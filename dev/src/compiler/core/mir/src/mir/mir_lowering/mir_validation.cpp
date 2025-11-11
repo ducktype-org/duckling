@@ -29,17 +29,17 @@ namespace compiler::mir {
 				if (instr.operation == Operation::Destruct
 				    || instr.operation == Operation::DestructIf)
 
-					return true;  // Lir decides whether destruction should be performed.
+					return true;  // LIR decides whether destruction should be performed.
 
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
 						used_variables.at(block.key).insert(
-							arg.get<MirPlace>().getBase<MirLocalRef>()->id
+							arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
 						);
 
 						if (moved_variables.at(block.key).contains(
-								arg.get<MirPlace>().getBase<MirLocalRef>()->id
+								arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
 							))
 							return false;  // It is already moved.
 					}
@@ -48,11 +48,11 @@ namespace compiler::mir {
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value() && instr.output.value().isLocal()) {
 					used_variables.at(block.key).insert(
-						instr.output.value().getBase<MirLocalRef>()->id
+						instr.output.value().getBase<MIRLocalRef>()->id
 					);
 
 					if (moved_variables.at(block.key).contains(
-							instr.output.value().getBase<MirLocalRef>()->id
+							instr.output.value().getBase<MIRLocalRef>()->id
 						))
 						return false;  // It is already moved.
 				}
@@ -72,8 +72,8 @@ namespace compiler::mir {
 								instr.arguments,
 								[&](const auto& arg) {
 									return arg.isLocal()
-							            && arg.template get<MirPlace>()
-							                       .template getBase<MirLocalRef>()
+							            && arg.template get<MIRPlace>()
+							                       .template getBase<MIRLocalRef>()
 							                       ->id
 							                   == flag.local->id;
 								}
@@ -82,7 +82,7 @@ namespace compiler::mir {
 							return false;  // Used 0 or 2 or more times as argument.
 
 						if (instr.output.has_value() && instr.output.value().isLocal()
-						    && instr.output.value().getBase<MirLocalRef>()->id == flag.local->id)
+						    && instr.output.value().getBase<MIRLocalRef>()->id == flag.local->id)
 							return false;  // Moved local used as output.
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {

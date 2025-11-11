@@ -66,15 +66,15 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
-			valueOutput(continuation, MIRValue{ MirUnitConst{} });
+			valueOutput(continuation, MIRValue{ MIRUnitConst{} });
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MirIntegerConst{ expr.value } });
+			valueOutput(continuation, MIRValue{ MIRIntegerConst{ expr.value } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MirBoolConst{ expr.value } });
+			valueOutput(continuation, MIRValue{ MIRBoolConst{ expr.value } });
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
@@ -94,7 +94,7 @@ namespace compiler::mir {
 				//@TODO: #1334 Check if the symbol is a real global variable.
 				valueOutput(
 					continuation,
-					MIRValue{ MirGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+					MIRValue{ MIRGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
 				);
 			}
 		}
@@ -111,8 +111,8 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type       = typeOfMirValue(res_right, function.getContext());
-			const auto other_argument_type = typeOfMirValue(res_left, function.getContext());
+			const auto argument_type       = typeOfMIRValue(res_right, function.getContext());
+			const auto other_argument_type = typeOfMIRValue(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different argument types"
@@ -162,7 +162,7 @@ namespace compiler::mir {
 				auto lowered_block = lowerSubExpr(case_expr, block);
 
 				lowered_block.storeResultInGivenPlace(
-					MirPlace(target_location),
+					MIRPlace(target_location),
 					assign_hole,
 					{ flagConstruct(target_location) },
 					expr_scope
@@ -210,7 +210,7 @@ namespace compiler::mir {
 			auto       sub_value  = sub_result.getResult(function);
 
 			variant_match(std::move(sub_value.getVariant())) {
-				variant_case(MirPlace, place) {
+				variant_case(MIRPlace, place) {
 					valueOutput(sub_begin, place.withField(function.getContext(), expr.field));
 				}
 				variant_default {
@@ -320,7 +320,7 @@ namespace compiler::mir {
 					"supported."
 				);
 			}
-			args.emplace_back(MirFunctionLiteral{ function_symid.value() });
+			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 
@@ -422,23 +422,23 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> typeOfMirValue(const MIRValue& value, query::Context& ctx) {
+		static tsh::SymbolType<> typeOfMIRValue(const MIRValue& value, query::Context& ctx) {
 			variant_match(value.getVariant()) {
-				variant_case_novalue(MirIntegerConst) {
+				variant_case_novalue(MIRIntegerConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryIntegralType>({ 64 }),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case_novalue(MirBoolConst) {
+				variant_case_novalue(MIRBoolConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryBoolType>({}),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(MirPlace, place) { return place.type; }
+				variant_case(MIRPlace, place) { return place.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
@@ -495,7 +495,7 @@ namespace compiler::mir {
 	}
 
 	void ExprLowerRes::storeResultInGivenPlace(
-		const MirPlace&                   target,
+		const MIRPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
 		const std::vector<OperationFlag>& flags,
 		ScopeRef                          scope

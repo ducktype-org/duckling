@@ -90,7 +90,7 @@ namespace compiler::mir {
 		base::Optional<base::StrID>      name;
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
-		base::StableVector<MirLocal>     local_list;
+		base::StableVector<MIRLocal>     local_list;
 		tsh::FunctionAbstractType        function_type;
 
 		LifetimeScopeTree lifetime_scope_tree;
@@ -137,18 +137,18 @@ namespace compiler::mir {
 		/**
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
-		MirLocalMutRef addLocal(const helios::SymID helios_id);
+		MIRLocalMutRef addLocal(const helios::SymID helios_id);
 
 		/**
 		 * Adds a local parameter variable to MIR function from helios_id representing it.
 		 */
-		MirLocalMutRef addParameter(const helios::SymID helios_id, u64 parameter_index);
+		MIRLocalMutRef addParameter(const helios::SymID helios_id, u64 parameter_index);
 
 		/**
 		 * Creates a temporary local value, and also sets its lifetime scope.
 		 */
 		[[nodiscard]]
-		MirLocalMutRef addTmp(const tsh::SymbolType<> type, ScopeRef scope);
+		MIRLocalMutRef addTmp(const tsh::SymbolType<> type, ScopeRef scope);
 
 		/**
 		 * Creates a temporary local value, i.e. local value
@@ -156,7 +156,7 @@ namespace compiler::mir {
 		 * Sets its lifetime scope to no_lifetime_scope.
 		 */
 		[[nodiscard]]
-		MirLocalMutRef addNoLifetimeTmp(const tsh::SymbolType<> type);
+		MIRLocalMutRef addNoLifetimeTmp(const tsh::SymbolType<> type);
 
 		/**
 		 * Add a temporary local value of type bool.
@@ -165,7 +165,7 @@ namespace compiler::mir {
 		 * the result of the condition.
 		 */
 		[[nodiscard]]
-		MirLocalMutRef addNoLifetimeBoolTmp();
+		MIRLocalMutRef addNoLifetimeBoolTmp();
 
 		/**
 		 * Finds the location of a local variable in the function. Does not check the global scope.
@@ -173,7 +173,7 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		base::Optional<MirLocalMutRef> findLocal(const helios::SymID helios_id);
+		base::Optional<MIRLocalMutRef> findLocal(const helios::SymID helios_id);
 
 		[[nodiscard]]
 		BlockBuilderRef newBlock();

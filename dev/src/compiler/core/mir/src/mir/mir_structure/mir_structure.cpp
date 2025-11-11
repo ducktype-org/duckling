@@ -19,7 +19,7 @@ namespace compiler::mir {
 		std::vector<tsh::SymbolType<>>                  parameter_types,
 		base::StableHashMap<BlockID, Block>             blocks,
 		std::vector<BlockID>                            block_order,
-		base::StableVector<const MirLocal>              local_list,
+		base::StableVector<const MIRLocal>              local_list,
 		LifetimeScopeTree                               lifetime_scope_tree,
 		ScopeRef                                        no_lifetime_scope,
 		std::variant<FunctionSymID, GlobalVariableCTOR> helios_id
@@ -174,7 +174,7 @@ namespace compiler::mir {
 		os.flags(output_flags);
 	}
 
-	void MirLocal::debugPrint(std::ostream& os, bool detailed) const {
+	void MIRLocal::debugPrint(std::ostream& os, bool detailed) const {
 		os << "Local(" << u64(id) << ")";
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
@@ -185,7 +185,7 @@ namespace compiler::mir {
 		}
 	}
 
-	void MirGlobal::debugPrint(std::ostream& os, bool detailed) const {
+	void MIRGlobal::debugPrint(std::ostream& os, bool detailed) const {
 		os << "Global(" << name(helios_id).strView() << ")";
 		if (detailed) {
 			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
@@ -194,27 +194,27 @@ namespace compiler::mir {
 		}
 	}
 
-	base::StrID MirLocal::getName() const {
+	base::StrID MIRLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
 	}
 
-	void MirLocal::setLifetimeScope(ScopeRef scope) {
+	void MIRLocal::setLifetimeScope(ScopeRef scope) {
 		CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
 		this->scope.emplace(scope);
 	}
 
-	MirPlace MirPlace::withField(query::Context& ctx, const helios::SymID field) const {
-		MirPlace result = *this;
+	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
+		MIRPlace result = *this;
 		result.access_chain.push_back(field);
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
 		return result;
 	}
 
-	void MirPlace::debugPrint(std::ostream& os, bool detailed) const {
+	void MIRPlace::debugPrint(std::ostream& os, bool detailed) const {
 		variant_match(base) {
-			variant_case(MirLocalRef, local) { local->debugPrint(os, detailed); }
-			variant_case(MirGlobal, global) { global.debugPrint(os, detailed); }
+			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
+			variant_case(MIRGlobal, global) { global.debugPrint(os, detailed); }
 		}
 		for (const auto& arg: access_chain) os << "." << name(arg).strView();
 		if (detailed and not access_chain.empty()) {
@@ -226,15 +226,15 @@ namespace compiler::mir {
 
 	void MIRValue::debugPrint(std::ostream& os) const {
 		variant_match(value) {
-			variant_case_novalue(MirUnitConst) { os << "()"; }
-			variant_case(MirIntegerConst, value) { os << value.value; }
-			variant_case(MirBoolConst, value) { os << (value.value ? "true" : "false"); }
-			variant_case(MirPlace, place) { place.debugPrint(os); }
+			variant_case_novalue(MIRUnitConst) { os << "()"; }
+			variant_case(MIRIntegerConst, value) { os << value.value; }
+			variant_case(MIRBoolConst, value) { os << (value.value ? "true" : "false"); }
+			variant_case(MIRPlace, place) { place.debugPrint(os); }
 			variant_case(BlockID, block) { os << "Block(" << u64(block) << ")"; }
-			variant_case(MirFunctionLiteral, func) {
+			variant_case(MIRFunctionLiteral, func) {
 				os << "Function(" << name(func.helios_id).strView() << ")";
 			}
-			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
+			variant_default { CORE_PANIC("Unexpected MIRLocal alternative in mir debugPrint"); }
 		}
 	}
 

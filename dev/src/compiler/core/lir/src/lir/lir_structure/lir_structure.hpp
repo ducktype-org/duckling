@@ -71,14 +71,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 )
 
 namespace compiler::lir {
-	struct LirLocal;
+	struct LIRLocal;
 	struct Block;
 	struct Function;
 
 	/**
 	 * @brief Reference to local variable in LIR.
 	 */
-	using LirLocalRef = CRef<LirLocal>;
+	using LIRLocalRef = CRef<LIRLocal>;
 
 	/**
 	 * @brief Reference to block in LIR.
@@ -103,7 +103,7 @@ namespace compiler::lir {
 	 * description of a function. Other uses should use LocalRef to reference the variable
 	 * description.
 	 */
-	struct LirLocal final {
+	struct LIRLocal final {
 		/**
 		 * @brief HELIOS id of the variable, if exists.
 		 */
@@ -118,7 +118,7 @@ namespace compiler::lir {
 		base::Optional<u64> parameter_index;
 
 	private:
-		LirLocal(
+		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			tsl::TypeLayout                     layout,
 			base::Optional<u64>                 parameter_index
@@ -127,34 +127,34 @@ namespace compiler::lir {
 			  layout(std::move(layout)),
 			  parameter_index(parameter_index) {}
 
-		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
+		explicit LIRLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
 		friend Function;
-		friend LirLocalRef;
+		friend LIRLocalRef;
 
 	public:
 		/**
 		 * @note Do not use this function outside of LIR lowering.
 		 */
-		static LirLocal fromMIR(query::Context& ctx, mir::MirLocalRef mir_local);
+		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
 		 * helios_id.
 		 * @note it's used to create lifetime-flags
 		 * @param ctx
-		 * @return LirLocal
+		 * @return LIRLocal
 		 */
-		static LirLocal boolLocal(query::Context& ctx);
+		static LIRLocal boolLocal(query::Context& ctx);
 	};
 
-	enum class LirGlobalType { Variable, Constant };
+	enum class LIRGlobalType { Variable, Constant };
 
 	/**
 	 * @brief Global variable in LIR.
-	 * layout is in shared_ptr, so the LirGlobal can be copied
+	 * layout is in shared_ptr, so the LIRGlobal can be copied
 	 */
-	struct LirGlobal final {
+	struct LIRGlobal final {
 		/**
 		 * @brief HELIOS id of the variable.
 		 */
@@ -165,16 +165,16 @@ namespace compiler::lir {
 
 		base::StrID mangled_name;
 
-		LirGlobalType type;
+		LIRGlobalType type;
 
 		base::Optional<helios::CompileTimeValue> initial_value;
 
 	private:
-		LirGlobal(
+		LIRGlobal(
 			const helios::SymID                      helios_id,
 			const tsl::TypeLayout&                   layout,
 			const base::StrID&                       mangled_name,
-			const LirGlobalType                      type          = LirGlobalType::Variable,
+			const LIRGlobalType                      type          = LIRGlobalType::Variable,
 			base::Optional<helios::CompileTimeValue> initial_value = {}
 		):
 			  helios_id(helios_id),
@@ -189,12 +189,12 @@ namespace compiler::lir {
 		/**
 		 * @note Do not use this function outside of LIR lowering.
 		 */
-		static LirGlobal fromMIR(query::Context& ctx, mir::MirGlobal mir_global);
+		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
 		/**
 		 * @note Do not use this function outside of LIR lowering.
 		 */
-		static LirGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 
 	/**
@@ -206,8 +206,8 @@ namespace compiler::lir {
 	 *
 	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
 	 */
-	struct LirPlace final {
-		using BaseVariant = std::variant<LirLocalRef, LirGlobal>;
+	struct LIRPlace final {
+		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
 		 */
@@ -218,8 +218,8 @@ namespace compiler::lir {
 		 */
 		tsl::TypeLayout getBaseLayout() {
 			variant_match(base) {
-				variant_case(LirLocalRef, local) { return local->layout; }
-				variant_case(LirGlobal, global) { return *global.layout; }
+				variant_case(LIRLocalRef, local) { return local->layout; }
+				variant_case(LIRGlobal, global) { return *global.layout; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -242,16 +242,16 @@ namespace compiler::lir {
 		 */
 		tsl::TypeLayout layout;
 
-		LirPlace(query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain);
+		LIRPlace(query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain);
 
 		[[nodiscard]]
 		bool isLocal() const {
-			return std::holds_alternative<LirLocalRef>(base);
+			return std::holds_alternative<LIRLocalRef>(base);
 		}
 
 		[[nodiscard]]
 		bool isGlobal() const {
-			return std::holds_alternative<LirGlobal>(base);
+			return std::holds_alternative<LIRGlobal>(base);
 		}
 
 		[[nodiscard]]
@@ -265,7 +265,7 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LirPlace, BlockRef, FunctionLiteral>;
+		using ValueType = std::variant<i64, bool, LIRPlace, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
@@ -273,7 +273,7 @@ namespace compiler::lir {
 
 		LIRValue(bool value): value(value) {}
 
-		LIRValue(LirPlace value): value(value) {}
+		LIRValue(LIRPlace value): value(value) {}
 
 		LIRValue(BlockRef value): value(value) {}
 
@@ -288,12 +288,12 @@ namespace compiler::lir {
 
 		[[nodiscard]]
 		bool isLocal() const {
-			return std::holds_alternative<LirPlace>(value) && std::get<LirPlace>(value).isLocal();
+			return std::holds_alternative<LIRPlace>(value) && std::get<LIRPlace>(value).isLocal();
 		}
 
 		[[nodiscard]]
 		bool isGlobal() const {
-			return std::holds_alternative<LirPlace>(value) && std::get<LirPlace>(value).isGlobal();
+			return std::holds_alternative<LIRPlace>(value) && std::get<LIRPlace>(value).isGlobal();
 		}
 
 		/**
@@ -344,7 +344,7 @@ namespace compiler::lir {
 	 */
 	struct Instruction final {
 		Operation                operation = Operation::Uninitialized;
-		base::Optional<LirPlace> output;
+		base::Optional<LIRPlace> output;
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
 
@@ -358,7 +358,7 @@ namespace compiler::lir {
 
 		Instruction(
 			const Operation          operation,
-			base::Optional<LirPlace> output,
+			base::Optional<LIRPlace> output,
 			std::vector<LIRValue>    arguments,
 			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
@@ -389,7 +389,7 @@ namespace compiler::lir {
 		std::vector<tsl::TypeLayout> parameter_layouts;
 
 		base::StableVector<Block>    blocks;
-		base::StableVector<LirLocal> local_list;
+		base::StableVector<LIRLocal> local_list;
 
 		std::vector<BlockRef> block_order;
 
@@ -425,6 +425,6 @@ namespace compiler::lir {
 		 * @return base::Map<BlockRef, u64>
 		 */
 		[[nodiscard]]
-		base::Map<LirLocalRef, u64> getLocalVariableIDs() const;
+		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
 	};
 }

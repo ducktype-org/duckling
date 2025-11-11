@@ -50,10 +50,10 @@ private:
 			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).declaration->original_name);
 			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).declaration->original_name);
 
-			auto foo1_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
-			auto foo2_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
-			auto foo3_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(2));
-			auto foo4_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(3));
+			auto foo1_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
+			auto foo2_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
+			auto foo3_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(2));
+			auto foo4_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(3));
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrID("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrID("foo2"));
@@ -93,10 +93,10 @@ private:
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
 
 			auto& c_ctor
-				= ctx.query<compiler::mir::LowerGlobalDataToMirCtor>({ globals.at(0) })->value();
+				= ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })->value();
 			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
-			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
+			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
@@ -159,7 +159,7 @@ private:
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// Simple assignment tests
-			auto goo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
+			auto goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
 			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
@@ -207,7 +207,7 @@ private:
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
@@ -252,7 +252,7 @@ private:
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
@@ -268,7 +268,7 @@ private:
 			ASSERT_EQUAL(2, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// note: it might change where those branch operations are placed:
@@ -276,12 +276,12 @@ private:
 			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
 			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
 
-			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
-			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
+			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MIRBoolConst>().value, true);
+			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MIRBoolConst>().value, false);
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->value();
 			ASSERT_TRUE(goo_mir.validateBlockIDs().isOk());
 		});
 	}
@@ -295,7 +295,7 @@ private:
 			ASSERT_EQUAL(3, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
@@ -310,7 +310,7 @@ private:
 			for (auto& instruction: foo_mir.blocks[entry_block].instructions) {
 				if (instruction.operation == compiler::mir::Operation::Call) {
 					auto callee
-						= instruction.arguments.at(0).get<compiler::mir::MirFunctionLiteral>();
+						= instruction.arguments.at(0).get<compiler::mir::MIRFunctionLiteral>();
 					ASSERT_EQUAL(
 						compiler::helios::name(callee.helios_id),
 						functions_to_call.at(count_of_calls)
@@ -332,7 +332,7 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			auto i16_type = ctx.query<QueryIntegralType>(16);
@@ -373,8 +373,8 @@ private:
 				const auto& block          = foo_mir.blocks[block_id];
 				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
                     if (value.isLocal()) {
-                        if (const auto local = value.get<compiler::mir::MirPlace>()
-                                                   .getBase<compiler::mir::MirLocalRef>();
+                        if (const auto local = value.get<compiler::mir::MIRPlace>()
+                                                   .getBase<compiler::mir::MIRLocalRef>();
                             local->parameter_index.has_value())
                             ASSERT_EQUAL(local->parameter_index.value(), 2);
                     }
@@ -403,11 +403,11 @@ private:
 			ASSERT_EQUAL(functions.at(2).declaration->original_name, base::StrID("unreachable_end"));
 			ASSERT_EQUAL(functions.at(3).declaration->original_name, base::StrID("empty"));
 
-			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->hasError()
+			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
 			);
 
 			auto& should_add_retvoid_fun
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->value();
 			should_add_retvoid_fun.validateBlockIDs();
 			std::stringstream foo_str;
 			should_add_retvoid_fun.debugPrint(foo_str);
@@ -418,13 +418,13 @@ private:
 
 
 			auto& unreachable_end_fun
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->value();
 			unreachable_end_fun.validateBlockIDs();
 			unreachable_end_fun.debugPrint(foo_str);
 			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
 
 			auto& empty
-				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->value();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
 		});
 	}
@@ -442,10 +442,10 @@ private:
 			for (const compiler::helios::HOUTFunction& fun: functions) {
 				if (fun.declaration->original_name.str() == "good1") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
@@ -456,11 +456,11 @@ private:
 
 				if (fun.declaration->original_name.str() == "good2") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 					compiler::mir::Instruction&   assignment
 						= mir_rep.blocks[mir_rep.block_order[2]].instructions[0];
 
@@ -482,10 +482,10 @@ private:
 
 				if (fun.declaration->original_name.str() == "good3") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[2]].instructions[1].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
@@ -496,10 +496,10 @@ private:
 
 				if (fun.declaration->original_name.str() == "good4") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[1].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
@@ -510,10 +510,10 @@ private:
 
 				if (fun.declaration->original_name.str() == "bad1") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 
 					mir_rep.blocks[mir_rep.block_order[0]].instructions[2].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
@@ -524,10 +524,10 @@ private:
 
 				if (fun.declaration->original_name.str() == "bad2") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);
@@ -537,10 +537,10 @@ private:
 
 				if (fun.declaration->original_name.str() == "bad3") {
 					auto& mir_rep = (compiler::mir::Function&) ctx
-					                    .query<compiler::mir::LowerToMirFunction>({ fun })
+					                    .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                    ->value();
 
-					CRef<compiler::mir::MirLocal> tmp(mir_rep.local_list[2]);
+					CRef<compiler::mir::MIRLocal> tmp(mir_rep.local_list[2]);
 					mir_rep.blocks[mir_rep.block_order[1]].instructions[0].flags.emplace_back(
 						compiler::mir::OperationFlag::Flag::Move, tmp
 					);

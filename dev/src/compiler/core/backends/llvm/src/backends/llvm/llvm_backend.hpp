@@ -51,7 +51,7 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
-		void addGlobalToModule(const lir::LirGlobal& lir_global);
+		void addGlobalToModule(const lir::LIRGlobal& lir_global);
 
 		/**
 		 * @brief Adds a function to the LLVM module's list of global constructors.
