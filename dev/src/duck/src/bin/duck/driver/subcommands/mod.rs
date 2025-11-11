@@ -5,6 +5,7 @@ use crate::DuckCtx;
 
 mod add;
 mod build;
+#[cfg(feature = "shell-completion")]
 mod generate;
 mod info;
 mod init;
@@ -21,6 +22,7 @@ pub fn subcommands() -> Vec<Command> {
     vec![
         add::get_parser(),
         build::get_parser(),
+        #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         info::get_parser(),
         init::get_parser(),
@@ -41,6 +43,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "add" => add::execute,
         "build" => build::execute,
+        #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
         "info" => info::execute,
         "init" => init::execute,
