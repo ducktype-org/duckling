@@ -307,34 +307,29 @@ private:
 			TypeInterface           my_class_interface = my_class_type.getInterface(ctx);
 
 			const SymID a_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("a"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
+				const auto& matching = my_class_interface.getElementsWithName(base::StrID("a"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
 			}();
 			const SymID b_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("b"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
+				const auto& matching = my_class_interface.getElementsWithName(base::StrID("b"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
 			}();
 			const SymID c_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("c"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
+				const auto& matching = my_class_interface.getElementsWithName(base::StrID("c"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
 			}();
 			const SymID d_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("d"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
+				const auto& matching = my_class_interface.getElementsWithName(base::StrID("d"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
 			}();
 			const SymID e_field_symbol = [&] {
-				variant_match(my_class_interface.resolve(base::StrID("e"), ctx)) {
-					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
-				}
-				CORE_PANIC("Could not resolve field.");
+				const auto& matching = my_class_interface.getElementsWithName(base::StrID("e"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
 			}();
 
 			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);

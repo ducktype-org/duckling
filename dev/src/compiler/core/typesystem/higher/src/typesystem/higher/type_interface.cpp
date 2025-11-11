@@ -41,18 +41,5 @@ namespace tsh {
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->expect("Not handling errors yet");
 	}
-
-	
-	// using ResolutionResult = TypeInterface::ResolutionResult;
-	// using NamedArgument    = TypeInterface::NamedArgument;
-	// using Parameter        = InterfaceElement::Parameter;
-
-	// ResolutionResult TypeInterface::resolve(const base::StrID name, query::Context&) const {
-	// 	const std::vector<InterfaceElement>& elements_matching_name = getElementsWithName(name);
-	// 	if (elements_matching_name.empty()) return NoMatch{ {} };
-	// 	if (elements_matching_name.size() == 1)
-	// 		return SingleMatch{ .best_match=*elements_matching_name.begin(), .alternative_matches={}, .non_matches={} };
-	// 	return AmbiguousMatch{ .conflicting_matches=elements_matching_name, .alternative_matches={}, .non_matches={} };
-	// }
-
 }
+

@@ -250,18 +250,5 @@ namespace tsh {
 			return elements
 			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
 		}
-
-		// @TODO PR: we want to change it into lookup 
-		// /**
-		//  * @brief Gets the elements which match a name.
-		//  *
-		//  * @note This should be the primary method of resolving fields (as opposed to methods).
-		//  *
-		//  * @param name The requested name of an element.
-		//  * @param ctx The query context for implicit coercion checks.
-		//  * @return The elements which match the name.
-		//  */
-		// ResolutionResult resolve(base::StrID name, query::Context& ctx) const;
-
 	};
 }

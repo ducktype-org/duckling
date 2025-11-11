@@ -46,13 +46,6 @@ private:
 				my_class_interface.getElementsWithName(base::StrID("c")).empty(),
 				"There should be exactly no 'c' members."
 			);
-
-			auto a_resolution = my_class_interface.resolve(base::StrID("a"), ctx);
-
-			variant_match(a_resolution) {
-				variant_case_novalue(TypeInterface::SingleMatch) {}
-				variant_default { assertTrue(false, "Member 'a' should match exactly."); }
-			}
 		});
 	}
 
