@@ -12,8 +12,10 @@ namespace tsh {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
 
-			const auto& class_data = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-			                       ->expect("Handling ERRORS in TS is not supported yet...");
+			const auto& class_data
+				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->expect(
+					"Handling ERRORS in TS is not supported yet..."
+				);
 
 			std::vector<InterfaceElement> elements;
 			elements.reserve(class_data.members.size() + class_data.methods.size());
@@ -21,14 +23,22 @@ namespace tsh {
 			u32 declaration_order = 0;
 			for (const compiler::helios::SymID field_sym: class_data.members) {
 				elements.push_back(InterfaceElement(
-					field_sym, key.value->toAbstractType(), declaration_order, InterfaceElement::InterfaceElementKind::Field, {}
+					field_sym,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Field,
+					{}
 				));
 				declaration_order++;
 			}
 
 			for (const compiler::helios::SymID method_sym: class_data.methods) {
 				elements.push_back(InterfaceElement(
-					method_sym, key.value->toAbstractType(), declaration_order, InterfaceElement::InterfaceElementKind::Method, {}
+					method_sym,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{}
 				));
 				declaration_order++;
 			}

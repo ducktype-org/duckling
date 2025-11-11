@@ -1,7 +1,7 @@
 #include "type_interface.hpp"
 
-#include <helios/symbols/simple.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 
 #include <base/collections/optional.hpp>
 
@@ -39,7 +39,8 @@ namespace tsh {
 	}
 
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
-		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->expect("Not handling errors yet");
+		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->expect(
+			"Not handling errors yet"
+		);
 	}
 }
-

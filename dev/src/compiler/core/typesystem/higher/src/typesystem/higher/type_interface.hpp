@@ -27,7 +27,7 @@ namespace tsh {
 	 */
 	class InterfaceElement final {
 	public:
-		/** 
+		/**
 		 * Kind of type interface element.
 		 * @note In the future we might add more class-specific kinds here,
 		 * such as for example special-methods, base classes, etc.
@@ -43,6 +43,7 @@ namespace tsh {
 			 */
 			Other,
 		};
+
 	private:
 		/**
 		 * @brief The symbol corresponding to this element.
@@ -60,7 +61,7 @@ namespace tsh {
 
 		/**
 		 * The index of a field / method in the declaration source code of a class / scope.
-		 * Is relevant mostly for fields. 
+		 * Is relevant mostly for fields.
 		 */
 		u32 declaration_order;
 
@@ -77,7 +78,6 @@ namespace tsh {
 		ClassMemberVisibility visibility;
 
 	public:
-
 		/**
 		 * @brief Construct an element of an interface of a type.
 		 * @param symbol The symbol of this element.
@@ -88,11 +88,11 @@ namespace tsh {
 		 * @param visibility The visibility level of this element.
 		 */
 		explicit InterfaceElement(
-			const compiler::helios::SymID          symbol,
-			const AbstractType                     source,
-			const u32                              declaration_order,
-			const InterfaceElementKind kind,
-			const ClassMemberVisibility                       visibility
+			const compiler::helios::SymID symbol,
+			const AbstractType            source,
+			const u32                     declaration_order,
+			const InterfaceElementKind    kind,
+			const ClassMemberVisibility   visibility
 		):
 			  symbol(symbol),
 			  source(source),
@@ -145,7 +145,6 @@ namespace tsh {
 		bool isMethod() const {
 			return kind == InterfaceElementKind::Method;
 		}
-
 
 		/**
 		 * @brief Gets the entire type of this element.
