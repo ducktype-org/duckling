@@ -56,8 +56,11 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
+			std::cerr << hout_function.debugPrint() << std::endl;
 			CRef mir_function = &ctx.query<mir::LowerToMirFunction>({ hout_function })->value();
+			mir_function->debugPrint(std::cerr);
 			auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+			lir_function->debugPrint(ctx, std::cerr);
 			functions.push_back(lir_function);
 		}
 

@@ -1633,6 +1633,13 @@ private:
 			auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 			ASSERT_EQUAL(i32_type, cast_ptr->target_type.getType());
 		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("int_as_bool"));
+			auto cast_ptr
+				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+		}
 	}
 
 	void testErrorBadExpr() {

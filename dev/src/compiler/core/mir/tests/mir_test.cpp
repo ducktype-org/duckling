@@ -102,22 +102,22 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
-			auto i32_type = ctx.query<QueryIntegralType>(64);
+			auto i64_type = ctx.query<QueryIntegralType>(64);
 
 			{
 				auto a = foo_mir.local_list[0];
 				ASSERT_EQUAL(a->getName(), "a");
-				ASSERT_EQUAL(a->type.getType(), i32_type);
+				ASSERT_EQUAL(a->type.getType(), i64_type);
 			}
 			{
 				auto b = foo_mir.local_list[1];
 				ASSERT_EQUAL(b->getName(), "b");
-				ASSERT_EQUAL(b->type.getType(), i32_type);
+				ASSERT_EQUAL(b->type.getType(), i64_type);
 			}
 			{
 				auto b = foo_mir.local_list[2];
 				ASSERT_EQUAL(b->getName(), "b");
-				ASSERT_EQUAL(b->type.getType(), i32_type);
+				ASSERT_EQUAL(b->type.getType(), i64_type);
 			}
 
 			// Test code generation:

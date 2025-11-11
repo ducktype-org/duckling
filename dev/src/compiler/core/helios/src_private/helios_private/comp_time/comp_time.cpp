@@ -369,6 +369,7 @@ namespace compiler::helios {
 			}
 
 			void visitCastExpr(const code::CastExpr&) final {
+				// @TODO: #1529 Think about this in the future.
 				result = query::QError(errors::Failed());
 			}
 		};

@@ -144,9 +144,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
-				return llvm::PointerType::getUnqual(
-					typeFromLayout(context, *pointer_layout.getPointee())
-				);
+				return llvm::PointerType::getUnqual(context);
 			}
 			variant_default {
 				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
@@ -703,8 +701,8 @@ namespace compiler::backend_llvm {
 				} else {
 					CORE_ASSERT(
 						callee.getFunctionType()->getReturnType()->isVoidTy(),
-						"call to non void function without output – this may be valid, feel "
-						"free "
+						"call to non void function without output "
+						"– this may be valid, feel free "
 						"to remove assertion if the compiler internals change."
 					);
 					builder.CreateCall(callee, args);

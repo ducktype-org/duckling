@@ -268,6 +268,24 @@ namespace compiler::helios::code {
 		case IntegerPow:
 			out << "**";
 			break;
+		case IntegerLt:
+			out << " < ";
+			break;
+		case IntegerLteq:
+			out << " <= ";
+			break;
+		case IntegerGt:
+			out << " > ";
+			break;
+		case IntegerGteq:
+			out << " >= ";
+			break;
+		case IntegerEq:
+			out << " == ";
+			break;
+		case IntegerNeq:
+			out << " != ";
+			break;
 		case BooleanAnd:
 			out << " and ";
 			break;

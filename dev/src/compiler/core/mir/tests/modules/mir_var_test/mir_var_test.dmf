@@ -15,7 +15,7 @@ fun foo() = {
 
 fun goo() = { 
 	var a: i32 = i32(23);
-	a = 24;
+	a = i32(24);
 	hoo() = 15;
 }
 
