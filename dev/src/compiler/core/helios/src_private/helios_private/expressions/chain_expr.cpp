@@ -317,7 +317,7 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
-			// This is a temporary mock implementation @TODO: #1530
+			//  @TODO: #1530 This is a temporary mock implementation
 			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			if (hout_expr.hasError()) return query::QError(errors::Failed());
 
