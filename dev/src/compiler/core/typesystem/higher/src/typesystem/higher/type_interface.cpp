@@ -1,8 +1,7 @@
 #include "type_interface.hpp"
 
-// #include "queries.hpp"
-
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 
 #include <base/collections/optional.hpp>
 
@@ -37,6 +36,10 @@ namespace tsh {
 		static constexpr std::vector<InterfaceElement> EMPTY{};
 		if (elements_by_name.contains(name)) return elements_by_name.at(name);
 		return EMPTY;
+	}
+
+	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
+		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->expect("Not handling errors yet");
 	}
 
 	

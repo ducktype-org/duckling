@@ -23,12 +23,14 @@ namespace tsh {
 	enum class ClassMemberVisibility { Public, Protected, Private };
 
 	/**
-	 * @brief A single element of an interface, defined by its symbol (not name).
+	 * @brief A single element of a type interface, defined by its symbol (not name).
 	 */
 	class InterfaceElement final {
 	public:
 		/** 
 		 * Kind of type interface element.
+		 * @note In the future we might add more class-specific kinds here,
+		 * such as for example special-methods, base classes, etc.
 		 */
 		enum class InterfaceElementKind {
 			Field,
@@ -58,6 +60,7 @@ namespace tsh {
 
 		/**
 		 * The index of a field / method in the declaration source code of a class / scope.
+		 * Is relevant mostly for fields. 
 		 */
 		u32 declaration_order;
 
@@ -72,8 +75,6 @@ namespace tsh {
 		 * rather than "this element is not recognised, go figure out why".
 		 */
 		ClassMemberVisibility visibility;
-
-		// @TODO PR: add method/field distinction?
 
 	public:
 
