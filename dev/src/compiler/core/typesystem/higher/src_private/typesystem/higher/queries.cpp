@@ -11,21 +11,24 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
-			auto& field_syms = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-			                       ->expect("Handling ERRORS in TS is not supported yet...")
-			                       .members;
-			// @TODO: #1485 Add methods to the interface, when obtaining their signature is supported.
+
+			const auto& class_data = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+			                       ->expect("Handling ERRORS in TS is not supported yet...");
 
 			std::vector<InterfaceElement> elements;
+			elements.reserve(class_data.members.size() + class_data.methods.size());
 
 			u32 declaration_order = 0;
-			for (const compiler::helios::QueryTypeOfSymbol::QKey field_sym: field_syms) {
-				const SymbolType<> field_type
-					= ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym)->expect(
-						"Handling ERRORS in TS is not supported yet..."
-					);
+			for (const compiler::helios::SymID field_sym: class_data.members) {
 				elements.push_back(InterfaceElement(
-					field_sym, key.value->toAbstractType(), declaration_order, {}, field_type, {}
+					field_sym, key.value->toAbstractType(), declaration_order, InterfaceElement::InterfaceElementKind::Field, {}
+				));
+				declaration_order++;
+			}
+
+			for (const compiler::helios::SymID method_sym: class_data.methods) {
+				elements.push_back(InterfaceElement(
+					method_sym, key.value->toAbstractType(), declaration_order, InterfaceElement::InterfaceElementKind::Method, {}
 				));
 				declaration_order++;
 			}

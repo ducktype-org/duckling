@@ -55,9 +55,10 @@ namespace tsh {
 		 * This is applicable for types which require being at some point "incomplete".
 		 * @return The TypeInterface of the type described by this class.
 		 */
-		// @TODO: Remove the default for the interface. Each type should know its interface.
+		// @TODO PR: Remove the default for the interface. Each type should know its interface.
 		// The interface default is to be removed when interfaces for each type are determined.
 		// Then, this definition should become pure virtual.
+		// PR NOTE: just add panics for those types that do not have interfaces yet.
 		[[nodiscard]]
 		virtual const TypeInterface& getInterface(query::Context& ctx) const {
 			(void) ctx;
