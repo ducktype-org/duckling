@@ -3,8 +3,6 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
-#include "diagnostic/source_position.hpp"
-#include "query_framework/context.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/query_impl.hpp>
 

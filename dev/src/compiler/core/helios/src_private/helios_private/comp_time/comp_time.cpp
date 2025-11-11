@@ -21,6 +21,7 @@
 
 #include <cmath>
 #include <ranges>
+#include <type_traits>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -52,11 +53,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralNumericExpr(const code::LiteralNumericExpr& expr) final {
-				// TODOP: This is a mock because casts...
-				result = CompileTimeValue{ std::visit(
-					[&](auto&& val) { return NumericValue::createMinimized(val); },
-					expr.value.getStorage()
-				) };
+				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr& expr) final {
@@ -124,11 +121,14 @@ namespace compiler::helios {
 								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
 									using LhsNumT = std::decay_t<decltype(lhs_val)>;
 									using RhsNumT = std::decay_t<decltype(rhs_val)>;
-									// Type potentially to big to prevent overflow.
-									using ResultT = std::conditional_t<
-										std::is_integral_v<LhsNumT> && std::is_integral_v<RhsNumT>,
-										i64,
-										f128>;
+									// TODOP: Type minimization in comp time version.
+							        // Type potentially to big to prevent overflow.
+							        // using ResultT = std::conditional_t<
+							        // 	std::is_integral_v<LhsNumT> && std::is_integral_v<RhsNumT>,
+							        // 	i64,
+							        // 	f128>;
+
+									using ResultT = std::common_type_t<LhsNumT, RhsNumT>;
 
 									auto maybe_lhs_coerced = lhs.template coerceTo<ResultT>();
 									auto maybe_rhs_coerced = rhs.template coerceTo<ResultT>();
@@ -180,7 +180,9 @@ namespace compiler::helios {
 										);
 									}
 
-									return CompileTimeValue{ NumericValue::createMinimized(result) };
+									return CompileTimeValue{ NumericValue{ result } };
+									// TODOP: Literal minimization version.
+							        // return CompileTimeValue{ NumericValue::createMinimized(result) };
 								},
 								lhs.getStorage(),
 								rhs.getStorage()

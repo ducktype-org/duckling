@@ -15,10 +15,10 @@ const tr_big_e_dot: f32     = .00125E2;
 const lead_big_e_dot: f32   = 2.E0;
 const neg: f32              = -10.125;
 
-# const hex: i16 = 0x1A;
-# const oct: i16 = 0o17;
-# const bin: i16 = 0b10101;
-const bin2: i16 = 0b10101i32;
+const hex: i16 = 0x1Ai16;
+const oct: i16 = 0o17i16;
+const bin: i16 = 0b10101i16;
+const bin2: i32 = 0b10101i32;
 
 # Test minimization.
 # Doesn't work since we cast to i64 anyways.
