@@ -93,6 +93,25 @@ namespace query::internal {
 		 */
 		[[nodiscard]] bool compare(const QueryGraph& other) const;
 
+		/**
+		 * @brief Checks if a node exists in the graph.
+		 * @param node_id The NodeID to check.
+		 * @return True if the node exists, false otherwise.
+		 */
+		[[nodiscard]]
+		bool nodeExists(const NodeID& node_id) const {
+			return node_deps.contains(node_id);
+		}
+
+		/**
+		 * @brief Get all Nodes in the graph.
+		 * @return A vector of all NodeIDs in the graph.
+		 */
+		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
+
+		/** @brief Check if a node has any dependencies. */
+		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
+
 		~QueryGraph() = default;
 	};
 }

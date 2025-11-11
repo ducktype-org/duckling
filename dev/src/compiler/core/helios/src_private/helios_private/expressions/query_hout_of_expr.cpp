@@ -431,10 +431,6 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			// std::cerr << "\nExpr: \n";
-			// root->debugPrint(std::cerr);
-			// std::cerr << '\n'
-
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 

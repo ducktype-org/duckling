@@ -496,9 +496,10 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
+				auto coercion
+					= canCoerce(ctx, new_value_expr->expression_type.getSymbolType(), location_type);
 
-				if (new_value_coerced.hasError()) {
+				if (coercion.hasError()) {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							assignment->getSourcePosition(),
@@ -515,11 +516,9 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
+				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
 
-
-				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_coerced.value())
-				));
+				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -604,9 +603,10 @@ namespace compiler::helios {
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 
-					auto initial_value_coerced
-						= coerceExpression(std::move(initial_value), symbol_type);
-					if (initial_value_coerced.hasError()) {
+					auto coercion = canCoerce(
+						ctx, initial_value->expression_type.getSymbolType(), symbol_type
+					);
+					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
@@ -624,7 +624,7 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						std::move(initial_value_coerced.value()), symbol_type, symbol
+						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}

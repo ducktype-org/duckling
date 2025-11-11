@@ -23,6 +23,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -72,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
+		TESTER_ADD_TEST(testOverloadResolution);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -128,6 +130,7 @@ private:
 		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
 		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
 	}
 
 	void testNumericLiterals() {
@@ -390,10 +393,11 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
-		auto [_, root_scope]           = getModule(fs::File(path("test_modules/expressions")));
-		auto [func_module, func_scope] = getModule(fs::File(path("test_modules/function_calls")));
-		auto sym_v1                    = getChain("V1", root_scope).back();
-		auto square_sym                = getChain("square", func_scope).back();
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
+		const auto [func_module, func_scope]
+			= getModule(fs::File(path("test_modules/function_calls")));
+		const auto a_obj      = getChain("aObj", root_scope).back();
+		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto int_type = ctx.query<tsh::QueryIntegralType>({ 64 });
@@ -416,11 +420,17 @@ private:
 			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
 
 			// Build call arguments for square function
+			const compiler::helios::SymID a_field
+				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
+			          ->value()
+			          .getType()
+			          .getInterface(ctx)
+			          .getElementsWithName(base::StrID("a"))
+			          .back()
+			          .getSymbol();
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
 			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx,
-				makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
-				base::StrID("field")
+				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
 			));
 
 			// Build sequence expressions
@@ -1579,6 +1589,98 @@ private:
 				// Expected failure for invalid ABI
 			}
 		});
+	}
+
+	void testOverloadResolution() {
+		{
+			auto [module, root_scope]
+				= getModule(fs::File(path("test_modules/overload_resolution")));
+
+			auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+			auto get_function_by_order = [&](usize index) {
+				return hout->functions.at(index).declaration->original_symbol;
+			};
+
+			// Store function symbols for each overload (order matches declaration order in file)
+			auto foo_bool  = get_function_by_order(0);  // fun foo(x: bool)
+			auto foo_float = get_function_by_order(1);  // fun foo(x: f64)
+			auto foo_class = get_function_by_order(2);  // fun foo(x: MyClass)
+			auto foo_i64   = get_function_by_order(3);  // fun foo(x: i64)
+			auto goo_x     = get_function_by_order(4);  // fun goo(x: i64) -> i32 (first one)
+			auto goo_y     = get_function_by_order(5);  // fun goo(y: i64) -> i32 (second one)
+			auto goo_f64   = get_function_by_order(6);  // fun goo(x: f64, y: bool) -> i64
+			[[maybe_unused]] auto goo_i64
+				= get_function_by_order(7);             // fun goo(x: i64, y: bool) -> i64
+
+			// Helper to get the function symbol called in a global variable's initializer
+			auto get_function_sym_by_var_sym = [](auto var_sym) {
+				auto expr      = getExprOfVariable(var_sym);
+				Ref  call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr);
+
+				Ref ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+					&*call_expr->callee.ref()
+				);
+				return ident_expr->symbol;
+			};
+
+			// Test overload resolution by argument type
+			auto call_foo_bool_sym  = getChain("CALL_FOO_BOOL", root_scope).back();
+			auto call_foo_float_sym = getChain("CALL_FOO_FLOAT", root_scope).back();
+			auto call_foo_class_sym = getChain("CALL_FOO_CLASS", root_scope).back();
+			auto call_foo_i64_sym   = getChain("CALL_FOO_I64", root_scope).back();
+
+			ASSERT_EQUAL(foo_bool, get_function_sym_by_var_sym(call_foo_bool_sym));
+			ASSERT_EQUAL(foo_float, get_function_sym_by_var_sym(call_foo_float_sym));
+			ASSERT_EQUAL(foo_class, get_function_sym_by_var_sym(call_foo_class_sym));
+			ASSERT_EQUAL(foo_i64, get_function_sym_by_var_sym(call_foo_i64_sym));
+
+			// Test overload resolution by named parameters
+			auto call_goo_x_sym = getChain("CALL_GOO_X", root_scope).back();
+			auto call_goo_y_sym = getChain("CALL_GOO_Y", root_scope).back();
+
+			ASSERT_EQUAL(goo_x, get_function_sym_by_var_sym(call_goo_x_sym));
+			ASSERT_EQUAL(goo_y, get_function_sym_by_var_sym(call_goo_y_sym));
+
+			// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
+			auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
+			ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
+		}
+		{
+			auto [module_id, root_scope]
+				= getModule(fs::File(path("test_modules/error_generating/ambiguous_exact_match")));
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
+				assertThrows<std::exception>(
+					[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
+					"Expected ambiguous callable candidates error"
+				);
+
+				assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+				std::stringstream non_detailed_log;
+				ctx.logger.dumpLog(false, non_detailed_log);
+			});
+		}
+		{
+			auto [module_id, root_scope]
+				= getModule(fs::File(path("test_modules/error_generating/ambiguous_coercion_match"))
+			    );
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
+				assertThrows<std::exception>(
+					[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
+					"Expected ambiguous callable candidates error"
+				);
+
+				assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+				std::stringstream non_detailed_log;
+				ctx.logger.dumpLog(false, non_detailed_log);
+			});
+		}
 	}
 
 	void testErrorBadExpr() {

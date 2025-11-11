@@ -3,27 +3,48 @@
 Tests:
   simple:
     Cases: 
-      default:
+      llvm:
+        backend: llvm
         Output:
-          String: "5 \n7 \n"
+          String: "5\n7\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "5\n7\n"
         ExitCode: 0
   single_stmt_body:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
-          String: "5 \n7 \n"
+          String: "5\n7\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "5\n7\n"
         ExitCode: 0
   named_default_args:
     Cases:
-      default:
+      dvm:
+        backend: dvm
         Output:
-          String: "1 \n2 \n1 \n2 \n3 \n2 \n4 \n5 \n1 \n3 \n1 \n2 \n2 \n3 \n4 \n5 \n1 \n5 \n4 \n2 \n"
+          String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
         ExitCode: 0
   default_args_advanced:
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
-          String: "101 \n105 \n109 \n"
+          String: "101\n105\n109\n"
         ExitCode: 0
+
+
 
 

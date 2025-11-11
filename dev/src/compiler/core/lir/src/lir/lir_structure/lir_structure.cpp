@@ -23,9 +23,9 @@ namespace compiler::lir {
 		return block_ids;
 	}
 
-	base::Map<LocalRef, u64> Function::getLocalVariableIDs() const {
-		base::Map<LocalRef, usize> local_ids;
-		usize                      next_id = 0;
+	base::Map<LIRLocalRef, u64> Function::getLocalVariableIDs() const {
+		base::Map<LIRLocalRef, usize> local_ids;
+		usize                         next_id = 0;
 		for (const auto& local: local_list) {
 			local_ids.put(&local, next_id);
 			next_id++;
@@ -70,16 +70,16 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LirPrinter {
+	struct LIRPrinter {
 		query::Context& ctx;
 		std::ostream&   output;
 
-		base::Map<LocalRef, usize> local_id;
-		base::Map<BlockRef, usize> block_id;
+		base::Map<LIRLocalRef, usize> local_id;
+		base::Map<BlockRef, usize>    block_id;
 
-		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
+		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
-		void printLocalDesc(LocalRef local) {
+		void printLocalDesc(LIRLocalRef local) {
 			output << "  Local(" << local_id[local] << ")";
 			if (local->helios_id.has_value())
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
@@ -92,32 +92,37 @@ namespace compiler::lir {
 		/**
 		 * @note Custom output, so we can align when printing instruction
 		 */
-		void printLocal(LocalRef local, std::ostream& loc_output) const {
+		void printLocal(LIRLocalRef local, std::ostream& loc_output) const {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
-		void printGlobal(const LirGlobal& global, std::ostream& loc_output) const {
+		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {
 			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
-		void printOutput(const std::variant<LocalRef, LirGlobal>& output, std::ostream& loc_output) {
-			variant_match(output) {
-				variant_case(LocalRef, local) { printLocal(local, loc_output); }
-				variant_case(LirGlobal, global) { printGlobal(global, loc_output); }
-				variant_default { CORE_PANIC("Unhandled variant in printOutput"); }
+		void printOutput(const LIRPlace& output, std::ostream& loc_output) {
+			variant_match(output.base) {
+				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
+				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
+			for (const auto& arg: output.access_chain) loc_output << "." << name(arg).strView();
 		}
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
 				variant_case(i64, value) { output << value; }
 				variant_case(bool, value) { output << (value ? "true" : "false"); }
-				variant_case(LocalRef, local) { printLocal(local, output); }
+				variant_case(LIRPlace, place) {
+					variant_match(place.base) {
+						variant_case(LIRLocalRef, local) { printLocal(local, output); }
+						variant_case(LIRGlobal, global) { printGlobal(global, output); }
+					}
+					for (const auto& arg: place.access_chain) output << "." << name(arg).strView();
+				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
 					output << "Func(" << func.mangled_name.strView() << ")";
 				}
-				variant_case(LirGlobal, global) { printGlobal(global, output); }
 				variant_default { CORE_PANIC("Unhandled variant in printValue"); }
 			}
 		}
@@ -179,7 +184,7 @@ namespace compiler::lir {
 	};
 
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LirPrinter{ ctx, output }.debugPrint(*this);
+		LIRPrinter{ ctx, output }.debugPrint(*this);
 	}
 
 	FunctionLiteral FunctionLiteral::fromFunction(const Function& function) {

@@ -21,13 +21,13 @@ namespace compiler::driver {
 			// Discard information-less globals.
 			if (not hout_global.type.getType().carriesInformation()) continue;
 
-			auto lir_global = lir::LirGlobal::fromHOUT(ctx, hout_global);
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
 
 			variant_match(hout_global.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_function
-						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
-					auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->value();
+					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
 						// @TODO: add legit dtors when implemented #929
@@ -56,8 +56,8 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
-			CRef mir_function = &ctx.query<mir::LowerToMirFunction>({ hout_function })->value();
-			auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+			CRef mir_function = &ctx.query<mir::LowerToMIRFunction>({ hout_function })->value();
+			auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 			functions.push_back(lir_function);
 		}
 
