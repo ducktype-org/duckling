@@ -4,6 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::{Context, bail};
+use clap::ArgMatches;
+use duck::{DuckCtx, QuackResult};
+use rustvil::{fs::PathExt, os::CommandExt};
+use tracing::debug;
+
 use crate::driver::{
     cli,
     cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
@@ -11,13 +17,6 @@ use crate::driver::{
     global_cli_options::GlobalCliOptions,
     subcommands::exec_for,
 };
-use duck_lib::DuckCtx;
-use duck_lib::QuackResult;
-
-use anyhow::{Context, bail};
-use clap::ArgMatches;
-use rustvil::{fs::PathExt, os::CommandExt};
-use tracing::debug;
 
 pub fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);

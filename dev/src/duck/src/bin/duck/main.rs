@@ -1,10 +1,7 @@
-use duck_lib::terminal::Terminal;
-
 pub mod driver;
 pub mod indent;
 
-use duck_lib::DuckCtx;
-use duck_lib::InternalError;
+use duck::{DuckCtx, InternalError, terminal::Terminal};
 use indent::indent;
 use tracing::debug;
 

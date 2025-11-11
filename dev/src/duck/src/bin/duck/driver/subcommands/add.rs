@@ -1,10 +1,8 @@
 use anyhow::bail;
-use clap::Command;
-use duck_lib::QuackResult;
+use clap::{ArgMatches, Command};
+use duck::{DuckCtx, QuackResult};
 
-use crate::DuckCtx;
 use crate::driver::cli_ext::{CommandExt, subcommand};
-use clap::ArgMatches;
 
 pub fn get_parser() -> Command {
     subcommand("add")

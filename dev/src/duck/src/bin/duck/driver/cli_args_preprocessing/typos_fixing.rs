@@ -2,20 +2,17 @@ use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use anyhow::bail;
 use clap::ArgMatches;
-use duck_lib::QuackResult;
+use duck::{DuckCtx, QuackResult};
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::{
-    DuckCtx,
-    driver::{
-        cli,
-        cli_args_preprocessing::{
-            builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},
-            levenshtein,
-        },
-        subcommands::subcommands,
+use crate::driver::{
+    cli,
+    cli_args_preprocessing::{
+        builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},
+        levenshtein,
     },
+    subcommands::subcommands,
 };
 
 pub fn fix_typos(

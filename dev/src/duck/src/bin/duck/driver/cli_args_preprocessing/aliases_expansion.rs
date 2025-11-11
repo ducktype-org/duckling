@@ -1,17 +1,15 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{
-    DuckCtx,
-    driver::{
-        cli,
-        cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
-    },
-};
 use anyhow::bail;
 use clap::ArgMatches;
-use duck_lib::QuackResult;
+use duck::{DuckCtx, QuackResult};
 use itertools::chain;
 use tracing::debug;
+
+use crate::driver::{
+    cli,
+    cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
+};
 
 pub fn expand_aliases(
     args: ArgMatches,

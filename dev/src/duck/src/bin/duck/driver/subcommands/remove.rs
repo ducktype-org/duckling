@@ -1,11 +1,8 @@
 use anyhow::bail;
 use clap::{ArgMatches, Command};
-use duck_lib::QuackResult;
+use duck::{DuckCtx, QuackResult};
 
-use crate::{
-    DuckCtx,
-    driver::cli_ext::{CommandExt, flag, subcommand},
-};
+use crate::driver::cli_ext::{CommandExt, flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("remove")

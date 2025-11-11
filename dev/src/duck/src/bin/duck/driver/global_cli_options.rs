@@ -2,11 +2,9 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use clap::ArgMatches;
-use duck_lib::QuackResult;
+use duck::QuackResult;
 
-use crate::DuckCtx;
-use crate::InternalError;
-use duck_lib::terminal::Verbosity;
+use duck::{DuckCtx, InternalError, terminal::Verbosity};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
@@ -16,7 +14,7 @@ pub enum Color {
 }
 
 impl FromStr for Color {
-    type Err = crate::InternalError;
+    type Err = duck::InternalError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {

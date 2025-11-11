@@ -1,11 +1,8 @@
 use anyhow::bail;
 use clap::{Arg, ArgMatches, Command};
-use duck_lib::QuackResult;
+use duck::{DuckCtx, QuackResult};
 
-use crate::{
-    DuckCtx,
-    driver::cli_ext::{flag, subcommand},
-};
+use crate::driver::cli_ext::{flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("tree")

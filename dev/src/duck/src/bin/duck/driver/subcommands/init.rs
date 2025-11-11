@@ -1,11 +1,8 @@
 use anyhow::bail;
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use duck_lib::QuackResult;
+use duck::{DuckCtx, QuackResult};
 
-use crate::{
-    DuckCtx,
-    driver::cli_ext::{flag, optional, subcommand},
-};
+use crate::driver::cli_ext::{flag, optional, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("init")
