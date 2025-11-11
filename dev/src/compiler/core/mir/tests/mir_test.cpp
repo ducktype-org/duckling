@@ -100,7 +100,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
-			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
 
 			auto i64_type = ctx.query<QueryIntegralType>(64);
 
@@ -211,7 +211,7 @@ private:
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
@@ -255,7 +255,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
 		});
 	}
 
