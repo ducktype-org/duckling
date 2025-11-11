@@ -152,4 +152,12 @@ namespace base {
 	 * @return A vector of separated strings.
 	 */
 	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
+
+	/**
+	 * @brief Generates a random alphanumeric string of the specified length.
+	 * @param length The length of the random string to generate.
+	 * @return A random alphanumeric string.
+	 */
+	std::string generateRandomString(u64 length);
+
 }

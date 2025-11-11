@@ -6,7 +6,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/internal/queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/stable_container.hpp>
@@ -62,7 +61,7 @@ namespace compiler::helios::houtgen {
 					makeBox<code::AccessExpr>(
 						ctx,
 						makeBox<code::IdentifierExpr>(ctx, result_symbol),
-						name(fields.at(i).getSymbol())
+						fields.at(i).getSymbol()
 					),
 					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
 				));

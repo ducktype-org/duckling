@@ -21,7 +21,7 @@ namespace compiler::backend_llvm {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
-	void Module::addGlobalToModule(const lir::LirGlobal& lir_global) {
+	void Module::addGlobalToModule(const lir::LIRGlobal& lir_global) {
 		addGlobalToModuleImpl(impl.refMut(), lir_global);
 	}
 

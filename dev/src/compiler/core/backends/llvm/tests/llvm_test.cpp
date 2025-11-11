@@ -48,15 +48,15 @@ private:
 
 			for (auto& hout_glob: top_level->glob_data) {
 				if (!hout_glob.type.getType().carriesInformation()) continue;
-				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
-						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						lir_func->debugPrint(ctx, std::cerr);
 						std::cerr << "\n\n\n";
 						ctors.push_back(lir_func);
@@ -85,7 +85,7 @@ private:
 					compiler::helios::mangler::getSpecialMangledName<
 						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
 						ctx,
-						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 							frontend::moduleName(module) }
 					)
 				);
@@ -99,7 +99,7 @@ private:
 					compiler::helios::mangler::getSpecialMangledName<
 						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
 						ctx,
-						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 							frontend::moduleName(module) }
 					)
 				);
@@ -107,8 +107,8 @@ private:
 			}
 
 			for (auto& fun: top_level->functions) {
-				CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+				CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});

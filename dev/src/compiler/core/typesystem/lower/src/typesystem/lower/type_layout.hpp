@@ -443,18 +443,31 @@ namespace tsl {
 		MBox<TypeLayout> pointee;
 
 	public:
+		// @TODO: #1520 Explicitly delete all copy constructors and assignment operators
+		// when interning is introduced. Maybe delete the move counterparts as well.
 		PointerTypeLayout(const PointerTypeLayout& other):
-			  TypeLayoutABC(other.getSize(), other.getSourceType()),
+			  TypeLayoutABC(other),
 			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
-		Ref<TypeLayout> operator->() const { return pointee.toOpt().value(); }
+		PointerTypeLayout(PointerTypeLayout&& other) = default;
+
+		PointerTypeLayout& operator=(const PointerTypeLayout& other) = delete;
+
+		PointerTypeLayout& operator=(PointerTypeLayout&& other) noexcept {
+			TypeLayoutABC::operator=(other);
+			pointee = std::move(other.pointee);
+			return *this;
+		}
 
 		[[nodiscard]]
 		Ref<TypeLayout> getPointee() const {
-			return operator->();
+			return pointee.toOpt().value();
 		}
 
-		bool hasPointee() { return pointee; }
+		[[nodiscard]]
+		bool hasPointee() const {
+			return pointee;
+		}
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
@@ -500,39 +513,70 @@ namespace tsl {
 	/**
 	 * @brief The ADT representing the layout of a type.
 	 *
-	 * @note Use operator() when matching against the variant's options.
+	 * @note Use getVariant() when matching against the variant's options.
 	 */
-	class TypeLayout: public TypeLayoutDirectVariant {
+	class TypeLayout final {
 	public:
-		// Use when matching against the variant's options.
-		TypeLayoutDirectVariant& operator()() { return *this; }
+		TypeLayoutDirectVariant variant;
 
-		// Use when matching against the variant's options.
-		const TypeLayoutDirectVariant& operator()() const { return *this; }
+		TypeLayout(EmptyTypeLayout layout): variant(std::move(layout)) {}
 
-		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
+		TypeLayout(IntegralTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(FloatTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(VariantTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(TupleTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(DynamicArrayTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(ClassTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(FunctionalTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(PointerTypeLayout layout): variant(std::move(layout)) {}
+
+		TypeLayout(StringTypeLayout layout): variant(std::move(layout)) {}
+
+		[[nodiscard]]
+		bool operator==(const TypeLayout&) const
+			= default;
+
+		[[nodiscard]]
+		const TypeLayoutDirectVariant& getVariant() const {
+			return variant;
+		}
 
 		/**
-		 * @copydoc TypeLayoutABC::getSize
+		 * @brief Get the total size of a layout, in bits.
+		 * @return The total size of a layout, in bits.
 		 */
 		[[nodiscard]]
 		Bits getSize() const;
 
 		/**
-		 * @copydoc TypeLayoutABC::getSourceType
+		 * @brief Get the source type of a layout.
+		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
 		tsh::AbstractType getSourceType() const;
 
 		/**
-		 * @copydoc TypeLayoutABC::toStringDefinition
+		 * @brief Get a string describing the layout in a human-friendly format.
+		 * @param ctx The query context for fetching layouts of components in composite layouts.
+		 * @param recursive Whether the layout string should contain full layout strings of
+		 * composite component types. Setting this to `false` will result in the use of IDs instead.
+		 * @param indent The indent at which to print. Mostly used internally for recursive prints.
+		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
 			const;
 
 		/**
-		 * @copydoc TypeLayoutABC::toStringIdentification
+		 * @brief Get a relatively short string identifying the type layout.
+		 * @return A string identifying the type layout.
 		 */
 		[[nodiscard]]
 		std::string toStringIdentification() const;
