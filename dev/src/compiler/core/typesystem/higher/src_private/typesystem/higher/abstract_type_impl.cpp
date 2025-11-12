@@ -207,7 +207,7 @@ namespace tsh {
 		return &empty;
 	}
 
-	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
 

@@ -34,7 +34,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
-			// @TODO: #1479 this a mock that works for now, make it better
+			// @TODO: #1412 #1531 this a mock that works for now, make it better
 
 			auto        interface = key.type.getInterface(ctx);
 			const auto& elements  = interface->getElementsWithName(key.name);

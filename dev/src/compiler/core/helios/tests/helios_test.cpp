@@ -198,11 +198,10 @@ private:
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			// @TODO: #1485 uncomment when methods are added to type interfaces
-			// auto get_a_result = h_interface.lookup(ctx, base::StrID("get_a"));
-			// ASSERT_TRUE(get_a_result->isSingle());
-			// auto get_a_symbol = get_a_result->leaves.at(0);
-			// ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
+			auto get_a_result = h_interface.lookup(ctx, base::StrID("get_a"));
+			ASSERT_TRUE(get_a_result->isSingle());
+			auto get_a_symbol = get_a_result->leaves.at(0);
+			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
 			auto empty_result = h_interface.lookup(ctx, base::StrID("non_existent_symbol"));
 			ASSERT_TRUE(empty_result->isEmpty());
