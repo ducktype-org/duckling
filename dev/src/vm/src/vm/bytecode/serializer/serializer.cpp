@@ -68,6 +68,11 @@ namespace vm::code {
 		out << ";";
 	}
 
+	template<>
+	void writeOpcode(const instructions::Comment& comment, std::ostream& out) {
+		writeComment(comment.comment.strView(), out);
+	}
+
 	void writeInstruction(Instruction instruction, std::ostream& out) {
 		VISIT(instruction, i, writeOpcode(i, out));
 	}
