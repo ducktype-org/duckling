@@ -28,8 +28,8 @@ namespace compiler::driver {
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
 			auto path = artifacts_options.artifacts_path;
 			if (not path.exists()) {
-				if (path.isPhysical()) {
-					auto file = fs::FileManager::createPhysicalFolder(path);
+				if (path.isPhysical() || path.isRelative()) {
+					auto file = fs::FileManager::createPhysicalFolder(path.absolute());
 					CORE_ASSERT(
 						file.exists(), "Failed to create artifacts folder: " + path.string()
 					);
