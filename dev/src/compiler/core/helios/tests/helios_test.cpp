@@ -198,7 +198,7 @@ private:
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			auto get_a_result = h_interface.lookup(ctx, base::StrID("get_a"));
+			auto get_a_result = h_interface.lookup(ctx, base::StrID("getA"));
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves.at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
