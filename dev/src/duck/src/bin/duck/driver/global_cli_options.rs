@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use anyhow::anyhow;
 use clap::ArgMatches;
 use quackpack::QuackResult;
 
@@ -22,11 +21,10 @@ impl FromStr for Color {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            _ => Err(anyhow!(
+            _ => Err(InternalError::from(format!(
                 "`{}` is not a valid color. This should be guarded by a parser",
                 s
-            )
-            .into()),
+            ))),
         }
     }
 }
@@ -45,9 +43,7 @@ impl GlobalCliOptions {
         let color = matches
             .get_one::<String>("color")
             .ok_or_else(|| {
-                InternalError::from(anyhow!(
-                    "this should be guarded by a default color in parser"
-                ))
+                InternalError::from("this should be guarded by a default color in parser")
             })
             .and_then(|color| Color::from_str(color))?;
         Ok(Self {

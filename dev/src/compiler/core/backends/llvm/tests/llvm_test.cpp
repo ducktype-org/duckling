@@ -13,6 +13,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <regex>
 #include <utility>
 
 class LLVMBackendTest final: public tester::TestSuite {
@@ -27,6 +28,7 @@ public:
 		TESTER_ADD_TEST(arithmeticTest);
 		TESTER_ADD_TEST(comparisonTest);
 		TESTER_ADD_TEST(functionCalls);
+		TESTER_ADD_TEST(castsLoweringTest);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
@@ -48,15 +50,15 @@ private:
 
 			for (auto& hout_glob: top_level->glob_data) {
 				if (!hout_glob.type.getType().carriesInformation()) continue;
-				lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
 						mir_func->debugPrint(std::cerr);
 						std::cerr << "\n\n\n";
-						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						lir_func->debugPrint(ctx, std::cerr);
 						std::cerr << "\n\n\n";
 						ctors.push_back(lir_func);
@@ -85,7 +87,7 @@ private:
 					compiler::helios::mangler::getSpecialMangledName<
 						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
 						ctx,
-						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 							frontend::moduleName(module) }
 					)
 				);
@@ -99,7 +101,7 @@ private:
 					compiler::helios::mangler::getSpecialMangledName<
 						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
 						ctx,
-						compiler::helios::mangler::special_symbol_keys::LirModuleID{
+						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
 							frontend::moduleName(module) }
 					)
 				);
@@ -107,8 +109,8 @@ private:
 			}
 
 			for (auto& fun: top_level->functions) {
-				CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+				CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});
@@ -188,6 +190,41 @@ private:
 	}
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+
+	void castsLoweringTest() {
+		// Load module with cast test functions
+		auto llvm_module = getLLVMModuleFromPath("modules/casts");
+
+		std::string ir = llvm_module.dumpLLVMToString();
+
+		bool has_i64_to_f64
+			= std::regex_search(ir, std::regex{ R"(sitofp\s+i64\s+%[^\s]+\s+to\s+double)" });
+		assertTrue(has_i64_to_f64, "Expected sitofp i64->f64 in IR");
+
+		bool has_f64_to_i32_sat = std::regex_search(
+			ir, std::regex{ R"(call\s+i32\s+@llvm\.fptosi\.sat\.i32\.f64\(double %\S+\))" }
+		);
+		assertTrue(has_f64_to_i32_sat, "Expected call to llvm.fptosi.sat.i32.f64 in IR");
+
+		bool has_i64_to_i32
+			= std::regex_search(ir, std::regex{ R"(trunc\s+i64\s+%\S+\s+to\s+i32)" });
+		assertTrue(has_i64_to_i32, "Expected trunc i64->i32 in IR");
+
+		bool has_i32_to_i64
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i32\s+%\S+\s+to\s+i64)" });
+		assertTrue(has_i32_to_i64, "Expected sext/zext i32-> i64 in IR");
+
+		bool has_i1_to_i32
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i1\s+%\S+\s+to\s+i32)" });
+		assertTrue(has_i1_to_i32, "Expected sext/zext i1-> i32 in IR");
+
+		bool has_i32_to_i1 = std::regex_search(ir, std::regex{ R"(icmp\sne\si64)" });
+		assertTrue(has_i32_to_i1, "Expected icmp ne i64 in IR");
+
+		bool has_i16_to_i64
+			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
+		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
+	}
 };
 
 

@@ -23,6 +23,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -72,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
+		TESTER_ADD_TEST(testCastsHout);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -295,10 +297,11 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
-		auto [_, root_scope]           = getModule(fs::File(path("test_modules/expressions")));
-		auto [func_module, func_scope] = getModule(fs::File(path("test_modules/function_calls")));
-		auto sym_v1                    = getChain("V1", root_scope).back();
-		auto square_sym                = getChain("square", func_scope).back();
+		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
+		const auto [func_module, func_scope]
+			= getModule(fs::File(path("test_modules/function_calls")));
+		const auto a_obj      = getChain("aObj", root_scope).back();
+		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto int_type = ctx.query<tsh::QueryIntegralType>({ 64 });
@@ -321,11 +324,17 @@ private:
 			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralIntExpr>(ctx, 2));
 
 			// Build call arguments for square function
+			const compiler::helios::SymID a_field
+				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
+			          ->value()
+			          .getType()
+			          .getInterface(ctx)
+			          .getElementsWithName(base::StrID("a"))
+			          .back()
+			          .getSymbol();
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
 			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx,
-				makeBox<compiler::helios::code::IdentifierExpr>(ctx, sym_v1),
-				base::StrID("field")
+				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
 			));
 
 			// Build sequence expressions
@@ -1574,6 +1583,62 @@ private:
 				std::stringstream non_detailed_log;
 				ctx.logger.dumpLog(false, non_detailed_log);
 			});
+		}
+	}
+
+	void testCastsHout() {
+		// Load the small test module we added under test_modules/casts
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/casts")));
+
+		// Get HOUT for the module and find the function HOUT unit
+		auto  hout_unit = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& function  = hout_unit->functions[0];
+
+		// Helper: find a VariableStmt by name in the function body and return its initializer expr
+		auto get_var_init_expr
+			= [&](const base::StrID& varname) -> CRef<compiler::helios::code::Expr> {
+			for (const auto& st_box: function.body->statements) {
+				if (auto var_ptr
+				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
+					if (compiler::helios::name(var_ptr->helios_symbol) == varname) {
+						CORE_ASSERT(var_ptr->initial_value.has_value(), "Expected initializer");
+						return var_ptr->initial_value->ref();
+					}
+				}
+			}
+			CORE_PANIC("Variable not found in function body");
+		};
+
+		// Use helper to fetch initializer expressions and assert CastExpr insertion
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("explicit"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto f64_type = query::entryPoint<tsh::QueryFloatType>({ 64 });
+			ASSERT_EQUAL(f64_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("widen"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+			ASSERT_EQUAL(i64_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("bool_as_int"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+			ASSERT_EQUAL(i32_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("int_as_bool"));
+			auto cast_ptr
+				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
 		}
 	}
 

@@ -371,10 +371,10 @@ namespace compiler::helios::code {
 	 * For now it is a mockup, doesn't work.
 	 */
 	struct AccessExpr final: public Expr {
-		Box<Expr>   base;
-		base::StrID field;
+		Box<Expr> base;
+		SymID     field;
 
-		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		AccessExpr(query::Context& ctx, Box<Expr> base, SymID field);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -384,7 +384,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		AccessExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field);
+		AccessExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, SymID field);
 	};
 
 	/**
@@ -463,6 +463,33 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			std::vector<base::Box<Expr>> expressions,
 			std::vector<BuiltinBinary>   operators
+		);
+	};
+
+	/**
+	 * @brief Represents a type cast expression for builtin types, such as "i64(..)".
+	 *
+	 * CastExpr performs a conversion of the source expression to the specified target type.
+	 * The result is an expression of the target type.
+	 */
+	struct CastExpr final: public Expr {
+		Box<Expr>         source_expr;
+		tsh::SymbolType<> target_type;
+
+		CastExpr(query::Context& ctx, Box<Expr> source_expr, tsh::SymbolType<> target_type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CastExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             source_expr,
+			tsh::SymbolType<>     target_type
 		);
 	};
 }

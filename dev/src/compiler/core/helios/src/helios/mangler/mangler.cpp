@@ -116,7 +116,7 @@ namespace compiler::helios::mangler {
 			// @todo: backreference -- this will be added in the next PR
 		}
 
-		std::string pathPrefix(special_symbol_keys::LirModuleID mod_id) {
+		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
 			// "M" <module-name>                                 // standalone module
 			return base::strConcat("M", mod_id.id);
 
@@ -333,8 +333,8 @@ namespace compiler::helios::mangler {
 		template<>
 		std::string specialSymbolEncoding<
 			ManglingSymbolKind::ModuleConstructor,
-			special_symbol_keys::LirModuleID>(
-			query::Context&, special_symbol_keys::LirModuleID module_id
+			special_symbol_keys::LIRModuleID>(
+			query::Context&, special_symbol_keys::LIRModuleID module_id
 		) {
 			// <encoding> ::= <path>
 			// <path> ::= <path-prefix> <symbol-name>
@@ -352,8 +352,8 @@ namespace compiler::helios::mangler {
 		template<>
 		std::string specialSymbolEncoding<
 			ManglingSymbolKind::ModuleDestructor,
-			special_symbol_keys::LirModuleID>(
-			query::Context&, special_symbol_keys::LirModuleID module_id
+			special_symbol_keys::LIRModuleID>(
+			query::Context&, special_symbol_keys::LIRModuleID module_id
 		) {
 			auto path_prefix = pathPrefix(module_id);
 			return base::strConcat(path_prefix, "GHmdE");
@@ -464,8 +464,8 @@ namespace compiler::helios::mangler {
 	template<>
 	base::StrID getSpecialMangledName<
 		ManglingSymbolKind::ModuleConstructor,
-		special_symbol_keys::LirModuleID>(
-		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+		special_symbol_keys::LIRModuleID>(
+		query::Context& ctx, special_symbol_keys::LIRModuleID mod_id
 	) {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
 			.symbol_key = mod_id, .kind = ManglingSymbolKind::ModuleConstructor });
@@ -474,8 +474,8 @@ namespace compiler::helios::mangler {
 	template<>
 	base::StrID getSpecialMangledName<
 		ManglingSymbolKind::ModuleDestructor,
-		special_symbol_keys::LirModuleID>(
-		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+		special_symbol_keys::LIRModuleID>(
+		query::Context& ctx, special_symbol_keys::LIRModuleID mod_id
 	) {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
 			.symbol_key = mod_id, .kind = ManglingSymbolKind::ModuleDestructor });

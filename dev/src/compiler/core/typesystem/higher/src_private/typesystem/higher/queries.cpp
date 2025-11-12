@@ -7,7 +7,7 @@
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsh::internal {
+namespace tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();

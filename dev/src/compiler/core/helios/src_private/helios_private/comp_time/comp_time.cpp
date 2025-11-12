@@ -367,6 +367,11 @@ namespace compiler::helios {
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
+
+			void visitCastExpr(const code::CastExpr&) final {
+				// @TODO: #1529 Think about this in the future.
+				result = query::QError(errors::Failed());
+			}
 		};
 
 		/**
@@ -394,10 +399,10 @@ namespace compiler::helios {
 			std::vector<CRef<lir::Function>> all_lir_functions;
 			for (const SymID& func_id: *dependencies) {
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
-				auto mir_func_result  = ctx.query<mir::LowerToMirFunction>({ hout_func_result });
+				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
 				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
 				CRef<mir::Function> mir_func = &mir_func_result->value();
-				auto lir_func_result         = ctx.query<lir::LowerToLirFunction>({ mir_func });
+				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know which
 				// function to call in the VM.
