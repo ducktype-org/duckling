@@ -140,8 +140,8 @@ namespace tsh {
 		representation = "Class " + name(symbol).str();
 	}
 
-	const TypeInterface& ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
-		return *ctx.query<QueryInterfaceOfClass>(this);
+	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
+		return ctx.query<QueryInterfaceOfClass>(this);
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx

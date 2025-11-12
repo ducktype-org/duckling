@@ -60,10 +60,10 @@ namespace tsh {
 		// Then, this definition should become pure virtual.
 		// PR NOTE: just add panics for those types that do not have interfaces yet.
 		[[nodiscard]]
-		virtual const TypeInterface& getInterface(query::Context& ctx) const {
+		virtual CRef<TypeInterface> getInterface(query::Context& ctx) const {
 			(void) ctx;
 			static TypeInterface empty{};
-			return empty;
+			return &empty;
 		}
 
 		/**
@@ -602,7 +602,7 @@ namespace tsh {
 		static constexpr Kind STATIC_KIND = Kind::Class;
 
 		[[nodiscard]]
-		const TypeInterface& getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 
 		explicit ClassAbstractTypeImpl(compiler::helios::SymID symbol);
 

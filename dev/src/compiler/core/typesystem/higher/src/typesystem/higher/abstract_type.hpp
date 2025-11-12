@@ -100,7 +100,7 @@ namespace tsh {
 		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		const TypeInterface& getInterface(query::Context& ctx) const;
+		base::CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
