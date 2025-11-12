@@ -31,33 +31,44 @@ const NEEDS_F32 = 1.0 + 1.0 / 2048.0;       # 1 + 2^{-11}
 const NEEDS_F64 = 1.0 + 1.0 / 16777216.0;   # 1 + 2^{-24}
 const NEEDS_F128 = 1.0 + 1.0 / 1152921504606846976.0; # 1 + 2^{-60}
 
+const const_i8 = 100i8;
 const const_i16 = 32000i16;
 const const_i32 = -2000000000i32;
 const const_i64 = 9000000000000000000i64;
 
+const const_u8 = 100u8;
 const const_u16 = 65000u16;
 const const_u32 = 4000000000u32;
 const const_u64 = 18446744073709551615u64;
+
 const const_f32 = -456.789f32;
 const const_f64 = 1.23456789e10f64;
 const const_f128 = -3.33e-100f128;
 
+var var_i8 = 100i8;
 var var_i16 = 32000i16;
 var var_i32 = -2000000000i32;
 var var_i64 = 9000000000000000000i64;
+
+var var_u8 = 100u8;
 var var_u16 = 65000u16;
 var var_u32 = 4000000000u32;
 var var_u64 = 18446744073709551615u64;
+
 var var_f32 = -456.789f32;
 var var_f64 = 1.23456789e10f64;
 var var_f128 = -3.33e-100f128;
 
+let let_i8 = 100i8;
 let let_i16 = 32000i16;
 let let_i32 = -2000000000i32;
 let let_i64 = 9000000000000000000i64;
+
+let let_u8 = 100u8;
 let let_u16 = 65000u16;
 let let_u32 = 4000000000u32;
 let let_u64 = 18446744073709551615u64;
+
 let let_f32 = -456.789f32;
 let let_f64 = 1.23456789e10f64;
 let let_f128 = -3.33e-100f128;

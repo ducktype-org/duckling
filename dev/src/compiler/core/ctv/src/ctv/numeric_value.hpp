@@ -17,10 +17,10 @@
 namespace compiler::numeric_value {
 	/**
 	 * @brief Represents a numeric value representing a numeric literal.
-	 * @TODO: #1498 Add support for i8, u8, f16, i128.
+	 * @TODO: #1498 Add support for f16, f128, i128.
 	 */
 	class NumericValue {
-		using Storage = std::variant<i16, i32, i64, u16, u32, u64, f32, f64>;
+		using Storage = std::variant<i8, i16, i32, i64, u8, u16, u32, u64, f32, f64>;
 		Storage value;
 
 	public:

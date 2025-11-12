@@ -169,9 +169,11 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
+		const auto i8_type  = query::entryPoint<tsh::QueryIntegralType>({ 8, Signed });
 		const auto i16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
 		const auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto u8_type  = query::entryPoint<tsh::QueryIntegralType>({ 8, Unsigned });
 		const auto u16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
 		const auto u32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
 		const auto u64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
@@ -190,27 +192,33 @@ private:
 			ASSERT_EQUAL(expected_mutability, symbol_type.getMutability());
 		};
 
+		verify_type_and_mutability("const", "i8", i8_type, Immutable);
 		verify_type_and_mutability("const", "i16", i16_type, Immutable);
 		verify_type_and_mutability("const", "i32", i32_type, Immutable);
 		verify_type_and_mutability("const", "i64", i64_type, Immutable);
+		verify_type_and_mutability("const", "u8", u8_type, Immutable);
 		verify_type_and_mutability("const", "u16", u16_type, Immutable);
 		verify_type_and_mutability("const", "u32", u32_type, Immutable);
 		verify_type_and_mutability("const", "u64", u64_type, Immutable);
 		verify_type_and_mutability("const", "f32", f32_type, Immutable);
 		verify_type_and_mutability("const", "f64", f64_type, Immutable);
 
+		verify_type_and_mutability("let", "i8", i8_type, Immutable);
 		verify_type_and_mutability("let", "i16", i16_type, Immutable);
 		verify_type_and_mutability("let", "i32", i32_type, Immutable);
 		verify_type_and_mutability("let", "i64", i64_type, Immutable);
+		verify_type_and_mutability("let", "u8", u8_type, Immutable);
 		verify_type_and_mutability("let", "u16", u16_type, Immutable);
 		verify_type_and_mutability("let", "u32", u32_type, Immutable);
 		verify_type_and_mutability("let", "u64", u64_type, Immutable);
 		verify_type_and_mutability("let", "f32", f32_type, Immutable);
 		verify_type_and_mutability("let", "f64", f64_type, Immutable);
 
+		verify_type_and_mutability("var", "i8", i8_type, Mutable);
 		verify_type_and_mutability("var", "i16", i16_type, Mutable);
 		verify_type_and_mutability("var", "i32", i32_type, Mutable);
 		verify_type_and_mutability("var", "i64", i64_type, Mutable);
+		verify_type_and_mutability("var", "u8", u8_type, Mutable);
 		verify_type_and_mutability("var", "u16", u16_type, Mutable);
 		verify_type_and_mutability("var", "u32", u32_type, Mutable);
 		verify_type_and_mutability("var", "u64", u64_type, Mutable);
