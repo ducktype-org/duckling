@@ -118,15 +118,7 @@ namespace compiler::helios::code {
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
-
-			numeric_value::NumericValue numeric_result
-				= numeric_value::NumericValue::createMinimized(parsed_value);
-
-			// @TODO: #859 For now, until the cast instuction are added we cast all the deduced
-			// types to i64 to avoid adding a type specifier to every numeric literal in the tests.
-			return numeric_value::NumericValue{ std::visit(
-				[&](auto&& val) { return static_cast<i64>(val); }, numeric_result.getStorage()
-			) };
+			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(

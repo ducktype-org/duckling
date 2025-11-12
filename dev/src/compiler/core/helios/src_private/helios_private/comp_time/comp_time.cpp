@@ -14,6 +14,9 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -121,13 +124,8 @@ namespace compiler::helios {
 								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
 									using LhsNumT = std::decay_t<decltype(lhs_val)>;
 									using RhsNumT = std::decay_t<decltype(rhs_val)>;
-									// TODOP: Type minimization in comp time version.
-							        // Type potentially to big to prevent overflow.
-							        // using ResultT = std::conditional_t<
-							        // 	std::is_integral_v<LhsNumT> && std::is_integral_v<RhsNumT>,
-							        // 	i64,
-							        // 	f128>;
 
+									// TODOP: Fix that so its assumed both sides are the same type.
 									using ResultT = std::common_type_t<LhsNumT, RhsNumT>;
 
 									auto maybe_lhs_coerced = lhs.template coerceTo<ResultT>();
@@ -180,9 +178,7 @@ namespace compiler::helios {
 										);
 									}
 
-									return CompileTimeValue{ NumericValue{ result } };
-									// TODOP: Literal minimization version.
-							        // return CompileTimeValue{ NumericValue::createMinimized(result) };
+									return CompileTimeValue{ NumericValue::createMinimized(result) };
 								},
 								lhs.getStorage(),
 								rhs.getStorage()
@@ -212,7 +208,7 @@ namespace compiler::helios {
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
 				auto expr_result = evalHoutExpr(ctx, expr.expr.ref());
 				if (expr_result.hasError()) {
-					result = query::QError(errors::Failed(expr_result.error()));
+					result = query::QError(errors::Failed());
 					return;
 				}
 
@@ -288,7 +284,7 @@ namespace compiler::helios {
 			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
 				auto cond_result = evalHoutExpr(ctx, expr.condition.ref());
 				if (cond_result.hasError()) {
-					result = query::QError(errors::Failed(cond_result.error()));
+					result = query::QError(errors::Failed());
 					return;
 				}
 
@@ -367,13 +363,13 @@ namespace compiler::helios {
 
 				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
 				if (evaluated.hasError()) {
-					result = query::QError(errors::Failed(evaluated.error()));
+					result = query::QError(errors::Failed());
 					return;
 				}
 				auto prev_value = evaluated.value();
 				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
 					if (next_expr.hasError()) {
-						result = query::QError(errors::Failed(evaluated.error()));
+						result = query::QError(errors::Failed());
 						return;
 					}
 
@@ -424,7 +420,7 @@ namespace compiler::helios {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExpr(ctx, sub_type.ref());
 					if (sub_type_result.hasError()) {
-						result = query::QError(errors::Failed(sub_type_result.error()));
+						result = query::QError(errors::Failed());
 						return;
 					}
 
@@ -445,9 +441,21 @@ namespace compiler::helios {
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
 
-			void visitCastExpr(const code::CastExpr&) final {
-				// @TODO: #1529 Think about this in the future.
-				result = query::QError(errors::Failed());
+			void visitCastExpr(const code::CastExpr& cast) final {
+				// @note: We assume that if we got here, then the cast if valid.
+				auto expr_to_cast = evalHoutExpr(ctx, cast.source_expr.ref());
+				if (expr_to_cast.hasError()) {
+					result = query::QError(errors::Failed());
+					return;
+				}
+				const auto& ctv     = expr_to_cast.value();
+				const auto& numeric = ctv.get<NumericValue>();
+				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
+
+				auto maybe_new_numeric = numeric->castTo(cast.target_type);
+				result                 = maybe_new_numeric.has_value()
+				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
+				                           : query::QError(errors::Failed());
 			}
 		};
 
