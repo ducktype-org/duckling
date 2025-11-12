@@ -32,8 +32,6 @@ namespace {
 							dvm_type_name = base::StrID("i32");
 						else if constexpr (sizeof(NumT) <= 8)
 							dvm_type_name = base::StrID("i64");
-						else if constexpr (sizeof(NumT) <= 16)
-							dvm_type_name = base::StrID("i128");
 						else {
 							throw base::NotYetImplemented(
 								"Conversion from CTV to VmValue for bigger numeric sizes"
@@ -126,8 +124,6 @@ namespace {
 				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
 			else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
 				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f64>() } };
-			else if (bit_size <= Bits{ 128 } && vm_type_name == "i128")
-				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f128>() } };
 
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ReturnConversionFailed,

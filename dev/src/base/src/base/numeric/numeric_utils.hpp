@@ -25,9 +25,10 @@ namespace base {
 		} else if constexpr (!IS_SOURCE_INTEGRAL
 		                     && IS_TARGET_INTEGRAL) {  // Floating point to integral.
 			if (std::isnan(value) || std::isinf(value)) return false;
-			SourceType truncated = std::trunc(value);
-			return value >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
-			    && value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
+			[[maybe_unused]] SourceType truncated
+				= std::trunc(value);  // Removes the floating point part. No rounding.
+			return truncated >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
+			    && truncated <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
 		} else if constexpr (IS_SOURCE_INTEGRAL
 		                     && !IS_TARGET_INTEGRAL) {  // Integral to floating point.
 			// Check if we lose no precision when casting to the desired integral type.

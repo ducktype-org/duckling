@@ -11,7 +11,6 @@
 
 #include <query_framework/context.hpp>
 
-#include <cmath>
 #include <type_traits>
 #include <variant>
 
@@ -21,7 +20,7 @@ namespace compiler::numeric_value {
 	 * @TODO: #1498 Add support for i8, u8, f16, i128.
 	 */
 	class NumericValue {
-		using Storage = std::variant<i16, i32, i64, u16, u32, u64, f32, f64, f128>;
+		using Storage = std::variant<i16, i32, i64, u16, u32, u64, f32, f64>;
 		Storage value;
 
 	public:
@@ -51,8 +50,8 @@ namespace compiler::numeric_value {
 				if (base::fitsIn<u64>(value)) return NumericValue{ static_cast<u64>(value) };
 				return NumericValue{ static_cast<i64>(value) };
 			} else if constexpr (std::is_floating_point_v<T>) {
-				f128 high_prec = static_cast<f128>(value);
-				if (static_cast<f128>(static_cast<f32>(high_prec)) == high_prec)
+				f64 high_prec = static_cast<f64>(value);
+				if (static_cast<f64>(static_cast<f32>(high_prec)) == high_prec)
 					return NumericValue{ static_cast<f32>(high_prec) };
 				// Highest precision needed.
 				return NumericValue{ high_prec };
@@ -84,9 +83,8 @@ namespace compiler::numeric_value {
 		[[nodiscard]] base::Optional<TargetType> coerceTo() const {
 			return std::visit(
 				[&](auto&& stored_val) -> base::Optional<TargetType> {
-					if (base::fitsIn<TargetType>(stored_val)) {
+					if (base::fitsIn<TargetType>(stored_val))
 						return static_cast<TargetType>(stored_val);
-					}
 					return {};
 				},
 				value

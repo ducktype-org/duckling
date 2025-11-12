@@ -103,7 +103,7 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> parseFloat(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			f128 parsed_value = 0;
+			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
@@ -132,7 +132,7 @@ namespace compiler::helios::code {
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
-			f128 parsed_value = 0;
+			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
@@ -184,14 +184,13 @@ namespace compiler::helios::code {
 			return parseFloat<f32>(value, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::f64:
 			return parseFloat<f64>(value, position, ctx);
-		case lang_def::NumericLiteralTypeSpecifier::f128:
-			return parseFloat<f128>(value, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::i8:
 		case lang_def::NumericLiteralTypeSpecifier::u8:
 		case lang_def::NumericLiteralTypeSpecifier::f16:
 		case lang_def::NumericLiteralTypeSpecifier::f80:
 		case lang_def::NumericLiteralTypeSpecifier::u128:
 		case lang_def::NumericLiteralTypeSpecifier::i128:
+		case lang_def::NumericLiteralTypeSpecifier::f128:
 			throw base::NotYetImplemented(base::strConcat(
 				"Unhandled type specifier in hout of expr: ",
 				lang_def::numericLiteralTypeSpecifierToStr(type_specifier)

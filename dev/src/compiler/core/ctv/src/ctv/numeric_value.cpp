@@ -12,17 +12,7 @@ namespace compiler::numeric_value {
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
 	[[nodiscard]] std::string NumericValue::toString() const {
-		return std::visit(
-			[&](auto&& value) {
-				using T = std::decay_t<decltype(value)>;
-				if constexpr (std::is_same_v<T, f128>)
-					// No overload of std::to_string exists for __Float128, thus we cast it.
-					return base::toString(static_cast<f64>(value));
-				else
-					return base::toString(value);
-			},
-			value
-		);
+		return std::visit([&](auto&& value) { return base::toString(value); }, value);
 	}
 
 	tsh::SymbolType<> NumericValue::getTypeOfStoredValue(query::Context& ctx) const {

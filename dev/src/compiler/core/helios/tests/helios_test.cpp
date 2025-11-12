@@ -169,15 +169,14 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
-		const auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
-		const auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
-		const auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
-		const auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
-		const auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
-		const auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type  = query::entryPoint<tsh::QueryFloatType>(32);
-		const auto f64_type  = query::entryPoint<tsh::QueryFloatType>(64);
-		const auto f128_type = query::entryPoint<tsh::QueryFloatType>(128);
+		const auto i16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
+		const auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		const auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto u16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
+		const auto u32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
+		const auto u64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
+		const auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
+		const auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
 
 		auto verify_type_and_mutability = [&](std::string_view  keyword,
 		                                      std::string_view  type_suffix,
@@ -199,7 +198,6 @@ private:
 		verify_type_and_mutability("const", "u64", u64_type, Immutable);
 		verify_type_and_mutability("const", "f32", f32_type, Immutable);
 		verify_type_and_mutability("const", "f64", f64_type, Immutable);
-		verify_type_and_mutability("const", "f128", f128_type, Immutable);
 
 		verify_type_and_mutability("let", "i16", i16_type, Immutable);
 		verify_type_and_mutability("let", "i32", i32_type, Immutable);
@@ -209,7 +207,6 @@ private:
 		verify_type_and_mutability("let", "u64", u64_type, Immutable);
 		verify_type_and_mutability("let", "f32", f32_type, Immutable);
 		verify_type_and_mutability("let", "f64", f64_type, Immutable);
-		verify_type_and_mutability("let", "f128", f128_type, Immutable);
 
 		verify_type_and_mutability("var", "i16", i16_type, Mutable);
 		verify_type_and_mutability("var", "i32", i32_type, Mutable);
@@ -219,7 +216,6 @@ private:
 		verify_type_and_mutability("var", "u64", u64_type, Mutable);
 		verify_type_and_mutability("var", "f32", f32_type, Mutable);
 		verify_type_and_mutability("var", "f64", f64_type, Mutable);
-		verify_type_and_mutability("var", "f128", f128_type, Mutable);
 
 		// // Test literals with different bases
 		// // TODOP: Write about the default approach.
