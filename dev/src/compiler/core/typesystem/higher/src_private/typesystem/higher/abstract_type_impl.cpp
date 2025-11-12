@@ -145,17 +145,89 @@ namespace tsh {
 	}
 
 	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context& ctx) const {
-			(void) ctx;
+		// note: we can extend interface later if needed	
+		(void) ctx;
 			static TypeInterface empty{};
 			return &empty;
 		}
 
 	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context& ctx) const {
+		// note: we can extend interface later if needed	
+		(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> ByteAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
 			(void) ctx;
 			static TypeInterface empty{};
 			return &empty;
 		}
 
+	CRef<TypeInterface> BoolAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> CharAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> IntegralAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> FloatAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> RawPointerAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> PointerAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			// note: we can extend interface later if needed
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			throw base::NotYetImplemented("String type interface not yet implemented");
+		}
+
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
+		}
+
+	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			throw base::NotYetImplemented("Tuple type interface not yet implemented");
+		}
+
+	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			throw base::NotYetImplemented("Function type interface not yet implemented");
+		}
+
+	CRef<TypeInterface> VariantAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			throw base::NotYetImplemented("Variant type interface not yet implemented");
+		}
+
+	
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
