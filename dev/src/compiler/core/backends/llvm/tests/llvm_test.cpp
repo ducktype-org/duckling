@@ -214,9 +214,11 @@ private:
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i32\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i32_to_i64, "Expected sext/zext i32-> i64 in IR");
 
-		bool has_i8_to_i32
+		bool has_i1_to_i32
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i1\s+%\S+\s+to\s+i32)" });
-		assertTrue(has_i8_to_i32, "Expected sext/zext i1-> i32 in IR");
+		assertTrue(has_i1_to_i32, "Expected sext/zext i1-> i32 in IR");
+
+		bool has_i32_to_i1 = std::regex_search(ir, std::regex{ R"(icmp\sne\si64)" });
 
 		bool has_i16_to_i64
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });

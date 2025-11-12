@@ -314,6 +314,12 @@ namespace compiler::helios::code {
 			return ChainState::ofExpr(std::move(res.value()));
 		}
 
+		/**
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
+		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
+		 * Currently used only for type casts.
+		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState, errors::Failed> {
