@@ -47,7 +47,7 @@ impl DuckCtx {
         &self.duck_cfg
     }
 
-    #[cfg(feature = "test_utils")]
+    #[cfg(test)]
     pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
         &mut self.duck_cfg
     }

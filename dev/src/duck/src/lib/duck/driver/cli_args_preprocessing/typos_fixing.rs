@@ -149,7 +149,7 @@ fn parse_fixed_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
         .try_get_matches_from(new_cli_args)?)
 }
 
-#[cfg(all(test, feature = "test_utils"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

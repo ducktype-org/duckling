@@ -123,13 +123,13 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
     Ok(())
 }
 
-#[cfg(all(test, feature = "test_utils"))]
+#[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use crate::{
         DuckCtx,
-        driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
+        duck::driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
     };
 
     #[test]
