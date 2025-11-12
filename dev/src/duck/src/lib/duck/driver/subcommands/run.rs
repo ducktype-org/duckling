@@ -1,10 +1,10 @@
 use std::ffi::OsString;
 
+use crate::{DuckCtx, QuackResult};
 use anyhow::bail;
 use clap::{ArgMatches, Command, value_parser};
-use duck::{DuckCtx, QuackResult};
 
-use crate::driver::cli_ext::{CommandExt, flag, multi, subcommand};
+use crate::duck::driver::cli_ext::{CommandExt, flag, multi, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("run")

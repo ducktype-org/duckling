@@ -3,7 +3,9 @@ use rustvil::os::env::Env;
 use tracing::debug;
 
 use crate::{
-    QuackResult, quackpack::paths::config_file, terminal::Terminal, toml_config::TomlConfig,
+    QuackResult,
+    quackpack::util::paths::config_file,
+    util_common::{terminal::Terminal, toml_config::TomlConfig},
 };
 
 #[derive(Debug, Default)]

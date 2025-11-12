@@ -1,5 +1,5 @@
+use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
-use duck::{DuckCtx, QuackResult};
 
 mod add;
 mod build;

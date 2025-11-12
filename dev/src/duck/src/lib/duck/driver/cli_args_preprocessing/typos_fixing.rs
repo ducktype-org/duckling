@@ -1,12 +1,12 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
+use crate::{DuckCtx, QuackResult};
 use anyhow::bail;
 use clap::ArgMatches;
-use duck::{DuckCtx, QuackResult};
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::driver::{
+use crate::duck::driver::{
     cli,
     cli_args_preprocessing::{
         builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},

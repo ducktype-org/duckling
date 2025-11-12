@@ -1,13 +1,8 @@
-pub mod duck_cfg;
-pub mod duck_ctx;
-pub mod error;
-pub mod terminal;
-pub mod toml_config;
-
+pub mod duck;
 pub mod quackpack;
+pub mod util_common;
 
-pub use duck_ctx::DuckCtx;
-pub use error::InternalError;
-pub use quackpack::str_id::*;
+pub use quackpack::util::str_id::*;
+pub use util_common::{duck_ctx::DuckCtx, error::InternalError};
 
 pub type QuackResult<T> = anyhow::Result<T>;

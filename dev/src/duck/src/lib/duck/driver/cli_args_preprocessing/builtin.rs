@@ -1,6 +1,6 @@
 use tracing::debug;
 
-use crate::driver::subcommands::exec_for;
+use crate::duck::driver::subcommands::exec_for;
 
 // All builtin aliases should be set here.
 // Format is `(alias, command)`. Current code assumes only „simple” aliases,

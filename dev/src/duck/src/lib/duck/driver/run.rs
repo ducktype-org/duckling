@@ -4,13 +4,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::{DuckCtx, QuackResult};
 use anyhow::{Context, bail};
 use clap::ArgMatches;
-use duck::{DuckCtx, QuackResult};
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
 
-use crate::driver::{
+use crate::duck::driver::{
     cli,
     cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
     cli_no_err,

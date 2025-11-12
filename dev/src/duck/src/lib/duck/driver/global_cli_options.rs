@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
+use crate::QuackResult;
 use anyhow::anyhow;
 use clap::ArgMatches;
-use duck::QuackResult;
 
-use duck::{DuckCtx, InternalError, terminal::Verbosity};
+use crate::{DuckCtx, InternalError, util_common::terminal::Verbosity};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
@@ -14,7 +14,7 @@ pub enum Color {
 }
 
 impl FromStr for Color {
-    type Err = duck::InternalError;
+    type Err = crate::InternalError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {

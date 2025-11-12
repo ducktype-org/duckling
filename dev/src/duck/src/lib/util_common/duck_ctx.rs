@@ -1,6 +1,9 @@
 use rustvil::os::env::Env;
 
-use crate::{QuackResult, duck_cfg::DuckCfg, terminal::Terminal, toml_config::TomlConfig};
+use crate::{
+    QuackResult,
+    util_common::{duck_cfg::DuckCfg, terminal::Terminal, toml_config::TomlConfig},
+};
 
 #[derive(Debug)]
 pub struct DuckCtx {
