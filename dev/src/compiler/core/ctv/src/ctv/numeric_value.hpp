@@ -54,8 +54,6 @@ namespace compiler::numeric_value {
 				f128 high_prec = static_cast<f128>(value);
 				if (static_cast<f128>(static_cast<f32>(high_prec)) == high_prec)
 					return NumericValue{ static_cast<f32>(high_prec) };
-				if (static_cast<f128>(static_cast<f64>(high_prec)) == high_prec)
-					return NumericValue{ static_cast<f64>(high_prec) };
 				// Highest precision needed.
 				return NumericValue{ high_prec };
 			}
@@ -86,41 +84,10 @@ namespace compiler::numeric_value {
 		[[nodiscard]] base::Optional<TargetType> coerceTo() const {
 			return std::visit(
 				[&](auto&& stored_val) -> base::Optional<TargetType> {
-					using StoredType = std::decay_t<decltype(stored_val)>;
-
-					// Integer to integer.
-					if constexpr (std::is_integral_v<StoredType> && std::is_integral_v<TargetType>) {
-						if constexpr (std::is_signed_v<StoredType>
-					                  && std::is_unsigned_v<TargetType>) {
-							if (stored_val < 0) return {};
-						}
-						// Check for over/underflow.
-						if (stored_val > std::numeric_limits<TargetType>::max()) return {};
-						if (stored_val < std::numeric_limits<TargetType>::min()) return {};
+					if (base::fitsIn<TargetType>(stored_val)) {
+						return static_cast<TargetType>(stored_val);
 					}
-					// Floating point to integer.
-					else if constexpr (std::is_floating_point_v<StoredType>
-				                       && std::is_integral_v<TargetType>) {
-						if (std::isnan(stored_val) || std::isinf(stored_val)) return {};
-						if ((stored_val
-					         > static_cast<StoredType>(std::numeric_limits<TargetType>::max()))
-					        || (stored_val
-					            < static_cast<StoredType>(std::numeric_limits<TargetType>::min()))) {
-							return {};
-						}
-					}
-					// Integer/Floating point to floating point.
-					else if constexpr (std::is_floating_point_v<TargetType>) {
-						if (static_cast<f128>(stored_val) > std::numeric_limits<TargetType>::max()) {
-							return {};
-						} else if (static_cast<f128>(stored_val)
-					               < -std::numeric_limits<TargetType>::max()) {
-							return {};
-						}
-					}
-
-					// If we got here, than the conversion if safe.
-					return static_cast<TargetType>(stored_val);
+					return {};
 				},
 				value
 			);

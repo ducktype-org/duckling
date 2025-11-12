@@ -1,44 +1,43 @@
 #pragma once
 
+#include <cmath>
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 namespace base {
 	/**
-	 * @brief Checks if a value of a source integral type can be safely represented in a target
-	 * integral type without overflow or underflow.
+	 * @brief Checks if a value of a source arithmetic type can be safely represented in a target
+	 * arithmetic type without overflow/underflow or other invalid conversions.
 	 * @tparam Target The target integral type.
 	 * @tparam Source The source integral type.
 	 * @param value The value to check.
 	 * @return True if the value fits, false otherwise.
 	 */
 	template<typename TargetType, typename SourceType>
-	requires(std::is_integral_v<TargetType> && std::is_integral_v<SourceType>)
+	requires(std::is_arithmetic_v<TargetType> && std::is_arithmetic_v<SourceType>)
 	constexpr bool fitsIn(SourceType value) {
-		constexpr bool is_source_signed = std::is_signed_v<SourceType>;
-		constexpr bool is_target_signed = std::is_signed_v<TargetType>;
+		constexpr bool IS_SOURCE_INTEGRAL = std::is_integral_v<SourceType>;
+		constexpr bool IS_TARGET_INTEGRAL = std::is_integral_v<TargetType>;
 
-		if constexpr (is_source_signed && is_target_signed) {  // Signed to signed.
-			if constexpr (sizeof(TargetType) >= sizeof(SourceType)) return true;
-
-			// Target is smaller the source, check bounds.
+		if constexpr (IS_SOURCE_INTEGRAL && IS_TARGET_INTEGRAL) {  // Integral to integral.
+			return std::in_range<TargetType>(value);
+		} else if constexpr (!IS_SOURCE_INTEGRAL
+		                     && IS_TARGET_INTEGRAL) {  // Floating point to integral.
+			if (std::isnan(value) || std::isinf(value)) return false;
+			SourceType truncated = std::trunc(value);
 			return value >= static_cast<SourceType>(std::numeric_limits<TargetType>::min())
 			    && value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
-		} else if constexpr (!is_source_signed && !is_target_signed) {  // Unsigned to unsigned.
+		} else if constexpr (IS_SOURCE_INTEGRAL
+		                     && !IS_TARGET_INTEGRAL) {  // Integral to floating point.
+			// Check if we lose no precision when casting to the desired integral type.
+			return static_cast<SourceType>(static_cast<TargetType>(value)) == value;
+		} else {  // Floating point to floating point.
 			if constexpr (sizeof(TargetType) >= sizeof(SourceType)) return true;
-
-			// Target is smaller the source, check bounds. Upcasting to the bigger source type is
-			// safe here.
-			return value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
-		} else if constexpr (is_source_signed && !is_target_signed) {  // Signed to unsigned.
-			if (value < 0) return false;
-			if constexpr (sizeof(TargetType) >= sizeof(SourceType)) return true;
-			// Target is smaller than Source so the widening cast is safe here.
-			return value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
-		} else {  // Unsigned to signed
-			if constexpr (sizeof(TargetType) > sizeof(SourceType)) return true;
-			// Target is smaller than Source so the widening cast is safe here.
-			return value <= static_cast<SourceType>(std::numeric_limits<TargetType>::max());
+			if (std::isnan(value)) return true;
+			if (std::isinf(value)) return std::numeric_limits<TargetType>::has_infinity;
+			return value >= -std::numeric_limits<TargetType>::max()
+			    && value <= std::numeric_limits<TargetType>::max();
 		}
 	}
 
