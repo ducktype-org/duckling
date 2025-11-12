@@ -12,7 +12,7 @@ namespace compiler::helios {
 	 * @brief Create a zero literal HOUT expression of the given symbol type.
 	 */
 	Box<code::Expr> createZeroLiteralOfType(query::Context& ctx, const tsh::SymbolType<> type) {
-		auto zero_literal = makeBox<code::LiteralNumericExpr>(ctx, 0);
+		auto zero_literal = makeBox<code::LiteralNumericExpr>(ctx, i64(0));
 		if (zero_literal->expression_type.getType() == type.getType()) return zero_literal;
 
 		auto coerced = makeBox<code::CastExpr>(ctx, std::move(zero_literal), type);
