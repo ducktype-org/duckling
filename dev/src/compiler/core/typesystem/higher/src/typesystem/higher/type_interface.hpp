@@ -182,7 +182,11 @@ namespace tsh {
 	/**
 	 * @brief An aggregate of the elements of the interface of an object.
 	 *
-	 * @note Expected to be used predominantly for symbol resolution in type-dependent contexts.
+	 * @note Expected to be used predominantly for getting structural information about the type
+	 * content.
+	 * @important It is used in type-instance lookup,
+	 * but it does not implement the lookup logic directly, and should not be used for that.
+	 * Use HInterface for that instead.
 	 *
 	 * Full information about all elements of an interface is obtained via the `getElements` method.
 	 * The returned map is indexed by string IDs (instead of symbols) because element names may be
