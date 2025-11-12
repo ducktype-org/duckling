@@ -308,13 +308,10 @@ namespace tsh {
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
 			// Implicit coercions allow checking against zero,
-			// as well as promoting to greater sizes and to floating point
-			// numbers for physics simulations or similar
+			// as well as promoting to greater sizes
 			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::Integral)
-			    // && IntegralAbstractType(target).getSize() > size)
-			    // @TODO: #1461 Make implicit narrowing conversion illegal
-			    || target.getKind() == Kind::Float;
+			    || ((target.getKind() == Kind::Integral)
+			        && (IntegralAbstractType(target).getSize() > size));
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }

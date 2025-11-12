@@ -516,7 +516,7 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
+				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -546,6 +546,18 @@ namespace compiler::helios {
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (If)");
+				if (condition->expression_type.getType().getKind() != tsh::Kind::Bool) {
+					auto coercion = canCoerce(
+						ctx,
+						condition->expression_type.getSymbolType(),
+						tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
+					                        tsh::ReferenceKind::Direct,
+					                        tsh::Mutability::Mutable })
+					);
+					if (coercion.hasError())
+						CORE_PANIC("Not handling errors here yet... (If condition coercion)");
+					condition = coercion.value().coerce(ctx, std::move(condition));
+				}
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
@@ -599,13 +611,11 @@ namespace compiler::helios {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 					          .expect("Not handling errors here yet... (variable initial value)");
-
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
-
-					auto coercion = canCoerce(
-						ctx, initial_value->expression_type.getSymbolType(), symbol_type
-					);
+					auto coercion           = canCoerce(
+                        ctx, initial_value->expression_type.getSymbolType(), symbol_type
+                    );
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -624,12 +634,14 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
+						coercion.value().coerce(ctx, std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override {}
+			void visitConst(pst::Access<pst::Const>) override {
+				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

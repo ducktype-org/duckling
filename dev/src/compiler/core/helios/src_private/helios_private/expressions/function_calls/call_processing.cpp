@@ -235,7 +235,7 @@ namespace compiler::helios::code {
 			}();
 
 			if (coercions.has_value()) {
-				Box<Expr> coerced_expr = coercions.value()[i].coerce(std::move(expr));
+				Box<Expr> coerced_expr = coercions.value()[i].coerce(ctx, std::move(expr));
 				final_arguments.push_back(std::move(coerced_expr));
 			} else {
 				final_arguments.push_back(std::move(expr));
