@@ -36,6 +36,9 @@ namespace query::internal {
 		bool hasStableHash() const;
 
 		// @TODO: #1433 determinate if we should keep this method
+		// This method is used to determinate whether the query is registered - it points to query
+		// actually implemented in the system Dummy queries from previous graph aren't registered
+		// Unregistered query does not have QueryData associated with it
 		[[nodiscard]] bool registered() const;
 
 		[[nodiscard]]
@@ -66,3 +69,11 @@ namespace query::internal {
 	QueryID outsideWorldQueryID();
 
 }
+
+template<>
+struct std::hash<query::internal::QueryID> {
+	[[nodiscard]]
+	size_t operator()(const query::internal::QueryID& id) const {
+		return id.asInt();
+	}
+};

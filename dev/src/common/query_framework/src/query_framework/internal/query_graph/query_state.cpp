@@ -10,15 +10,6 @@
 #include <iostream>
 #include <unordered_set>
 
-namespace std {
-	template<>
-	struct hash<query::internal::QueryID> {
-		size_t operator()(const query::internal::QueryID& id) const {
-			return hash<u64>()(id.asInt());
-		}
-	};
-}
-
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
@@ -225,7 +216,7 @@ namespace query::internal {
 
 			// Insert the node with an empty dependency list first (ensures parent exists for
 			// addDependency)
-			query_graph.node_deps.insert_or_assign(get_node_id_mapping(node), std::vector<NodeID>{});
+			query_graph.node_deps.emplace(get_node_id_mapping(node), std::vector<NodeID>{});
 
 			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(

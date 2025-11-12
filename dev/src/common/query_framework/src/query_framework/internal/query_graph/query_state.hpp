@@ -57,6 +57,10 @@ namespace query::internal {
 		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
 		 */
 		struct PreviousCompilation final {
+			/**
+			 * The immutable query graph from the previous compilation.
+			 * @note We assume that this graph is correct and does not contain cycles.
+			 */
 			const QueryGraph                 graph;
 			base::HashMap<NodeID, PrevColor> node_colors;
 
@@ -158,6 +162,11 @@ namespace query::internal {
 		 * @note This function should be called after the red-green sweep to ensure that only the
 		 * relevant nodes are merged.
 		 * This function will only merge nodes that are not merged yet.
+		 * This function assumes that the previous graph is acyclic.
+		 * It will panic if a cycle is detected during the merge.
+		 * The nodes with unstable hashes will be assigned new QueryIDs to avoid collisions in the
+		 * current graph. The new QueryIDs will be a 'dummy' queries. Dummy queries in next
+		 * compilation will be unregistered.
 		 */
 		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
 	};

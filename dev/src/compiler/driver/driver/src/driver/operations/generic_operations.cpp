@@ -116,8 +116,10 @@ namespace compiler::driver {
 			return output;
 		}
 
-		// Load precompiled artifact from disk without performing any compilation.
-		// Returns Optional empty if the underlying file does not exist anymore.
+		/**
+		 * Load precompiled artifact from disk without performing any compilation.
+		 * Returns Optional empty if the underlying file does not exist anymore.
+		 */
 		static auto loadFromDisc(const QKey& key) -> base::Optional<artifacts::FileArtifact> {
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);

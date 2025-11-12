@@ -52,8 +52,8 @@ private:
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
 		ASSERT_TRUE(!prev_colors->empty());
 
-		int green_count = 0;
-		int red_count   = 0;
+		u64 green_count = 0;
+		u64 red_count   = 0;
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
 				if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Green)
@@ -66,6 +66,8 @@ private:
 		}
 		std::cerr << "Green nodes: " << green_count << ", Red nodes: " << red_count << '\n';
 		ASSERT_TRUE(green_count > 0);
+		// functions_1/functions_1.dmf there is a change in variable name a -> c in function main()
+		// this should result in only one red node in the previous graph
 		ASSERT_TRUE(red_count == 1);
 
 
