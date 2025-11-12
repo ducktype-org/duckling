@@ -282,9 +282,9 @@ namespace tsl {
 		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
 		Bits                                 total_size;
 
-		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
+		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(CRef<tsh::TypeInterface>
 		                                                                   interface) {
-			const auto&                        elements = interface.getElementsByName();
+			const auto&                        elements = interface->getElementsByName();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 

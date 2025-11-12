@@ -17,7 +17,7 @@ namespace compiler::helios::houtgen {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
 			const SymID               class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface& class_interface = class_type.getInterface(ctx);
+			auto class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
 			using Variable            = GeneratedSymbolData::Variable;
@@ -27,7 +27,7 @@ namespace compiler::helios::houtgen {
 			// Construct the constructor's type.
 			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the ctor symbol and declaration.

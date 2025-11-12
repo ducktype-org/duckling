@@ -328,7 +328,7 @@ private:
 			          ->value()
 			          .getType()
 			          .getInterface(ctx)
-			          .getElementsWithName(base::StrID("a"))
+			          ->getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;

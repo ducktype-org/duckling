@@ -632,7 +632,7 @@ namespace tsh {
 		[[nodiscard]]
 		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
 			const auto& elements_with_same_name
-				= getInterface(ctx).getElementsByName().at(name(sym));
+				= getInterface(ctx)->getElementsByName().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");

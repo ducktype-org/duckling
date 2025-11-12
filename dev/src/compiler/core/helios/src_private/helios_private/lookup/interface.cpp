@@ -36,8 +36,8 @@ namespace compiler::helios {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			// @TODO: #1479 this a mock that works for now, make it better
 
-			const auto& interface = key.type.getInterface(ctx);
-			const auto& elements  = interface.getElementsWithName(key.name);
+			auto interface = key.type.getInterface(ctx);
+			const auto& elements  = interface->getElementsWithName(key.name);
 
 			LookupResult result;
 			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());

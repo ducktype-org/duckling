@@ -304,30 +304,30 @@ private:
 
 		withContextDo([&](query::Context& ctx) -> void {
 			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
-			TypeInterface           my_class_interface = my_class_type.getInterface(ctx);
+			CRef<TypeInterface>           my_class_interface = my_class_type.getInterface(ctx);
 
 			const SymID a_field_symbol = [&] {
-				const auto& matching = my_class_interface.getElementsWithName(base::StrID("a"));
+				const auto& matching = my_class_interface->getElementsWithName(base::StrID("a"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 			const SymID b_field_symbol = [&] {
-				const auto& matching = my_class_interface.getElementsWithName(base::StrID("b"));
+				const auto& matching = my_class_interface->getElementsWithName(base::StrID("b"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 			const SymID c_field_symbol = [&] {
-				const auto& matching = my_class_interface.getElementsWithName(base::StrID("c"));
+				const auto& matching = my_class_interface->getElementsWithName(base::StrID("c"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 			const SymID d_field_symbol = [&] {
-				const auto& matching = my_class_interface.getElementsWithName(base::StrID("d"));
+				const auto& matching = my_class_interface->getElementsWithName(base::StrID("d"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();
 			const SymID e_field_symbol = [&] {
-				const auto& matching = my_class_interface.getElementsWithName(base::StrID("e"));
+				const auto& matching = my_class_interface->getElementsWithName(base::StrID("e"));
 				ASSERT_TRUE(matching.size() == 1);
 				return matching.at(0).getSymbol();
 			}();

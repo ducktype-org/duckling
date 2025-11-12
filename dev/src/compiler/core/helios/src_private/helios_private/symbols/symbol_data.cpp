@@ -42,7 +42,7 @@ namespace compiler::helios {
 					          .as<tsh::ClassAbstractType>();
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					auto class_fields = class_type.getInterface(ctx).getFieldsView();
+					auto class_fields = class_type.getInterface(ctx)->getFieldsView();
 					std::vector<tsh::SymbolType<>> param_types;
 					for (const auto& field: class_fields) param_types.push_back(field.getType(ctx));
 
