@@ -219,6 +219,7 @@ private:
 		assertTrue(has_i1_to_i32, "Expected sext/zext i1-> i32 in IR");
 
 		bool has_i32_to_i1 = std::regex_search(ir, std::regex{ R"(icmp\sne\si64)" });
+		assertTrue(has_i32_to_i1, "Expected icmp ne i64 in IR");
 
 		bool has_i16_to_i64
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
