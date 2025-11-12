@@ -144,6 +144,18 @@ namespace tsh {
 		return ctx.query<QueryInterfaceOfClass>(this);
 	}
 
+	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
+	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context& ctx) const {
+			(void) ctx;
+			static TypeInterface empty{};
+			return &empty;
+		}
+
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
