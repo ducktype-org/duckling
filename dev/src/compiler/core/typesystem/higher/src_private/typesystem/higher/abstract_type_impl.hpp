@@ -56,7 +56,8 @@ namespace tsh {
 		 * @return The TypeInterface of the type described by this class.
 		 */
 		[[nodiscard]]
-		virtual CRef<TypeInterface> getInterface(query::Context& ctx) const = 0;
+		virtual CRef<TypeInterface> getInterface(query::Context& ctx) const
+			= 0;
 
 		/**
 		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not
