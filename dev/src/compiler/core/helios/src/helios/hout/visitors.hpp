@@ -30,6 +30,7 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr,
 		CallExpr,
 		AccessExpr,
-		SequenceExpr
+		SequenceExpr,
+		CastExpr
 	);
 }

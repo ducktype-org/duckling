@@ -86,7 +86,7 @@ namespace compiler::driver {
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
-					llvm_module.debugDumpToFile(llvm_ir_path);
+					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
 				if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
 					base::StrID assembly_path

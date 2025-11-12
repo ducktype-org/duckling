@@ -29,7 +29,7 @@ namespace compiler::helios {
 		/**
 		 * Main function that creates a coerced expression from the old one.
 		 */
-		[[nodiscard]] Box<code::Expr> coerce(Box<code::Expr> from) const;
+		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
 		/**
 		 * The symbol type that was validated to be coercible.
 		 */
@@ -51,7 +51,9 @@ namespace compiler::helios {
 			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 		);
 
-		[[nodiscard]] bool isEmptyCoercion() const noexcept { return validated_from == to; }
+		[[nodiscard]] bool isEmptyCoercion() const noexcept {
+			return validated_from.getType() == to.getType();
+		}
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
 			return { from_and_to, from_and_to };

@@ -7,6 +7,8 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -315,6 +317,50 @@ namespace compiler::helios::code {
 		/**
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
+		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
+		 * Currently used only for type casts.
+		 */
+		auto processPSTExpr(
+			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState, errors::Failed> {
+			//  @TODO: #1530 This is a temporary mock implementation
+			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
+			if (hout_expr.hasError()) return query::QError(errors::Failed());
+
+			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.value().get())) {
+				auto args = call_expr->getArgs().unlock(query_ctx);
+				if (args->size() != 1) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							call_expr->getSourcePosition(), "Type cast expects a single argument"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				// Iterating over a single argument list, because the pst arguments
+				// have only iterator accessor.
+				for (auto&& arg: *args) {
+					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+					);
+					if (arg_expr.hasError()) return query::QError(errors::Failed());
+
+					auto cast_expr = makeBox<CastExpr>(
+						query_ctx, std::move(arg_expr.value()), literal_type_expr->value_type
+					);
+					return ChainState::ofExpr(std::move(cast_expr));
+				}
+			}
+
+			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+				keyword->getSourcePosition(), "Unsupported keyword literal in call expression"
+			));
+			return query::QError(errors::Failed());
+		}
+
+		/**
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
 		 * Case when as a first element we have an identifier not followed by a call expression,
 		 * like "foo.bar.c".
 		 */
@@ -361,7 +407,7 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(Box<Expr> /* current_expr */, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 
@@ -628,6 +674,10 @@ namespace compiler::helios::code {
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
 			    && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
+				this->index += 2;
+			} else if (isCurrentElement<pst::expr::KeywordLiteral>()
+			           && isNextElement<pst::expr::Call>()) {
+				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
 			} else {
 				error = firstStep<pst::ExprElement>();

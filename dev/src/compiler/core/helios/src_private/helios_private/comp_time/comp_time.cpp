@@ -444,6 +444,11 @@ namespace compiler::helios {
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
+
+			void visitCastExpr(const code::CastExpr&) final {
+				// @TODO: #1529 Think about this in the future.
+				result = query::QError(errors::Failed());
+			}
 		};
 
 		/**
