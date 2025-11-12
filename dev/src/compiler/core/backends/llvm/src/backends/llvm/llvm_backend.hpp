@@ -80,7 +80,12 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param output_file Path where the output file will be saved.
 		 */
-		void debugDumpToFile(base::StrID output_file) const;
+		void dumpLLVMToFile(base::StrID output_file) const;
+
+		/**
+		 * @brief Dumps the LLVM IR to string.
+		 */
+		[[nodiscard]] std::string dumpLLVMToString() const;
 
 		[[nodiscard]]
 		base::OkBad verify() const;

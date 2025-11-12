@@ -59,6 +59,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanOr,
 	BooleanNot,
 
+	/** Cast is also parametrized by the source type and the target type */
+	Cast,
+
 	/** See readme.md for more info about destruct. */
 	Destruct,
 	/** See readme.md for more info about DestructIf. */
@@ -455,6 +458,29 @@ namespace compiler::mir {
 	}
 
 	/**
+	 * @brief Used to inform that the instruction doesn't require any additional parameters.
+	 */
+	struct NoInstrParameters final {};
+
+	struct CastParameters final {
+		/**
+		 * @brief The source type of the cast operation.
+		 */
+		tsh::SymbolType<> source_type;
+		/**
+		 * @brief The target type of the cast operation.
+		 */
+		tsh::SymbolType<> target_type;
+	};
+
+	/**
+	 * @brief Additional parameters for MIR instructions that depend on the operation type.
+	 * For example, cast instruction needs to know
+	 * from which type to which type it is casting.
+	 */
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+
+	/**
 	 * @brief Single instruction of MIR code.
 	 */
 	struct Instruction final {
@@ -466,6 +492,8 @@ namespace compiler::mir {
 
 		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
+
+		InstrParameters extra_params{ NoInstrParameters{} };
 
 		// @TODO: each Instruction should have source position reference
 
@@ -488,12 +516,14 @@ namespace compiler::mir {
 			base::Optional<MIRPlace>   output,
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
-			const ScopeRef             scope
+			const ScopeRef             scope,
+			InstrParameters            extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
+			  extra_params(extra_parameters),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& os) const;
