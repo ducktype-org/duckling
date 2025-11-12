@@ -28,7 +28,7 @@ namespace tsh {
 	class InterfaceElement final {
 	public:
 		/**
-		 * Kind of type interface element.
+		 * The kind of a type interface element.
 		 * @note In the future we might add more class-specific kinds here,
 		 * such as for example special-methods, base classes, etc.
 		 */
