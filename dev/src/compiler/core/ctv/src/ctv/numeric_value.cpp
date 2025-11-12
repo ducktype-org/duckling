@@ -9,8 +9,6 @@
 #include <type_traits>
 
 namespace compiler::numeric_value {
-	NumericValue::NumericValue() = default;
-
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
 	[[nodiscard]] std::string NumericValue::toString() const {

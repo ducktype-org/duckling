@@ -25,7 +25,7 @@ namespace compiler::numeric_value {
 		Storage value;
 
 	public:
-		NumericValue();
+		NumericValue() = delete;
 
 		/**
 		 * @brief Template constructor for all types which exist in the Storage variant.
@@ -43,8 +43,8 @@ namespace compiler::numeric_value {
 		[[nodiscard]] static NumericValue createMinimized(T value) {
 			if constexpr (std::is_integral_v<T>) {
 				// Prioritize signed types as they're more general.
-				if (base::fitsIn<i16>(value)) return NumericValue{ static_cast<i16>(value) };
-				if (base::fitsIn<u16>(value)) return NumericValue{ static_cast<u16>(value) };
+				// @note: For now, the smallest deduced type is `i32`. We may decide to deduce `i8`
+				// and `i16` in the future as well.
 				if (base::fitsIn<i32>(value)) return NumericValue{ static_cast<i32>(value) };
 				if (base::fitsIn<u32>(value)) return NumericValue{ static_cast<u32>(value) };
 				if (base::fitsIn<i64>(value)) return NumericValue{ static_cast<i64>(value) };

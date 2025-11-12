@@ -1,9 +1,9 @@
 #include "coercions.hpp"
 
+#include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/context.hpp>
-#include "helios/hout/elements/expr.hpp"
 
 namespace compiler::helios {
 

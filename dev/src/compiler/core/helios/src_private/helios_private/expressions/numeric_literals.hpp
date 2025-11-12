@@ -10,8 +10,10 @@ namespace compiler::helios::code {
 	 * f64), and type deduction for literals without an explicit type.
 	 *
 	 * @note: For a literal without an explicit type specifier, returns a numeric value containing
-	 * the minimal type in which a value can be stored. For example, for `150` it will return a
-	 * numeric value containing the smallest possible type `i16`.
+	 * the minimal type in which a value can be stored. For example, for `40000` it will return a
+	 * numeric value containing the smallest possible type `i32`.
+	 * @note: For now, the minimal type used in type deduction is `i32`, meaning a value of `256`
+	 * will be stored in a `i32` type, although it fits in `i16`).
 	 *
 	 * @param ctx The query context for logging errors.
 	 * @param literal_expr An PST expression representing the numeric literal.

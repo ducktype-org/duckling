@@ -17,7 +17,7 @@ namespace compiler::helios::code {
 		 * @return True `from_chars` succeeded, false if an error occurred, an appropriate compiler
 		 * error is logged.
 		 */
-		bool handleFromCharsResult(
+		bool handleFromCharsFailure(
 			const std::from_chars_result& result,
 			std::string_view              value,
 			const dia::SourcePosition&    position,
@@ -65,7 +65,7 @@ namespace compiler::helios::code {
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 
-			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 
 			if (!base::fitsIn<TargetInt>(parsed_value)) {
 				ctx.log(
@@ -87,7 +87,7 @@ namespace compiler::helios::code {
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 
-			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			if (!base::fitsIn<TargetUInt>(parsed_value)) {
 				ctx.log(
 					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -106,7 +106,7 @@ namespace compiler::helios::code {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
-			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			// @note: No need to check with fitsIn, since casting to smaller types is always okay.
 			return numeric_value::NumericValue(static_cast<TargetFloat>(parsed_value));
 		}
@@ -117,7 +117,7 @@ namespace compiler::helios::code {
 			i64  parsed_value = 0;
 			auto result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
-			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 
 			numeric_value::NumericValue numeric_result
 				= numeric_value::NumericValue::createMinimized(parsed_value);
@@ -134,7 +134,7 @@ namespace compiler::helios::code {
 		) {
 			f128 parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
-			if (!handleFromCharsResult(result, value, position, ctx)) return {};
+			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
 
