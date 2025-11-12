@@ -304,7 +304,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) -> void {
 			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
-			CRef<TypeInterface>           my_class_interface = my_class_type.getInterface(ctx);
+			CRef<TypeInterface>     my_class_interface = my_class_type.getInterface(ctx);
 
 			const SymID a_field_symbol = [&] {
 				const auto& matching = my_class_interface->getElementsWithName(base::StrID("a"));

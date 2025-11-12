@@ -16,8 +16,8 @@ namespace compiler::helios::houtgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, HOUTFunction) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
-			const SymID               class_symbol    = class_type.getSymbol();
-			auto class_interface = class_type.getInterface(ctx);
+			const SymID class_symbol    = class_type.getSymbol();
+			auto        class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
 			using Variable            = GeneratedSymbolData::Variable;
