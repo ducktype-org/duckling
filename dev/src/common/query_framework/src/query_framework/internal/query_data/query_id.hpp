@@ -35,10 +35,16 @@ namespace query::internal {
 		[[nodiscard]]
 		bool hasStableHash() const;
 
-		// @TODO: #1433 determinate if we should keep this method
-		// This method is used to determinate whether the query is registered - it points to query
-		// actually implemented in the system Dummy queries from previous graph aren't registered
-		// Unregistered query does not have QueryData associated with it
+		/**
+		 * @TODO: #1433 determinate if we should keep this method
+		 * This method is used to determinate whether the query is registered - it points to query
+		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
+		 * All other queries should be registered.
+		 *
+		 * Unregistered query does not have QueryData associated with it.
+		 * This also means that unregistered queries don't have any kind associated with it, but
+		 * they should be viewed as implicitly dummy.
+		 */
 		[[nodiscard]] bool registered() const;
 
 		[[nodiscard]]
