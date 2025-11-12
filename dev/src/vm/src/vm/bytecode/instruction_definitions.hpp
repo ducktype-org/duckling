@@ -89,6 +89,9 @@ DEF_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // sets pointer to null
 DEF_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
 
+// Copies an opaque value
+DEF_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
+
 
 // ========= ARITHMETIC OPERATIONS ========
 
@@ -279,7 +282,8 @@ DEF_INSTR(jmpIfNot_label, vm::opargs::Label)
 // ========= FUNCTION OPERATIONS ========
 
 DEF_INSTR(call_func, vm::opargs::FunctionName)
-DEF_INSTR(call_builtin_func, vm::opargs::BuiltinFunctionName)
+DEF_INSTR(call_builtinfunc, vm::opargs::BuiltinFunctionName)
+DEF_INSTR(call_cfunc, vm::opargs::ExtCFunctionName)
 
 // return while performing a tail call
 DEF_INSTR(ret_tailcall_func, vm::opargs::FunctionName)

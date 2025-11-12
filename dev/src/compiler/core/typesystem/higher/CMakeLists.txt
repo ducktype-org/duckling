@@ -6,9 +6,8 @@ add_library(TypeSystemHigher STATIC
         src/typesystem/higher/type_interface.cpp
         src/typesystem/higher/value_category.cpp
         src/typesystem/higher/all.cpp
-        src/typesystem/higher/internal/abstract_type_impl.cpp
-        src/typesystem/higher/internal/queries.cpp
-        src/typesystem/higher/expression_type.cpp
+        src_private/typesystem/higher/abstract_type_impl.cpp
+        src_private/typesystem/higher/queries.cpp
 )
 
 # @FIXME: adding HELIOS dependency for SymID introduces cyclic dependency (but everything compiles).
@@ -18,4 +17,4 @@ duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES TypeSystemHighe
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES TypeSystemHigher)
 
-duck_add_test(compiler tsh_overload_resolution tests/tsh_overload_resolution_test.cpp USES TypeSystemHigher HELIOS)
+duck_add_test(compiler tsh_fields tests/tsh_fields_test.cpp USES TypeSystemHigher HELIOS)

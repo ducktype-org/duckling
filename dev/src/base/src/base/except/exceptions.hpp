@@ -46,6 +46,7 @@ namespace base {
 
 		// @TODO: use Printer
 		void print(std::ostream& out) const;
+		void printToCerr() const;
 	};
 
 	/**
@@ -129,3 +130,17 @@ namespace base {
 #else
 	#define CORE_UNREACHABLE() std::unreachable()
 #endif
+
+/**
+ * Non throwing version of CORE_ASSERT.
+ * Should be used only in places where noexcept is required.
+ * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
+ * @note If this assertion fails the program will be terminated.
+ */
+#define CORE_ASSERT_NOEXCEPT(cond, what, ...)               \
+	try {                                                   \
+		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__); \
+	} catch (const base::Panic& e) {                        \
+		e.printToCerr();                                    \
+		std::terminate();                                   \
+	}

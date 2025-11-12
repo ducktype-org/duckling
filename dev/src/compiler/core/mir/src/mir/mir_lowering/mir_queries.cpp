@@ -23,11 +23,11 @@
 namespace compiler::mir {
 	namespace hc = helios::code;
 
-	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
+	u64 KeyOf_LowerToMIRFunction::queryUnstablePerfectHash() const {
 		return function.queryUnstablePerfectHash();
 	}
 
-	u64 KeyOf_LowerGlobalDataToMirFunction::queryUnstablePerfectHash() const {
+	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
 		return global_data.helios_symbol.queryUnstablePerfectHash();
 	}
 
@@ -103,7 +103,7 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
 	};
 
-	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
+	Function lowerToPreMIRFunction(query::Context& ctx, const helios::HOUTFunction& function) {
 		FunctionBuilder function_builder{
 			ctx,
 			FunctionSymID{ function.declaration->original_symbol },
@@ -201,7 +201,7 @@ namespace compiler::mir {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(LowerGlobalDataToMirCtor, LowerGlobalDataToMirFunctionResult) {
+	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
 				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
@@ -243,7 +243,7 @@ namespace compiler::mir {
 
 			assing_instr.fill(Instruction{
 				Operation::Assign,
-				{ MirGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ MIRGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
 				{ lowerexpr_res.getResult(function_builder) },
 				{},
 				function_builder.getTopLevelScope(),
@@ -268,12 +268,12 @@ namespace compiler::mir {
 		QUERY_AUTO_CACHE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMirCtor)
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
 
-	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
+	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
+			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
 
 			// second step: lifetime stuff
 			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
@@ -292,5 +292,5 @@ namespace compiler::mir {
 		QUERY_AUTO_CACHE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
 }

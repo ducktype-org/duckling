@@ -55,21 +55,19 @@ namespace vm {
 		std::ios_base::Init cin_cout_init;
 
 		/**
-		 * @brief The program being executed by this process.
-		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module or
-		 * is empty if no code was loaded.
-		 */
-		base::Optional<CRef<low::LowVMProgram>> loaded_program{};
-
-		Memory memory;
-
-
-		/**
 		 * @brief A loader instance for this VMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
 		loader::Loader loader{};
+
+		/**
+		 * @brief The program being executed by this process.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
+		 */
+		CRef<low::LowVMProgram> loaded_program;
+
+		Memory memory;
 
 		/**
 		 * @brief Storage for all VmValues which belong to this process.
@@ -121,7 +119,7 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> output();
 
-		base::Optional<api::ApiError> validateMemoryRequest();
+		base::Optional<api::ApiError> assertProcessCanRespond();
 
 		/**
 		 * @brief Gets the status of the process (memory-safe).

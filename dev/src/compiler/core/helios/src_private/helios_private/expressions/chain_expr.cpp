@@ -5,21 +5,22 @@
 
 #include "chain_expr.hpp"
 
-#include "call_processing.hpp"
-
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -304,13 +305,57 @@ namespace compiler::helios::code {
 			if (res.hasError()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						ident->getName().position,
-						base::strConcat("Failed to find correct function: ", ident->getName().value)
+						ident->getSourcePosition(),
+						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());
 			}
 			return ChainState::ofExpr(std::move(res.value()));
+		}
+
+		/**
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
+		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
+		 * Currently used only for type casts.
+		 */
+		auto processPSTExpr(
+			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState, errors::Failed> {
+			//  @TODO: #1530 This is a temporary mock implementation
+			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
+			if (hout_expr.hasError()) return query::QError(errors::Failed());
+
+			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.value().get())) {
+				auto args = call_expr->getArgs().unlock(query_ctx);
+				if (args->size() != 1) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							call_expr->getSourcePosition(), "Type cast expects a single argument"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				// Iterating over a single argument list, because the pst arguments
+				// have only iterator accessor.
+				for (auto&& arg: *args) {
+					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+					);
+					if (arg_expr.hasError()) return query::QError(errors::Failed());
+
+					auto cast_expr = makeBox<CastExpr>(
+						query_ctx, std::move(arg_expr.value()), literal_type_expr->value_type
+					);
+					return ChainState::ofExpr(std::move(cast_expr));
+				}
+			}
+
+			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+				keyword->getSourcePosition(), "Unsupported keyword literal in call expression"
+			));
+			return query::QError(errors::Failed());
 		}
 
 		/**
@@ -362,7 +407,7 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(Box<Expr> /* current_expr */, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
 			// @note this function is not run yet.
 
@@ -405,20 +450,27 @@ namespace compiler::helios::code {
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			const auto& looked_up_symbols = lookup_result->getAsSingle();
+			// Note that if multiple symbols were found, it results in an error and enters
+			// the following if statement. This is temporary, as symbol ambiguity should be
+			// handled differently than through dynamic field access.
 
 			if (looked_up_symbols.hasError()) {
-				auto node = makeBox<AccessExpr>(
-					query_ctx, std::move(current_expr), expr_access->getName().value
-				);
-				return ChainState::ofExpr(std::move(node));
-			} else {
-				auto sym = looked_up_symbols.value().back();
-				if (kind(sym) == SymbolKind::Namespace) {
-					result_sequence.push_back(std::move(current_expr));
-					return ChainState::ofNamespaceLike(sym);
-				}
+				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
+				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
+				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::QError(errors::Failed());
 			}
+
+			const auto sym = looked_up_symbols.value().back();
+			if (kind(sym) == SymbolKind::Field) {
+				auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
+				return ChainState::ofExpr(std::move(node));
+			} else if (kind(sym) == SymbolKind::Namespace) {
+				result_sequence.push_back(std::move(current_expr));
+				return ChainState::ofNamespaceLike(sym);
+			}
+			// @TODO: #1412 #1485 Support lookup of other kinds of symbols in classes.
+			return query::QError(errors::Failed());
 		}
 
 		/**
@@ -484,9 +536,7 @@ namespace compiler::helios::code {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 						expr_access->getName().position,
-						base::strConcat(
-							"Failed to find correct function: '", expr_access->getName().value
-						)
+						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
 					)
 				);
 				return query::QError(errors::Failed());
@@ -624,6 +674,10 @@ namespace compiler::helios::code {
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
 			    && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
+				this->index += 2;
+			} else if (isCurrentElement<pst::expr::KeywordLiteral>()
+			           && isNextElement<pst::expr::Call>()) {
+				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
 			} else {
 				error = firstStep<pst::ExprElement>();

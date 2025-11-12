@@ -1,13 +1,13 @@
 #include "query_hout_of_expr.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/collections/optional.hpp>
@@ -77,7 +77,7 @@ namespace compiler::helios::code {
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, std::stoll(stmt->getValue().str()));
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
@@ -423,10 +423,6 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			// std::cerr << "\nExpr: \n";
-			// root->debugPrint(std::cerr);
-			// std::cerr << '\n'
-
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 

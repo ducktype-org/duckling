@@ -21,12 +21,12 @@ function main { i64, ptr_argv } -> i64 {
 		jmpIf_label EndConvLoop;
 		init_lany_type stoi_arg, ptr_string;
 		dynTableLoad_lany_lptr_l64 stoi_arg, arg1, ret_val;
-		call_builtin_func builtin_stoi_lptr;
+		call_builtinfunc builtin_stoi_lptr;
 		dynTableStore_lptr_lany_l64 res_arr_ptr, stoi_ret_val, ret_val;
 		add_l64_imm ret_val, 1;
 		jmp_label ConvLoop;
 
-	
+
 	label EndConvLoop;
 		mov_l64_imm ret_val, 0;
 

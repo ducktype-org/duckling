@@ -299,6 +299,7 @@ namespace vm::loader::parser {
 			Type,
 			FunctionName,
 			BuiltinFunctionName,
+			ExtCFunctionName,
 			MethodName,
 			Label,
 			VM_OPARG_GLOBAL_TYPES,

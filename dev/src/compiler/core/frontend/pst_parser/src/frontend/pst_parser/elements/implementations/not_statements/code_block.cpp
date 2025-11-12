@@ -5,6 +5,8 @@
 #include <algorithm>
 
 namespace pst {
+
+
 	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, CodeBlockType order_type) {
 		CORE_ASSERT(order_type != Undefined, "Parsing with an undefined ordering type");
 
@@ -20,12 +22,20 @@ namespace pst {
 
 		state.parse(out).goDown();
 
-		// @TODO: this may not work in case of compilation error
+		// @TODO: #1484 Rethink parser errors
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
-			out->statements.emplace_back(nullptr);
-			state.parse(out).assign(&out->statements.back(), std::move(stmt));
+
+			if (stmt) {
+				out->statements.emplace_back(nullptr);
+				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+			}
+
+			while (state[0].is(Special::Semicolon)) {
+				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				state.tokens().skip();
+			}
 		}
 
 		state.parse(out).goUpAndSkip();

@@ -6,11 +6,11 @@
 
 #include "generated_symbol_data.hpp"
 
+#include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
 
 #include <base/str/string_id.hpp>
 #include <base/types/bit256.hpp>
@@ -108,4 +108,20 @@ namespace compiler::helios {
 		 */
 		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID);
 	}
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
+	 * all SymID-s of functions called directly by this one.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>);
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
+	 * this function or all functions called by the called functions).
+	 * @note This query is used to determine all other functions that have to be compiled when
+	 * compile time evaluating a function.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>);
 }

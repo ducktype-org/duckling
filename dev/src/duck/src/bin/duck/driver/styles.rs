@@ -1,0 +1,37 @@
+use clap::builder::styling::{AnsiColor, Color, Style, Styles};
+
+pub const fn get_styles() -> Styles {
+    Styles::styled()
+        .usage(
+            Style::new()
+                .bold()
+                .underline()
+                .fg_color(Some(Color::Ansi(AnsiColor::Yellow))),
+        )
+        .header(
+            Style::new()
+                .bold()
+                .underline()
+                .fg_color(Some(Color::Ansi(AnsiColor::Magenta))),
+        )
+        .literal(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightCyan))))
+        .invalid(
+            Style::new()
+                .bold()
+                .fg_color(Some(Color::Ansi(AnsiColor::Red))),
+        )
+        .error(
+            Style::new()
+                .bold()
+                .fg_color(Some(Color::Ansi(AnsiColor::Red))),
+        )
+        .valid(
+            Style::new()
+                .bold()
+                .underline()
+                .fg_color(Some(Color::Ansi(AnsiColor::Green))),
+        )
+        .placeholder(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightCyan))))
+        .context(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Blue))))
+        .context_value(Style::new().fg_color(Some(Color::Ansi(AnsiColor::BrightBlue))))
+}

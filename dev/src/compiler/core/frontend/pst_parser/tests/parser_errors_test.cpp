@@ -234,8 +234,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::For, false> empty_type_for{ "for(a: in a + c) {}" };
 	Example<pst::For, false> no_in_for{ "for(a a + c) {}" };
 
-	Example<pst::Class, true>  simple_class{ "class x{}" };
-	Example<pst::Class, true>  complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, true> simple_class{ "class x{}" };
+	Example<pst::Class, true> complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, true> nested_class{
+		"class outer { class inner { x: i32 = 0; } x: i32 = 0;}"
+	};
 	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };

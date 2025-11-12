@@ -41,7 +41,7 @@ namespace compiler::driver {
 				ctors,
 				helios::mangler::getSpecialMangledName<
 					helios::mangler::ManglingSymbolKind::ModuleConstructor>(
-					ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+					ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module.module_id }
 				)
 			);
 			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
@@ -55,7 +55,7 @@ namespace compiler::driver {
                 reversed_dtors,
                 helios::mangler::getSpecialMangledName<
 												helios::mangler::ManglingSymbolKind::ModuleDestructor>(
-                    ctx, helios::mangler::special_symbol_keys::LirModuleID{ lir_module.module_id }
+                    ctx, helios::mangler::special_symbol_keys::LIRModuleID{ lir_module.module_id }
                 )
             );
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));

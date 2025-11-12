@@ -349,6 +349,13 @@ namespace vm::loader::compiler::detail {
 		addLow<Op_setNull_lptr>(arg0);
 	}
 
+	template<>
+	void MicroBytecodeBuilder::lower<high::Op_mov_lopq_lopq>(
+		vm::opargs::StackLocalOpq arg0, vm::opargs::StackLocalOpq arg1
+	) {
+		addLow<Op_mov_lopq_lopq>(arg0, arg1);
+	}
+
 	// ========= ARITHMETIC OPERATIONS ========
 
 	template<>
@@ -1034,9 +1041,14 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
-	void MicroBytecodeBuilder::lower<high::Op_call_builtin_func>(vm::opargs::BuiltinFunctionName arg0
+	void MicroBytecodeBuilder::lower<high::Op_call_builtinfunc>(vm::opargs::BuiltinFunctionName arg0
 	) {
-		addLow<Op_call_builtin_func>(arg0);
+		addLow<Op_call_builtinfunc>(arg0);
+	}
+
+	template<>
+	void MicroBytecodeBuilder::lower<high::Op_call_cfunc>(vm::opargs::ExtCFunctionName arg0) {
+		addLow<Op_call_cfunc>(arg0);
 	}
 
 	template<>

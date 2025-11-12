@@ -1,6 +1,7 @@
 #include "comp_time.hpp"
 
 #include <backends/dvm/backend.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/ctv/ctv.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
@@ -10,7 +11,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
@@ -367,22 +367,22 @@ namespace compiler::helios {
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
 				result = evalHoutExpr(ctx, seq.expressions.back().ref());
 			}
+
+			void visitCastExpr(const code::CastExpr&) final {
+				// @TODO: #1529 Think about this in the future.
+				result = query::QError(errors::Failed());
+			}
 		};
 
 		/**
 		 * @brief Evaluates a HOUT call expression using VM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
-		static CompTimeEvalResult evaluateFunctionWithVm(query::Context& ctx, CRef<code::Expr> expr) {
-			// @todo: For now this works only with functions which don't call any other functions.
-			// This should change in #1203
-			using namespace compiler;
-
-			const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-			if (!call_expr) return query::QError(errors::Failed());
-
+		static CompTimeEvalResult evaluateFunctionWithVm(
+			query::Context& ctx, CRef<code::CallExpr> call_expr
+		) {
 			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.operator->());
+				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
 			if (!callee_ident) return query::QError(errors::Failed());
 
 			const SymID function_sym_id = callee_ident->symbol;
@@ -391,13 +391,28 @@ namespace compiler::helios {
 			// @todo: Change this code to a single query once it gets implemented #826.
 			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
 
-			auto mir_func_result = ctx.query<mir::LowerToMirFunction>({ fun_hout_result });
-			if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
+			// Collect all function dependencies for this function. All functions needed in order to
+			// evaluate this one.
+			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
 
-			CRef<mir::Function> mir_func        = &mir_func_result->value();
-			auto                lir_func_result = ctx.query<lir::LowerToLirFunction>({ mir_func });
+			std::string                      func_to_call_name;
+			std::vector<CRef<lir::Function>> all_lir_functions;
+			for (const SymID& func_id: *dependencies) {
+				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
+				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
+				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
+				CRef<mir::Function> mir_func = &mir_func_result->value();
+				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
-			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), { lir_func_result }, {} };
+				// When lowering the top level function, we store it's mangled name to know which
+				// function to call in the VM.
+				if (func_id == function_sym_id)
+					func_to_call_name = lir_func_result->mangled_name.str();
+
+				all_lir_functions.push_back(lir_func_result);
+			}
+
+			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), all_lir_functions, {} };
 			vm::code::CodeCollection code = m.build();
 
 			std::vector<CompileTimeValue> ctv_arguments;
@@ -416,9 +431,8 @@ namespace compiler::helios {
 			}
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
-			auto vm_eval_result = executeInVm(
-				lir_func_result->mangled_name.str(), code, ctv_arguments, func_type.getResultType()
-			);
+			auto vm_eval_result
+				= executeInVm(func_to_call_name, code, ctv_arguments, func_type.getResultType());
 
 			if (!vm_eval_result) return query::QError(errors::Failed());
 			return vm_eval_result.value();
@@ -450,7 +464,9 @@ namespace compiler::helios {
 					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
-						return evaluateFunctionWithVm(ctx, expr);
+						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
+						if (!call_expr) return query::QError(errors::Failed());
+						return evaluateFunctionWithVm(ctx, call_expr);
 					}
 				}
 			}
