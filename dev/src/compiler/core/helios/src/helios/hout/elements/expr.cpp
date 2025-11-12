@@ -58,41 +58,7 @@ namespace compiler::helios::code {
 
 	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value):
 		  Expr(tsh::ExpressionType<>(
-			  [&]() -> tsh::SymbolType<> {
-				  using namespace tsh;
-				  return std::visit(
-					  [&](auto&& actual_value) -> SymbolType<> {
-						  using T = std::decay_t<decltype(actual_value)>;
-						  if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
-							  return SymbolType{
-								  ctx.query<QueryIntegralType>(
-									  { sizeof(T) * 8, IntegralAbstractType::Signedness::Signed }
-								  ),
-								  ReferenceKind::Direct,
-								  Mutability::Immutable,
-							  };
-						  } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
-							  return SymbolType{
-								  ctx.query<QueryIntegralType>(
-									  { sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned }
-								  ),
-								  ReferenceKind::Direct,
-								  Mutability::Immutable,
-							  };
-						  } else if constexpr (std::is_floating_point_v<T>) {
-							  return SymbolType{
-								  ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
-								  ReferenceKind::Direct,
-								  Mutability::Immutable,
-							  };
-						  } else {
-							  CORE_PANIC("Unsupported numeric value type");
-						  }
-					  },
-					  value.getStorage()
-				  );
-			  }(),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  value.getTypeOfStoredValue(ctx), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 		  )),
 		  value(value) {}
 

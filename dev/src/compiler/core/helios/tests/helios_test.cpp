@@ -185,6 +185,7 @@ private:
 			auto var_name    = base::strConcat(keyword, "_", type_suffix);
 			auto symbol_type = getSymbolTypeOf(var_name, root_scope);
 
+			std::cout << keyword << type_suffix << '\n';
 			ASSERT_EQUAL(expected_type, symbol_type.getType());
 			ASSERT_EQUAL(expected_mutability, symbol_type.getMutability());
 		};

@@ -1,11 +1,15 @@
 #pragma once
 
+#include <typesystem/higher/symbol_type.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/numeric/numeric_utils.hpp>
 #include <base/types/floats.hpp>
 #include <base/types/ints.hpp>
+
+#include <query_framework/context.hpp>
 
 #include <cmath>
 #include <type_traits>
@@ -135,5 +139,11 @@ namespace compiler::numeric_value {
 			}
 			return {};
 		}
+
+		/**
+		 * @brief Returns the tsh::SymbolType based on the value stored in the NumericValue
+		 * @return The tsh::SymbolType of the value stored in the NumericValue.
+		 */
+		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 	};
 }
