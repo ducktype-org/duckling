@@ -1,6 +1,12 @@
-from abc import ABC
 import random
-from typing import Literal
+
+from typing import Literal, List
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from dataclasses import dataclass
+from enum import Enum
+
+from textwrap import indent
 
 PROB = 30
 
@@ -9,34 +15,113 @@ def random_identifier(length: int) -> str:
     chars = "1234567890_"
     return random.choice(letters) + ''.join(random.choice(chars+letters) for _ in range(length-1))
 
-class CodeGenerator(ABC):
-    pass
+@dataclass
+class FunctionData:
+    name: str
+    args: int = 0
 
+@dataclass
+class ScopeData:
+    vars: List[str] = []
+    funcs: List[FunctionData] = []
+
+class Indenter:
+    def __init__(self, generator: 'CodeGenerator'):
+        self.level = -1
+        self.content = ""
+        self.fragment = ""
+
+        self.generator = generator
+
+    def indent(self, text: str):
+        for _ in range(self.level):
+            text = indent(text, "\t")
+        return text
+
+    def add_full(self, text: str):
+        self.content += self.indent(text)
+
+    def add_fragment(self, text: str):
+        self.fragment += text
+    
+    def flush_fragment(self):
+        if len(self.fragment) > 0:
+            self.content += self.indent(self.fragment)
+            self.fragment = ""
+    
+    def flush(self):
+        assert len(self.fragment) == 0, "Trying to flush text while writing a text fragment."
+        if len(self.content) > 0:
+            with open(self.generator.file_path, 'a') as f:
+                f.write(self.content)
+            self.generator.n_lines += len(self.content.splitlines())
+            self.content = ""
+    
+    def __enter__(self):
+        self.flush()
+        self.level += 1
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.flush()
+        self.level -= 1
+
+class CodeGenerator(ABC):
+    def __init__(self, file_path: str, logic_generator: 'LogicGenerator'):
+        self.file_path = file_path
+        self.logic_generator = logic_generator
+        self.indenter = self.Indenter(self)
+        self.n_lines = 0
+
+        # Clear the file.
+        open(self.file_path, 'w').close()
+
+    # Variables
+    @abstractmethod
+    def variable_declaration(self, var_name: str, scope: ScopeData, indent: int):
+        pass
+
+    @abstractmethod
+    def constant_declaration(self, var_name: str, scope: ScopeData, indent: int):
+        pass
+
+    @abstractmethod
+    def assignment(self, var_name: str, scope: ScopeData, indent: int):
+        pass
+    
+    # Functions
+    def return_(self, scope: ScopeData, indent:int):
+        self.do_indent(indent)
+        self.write("return ")
+        self.logic_generator.generate_expression(scope, PROB)
+        self.write(";\n")
+
+    # Literals
+    def int_literal(self, value: int):
+        self.write(f"{value}")
+
+    # Simple elements
+    def operator(self, operator: str):
+        self.write(f" {operator} ")
+    
+    # Special elements
+    @abstractmethod
+    def print(self, scope: ScopeData, indent: int):
+        pass
+
+    @abstractmethod
+    @contextmanager
+    def main_function(self):
+        pass
+
+    
 
 class CppCodeGenerator(CodeGenerator):
     pass
 
 
 class DucklingCodeGenerator(CodeGenerator):
-    def __init__(self, file_path: str, logic_generator: 'LogicGenerator'):
-        self.file_path = file_path
-        self.logic_generator = logic_generator
-        self.length = 0
-        
-        open(self.file_path, 'w').close()
-    
-    def write(self, content: str):
-        with open(self.file_path, 'a') as f:
-            f.write(content)
-    
-    def do_indent(self, indent: int):
-        self.write("\t"*indent)
-    
-    def do_line_break(self):
-        self.write("\n")
-        self.length += 1
-    
-    def variable_declaration(self, var_name: str, scope:list, indent: int) -> str:
+    def variable_declaration(self, var_name: str, scope:list, indent: int):
         self.do_indent(indent)
         self.write(f"var {var_name}: i64 = ")
         self.logic_generator.generate_expression(scope, PROB)
@@ -50,30 +135,21 @@ class DucklingCodeGenerator(CodeGenerator):
         self.write(";\n")
         self.length += 1
         
-    def generate_assignment(self, var_name: str, scope:list, indent: int) -> str:
+    def assignment(self, var_name: str, scope:list, indent: int) -> str:
         self.do_indent(indent)
         self.write(f"{var_name} = ")
         self.logic_generator.generate_expression(scope, PROB)
         self.write(";\n")
         self.length += 1
-    
-    def generate_number_literal(self, value: int) -> str:
-        self.write(f"{value}")
-    
-    def generate_symbol(self, symbol: str) -> str:
-        self.write(f"{symbol}")
-    
-    def generate_operator(self, value: int) -> str:
-        self.write(f" {value} ")
         
-    def generate_print(self, scope:list, indent: int) -> str:
+    def print(self, scope:list, indent: int):
         self.do_indent(indent)
         self.write("builtin_output_i64(")
         self.logic_generator.generate_expression(scope, PROB)
         self.write(");\n")
         self.length += 1
     
-    def generate_return(self, scope:list, indent:int) -> str:
+    def return_(self, scope:list, indent:int) -> str:
         self.do_indent(indent)
         self.write("return ")
         self.logic_generator.generate_expression(scope, PROB)
