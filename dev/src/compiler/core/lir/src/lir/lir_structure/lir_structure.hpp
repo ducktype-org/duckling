@@ -326,11 +326,11 @@ namespace compiler::lir {
 		 * @brief The source type layout of the cast operation.
 		 * @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
 		 */
-		std::shared_ptr<tsl::TypeLayout> source_layout;
+		CRef<tsl::TypeLayout> source_layout;
 		/**
 		 * @brief The target type layout of the cast operation.
 		 */
-		std::shared_ptr<tsl::TypeLayout> target_layout;
+		CRef<tsl::TypeLayout> target_layout;
 	};
 
 	/**

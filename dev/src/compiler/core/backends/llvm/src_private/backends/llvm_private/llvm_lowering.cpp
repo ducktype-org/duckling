@@ -426,17 +426,17 @@ namespace compiler::backend_llvm {
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
 		) {
-			const auto& target_layout = *cast_params.target_layout;
-			const auto& source_layout = *cast_params.source_layout;
+			const auto target_layout = cast_params.target_layout;
+			const auto source_layout = cast_params.source_layout;
 			const auto& source_type   = cast_params.source_type;
 			const auto& target_type   = cast_params.target_type;
 
 			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
 
 			auto src_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout.getSize()));
+				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout->getSize()));
 			auto dst_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout.getSize()));
+				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
 			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
 				if (type.getType().getKind() == tsh::Kind::Integral) {
@@ -449,12 +449,12 @@ namespace compiler::backend_llvm {
 				return false;
 			};
 
-			variant_match(source_layout.getVariant()) {
+			variant_match(source_layout->getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
 					bool src_signed = is_signed(source_type);
 
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
@@ -480,7 +480,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Float -> Float ==================
 
@@ -536,7 +536,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::PointerTypeLayout) {
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
 							auto ptr_bits
