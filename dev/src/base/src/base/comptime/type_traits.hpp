@@ -77,18 +77,22 @@ namespace base {
 	};
 
 	/**
+	 * @brief Checks if type `T` is the same as one of the types in `Types...`
+	 */
+	template<typename T, typename... Types>
+	concept IsOneOf = (std::is_same_v<T, Types> || ...);
+
+	/**
 	 * @brief Checks if type `T` is an integral or floating point number but not a character or bool
 	 * type
 	 */
 	template<typename T>
-	concept IsNumber = (std::is_floating_point_v<T> || std::is_integral_v<T>)
-	                && not(std::is_same_v<T, bool> || std::is_same_v<T, char>
-	                       || std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t>
-	                       || std::is_same_v<T, char32_t> || std::is_same_v<T, wchar_t>);
+	concept IsNumber
+		= std::is_arithmetic_v<T>
+	   && not IsOneOf<std::remove_cv_t<T>, bool, char, char8_t, char16_t, char32_t, wchar_t>;
 
 	template<typename T>
 	concept IsPlainType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);
-
 
 	/**
 	 * This concept is used to statically determine if two types are instances of the same templated
