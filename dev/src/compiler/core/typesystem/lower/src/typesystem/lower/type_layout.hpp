@@ -233,6 +233,8 @@ namespace tsl {
 		 */
 		static constexpr auto OFFSET_SIZE = Bytes(8);
 
+		CRef<TypeLayout> element_layout;
+
 		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -267,6 +269,14 @@ namespace tsl {
 			(void) this;
 			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
 		}
+
+		/**
+		 * @return The layout of each element of the dynamic array.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getElementLayout() const {
+			return element_layout;
+		}
 	};
 
 	/**
@@ -279,10 +289,12 @@ namespace tsl {
 		Bits  data_size;
 
 		base::Map<tsh::SymbolType<>, usize> type_to_index;
-		std::vector<tsh::SymbolType<>>      index_to_type;
+		std::vector<CRef<TypeLayout>>       index_to_layout;
 
 		// Delegate constructor.
-		explicit VariantTypeLayout(struct VariantTypeLayoutConstructionHelper helper);
+		explicit VariantTypeLayout(
+			const struct VariantTypeLayoutConstructionHelper& helper, query::Context& ctx
+		);
 
 		VariantTypeLayout(tsh::VariantAbstractType variant_type, query::Context& ctx);
 
@@ -324,11 +336,11 @@ namespace tsl {
 
 		/**
 		 * @param index An in-bounds index (tag value) of the variant.
-		 * @return The type corresponding to that index.
+		 * @return The type layout corresponding to that index.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getTypeOfIndex(const usize index) const {
-			return index_to_type[index];
+		CRef<TypeLayout> getLayoutOfIndex(const usize index) const {
+			return index_to_layout.at(index);
 		}
 
 		[[nodiscard]]
@@ -350,9 +362,14 @@ namespace tsl {
 
 		/**
 		 * @brief The component indices of the components in the original tuple type, sorted by
-		 * their order of appearance (offset) in the layout.
+		 * their order of appearance in the layout.
 		 */
-		std::vector<usize> offset_idx_to_component_idx;
+		std::vector<usize> layout_idx_to_component_idx;
+
+		/**
+		 * @brief The component layouts, in the order of appearance in the tuple layout.
+		 */
+		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
 		// Delegate constructor.
 		explicit TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper);
@@ -363,23 +380,33 @@ namespace tsl {
 
 	public:
 		/**
-		 * @return The full list of component offsets, in bytes.
-		 *
-		 * @note Not necessarily increasing. These offsets are given in the order of the components
-		 * in the source tuple type. This order may not be preserved in the layout.
-		 */
-		[[nodiscard]]
-		const std::vector<Bytes>& getComponentOffsets() const {
-			return component_offsets;
-		}
-
-		/**
+		 * @brief Get the offset of a component from the original tuple type.
 		 * @param index The index of a component in the original tuple type.
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
 		[[nodiscard]]
 		Bytes getComponentOffset(const usize index) const {
-			return getComponentOffsets()[index];
+			return component_offsets.at(index);
+		}
+
+		/**
+		 * @brief Get the component index in the original tuple type from the layout component index.
+		 * @param layout_index The index of the component in the layout order.
+		 * @return The index of the type component corresponding to the given offset index.
+		 */
+		[[nodiscard]]
+		usize getComponentIndexOfLayoutIndex(const usize layout_index) const {
+			return layout_idx_to_component_idx.at(layout_index);
+		}
+
+		/**
+		 * @brief Get the layout of a component from the layout.
+		 * @param layout_index The index of the component in the layout order.
+		 * @return The layout of the component corresponding to the given offset index.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getComponentLayoutOfLayoutIndex(const usize layout_index) const {
+			return layout_idx_to_layout.at(layout_index);
 		}
 
 		[[nodiscard]]
@@ -394,11 +421,20 @@ namespace tsl {
 	 * @todo Add layout of base classes.
 	 */
 	class ClassTypeLayout final: public TypeLayoutABC {
+		/**
+		 * @brief The offsets of the fields, in bytes.
+		 */
 		base::Map<compiler::helios::SymID, Bytes> field_offsets;
+
 		/**
 		 * @brief A mapping of the order of appearance in the layout to the symbol of the field.
 		 */
-		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
+		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
+
+		/**
+		 * @brief The field layouts, in the order of appearance in the class layout.
+		 */
+		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
 
 		// Delegate constructor.
 		explicit ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);
@@ -409,20 +445,33 @@ namespace tsl {
 
 	public:
 		/**
-		 * @return The full dictionary of field offsets, in bytes.
-		 */
-		[[nodiscard]]
-		const base::Map<compiler::helios::SymID, Bytes>& getFieldOffsets() const {
-			return field_offsets;
-		}
-
-		/**
+		 * @brief Get the offset of a field from the original class type.
 		 * @param symbol The symbol of a field.
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
 		[[nodiscard]]
 		Bytes getFieldOffset(const compiler::helios::SymID symbol) const {
-			return getFieldOffsets().at(symbol);
+			return field_offsets.at(symbol);
+		}
+
+		/**
+		 * Get the symbol of a field from the index in which it appears in the layout.
+		 * @param layout_index The index of the field in the layout order.
+		 * @return The symbol of the field corresponding to the given layout index.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymID getFieldSymbolOfLayoutIndex(const usize layout_index) const {
+			return layout_idx_to_sym_id.at(layout_index);
+		}
+
+		/**
+		 * @brief Get the layout of a field from the index in which it appears in the layout.
+		 * @param layout_index The index of the field in the layout order.
+		 * @return The layout of the field corresponding to the given layout index.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getFieldLayoutOfLayoutIndex(const usize layout_index) const {
+			return layout_idx_to_layout.at(layout_index);
 		}
 
 		[[nodiscard]]
@@ -481,6 +530,11 @@ namespace tsl {
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
 	public:
+		[[nodiscard]]
+		base::Optional<CRef<TypeLayout>> getPointeeOpt() const {
+			return pointee.toOpt();
+		}
+
 		[[nodiscard]]
 		CRef<TypeLayout> getPointee() const {
 			return pointee.toOpt().value();

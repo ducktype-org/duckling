@@ -202,16 +202,30 @@ private:
 	void dynamicArrayTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
-			auto                   unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+			const auto             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(st(unit_type));
-			auto dynamic_array_layout = ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+			const auto dynamic_array_layout
+				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
 
-			assertTrue(
-				dynamic_array_layout->getSourceType() == dynamic_array_type,
+			assertEqual(
+				dynamic_array_layout->getSourceType(),
+				dynamic_array_type,
 				"Layout should have source type as constructed."
 			);
+			variant_match(dynamic_array_layout->getVariant()) {
+				variant_case(DynamicArrayTypeLayout, l) {
+					// Comparison uses dereference because the (cached) layout of the abstract type
+					// will have a different address than the (cached) layout of the symbol type.
+					assertEqual(
+						*l.getElementLayout(),
+						*unit_layout,
+						"Element layout should be the layout of the element type."
+					);
+				}
+				variant_default { fail("Layout of dynamic array type should be array-like."); }
+			}
 
 			testPrinting(dynamic_array_layout, ctx, true);
 		});
@@ -248,7 +262,8 @@ private:
 						"Different variant options should have different indices."
 					);
 					assertTrue(
-						l.getTypeOfIndex(0) != l.getTypeOfIndex(1),
+						l.getLayoutOfIndex(0)->getSourceType()
+							!= l.getLayoutOfIndex(1)->getSourceType(),
 						"Different indices should correspond to different types."
 					);
 				}
