@@ -2,11 +2,9 @@ use clap::{Arg, ArgAction, Command, crate_name, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
 use crate::{
-    DuckCtx,
-    InternalError,
-    QuackResult,
+    DuckCtx, InternalError, QuackResult,
     duck::driver::{cli, cli_ext::subcommand},
-    duck::util::terminal::Terminal
+    duck::util::terminal::Terminal,
 };
 use clap::ArgMatches;
 

@@ -3,9 +3,7 @@ use rustvil::os::env::Env;
 use tracing::debug;
 
 use crate::{
-    QuackResult,
-    duck::util::terminal::Terminal,
-    quackpack::util::paths::config_file,
+    QuackResult, duck::util::terminal::Terminal, quackpack::util::paths::config_file,
     util_common::toml_config::TomlConfig,
 };
 
