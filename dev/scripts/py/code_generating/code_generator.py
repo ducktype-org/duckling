@@ -237,12 +237,12 @@ class LogicGenerator:
         # Generate global symbols
         for _ in range(random.randint(1, 5)):
             action = random.choices(
-                ['constant_declaration', 'function_definition'],
+                ['variable_declaration', 'function_definition'],
                 weights=[50, 30],
                 k=1
             )[0]
-            if action == 'constant_declaration':
-                self.generate_constant_declaration(scope)
+            if action == 'variable_declaration':
+                self.generate_variable_declaration(scope)
             elif action == 'function_definition':
                 self.generate_function_definition(scope)
                 self.generator.line_break()

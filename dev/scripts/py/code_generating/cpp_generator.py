@@ -98,7 +98,7 @@ class CppCodeGenerator(CodeGenerator):
     
     # Special elements
     def preambule(self) -> ScopeData:
-        self.indenter.add_text("#include <iostream>\n")
+        self.indenter.add_text("#include <iostream>\n\n")
         return ScopeData()
     
     def print(self, scope: ScopeData):
