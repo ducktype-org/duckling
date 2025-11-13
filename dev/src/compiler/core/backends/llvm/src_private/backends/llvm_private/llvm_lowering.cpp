@@ -426,8 +426,8 @@ namespace compiler::backend_llvm {
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
 		) {
-			const auto target_layout = cast_params.target_layout;
-			const auto source_layout = cast_params.source_layout;
+			const auto  target_layout = cast_params.target_layout;
+			const auto  source_layout = cast_params.source_layout;
 			const auto& source_type   = cast_params.source_type;
 			const auto& target_type   = cast_params.target_type;
 
