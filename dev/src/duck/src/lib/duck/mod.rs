@@ -1,3 +1,5 @@
 pub mod driver;
-pub mod main;
+mod main;
 pub mod util;
+
+pub use main::main;

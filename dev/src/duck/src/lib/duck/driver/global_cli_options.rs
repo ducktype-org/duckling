@@ -4,7 +4,7 @@ use crate::QuackResult;
 use anyhow::anyhow;
 use clap::ArgMatches;
 
-use crate::{DuckCtx, InternalError, util_common::terminal::Verbosity};
+use crate::{DuckCtx, InternalError, duck::util::terminal::Verbosity};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {

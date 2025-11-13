@@ -1,5 +1,5 @@
 use crate::duck::util::indent::indent;
-use crate::{DuckCtx, InternalError, util_common::terminal::Terminal};
+use crate::{DuckCtx, InternalError, duck::util::terminal::Terminal};
 use tracing::debug;
 
 pub fn main() {

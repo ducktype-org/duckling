@@ -1,3 +1,3 @@
 fn main() {
-    duck::duck::main::main();
+    duck::main();
 }

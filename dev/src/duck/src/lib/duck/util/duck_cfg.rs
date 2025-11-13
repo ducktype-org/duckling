@@ -4,8 +4,9 @@ use tracing::debug;
 
 use crate::{
     QuackResult,
+    duck::util::terminal::Terminal,
     quackpack::util::paths::config_file,
-    util_common::{terminal::Terminal, toml_config::TomlConfig},
+    util_common::toml_config::TomlConfig,
 };
 
 #[derive(Debug, Default)]

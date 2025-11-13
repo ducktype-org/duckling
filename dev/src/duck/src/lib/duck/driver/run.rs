@@ -18,7 +18,7 @@ use crate::duck::driver::{
     subcommands::exec_for,
 };
 
-pub fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
+pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
         "found external subcommands `{}`",

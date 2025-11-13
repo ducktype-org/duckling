@@ -2,7 +2,8 @@ use rustvil::os::env::Env;
 
 use crate::{
     QuackResult,
-    util_common::{duck_cfg::DuckCfg, terminal::Terminal, toml_config::TomlConfig},
+    duck::util::{duck_cfg::DuckCfg, terminal::Terminal},
+    util_common::toml_config::TomlConfig,
 };
 
 #[derive(Debug)]
