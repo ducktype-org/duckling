@@ -77,10 +77,12 @@ namespace base {
 	};
 
 	/**
-	 * @brief Checks if type `T` is an integral or floating point number.
+	 * @brief Checks if type `T` is an integral or floating point number but not a character or bool type
 	 */
 	template<typename T>
-	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
+	concept IsNumber = (std::is_floating_point_v<T> || std::is_integral_v<T>)
+		&& not (std::is_same_v<T, bool> || std::is_same_v<T, char> || std::is_same_v<T, char8_t>
+				|| std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t> || std::is_same_v<T, wchar_t>);
 
 	template<typename T>
 	concept IsPlainType = (not std::is_reference_v<T>) and (not std::is_pointer_v<T>);

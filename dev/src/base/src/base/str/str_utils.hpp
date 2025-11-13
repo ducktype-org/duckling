@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 
+
 class Bits;
 class Bytes;
 
@@ -47,12 +48,14 @@ namespace base {
 		void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
-
+		
 		inline void strConcat(std::string& out, base::RawView view) {
 			out.append(view.stringView());
 		}
-
-		inline void strConcat(std::string& out, base::IsNumber auto v) {
+		
+		template<base::IsNumber T>
+			requires (not std::is_same_v<char, std::remove_cvref_t<T>>)
+		inline void strConcat(std::string& out, T v) {
 			out.append(std::to_string(v));
 		}
 
@@ -61,12 +64,18 @@ namespace base {
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_utils.hpp
 		void strConcat(std::string& out, base::StrID str_id);
+		
+		inline void strConcat(std::string& out, char v) {
+			out.append(1uz, v);
+		}
 
-		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
+		inline void strConcat(std::string& out, bool v) {
+			out.append(v ? "true" : "false");
+		}
 
 		inline void strConcat(std::string& out, const char* v) {
 			if (v == nullptr) throw std::domain_error("strConcat called with nullptr");
-			out.append(std::string(v));
+			out.append(v);
 		}
 
 		template<typename U, typename V>
