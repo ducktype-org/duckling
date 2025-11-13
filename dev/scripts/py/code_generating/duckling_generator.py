@@ -57,6 +57,15 @@ class DucklingCodeGenerator(CodeGenerator):
             args.append(arg_name)
         return args
     
+    def function_call(self, func: FunctionData, scope: ScopeData):
+        self.indenter.add_fragment(func.name)
+        self.indenter.add_fragment("(")
+        for i in range(func.args):
+            self.logic_generator.generate_expression(scope, PROB)
+            if i < func.args - 1:
+                self.indenter.add_fragment(", ")
+        self.indenter.add_fragment(")")
+    
     # Control flow
     def if_statement(self, scope: ScopeData):
         # Generate if signature

@@ -108,6 +108,10 @@ class CodeGenerator(ABC):
             self.logic_generator.generate_expression(scope, PROB)
             self.indenter.add_fragment(";\n")
             self.indenter.flush_fragment()
+    
+    @abstractmethod
+    def function_call(self, func: FunctionData, scope: ScopeData):
+        pass
 
     # Control flow
     @abstractmethod
@@ -166,7 +170,12 @@ class LogicGenerator:
     def generate_while_loop(self, scope: ScopeData):
         self.generator.while_loop(scope)
 
-    def generate_expression(self, scope: ScopeData, prob: int):
+    def generate_function_call(self, scope: ScopeData):
+        if len(scope.funcs) == 0:
+            return
+        self.generator.function_call(random.choice(scope.funcs), scope)
+    
+    def generate_expression(self, scope: ScopeData, prob: int, allow_function_calls: bool = True):
         op = False
         do = 0
         while do < prob/100 or not op:
@@ -174,8 +183,15 @@ class LogicGenerator:
                 self.generator.operator(random.choice(['+', '-', '*', '/']))
                 op = False
             else:
-                if random.random() < 0.5 and len(scope.vars) > 0:
+                action = random.choices(
+                    ['symbol', 'literal', 'function_call'],
+                    weights=[70, 20, 10*int(allow_function_calls)],
+                    k=1
+                )[0]
+                if action == 'symbol' and len(scope.vars) > 0:
                     self.generator.symbol(random.choice(scope.vars))
+                elif action == 'function_call' and len(scope.funcs) > 0:
+                    self.generate_function_call(scope)
                 else:
                     self.generator.int_literal(random.randint(0, 1000))
                 op = True
