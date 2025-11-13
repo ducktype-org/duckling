@@ -31,15 +31,16 @@ namespace tsl {
 		 */
 		tsh::AbstractType source_type;
 
-		/**
-		 * @brief The kind of reference indirection applied to the source type.
-		 *
-		 * This usually has the value ReferenceKind::DIRECT, but will be either REF or BOX for when
-		 * a layout is created for a SymbolType with an indirection.
-		 */
-		tsh::ReferenceKind reference_kind;
-
 	public:
+		// Needed for default generation of copy constructor in deriving classes.
+		TypeLayoutABC(const TypeLayoutABC&) = default;
+
+		TypeLayoutABC(TypeLayoutABC&&) = delete;
+
+		TypeLayoutABC& operator=(const TypeLayoutABC&) = delete;
+
+		TypeLayoutABC& operator=(TypeLayoutABC&&) noexcept = delete;
+
 		// This definition is necessary for default definitions in deriving classes.
 		bool operator==(const TypeLayoutABC& other) const = default;
 
@@ -81,26 +82,15 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return "Layout of "
-			     + std::string(
-					   reference_kind == tsh::ReferenceKind::Direct ? ""
-					   : reference_kind == tsh::ReferenceKind::Ref  ? "ref "
-																	: "box "
-				 )
-			     + source_type.toString() + " : " + base::toString(getSize());
+			return "Layout of " + source_type.toString() + " : " + base::toString(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(
-			const Bits               size,
-			const tsh::AbstractType  source_type,
-			const tsh::ReferenceKind reference_kind = tsh::ReferenceKind::Direct
-		):
+		TypeLayoutABC(const Bits size, const tsh::AbstractType source_type):
 			  size(size),
-			  source_type(source_type),
-			  reference_kind(reference_kind) {}
+			  source_type(source_type) {}
 
 		[[nodiscard]]
 		static auto getIndent(const u32 indent) {
@@ -118,10 +108,12 @@ namespace tsl {
 	 * whatsoever, so considering a layout for it is invalid and should not be "useful".
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
-	public:
 		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type):
 			  TypeLayoutABC(Bits(0), unit_type) {}
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "{} : " + base::toString(getSize());
@@ -134,7 +126,6 @@ namespace tsl {
 	 * Valid candidates include, of course, integers, but also bytes, bools, and characters.
 	 */
 	class IntegralTypeLayout final: public TypeLayoutABC {
-	public:
 		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type):
 			  TypeLayoutABC(BYTE_SIZE, byte_type) {}
 
@@ -147,6 +138,9 @@ namespace tsl {
 		explicit IntegralTypeLayout(const tsh::IntegralAbstractType integral_type):
 			  TypeLayoutABC(integral_type.getSize(), integral_type) {}
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "i" + std::to_string(usize(getSize())) + " : "
@@ -158,10 +152,12 @@ namespace tsl {
 	 * @brief Layout of a type that has float-like low level behaviour.
 	 */
 	class FloatTypeLayout final: public TypeLayoutABC {
-	public:
 		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type):
 			  TypeLayoutABC(float_type.getSize(), float_type) {}
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "f" + std::to_string(usize(getSize())) + " : "
@@ -184,10 +180,12 @@ namespace tsl {
 		 */
 		static constexpr auto OFFSET_SIZE = Bytes(8);
 
-	public:
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
 			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, string_type) {}
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "string : " + base::toString(getSize());
@@ -198,6 +196,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfDataOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES;
 		}
 
@@ -206,6 +205,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES + OFFSET_SIZE;
 		}
 
@@ -214,6 +214,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
 		}
 	};
@@ -232,17 +233,20 @@ namespace tsl {
 		 */
 		static constexpr auto OFFSET_SIZE = Bytes(8);
 
-	public:
 		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override;
+		std::string toStringDefinition(query::Context&, bool recursive, u32 indent) const override;
 
 		/**
 		 * @return The offset of the end of data offset
 		 */
 		[[nodiscard]]
 		Bytes getEndOfDataOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES;
 		}
 
@@ -251,6 +255,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES + OFFSET_SIZE;
 		}
 
@@ -259,6 +264,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
+			(void) this;
 			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
 		}
 	};
@@ -278,9 +284,11 @@ namespace tsl {
 		// Delegate constructor.
 		explicit VariantTypeLayout(struct VariantTypeLayoutConstructionHelper helper);
 
-	public:
 		VariantTypeLayout(tsh::VariantAbstractType variant_type, query::Context& ctx);
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		/**
 		 * @return The offset of the discriminating tag of this variant, in bytes.
 		 */
@@ -349,9 +357,11 @@ namespace tsl {
 		// Delegate constructor.
 		explicit TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper);
 
-	public:
 		TupleTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		/**
 		 * @return The full list of component offsets, in bytes.
 		 *
@@ -393,9 +403,11 @@ namespace tsl {
 		// Delegate constructor.
 		explicit ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);
 
-	public:
 		ClassTypeLayout(tsh::ClassAbstractType class_type, query::Context& ctx);
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		/**
 		 * @return The full dictionary of field offsets, in bytes.
 		 */
@@ -422,11 +434,13 @@ namespace tsl {
 	 * @brief Layout of a functional object or pointer type.
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
-	public:
 		// @TODO: Add support for function objects
 		explicit FunctionalTypeLayout(const tsh::FunctionAbstractType function_type):
 			  TypeLayoutABC(POINTER_SIZE, function_type) {}
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Functional : " + base::toString(getSize());
@@ -439,43 +453,15 @@ namespace tsl {
 	class PointerTypeLayout final: public TypeLayoutABC {
 		// The layout of the pointee type.
 		// Since a pointer may be untyped, the layout of the pointee may be unknown.
-		// Hence, the use of a nullable box.
-		MBox<TypeLayout> pointee;
-
-	public:
-		// @TODO: #1520 Explicitly delete all copy constructors and assignment operators
-		// when interning is introduced. Maybe delete the move counterparts as well.
-		PointerTypeLayout(const PointerTypeLayout& other):
-			  TypeLayoutABC(other),
-			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
-
-		PointerTypeLayout(PointerTypeLayout&& other) = default;
-
-		PointerTypeLayout& operator=(const PointerTypeLayout& other) = delete;
-
-		PointerTypeLayout& operator=(PointerTypeLayout&& other) noexcept {
-			TypeLayoutABC::operator=(other);
-			pointee = std::move(other.pointee);
-			return *this;
-		}
-
-		[[nodiscard]]
-		Ref<TypeLayout> getPointee() const {
-			return pointee.toOpt().value();
-		}
-
-		[[nodiscard]]
-		bool hasPointee() const {
-			return pointee;
-		}
+		// Hence, the use of a nullable ref.
+		MCRef<TypeLayout> pointee{};
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
 		 * @param raw_pointer_type The source RawPointer.
 		 */
 		explicit PointerTypeLayout(const tsh::RawPointerAbstractType raw_pointer_type):
-			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type),
-			  pointee() {}
+			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type) {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.
@@ -491,6 +477,20 @@ namespace tsl {
 		 */
 		PointerTypeLayout(tsh::SymbolType<> symbol_type, query::Context& ctx);
 
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+		friend struct ImplementationOf_QuerySymbolTypeLayout;
+
+	public:
+		[[nodiscard]]
+		CRef<TypeLayout> getPointee() const {
+			return pointee.toOpt().value();
+		}
+
+		[[nodiscard]]
+		bool hasPointee() const {
+			return pointee;
+		}
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Pointer to " + getSourceType().toString() + " : "
@@ -504,11 +504,11 @@ namespace tsl {
 		FloatTypeLayout,
 		VariantTypeLayout,
 		TupleTypeLayout,
+		StringTypeLayout,
 		DynamicArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
-		PointerTypeLayout,
-		StringTypeLayout>;
+		PointerTypeLayout>;
 
 	/**
 	 * @brief The ADT representing the layout of a type.
@@ -516,28 +516,24 @@ namespace tsl {
 	 * @note Use getVariant() when matching against the variant's options.
 	 */
 	class TypeLayout final {
+		// Copy constructor needed for QuerySymbolTypeLayout.
+		TypeLayout(const TypeLayout& other) = default;
+
+		friend struct ImplementationOf_QuerySymbolTypeLayout;
+
 	public:
 		TypeLayoutDirectVariant variant;
 
-		TypeLayout(EmptyTypeLayout layout): variant(std::move(layout)) {}
+		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
+		TypeLayout(TypeLayout&& other) noexcept = default;
 
-		TypeLayout(IntegralTypeLayout layout): variant(std::move(layout)) {}
+		// Copy and move assignments are deleted to avoid accidental copies.
+		TypeLayout& operator=(const TypeLayout& other)     = delete;
+		TypeLayout& operator=(TypeLayout&& other) noexcept = delete;
 
-		TypeLayout(FloatTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(VariantTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(TupleTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(DynamicArrayTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(ClassTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(FunctionalTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(PointerTypeLayout layout): variant(std::move(layout)) {}
-
-		TypeLayout(StringTypeLayout layout): variant(std::move(layout)) {}
+		// Constructor for any variant option.
+		template<typename T>
+		TypeLayout(T&& layout): variant(std::forward<T>(layout)) {}
 
 		[[nodiscard]]
 		bool operator==(const TypeLayout&) const

@@ -30,13 +30,13 @@ public:
 
 private:
 	static void testPrinting(
-		const TypeLayout& layout, query::Context& ctx, const bool do_non_recursive = false
+		CRef<TypeLayout> layout, query::Context& ctx, const bool do_non_recursive = false
 	) {
-		std::cout << layout.toStringIdentification() << "\n";
-		std::cout << layout.toStringDefinition(ctx) << "\n";
+		std::cout << layout->toStringIdentification() << "\n";
+		std::cout << layout->toStringDefinition(ctx) << "\n";
 		if (do_non_recursive) {
 			std::cout << "non recursive:\n";
-			std::cout << layout.toStringDefinition(ctx, false) << "\n";
+			std::cout << layout->toStringDefinition(ctx, false) << "\n";
 		}
 	}
 
@@ -49,14 +49,14 @@ private:
 	void basicTypesTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
-			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+			auto                   unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
 
-			assertTrue(unit_layout.getSize() == Bits(0), "Empty layout should have size zero.");
+			assertTrue(unit_layout->getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
-				unit_layout.getSourceType() == ctx.query<QueryUnitType>({}),
+				unit_layout->getSourceType() == ctx.query<QueryUnitType>({}),
 				"Layout should have source type as constructed."
 			);
-			variant_match(unit_layout.getVariant()) {
+			variant_match(unit_layout->getVariant()) {
 				variant_case(EmptyTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
@@ -68,16 +68,16 @@ private:
 				{ ctx.query<QueryCharType>({}), CHAR_SIZE },
 			} };
 			for (auto [small_type, expected_small_size]: small_types) {
-				TypeLayout small_layout = ctx.query<QueryAbstractTypeLayout>(small_type);
+				auto small_layout = ctx.query<QueryAbstractTypeLayout>(small_type);
 				assertTrue(
-					small_layout.getSize() == expected_small_size,
+					small_layout->getSize() == expected_small_size,
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					small_layout.getSourceType() == small_type,
+					small_layout->getSourceType() == small_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(small_layout.getVariant()) {
+				variant_match(small_layout->getVariant()) {
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
@@ -87,16 +87,16 @@ private:
 			for (constexpr std::array<usize, 5> int_sizes{ 8, 16, 32, 64, 128 };
 			     usize                          size: int_sizes) {
 				IntegralAbstractType int_type   = ctx.query<QueryIntegralType>(size);
-				TypeLayout           int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
+				auto                 int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
 				assertTrue(
-					int_layout.getSize() == Bits(size),
+					int_layout->getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					int_layout.getSourceType() == int_type,
+					int_layout->getSourceType() == int_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(int_layout.getVariant()) {
+				variant_match(int_layout->getVariant()) {
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
@@ -106,16 +106,16 @@ private:
 			for (constexpr std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
 			     usize                          size: float_sizes) {
 				FloatAbstractType float_type   = ctx.query<QueryFloatType>(size);
-				TypeLayout        float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
+				auto              float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
 				assertTrue(
-					float_layout.getSize() == Bits(size),
+					float_layout->getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					float_layout.getSourceType() == float_type,
+					float_layout->getSourceType() == float_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(float_layout.getVariant()) {
+				variant_match(float_layout->getVariant()) {
 					variant_case(FloatTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of float type should be float."); }
 				}
@@ -124,32 +124,32 @@ private:
 
 			const FunctionAbstractType function_type
 				= ctx.query<QueryFunctionType>({ {}, st(unit_type) });
-			TypeLayout functional_layout = ctx.query<QueryAbstractTypeLayout>(function_type);
+			auto functional_layout = ctx.query<QueryAbstractTypeLayout>(function_type);
 			assertTrue(
-				functional_layout.getSize() == POINTER_SIZE,
+				functional_layout->getSize() == POINTER_SIZE,
 				"Functional layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				functional_layout.getSourceType() == function_type,
+				functional_layout->getSourceType() == function_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(functional_layout.getVariant()) {
+			variant_match(functional_layout->getVariant()) {
 				variant_case(FunctionalTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of function type should be functional."); }
 			}
 			testPrinting(functional_layout, ctx);
 
 			const RawPointerAbstractType raw_pointer_type = ctx.query<QueryRawPointerType>({});
-			TypeLayout raw_pointer_layout = ctx.query<QueryAbstractTypeLayout>(raw_pointer_type);
+			auto raw_pointer_layout = ctx.query<QueryAbstractTypeLayout>(raw_pointer_type);
 			assertTrue(
-				raw_pointer_layout.getSize() == POINTER_SIZE,
+				raw_pointer_layout->getSize() == POINTER_SIZE,
 				"Raw pointer layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				raw_pointer_layout.getSourceType() == raw_pointer_type,
+				raw_pointer_layout->getSourceType() == raw_pointer_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(raw_pointer_layout.getVariant()) {
+			variant_match(raw_pointer_layout->getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertFalse(l.hasPointee(), "Raw pointer layout should not have pointee.");
 				}
@@ -159,20 +159,20 @@ private:
 
 			const PointerAbstractType unit_pointer_type
 				= ctx.query<QueryPointerType>({ st(unit_type) });
-			TypeLayout unit_pointer_layout = ctx.query<QueryAbstractTypeLayout>(unit_pointer_type);
+			auto unit_pointer_layout = ctx.query<QueryAbstractTypeLayout>(unit_pointer_type);
 			assertTrue(
-				unit_pointer_layout.getSize() == POINTER_SIZE,
+				unit_pointer_layout->getSize() == POINTER_SIZE,
 				"Typed pointer layout should have size equal to the size of a pointer."
 			);
 			assertTrue(
-				unit_pointer_layout.getSourceType() == unit_pointer_type,
+				unit_pointer_layout->getSourceType() == unit_pointer_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(unit_pointer_layout.getVariant()) {
+			variant_match(unit_pointer_layout->getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
 					assertTrue(
-						*l.getPointee() == unit_layout,
+						l.getPointee() == unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);
 				}
@@ -185,13 +185,13 @@ private:
 	void stringTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const StringAbstractType string_type = ctx.query<QueryStringType>({});
-			TypeLayout string_layout             = ctx.query<QueryAbstractTypeLayout>(string_type);
+			auto string_layout                   = ctx.query<QueryAbstractTypeLayout>(string_type);
 
 			assertTrue(
-				string_layout.getSourceType() == string_type,
+				string_layout->getSourceType() == string_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(string_layout.getVariant()) {
+			variant_match(string_layout->getVariant()) {
 				variant_case(StringTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of string type should be string-like."); }
 			}
@@ -202,15 +202,14 @@ private:
 	void dynamicArrayTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
-			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+			auto                   unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(st(unit_type));
-			TypeLayout dynamic_array_layout
-				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+			auto dynamic_array_layout = ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
 
 			assertTrue(
-				dynamic_array_layout.getSourceType() == dynamic_array_type,
+				dynamic_array_layout->getSourceType() == dynamic_array_type,
 				"Layout should have source type as constructed."
 			);
 
@@ -224,17 +223,17 @@ private:
 			SymbolType<>              f16_type = st(ctx.query<QueryFloatType>(16));
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
-			TypeLayout variant_layout = ctx.query<QueryAbstractTypeLayout>(variant_type);
+			auto variant_layout = ctx.query<QueryAbstractTypeLayout>(variant_type);
 
 			assertTrue(
-				variant_layout.getSize() == BYTE_SIZE * 2 + Bits(16),
+				variant_layout->getSize() == BYTE_SIZE * 2 + Bits(16),
 				"Variant layout size should account for data alignment."
 			);
 			assertTrue(
-				variant_layout.getSourceType() == variant_type,
+				variant_layout->getSourceType() == variant_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(variant_layout.getVariant()) {
+			variant_match(variant_layout->getVariant()) {
 				variant_case(VariantTypeLayout, l) {
 					assertTrue(
 						l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
@@ -271,17 +270,17 @@ private:
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
-			TypeLayout              tuple_layout = ctx.query<QueryAbstractTypeLayout>(tuple_type);
+			auto                    tuple_layout = ctx.query<QueryAbstractTypeLayout>(tuple_type);
 
 			assertTrue(
-				tuple_layout.getSize() == BYTE_SIZE * 16 + POINTER_SIZE * 2,
+				tuple_layout->getSize() == BYTE_SIZE * 16 + POINTER_SIZE * 2,
 				"Tuple layout size should account for data alignment and references."
 			);
 			assertTrue(
-				tuple_layout.getSourceType() == tuple_type,
+				tuple_layout->getSourceType() == tuple_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(tuple_layout.getVariant()) {
+			variant_match(tuple_layout->getVariant()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
 						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
@@ -337,18 +336,18 @@ private:
 				CORE_PANIC("Could not resolve field.");
 			}();
 
-			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
+			auto my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
 			assertTrue(
 				// (1 + padding 1) + (2 + padding 2) + 8 + 8 + 8
-				my_class_layout.getSize() == BYTE_SIZE * 32,
+				my_class_layout->getSize() == BYTE_SIZE * 32,
 				"Class layout size should account for data alignment."
 			);
 			assertTrue(
-				my_class_layout.getSourceType() == my_class_type,
+				my_class_layout->getSourceType() == my_class_type,
 				"Layout should have source type as constructed."
 			);
 
-			variant_match(my_class_layout.getVariant()) {
+			variant_match(my_class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
 						l.getFieldOffset(a_field_symbol) == Bytes(0)

@@ -86,7 +86,7 @@ namespace compiler::lir {
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
-			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:\n" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
@@ -192,8 +192,8 @@ namespace compiler::lir {
 			.mangled_name = function.mangled_name,
 			.abi          = function.abi,
 			.parameter_layouts
-			= std::make_shared<std::vector<tsl::TypeLayout>>(function.parameter_layouts),
-			.return_type_layout = std::make_shared<tsl::TypeLayout>(function.return_type_layout)
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
+			.return_type_layout = function.return_type_layout
 		};
 	}
 }

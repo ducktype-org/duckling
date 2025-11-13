@@ -87,10 +87,10 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral {
-		base::StrID                                   mangled_name;
-		helios::SymbolABI                             abi;
-		std::shared_ptr<std::vector<tsl::TypeLayout>> parameter_layouts;
-		std::shared_ptr<tsl::TypeLayout>              return_type_layout;
+		base::StrID                                         mangled_name;
+		helios::SymbolABI                                   abi;
+		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
+		CRef<tsl::TypeLayout>                               return_type_layout;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};
@@ -107,8 +107,7 @@ namespace compiler::lir {
 		 */
 		base::Optional<helios::SymID> helios_id;
 
-		// @TODO: #1520 Introduce interning, store layouts cheaper.
-		tsl::TypeLayout layout;
+		CRef<tsl::TypeLayout> layout;
 
 		/**
 		 * @brief Index of the parameter in the function, if this is a function parameter.
@@ -118,14 +117,14 @@ namespace compiler::lir {
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
-			tsl::TypeLayout                     layout,
-			base::Optional<u64>                 parameter_index
+			const CRef<tsl::TypeLayout>         layout,
+			const base::Optional<u64>           parameter_index
 		):
 			  helios_id(helios_id),
-			  layout(std::move(layout)),
+			  layout(layout),
 			  parameter_index(parameter_index) {}
 
-		explicit LIRLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
+		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
 
 		friend Function;
 		friend LIRLocalRef;
@@ -158,8 +157,7 @@ namespace compiler::lir {
 		 */
 		helios::SymID helios_id;
 
-		// @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
-		std::shared_ptr<tsl::TypeLayout> layout;
+		CRef<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
 
@@ -169,14 +167,14 @@ namespace compiler::lir {
 
 	private:
 		LIRGlobal(
-			const helios::SymID                      helios_id,
-			const tsl::TypeLayout&                   layout,
-			const base::StrID&                       mangled_name,
-			const LIRGlobalType                      type          = LIRGlobalType::Variable,
-			base::Optional<helios::CompileTimeValue> initial_value = {}
+			const helios::SymID                             helios_id,
+			const CRef<tsl::TypeLayout>                     layout,
+			const base::StrID&                              mangled_name,
+			const LIRGlobalType                             type          = LIRGlobalType::Variable,
+			const base::Optional<helios::CompileTimeValue>& initial_value = {}
 		):
 			  helios_id(helios_id),
-			  layout(std::make_shared<tsl::TypeLayout>(layout)),
+			  layout(layout),
 			  mangled_name(mangled_name),
 			  type(type),
 			  initial_value(initial_value) {}
@@ -214,10 +212,10 @@ namespace compiler::lir {
 		/**
 		 * @brief Get the type layout of the base variable.
 		 */
-		tsl::TypeLayout getBaseLayout() {
+		CRef<tsl::TypeLayout> getBaseLayout() {
 			variant_match(base) {
 				variant_case(LIRLocalRef, local) { return local->layout; }
-				variant_case(LIRGlobal, global) { return *global.layout; }
+				variant_case(LIRGlobal, global) { return global.layout; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -236,11 +234,12 @@ namespace compiler::lir {
 		 * @brief The type layout of the final accessed field.
 		 * @note This type layout may be different from the layout of the base variable,
 		 * especially when the access chain is not empty.
-		 * @TODO: #1520 Introduce interning, store layouts cheaper.
 		 */
-		tsl::TypeLayout layout;
+		CRef<tsl::TypeLayout> layout;
 
-		LIRPlace(query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain);
+		LIRPlace(
+			query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
+		);
 
 		[[nodiscard]]
 		bool isLocal() const {
@@ -350,8 +349,8 @@ namespace compiler::lir {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
 
-		tsl::TypeLayout              return_type_layout;
-		std::vector<tsl::TypeLayout> parameter_layouts;
+		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
+		CRef<tsl::TypeLayout>              return_type_layout;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LIRLocal> local_list;

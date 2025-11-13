@@ -143,7 +143,7 @@ private:
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
+						local.layout->getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
 						)
@@ -151,7 +151,7 @@ private:
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
+						local.layout->getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
 						)
@@ -264,7 +264,7 @@ private:
 				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
+						local.layout->getSourceType(),
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
 						)

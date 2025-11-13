@@ -20,10 +20,10 @@ namespace tsl {
 		 * @param ctx The query context.
 		 * @return The output TypeLayout vector.
 		 */
-		std::vector<TypeLayout> getLayoutVector(
+		std::vector<CRef<TypeLayout>> getLayoutVector(
 			const std::vector<tsh::SymbolType<>>& types, query::Context& ctx
 		) {
-			std::vector<TypeLayout> layouts;
+			std::vector<CRef<TypeLayout>> layouts;
 			layouts.reserve(types.size());
 			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
 			return layouts;
@@ -34,9 +34,9 @@ namespace tsl {
 		 * @param layouts Vector of type layouts to aggregate over.
 		 * @return The maximum size of a type layout in the vector.
 		 */
-		Bits maxTypeLayoutSizeInVector(const std::vector<TypeLayout>& layouts) {
+		Bits maxTypeLayoutSizeInVector(const std::vector<CRef<TypeLayout>>& layouts) {
 			Bits max{ 0 };
-			for (const auto& type: layouts) max = std::max(max, type.getSize());
+			for (const auto& type: layouts) max = std::max(max, type->getSize());
 			return max;
 		}
 
@@ -89,10 +89,11 @@ namespace tsl {
 		 * @param layouts The layouts of the types.
 		 * @return The aligned offsets.
 		 */
-		std::vector<Bytes> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
+		std::vector<Bytes> alignOffsetsForLayoutVector(const std::vector<CRef<TypeLayout>>& layouts
+		) {
 			std::vector<Bits> sizes;
 			sizes.reserve(layouts.size());
-			for (const auto& layout: layouts) sizes.push_back(layout.getSize());
+			for (const auto& layout: layouts) sizes.push_back(layout->getSize());
 			return alignOffsetsForSizeVector(sizes);
 		}
 
@@ -153,9 +154,9 @@ namespace tsl {
 		const auto element_type   = tsh::DynamicArrayAbstractType(getSourceType()).getElementType();
 		const auto element_layout = ctx.query<QuerySymbolTypeLayout>(element_type);
 		if (recursive)
-			ss << element_layout.toStringDefinition(ctx, recursive, indent + 1) << "\n";
+			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
 		else
-			ss << getIndent(indent + 1) << element_layout.toStringIdentification() << "\n";
+			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
 
 		// Display the total size
 		ss << getIndent(indent) << "} : " << base::toString(getSize());
@@ -208,9 +209,9 @@ namespace tsl {
 		for (const auto component_type: index_to_type) {
 			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
-				ss << component_layout.toStringDefinition(ctx, recursive, indent + 1) << "\n";
+				ss << component_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
 			else
-				ss << getIndent(indent + 1) << component_layout.toStringIdentification() << "\n";
+				ss << getIndent(indent + 1) << component_layout->toStringIdentification() << "\n";
 		}
 
 		// Display the total size
@@ -220,11 +221,11 @@ namespace tsl {
 	}
 
 	struct TupleTypeLayoutConstructionHelper {
-		tsh::TupleAbstractType  tuple_type;
-		std::vector<TypeLayout> component_layouts;
-		std::vector<Bytes>      component_offsets;
-		std::vector<usize>      offset_idx_to_component_idx;
-		Bits                    total_size;
+		tsh::TupleAbstractType        tuple_type;
+		std::vector<CRef<TypeLayout>> component_layouts;
+		std::vector<Bytes>            component_offsets;
+		std::vector<usize>            offset_idx_to_component_idx;
+		Bits                          total_size;
 
 		TupleTypeLayoutConstructionHelper(
 			const tsh::TupleAbstractType tuple_type, query::Context& ctx
@@ -236,7 +237,7 @@ namespace tsl {
 			  total_size(
 				  component_layouts.empty()
 					  ? Bits(0)
-					  : bytes2bits(component_offsets.back()) + component_layouts.back().getSize()
+					  : bytes2bits(component_offsets.back()) + component_layouts.back()->getSize()
 			  ) {}
 	};
 
@@ -261,9 +262,9 @@ namespace tsl {
 			const tsh::SymbolType<> component_type   = tuple_type.getComponents().at(component_idx);
 			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
-				ss << component_layout.toStringDefinition(ctx, recursive, indent + 1);
+				ss << component_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
-				ss << getIndent(indent + 1) << component_layout.toStringIdentification();
+				ss << getIndent(indent + 1) << component_layout->toStringIdentification();
 			// Display the offset
 			ss << " @ " << base::toString(component_offset) << "\n";
 		}
@@ -277,7 +278,7 @@ namespace tsl {
 	struct ClassTypeLayoutConstructionHelper {
 		tsh::ClassAbstractType               class_type;
 		std::vector<tsh::InterfaceElement>   field_elements;
-		std::vector<TypeLayout>              field_layouts;
+		std::vector<CRef<TypeLayout>>        field_layouts;
 		std::vector<Bytes>                   field_offsets;
 		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
 		Bits                                 total_size;
@@ -316,7 +317,7 @@ namespace tsl {
 			  total_size(
 				  field_layouts.empty()
 					  ? Bits(0)
-					  : bytes2bits(field_offsets.back()) + field_layouts.back().getSize()
+					  : bytes2bits(field_offsets.back()) + field_layouts.back()->getSize()
 			  ) {}
 	};
 
@@ -343,9 +344,9 @@ namespace tsl {
 			const tsh::SymbolType<> field_type   = class_type.getMemberType(field_sym_id, ctx);
 			auto                    field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
-				ss << field_layout.toStringDefinition(ctx, recursive, indent + 1);
+				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
-				ss << getIndent(indent + 1) << field_layout.toStringIdentification();
+				ss << getIndent(indent + 1) << field_layout->toStringIdentification();
 			// Display the offset
 			ss << " @ " << base::toString(field_offset) << "\n";
 		}
@@ -360,13 +361,11 @@ namespace tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, pointer_type),
-		  pointee(makeBox<TypeLayout>(
-			  ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())
-		  )) {}
+		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
-		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType(), symbol_type.getRefKind()),
-		  pointee(makeBox<TypeLayout>(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType()))) {
+		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType()),
+		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
