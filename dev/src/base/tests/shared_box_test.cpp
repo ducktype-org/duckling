@@ -3,7 +3,7 @@
 
 class SharedBoxTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS BoxRefTest
+#define TESTER_CLASS SharedBoxTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {

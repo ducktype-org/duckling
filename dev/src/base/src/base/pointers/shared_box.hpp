@@ -1,72 +1,23 @@
 #pragma once
 
-#include <atomic>
+// #include <atomic>
 
 #include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/pointers/default_deleter.hpp>
 
 namespace base {
-
-	/**
-	 * @brief Default deleter functor used by Box, MBox.
-	 *
-	 * @note Adding specialization for custom types with macros
-	 * DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and
-	 * DEFAULT_BOX_PTR_DELETER_DEFINITION(T) is supported and
-	 * can be used to avoid delete on incomplete types.
-	 * This effectively moves the definition into the cpp file, where the type is complete.
-	 *
-	 * @tparam T
-	 */
-	template<class T>
-	struct DefaultBoxPtrDeleter final {
-		DefaultBoxPtrDeleter() = default;
-
-		/**
-		 * DefaultBoxPtrDeleter can be constructed from other DefaultBoxPtrDeleter.
-		 */
-		template<class U>
-		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {}
-
-		static void del(T* ptr) {
-			static_assert(
-				IS_COMPLETE_V<T>,
-				"DefaultBoxPtrDeleter can be used only with complete types. If you need to use it "
-				"with "
-				"incomplete type, please provide a specialization using macros "
-				"DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T)."
-			);
-
-			delete ptr;
-		}
-	};
-
-    class ControlBlock final {
-    private:
-        std::atomic<usize> n_owners;
-        std::atomic<usize> n_weak;
-        std::atomic<bool> is_owned_mutably;
-    public:
-        explicit ControlBlock() noexcept: n_owners{ 1 }, n_weak{ 0 }, is_owned_mutably{ false } {}
-        void addOwner() {
-            n_owners++;
-        }
-        void removeOwner() {
-            n_owners--;
-        }
-        void addWeak() {
-            n_weak++;
-        }
-        void removeWeak() {
-            n_weak--;
-        }
-        bool tryTakeMut() {
-            return !is_owned_mutably.exchange(true);
-        }
+	template<class DataDeleter, class ControlBlockDeleter>
+	class ControlBlock final {
+	public:
+        usize n_owners;
+		[[no_unique_address]] DataDeleter data_deleter;
+		ControlBlock() = delete;
+		ControlBlock(Deleter deleter) noexcept: n_owners{ 0 }, deleter { std::move(deleter) } {}
     };
 
-    template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
+    template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
     class SharedBox final {
     private:
         static_assert(
@@ -81,8 +32,7 @@ namespace base {
 		);
 
 		T* data_ptr;
-        ControlBlock* ctrl_ptr;
-		[[no_unique_address]] Deleter deleter;
+        ControlBlock<Deleter>* ctrl_ptr;
 
 		template<class U, class UDeleter>
 		friend class SharedBox;
@@ -91,10 +41,10 @@ namespace base {
 		//friend class MBox;
 
 		constexpr void assertNotNull() const {
-			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
+			if (data_ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
-		explicit SharedBox(T* ptr, ControlBlock* ctrl, Deleter deleter) noexcept: data_ptr{ ptr }, ctrl_ptr{ ctrl }, deleter{ std::move(deleter) } {
+		explicit SharedBox(T* ptr, ControlBlock<Deleter>* ctrl) noexcept: data_ptr{ ptr }, ctrl_ptr{ ctrl } {
 			assertNotNull();
 		}
     public:
@@ -109,7 +59,7 @@ namespace base {
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, *(new ControlBlock()) std::move(deleter));
+			return SharedBox(ptr, *(new ControlBlock(deleter)));
 		}
 
 		/**
@@ -120,6 +70,34 @@ namespace base {
 		}
 
         SharedBox(const SharedBox& other) = delete;
+
+		/**
+		 * @brief Assignment increments counter in the control block.
+		 *
+		 * @tparam U
+		 * @param oth
+		 * @return SharedBox&
+		 */
+		template<class U, class UDeleter>
+		requires std::is_same<Deleter, UDeleter&&>
+		SharedBox& operator=(Box<U, UDeleter>&& oth) noexcept {
+			this.renounce_ownership();
+
+			data_ptr = std::move(oth).data_ptr;
+			ctlr_ptr = std::move(oth).ctrl_ptr;
+			ctrl_ptr->n_owners++;
+		}
+
+		void renounce_ownership() {
+			ctrl_ptr->n_owners--;
+			if (ctrl_ptr->n_owners == 0) {
+				ctrl_ptr->deleter.del(data_ptr);
+				data_ptr = nullptr;
+
+				delete ctrl_ptr;
+				ctrl_ptr = nullptr;
+			}
+		}
     };
 }
 
