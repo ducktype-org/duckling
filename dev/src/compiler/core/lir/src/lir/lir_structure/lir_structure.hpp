@@ -324,7 +324,6 @@ namespace compiler::lir {
 		tsh::SymbolType<> target_type;
 		/**
 		 * @brief The source type layout of the cast operation.
-		 * @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
 		 */
 		CRef<tsl::TypeLayout> source_layout;
 		/**
