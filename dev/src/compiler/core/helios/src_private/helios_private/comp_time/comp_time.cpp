@@ -117,7 +117,7 @@ namespace compiler::helios {
 						using LhsT = std::decay_t<decltype(lhs)>;
 						using RhsT = std::decay_t<decltype(rhs)>;
 
-						// Binary operation on  numeric literals.
+						// Binary operation on numeric literals.
 						if constexpr (std::is_same_v<LhsT, NumericValue>
 					                  && std::is_same_v<RhsT, NumericValue>) {
 							return std::visit(
@@ -125,52 +125,50 @@ namespace compiler::helios {
 									using LhsNumT = std::decay_t<decltype(lhs_val)>;
 									using RhsNumT = std::decay_t<decltype(rhs_val)>;
 
-									// TODOP: Fix that so its assumed both sides are the same type.
-									using ResultT = std::common_type_t<LhsNumT, RhsNumT>;
+									// @note: We assume both sides of the binary operation have the
+							        // same types. If types differ, they should be casted with the
+							        // cast expr beforehand.
 
-									auto maybe_lhs_coerced = lhs.template coerceTo<ResultT>();
-									auto maybe_rhs_coerced = rhs.template coerceTo<ResultT>();
+									static_assert(
+										std::is_same_v<LhsNumT, RhsNumT>,
+										"Operands on binary expression evaluated at compile time "
+										"are of different type"
+									);
 
-									// Failed to coerce.
-									if (!maybe_lhs_coerced || !maybe_rhs_coerced)
-										return query::QError(errors::Failed());
-									auto lhs_coerced = maybe_lhs_coerced.value();
-									auto rhs_coerced = maybe_rhs_coerced.value();
+
+									using ResultT = LhsNumT;
+
 
 									ResultT result;
 									switch (expr.operation) {
 									case IntegerAdd:
 									case FloatAdd:
-										result = lhs_coerced + rhs_coerced;
+										result = lhs_val + rhs_val;
 										break;
 									case IntegerSub:
 									case FloatSub:
-										result = lhs_coerced - rhs_coerced;
+										result = lhs_val - rhs_val;
 										break;
 									case IntegerMul:
 									case FloatMul:
-										result = lhs_coerced * rhs_coerced;
+										result = lhs_val * rhs_val;
 										break;
 									case IntegerDiv:
 									case FloatDiv:
-										if (rhs_coerced == 0)
-											return query::QError(errors::Failed());
-										result = lhs_coerced / rhs_coerced;
+										if (rhs_val == 0) return query::QError(errors::Failed());
+										result = lhs_val / rhs_val;
 										break;
 									case IntegerMod:
 									case FloatMod:
-										if (rhs_coerced == 0)
-											return query::QError(errors::Failed());
+										if (rhs_val == 0) return query::QError(errors::Failed());
 										if constexpr (std::is_integral_v<ResultT>)
-											result = lhs_coerced % rhs_coerced;
+											result = lhs_val % rhs_val;
 										else
-											result = std::fmod(lhs_coerced, rhs_coerced);
+											result = std::fmod(lhs_val, rhs_val);
 										break;
 									case IntegerPow:
 									case FloatPow:
-										result = static_cast<ResultT>(
-											std::pow(lhs_coerced, rhs_coerced)
-										);
+										result = static_cast<ResultT>(std::pow(lhs_val, rhs_val));
 										break;
 									default:
 										throw base::NotYetImplemented(
@@ -178,7 +176,7 @@ namespace compiler::helios {
 										);
 									}
 
-									return CompileTimeValue{ NumericValue::createMinimized(result) };
+									return CompileTimeValue{ NumericValue{ result } };
 								},
 								lhs.getStorage(),
 								rhs.getStorage()
@@ -288,18 +286,15 @@ namespace compiler::helios {
 					return;
 				}
 
-				bool        condition_is_true = false;
-				const auto& cond_ctv          = cond_result.value();
-				variant_match(cond_ctv.getStorage()) {
-					variant_case(bool, val) { condition_is_true = val; }
-					variant_case(NumericValue, val) {
-						condition_is_true = std::visit(
-							[&](auto&& num_val) { return (num_val != 0); }, val.getStorage()
+				const auto& cond_ctv   = cond_result.value();
+				auto        maybe_bool = cond_ctv.get<bool>();
+				match_optional(cond_ctv.get<bool>()) {
+					opt_some(value) { condition_is_true = value; }
+					opt_none {
+						CORE_PANIC(
+							"Ternary operator got a non boolean value when evaluating the ternary "
+							"operator condition"
 						);
-					}
-					variant_default {
-						result = query::QError(errors::Failed());
-						return;
 					}
 				}
 
@@ -314,14 +309,20 @@ namespace compiler::helios {
 				                  const NumericValue& second,
 				                  code::BuiltinBinary operation) {
 					return std::visit(
-						[&](auto&& lhs, auto&& rhs) -> bool {
+						[&](auto&& lhs_num, auto&& rhs_num) -> bool {
 							using LhsNumT = std::decay_t<decltype(lhs)>;
 							using RhsNumT = std::decay_t<decltype(rhs)>;
-							// Find a common type for those literals.
-							using CommonTypeT = std::common_type_t<LhsNumT, RhsNumT>;
 
-							auto lhs_num = static_cast<CommonTypeT>(lhs);
-							auto rhs_num = static_cast<CommonTypeT>(rhs);
+							// @note: We assume both sides of the comparison operation have the
+						    // same types. If types differ, they should be casted with the
+						    // cast expr beforehand.
+
+							static_assert(
+								std::is_same_v<LhsNumT, RhsNumT>,
+								"Operands on binary comparison expression evaluated at compile "
+								"time are of different type"
+							);
+
 
 							using enum code::BuiltinBinary;
 							switch (operation) {
@@ -442,7 +443,7 @@ namespace compiler::helios {
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
-				// @note: We assume that if we got here, then the cast if valid.
+				// @note: We assume that if we got here, then the cast is valid.
 				auto expr_to_cast = evalHoutExpr(ctx, cast.source_expr.ref());
 				if (expr_to_cast.hasError()) {
 					result = query::QError(errors::Failed());

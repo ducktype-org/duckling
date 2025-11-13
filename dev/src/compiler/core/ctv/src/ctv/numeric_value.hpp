@@ -83,6 +83,7 @@ namespace compiler::numeric_value {
 		[[nodiscard]] base::Optional<TargetType> coerceTo() const {
 			return std::visit(
 				[&](auto&& stored_val) -> base::Optional<TargetType> {
+					if constexpr (std::is_same_v<TargetType, bool>) return stored_val != 0;
 					if (base::fitsIn<TargetType>(stored_val))
 						return static_cast<TargetType>(stored_val);
 					return {};

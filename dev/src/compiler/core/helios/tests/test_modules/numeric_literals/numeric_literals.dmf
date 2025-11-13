@@ -43,7 +43,6 @@ const const_u64 = 18446744073709551615u64;
 
 const const_f32 = -456.789f32;
 const const_f64 = 1.23456789e10f64;
-const const_f128 = -3.33e-100f128;
 
 var var_i8 = 100i8;
 var var_i16 = 32000i16;
@@ -57,7 +56,6 @@ var var_u64 = 18446744073709551615u64;
 
 var var_f32 = -456.789f32;
 var var_f64 = 1.23456789e10f64;
-var var_f128 = -3.33e-100f128;
 
 let let_i8 = 100i8;
 let let_i16 = 32000i16;
@@ -71,4 +69,3 @@ let let_u64 = 18446744073709551615u64;
 
 let let_f32 = -456.789f32;
 let let_f64 = 1.23456789e10f64;
-let let_f128 = -3.33e-100f128;

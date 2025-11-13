@@ -152,14 +152,10 @@ private:
 
 		// Test minimization logic.
 		// TODOP: Probably remove if we decide on no minimization in constants.
-		// ASSERT_EQUAL(128, getConstValueAs<i16>("NEEDS_I16", root_scope));
 		// ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
 		// ASSERT_EQUAL(2'147'483'648, getConstValueAs<i64>("NEEDS_I64", root_scope));
 		// ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
 		// ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
-		// ASSERT_EQUAL(
-		// 	1.0L + 1.0L / 1152921504606846976.0L, getConstValueAs<f128>("NEEDS_F128", root_scope)
-		// );
 
 		// TODOP: Figure out what to do with this, with the current casting logic.
 		ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));

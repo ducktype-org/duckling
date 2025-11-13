@@ -108,6 +108,9 @@ namespace compiler::numeric_value {
 				CORE_PANIC("Unsupported float width in compile-time cast");
 			}
 		}
+		case tsh::Kind::Bool: {
+			return cast.template operator()<bool>();
+		}
 		default:
 			CORE_PANIC("Invalid compile-time cast to a non-numeric type");
 		}
