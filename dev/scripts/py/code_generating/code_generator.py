@@ -32,7 +32,6 @@ class Indenter:
 
         self.generator = generator
         atexit.register(self.flush)
-        
 
     def indent(self, text: str):
         for _ in range(self.level):
@@ -135,6 +134,10 @@ class CodeGenerator(ABC):
     
     # Special elements
     @abstractmethod
+    def preambule(self) -> ScopeData:
+        pass
+            
+    @abstractmethod
     def print(self, scope: ScopeData):
         pass
 
@@ -229,7 +232,7 @@ class LogicGenerator:
         self.generator.return_statement(scope)
         
     def generate_code(self):
-        scope = ScopeData()
+        scope = self.generator.preambule()
         
         # Generate global symbols
         for _ in range(random.randint(1, 5)):
@@ -259,3 +262,7 @@ class LogicGenerator:
                 else:
                     self.generate_non_control_flow(scope)
 
+# TODOs:
+# 1. Only assign to modifiable value
+# 2. Declare vars without starting value as well
+# 3. Multifile

@@ -1,6 +1,5 @@
 import random
 
-
 from contextlib import contextmanager
 
 from code_generator import CodeGenerator, ScopeData, FunctionData
@@ -98,6 +97,9 @@ class DucklingCodeGenerator(CodeGenerator):
         self.indenter.add_text("}\n")
 
     # Special elements
+    def preambule(self) -> ScopeData:
+        return ScopeData()
+    
     def print(self, scope: ScopeData):
         self.indenter.add_fragment("builtin_output_i64(")
         self.logic_generator.generate_expression(scope, PROB)
