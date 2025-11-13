@@ -10,14 +10,6 @@
 
 #include <base/collections/maps.hpp>
 
-template<>
-struct std::hash<query::internal::QueryID> {
-	[[nodiscard]]
-	size_t operator()(const query::internal::QueryID& id) const {
-		return id.asInt();
-	}
-};
-
 namespace query::internal {
 
 	struct QueryIDMaker {
@@ -69,6 +61,8 @@ namespace query::internal {
 	}
 
 	bool QueryID::hasStableHash() const { return hasStableHashMapInstance().at(*this); }
+
+	bool QueryID::registered() const { return dataMap().contains(*this); }
 
 	QueryID registerQuery(QueryData query_data, bool has_stable_hash) {
 		auto ret_id = next;
