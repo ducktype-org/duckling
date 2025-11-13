@@ -1,11 +1,13 @@
 use clap::{Arg, ArgAction, Command, crate_name, value_parser};
-use clap_complete::{Generator, Shell, Generate};
-use duck_lib::{InternalError, QuackResult};
+use clap_complete::{Generator, Shell, generate};
 
-use crate::DuckCtx;
-use crate::driver::cli;
-use crate::driver::cli_ext::subcommand;
-use crate::Terminal;
+use crate::{
+    DuckCtx,
+    InternalError,
+    QuackResult,
+    duck::driver::{cli, cli_ext::subcommand},
+    duck::util::terminal::Terminal
+};
 use clap::ArgMatches;
 
 pub fn get_parser() -> Command {

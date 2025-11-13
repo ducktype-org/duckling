@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io::Read;
 use std::io::Write;
 
 use crate::QuackResult;
@@ -145,5 +146,47 @@ impl Terminal {
         note => "Note:" + cyan + bold,
         hint => "Hint:" + cyan + bold,
         critical => "Critical:" + red + reverse + bold,
+    }
+}
+
+impl Write for Terminal {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if self.verbosity.is_quiet() {
+            Ok(0)
+        } else {
+            self.term.write(buf)
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.term.flush()
+    }
+}
+
+impl Write for &Terminal {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut term: &Term = &self.term;
+        if self.verbosity.is_quiet() {
+            Ok(0)
+        } else {
+            term.write(buf)
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.term.flush()
+    }
+}
+
+impl Read for Terminal {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.term.read(buf)
+    }
+}
+
+impl Read for &Terminal {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let mut term: &Term = &self.term;
+        term.read(buf)
     }
 }
