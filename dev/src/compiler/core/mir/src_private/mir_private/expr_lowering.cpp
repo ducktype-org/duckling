@@ -1,5 +1,6 @@
 #include "expr_lowering.hpp"
 
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -343,6 +344,27 @@ namespace compiler::mir {
 				expr.expression_type.getSymbolType()
 			);
 		}
+
+		void visitCastExpr(const hc::CastExpr& expr) override {
+			auto       cast        = continuation->addHole();
+			auto       lowered     = lowerSubExpr(*expr.source_expr, continuation);
+			const auto res_lowered = lowered.getResult(function);
+
+			return noValueOutput(
+				lowered.begin,
+				cast,
+				Instruction{ Operation::Cast,
+			                 {},
+			                 { res_lowered },
+			                 {},
+			                 expr_scope,
+			                 CastParameters{ .source_type
+			                                 = expr.source_expr->expression_type.getSymbolType(),
+			                                 .target_type = expr.target_type } },
+				expr.expression_type.getSymbolType()
+			);
+		}
+
 
 	private:
 		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {

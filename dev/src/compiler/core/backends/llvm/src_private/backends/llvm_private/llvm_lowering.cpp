@@ -143,6 +143,9 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
+			variant_case(tsl::PointerTypeLayout, pointer_layout) {
+				return llvm::PointerType::getUnqual(context);
+			}
 			variant_default {
 				CORE_PANIC(
 					base::strConcat("Type not handled yet: ", layout->toStringIdentification())
@@ -420,6 +423,152 @@ namespace compiler::backend_llvm {
 			}
 		}
 
+		llvm::Value* castOperation(
+			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
+		) {
+			const auto& target_layout = *cast_params.target_layout;
+			const auto& source_layout = *cast_params.source_layout;
+			const auto& source_type   = cast_params.source_type;
+			const auto& target_type   = cast_params.target_type;
+
+			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
+
+			auto src_bits
+				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout.getSize()));
+			auto dst_bits
+				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout.getSize()));
+
+			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+				if (type.getType().getKind() == tsh::Kind::Integral) {
+					return (
+						tsh::IntegralAbstractType(type.getType()).getSignedness()
+						== tsh::IntegralAbstractType::Signedness::Signed
+					);
+				}
+				// Char, bool, etc. are treated as unsigned
+				return false;
+			};
+
+			variant_match(source_layout.getVariant()) {
+				variant_case_novalue(tsl::IntegralTypeLayout) {
+					// signedness comes from the symbol-level type information
+					bool src_signed = is_signed(source_type);
+
+					variant_match(target_layout.getVariant()) {
+						variant_case_novalue(tsl::IntegralTypeLayout) {
+							// ================== Int -> Int ==================
+							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
+						}
+						variant_case_novalue(tsl::FloatTypeLayout) {
+							// ================== Int -> Float ==================
+							return src_signed ? builder.CreateSIToFP(argument, llvm_dst_ty)
+							                  : builder.CreateUIToFP(argument, llvm_dst_ty);
+						}
+						variant_case_novalue(tsl::PointerTypeLayout) {
+							// ================== Int -> Pointer ==================
+							auto ptr_bits
+								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							llvm::Value* int_for_ptr
+								= builder.CreateIntCast(argument, ptr_int_ty, src_signed);
+							return builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
+						}
+						variant_default {
+							CORE_PANIC("Unsupported cast from integral-layout to target layout");
+						}
+					}
+				}
+
+				variant_case_novalue(tsl::FloatTypeLayout) {
+					variant_match(target_layout.getVariant()) {
+						variant_case_novalue(tsl::FloatTypeLayout) {
+							// ================== Float -> Float ==================
+
+							if (dst_bits > src_bits)
+								return builder.CreateFPExt(argument, llvm_dst_ty);
+							else if (dst_bits < src_bits)
+								return builder.CreateFPTrunc(argument, llvm_dst_ty);
+							else
+								return argument;
+						}
+						variant_case_novalue(tsl::IntegralTypeLayout) {
+							// ================== Float -> Int ==================
+
+
+							// Here is a problem when the float is NaN or out of range of the int
+							// then the behavior is undefined.
+							bool to_signed = is_signed(target_type);
+
+							// Some other solution to consider in the future;
+							// bool use_saturating_float_casts = true;
+
+							// if (not use_saturating_float_casts) {
+							// 	return to_signed ? builder.CreateFPToSI(argument, llvm_dst_ty)
+							// 	                 : builder.CreateFPToUI(argument, llvm_dst_ty);
+							// }
+
+							// Use LLVM saturating fptosi/fptoui intrinsics when available.
+							std::string instr = to_signed ? "fptosi" : "fptoui";
+
+							// scalar
+							llvm::FunctionType* func_type = llvm::FunctionType::get(
+								llvm_dst_ty, { argument->getType() }, false
+							);
+
+							// name =  llvm.{fptosi, fptoui}.sat.i{int_width}.f{float_width}
+							std::string name = base::strConcat(
+								"llvm.",
+								instr,
+								".sat.i",
+								std::to_string(dst_bits),
+								".f",
+								std::to_string(src_bits)
+							);
+
+							llvm::FunctionCallee fdecl
+								= module->getOrInsertFunction(name, func_type);
+							return builder.CreateCall(fdecl, { argument });
+						}
+						variant_default {
+							CORE_PANIC("Unsupported cast from float-layout to target layout");
+						}
+					}
+				}
+
+				variant_case_novalue(tsl::PointerTypeLayout) {
+					variant_match(target_layout.getVariant()) {
+						variant_case_novalue(tsl::IntegralTypeLayout) {
+							// ================== Pointer -> Int  ==================
+							auto ptr_bits
+								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
+						}
+						variant_case_novalue(tsl::PointerTypeLayout) {
+							// =================== Pointer -> Pointer ==================
+							return builder.CreateBitCast(argument, llvm_dst_ty);
+						}
+						variant_case_novalue(tsl::FloatTypeLayout) {
+							// ================== Pointer -> Float ==================
+							auto ptr_bits
+								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							return builder.CreateUIToFP(int_from_ptr, llvm_dst_ty);
+						}
+						variant_default {
+							CORE_PANIC("Unsupported cast from pointer-layout to target layout");
+						}
+					}
+				}
+				// For other layouts (variant, class, tuple, etc.) fallback to symbol-kind
+				// based panic
+				variant_default { CORE_PANIC("Unsupported cast source layout in LLVM lowering"); }
+			}
+			CORE_UNREACHABLE();
+		}
+
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                        \
 	{                                                                               \
 		const auto lhs   = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
@@ -518,6 +667,20 @@ namespace compiler::backend_llvm {
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
+			case Cast: {
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto output   = lir_instruction.output.value();
+
+				// get cast parameters:
+				auto cast_params = std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
+
+				CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+
+				const auto value = castOperation(argument, builder, *cast_params);
+
+				storeOutput(output, value, builder);
+				break;
+			}
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
@@ -539,7 +702,8 @@ namespace compiler::backend_llvm {
 				} else {
 					CORE_ASSERT(
 						callee.getFunctionType()->getReturnType()->isVoidTy(),
-						"call to non void function without output – this may be valid, feel free "
+						"call to non void function without output "
+						"– this may be valid, feel free "
 						"to remove assertion if the compiler internals change."
 					);
 					builder.CreateCall(callee, args);
@@ -623,10 +787,11 @@ namespace compiler::backend_llvm {
 	) {
 		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
 		// 65535 is the default priority for global constructors in LLVM.
-		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the global
-		// variable associated with the constructor. However, the problem is that the order of
-		// functions with the same priority is not defined. Therefore, we probably want to create
-		// one global constructor that calls the constructor of each variable in the module.
+		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
+		// global variable associated with the constructor. However, the problem is that the
+		// order of functions with the same priority is not defined. Therefore, we probably want
+		// to create one global constructor that calls the constructor of each variable in the
+		// module.
 		llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
 	}
 

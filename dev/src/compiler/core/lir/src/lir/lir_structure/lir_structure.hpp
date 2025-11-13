@@ -60,6 +60,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	BooleanOr,
 	BooleanNot,
 
+	Cast,
+
 	Call,
 
 	ReturnVoid,
@@ -307,29 +309,62 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Used to inform that the instruction doesn't require any additional parameters.
+	 */
+	struct NoInstrParameters final {};
+
+	struct CastParameters final {
+		/**
+		 * @brief The source type of the cast operation.
+		 */
+		tsh::SymbolType<> source_type;
+		/**
+		 * @brief The target type of the cast operation.
+		 */
+		tsh::SymbolType<> target_type;
+		/**
+		 * @brief The source type layout of the cast operation.
+		 * @TODO: #1520 Introduce interning for layouts, use it here instead of shared_ptr.
+		 */
+		std::shared_ptr<tsl::TypeLayout> source_layout;
+		/**
+		 * @brief The target type layout of the cast operation.
+		 */
+		std::shared_ptr<tsl::TypeLayout> target_layout;
+	};
+
+	/**
+	 * @brief Additional parameters for LIR instructions that depend on the operation type.
+	 */
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+
+	/**
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
 		Operation                operation = Operation::Uninitialized;
 		base::Optional<LIRPlace> output;
 		std::vector<LIRValue>    arguments;
+		InstrParameters          extra_params{ NoInstrParameters{} };
 
 		// @TODO: each Instruction should have source position reference
 
-		Instruction()                   = default;
-		Instruction(const Instruction&) = default;
-		Instruction(Instruction&&)      = default;
+		Instruction()                       = default;
+		Instruction(const Instruction&)     = default;
+		Instruction(Instruction&&) noexcept = default;
 
 		Instruction& operator=(Instruction&&) noexcept = default;
 
 		Instruction(
 			const Operation          operation,
 			base::Optional<LIRPlace> output,
-			std::vector<LIRValue>    arguments
+			std::vector<LIRValue>    arguments,
+			InstrParameters          extra_parameters = NoInstrParameters{}
 		):
 			  operation(operation),
 			  output(std::move(output)),
-			  arguments(std::move(arguments)) {}
+			  arguments(std::move(arguments)),
+			  extra_params(std::move(extra_parameters)) {}
 	};
 
 	/**

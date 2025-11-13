@@ -34,6 +34,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
+	EXPR_VISITOR(CastExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx):
 		  Expr(tsh::ExpressionType<>(
@@ -266,6 +267,24 @@ namespace compiler::helios::code {
 			break;
 		case IntegerPow:
 			out << "**";
+			break;
+		case IntegerLt:
+			out << " < ";
+			break;
+		case IntegerLteq:
+			out << " <= ";
+			break;
+		case IntegerGt:
+			out << " > ";
+			break;
+		case IntegerGteq:
+			out << " >= ";
+			break;
+		case IntegerEq:
+			out << " == ";
+			break;
+		case IntegerNeq:
+			out << " != ";
 			break;
 		case BooleanAnd:
 			out << " and ";
@@ -613,6 +632,30 @@ namespace compiler::helios::code {
 		expressions.reserve(this->expressions.size());
 		for (const auto& expr: this->expressions) expressions.push_back(expr->clone());
 		return makeBox<ChainComparisonExpr>(expression_type, std::move(expressions), operators);
+	}
+
+	CastExpr::CastExpr(query::Context&, Box<Expr> source_expr, tsh::SymbolType<> target_type):
+		  Expr(tsh::ExpressionType<>(
+			  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  source_expr(std::move(source_expr)),
+		  target_type(target_type) {}
+
+	CastExpr::CastExpr(
+		tsh::ExpressionType<> expression_type, Box<Expr> source_expr, tsh::SymbolType<> target_type
+	):
+		  Expr(expression_type),
+		  source_expr(std::move(source_expr)),
+		  target_type(target_type) {}
+
+	void CastExpr::debugPrint(std::ostream& out) const {
+		out << "cast[to=" << target_type.toString() << "](";
+		source_expr->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> CastExpr::clone() const {
+		return makeBox<CastExpr>(expression_type, source_expr->clone(), target_type);
 	}
 
 }
