@@ -35,17 +35,13 @@ namespace compiler::driver {
 						.global_dtor = std::nullopt,
 					});
 				}
-				// @TODO: add ctors and dtors for Global Consts when implemented
 				variant_case(helios::HOUTGlobalConst, global_const) {
-					// CRef mir_function
-					// 	= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->value();
-					// auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-					// globals.emplace_back(LIRModuleGlobal{
-					// 	.lir_global = lir_global,
-					// 	// @TODO: add legit dtors when implemented #929
-					// 	.global_ctor = lir_function,
-					// 	.global_dtor = std::nullopt,
-					// });
+					// @TODO: (add proper todo, issue, about non trivial constants) add ctors and dtors for Global Consts when implemented
+					globals.emplace_back(LIRModuleGlobal{
+						.lir_global = lir_global,
+						.global_ctor = std::nullopt,
+						.global_dtor = std::nullopt,
+					});
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(
