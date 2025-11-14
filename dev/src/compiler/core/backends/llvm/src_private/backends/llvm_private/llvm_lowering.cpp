@@ -123,18 +123,18 @@ namespace compiler::backend_llvm {
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
-	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
-		variant_match(layout.getVariant()) {
+	auto typeFromLayout(llvm::LLVMContext& context, CRef<tsl::TypeLayout> layout) -> llvm::Type* {
+		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(
-					context, base::safeIntConv<unsigned>(static_cast<usize>(layout.getSize()))
+					context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
 				// see https://llvm.org/docs/LangRef.html#floating-point-types for docs on LLVM
 				// floating point types
-				switch (static_cast<usize>(layout.getSize())) {
+				switch (static_cast<usize>(layout->getSize())) {
 				case 32:
 					return llvm::Type::getFloatTy(context);
 				case 64:
@@ -147,7 +147,8 @@ namespace compiler::backend_llvm {
 				return llvm::PointerType::getUnqual(context);
 			}
 			variant_default {
-				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(
+					base::strConcat("Type not handled yet: ", layout->toStringIdentification())
 				);
 			}
 		}
@@ -155,9 +156,9 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(
-		llvm::LLVMContext&                  context,
-		const std::vector<tsl::TypeLayout>& parameters,
-		const tsl::TypeLayout&              return_type
+		llvm::LLVMContext&                        context,
+		const std::vector<CRef<tsl::TypeLayout>>& parameters,
+		CRef<tsl::TypeLayout>                     return_type
 	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
@@ -197,7 +198,7 @@ namespace compiler::backend_llvm {
 		llvm::FunctionCallee callee  = module->getOrInsertFunction(
             mangled_name.strView(),
             getFunType(
-                context, *function_literal.parameter_layouts, *function_literal.return_type_layout
+                context, *function_literal.parameter_layouts, function_literal.return_type_layout
             )
         );
 
@@ -224,7 +225,7 @@ namespace compiler::backend_llvm {
 
 		auto& context = module->getContext();
 
-		auto global_type = typeFromLayout(context, *lir_global.layout);
+		auto global_type = typeFromLayout(context, lir_global.layout);
 
 		return module->getOrInsertGlobal(mangled_name, global_type);
 	}
@@ -326,7 +327,7 @@ namespace compiler::backend_llvm {
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function->local_list) {
 				CORE_ASSERT(
-					var.layout.getSize() > Bits(0),
+					var.layout->getSize() > Bits(0),
 					"local variable with size 0 is not allowed in LLVM"
 				);
 				auto reg = locals_builder.CreateAlloca(
@@ -386,7 +387,7 @@ namespace compiler::backend_llvm {
 						variant_case(lir::LIRGlobal, lir_global) {
 							auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 							return builder.CreateLoad(
-								typeFromLayout(builder.getContext(), *lir_global.layout),
+								typeFromLayout(builder.getContext(), lir_global.layout),
 								global_ptr.get()
 							);
 						}
@@ -425,17 +426,17 @@ namespace compiler::backend_llvm {
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
 		) {
-			const auto& target_layout = *cast_params.target_layout;
-			const auto& source_layout = *cast_params.source_layout;
+			const auto  target_layout = cast_params.target_layout;
+			const auto  source_layout = cast_params.source_layout;
 			const auto& source_type   = cast_params.source_type;
 			const auto& target_type   = cast_params.target_type;
 
 			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
 
 			auto src_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout.getSize()));
+				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout->getSize()));
 			auto dst_bits
-				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout.getSize()));
+				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
 			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
 				if (type.getType().getKind() == tsh::Kind::Integral) {
@@ -448,12 +449,12 @@ namespace compiler::backend_llvm {
 				return false;
 			};
 
-			variant_match(source_layout.getVariant()) {
+			variant_match(source_layout->getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
 					bool src_signed = is_signed(source_type);
 
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
@@ -479,7 +480,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Float -> Float ==================
 
@@ -535,7 +536,7 @@ namespace compiler::backend_llvm {
 				}
 
 				variant_case_novalue(tsl::PointerTypeLayout) {
-					variant_match(target_layout.getVariant()) {
+					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
 							auto ptr_bits
