@@ -12,7 +12,7 @@ def init_impl():
     log_new_line()
 
     log_info("Initializing git submodules...")
-    bash_command("git submodule update --init")
+    # bash_command("git submodule update --init")
     log_new_line()
 
     setup_venv_impl()
