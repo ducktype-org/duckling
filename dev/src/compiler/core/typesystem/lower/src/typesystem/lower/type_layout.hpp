@@ -10,6 +10,8 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
+#include <query_framework/context_fd.hpp>
+
 #include <variant>
 
 /**
@@ -178,10 +180,10 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
-		static constexpr auto OFFSET_SIZE = Bytes(8);
+		static constexpr auto METADATA_SIZE = Bytes(8);
 
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
-			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, string_type) {}
+			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(METADATA_SIZE) * 3, string_type) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -206,7 +208,7 @@ namespace tsl {
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
 			(void) this;
-			return POINTER_SIZE_BYTES + OFFSET_SIZE;
+			return POINTER_SIZE_BYTES + METADATA_SIZE;
 		}
 
 		/**
@@ -215,7 +217,7 @@ namespace tsl {
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
 			(void) this;
-			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
+			return POINTER_SIZE_BYTES + METADATA_SIZE * 2;
 		}
 	};
 
@@ -231,7 +233,7 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
-		static constexpr auto OFFSET_SIZE = Bytes(8);
+		static constexpr auto METADATA_SIZE = Bytes(8);
 
 		CRef<TypeLayout> element_layout;
 
@@ -258,7 +260,7 @@ namespace tsl {
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
 			(void) this;
-			return POINTER_SIZE_BYTES + OFFSET_SIZE;
+			return POINTER_SIZE_BYTES + METADATA_SIZE;
 		}
 
 		/**
@@ -267,7 +269,7 @@ namespace tsl {
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
 			(void) this;
-			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
+			return POINTER_SIZE_BYTES + METADATA_SIZE * 2;
 		}
 
 		/**

@@ -143,7 +143,7 @@ namespace tsl {
 	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
 		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE + bytes2bits(OFFSET_SIZE) * 3, dynamic_array_type),
+		  TypeLayoutABC(POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3, dynamic_array_type),
 		  element_layout(ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())) {}
 
 	std::string DynamicArrayTypeLayout::toStringDefinition(
