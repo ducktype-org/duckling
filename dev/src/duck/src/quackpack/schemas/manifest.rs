@@ -39,7 +39,7 @@ pub struct Dependency {
 }
 
 #[derive(Debug)]
-pub struct OredSemver(pub Vec<Version>);
+pub struct OredSemver(pub NonEmptyVec<Version>);
 
 impl<'de> Deserialize<'de> for OredSemver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -51,7 +51,7 @@ impl<'de> Deserialize<'de> for OredSemver {
             type Value = Vec<Version>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a string or a sequence of strings")
+                formatter.write_str("an ored semver string or a list of semver strings")
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -72,10 +72,19 @@ impl<'de> Deserialize<'de> for OredSemver {
                 while let Some(next) = seq.next_element::<Version>()? {
                     values.push(next);
                 }
-                Ok(values)
+                if values.is_empty() {
+                    Err(de::Error::custom("expected at least one version"))
+                } else {
+                    Ok(values)
+                }
             }
         }
-        deserializer.deserialize_any(SeqOrSplit).map(Self)
+        // SAFETY: `visit_seq` manually checks for empty vectors, and `visit_str` implementation combined
+        // with `Version::from_str` implementation assumes, that it's not empty.
+        deserializer
+            .deserialize_any(SeqOrSplit)
+            .map(NonEmptyVec)
+            .map(Self)
     }
 }
 
@@ -83,6 +92,38 @@ impl<'de> Deserialize<'de> for OredSemver {
 pub enum DependencySource {
     Simple(String),
     Detailed(DetailedSource),
+}
+
+#[derive(Debug)]
+pub struct NonEmptyVec<T>(Vec<T>);
+
+impl<T> AsRef<Vec<T>> for NonEmptyVec<T> {
+    fn as_ref(&self) -> &Vec<T> {
+        &self.0
+    }
+}
+
+impl<T> From<NonEmptyVec<T>> for Vec<T> {
+    fn from(value: NonEmptyVec<T>) -> Self {
+        value.0
+    }
+}
+
+impl<'de, T> de::Deserialize<'de> for NonEmptyVec<T>
+where
+    T: de::Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let inner = <Vec<T>>::deserialize(deserializer)?;
+        if inner.is_empty() {
+            Err(de::Error::custom("expected non-empty list"))
+        } else {
+            Ok(Self(inner))
+        }
+    }
 }
 
 impl<'de> de::Deserialize<'de> for DependencySource {
@@ -111,9 +152,9 @@ pub struct DetailedSource {
 
 #[derive(Debug, Deserialize)]
 pub struct DependencyCondition {
-    pub system: Option<Vec<String>>,
-    pub arch: Option<Vec<String>>,
-    pub package_features: Option<Vec<String>>,
+    pub system: Option<NonEmptyVec<String>>,
+    pub arch: Option<NonEmptyVec<String>>,
+    pub package_features: Option<NonEmptyVec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -152,11 +193,11 @@ mod tests {
     #[test]
     fn test_ored_semver_deserialization() {
         let x = serde_json::from_str::<OredSemver>(r#""1.0.0""#).unwrap();
-        assert_eq!(x.0, [Version::new(1, 0, 0)]);
+        assert_eq!(Vec::from(x.0), [Version::new(1, 0, 0)]);
 
         let x = serde_json::from_str::<OredSemver>(r#"" 1.0.0 or  1.1.0 or  2.0.0  ""#).unwrap();
         assert_eq!(
-            x.0,
+            Vec::from(x.0),
             [
                 Version::new(1, 0, 0),
                 Version::new(1, 1, 0),
@@ -164,7 +205,16 @@ mod tests {
             ]
         );
 
+        let x = serde_json::from_str::<OredSemver>(r#"" 1.0.0 or  1.1.0 or  2.0.0  ""#).unwrap();
         let y = serde_json::from_str::<OredSemver>(r#"["1.0.0", "1.1.0", "2.0.0"]"#).unwrap();
-        assert_eq!(y.0, x.0);
+        assert_eq!(Vec::from(x.0), Vec::from(y.0));
+    }
+
+    #[test]
+    fn test_empty_ored_semver_() {
+        assert!(serde_json::from_str::<OredSemver>(r#""""#).is_err());
+        assert!(serde_json::from_str::<OredSemver>(r#""  ""#).is_err());
+        assert!(serde_json::from_str::<OredSemver>(r#""  or ""#).is_err());
+        assert!(serde_json::from_str::<OredSemver>(r#"[]"#).is_err());
     }
 }
