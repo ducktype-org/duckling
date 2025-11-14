@@ -20,3 +20,4 @@ class A {
 }
 
 let aObj: A = A(42);
+let member_access = aObj.a;
