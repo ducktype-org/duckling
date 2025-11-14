@@ -121,6 +121,18 @@ namespace compiler::mir {
 		os << "}\n";
 	}
 
+	void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
+		os << " Params{";
+		variant_match(instr_params) {
+			variant_case_novalue(NoInstrParameters) { /* nothing */ }
+			variant_case(CastParameters, params) {
+				os << "from:" << params.source_type.toString()
+				   << ", to:" << params.target_type.toString();
+			}
+		}
+		os << "},";
+	}
+
 	void Instruction::debugPrint(std::ostream& os) const {
 		// save flags to restore
 		auto output_flags = os.flags();
@@ -154,7 +166,9 @@ namespace compiler::mir {
 			flag.debugPrint(os);
 			separator = ", ";
 		}
-		os << "], scope:" << scope->id;
+		os << "],";
+		debugPrintInstrParameters(os, extra_params);
+		os << " scope:" << scope->id;
 
 		// restore flags
 		os.flags(output_flags);

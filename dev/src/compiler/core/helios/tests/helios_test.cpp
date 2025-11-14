@@ -73,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
+		TESTER_ADD_TEST(testCastsHout);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -685,6 +686,13 @@ private:
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
+
+		auto member_access_sym  = getChain("member_access", root_scope).back();
+		auto member_access_expr = getExprOfVariable(member_access_sym);
+		ASSERT_EQUAL(
+			member_access_expr->expression_type.getType(),
+			query::entryPoint<tsh::QueryIntegralType>({ 32, Signed })
+		);
 	}
 
 	void testHoutVariables() {
@@ -1582,6 +1590,62 @@ private:
 				std::stringstream non_detailed_log;
 				ctx.logger.dumpLog(false, non_detailed_log);
 			});
+		}
+	}
+
+	void testCastsHout() {
+		// Load the small test module we added under test_modules/casts
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/casts")));
+
+		// Get HOUT for the module and find the function HOUT unit
+		auto  hout_unit = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& function  = hout_unit->functions[0];
+
+		// Helper: find a VariableStmt by name in the function body and return its initializer expr
+		auto get_var_init_expr
+			= [&](const base::StrID& varname) -> CRef<compiler::helios::code::Expr> {
+			for (const auto& st_box: function.body->statements) {
+				if (auto var_ptr
+				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
+					if (compiler::helios::name(var_ptr->helios_symbol) == varname) {
+						CORE_ASSERT(var_ptr->initial_value.has_value(), "Expected initializer");
+						return var_ptr->initial_value->ref();
+					}
+				}
+			}
+			CORE_PANIC("Variable not found in function body");
+		};
+
+		// Use helper to fetch initializer expressions and assert CastExpr insertion
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("explicit"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto f64_type = query::entryPoint<tsh::QueryFloatType>({ 64 });
+			ASSERT_EQUAL(f64_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("widen"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+			ASSERT_EQUAL(i64_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("bool_as_int"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+			ASSERT_EQUAL(i32_type, cast_ptr->target_type.getType());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("int_as_bool"));
+			auto cast_ptr
+				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
 		}
 	}
 

@@ -50,13 +50,13 @@ namespace {
 
 namespace compiler::backend_vm {
 	namespace {
-		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
-			variant_match(layout.getVariant()) {
+		vm::code::TypeOfData getTypeFromLayout(CRef<tsl::TypeLayout> layout) {
+			variant_match(layout->getVariant()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
@@ -65,7 +65,7 @@ namespace compiler::backend_vm {
 					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 				}
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					CORE_ASSERT(
 						bits == 16 || bits == 32 || bits == 64 || bits == 80,
 						"Invalid size of float: ",
@@ -78,7 +78,7 @@ namespace compiler::backend_vm {
 				}
 				variant_default {
 					CORE_PANIC(
-						base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+						base::strConcat("Type not handled yet: ", layout->toStringIdentification())
 					);
 				}
 			}
@@ -86,8 +86,8 @@ namespace compiler::backend_vm {
 		}
 
 		vm::code::FuncSignature getDVMSignatureFromLayouts(
-			const std::vector<tsl::TypeLayout>& parameter_layouts,
-			const tsl::TypeLayout&              return_layout
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			const CRef<tsl::TypeLayout>               return_layout
 		) {
 			vm::code::FuncSignature signature;
 			signature.parameters.reserve(parameter_layouts.size());
@@ -213,7 +213,7 @@ namespace compiler::backend_vm {
 						signatures.put(
 							func_literal.mangled_name,
 							getDVMSignatureFromLayouts(
-								*func_literal.parameter_layouts, *func_literal.return_type_layout
+								*func_literal.parameter_layouts, func_literal.return_type_layout
 							)
 						);
 					}
@@ -295,7 +295,7 @@ namespace compiler::backend_vm {
 					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
 				}
 				variant_case(lir::LIRGlobal, global) {
-					auto vm_type = getTypeFromLayout(*global.layout);
+					auto vm_type = getTypeFromLayout(global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 			}
@@ -318,7 +318,7 @@ namespace compiler::backend_vm {
 							return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
 						}
 						variant_case(lir::LIRGlobal, global) {
-							auto vm_type = getTypeFromLayout(*global.layout);
+							auto vm_type = getTypeFromLayout(global.layout);
 							return outputToOpArg(vm_type, global.mangled_name, true);
 						}
 					}
@@ -622,7 +622,7 @@ namespace compiler::backend_vm {
 			insertFunctionDependencies(compiled_collection.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
-			auto global_type = getTypeFromLayout(*global.lir_global.layout);
+			auto global_type = getTypeFromLayout(global.lir_global.layout);
 			compiled_collection.types.push_back(global_type);
 
 			base::Optional<Identifier> ctor_name;

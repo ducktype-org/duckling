@@ -83,7 +83,7 @@ namespace base::internal {
 	template<typename VariantT, typename T>
 	constexpr usize alternativeIndex() {
 		// removing wrappers and using a template helper
-		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
+		using ClearedVariantT = std::remove_cvref_t<VariantT>;
 		return AlternativeIndexAux<ClearedVariantT, T>::findIndex();
 	}
 

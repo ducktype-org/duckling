@@ -11,6 +11,9 @@ namespace query::internal {
 		Normal,
 		SideInput,
 		Input,
+		Dummy  //> Query with that type should never be called or implemented. This is used in
+		       // incremental compilation when inserting dummy nodes to current graph from previous
+		       // graph.
 	};
 
 	/**

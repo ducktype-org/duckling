@@ -27,6 +27,14 @@
 
 namespace query::internal {
 
+	// Concept: implementation provides loadFromDisc with either exact PResult signature
+	// or Optional<PResult> signature (used to signal absence of on-disk artifact).
+	// @TODO: #1433 replace this with proper query tag
+	template<typename Impl>
+	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
+		{ Impl::loadFromDisc(key) };
+	} && (std::same_as<decltype(Impl::loadFromDisc(std::declval<const typename Impl::QKey&>())), base::Optional<typename Impl::PResult>>);
+
 	/**
 	 * @brief Internal function implementing the call to a query.
 	 *
@@ -61,6 +69,28 @@ namespace query::internal {
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
+
+			// Before computing, try to reuse result from disk if available and safe to do so.
+			// Conditions:
+			//  - QueryImplType provides loadFromDisc(QKey) -> PResult
+			//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
+			if constexpr (HasLoadFromDiscWithSignature<QueryImplType>) {
+				if (ContextAccess::getState()->redGreenSweep(node_id)
+				    == QueryState::PrevColor::Green) {
+					QUERY_DEBUG_LOG(
+						"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Loading from disk.\n"
+					);
+
+					auto loaded = QueryImplType::loadFromDisc(key);
+
+					if (loaded) {
+						// Merge previous graph nodes into current graph
+						// We merge only node_id and its dependencies
+						ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
+						return QueryImplType::store(perfect_hash, loaded.value(), acd);
+					}  // fall through to provide() if loading from disk failure
+				}
+			}
 
 
 			// Use of defer here makes it also called when an exception is thrown.

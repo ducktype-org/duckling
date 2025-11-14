@@ -22,6 +22,22 @@ impl From<anyhow::Error> for InternalError {
     }
 }
 
+impl From<&'static str> for InternalError {
+    fn from(value: &'static str) -> Self {
+        Self {
+            inner: anyhow::Error::msg(value),
+        }
+    }
+}
+
+impl From<String> for InternalError {
+    fn from(value: String) -> Self {
+        Self {
+            inner: anyhow::Error::msg(value),
+        }
+    }
+}
+
 impl Error for InternalError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         self.inner.source()

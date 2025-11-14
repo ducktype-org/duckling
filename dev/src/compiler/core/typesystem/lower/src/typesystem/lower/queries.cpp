@@ -40,7 +40,7 @@ namespace tsl {
 			}
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
@@ -48,11 +48,11 @@ namespace tsl {
 	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (key.getRefKind() == tsh::ReferenceKind::Direct)
-				return ctx.query<QueryAbstractTypeLayout>(key.getType());
+				return *ctx.query<QueryAbstractTypeLayout>(key.getType());
 			return PointerTypeLayout(key, ctx);
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)
