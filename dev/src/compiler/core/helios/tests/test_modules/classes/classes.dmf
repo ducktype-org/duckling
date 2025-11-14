@@ -35,10 +35,6 @@ class ClassWithMember {
     }
 }
 
-let c: ClassWithMember = ClassWithMember(FirstClassEver(5, 6.0));
-#let c_member: FirstClassEver = c.member;
-#let c_member_a: i64 = c.getMemberA();
-
 # Nested classes
 
 # @TODO: #1503 Support nested classes in HELIOS
