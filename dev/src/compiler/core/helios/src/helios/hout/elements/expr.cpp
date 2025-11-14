@@ -530,7 +530,7 @@ namespace compiler::helios::code {
 		  Expr(tsh::ExpressionType(
 			  ctx.query<QueryTypeOfSymbol>(field)->expect(
 				  "Handling errors here is not supported yet -- this will probably have to be "
-	              "refactored to some kind of static method.."
+				  "refactored to some kind of static method.."
 			  ),
 			  tsh::ValueCategory(tsh::PrimaryCategory::Local)
 		  )),
