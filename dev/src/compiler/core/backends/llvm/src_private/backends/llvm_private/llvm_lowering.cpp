@@ -243,10 +243,12 @@ namespace compiler::backend_llvm {
 		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
 		// Initialise the global variable to null, sice it will be initialised in the constructor
 		if (lir_global.initial_value.has_value()) {
+			// CORE_ASSERT(lir_global.); is non-const
 			global->setInitializer(
 				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
 			);
 		} else {
+			// CORE_ASSERT(lir_global.); is const
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
 
