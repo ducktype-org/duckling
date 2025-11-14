@@ -7,13 +7,6 @@
 
 #include <iostream>
 
-template<>
-struct std::hash<query::internal::QueryID> final {
-	auto operator()(const query::internal::QueryID& id) const noexcept {
-		return std::hash<u64>()(id.asInt());
-	}
-};
-
 namespace query {
 
 	namespace {
