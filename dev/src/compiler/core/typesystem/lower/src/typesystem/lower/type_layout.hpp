@@ -355,6 +355,11 @@ namespace tsl {
 	 */
 	class TupleTypeLayout final: public TypeLayoutABC {
 		/**
+		 * @brief The number of fields in the tuple layout.
+		 */
+		usize num_fields;
+
+		/**
 		 * @brief The component offsets, in bytes.
 		 *
 		 * @note Not necessarily increasing. These offsets are given in the order of the components
@@ -381,6 +386,15 @@ namespace tsl {
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the number of fields in the tuple layout.
+		 * @return The number of fields in the tuple layout.
+		 */
+		[[nodiscard]]
+		usize getNumFields() const {
+			return num_fields;
+		}
+
 		/**
 		 * @brief Get the offset of a component from the original tuple type.
 		 * @param index The index of a component in the original tuple type.
@@ -424,6 +438,11 @@ namespace tsl {
 	 */
 	class ClassTypeLayout final: public TypeLayoutABC {
 		/**
+		 * @brief The number of fields in the class layout.
+		 */
+		usize num_fields;
+
+		/**
 		 * @brief The offsets of the fields, in bytes.
 		 */
 		base::Map<compiler::helios::SymID, Bytes> field_offsets;
@@ -446,6 +465,15 @@ namespace tsl {
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the number of fields in the class layout.
+		 * @return The number of fields in the class layout.
+		 */
+		[[nodiscard]]
+		usize getNumFields() const {
+			return num_fields;
+		}
+
 		/**
 		 * @brief Get the offset of a field from the original class type.
 		 * @param symbol The symbol of a field.

@@ -1,4 +1,6 @@
+#include <helios/symbols/simple.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -75,8 +77,8 @@ namespace compiler::backend_llvm {
 	 * @note it *should* be safe to call it multiple times
 	 */
 	void init() {
-		bool v1 = llvm::InitializeNativeTarget();
-		bool v2 = llvm::InitializeNativeTargetAsmPrinter();
+		const bool v1 = llvm::InitializeNativeTarget();
+		const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
 		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
@@ -123,7 +125,8 @@ namespace compiler::backend_llvm {
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
-	auto typeFromLayout(llvm::LLVMContext& context, CRef<tsl::TypeLayout> layout) -> llvm::Type* {
+	auto typeFromLayout(llvm::LLVMContext& context, const CRef<tsl::TypeLayout> layout)
+		-> llvm::Type* {
 		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -143,6 +146,34 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
+			variant_case(tsl::ClassTypeLayout, class_layout) {
+				const auto class_name
+					= name(class_layout.getSourceType().as<tsh::ClassAbstractType>().getSymbol())
+				          .strView();
+
+				// Get the struct from the context, if it has been previously defined.
+				if (llvm::StructType* struct_type
+				    = llvm::StructType::getTypeByName(context, class_name);
+				    struct_type) {
+					return struct_type;
+				}
+
+				// Otherwise, define the struct in LLVM.
+				// - First, create an opaque type.
+				llvm::StructType* struct_type = llvm::StructType::create(context, class_name);
+				// - Then, collect the member types.
+				const usize              num_fields = class_layout.getNumFields();
+				std::vector<llvm::Type*> member_types;
+				member_types.reserve(num_fields);
+				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+					const CRef<tsl::TypeLayout> field_layout
+						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					member_types.push_back(typeFromLayout(context, field_layout));
+				}
+				// - Finally, set the body of the struct and return it.
+				struct_type->setBody(member_types, /*is_packed=*/false);
+				return struct_type;
+			}
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(context);
 			}
@@ -158,7 +189,7 @@ namespace compiler::backend_llvm {
 	auto getFunType(
 		llvm::LLVMContext&                        context,
 		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		CRef<tsl::TypeLayout>                     return_type
+		const CRef<tsl::TypeLayout>               return_type
 	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
@@ -188,11 +219,11 @@ namespace compiler::backend_llvm {
 	 * module.
 	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
-		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
+		const Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
-		auto mangled_name = function_literal.mangled_name;
+		const auto mangled_name = function_literal.mangled_name;
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(mangled_name.strView())) return func;
+		if (const auto func = module->getFunction(mangled_name.strView())) return func;
 
 		auto&                context = module->getContext();
 		llvm::FunctionCallee callee  = module->getOrInsertFunction(
@@ -209,7 +240,7 @@ namespace compiler::backend_llvm {
 	}
 
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLIRFunction(
-		Ref<llvm::Module> module, const lir::Function& lir_function
+		const Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		return getOrInsertFunctionPrototypeFromLiteral(
 			module, lir::FunctionLiteral::fromFunction(lir_function)
@@ -217,25 +248,24 @@ namespace compiler::backend_llvm {
 	}
 
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
-		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
-		auto mangled_name = lir_global.mangled_name.strView();
+		const auto mangled_name = lir_global.mangled_name.strView();
 
-		if (auto global = module->getGlobalVariable(mangled_name)) return global;
+		if (const auto global = module->getGlobalVariable(mangled_name)) return global;
 
 		auto& context = module->getContext();
 
-		auto global_type = typeFromLayout(context, lir_global.layout);
+		const auto global_type = typeFromLayout(context, lir_global.layout);
 
 		return module->getOrInsertGlobal(mangled_name, global_type);
 	}
 
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
 		getOrInsertGlobalVariable(module, lir_global);
-		Ref<llvm::GlobalVariable> global
-			= module->getNamedGlobal(lir_global.mangled_name.strView());
+		const Ref global = module->getNamedGlobal(lir_global.mangled_name.strView());
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
@@ -266,10 +296,10 @@ namespace compiler::backend_llvm {
 		Ref<llvm::Module>   module;
 
 		LIRFunction2LLVM(
-			llvm::LLVMContext&  context,
-			query::Context&     ctx,
-			CRef<lir::Function> lir_function,
-			Ref<llvm::Module>   module
+			llvm::LLVMContext&        context,
+			query::Context&           ctx,
+			const CRef<lir::Function> lir_function,
+			const Ref<llvm::Module>   module
 		):
 			  context(context),
 			  ctx(ctx),
@@ -296,7 +326,7 @@ namespace compiler::backend_llvm {
 
 		base::Map<lir::LIRLocalRef, u64> lir_local_ids;
 
-		std::string llvmLocalName(lir::LIRLocalRef lir_local) {
+		std::string llvmLocalName(const lir::LIRLocalRef lir_local) {
 			// @TODO.. this might have to change in the future
 			if (lir_local->helios_id)
 				return base::strConcat("helios_", lir_local_ids[lir_local]);
@@ -385,7 +415,7 @@ namespace compiler::backend_llvm {
 							);
 						}
 						variant_case(lir::LIRGlobal, lir_global) {
-							auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
+							const auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
 							return builder.CreateLoad(
 								typeFromLayout(builder.getContext(), lir_global.layout),
 								global_ptr.get()
@@ -409,7 +439,9 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-		void storeOutput(lir::LIRPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
+		void storeOutput(
+			lir::LIRPlace output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
+		) {
 			// @TODO: #500 handle field access.
 			variant_match(output.base) {
 				variant_case(lir::LIRLocalRef, lir_local) {
@@ -425,17 +457,17 @@ namespace compiler::backend_llvm {
 
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
-		) {
+		) const {
 			const auto  target_layout = cast_params.target_layout;
 			const auto  source_layout = cast_params.source_layout;
 			const auto& source_type   = cast_params.source_type;
 			const auto& target_type   = cast_params.target_type;
 
-			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
+			const auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
 
-			auto src_bits
+			const auto src_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout->getSize()));
-			auto dst_bits
+			const auto dst_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
 			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
@@ -452,7 +484,7 @@ namespace compiler::backend_llvm {
 			variant_match(source_layout->getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
-					bool src_signed = is_signed(source_type);
+					const bool src_signed = is_signed(source_type);
 
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -466,9 +498,10 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
 							// ================== Int -> Pointer ==================
-							auto ptr_bits
+							constexpr auto ptr_bits
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
 							llvm::Value* int_for_ptr
 								= builder.CreateIntCast(argument, ptr_int_ty, src_signed);
 							return builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
@@ -497,7 +530,7 @@ namespace compiler::backend_llvm {
 
 							// Here is a problem when the float is NaN or out of range of the int
 							// then the behavior is undefined.
-							bool to_signed = is_signed(target_type);
+							const bool to_signed = is_signed(target_type);
 
 							// Some other solution to consider in the future;
 							// bool use_saturating_float_casts = true;
@@ -516,7 +549,7 @@ namespace compiler::backend_llvm {
 							);
 
 							// name =  llvm.{fptosi, fptoui}.sat.i{int_width}.f{float_width}
-							std::string name = base::strConcat(
+							const std::string name = base::strConcat(
 								"llvm.",
 								instr,
 								".sat.i",
@@ -525,7 +558,7 @@ namespace compiler::backend_llvm {
 								std::to_string(src_bits)
 							);
 
-							llvm::FunctionCallee fdecl
+							const llvm::FunctionCallee fdecl
 								= module->getOrInsertFunction(name, func_type);
 							return builder.CreateCall(fdecl, { argument });
 						}
@@ -539,10 +572,11 @@ namespace compiler::backend_llvm {
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
-							auto ptr_bits
+							constexpr auto ptr_bits
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
@@ -551,10 +585,11 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Pointer -> Float ==================
-							auto ptr_bits
+							constexpr auto ptr_bits
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateUIToFP(int_from_ptr, llvm_dst_ty);
 						}
 						variant_default {
@@ -672,7 +707,8 @@ namespace compiler::backend_llvm {
 				const auto output   = lir_instruction.output.value();
 
 				// get cast parameters:
-				auto cast_params = std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
+				const auto cast_params
+					= std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
 
 				CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
 
@@ -726,7 +762,7 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			Ref fun = llvm::cast<llvm::Function>(
+			const Ref fun = llvm::cast<llvm::Function>(
 				getOrInsertFunctionPrototypeFromLIRFunction(module, *lir_function).getCallee()
 			);
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
@@ -734,8 +770,8 @@ namespace compiler::backend_llvm {
 			generateMainBlocksAndLocals(fun.get());
 
 			for (auto& block: lir_function->block_order) {
-				auto              llvm_block = block_mapping[block];
-				llvm::IRBuilder<> builder(llvm_block.get());
+				auto            llvm_block = block_mapping[block];
+				llvm::IRBuilder builder(llvm_block.get());
 				for (const auto& instruction: block->instructions)
 					lirInstruction2LLVM(instruction, builder);
 				lirInstruction2LLVM(block->terminator, builder);
@@ -745,7 +781,7 @@ namespace compiler::backend_llvm {
 		}
 	};
 
-	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
+	Box<ModuleImpl> initModuleImpl(const base::StrID module_id) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
@@ -753,8 +789,8 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
-		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
+	Box<ModuleImpl> parseIRCodeToModuleImpl(const std::string_view llvm_ir_code) {
+		const auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
 		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
@@ -770,22 +806,22 @@ namespace compiler::backend_llvm {
 	}
 
 	llvm::Function* addFunctionToModuleInternal(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
 		LIRFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		return lir2llvm.createFunction();
 	}
 
 	void addFunctionToModuleImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
 		addFunctionToModuleInternal(ctx, module, lir_function);
 	}
 
 	void addFunctionToModuleCtorsImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
-		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		const auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
 		// 65535 is the default priority for global constructors in LLVM.
 		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
 		// global variable associated with the constructor. However, the problem is that the
@@ -796,13 +832,13 @@ namespace compiler::backend_llvm {
 	}
 
 	void addFunctionToModuleDtorsImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
-		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		const auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
+	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }

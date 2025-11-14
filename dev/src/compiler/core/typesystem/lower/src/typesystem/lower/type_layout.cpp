@@ -252,6 +252,7 @@ namespace tsl {
 
 	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
 		  TypeLayoutABC(helper.total_size, helper.tuple_type),
+		  num_fields(helper.component_layouts.size()),
 		  component_offsets(std::move(helper).component_offsets),
 		  layout_idx_to_component_idx(std::move(helper).offset_idx_to_component_idx),
 		  layout_idx_to_layout(std::move(helper).offset_idx_to_component_layout) {}
@@ -333,6 +334,7 @@ namespace tsl {
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper):
 		  TypeLayoutABC(helper.total_size, helper.class_type),
+		  num_fields(helper.field_layouts.size()),
 		  layout_idx_to_sym_id(std::move(helper).offset_idx_to_sym_id) {
 		for (u32 i = 0; i < helper.field_elements.size(); i++)
 			field_offsets.put(helper.field_elements[i].getSymbol(), helper.field_offsets[i]);

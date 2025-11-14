@@ -229,8 +229,7 @@ namespace compiler::mir {
 
 			CORE_ASSERT(
 				optional_local.has_value(),
-				"Variable statement refers to local variable that is not defined in the "
-				"function."
+				"Variable statement refers to local variable that is not defined in the function."
 			);
 
 			auto local = optional_local.value();
@@ -238,10 +237,9 @@ namespace compiler::mir {
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
 
-			auto local_construction_hole = continuation->addHole();
-
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
+					auto local_construction_hole = continuation->addHole();
 					auto assignment_scope = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
@@ -254,7 +252,12 @@ namespace compiler::mir {
 					output({ expr_result.begin });
 					return;
 				}
-				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
+				opt_none {
+					// OK
+					// We don't need to do anything, the variable is uninitialized.
+					output({ continuation });
+					return;
+				}
 			}
 
 			CORE_UNREACHABLE();
