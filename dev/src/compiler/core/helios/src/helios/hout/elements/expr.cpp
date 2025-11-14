@@ -525,8 +525,15 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(expression_type, callee->clone(), std::move(arguments_cloned));
 	}
 
-	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, const SymID field):
-		  Expr(base->expression_type),
+	AccessExpr::AccessExpr(query::Context& ctx, Box<Expr> base, const SymID field):
+		  // @TODO: #1549 Value category usage is not correct here.
+		  Expr(tsh::ExpressionType(
+			  ctx.query<QueryTypeOfSymbol>(field)->expect(
+				  "Handling errors here is not supported yet -- this will probably have to be "
+	              "refactored to some kind of static method.."
+			  ),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+		  )),
 		  base(std::move(base)),
 		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
