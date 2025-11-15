@@ -41,12 +41,24 @@ impl Version {
         self <= other
     }
 
-    pub fn to_full_string(&self) -> String {
-        format!("{}.{}.{}", self.major, self.minor, self.patch)
+    pub fn to_string_without_trailing_zeros(&self) -> String {
+        if self.patch == 0 && self.minor == 0 {
+            format!("{}", self.major)
+        } else if self.patch == 0 {
+            format!("{}.{}", self.major, self.minor)
+        } else {
+            format!("{}.{}.{}", self.major, self.minor, self.patch)
+        }
     }
 
-    pub fn format_as_full_string(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    pub fn format_without_trailing_zeros(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.patch == 0 && self.minor == 0 {
+            write!(f, "{}", self.major)
+        } else if self.patch == 0 {
+            write!(f, "{}.{}", self.major, self.minor)
+        } else {
+            write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+        }
     }
 
     pub const fn bump_patch(&self) -> Self {
@@ -90,13 +102,7 @@ impl From<u64> for Version {
 
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.patch == 0 && self.minor == 0 {
-            write!(f, "{}", self.major)
-        } else if self.patch == 0 {
-            write!(f, "{}.{}", self.major, self.minor)
-        } else {
-            write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
-        }
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 
@@ -239,19 +245,19 @@ mod tests {
 
     #[test]
     fn as_string() {
-        assert_eq!(Version::new(1, 0, 0).to_string(), "1");
-        assert_eq!(Version::new(1, 0, 0).to_full_string(), "1.0.0");
+        assert_eq!(Version::new(1, 0, 0).to_string(), "1.0.0");
+        assert_eq!(Version::new(1, 0, 0).to_string_without_trailing_zeros(), "1");
 
-        assert_eq!(Version::new(0, 1, 0).to_string(), "0.1");
-        assert_eq!(Version::new(0, 1, 0).to_full_string(), "0.1.0");
+        assert_eq!(Version::new(0, 1, 0).to_string(), "0.1.0");
+        assert_eq!(Version::new(0, 1, 0).to_string_without_trailing_zeros(), "0.1");
 
-        assert_eq!(Version::new(0, 0, 0).to_string(), "0");
-        assert_eq!(Version::new(0, 0, 0).to_full_string(), "0.0.0");
+        assert_eq!(Version::new(0, 0, 0).to_string(), "0.0.0");
+        assert_eq!(Version::new(0, 0, 0).to_string_without_trailing_zeros(), "0");
 
         assert_eq!(Version::new(1, 2, 3).to_string(), "1.2.3");
-        assert_eq!(Version::new(1, 2, 3).to_full_string(), "1.2.3");
+        assert_eq!(Version::new(1, 2, 3).to_string_without_trailing_zeros(), "1.2.3");
 
         assert_eq!(Version::new(1, 0, 10).to_string(), "1.0.10");
-        assert_eq!(Version::new(1, 0, 10).to_full_string(), "1.0.10");
+        assert_eq!(Version::new(1, 0, 10).to_string_without_trailing_zeros(), "1.0.10");
     }
 }
