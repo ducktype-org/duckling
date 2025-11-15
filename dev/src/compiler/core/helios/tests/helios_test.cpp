@@ -686,6 +686,13 @@ private:
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
+
+		auto member_access_sym  = getChain("member_access", root_scope).back();
+		auto member_access_expr = getExprOfVariable(member_access_sym);
+		ASSERT_EQUAL(
+			member_access_expr->expression_type.getType(),
+			query::entryPoint<tsh::QueryIntegralType>({ 32, Signed })
+		);
 	}
 
 	void testHoutVariables() {
