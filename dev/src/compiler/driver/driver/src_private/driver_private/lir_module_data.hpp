@@ -6,8 +6,8 @@
 #include <base/str/string_id.hpp>
 
 namespace compiler::driver {
-	
-	/** 
+
+	/**
 	 * LIRGlobal with its optional constructor and destructor functions.
 	 */
 	struct LIRModuleGlobal final {

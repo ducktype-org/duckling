@@ -46,8 +46,7 @@ public:
 	}
 
 private:
-
-	/** 
+	/**
 	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
 	 */
 	struct LIRModuleResult final {
@@ -88,8 +87,8 @@ private:
 	};
 
 	/**
-	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of functions.
-	 * Note that it does not include globals/constants in the result (only functions).
+	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
+	 * functions. Note that it does not include globals/constants in the result (only functions).
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));

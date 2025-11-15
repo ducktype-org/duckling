@@ -38,7 +38,7 @@ namespace compiler::driver {
 				variant_case(helios::HOUTGlobalConst, global_const) {
 					// @future #1554 -- const ctors will probably be added here
 					globals.emplace_back(LIRModuleGlobal{
-						.lir_global = lir_global,
+						.lir_global  = lir_global,
 						.global_ctor = std::nullopt,
 						.global_dtor = std::nullopt,
 					});
