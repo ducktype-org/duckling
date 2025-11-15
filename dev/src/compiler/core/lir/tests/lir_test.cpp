@@ -14,6 +14,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -28,13 +29,6 @@ class LIRConstructionTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO
-		// tests here don't tests much apart from the fact that code compiles
-		// and does not throw.
-		// This is due to the fact that LIR is in a very early stage of development
-		// and will likely change a lot in near future.
-		// Add more tests with future LIR changes.
-
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
@@ -43,6 +37,7 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(simpleConstant);
 	}
 
 private:
@@ -345,6 +340,32 @@ private:
 
 		auto my_float = module.houtGlobal("my_float");
 		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
+	}
+
+	void simpleConstant() {
+		auto [module, scope] = getModule(fs::File(path("modules/simple_constant")));
+		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+
+		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
+
+		auto fib_const_global_data = hout_unit.glob_data.at(0);
+		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
+
+		withContextDo([&](query::Context& ctx) {
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, fib_const_global_data);
+			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
+
+
+			// the main assertions of FIB_10 checks:
+			assertTrue(
+				lir_global.type == lir::LIRGlobalType::Constant, "Expected FIB_10 to be a constant"
+			);
+			assertTrue(
+				lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
+			);
+			auto const_value = lir_global.initial_value.value().asI64().value();
+			ASSERT_EQUAL(const_value, 55);
+		});
 	}
 };
 
