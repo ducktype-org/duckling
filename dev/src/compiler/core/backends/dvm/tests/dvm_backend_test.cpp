@@ -68,7 +68,7 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 						fail(base::strConcat(
 							"We fail here, because constant not work on DVM as expected, remove "
-						    "the fail after #1553. ",
+							"the fail after #1553. ",
 							"Global constant: ",
 							hout_glob.original_name.strView()
 						));
