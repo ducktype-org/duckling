@@ -185,8 +185,8 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.members.size());
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
-		const auto class_with_members_ctor = 	
-			query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+		const auto class_with_members_ctor
+			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
 				class_with_member_abstract_type
 			);
 		ASSERT_EQUAL(
@@ -194,8 +194,10 @@ private:
 			class_with_member_abstract_type
 		);
 
-		std::vector<compiler::helios::HOUTUnit> units = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
-		(void)units; // @note when QueryModuleHOUTRecursively returns QResult, add assertion that it is successful
+		std::vector<compiler::helios::HOUTUnit> units
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
+		(void) units;  // @note when QueryModuleHOUTRecursively returns QResult, add assertion that
+		               // it is successful
 	}
 
 	void testClassInteractions() {
@@ -214,33 +216,30 @@ private:
 		          .getType();
 
 		auto c_symbol = getChain("c", root_scope).back();
-		auto c_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_symbol)
-		                  ->valueOrThrow();
-		ASSERT_EQUAL(
-			c_type,
-			st(class_with_member_abstract_type)
-		);
-		
+		auto c_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_symbol)->valueOrThrow();
+		ASSERT_EQUAL(c_type, st(class_with_member_abstract_type));
+
 		auto c_member_symbol = getChain("c_member", root_scope).back();
 		auto c_member_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_symbol)
 		                         ->valueOrThrow();
 
-		ASSERT_EQUAL(
-			c_member_type,
-			st(first_class_abstract_type)
-		);
+		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
 
 		// @TODO: #1547 uncomment this test
 		// auto c_member_a_symbol =  getChain("c_member_a", root_scope).back();
-		// auto c_member_a_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
-		//                          ->valueOrThrow(); 
+		// auto c_member_a_type =
+		// query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
+		//                          ->valueOrThrow();
 		// ASSERT_EQUAL(
 		// 	c_member_a_type,
 		// 	st(query::entryPoint<tsh::QueryIntegralType>({64, Signed}))
 		// );
 
-		std::vector<compiler::helios::HOUTUnit> units = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
-		(void)units; // @note when QueryModuleHOUTRecursively returns QResult, add assertion that it is successful
+		std::vector<compiler::helios::HOUTUnit> units
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
+		(void) units;  // @note when QueryModuleHOUTRecursively returns QResult, add assertion that
+		               // it is successful
 	}
 
 	/**
