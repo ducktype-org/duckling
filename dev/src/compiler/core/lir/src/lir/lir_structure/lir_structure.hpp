@@ -150,8 +150,7 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable in LIR.
-	 * layout is in shared_ptr, so the LIRGlobal can be copied
+	 * @brief Global variable/constant in LIR.
 	 */
 	struct LIRGlobal final {
 		/**

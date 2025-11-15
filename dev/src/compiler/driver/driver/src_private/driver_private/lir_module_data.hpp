@@ -6,6 +6,10 @@
 #include <base/str/string_id.hpp>
 
 namespace compiler::driver {
+	
+	/** 
+	 * LIRGlobal with its optional constructor and destructor functions.
+	 */
 	struct LIRModuleGlobal final {
 		lir::LIRGlobal lir_global;
 		base::Optional<CRef<lir::Function>>

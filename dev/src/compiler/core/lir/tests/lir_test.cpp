@@ -46,7 +46,11 @@ public:
 	}
 
 private:
-	struct LIRModuleResult {
+
+	/** 
+	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
+	 */
+	struct LIRModuleResult final {
 		frontend::ModuleID module;
 		helios::ScopeID    scope;
 		base::Map<
@@ -83,6 +87,10 @@ private:
 		}
 	};
 
+	/**
+	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of functions.
+	 * Note that it does not include globals/constants in the result (only functions).
+	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
 		LIRModuleResult result{ .module = module, .scope = scope };
@@ -112,12 +120,7 @@ private:
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						//@TODO: create global constant ctors if nessesary
-						CORE_PANIC(
-							"Creating ctors for constant variables is not implemented yet. "
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						);
+						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
 						fail(base::strConcat(

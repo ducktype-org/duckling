@@ -30,12 +30,13 @@ namespace compiler::driver {
 					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
-						// @TODO: add legit dtors when implemented #929
+						// @TODO: #929 add legit dtors when implemented
 						.global_ctor = lir_function,
 						.global_dtor = std::nullopt,
 					});
 				}
 				variant_case(helios::HOUTGlobalConst, global_const) {
+					// @future #1554 -- const ctors will probably be added here
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
 						.global_ctor = std::nullopt,

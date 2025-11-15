@@ -230,6 +230,11 @@ namespace compiler::backend_llvm {
 		return module->getOrInsertGlobal(mangled_name, global_type);
 	}
 
+	/**
+	 * Adds a global variable to the module based on the LIRGlobal description.
+	 * For globals is sets the initial value to null (this function does not handle constructors),
+	 * for constants it sets the initial value to the provided constant value.
+	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
 		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
