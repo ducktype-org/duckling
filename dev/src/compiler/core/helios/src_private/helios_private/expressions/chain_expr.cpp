@@ -414,9 +414,8 @@ namespace compiler::helios::code {
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
 
-			// @TODO #982 improve type lookup and provide correct
-			// candidates for processFunctionCall
-			// @TODO write tests for this case, when it will be implemented
+			// @TODO: #982 improve type lookup and provide correct
+			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
