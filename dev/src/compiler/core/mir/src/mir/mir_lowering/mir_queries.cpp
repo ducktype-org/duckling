@@ -7,7 +7,6 @@
 #include <helios/helios_errors.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/hout/elements/expr.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
@@ -207,7 +206,8 @@ namespace compiler::mir {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
 				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
 
-			auto global_init_expr = std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
+			auto global_init_expr
+				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},

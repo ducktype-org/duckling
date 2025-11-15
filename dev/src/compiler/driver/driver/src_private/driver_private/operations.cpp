@@ -36,8 +36,6 @@ namespace compiler::driver {
 					});
 				}
 				variant_case(helios::HOUTGlobalConst, global_const) {
-					// @TODO: (add proper todo, issue, about non trivial constants) add ctors and dtors for Global Consts when implemented
-					// @PR: look at other places like this one in the code
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
 						.global_ctor = std::nullopt,
