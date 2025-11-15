@@ -46,3 +46,4 @@ SubDirs:
   - samples
   - statements
   - functions
+  - constants
