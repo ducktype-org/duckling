@@ -1,7 +1,7 @@
 use crate::{core::Summary, schemas::manifest::Manifest as ManifestSchema};
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Manifest {
     inner: Arc<ManifestInner>,
 }
@@ -14,12 +14,12 @@ impl Manifest {
         warnings: Vec<String>,
     ) -> Self {
         Self {
-            inner: Arc::new(ManifestInner::new(
+            inner: Arc::new(ManifestInner {
                 original_content,
                 original_schema,
                 summary,
-                warnings,
-            )),
+                _warnings: warnings,
+            }),
         }
     }
 
@@ -44,18 +44,15 @@ struct ManifestInner {
     _warnings: Vec<String>,
 }
 
-impl ManifestInner {
-    fn new(
-        original_content: String,
-        original_schema: ManifestSchema,
-        summary: Summary,
-        warnings: Vec<String>,
-    ) -> Self {
-        Self {
-            original_content,
-            original_schema,
-            summary,
-            _warnings: warnings,
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn assert_send_sync_manifest() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+        assert_send::<Manifest>();
+        assert_sync::<Manifest>();
     }
 }

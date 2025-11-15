@@ -246,18 +246,33 @@ mod tests {
     #[test]
     fn as_string() {
         assert_eq!(Version::new(1, 0, 0).to_string(), "1.0.0");
-        assert_eq!(Version::new(1, 0, 0).to_string_without_trailing_zeros(), "1");
+        assert_eq!(
+            Version::new(1, 0, 0).to_string_without_trailing_zeros(),
+            "1"
+        );
 
         assert_eq!(Version::new(0, 1, 0).to_string(), "0.1.0");
-        assert_eq!(Version::new(0, 1, 0).to_string_without_trailing_zeros(), "0.1");
+        assert_eq!(
+            Version::new(0, 1, 0).to_string_without_trailing_zeros(),
+            "0.1"
+        );
 
         assert_eq!(Version::new(0, 0, 0).to_string(), "0.0.0");
-        assert_eq!(Version::new(0, 0, 0).to_string_without_trailing_zeros(), "0");
+        assert_eq!(
+            Version::new(0, 0, 0).to_string_without_trailing_zeros(),
+            "0"
+        );
 
         assert_eq!(Version::new(1, 2, 3).to_string(), "1.2.3");
-        assert_eq!(Version::new(1, 2, 3).to_string_without_trailing_zeros(), "1.2.3");
+        assert_eq!(
+            Version::new(1, 2, 3).to_string_without_trailing_zeros(),
+            "1.2.3"
+        );
 
         assert_eq!(Version::new(1, 0, 10).to_string(), "1.0.10");
-        assert_eq!(Version::new(1, 0, 10).to_string_without_trailing_zeros(), "1.0.10");
+        assert_eq!(
+            Version::new(1, 0, 10).to_string_without_trailing_zeros(),
+            "1.0.10"
+        );
     }
 }

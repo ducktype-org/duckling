@@ -119,7 +119,7 @@ where
     {
         let inner = <Vec<T>>::deserialize(deserializer)?;
         if inner.is_empty() {
-            Err(de::Error::custom("expected non-empty list"))
+            Err(de::Error::custom("expected a non-empty list"))
         } else {
             Ok(Self(inner))
         }

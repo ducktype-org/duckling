@@ -2,20 +2,23 @@ use std::collections::HashSet;
 
 use anyhow::bail;
 
-use crate::{QuackResult, StrId, core::DependencySpec};
+use crate::{
+    QuackResult, StrId,
+    core::{DependencySpec, FeatureName},
+};
 
 #[derive(Debug)]
 pub struct Conditions {
     system_requirements: Option<Vec<StrId>>,
     arch_requirements: Option<Vec<StrId>>,
-    required_root_package_features: Option<Vec<StrId>>,
+    required_root_package_features: Option<Vec<FeatureName>>,
 }
 
 impl Conditions {
     pub fn new(
         system_requirements: Option<Vec<StrId>>,
         arch_requirements: Option<Vec<StrId>>,
-        required_root_package_features: Option<Vec<StrId>>,
+        required_root_package_features: Option<Vec<FeatureName>>,
     ) -> QuackResult<Self> {
         fn check_non_empty(t: &Option<Vec<StrId>>, name: &'static str) -> QuackResult<()> {
             if let Some(vec) = t
@@ -40,7 +43,7 @@ impl Conditions {
 
     // @TODO: #1353 Do we want to take an `impl IntoIterator`, or a `Vec`, or a `HashSet`?
     //  Connected with !TODO in `are_features_enabled`.
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = StrId>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
         self.is_system_enabled()
             && self.is_arch_enabled()
             && self.are_features_enabled(enabled_features)
@@ -62,7 +65,10 @@ impl Conditions {
         true
     }
 
-    fn are_features_enabled(&self, enabled_features: impl IntoIterator<Item = StrId>) -> bool {
+    fn are_features_enabled(
+        &self,
+        enabled_features: impl IntoIterator<Item = FeatureName>,
+    ) -> bool {
         let Some(ref features) = self.required_root_package_features else {
             return true;
         };
@@ -90,7 +96,7 @@ impl DependencyFeature {
         self.name
     }
 
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = StrId>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
@@ -139,7 +145,7 @@ impl Dependency {
         self.is_pinned
     }
 
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = StrId>) -> bool {
+    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
         self.conditions
             .as_ref()
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
@@ -147,8 +153,8 @@ impl Dependency {
 
     pub fn enabled_features(
         &self,
-        enabled_features: impl IntoIterator<Item = StrId> + Clone,
-    ) -> impl Iterator<Item = StrId> {
+        enabled_features: impl IntoIterator<Item = FeatureName> + Clone,
+    ) -> impl Iterator<Item = FeatureName> {
         self.features.iter().filter_map(move |feature| {
             if feature.is_enabled_for(enabled_features.clone()) {
                 Some(feature.name())
