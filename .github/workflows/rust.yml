@@ -18,10 +18,45 @@ jobs:
       github-labels: '["ubuntu-24.04"]'
     secrets: inherit
 
-  rust-checks:
+  clippy:
     if: github.event.pull_request.draft == false
     needs: determine-runners
     runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
+    name: cargo clippy / (${{ matrix.project.name }}, ${{ matrix.project.path }})
+
+    strategy:
+      matrix:
+        project:
+          - name: duck & quackpack
+            path: dev/src/duck/
+      fail-fast: false
+
+    timeout-minutes: 15
+
+    steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+      
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Add Rust components to PATH
+        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+
+      - name: Run cargo clippy
+        working-directory: ${{ matrix.project.path }}
+        run: cargo clippy -- -D warnings
+
+  rustfmt:
+    if: github.event.pull_request.draft == false
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
+    name: cargo fmt / (${{ matrix.project.name }}, ${{ matrix.project.path }})
 
     strategy:
       matrix:
@@ -45,37 +80,42 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Add Rust components to PATH
-        run: echo "${{ env.CARGO_DIR}}/bin" >> $GITHUB_PATH
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.CARGO_DIR }}/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-registry-
-
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.CARGO_DIR }}/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
+        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
       - name: Run cargo fmt
         working-directory: ${{ matrix.project.path }}
         run: cargo fmt --check
 
-      - name: Run cargo clippy
-        working-directory: ${{ matrix.project.path }}
-        run: cargo clippy -- -D warnings
+  test:
+    if: github.event.pull_request.draft == false
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
+    name: cargo test / (${{ matrix.project.name }}, ${{ matrix.project.path }})
+
+    strategy:
+      matrix:
+        project:
+          - name: duck & quackpack
+            path: dev/src/duck/
+      fail-fast: false
+
+    timeout-minutes: 15
+
+    steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Add Rust components to PATH
+        run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}
         run: cargo test
-
-      - name: Remove target/ on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        run: rm -rf ${{ matrix.project.path }}/target
-
