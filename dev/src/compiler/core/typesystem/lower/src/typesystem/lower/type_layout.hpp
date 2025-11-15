@@ -357,7 +357,7 @@ namespace tsl {
 		/**
 		 * @brief The number of fields in the tuple layout.
 		 */
-		usize num_fields;
+		usize num_components;
 
 		/**
 		 * @brief The component offsets, in bytes.
@@ -366,6 +366,11 @@ namespace tsl {
 		 * in the source tuple type. This order may not be preserved in the layout.
 		 */
 		std::vector<Bytes> component_offsets;
+
+		/**
+		 * @brief The component layout indices of the components in the original tuple type.
+		 */
+		std::vector<usize> component_idx_to_layout_idx;
 
 		/**
 		 * @brief The component indices of the components in the original tuple type, sorted by
@@ -387,12 +392,12 @@ namespace tsl {
 
 	public:
 		/**
-		 * @brief Get the number of fields in the tuple layout.
-		 * @return The number of fields in the tuple layout.
+		 * @brief Get the number of components in the tuple layout.
+		 * @return The number of components in the tuple layout.
 		 */
 		[[nodiscard]]
-		usize getNumFields() const {
-			return num_fields;
+		usize getNumComponents() const {
+			return num_components;
 		}
 
 		/**
@@ -401,8 +406,18 @@ namespace tsl {
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
 		[[nodiscard]]
-		Bytes getComponentOffset(const usize index) const {
+		Bytes getOffsetOfComponentIndex(const usize index) const {
 			return component_offsets.at(index);
+		}
+
+		/**
+		 * @brief Get the layout index from the component index in the original tuple type.
+		 * @param component_index The index of the component in the tuple type.
+		 * @return The index of the layout component corresponding to the given component index.
+		 */
+		[[nodiscard]]
+		usize getLayoutIndexOfComponentIndex(const usize component_index) const {
+			return component_idx_to_layout_idx.at(component_index);
 		}
 
 		/**
@@ -445,7 +460,12 @@ namespace tsl {
 		/**
 		 * @brief The offsets of the fields, in bytes.
 		 */
-		base::Map<compiler::helios::SymID, Bytes> field_offsets;
+		base::Map<compiler::helios::SymID, Bytes> sym_id_to_offset;
+
+		/**
+		 * @brief The layout indices of the fields.
+		 */
+		base::Map<compiler::helios::SymID, usize> sym_id_to_layout_idx;
 
 		/**
 		 * @brief A mapping of the order of appearance in the layout to the symbol of the field.
@@ -480,8 +500,18 @@ namespace tsl {
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
 		[[nodiscard]]
-		Bytes getFieldOffset(const compiler::helios::SymID symbol) const {
-			return field_offsets.at(symbol);
+		Bytes getOffsetOfFieldSymbol(const compiler::helios::SymID symbol) const {
+			return sym_id_to_offset.at(symbol);
+		}
+
+		/**
+		 * @brief Get the layout index from the field symbol in the original class type.
+		 * @param symbol The symbol of a field.
+		 * @return The index of the layout component corresponding to the given symbol.
+		 */
+		[[nodiscard]]
+		usize getLayoutIndexOfFieldSymbol(const compiler::helios::SymID symbol) const {
+			return sym_id_to_layout_idx.at(symbol);
 		}
 
 		/**

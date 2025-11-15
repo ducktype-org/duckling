@@ -22,10 +22,15 @@ class FirstClassEver {
     FirstClassEver.destroy() = {}
 }
 
-class SecondClass extends FirstClassEver {}
-
 let a: FirstClassEver = FirstClassEver(1, f32(2.0));
 let b = a;
+
+fun main() -> i64 = {
+    builtin_output_i64(a.a);
+    a.a = 42;
+    builtin_output_i64(a.a);
+    return 0;
+}
 
 # @TODO: #520 #1479 Support lookup in types; type interfaces
 # Classes as members

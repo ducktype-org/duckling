@@ -126,7 +126,7 @@ namespace tsl {
 		 * @return A vector which has the field symbols in the order in which they appear in the
 		 * layout.
 		 */
-		std::vector<compiler::helios::SymID> offsetsToSymIDs(
+		std::vector<compiler::helios::SymID> layoutsIndicesToSymIDs(
 			const std::vector<tsh::InterfaceElement>& fields, const std::vector<Bytes>& offsets
 		) {
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
@@ -225,8 +225,8 @@ namespace tsl {
 		tsh::TupleAbstractType        tuple_type;
 		std::vector<CRef<TypeLayout>> component_layouts;
 		std::vector<Bytes>            component_offsets;
-		std::vector<usize>            offset_idx_to_component_idx;
-		std::vector<CRef<TypeLayout>> offset_idx_to_component_layout;
+		std::vector<usize>            layout_idx_to_component_idx;
+		std::vector<CRef<TypeLayout>> layout_idx_to_component_layout;
 		Bits                          total_size;
 
 		TupleTypeLayoutConstructionHelper(
@@ -235,15 +235,15 @@ namespace tsl {
 			  tuple_type(tuple_type),
 			  component_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
-			  offset_idx_to_component_idx(offsetsToPermutation(component_offsets)),
+			  layout_idx_to_component_idx(offsetsToPermutation(component_offsets)),
 			  total_size(
 				  component_layouts.empty()
 					  ? Bits(0)
 					  : bytes2bits(component_offsets.back()) + component_layouts.back()->getSize()
 			  ) {
-			offset_idx_to_component_layout.reserve(component_layouts.size());
-			for (const auto component_idx: offset_idx_to_component_idx)
-				offset_idx_to_component_layout.push_back(component_layouts[component_idx]);
+			layout_idx_to_component_layout.reserve(component_layouts.size());
+			for (const auto component_idx: layout_idx_to_component_idx)
+				layout_idx_to_component_layout.push_back(component_layouts.at(component_idx));
 		}
 	};
 
@@ -252,10 +252,14 @@ namespace tsl {
 
 	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
 		  TypeLayoutABC(helper.total_size, helper.tuple_type),
-		  num_fields(helper.component_layouts.size()),
+		  num_components(helper.component_layouts.size()),
 		  component_offsets(std::move(helper).component_offsets),
-		  layout_idx_to_component_idx(std::move(helper).offset_idx_to_component_idx),
-		  layout_idx_to_layout(std::move(helper).offset_idx_to_component_layout) {}
+		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
+		  layout_idx_to_layout(std::move(helper).layout_idx_to_component_layout) {
+		component_idx_to_layout_idx.resize(num_components);
+		for (u32 i = 0; i < num_components; i++)
+			component_idx_to_layout_idx.at(layout_idx_to_component_idx.at(i)) = i;
+	}
 
 	std::string TupleTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
@@ -266,7 +270,7 @@ namespace tsl {
 		// Display the tuple header and components
 		ss << getIndent(indent) << "tuple {\n";
 		for (const auto component_idx: layout_idx_to_component_idx) {
-			const Bytes             component_offset = getComponentOffset(component_idx);
+			const Bytes             component_offset = getOffsetOfComponentIndex(component_idx);
 			const tsh::SymbolType<> component_type   = tuple_type.getComponents().at(component_idx);
 			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
@@ -288,7 +292,8 @@ namespace tsl {
 		std::vector<tsh::InterfaceElement>   field_elements;
 		std::vector<CRef<TypeLayout>>        field_layouts;
 		std::vector<Bytes>                   field_offsets;
-		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
+		std::vector<usize>                   layout_idx_to_field_idx;
+		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
 		Bits                                 total_size;
 
 		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
@@ -321,7 +326,8 @@ namespace tsl {
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
-			  offset_idx_to_sym_id(offsetsToSymIDs(field_elements, field_offsets)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(layoutsIndicesToSymIDs(field_elements, field_offsets)),
 			  total_size(
 				  field_layouts.empty()
 					  ? Bits(0)
@@ -335,9 +341,24 @@ namespace tsl {
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper):
 		  TypeLayoutABC(helper.total_size, helper.class_type),
 		  num_fields(helper.field_layouts.size()),
-		  layout_idx_to_sym_id(std::move(helper).offset_idx_to_sym_id) {
-		for (u32 i = 0; i < helper.field_elements.size(); i++)
-			field_offsets.put(helper.field_elements[i].getSymbol(), helper.field_offsets[i]);
+		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
+		for (u32 i = 0; i < num_fields; i++) {
+			// Fill out the map based on the subsequent field symbols and their offsets.
+			sym_id_to_offset.put(
+				helper.field_elements.at(i).getSymbol(), helper.field_offsets.at(i)
+			);
+		}
+		for (u32 i = 0; i < num_fields; i++) {
+			// Fill out the map as the inverse of layout_idx_to_sym_id.
+			sym_id_to_layout_idx.put(layout_idx_to_sym_id.at(i), i);
+		}
+		layout_idx_to_layout.reserve(num_fields);
+		for (u32 i = 0; i < num_fields; i++) {
+			// Fill out the map based on the field layouts of subsequent layout components.
+			layout_idx_to_layout.push_back(
+				helper.field_layouts.at(helper.layout_idx_to_field_idx.at(i))
+			);
+		}
 	}
 
 	std::string ClassTypeLayout::toStringDefinition(
@@ -349,9 +370,9 @@ namespace tsl {
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
-			const Bytes             field_offset = getFieldOffset(field_sym_id);
+			const Bytes             field_offset = getOffsetOfFieldSymbol(field_sym_id);
 			const tsh::SymbolType<> field_type   = class_type.getMemberType(field_sym_id, ctx);
-			auto                    field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
+			const auto              field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else

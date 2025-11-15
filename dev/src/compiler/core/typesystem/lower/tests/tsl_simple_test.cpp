@@ -298,8 +298,8 @@ private:
 			variant_match(tuple_layout->getVariant()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
-						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
-							&& l.getComponentOffset(2) == Bytes(8),
+						l.getOffsetOfComponentIndex(0) == Bytes(0) && l.getOffsetOfComponentIndex(1) == Bytes(2)
+							&& l.getOffsetOfComponentIndex(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
 				}
@@ -365,11 +365,11 @@ private:
 			variant_match(my_class_layout->getVariant()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getFieldOffset(a_field_symbol) == Bytes(0)
-							&& l.getFieldOffset(b_field_symbol) == Bytes(2)
-							&& l.getFieldOffset(c_field_symbol) == Bytes(8)
-							&& l.getFieldOffset(d_field_symbol) == Bytes(16)
-							&& l.getFieldOffset(e_field_symbol) == Bytes(24),
+						l.getOffsetOfFieldSymbol(a_field_symbol) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(b_field_symbol) == Bytes(2)
+							&& l.getOffsetOfFieldSymbol(c_field_symbol) == Bytes(8)
+							&& l.getOffsetOfFieldSymbol(d_field_symbol) == Bytes(16)
+							&& l.getOffsetOfFieldSymbol(e_field_symbol) == Bytes(24),
 						"Class layout should align its component layouts."
 					);
 				}

@@ -382,7 +382,56 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
-		 * @brief Maps LIRValue to LLVM Value.
+		 * @brief Maps LIRPlace to an LLVM pointer Value.
+		 *
+		 * This function may generate new LLVM instructions if necessary. For example,
+		 * it may need to generate a GEP instruction to access a field of a struct.
+		 *
+		 * @param place The LIRPlace to convert into an LLVM pointer Value.
+		 * @param builder The LLVM IRBuilder to use for generating the pointer, if necessary.
+		 * @return Pointer to the place described by `lir_place`.
+		 */
+		auto lirPlace2LLVMPtr(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
+			// First, get the pointer and type of the base value.
+			const auto base_ptr = [&] -> llvm::Value* {
+				variant_match(place.base) {
+					variant_case(lir::LIRLocalRef, lir_local) {
+						return local_register_map[lir_local].get();
+					}
+					variant_case(lir::LIRGlobal, lir_global) {
+						return getOrInsertGlobalVariable(module, lir_global).get();
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			// Then, perform appropriate pointer modification based on the access chain.
+			// If there is no access chain, we can return the base pointer directly.
+			if (not place.hasAccess()) return base_ptr;
+
+			// Otherwise, we need to get the layout indices of the accessed fields.
+			// - First, collect the subsequent layout indices.
+			std::vector<llvm::Value*> access_indices;
+			access_indices.reserve(place.access_chain.size());
+			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+			for (const auto& field_sym: place.access_chain) {
+				const auto& current_class_layout
+					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+				const auto layout_idx = current_class_layout.getLayoutIndexOfFieldSymbol(field_sym);
+				access_indices.push_back(
+					llvm::ConstantInt::get(llvm::Type::getInt64Ty(builder.getContext()), layout_idx)
+				);
+				current_layout = current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+			}
+
+			// - Then, create the GEP instruction to get the final pointer.
+			const auto base_llvm_type = typeFromLayout(builder.getContext(), place.getBaseLayout());
+			return builder.CreateGEP(base_llvm_type, base_ptr, access_indices);
+		}
+
+		/**
+		 * @brief Maps LIRValue to an LLVM Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
 		 * when loading the value of a local variable (which we store behind a pointer
@@ -404,24 +453,12 @@ namespace compiler::backend_llvm {
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LIRPlace, place) {
-					// @TODO: #500 handle field access.
-					variant_match(place.base) {
-						variant_case(lir::LIRLocalRef, lir_local) {
-							// We store local values behind pointers to stack-allocated memory.
-							// We need to load them before using them.
-							const auto local_ptr = local_register_map[lir_local].get();
-							return builder.CreateLoad(
-								typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
-							);
-						}
-						variant_case(lir::LIRGlobal, lir_global) {
-							const auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
-							return builder.CreateLoad(
-								typeFromLayout(builder.getContext(), lir_global.layout),
-								global_ptr.get()
-							);
-						}
-					}
+					// We store local values behind pointers to stack-allocated memory.
+					// We need to load them (or their fields) before using them.
+					// Similarly, we need to use global values or their fields before use.
+					const auto llvm_type = typeFromLayout(builder.getContext(), place.layout);
+					llvm::Value* accessed_ptr = lirPlace2LLVMPtr(place, builder);
+					return builder.CreateLoad(llvm_type, accessed_ptr);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -440,19 +477,13 @@ namespace compiler::backend_llvm {
 		}
 
 		void storeOutput(
-			lir::LIRPlace output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
+			const lir::LIRPlace& output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
 		) {
-			// @TODO: #500 handle field access.
-			variant_match(output.base) {
-				variant_case(lir::LIRLocalRef, lir_local) {
-					builder.CreateStore(value.get(), local_register_map[lir_local].get());
-				}
-				variant_case(lir::LIRGlobal, global_lir) {
-					auto global = getOrInsertGlobalVariable(module, global_lir);
-					builder.CreateStore(value.get(), global.get());
-				}
-				variant_default { CORE_PANIC("unknown lir output type"); }
-			}
+			// We store local values behind pointers to stack-allocated memory.
+			// We need to load them (or their fields) before using them.
+			// Similarly, we need to use global values or their fields before use.
+			llvm::Value* accessed_ptr = lirPlace2LLVMPtr(output, builder);
+			builder.CreateStore(value.get(), accessed_ptr);
 		}
 
 		llvm::Value* castOperation(
