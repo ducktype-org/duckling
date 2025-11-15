@@ -25,8 +25,9 @@ pub struct QPCtx<'duck> {
 /// If no such key was specified, falls back to the appropriate function from the `paths` module.
 ///
 /// # Errors
-/// - Path retrieved from the TOML configuration failed to soft_canonicalize.
+/// - TOML parsing error related to the value attributed to `toml_key` occured.
 /// - Appropriate function from the `paths` module returned an error when called.
+/// - The retrieved path failed to soft_canonicalize.
 macro_rules! path_getters {
     (
         $(
