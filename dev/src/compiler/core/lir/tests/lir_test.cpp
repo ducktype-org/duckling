@@ -343,7 +343,7 @@ private:
 	}
 
 	void simpleConstant() {
-		auto [module, scope] = getModule(fs::File(path("modules/simple_constant")));
+		auto [module, scope] = getModule(fs::File(path("modules/constants")));
 		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
