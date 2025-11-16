@@ -24,3 +24,45 @@ protobuf_generate(
     PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:grpc_cpp_plugin>"
     IMPORT_DIRS ${PROTO_IMPORT_DIRS}
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
+
+
+# -----------------------------
+# Explicit command to generate the files for manual Proto library
+# -----------------------------
+
+# List of generated files
+set(GENERATED_PROTO_FILES
+    "${PROTO_BINARY_DIR}/view.pb.cc"
+    "${PROTO_BINARY_DIR}/view.pb.h"
+    "${PROTO_BINARY_DIR}/view.grpc.pb.cc"
+    "${PROTO_BINARY_DIR}/view.grpc.pb.h"
+)
+
+# Make sure output directory exists
+file(MAKE_DIRECTORY "${PROTO_BINARY_DIR}")
+
+# Custom target that depends on all generated files
+add_custom_target(generate_proto_files ALL
+    DEPENDS ${GENERATED_PROTO_FILES}
+)
+
+# C++ generation
+add_custom_command(
+    OUTPUT "${PROTO_BINARY_DIR}/view.pb.cc" "${PROTO_BINARY_DIR}/view.pb.h"
+    COMMAND ${Protobuf_PROTOC_EXECUTABLE}
+    ARGS --cpp_out="${PROTO_BINARY_DIR}" -I "${PROTO_IMPORT_DIRS}" "${CMAKE_CURRENT_LIST_DIR}/view.proto"
+    DEPENDS "${CMAKE_CURRENT_LIST_DIR}/view.proto"
+    COMMENT "Generating C++ protobuf files"
+)
+
+# gRPC generation
+add_custom_command(
+    OUTPUT "${PROTO_BINARY_DIR}/view.grpc.pb.cc" "${PROTO_BINARY_DIR}/view.grpc.pb.h"
+    COMMAND ${Protobuf_PROTOC_EXECUTABLE}
+    ARGS --grpc_out="${PROTO_BINARY_DIR}"
+         --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>
+         -I "${PROTO_IMPORT_DIRS}"
+         "${CMAKE_CURRENT_LIST_DIR}/view.proto"
+    DEPENDS "${CMAKE_CURRENT_LIST_DIR}/view.proto"
+    COMMENT "Generating gRPC C++ files"
+)

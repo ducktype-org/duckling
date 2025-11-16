@@ -29,14 +29,14 @@ namespace term_ui {
 
 	CodePiece::CodePiece(std::string text): text(text) {}
 
-	CodePiece::CodePiece(std::string text, std::set<u32> groups): text(text), groups(groups) {}
+	CodePiece::CodePiece(std::string text, std::set<u32> pointer_messages): text(text), pointer_messages(pointer_messages) {}
 
 	CodePiece::CodePiece(const view::HlCodeComponent& component) {
 		text = component.content();
-		for (u32 i = 0; i < component.hl_tags_size(); ++i) groups.insert(component.hl_tags(i));
+		for (u32 i = 0; i < component.hl_tags_size(); ++i) pointer_messages.insert(component.hl_tags(i));
 	}
 
-	const std::set<u32>& CodePiece::getGroups() const { return groups; }
+	const std::set<u32>& CodePiece::getpointer_messages() const { return pointer_messages; }
 
 	const std::string& CodePiece::getText() const { return text; }
 

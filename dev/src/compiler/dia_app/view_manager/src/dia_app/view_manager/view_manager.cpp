@@ -2,6 +2,11 @@
 
 #include "fetcher.hpp"
 
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server.h>
+#include <grpcpp/security/server_credentials.h>
+#include <cstdlib>
+
 namespace dia_app {
 	namespace view_manager {
 		// ViewManager
@@ -120,6 +125,29 @@ namespace dia_app {
 			return ::grpc::Status::OK;
 		}
 
-		void runViewManagerRPCServer(const json& input) { UNIMPLEMENTED(); }
+		void runViewManagerRPCServer(const json& input) {
+			// Build service from JSON input.
+			auto service = ViewServiceImpl::createFromJson(input);
+
+			// Determine server address: prefer JSON field "server_address", else default.
+			std::string server_address = "0.0.0.0:50051";
+			if (auto it = input.find("server_address"); it != input.end() && it->is_string()) {
+				server_address = *it;
+			}
+
+			::grpc::ServerBuilder builder;
+			builder.AddListeningPort(server_address, ::grpc::InsecureServerCredentials());
+			builder.RegisterService(&service);
+
+			std::unique_ptr<::grpc::Server> server(builder.BuildAndStart());
+			if (!server) {
+				std::cerr << "Failed to start ViewManager gRPC server on " << server_address << "\n";
+				return;
+			}
+			std::cout << "ViewManager RPC server listening on " << server_address << "\n";
+
+			// Block until shutdown (Ctrl+C or external signal).
+			server->Wait();
+		}
 	}
 }

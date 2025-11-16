@@ -1,0 +1,596 @@
+[
+    {
+        "displayed_secondary_infos": ["0", "1", "2", "3", "4"],
+        "entities": {
+            "builtin_type_i32": {
+                "assoc_infos": [
+                    "0"
+                ],
+                "kind": "builtin_type"
+            },
+            "builtin_type_i64": {
+                "assoc_infos": [
+                    "1"
+                ],
+                "kind": "builtin_type"
+            },
+            "macro_someMacro_1010": {
+                "assoc_infos": [
+                    "2"
+                ],
+                "kind": "macro"
+            },
+            "type_A_1010": {
+                "assoc_infos": [
+                    "3"
+                ],
+                "kind": "type"
+            },
+            "type_K_2020": {
+                "assoc_infos": [],
+                "kind": "type"
+            },
+            "type_T_1020": {
+                "assoc_infos": [
+                    "4"
+                ],
+                "kind": "type"
+            },
+            "var_a_1010": {
+                "assoc_infos": [
+                    "3"
+                ],
+                "kind": "variable"
+            },
+            "var_t_1020": {
+                "assoc_infos": [
+                    "4"
+                ],
+                "kind": "variable"
+            }
+        },
+        "main_info": {
+            "code": {
+                "content": [
+                    {
+                        "number": 22,
+                        "type": "start_line"
+                    },
+                    {
+                        "content": "struct K",
+                        "type": "code"
+                    },
+                    {
+                        "content": " {",
+                        "type": "code"
+                    },
+                    {
+                        "number": 23,
+                        "type": "start_line"
+                    },
+                    [
+                        {
+                            "content": "    ",
+                            "type": "code"
+                        },
+                        [
+                            {
+                                "content": "t: ",
+                                "type": "code"
+                            },
+                            {
+                                "content": {
+                                    "content": "T",
+                                    "type": "code"
+                                },
+                                "refers_to": "type_T_1020",
+                                "type": "entity"
+                            },
+                            {
+                                "content": ";",
+                                "type": "code"
+                            },
+                            {
+                                "number": 24,
+                                "type": "start_line"
+                            },
+                            {
+                                "content": "    fun add(a: ",
+                                "type": "code"
+                            },
+                            {
+                                "content": {
+                                    "content": "A",
+                                    "type": "code"
+                                },
+                                "refers_to": "type_A_1010",
+                                "type": "entity"
+                            },
+                            {
+                                "content": ") -> ",
+                                "type": "code"
+                            },
+                            {
+                                "content": {
+                                    "content": "T",
+                                    "type": "code"
+                                },
+                                "refers_to": "type_T_1020",
+                                "type": "entity"
+                            },
+                            {
+                                "content": " = {",
+                                "type": "code"
+                            },
+                            {
+                                "number": 25,
+                                "type": "start_line"
+                            },
+                            {
+                                "content": "        return ",
+                                "type": "code"
+                            },
+                            {
+                                "content": [
+                                    {
+                                        "content": {
+                                            "content": "t",
+                                            "type": "code"
+                                        },
+                                        "refers_to": "var_t_1020",
+                                        "type": "entity"
+                                    },
+                                    {
+                                        "content": " + ",
+                                        "type": "code"
+                                    },
+                                    {
+                                        "content": {
+                                            "content": "a",
+                                            "type": "code"
+                                        },
+                                        "refers_to": "var_a_1010",
+                                        "type": "entity"
+                                    }
+                                ],
+                                "pointer_messages": [
+                                    "cause"
+                                ],
+                                "type": "grouping"
+                            },
+                            {
+                                "content": ";",
+                                "type": "code"
+                            },
+                            {
+                                "number": 26,
+                                "type": "start_line"
+                            },
+                            {
+                                "content": "    }",
+                                "type": "code"
+                            }
+                        ]
+                    ],
+                    {
+                        "number": 27,
+                        "type": "start_line"
+                    },
+                    {
+                        "content": "}",
+                        "type": "code"
+                    }
+                ],
+                "location": {
+                    "column": 1,
+                    "file": "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf",
+                    "last_modified": 0,
+                    "line": 22
+                }
+            },
+            "metadata": {
+                "family": "type_check",
+                "name": "no_match_2op",
+                "type": "error"
+            },
+            "params": {
+                "has_expanded_left_type": "false",
+                "has_expanded_right_type": "false",
+                "is_static": "false",
+                "left_type": {
+                    "content": {
+                        "content": "T",
+                        "type": "code"
+                    },
+                    "refers_to": "type_T_1020",
+                    "type": "entity"
+                },
+                "operator": {
+                    "content": "+",
+                    "type": "code"
+                },
+                "right_type": {
+                    "content": {
+                        "content": "A",
+                        "type": "code"
+                    },
+                    "refers_to": "type_A_1010",
+                    "type": "entity"
+                }
+            }
+        },
+        "secondary_infos": {
+            "0": {
+                "metadata": {
+                    "family": "builtin",
+                    "name": "type_integer",
+                    "type": "docs"
+                },
+                "params": {
+                    "bit_count": "32",
+                    "is_signed": "true",
+                    "type": {
+                        "content": {
+                            "content": "i32",
+                            "type": "code"
+                        },
+                        "refers_to": "builtin_type_i32",
+                        "type": "entity"
+                    }
+                }
+            },
+            "1": {
+                "metadata": {
+                    "family": "builtin",
+                    "name": "type_integer",
+                    "type": "docs"
+                },
+                "params": {
+                    "bit_count": "64",
+                    "is_signed": "true",
+                    "type": {
+                        "content": {
+                            "content": "i64",
+                            "type": "code"
+                        },
+                        "refers_to": "builtin_type_i64",
+                        "type": "entity"
+                    }
+                }
+            },
+            "2": {
+                "code": {
+                    "content": [
+                        {
+                            "number": 1,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "# Simple macro for struct insides",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 2,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": {
+                                    "content": "macro someMacro(type: Symbol, name: Symbol) {",
+                                    "type": "code"
+                                },
+                                "pointer_messages": [
+                                    "declaration"
+                                ],
+                                "type": "grouping"
+                            }
+                        ],
+                        {
+                            "number": 3,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "    return ${",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 4,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "        name: type;",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 5,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "        fun add(a: A) -> type = {",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 6,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "            return name + a;",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 7,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "        }",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 8,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "    };",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 9,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": "}",
+                                "type": "code"
+                            }
+                        ]
+                    ],
+                    "location": {
+                        "column": 1,
+                        "file": "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf",
+                        "last_modified": 0,
+                        "line": 2
+                    }
+                },
+                "metadata": {
+                    "family": "declaration",
+                    "name": "macro_decl",
+                    "type": "note"
+                },
+                "params": {
+                    "macro": {
+                        "content": {
+                            "content": "someMacro",
+                            "type": "code"
+                        },
+                        "refers_to": "macro_someMacro_1010",
+                        "type": "entity"
+                    }
+                }
+            },
+            "3": {
+                "code": {
+                    "content": [
+                        {
+                            "number": 11,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": {
+                                    "content": "struct A",
+                                    "type": "code"
+                                },
+                                "pointer_messages": [
+                                    "declaration"
+                                ],
+                                "type": "grouping"
+                            },
+                            {
+                                "content": " {",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 12,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "    p: ",
+                            "type": "code"
+                        },
+                        {
+                            "content": {
+                                "content": "i64",
+                                "type": "code"
+                            },
+                            "refers_to": "builtin_type_i64",
+                            "type": "entity"
+                        },
+                        {
+                            "content": ";",
+                            "type": "code"
+                        },
+                        {
+                            "number": 13,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "    q: ",
+                            "type": "code"
+                        },
+                        {
+                            "content": {
+                                "content": "i64",
+                                "type": "code"
+                            },
+                            "refers_to": "builtin_type_i64",
+                            "type": "entity"
+                        },
+                        {
+                            "content": ";",
+                            "type": "code"
+                        },
+                        {
+                            "number": 14,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "}",
+                            "type": "code"
+                        }
+                    ],
+                    "location": {
+                        "column": 1,
+                        "file": "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf",
+                        "last_modified": 0,
+                        "line": 11
+                    }
+                },
+                "metadata": {
+                    "family": "declaration",
+                    "name": "type_decl",
+                    "type": "note"
+                },
+                "params": {
+                    "type": {
+                        "content": {
+                            "content": "A",
+                            "type": "code"
+                        },
+                        "refers_to": "type_A_1010",
+                        "type": "entity"
+                    }
+                }
+            },
+            "4": {
+                "code": {
+                    "content": [
+                        {
+                            "number": 16,
+                            "type": "start_line"
+                        },
+                        [
+                            {
+                                "content": {
+                                    "content": "struct T",
+                                    "type": "code"
+                                },
+                                "pointer_messages": [
+                                    "declaration"
+                                ],
+                                "type": "grouping"
+                            },
+                            {
+                                "content": " {",
+                                "type": "code"
+                            }
+                        ],
+                        {
+                            "number": 17,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "    x: ",
+                            "type": "code"
+                        },
+                        {
+                            "content": {
+                                "content": "i32",
+                                "type": "code"
+                            },
+                            "refers_to": "builtin_type_i32",
+                            "type": "entity"
+                        },
+                        {
+                            "content": ";",
+                            "type": "code"
+                        },
+                        {
+                            "number": 18,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "    y: ",
+                            "type": "code"
+                        },
+                        {
+                            "content": {
+                                "content": "i32",
+                                "type": "code"
+                            },
+                            "refers_to": "builtin_type_i32",
+                            "type": "entity"
+                        },
+                        {
+                            "content": ";",
+                            "type": "code"
+                        },
+                        {
+                            "number": 19,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "    z: ",
+                            "type": "code"
+                        },
+                        {
+                            "content": {
+                                "content": "i32",
+                                "type": "code"
+                            },
+                            "refers_to": "builtin_type_i32",
+                            "type": "entity"
+                        },
+                        {
+                            "content": ";",
+                            "type": "code"
+                        },
+                        {
+                            "number": 20,
+                            "type": "start_line"
+                        },
+                        {
+                            "content": "}",
+                            "type": "code"
+                        }
+                    ],
+                    "location": {
+                        "column": 1,
+                        "file": "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf",
+                        "last_modified": 0,
+                        "line": 16
+                    }
+                },
+                "metadata": {
+                    "family": "declaration",
+                    "name": "type_decl",
+                    "type": "note"
+                },
+                "params": {
+                    "type": {
+                        "content": {
+                            "content": "T",
+                            "type": "code"
+                        },
+                        "refers_to": "type_T_1020",
+                        "type": "entity"
+                    }
+                }
+            }
+        }
+    }
+]

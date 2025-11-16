@@ -32,19 +32,19 @@ namespace term_ui {
 		u32 col = 0;
 
 		std::vector<Highlight>     lowered;
-		std::vector<std::set<u32>> visited_groups(pieces.size(), std::set<u32>());
+		std::vector<std::set<u32>> visited_pointer_messages(pieces.size(), std::set<u32>());
 
 		for (u32 i = 0; i < pieces.size(); ++i) {
 			auto& piece = pieces[i];
 
-			if (piece.getGroups().empty()) {
+			if (piece.getpointer_messages().empty()) {
 				// Print the code piece.
 				out << piece.getText();
 				col += piece.getText().size();
 			} else {
 				// Buffer all pointer messages.
-				for (auto group: piece.getGroups()) {
-					if (visited_groups[i].contains(group)) {
+				for (auto group: piece.getpointer_messages()) {
+					if (visited_pointer_messages[i].contains(group)) {
 						// This group on this piece has already been handled.
 						continue;
 					}
@@ -52,9 +52,9 @@ namespace term_ui {
 					// Find all contigous pieces in this line and merge them.
 					u32 last_idx = i;
 					u32 last_col = col;
-					while (last_idx < pieces.size() && pieces[last_idx].getGroups().contains(group)
+					while (last_idx < pieces.size() && pieces[last_idx].getpointer_messages().contains(group)
 					) {
-						visited_groups[last_idx].insert(group);
+						visited_pointer_messages[last_idx].insert(group);
 						last_col += pieces[last_idx].getText().size();
 						++last_idx;
 					}

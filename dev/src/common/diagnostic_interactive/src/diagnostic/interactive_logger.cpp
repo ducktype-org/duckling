@@ -10,6 +10,15 @@
 void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json j{ message };
 
+
+	if (dump_static) {
+		// Now we have view data in the format declared in view.proto
+		// This is just temporary:
+		printer::StreamPrinter::print(j.dump(2), std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
+		return;
+	}
+
 	// Create a view manager instance for static message.
 	auto                  view_manager = dia_app::view_manager::ViewManager::createFromJson(j);
 	::view::ViewResponse* vm_data      = new ::view::ViewResponse;
@@ -21,12 +30,5 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	term_msg.print(std::cerr, use_color);
 	delete vm_data;
 
-	if (dump_static) {
-		// Now we have view data in the format declared in view.proto
-		// This is just temporary:
-		printer::StreamPrinter::print(j.dump(2), std::cout);
-		printer::StreamPrinter::newline(1, std::cout);
-		return;
-	}
 	messages.emplace_back(std::move(message));
 }

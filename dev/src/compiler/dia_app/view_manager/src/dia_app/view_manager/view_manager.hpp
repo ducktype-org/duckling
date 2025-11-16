@@ -39,7 +39,7 @@ namespace dia_app {
 			/**
 			 * @brief Build a ViewManager from the full diagnostic file in JSON.
 			 *
-			 * Parses the diagnostic groups, initializes ViewConstructors and the
+			 * Parses the diagnostic pointer_messages, initializes ViewConstructors and the
 			 * corresponding Diagnostic structures.
 			 */
 			static ViewManager createFromJson(json input);

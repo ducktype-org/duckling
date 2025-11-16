@@ -1,0 +1,675 @@
+[
+  {
+    "displayed_secondary_infos": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "entities": {
+      "alias_x_3030": {
+        "assoc_infos": [
+          "7",
+          "10"
+        ],
+        "kind": "alias"
+      },
+      "builtin_op_plus_i32_i32": {
+        "assoc_infos": [
+          "4"
+        ],
+        "kind": "builtin_operator"
+      },
+      "builtin_type_i32": {
+        "assoc_infos": [
+          "2"
+        ],
+        "kind": "builtin_type"
+      },
+      "builtin_type_i64": {
+        "assoc_infos": [
+          "3"
+        ],
+        "kind": "builtin_type"
+      },
+      "var_a_1010": {
+        "assoc_infos": [
+          "5",
+          "8"
+        ],
+        "kind": "variable"
+      },
+      "var_b_2020": {
+        "assoc_infos": [
+          "6",
+          "9"
+        ],
+        "kind": "variable"
+      }
+    },
+    "main_info": {
+      "code": {
+        "content": [
+          {
+            "number": 1,
+            "type": "start_line"
+          },
+          {
+            "content": "fun foo() = {",
+            "type": "code"
+          },
+          {
+            "number": 2,
+            "type": "start_line"
+          },
+          [
+            {
+              "content": "    ",
+              "type": "code"
+            },
+            {
+              "content": "let a: ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "i32",
+                "type": "code"
+              },
+              "refers_to": "builtin_type_i32",
+              "type": "entity"
+            },
+            {
+              "content": " = 0;",
+              "type": "code"
+            }
+          ],
+          {
+            "number": 3,
+            "type": "start_line"
+          },
+          [
+            {
+              "content": "    ",
+              "type": "code"
+            },
+            {
+              "content": "let b: ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "i64",
+                "type": "code"
+              },
+              "refers_to": "builtin_type_i64",
+              "type": "entity"
+            },
+            {
+              "content": " = 0;",
+              "type": "code"
+            }
+          ],
+          {
+            "number": 4,
+            "type": "start_line"
+          },
+          {
+            "number": 5,
+            "type": "start_line"
+          },
+          [
+            {
+              "content": "    ",
+              "type": "code"
+            },
+            {
+              "content": "alias x = ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "b",
+                "type": "code"
+              },
+              "refers_to": "var_b_2020",
+              "type": "entity"
+            },
+            {
+              "content": ";",
+              "type": "code"
+            }
+          ],
+          {
+            "number": 6,
+            "type": "start_line"
+          },
+          {
+            "number": 7,
+            "type": "start_line"
+          },
+          [
+            {
+              "content": "    return ",
+              "type": "code"
+            },
+            {
+              "content": [
+                {
+                  "content": {
+                    "content": "a",
+                    "type": "code"
+                  },
+                  "refers_to": "var_a_1010",
+                  "type": "entity"
+                },
+                {
+                  "content": " ",
+                  "type": "code"
+                },
+                {
+                  "content": {
+                    "content": "+",
+                    "type": "code"
+                  },
+                  "refers_to": "builtin_op_plus_i32_i32",
+                  "type": "entity"
+                },
+                {
+                  "content": " ",
+                  "type": "code"
+                },
+                {
+                  "content": {
+                    "content": "a",
+                    "type": "code"
+                  },
+                  "refers_to": "var_a_1010",
+                  "type": "entity"
+                },
+                {
+                  "content": " + ",
+                  "type": "code"
+                },
+                {
+                  "content": {
+                    "content": "x",
+                    "type": "code"
+                  },
+                  "refers_to": "alias_x_3030",
+                  "type": "entity"
+                }
+              ],
+              "pointer_messages": [
+                "cause"
+              ],
+              "type": "grouping"
+            },
+            {
+              "content": ";",
+              "type": "code"
+            }
+          ],
+          {
+            "number": 8,
+            "type": "start_line"
+          },
+          {
+            "content": "}",
+            "type": "code"
+          }
+        ],
+        "location": {
+          "column": 14,
+          "file": "/home/wojtek/ducktype/duckling/dev/src/compiler/core/helios/src_private/helios_private/expressions/test.dmf",
+          "line": 1
+        }
+      },
+      "left_type": {
+        "content": {
+          "content": "i32",
+          "type": "code"
+        },
+        "refers_to": "builtin_type_i32",
+        "type": "entity"
+      },
+      "metadata": {
+        "family": "misc",
+        "name": "todo",
+        "type": "error"
+      },
+      "operator": {
+        "content": {
+          "content": "+",
+          "type": "code"
+        },
+        "refers_to": "builtin_op_plus_i32_i32",
+        "type": "entity"
+      },
+      "params": {
+        "message": "just testing"
+      },
+      "right_type": {
+        "content": {
+          "content": "i64",
+          "type": "code"
+        },
+        "refers_to": "builtin_type_i64",
+        "type": "entity"
+      }
+    },
+    "secondary_infos": {
+      "0": {
+        "metadata": {
+          "family": "type_check",
+          "name": "argument_of_type",
+          "type": "note"
+        },
+        "params": {
+          "argument": [
+            {
+              "content": {
+                "content": "a",
+                "type": "code"
+              },
+              "refers_to": "var_a_1010",
+              "type": "entity"
+            },
+            {
+              "content": " ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "+",
+                "type": "code"
+              },
+              "refers_to": "builtin_op_plus_i32_i32",
+              "type": "entity"
+            },
+            {
+              "content": " ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "a",
+                "type": "code"
+              },
+              "refers_to": "var_a_1010",
+              "type": "entity"
+            }
+          ],
+          "type": {
+            "content": {
+              "content": "i32",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i32",
+            "type": "entity"
+          }
+        }
+      },
+      "1": {
+        "metadata": {
+          "family": "type_check",
+          "name": "argument_of_type",
+          "type": "note"
+        },
+        "params": {
+          "argument": {
+            "alt_content": {
+              "content": {
+                "content": "b",
+                "type": "code"
+              },
+              "refers_to": "var_b_2020",
+              "type": "entity"
+            },
+            "content": {
+              "content": {
+                "content": "x",
+                "type": "code"
+              },
+              "refers_to": "alias_x_3030",
+              "type": "entity"
+            },
+            "type": "grouping"
+          },
+          "type": {
+            "content": {
+              "content": "i64",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i64",
+            "type": "entity"
+          }
+        }
+      },
+      "2": {
+        "metadata": {
+          "family": "builtin",
+          "name": "type_integer",
+          "type": "docs"
+        },
+        "params": {
+          "bit_count": "32",
+          "is_signed": "true",
+          "type": {
+            "content": {
+              "content": "i32",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i32",
+            "type": "entity"
+          }
+        }
+      },
+      "3": {
+        "metadata": {
+          "family": "builtin",
+          "name": "type_integer",
+          "type": "docs"
+        },
+        "params": {
+          "bit_count": "64",
+          "is_signed": "true",
+          "type": {
+            "content": {
+              "content": "i64",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i64",
+            "type": "entity"
+          }
+        }
+      },
+      "4": {
+        "metadata": {
+          "family": "builtin",
+          "name": "operator_plus",
+          "type": "docs"
+        },
+        "params": {
+          "first_arg_type": {
+            "content": {
+              "content": "i32",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i32",
+            "type": "entity"
+          },
+          "second_arg_type": {
+            "content": {
+              "content": "i32",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i32",
+            "type": "entity"
+          }
+        }
+      },
+      "5": {
+        "code": {
+          "content": [
+            {
+              "number": 2,
+              "type": "start_line"
+            },
+            [
+              {
+                "content": "    ",
+                "type": "code"
+              },
+              {
+                "content": [
+                  {
+                    "content": "let a: ",
+                    "type": "code"
+                  },
+                  {
+                    "content": {
+                      "content": "i32",
+                      "type": "code"
+                    },
+                    "refers_to": "builtin_type_i32",
+                    "type": "entity"
+                  }
+                ],
+                "pointer_messages": [
+                  "declaration"
+                ],
+                "type": "grouping"
+              },
+              {
+                "content": " = 0;",
+                "type": "code"
+              }
+            ]
+          ],
+          "location": {
+            "column": 5,
+            "file": "/home/wojtek/ducktype/duckling/dev/src/compiler/core/helios/src_private/helios_private/expressions/test.dmf",
+            "line": 2
+          }
+        },
+        "metadata": {
+          "family": "declaration",
+          "name": "variable_decl",
+          "type": "note"
+        },
+        "params": {
+          "variable": {
+            "content": {
+              "content": "a",
+              "type": "code"
+            },
+            "refers_to": "var_a_1010",
+            "type": "entity"
+          }
+        }
+      },
+      "6": {
+        "code": {
+          "content": [
+            {
+              "number": 3,
+              "type": "start_line"
+            },
+            [
+              {
+                "content": "    ",
+                "type": "code"
+              },
+              {
+                "content": [
+                  {
+                    "content": "let b: ",
+                    "type": "code"
+                  },
+                  {
+                    "content": {
+                      "content": "i64",
+                      "type": "code"
+                    },
+                    "refers_to": "builtin_type_i64",
+                    "type": "entity"
+                  }
+                ],
+                "pointer_messages": [
+                  "declaration"
+                ],
+                "type": "grouping"
+              },
+              {
+                "content": " = 0;",
+                "type": "code"
+              }
+            ]
+          ],
+          "location": {
+            "column": 5,
+            "file": "/home/wojtek/ducktype/duckling/dev/src/compiler/core/helios/src_private/helios_private/expressions/test.dmf",
+            "line": 3
+          }
+        },
+        "metadata": {
+          "family": "declaration",
+          "name": "variable_decl",
+          "type": "note"
+        },
+        "params": {
+          "variable": {
+            "content": {
+              "content": "b",
+              "type": "code"
+            },
+            "refers_to": "var_b_2020",
+            "type": "entity"
+          }
+        }
+      },
+      "7": {
+        "code": {
+          "content": [
+            {
+              "number": 5,
+              "type": "start_line"
+            },
+            [
+              {
+                "content": "    ",
+                "type": "code"
+              },
+              {
+                "content": [
+                  {
+                    "content": "alias x = ",
+                    "type": "code"
+                  },
+                  {
+                    "content": {
+                      "content": "b",
+                      "type": "code"
+                    },
+                    "refers_to": "var_b_2020",
+                    "type": "entity"
+                  }
+                ],
+                "pointer_messages": [
+                  "declaration"
+                ],
+                "type": "grouping"
+              },
+              {
+                "content": ";",
+                "type": "code"
+              }
+            ]
+          ],
+          "location": {
+            "column": 5,
+            "file": "/home/wojtek/ducktype/duckling/dev/src/compiler/core/helios/src_private/helios_private/expressions/test.dmf",
+            "line": 5
+          }
+        },
+        "metadata": {
+          "family": "declaration",
+          "name": "alias_decl",
+          "type": "note"
+        },
+        "params": {
+          "alias": {
+            "content": {
+              "content": "x",
+              "type": "code"
+            },
+            "refers_to": "alias_x_3030",
+            "type": "entity"
+          }
+        }
+      },
+      "8": {
+        "metadata": {
+          "family": "type_check",
+          "name": "variable_of_type",
+          "type": "note"
+        },
+        "params": {
+          "type": {
+            "content": {
+              "content": "i32",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i32",
+            "type": "entity"
+          },
+          "variable": {
+            "content": {
+              "content": "a",
+              "type": "code"
+            },
+            "refers_to": "var_a_1010",
+            "type": "entity"
+          }
+        }
+      },
+      "9": {
+        "metadata": {
+          "family": "type_check",
+          "name": "variable_of_type",
+          "type": "note"
+        },
+        "params": {
+          "type": {
+            "content": {
+              "content": "i64",
+              "type": "code"
+            },
+            "refers_to": "builtin_type_i64",
+            "type": "entity"
+          },
+          "variable": {
+            "content": {
+              "content": "b",
+              "type": "code"
+            },
+            "refers_to": "var_b_2020",
+            "type": "entity"
+          }
+        }
+      },
+      "10": {
+        "metadata": {
+          "family": "lookup",
+          "name": "name_is_alias",
+          "type": "note"
+        },
+        "params": {
+          "alias_name": {
+            "content": {
+              "content": "x",
+              "type": "code"
+            },
+            "refers_to": "alias_x_3030",
+            "type": "entity"
+          },
+          "underlying_name": {
+            "content": {
+              "content": "b",
+              "type": "code"
+            },
+            "refers_to": "var_b_2020",
+            "type": "entity"
+          }
+        }
+      }
+    }
+  }
+]

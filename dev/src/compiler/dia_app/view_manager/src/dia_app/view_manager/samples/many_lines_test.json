@@ -19,7 +19,7 @@
                 { "type": "code", "content": "this is line 1:" },
                 { "type": "start_line", "number": 2 },
                 { "type": "code", "content": "  " },
-                { "type": "code", "content": "this is line 2", "groups": ["cause"] },
+                { "type": "code", "content": "this is line 2", "pointer_messages": ["cause"] },
                 { "type": "code", "content": ";" },
                 { "type": "start_line", "number": 3 },
                 { "type": "start_line", "number": 4 },

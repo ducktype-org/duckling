@@ -10,7 +10,7 @@ namespace dia_app {
 
 		DisplayElement::DisplayElement(const DisplayElement& other):
 			  assoc_infos(other.assoc_infos),
-			  groups(other.groups) {}
+			  pointer_messages(other.pointer_messages) {}
 
 		// ---------------- TextDElement ---------------- //
 
@@ -43,13 +43,13 @@ namespace dia_app {
 				// A simple array of elements.
 				for (auto& el: elem_json) elems.push_back(parse(el));
 			} else {
-				// An element grouping with possible pointer message groups.
+				// An element grouping with possible pointer message pointer_messages.
 				ASSUME_HAS(elem_json, "type");
 				ASSUME_VAL(elem_json, "type", "grouping");
 
-				if (elem_json.contains("groups")) {
-					ASSUME_ARR(elem_json, "groups");
-					groups = elem_json["groups"];
+				if (elem_json.contains("pointer_messages")) {
+					ASSUME_ARR(elem_json, "pointer_messages");
+					pointer_messages = elem_json["pointer_messages"];
 				}
 
 				// We only create thin concat elements from element groupings.
@@ -111,9 +111,9 @@ namespace dia_app {
 			ASSUME_HAS(elem_json, "alt_content");
 			alt_content = parse(elem_json["alt_content"]);
 
-			if (elem_json.contains("groups")) {
-				ASSUME_ARR(elem_json, "groups");
-				groups = elem_json["groups"];
+			if (elem_json.contains("pointer_messages")) {
+				ASSUME_ARR(elem_json, "pointer_messages");
+				pointer_messages = elem_json["pointer_messages"];
 			}
 		}
 
@@ -170,9 +170,9 @@ namespace dia_app {
 				ASSUME_HAS(elem_json, "content");
 				content = parse(elem_json["content"]);
 
-				if (elem_json.contains("groups")) {
-					ASSUME_ARR(elem_json, "groups");
-					groups = elem_json["groups"];
+				if (elem_json.contains("pointer_messages")) {
+					ASSUME_ARR(elem_json, "pointer_messages");
+					pointer_messages = elem_json["pointer_messages"];
 				}
 			}
 		}
@@ -206,9 +206,9 @@ namespace dia_app {
 			ASSUME_HAS_STR(elem_json, "content");
 			content = elem_json["content"];
 
-			if (elem_json.contains("groups")) {
-				ASSUME_ARR(elem_json, "groups");
-				groups = elem_json["groups"];
+			if (elem_json.contains("pointer_messages")) {
+				ASSUME_ARR(elem_json, "pointer_messages");
+				pointer_messages = elem_json["pointer_messages"];
 			}
 		}
 
@@ -245,8 +245,8 @@ namespace dia_app {
 		// ---------------- ToComponentVisitor ---------------- //
 
 		void ToComponentVisitor::accumulateData(const DisplayElement& el) {
-			// Add this element's groups to the accumulator.
-			this->acc_data.groups.insert(el.groups.begin(), el.groups.end());
+			// Add this element's pointer_messages to the accumulator.
+			this->acc_data.pointer_messages.insert(el.pointer_messages.begin(), el.pointer_messages.end());
 			// Add this element's associated infos to the accumulator
 			// (may perform some fetching if it is an entity element and its
 			// related entity has not yet been fetched).
@@ -269,8 +269,8 @@ namespace dia_app {
 		) {
 			this->accumulateData(el);
 			auto id         = this->get_next_id();
-			auto groups     = this->acc_data.getGroups();
-			auto tags_range = std::ranges::subrange(groups.begin(), groups.end())
+			auto pointer_messages     = this->acc_data.getpointer_messages();
+			auto tags_range = std::ranges::subrange(pointer_messages.begin(), pointer_messages.end())
 			                | std::views::transform([this](const std::string& group) {
 								  return this->group_to_id(group);
 							  });

@@ -21,7 +21,7 @@ namespace dia_app {
 		void initialize(json&& diagnostic_file);
 
 		/**
-		 * @brief Get the number of info groups in the diagnostic file that
+		 * @brief Get the number of info pointer_messages in the diagnostic file that
 		 * the fetcher was initialized with.
 		 *
 		 * @return u32

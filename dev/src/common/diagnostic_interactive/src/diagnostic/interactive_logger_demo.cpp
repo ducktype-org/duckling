@@ -20,7 +20,7 @@ json meta(std::string type, std::string family, std::string name) {
 }
 
 json highlight_of(json content, std::string group) {
-	return json{ { "type", "grouping" }, { "content", content }, { "groups", json{ group } } };
+	return json{ { "type", "grouping" }, { "content", content }, { "pointer_messages", json{ group } } };
 }
 
 json start_line(uint i) { return json{ { "type", "start_line" }, { "number", i } }; }
@@ -650,13 +650,22 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json j{ message };
 
 	// j = create_demo_from(j);
-	// j = better_demo();
-	j = error_demo();
+	j = better_demo();
+	// j = error_demo();
 	// j = graph_demo();
 
+	if (dump_static) {
+		// Now we have view data in the format declared in view.proto
+		// This is just temporary:
+		printer::StreamPrinter::print(j.dump(2), std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
+		return;
+	}
+	
 
 	// Create a view manager instance for static message.
 	auto                  view_manager = dia_app::view_manager::ViewManager::createFromJson(j);
+
 	::view::ViewResponse* vm_data      = new ::view::ViewResponse;
 	view_manager.getView(vm_data);
 
@@ -666,12 +675,5 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	term_msg.print(std::cerr, use_color);
 	delete vm_data;
 
-	if (dump_static) {
-		// Now we have view data in the format declared in view.proto
-		// This is just temporary:
-		printer::StreamPrinter::print(j.dump(2), std::cout);
-		printer::StreamPrinter::newline(1, std::cout);
-		return;
-	}
 	messages.emplace_back(std::move(message));
 }

@@ -73,9 +73,9 @@ namespace dia_app {
 			 */
 			std::set<InfoID> assoc_infos;
 			/**
-			 * @brief Every display element has a set of groups it belongs to.
+			 * @brief Every display element has a set of pointer_messages it belongs to.
 			 *
-			 * Display element groups are only used inside the info code
+			 * Display element pointer_messages are only used inside the info code
 			 * section's contents.
 			 *
 			 * They refer to specific pointer messages in that code section.
@@ -84,7 +84,7 @@ namespace dia_app {
 			 * pointer message.
 			 *
 			 */
-			std::set<std::string> groups;
+			std::set<std::string> pointer_messages;
 
 			DisplayElement() = default;
 
@@ -108,14 +108,14 @@ namespace dia_app {
 			// Accumulation data for to-component conversion.
 			struct AccData {
 				std::set<InfoID>      assoc_infos;
-				std::set<std::string> groups;
+				std::set<std::string> pointer_messages;
 
 				std::vector<InfoID> getAssocInfos() const {
 					return std::vector<InfoID>(assoc_infos.begin(), assoc_infos.end());
 				}
 
-				std::vector<std::string> getGroups() const {
-					return std::vector<std::string>(groups.begin(), groups.end());
+				std::vector<std::string> getpointer_messages() const {
+					return std::vector<std::string>(pointer_messages.begin(), pointer_messages.end());
 				}
 			};
 
@@ -225,7 +225,7 @@ namespace dia_app {
 		 * Instead, the fetched contents reside inside the corresponding
 		 * view constructor and can be queried by this lazy element.
 		 *
-		 * Note: if the lazy element has any `assoc_infos` or `groups` data,
+		 * Note: if the lazy element has any `assoc_infos` or `pointer_messages` data,
 		 * it is ignored upon fetching its the `evaluated` content.
 		 *
 		 */

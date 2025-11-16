@@ -5,7 +5,7 @@
 namespace dia_app {
 	namespace fetcher {
 
-		std::vector<json> info_groups;
+		std::vector<json> info_pointer_messages;
 
 		base::HashMap<InfoID, json>        infos;
 		base::HashMap<EntityID, json>      entities;
@@ -33,14 +33,14 @@ namespace dia_app {
 				);
 			}
 			// Convert the diagnostic file contents into a vector.
-			info_groups = diagnostic_file;
+			info_pointer_messages = diagnostic_file;
 		}
 
-		u32 getInfoGroupCount() { return info_groups.size(); }
+		u32 getInfoGroupCount() { return info_pointer_messages.size(); }
 
 		ViewConstructor generateViewConstructor(u32 idx) {
-			CORE_ASSERT(idx < info_groups.size(), "View constructor index out of range.");
-			return ViewConstructor(info_groups[idx]);
+			CORE_ASSERT(idx < info_pointer_messages.size(), "View constructor index out of range.");
+			return ViewConstructor(info_pointer_messages[idx]);
 		}
 
 		FetchError::FetchError(std::string message): message(std::move(message)) {}

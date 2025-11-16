@@ -61,7 +61,7 @@ void dia::InteractiveCode::visit_leafs(
 		}
 
 		if (pointer.second.getStart() <= node_start && pointer.second.getEnd() >= node_end)
-			node["groups"] = { pointer.first };
+			node["pointer_messages"] = { pointer.first };
 		out.push_back(node);
 		return;
 	}
@@ -91,7 +91,7 @@ void dia::InteractiveCode::visit_leafs(
 				node["type"] = "grouping";
 			}
 			if (pointer.second.getStart() <= last_position && pointer.second.getEnd() >= child_start)
-				node["groups"] = { pointer.first };
+				node["pointer_messages"] = { pointer.first };
 			out.push_back(node);
 		}
 		json child_json{};
@@ -169,7 +169,7 @@ json dia::SimpleCode::serialize_code() const {
 	auto points_to
 		= make_string_array(source, pointer.second.getStart(), pointer.second.getEnd() + 1);
 	j.insert(j.end(), before.begin(), before.end());
-	j.push_back({ { "type", "grouping" }, { "content", points_to }, { "groups", { pointer.first } } }
+	j.push_back({ { "type", "grouping" }, { "content", points_to }, { "pointer_messages", { pointer.first } } }
 	);
 	auto after = make_string_array(source, pointer.second.getEnd() + 1, end_char + 1);
 	j.insert(j.end(), after.begin(), after.end());

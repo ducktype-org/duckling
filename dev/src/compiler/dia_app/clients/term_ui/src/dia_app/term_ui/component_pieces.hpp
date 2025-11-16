@@ -38,18 +38,18 @@ namespace term_ui {
 		// The code text.
 		std::string text;
 		/**
-		 * @brief The set of highlight groups this code piece belongs to
+		 * @brief The set of highlight pointer_messages this code piece belongs to
 		 *  (aka to which highlights it refers to).
 		 */
-		std::set<u32> groups;
+		std::set<u32> pointer_messages;
 
 	public:
 		// Construct a code piece from a view manager highlighted code
 		// component.
 		CodePiece(const view::HlCodeComponent& component);
 
-		// Get the highlight groups data.
-		const std::set<u32>& getGroups() const;
+		// Get the highlight pointer_messages data.
+		const std::set<u32>& getpointer_messages() const;
 
 		// Get the code text.
 		const std::string& getText() const;
@@ -57,7 +57,7 @@ namespace term_ui {
 		// Construct a code piece without a gRPC object. For testing only.
 		CodePiece(std::string text);
 		// Construct a code piece without a gRPC object. For testing only.
-		CodePiece(std::string text, std::set<u32> groups);
+		CodePiece(std::string text, std::set<u32> pointer_messages);
 	};
 
 	/**

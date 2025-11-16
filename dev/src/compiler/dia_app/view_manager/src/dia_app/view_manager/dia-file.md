@@ -19,7 +19,7 @@ of type `my_type` as `<my_type>` and an array
 of objects of type `my_type` as `[<my_type>...]`.
 
 The general structure of the diagnostic file goes as follows:
-- the file contains a list of info groups,
+- the file contains a list of info pointer_messages,
 - each info group represents one diagnostic message and consists of a number
 of infos along with metadata,
 - each info represents one piece of information in the diagnostic message.
@@ -29,7 +29,7 @@ be represented as:
 ```
 [<info_group>...]
 ```
-that is, as an array of info groups*.
+that is, as an array of info pointer_messages*.
 
 > (*) There is an alternative format, used only for testing the laziness mechanism, described in section about [laziness](#4-laziness).
 
@@ -195,18 +195,7 @@ document.
 
 ## 2. Components
 Some components can be annotated with additional
-metadata. Namely, a list of `groups` or an `alt_content`.
-
-The `groups` are only used in the context of code
-fragments inside infos. A `group` (defined by
-a `string` value) represents a set
-of components referred to by a *pointer message*
-(see \ref dia-templates) with the same name.
-
-The `alt_content` represents an alternative content
-of a component which can replace the standard content
-after user interaction. It is always accompanied
-by a `content` field (the standard content).
+metadata. Namely, a list of `pointer_messages` or an `alt_content`.
 
 ### `text_component`
 A simple component representing text. Since
@@ -229,7 +218,7 @@ A simple component representing code.
 | --        | --                | --        |
 | type      | `"code"`          | no        |
 | content   | `<string>`        | no        |
-| groups    | `[<string>...]`   | yes       |
+| pointer_messages    | `[<string>...]`   | yes       |
 
 ### `start_line_component`
 A simple component representing the start of
@@ -254,9 +243,9 @@ in the provided order.
 ### `grouping_component`
 The grouping component is a component wrapper
 which allows the introduction of
-[alternative content and groups](#2-components).
+[alternative content and pointer_messages](#2-components).
 
-> Note that the groups will be assigned to both
+> Note that the pointer_messages will be assigned to both
 the standard content and the alternative content
 of this component.
 
@@ -265,7 +254,19 @@ of this component.
 | type      | `"grouping"`      | no        |
 | content   | `<component>`     | no        |
 | alt_content | `<component>`   | yes       |
-| groups    | `[<string>...]`    | yes       |
+| pointer_messages    | `[<string>...]`    | yes       |
+
+
+The `pointer_messages` are only used in the context of code
+fragments inside infos. A `pointer_message` (defined by
+a `string` value) represents a set
+of components referred to by a *pointer message*
+(see \ref dia-templates) with the same name.
+
+The `alt_content` represents an alternative content
+of a component which can replace the standard content
+after user interaction. It is always accompanied
+by a `content` field (the standard content).
 
 ### `entity_component`
 The entity component is a component wrapper
@@ -273,9 +274,9 @@ which references an [entity](#3-entities)
 with the name given in the `refers_to` field.
 
 It also allows the introduction of
-[alternative content and groups](#2-components).
+[alternative content and pointer_messages](#2-components).
 
-> Note that both the groups and the reference
+> Note that both the pointer_messages and the reference
 to the entity will be assigned to both
 the standard content and the alternative
 content of this component.
@@ -289,7 +290,7 @@ and alt_content counter-intuitive?
 | refers_to | `<string>`        | no        |
 | content   | `<component>`     | no        |
 | alt_content | `<component>`   | yes       |
-| groups    | `[<string>...]`    | yes       |
+| pointer_messages    | `[<string>...]`    | yes       |
 
 ### `lazy_component`
 The lazy component represents a component

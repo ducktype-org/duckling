@@ -69,37 +69,37 @@ namespace dia_app {
 
 				VerifyCodeVisitor(const Info* info): info(info) {}
 
-				virtual void visitTextDElement(const TextDElement& el) { verify_groups(el.groups); }
+				virtual void visitTextDElement(const TextDElement& el) { verify_pointer_messages(el.pointer_messages); }
 
-				virtual void visitCodeDElement(const CodeDElement& el) { verify_groups(el.groups); }
+				virtual void visitCodeDElement(const CodeDElement& el) { verify_pointer_messages(el.pointer_messages); }
 
 				virtual void visitConcatDElement(const ConcatDElement& el) {
-					verify_groups(el.groups);
+					verify_pointer_messages(el.pointer_messages);
 					for (auto& child: el.elems) child->accept(*this);
 				}
 
 				virtual void visitStartLineDElement(const StartLineDElement& el) {
-					verify_groups(el.groups);
+					verify_pointer_messages(el.pointer_messages);
 				}
 
 				virtual void visitInteractDElement(const InteractDElement& el) {
-					verify_groups(el.groups);
+					verify_pointer_messages(el.pointer_messages);
 					el.content->accept(*this);
 					el.alt_content->accept(*this);
 				}
 
 				virtual void visitEntityDElement(const EntityDElement& el) {
-					verify_groups(el.groups);
+					verify_pointer_messages(el.pointer_messages);
 					el.content->accept(*this);
 				}
 
 				virtual void visitLazyDElement(const LazyDElement& el) {
-					verify_groups(el.groups);
+					verify_pointer_messages(el.pointer_messages);
 					// TODO: remember about verification upon fetching.
 				}
 
-				void verify_groups(const std::set<std::string>& groups) {
-					for (auto& g: groups) {
+				void verify_pointer_messages(const std::set<std::string>& pointer_messages) {
+					for (auto& g: pointer_messages) {
 						if (!info->pointer_messages.contains(g)) {
 							is_ok = false;
 							break;

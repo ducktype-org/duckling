@@ -2,7 +2,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -g3") # TODO: This should be more iso
 # Optional HELIOS/UI-dependent interactive diagnostics in a separate library
 add_library(DiagnosticInteractive STATIC
         src/diagnostic/interactive_message.cpp
-        src/diagnostic/interactive_logger.cpp
+        src/diagnostic/interactive_logger_demo.cpp
         src/diagnostic/interactive_code.cpp
 )
 

@@ -286,7 +286,7 @@ and another text node.
 
 ### Parameter node
 
-The parameter node, upon evaluation, is replaced by the template parameter
+<The parameter node, upon evaluation, is replaced by the template parameter>
 it refers to which has been passed down by the compiler.
 
 Evaluating a missing optional parameter results in an error.

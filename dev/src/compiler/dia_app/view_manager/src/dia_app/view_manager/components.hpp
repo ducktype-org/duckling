@@ -81,7 +81,7 @@ namespace dia_app {
 		 * representation (i.e. with highlighting metadata).
 		 *
 		 * Produces a line-wise structure used by the UI to render code, line
-		 * numbers and pointer messages with highlight groups.
+		 * numbers and pointer messages with highlight pointer_messages.
 		 */
 		class GetHlViewVisitor {
 		private:
@@ -110,7 +110,7 @@ namespace dia_app {
 		/**
 		 * @brief Visitor that serializes a component subtree into a
 		 * view::NoHlComponent representation (plain text without highlight
-		 * groups).
+		 * pointer_messages).
 		 */
 		class GetNoHlViewVisitor {
 		private:
@@ -252,9 +252,9 @@ namespace dia_app {
 		};
 
 		/**
-		 * @brief Leaf component holding a piece of code with highlight groups.
+		 * @brief Leaf component holding a piece of code with highlight pointer_messages.
 		 *
-		 * Each code piece can participate in multiple highlight groups that
+		 * Each code piece can participate in multiple highlight pointer_messages that
 		 * tie into pointer messages within a code section.
 		 */
 		class CodeComponent: public Component {

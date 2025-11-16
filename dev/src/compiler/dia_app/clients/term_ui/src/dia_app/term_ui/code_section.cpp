@@ -95,8 +95,8 @@ namespace term_ui {
 
 			for (u32 i = 0; i < line.size(); ++i) {
 				auto& piece = line[i];
-				if (!piece.getGroups().empty())
-					for (u32 group: piece.getGroups()) last_of_group.put(group, { l, i });
+				if (!piece.getpointer_messages().empty())
+					for (u32 group: piece.getpointer_messages()) last_of_group.put(group, { l, i });
 			}
 			tab_space = std::max(tab_space, line.minTabSpace());
 		}
