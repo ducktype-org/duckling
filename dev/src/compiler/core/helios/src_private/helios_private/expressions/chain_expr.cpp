@@ -257,7 +257,7 @@ namespace compiler::helios::code {
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
-			// @TODO: #980 #1532 Perform proper lookup in type for different cases.
+			// @TODO: #982 #1532 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.

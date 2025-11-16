@@ -144,65 +144,56 @@ namespace tsh {
 		return ctx.query<QueryInterfaceOfClass>(this);
 	}
 
-	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> ByteAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> ByteAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> BoolAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> BoolAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> CharAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> CharAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> IntegralAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> IntegralAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> FloatAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> FloatAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> RawPointerAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> RawPointerAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> PointerAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> PointerAbstractTypeImpl::getInterface(query::Context&) const {
 		// note: we can extend interface later if needed
-		(void) ctx;
 		static TypeInterface empty{};
 		return &empty;
 	}
