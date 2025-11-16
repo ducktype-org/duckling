@@ -6,11 +6,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "5\n5\n5\n55\n123123\n"
+          String: "5\n5\n5\n55\n123123\n42\n42\n"
         ExitCode: 0
-
-
-
-
 
 

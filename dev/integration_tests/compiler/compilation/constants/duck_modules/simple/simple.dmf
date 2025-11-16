@@ -5,6 +5,10 @@ fun fib(n: i64) -> i64 = {
    return fib(n - 1) + fib(n - 2);
 }
 
+fun takeUnit(u: ()) -> i64 = 42;
+
+fun unitIDentity(u: ()) -> () = u;
+
 const one = 1;
 const two = one + one;
 
@@ -25,6 +29,9 @@ fun main() -> i64 = {
     builtin_output_i64(FIB_10);
 
     if (not boolean) { builtin_output_i64(123123); }
+
+    builtin_output_i64(takeUnit(unit));
+    builtin_output_i64(takeUnit(unitIDentity(unit)));
 
     return 0;
 }
