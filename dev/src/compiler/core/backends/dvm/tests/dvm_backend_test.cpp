@@ -67,7 +67,7 @@ private:
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @future #1554 -- const ctors will probably be added here
 						fail(base::strConcat(
-							"We fail here, because constant not work on DVM as expected, remove "
+							"We fail here, because constants don't work on DVM as expected, remove "
 							"the fail after #1553. ",
 							"Global constant: ",
 							hout_glob.original_name.strView()
