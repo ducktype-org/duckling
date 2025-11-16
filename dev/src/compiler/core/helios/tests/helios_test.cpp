@@ -196,7 +196,7 @@ private:
 
 		std::vector<compiler::helios::HOUTUnit> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
-		(void) units;  // @note when QueryModuleHOUTRecursively returns QResult, add assertion that
+		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion that
 		               // it is successful
 	}
 
@@ -238,7 +238,7 @@ private:
 
 		std::vector<compiler::helios::HOUTUnit> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
-		(void) units;  // @note when QueryModuleHOUTRecursively returns QResult, add assertion that
+		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion that
 		               // it is successful
 	}
 
