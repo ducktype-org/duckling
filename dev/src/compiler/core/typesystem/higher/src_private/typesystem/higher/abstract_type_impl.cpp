@@ -240,7 +240,7 @@ namespace tsh {
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getInterface(query::Context&) const {
-		CORE_PANIC("Import type interface does not exits (we can add it if we find a use case).");
+		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
