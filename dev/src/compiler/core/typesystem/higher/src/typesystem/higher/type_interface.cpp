@@ -1,7 +1,6 @@
 #include "type_interface.hpp"
 
-#include "queries.hpp"
-
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 
 #include <base/collections/optional.hpp>
@@ -40,36 +39,8 @@ namespace tsh {
 	}
 
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
-		if (isField()) return getResultType();
-
-		// @TODO: #1396 Add .is_mutable and .pure when additional method specifiers are supported.
-		std::vector<SymbolType<>> all_parameter_types{};
-		// @note: The first parameter is the implicit self parameter. It might change to
-		// being specified in the method declaration.
-		all_parameter_types.emplace_back(source, ReferenceKind::Ref, Mutability::Mutable);
-		for (const auto& par: parameters.value()) all_parameter_types.push_back(par.type);
-		return SymbolType{
-			ctx.query<QueryFunctionType>({
-				.parameter_types = all_parameter_types,
-				.result_type     = result_type,
-				.pure            = false,
-				.free            = false,
-			}),
-			ReferenceKind::Direct,
-			Mutability::Immutable,
-		};
+		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->expect(
+			"Not handling errors yet"
+		);
 	}
-
-	using ResolutionResult = TypeInterface::ResolutionResult;
-	using NamedArgument    = TypeInterface::NamedArgument;
-	using Parameter        = InterfaceElement::Parameter;
-
-	ResolutionResult TypeInterface::resolve(const base::StrID name, query::Context&) const {
-		const std::vector<InterfaceElement>& elements_matching_name = getElementsWithName(name);
-		if (elements_matching_name.empty()) return NoMatch{ {} };
-		if (elements_matching_name.size() == 1)
-			return SingleMatch{ *elements_matching_name.begin(), {}, {} };
-		return AmbiguousMatch{ elements_matching_name, {}, {} };
-	}
-
 }

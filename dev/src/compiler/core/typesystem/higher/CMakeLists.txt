@@ -17,4 +17,4 @@ duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES TypeSystemHighe
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES TypeSystemHigher)
 
-duck_add_test(compiler tsh_fields tests/tsh_fields_test.cpp USES TypeSystemHigher HELIOS)
+duck_add_test(compiler tsh_advanced tests/tsh_advanced_test.cpp USES TypeSystemHigher HELIOS)
