@@ -228,11 +228,11 @@ namespace tsh {
 	}
 
 	CRef<TypeInterface> NamespaceAbstractTypeImpl::getInterface(query::Context&) const {
-		CORE_PANIC("Namespace type interface does not exits (we can add it if we find a use case).");
+		CORE_PANIC("Namespace type interface does not exist (we can add it if we find a use case).");
 	}
 
 	CRef<TypeInterface> ModuleAbstractTypeImpl::getInterface(query::Context&) const {
-		CORE_PANIC("Module type interface does not exits (we can add it if we find a use case).");
+		CORE_PANIC("Module type interface does not exist (we can add it if we find a use case).");
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getInterface(query::Context&) const {
