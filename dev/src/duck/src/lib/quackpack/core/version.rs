@@ -162,15 +162,42 @@ mod tests {
             Version::new(1, 12, 24)
         );
 
-        assert!("1.12.24.".parse::<Version>().is_err());
-        assert!("1.12.24.1".parse::<Version>().is_err());
-        assert!("a".parse::<Version>().is_err());
-        assert!("1.a.24.".parse::<Version>().is_err());
-        assert!("1.12.b.".parse::<Version>().is_err());
-        assert!("1.12..".parse::<Version>().is_err());
-        assert!("-1".parse::<Version>().is_err());
-        assert!("1.-12".parse::<Version>().is_err());
-        assert!("1.".parse::<Version>().is_err());
+        assert_eq!(
+            "1.12.24.".parse::<Version>().unwrap_err().to_string(),
+            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+        );
+        assert_eq!(
+            "1.12.24.1".parse::<Version>().unwrap_err().to_string(),
+            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+        );
+        assert_eq!(
+            "a".parse::<Version>().unwrap_err().to_string(),
+            "invalid digit found in string"
+        );
+        assert_eq!(
+            "1.a.24.".parse::<Version>().unwrap_err().to_string(),
+            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+        );
+        assert_eq!(
+            "1.12.b.".parse::<Version>().unwrap_err().to_string(),
+            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+        );
+        assert_eq!(
+            "1.12..".parse::<Version>().unwrap_err().to_string(),
+            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+        );
+        assert_eq!(
+            "-1".parse::<Version>().unwrap_err().to_string(),
+            "invalid digit found in string"
+        );
+        assert_eq!(
+            "1.-12".parse::<Version>().unwrap_err().to_string(),
+            "invalid digit found in string"
+        );
+        assert_eq!(
+            "1.".parse::<Version>().unwrap_err().to_string(),
+            "cannot parse integer from empty string"
+        );
     }
 
     #[test]

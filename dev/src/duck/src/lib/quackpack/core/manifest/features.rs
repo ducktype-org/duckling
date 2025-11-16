@@ -4,13 +4,17 @@ use anyhow::bail;
 
 use crate::{QuackResult, StrId};
 
+/// Name of a feature.
 pub type FeatureName = StrId;
+/// List of feature names that have been pulled in.
 pub type PulledFeatures = Vec<FeatureName>;
 
 #[derive(Debug)]
+/// Features exposed by a root package we are working on.
 pub struct Features(HashMap<FeatureName, Vec<FeatureName>>);
 
 impl Features {
+    /// Create a new features map, validating that all referenced features exist.
     pub fn new(features: HashMap<FeatureName, Vec<FeatureName>>) -> QuackResult<Self> {
         Self::is_valid_features_map(&features)?;
         Ok(Self(features))
@@ -22,7 +26,8 @@ impl Features {
                 if !features.contains_key(pulled_feature) {
                     bail!(
                         "feature `{feature}` requires absent feature `{pulled_feature}`\n\
-                           help: every feature needs to pull in some features, try adding `{pulled_feature}: []` to your manifest"
+                         help: every feature needs to pull in some features, try adding \
+                         `{pulled_feature}: []` to your manifest"
                     )
                 }
             }
@@ -30,10 +35,12 @@ impl Features {
         Ok(())
     }
 
+    /// Check if a feature exists.
     pub fn has_feature(&self, feature: FeatureName) -> bool {
         self.0.contains_key(&feature)
     }
 
+    /// Expand features by recursively pulling in all dependent features.
     pub fn expand_features(
         &self,
         root_features: impl IntoIterator<Item = FeatureName>,
@@ -62,6 +69,7 @@ impl Features {
         Ok(result)
     }
 
+    /// Get the underlying feature map.
     pub fn as_map(&self) -> &HashMap<FeatureName, Vec<FeatureName>> {
         &self.0
     }
@@ -147,11 +155,21 @@ mod tests {
     #[test]
     fn no_features() {
         let features = Features::new(HashMap::new()).unwrap();
-        assert!(features.expand_features([FeatureName::new("foo")]).is_err());
+        assert_eq!(
+            features
+                .expand_features([FeatureName::new("foo")])
+                .unwrap_err()
+                .to_string(),
+            "there is no such feature as `foo`"
+        );
     }
 
     #[test]
     fn invalid_features() {
-        assert!(Features::new(make_invalid_map()).is_err())
+        assert_eq!(
+            Features::new(make_invalid_map()).unwrap_err().to_string(),
+            "feature `a` requires absent feature `b`
+help: every feature needs to pull in some features, try adding `b: []` to your manifest"
+        );
     }
 }

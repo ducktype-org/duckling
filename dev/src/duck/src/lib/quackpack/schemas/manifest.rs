@@ -39,7 +39,7 @@ pub struct Dependency {
 }
 
 #[derive(Debug)]
-pub struct OredSemver(pub NonEmptyVec<Version>);
+pub struct OredSemver(pub Vec<Version>);
 
 impl<'de> Deserialize<'de> for OredSemver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -72,19 +72,12 @@ impl<'de> Deserialize<'de> for OredSemver {
                 while let Some(next) = seq.next_element::<Version>()? {
                     values.push(next);
                 }
-                if values.is_empty() {
-                    Err(de::Error::custom("expected at least one version"))
-                } else {
-                    Ok(values)
-                }
+                Ok(values)
             }
         }
         // SAFETY: `visit_seq` manually checks for empty vectors, and `visit_str` implementation combined
         // with `Version::from_str` implementation assumes, that it's not empty.
-        deserializer
-            .deserialize_any(SeqOrSplit)
-            .map(NonEmptyVec)
-            .map(Self)
+        deserializer.deserialize_any(SeqOrSplit).map(Self)
     }
 }
 
@@ -94,34 +87,32 @@ pub enum DependencySource {
     Detailed(DetailedSource),
 }
 
-#[derive(Debug)]
-pub struct NonEmptyVec<T>(Vec<T>);
-
-impl<T> AsRef<Vec<T>> for NonEmptyVec<T> {
-    fn as_ref(&self) -> &Vec<T> {
-        &self.0
+impl DependencySource {
+    pub fn has_git(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => false,
+            DependencySource::Detailed(detailed_source) => detailed_source.has_git(),
+        }
     }
-}
 
-impl<T> From<NonEmptyVec<T>> for Vec<T> {
-    fn from(value: NonEmptyVec<T>) -> Self {
-        value.0
+    pub fn has_local(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => false,
+            DependencySource::Detailed(detailed_source) => detailed_source.has_local(),
+        }
     }
-}
 
-impl<'de, T> de::Deserialize<'de> for NonEmptyVec<T>
-where
-    T: de::Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let inner = <Vec<T>>::deserialize(deserializer)?;
-        if inner.is_empty() {
-            Err(de::Error::custom("expected a non-empty list"))
-        } else {
-            Ok(Self(inner))
+    pub fn has_registry(&self) -> bool {
+        match self {
+            DependencySource::Simple(_) => true,
+            DependencySource::Detailed(detailed_source) => {
+                // Either we have explicit `registry_url`,
+                // or we have explicit `alias` without explicit `path` or `git_url` (implicit default registry).
+                detailed_source.has_registry()
+                    || (detailed_source.name.is_some()
+                        && !detailed_source.has_git()
+                        && !detailed_source.has_local())
+            }
         }
     }
 }
@@ -150,11 +141,25 @@ pub struct DetailedSource {
     pub branch: Option<String>,
 }
 
+impl DetailedSource {
+    pub fn has_git(&self) -> bool {
+        self.git_url.is_some()
+    }
+
+    pub fn has_local(&self) -> bool {
+        self.path.is_some()
+    }
+
+    pub fn has_registry(&self) -> bool {
+        self.registry_url.is_some()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct DependencyCondition {
-    pub system: Option<NonEmptyVec<String>>,
-    pub arch: Option<NonEmptyVec<String>>,
-    pub package_features: Option<NonEmptyVec<String>>,
+    pub system: Option<Vec<String>>,
+    pub arch: Option<Vec<String>>,
+    pub package_features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -193,11 +198,11 @@ mod tests {
     #[test]
     fn test_ored_semver_deserialization() {
         let x = serde_json::from_str::<OredSemver>(r#""1.0.0""#).unwrap();
-        assert_eq!(Vec::from(x.0), [Version::new(1, 0, 0)]);
+        assert_eq!(x.0, [Version::new(1, 0, 0)]);
 
         let x = serde_json::from_str::<OredSemver>(r#"" 1.0.0 or  1.1.0 or  2.0.0  ""#).unwrap();
         assert_eq!(
-            Vec::from(x.0),
+            x.0,
             [
                 Version::new(1, 0, 0),
                 Version::new(1, 1, 0),
@@ -205,16 +210,29 @@ mod tests {
             ]
         );
 
-        let x = serde_json::from_str::<OredSemver>(r#"" 1.0.0 or  1.1.0 or  2.0.0  ""#).unwrap();
         let y = serde_json::from_str::<OredSemver>(r#"["1.0.0", "1.1.0", "2.0.0"]"#).unwrap();
-        assert_eq!(Vec::from(x.0), Vec::from(y.0));
+        assert_eq!(x.0, y.0);
     }
 
     #[test]
     fn test_empty_ored_semver_() {
-        assert!(serde_json::from_str::<OredSemver>(r#""""#).is_err());
-        assert!(serde_json::from_str::<OredSemver>(r#""  ""#).is_err());
-        assert!(serde_json::from_str::<OredSemver>(r#""  or ""#).is_err());
-        assert!(serde_json::from_str::<OredSemver>(r#"[]"#).is_err());
+        assert_eq!(
+            serde_json::from_str::<OredSemver>(r#""""#)
+                .unwrap_err()
+                .to_string(),
+            "cannot parse integer from empty string at line 1 column 2"
+        );
+        assert_eq!(
+            serde_json::from_str::<OredSemver>(r#""  ""#)
+                .unwrap_err()
+                .to_string(),
+            "cannot parse integer from empty string at line 1 column 4"
+        );
+        assert_eq!(
+            serde_json::from_str::<OredSemver>(r#""  or ""#)
+                .unwrap_err()
+                .to_string(),
+            "cannot parse integer from empty string at line 1 column 7"
+        );
     }
 }

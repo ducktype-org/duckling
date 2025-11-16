@@ -2,19 +2,24 @@ use std::collections::HashSet;
 
 use anyhow::bail;
 
-use crate::{
-    QuackResult, StrId,
-    quackpack::core::{DependencySpec, FeatureName},
-};
+use crate::{QuackResult, StrId, quackpack::core::FeatureName};
 
 #[derive(Debug)]
+/// Conditions required by a dependency or a feature flag in order to be enabled.
+/// This is enabled for `any(system) and any(arch) and any(flags)`.
 pub struct Conditions {
+    /// Required operating systems for this condition.
     system_requirements: Option<Vec<StrId>>,
+    /// Required architectures for this condition.
     arch_requirements: Option<Vec<StrId>>,
+    /// Required root package features for this condition.
     required_root_package_features: Option<Vec<FeatureName>>,
 }
 
 impl Conditions {
+    /// Create new conditions with validation.
+    ///
+    /// Fails if any of the optional vectors are present but empty.
     pub fn new(
         system_requirements: Option<Vec<StrId>>,
         arch_requirements: Option<Vec<StrId>>,
@@ -41,6 +46,8 @@ impl Conditions {
         })
     }
 
+    /// Check if conditions are met for the given enabled features.
+    /// This checks `any(system) and any(arch) and any(flags)`.
     // @TODO: #1353 Do we want to take an `impl IntoIterator`, or a `Vec`, or a `HashSet`?
     //  Connected with !TODO in `are_features_enabled`.
     pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
@@ -81,90 +88,6 @@ impl Conditions {
     }
 }
 
-#[derive(Debug)]
-pub struct DependencyFeature {
-    name: StrId,
-    conditions: Option<Conditions>,
-}
-
-impl DependencyFeature {
-    pub fn new(name: StrId, conditions: Option<Conditions>) -> Self {
-        Self { name, conditions }
-    }
-
-    pub fn name(&self) -> StrId {
-        self.name
-    }
-
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
-        self.conditions
-            .as_ref()
-            .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
-    }
-}
-
-#[derive(Debug)]
-pub struct Dependency {
-    spec: DependencySpec,
-    features: Vec<DependencyFeature>,
-    is_pinned: bool,
-    conditions: Option<Conditions>,
-    real_name: StrId,
-}
-
-impl Dependency {
-    pub fn new(
-        spec: DependencySpec,
-        features: Vec<DependencyFeature>,
-        is_pinned: bool,
-        conditions: Option<Conditions>,
-        real_name: StrId,
-    ) -> Self {
-        Self {
-            spec,
-            features,
-            is_pinned,
-            conditions,
-            real_name,
-        }
-    }
-
-    pub fn spec(&self) -> &DependencySpec {
-        &self.spec
-    }
-
-    pub fn real_name(&self) -> StrId {
-        self.real_name
-    }
-
-    pub fn features(&self) -> &[DependencyFeature] {
-        &self.features
-    }
-
-    pub fn is_pinned(&self) -> bool {
-        self.is_pinned
-    }
-
-    pub fn is_enabled_for(&self, enabled_features: impl IntoIterator<Item = FeatureName>) -> bool {
-        self.conditions
-            .as_ref()
-            .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
-    }
-
-    pub fn enabled_features(
-        &self,
-        enabled_features: impl IntoIterator<Item = FeatureName> + Clone,
-    ) -> impl Iterator<Item = FeatureName> {
-        self.features.iter().filter_map(move |feature| {
-            if feature.is_enabled_for(enabled_features.clone()) {
-                Some(feature.name())
-            } else {
-                None
-            }
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,20 +106,22 @@ mod tests {
         let result = Conditions::new(Some(vec![]), None, None);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("system"));
-        assert!(err.to_string().contains("empty"));
+        assert_eq!(
+            err.to_string(),
+            "field `system` is present but empty, if you don't want to specify it, remove it from the manifest"
+        );
 
         let result = Conditions::new(None, Some(vec![]), None);
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("arch"));
-        assert!(err.to_string().contains("empty"));
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "field `arch` is present but empty, if you don't want to specify it, remove it from the manifest"
+        );
 
         let result = Conditions::new(None, None, Some(vec![]));
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("features"));
-        assert!(err.to_string().contains("empty"));
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "field `features` is present but empty, if you don't want to specify it, remove it from the manifest"
+        );
     }
 
     #[test]

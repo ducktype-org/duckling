@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::StrId;
 
 #[derive(Debug)]
+/// List of specific options which should be passed to the compiler.
 pub struct CompilerSpecificOptions {
     flags: Vec<StrId>,
 }
@@ -18,24 +19,22 @@ impl CompilerSpecificOptions {
 }
 
 #[derive(Debug)]
-pub struct CompilerFlagsMap(HashMap<StrId, CompilerSpecificOptions>);
+/// Common helper for `Profiles` and `Targets` structs.
+struct CompilerFlagsMap(HashMap<StrId, CompilerSpecificOptions>);
 
 impl CompilerFlagsMap {
-    pub fn new(flags: HashMap<StrId, CompilerSpecificOptions>) -> Self {
-        Self(flags)
-    }
-
-    pub fn options_for(&self, key: StrId) -> Option<&[StrId]> {
+    fn options_for(&self, key: StrId) -> Option<&[StrId]> {
         self.0.get(&key).map(CompilerSpecificOptions::flags)
     }
 }
 
 #[derive(Debug)]
+/// Map `profile name <-> options for compiler`
 pub struct Profiles(CompilerFlagsMap);
 
 impl Profiles {
-    pub fn new(compiler_flags_map: CompilerFlagsMap) -> Self {
-        Self(compiler_flags_map)
+    pub fn new(compiler_flags: HashMap<StrId, CompilerSpecificOptions>) -> Self {
+        Self(CompilerFlagsMap(compiler_flags))
     }
 
     pub fn options_for(&self, key: StrId) -> Option<&[StrId]> {
@@ -44,11 +43,12 @@ impl Profiles {
 }
 
 #[derive(Debug)]
+/// Map `target name <-> options for compiler`
 pub struct Targets(CompilerFlagsMap);
 
 impl Targets {
-    pub fn new(compiler_flags_map: CompilerFlagsMap) -> Self {
-        Self(compiler_flags_map)
+    pub fn new(compiler_flags: HashMap<StrId, CompilerSpecificOptions>) -> Self {
+        Self(CompilerFlagsMap(compiler_flags))
     }
 
     pub fn options_for(&self, key: StrId) -> Option<&[StrId]> {

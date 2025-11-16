@@ -1,19 +1,26 @@
+//! High-level abstraction on manifest and its inner types.
+//!
+//! The most notable members are [`Manifest`], [`Summary`], [`Dependency`],
+//! [`DependencyDescription`] and [`RootDescription`].
+//!
+//! Parsing will be implemented in a `parse` module, in future PRs.
 mod compiler_options;
 mod dependencies;
 mod dependency;
-mod dependency_spec;
+mod dependency_description;
 mod features;
+// NOTE: This module has a different name, because rust emits lints, when there's file in a module with the same name.
 mod manifest_struct;
-mod root_spec;
+mod root_description;
 mod source;
 mod summary;
 
 pub use compiler_options::*;
 pub use dependencies::*;
 pub use dependency::*;
-pub use dependency_spec::*;
+pub use dependency_description::*;
 pub use features::*;
 pub use manifest_struct::*;
-pub use root_spec::*;
+pub use root_description::*;
 pub use source::*;
 pub use summary::*;
