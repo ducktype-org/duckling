@@ -49,7 +49,7 @@ private:
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
-				if (!hout_glob.type.getType().carriesInformation()) continue;
+				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
 				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
@@ -186,6 +186,7 @@ private:
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
 		runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit_class", 2, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 

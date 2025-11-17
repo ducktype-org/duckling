@@ -1,0 +1,15 @@
+# Simple self-contained test for empty classes.
+
+class Unit {}
+
+let a: Unit = Unit();
+
+fun foo(u: Unit) -> Unit = {
+    builtin_output_i64(1);
+    return u;
+}
+
+fun main() -> i64 = {
+    foo(a);
+    return 0;
+}

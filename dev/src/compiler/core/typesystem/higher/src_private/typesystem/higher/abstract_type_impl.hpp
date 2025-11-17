@@ -124,10 +124,11 @@ namespace tsh {
 		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
+		 * @param ctx Query context needed to process complex types, esp. classes.
 		 * @return Whether the type carries information.
 		 */
 		[[nodiscard]]
-		virtual bool carriesInformation() const {
+		virtual bool carriesInformation(query::Context&) const {
 			return true;
 		}
 
@@ -171,7 +172,7 @@ namespace tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
-		[[nodiscard]] bool carriesInformation() const override { return false; }
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -190,7 +191,7 @@ namespace tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
-		[[nodiscard]] bool carriesInformation() const override { return false; }
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -637,6 +638,10 @@ namespace tsh {
 		[[nodiscard]] bool hasNoOpDestructor() const override {
 			// @TODO #1274: this is a placeholder, implemnt proper logic
 			return false;
+		}
+
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
+			return getInterface(ctx).getElements().size() != 0;
 		}
 	};
 

@@ -198,10 +198,11 @@ namespace tsh {
 		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
+		 * @param ctx Query context needed to process complex types, esp. classes.
 		 * @return Whether the type carries information.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const;
+		bool carriesInformation(query::Context& ctx) const;
 
 		/**
 		 * @brief Get the text representation of this type.

@@ -127,6 +127,11 @@ namespace compiler::backend_llvm {
 
 	auto typeFromLayout(llvm::LLVMContext& context, const CRef<tsl::TypeLayout> layout)
 		-> llvm::Type* {
+		// If the layout is empty, return the void type.
+		// Sometimes, empty layouts may appear in LIR, despite being eliminated during MIR -> LIR.
+		// This is because they are function return types. They should then be converted to void.
+		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(context);
+
 		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
