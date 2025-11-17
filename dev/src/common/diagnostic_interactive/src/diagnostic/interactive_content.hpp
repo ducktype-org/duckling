@@ -18,13 +18,14 @@
 #include <utility>
 
 namespace dia {
-	enum class ContentType { ERROR, WARNING, NOTE };
+	enum class ContentType { ERROR, WARNING, NOTE, DOCS };
 
 	NLOHMANN_JSON_SERIALIZE_ENUM(
 		ContentType,
 		{ { ContentType::ERROR, "error" },
 	      { ContentType::WARNING, "warning" },
-	      { ContentType::NOTE, "note" } }
+	      { ContentType::NOTE, "note" },
+	      { ContentType::DOCS, "docs" } }
 	)
 
 	using nlohmann::json;
@@ -69,29 +70,17 @@ namespace dia {
 
 	public:
 		InteractiveContent(
-			ContentType        content_type,
-			const std::string& family,
-			const std::string& name,
-			Box<ContentParams> params,
-			Box<AbstractCode>  code_sample
+			ContentType                       content_type,
+			std::string                       family,
+			std::string                       name,
+			Box<ContentParams>                params,
+			base::Optional<Box<AbstractCode>> code_sample = {}
 		):
 			  content_type(content_type),
-			  family(family),
-			  name(name),
+			  family(std::move(family)),
+			  name(std::move(name)),
 			  params(std::move(params)),
 			  code_sample(std::move(code_sample)) {}
-
-		InteractiveContent(
-			ContentType        content_type,
-			const std::string& family,
-			const std::string& name,
-			Box<ContentParams> params
-		):
-			  content_type(content_type),
-			  family(family),
-			  name(name),
-			  params(std::move(params)),
-			  code_sample() {}
 
 		json tojson() {
 			return json{ { "metadata",
@@ -100,7 +89,7 @@ namespace dia {
 				         { "code", code_sample } };
 		}
 
-		std::set<compiler::helios::SymID> get_symbols() {
+		std::set<compiler::helios::SymID> getSymbols() {
 			auto params_symbols = params->get_symbols();
 			if_opt_some(code_sample, val) {
 				auto code_symbols = val->get_symbols();
@@ -109,7 +98,7 @@ namespace dia {
 			return params_symbols;
 		}
 
-		std::set<tsh::AbstractType> get_types() {
+		std::set<tsh::AbstractType> getTypes() {
 			auto params_types = params->get_types();
 			if_opt_some(code_sample, val) {
 				auto code_types = val->get_types();

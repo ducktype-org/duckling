@@ -22,7 +22,6 @@
 #include <utility>
 
 namespace dia {
-	using pointer_message = dia::pointer_message;
 	using nlohmann::json;
 
 	/*
@@ -37,9 +36,9 @@ namespace dia {
 		dia::SourcePosition                       position;
 		mutable std::set<compiler::helios::SymID> symbols{};
 		mutable std::set<tsh::AbstractType>       types{};
-		pointer_message                           pointer;
+		dia::PointerMessage                       pointer;
 
-		AbstractCode(dia::SourcePosition position, pointer_message pointer):
+		AbstractCode(dia::SourcePosition position, PointerMessage pointer):
 			  position(position),
 			  pointer(pointer) {}
 
@@ -75,7 +74,7 @@ namespace dia {
 			dia::SourcePosition                 position,
 			pst::AccessLocked<pst::LangElement> pst,
 			query::Context&                     ctx,
-			pointer_message                     pointer
+			dia::PointerMessage                 pointer
 		):
 			  AbstractCode(position, pointer),
 			  pst(pst),
@@ -87,7 +86,7 @@ namespace dia {
 	public:
 		json serialize_code() const override;
 
-		SimpleCode(dia::SourcePosition position, pointer_message pointer):
+		SimpleCode(dia::SourcePosition position, dia::PointerMessage pointer):
 			  AbstractCode(position, pointer) {}
 	};
 }

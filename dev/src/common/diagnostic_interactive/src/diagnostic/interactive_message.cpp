@@ -16,9 +16,9 @@ json dia::InteractiveMessage::tojson() const {
 	res["secondary_infos"]            = notes;
 	res["entities"]                   = json::object();
 	if (params.include_symbols) {
-		auto content_symbols = content->get_symbols();
+		auto content_symbols = content->getSymbols();
 		for (auto& note: notes) {
-			auto note_symbols = note.second->get_symbols();
+			auto note_symbols = note.second->getSymbols();
 			content_symbols.insert(note_symbols.begin(), note_symbols.end());
 			if (note.second->is_displayed()) res["displayed_secondary_infos"].push_back(note.first);
 		}
@@ -28,9 +28,9 @@ json dia::InteractiveMessage::tojson() const {
 		}
 	}
 	if (params.include_types) {
-		auto content_types = content->get_types();
+		auto content_types = content->getTypes();
 		for (auto& note: notes) {
-			auto note_types = note.second->get_types();
+			auto note_types = note.second->getTypes();
 			content_types.insert(note_types.begin(), note_types.end());
 		}
 		if (!content_types.empty()) {

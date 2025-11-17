@@ -61,7 +61,7 @@ namespace dia {
 					  family,
 					  name,
 					  base::makeBox<EmptyParams>(),
-					  base::makeBox<SimpleCode>(position, pointer_message{ "cause", position })
+					  base::makeBox<SimpleCode>(position, PointerMessage{ "cause", position })
 				  ),
 				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}
@@ -96,7 +96,7 @@ namespace dia {
 					  "misc",
 					  "todo",
 					  base::makeBox<Params>(message),
-					  base::makeBox<SimpleCode>(position, pointer_message{ "cause", position })
+					  base::makeBox<SimpleCode>(position, PointerMessage{ "cause", position })
 				  ),
 				  std::map<std::string, Box<dia::InteractiveNote>>{}
 			  ) {}

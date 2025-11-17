@@ -650,9 +650,9 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json j{ message };
 
 	// j = create_demo_from(j);
-	j = better_demo();
+	// j = better_demo();
 	// j = error_demo();
-	// j = graph_demo();
+	j = graph_demo();
 
 	if (dump_static) {
 		// Now we have view data in the format declared in view.proto

@@ -14,5 +14,5 @@ namespace dia {
 		size_t default_code_lines = 2;
 	};
 
-	using pointer_message = std::pair<std::string, dia::SourcePosition>;
+	using PointerMessage = std::pair<std::string, dia::SourcePosition>;
 }

@@ -40,7 +40,7 @@ namespace dia {
 					  "no_match_2op",
 					  std::move(params),
 					  base::makeBox<InteractiveCode>(
-						  position, pst, ctx, dia::pointer_message{ "cause", position }
+						  position, pst, ctx, dia::PointerMessage{ "cause", position }
 					  )
 				  ) {}
 		};

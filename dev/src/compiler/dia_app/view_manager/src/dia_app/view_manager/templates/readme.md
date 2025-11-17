@@ -170,6 +170,9 @@ file. All pointer messages should be defined under
 the `pointer_messages` node at the root of the file.
 
 ### Explore edges
+> Note: this section is **optional**
+
+
 Certain pieces of diagnostic data may be represented
 as a directed graph. Sometimes it might be useful
 for the user to explore such a graph by viewing
