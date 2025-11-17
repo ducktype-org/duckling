@@ -31,20 +31,18 @@ pub struct QPCtx<'duck> {
 macro_rules! path_getters {
     (
         $(
-            $name:literal, $toml_key:literal, $message_name:literal
+            $name:ident, $toml_key:literal, $message_name:literal
         );*
     ) => {
-        item! {
             $(
-                pub fn [<$name>](&self) -> QuackResult<PathBuf> {
+                pub fn $name(&self) -> QuackResult<PathBuf> {
                     soft_canonicalize(
-                    self.inner.toml_cfg().get_path(stringify!($toml_key))?.or_else(|| [<$name>](self.inner.env()))
+                    self.inner.toml_cfg().get_path($toml_key)?.or_else(|| $name(self.inner.env()))
                         .ok_or_else(
-                            || anyhow!("Could not decide where the {} should be placed", stringify!($message_name))
+                            || anyhow!("Could not decide where the {} should be placed", $message_name)
                         )?).map_err(|e| e.into())
                 }
             )*
-        }
     };
 }
 
