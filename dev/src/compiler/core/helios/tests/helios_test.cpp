@@ -354,9 +354,6 @@ private:
 		ASSERT_EQUAL(6, getConstValueAs<i64>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
-		// These do not work anymore.
-		// ASSERT_EQUAL(7, getValue("O3", root_scope));
-		// ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}
 
 	/**

@@ -230,6 +230,11 @@ namespace compiler::backend_llvm {
 		return module->getOrInsertGlobal(mangled_name, global_type);
 	}
 
+	/**
+	 * Adds a global variable to the module based on the LIRGlobal description.
+	 * For globals is sets the initial value to null (this function does not handle constructors),
+	 * for constants it sets the initial value to the provided constant value.
+	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
 		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
@@ -241,12 +246,20 @@ namespace compiler::backend_llvm {
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
-		// Initialise the global variable to null, sice it will be initialised in the constructor
-		if (lir_global.initial_value.has_value()) {
+
+		if (lir_global.type == lir::LIRGlobalType::Constant) {
+			CORE_ASSERT(
+				lir_global.initial_value.has_value(), "Expected initial value for constant global"
+			);
 			global->setInitializer(
 				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
 			);
 		} else {
+			// Initialise the global variable to null, sice it will be initialised in the constructor:
+			CORE_ASSERT(
+				not lir_global.initial_value.has_value(),
+				"Non-constant global should not have initial value set"
+			);
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
 

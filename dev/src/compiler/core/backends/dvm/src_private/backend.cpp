@@ -643,7 +643,8 @@ namespace compiler::backend_vm {
 				dtors.emplace_back(global.global_dtor.value());
 			}
 
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
+			// GlobalVariables
 			compiled_collection.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}

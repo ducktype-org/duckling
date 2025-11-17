@@ -59,15 +59,16 @@ private:
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						globals.emplace_back(
 							lir_glob,
-							// @TODO: add legit dtors when implemented #929
+							// @TODO: #929 add legit dtors when implemented
 							lir_func,
 							std::nullopt
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @TODO: create global constant ctors if necessary
+						// @future #1554 -- const ctors will probably be added here
 						fail(base::strConcat(
-							"Creating ctors for constant variables is not implemented yet. ",
+							"We fail here, because constants don't work on DVM as expected, remove "
+							"the fail after #1553. ",
 							"Global constant: ",
 							hout_glob.original_name.strView()
 						));

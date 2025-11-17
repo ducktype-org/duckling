@@ -65,11 +65,7 @@ private:
 						llvm_module.addFunctionToModule(ctx, lir_func);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						fail(base::strConcat(
-							"Creating ctors for constant variables is not implemented yet. "
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						));
+						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
 						fail(base::strConcat(
