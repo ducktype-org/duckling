@@ -14,6 +14,6 @@ namespace NS1 {
 const O1: i64 = (NS1).NS2.A;
 const O2: i64 = ((NS1).NS2).A;
 
-# These do not work anymore
+# These do not work anymore (which is intended):
 # const O3: i64 = NS1.(NS2).A;
 # const O4: i64 = (NS1).(NS2).A;

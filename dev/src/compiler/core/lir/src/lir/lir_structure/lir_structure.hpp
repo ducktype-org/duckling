@@ -150,8 +150,7 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable in LIR.
-	 * layout is in shared_ptr, so the LIRGlobal can be copied
+	 * @brief Global variable/constant in LIR.
 	 */
 	struct LIRGlobal final {
 		/**
@@ -190,7 +189,9 @@ namespace compiler::lir {
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
 		/**
-		 * @note Do not use this function outside of LIR lowering.
+		 * @note Do not use this function outside of LIR lowering / driver.
+		 * This handles both global variables and constants. For constants, it also sets CTV initial
+		 * value of the global.
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
