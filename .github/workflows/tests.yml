@@ -264,7 +264,7 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
+          cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       - name: Integration Tests
