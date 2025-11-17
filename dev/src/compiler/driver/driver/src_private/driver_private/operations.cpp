@@ -37,6 +37,9 @@ namespace compiler::driver {
 				}
 				variant_case(helios::HOUTGlobalConst, global_const) {
 					// @future #1554 -- const ctors will probably be added here
+					// Note: The CTV initial value for constants is already set in lir_global (by
+					// the fromHOUT function used above). Backends should handle constant
+					// initialization appropriately.
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global  = lir_global,
 						.global_ctor = std::nullopt,
