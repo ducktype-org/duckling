@@ -19,7 +19,7 @@ namespace compiler::driver {
 
 		for (const auto& hout_global: hout_unit->glob_data) {
 			// Discard information-less globals.
-			if (not hout_global.type.getType().carriesInformation()) continue;
+			if (not hout_global.type.getType().carriesInformation(ctx)) continue;
 
 			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
 

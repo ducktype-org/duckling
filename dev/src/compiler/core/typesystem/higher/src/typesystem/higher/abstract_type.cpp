@@ -28,7 +28,9 @@ namespace tsh {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
 
-	bool AbstractType::carriesInformation(query::Context& ctx) const { return pimpl->carriesInformation(ctx); }
+	bool AbstractType::carriesInformation(query::Context& ctx) const {
+		return pimpl->carriesInformation(ctx);
+	}
 
 	[[nodiscard]]
 	const std::string& AbstractType::toString() const {

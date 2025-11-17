@@ -1,0 +1,19 @@
+class RecordClass {
+    a: i64 = 0;
+    b: f32 = 0;
+}
+
+fun printRecordClass(r: RecordClass) = {
+    builtin_output_i64(r.a);
+}
+
+let a: RecordClass = RecordClass(1, f32(2.0));
+let b = a;
+
+fun main() -> i64 = {
+    printRecordClass(a);
+    a.a = 42;
+    printRecordClass(a);
+    printRecordClass(b);
+    return 0;
+}

@@ -676,7 +676,7 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
-			return getInterface(ctx).getElements().size() != 0;
+			return getInterface(ctx)->getElements().size() != 0;
 		}
 	};
 

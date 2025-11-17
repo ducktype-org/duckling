@@ -214,6 +214,7 @@ namespace compiler::lir {
 		/**
 		 * @brief Get the type layout of the base variable.
 		 */
+		[[nodiscard]]
 		CRef<tsl::TypeLayout> getBaseLayout() const {
 			variant_match(base) {
 				variant_case(LIRLocalRef, local) { return local->layout; }

@@ -396,7 +396,7 @@ namespace compiler::backend_llvm {
 		 * @param builder The LLVM IRBuilder to use for generating the pointer, if necessary.
 		 * @return Pointer to the place described by `lir_place`.
 		 */
-		auto GepPointerToLirPlace(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
+		auto gepPointerToLirPlace(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			// First, get the pointer and type of the base value.
 			const auto base_ptr = [&] -> llvm::Value* {
@@ -450,7 +450,7 @@ namespace compiler::backend_llvm {
 		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
 		 * @return llvm::Value*
 		 */
-		auto LoadLirValue(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
+		auto loadLirValue(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
@@ -461,8 +461,8 @@ namespace compiler::backend_llvm {
 					// We store local values behind pointers to stack-allocated memory.
 					// We need to load them (or their fields) before using them.
 					// Similarly, we need to use global values or their fields before use.
-					const auto llvm_type = typeFromLayout(builder.getContext(), place.layout);
-					llvm::Value* accessed_ptr = GepPointerToLirPlace(place, builder);
+					const auto   llvm_type    = typeFromLayout(builder.getContext(), place.layout);
+					llvm::Value* accessed_ptr = gepPointerToLirPlace(place, builder);
 					return builder.CreateLoad(llvm_type, accessed_ptr);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
@@ -471,13 +471,13 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto LoadLirValueList(
+		auto loadLirValueList(
 			const std::vector<lir::LIRValue>& lir_locations, llvm::IRBuilder<>& builder
 		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
-				llvm_locations.push_back(LoadLirValue(lir_location, builder));
+				llvm_locations.push_back(loadLirValue(lir_location, builder));
 			return llvm_locations;
 		}
 
@@ -487,7 +487,7 @@ namespace compiler::backend_llvm {
 			// We store local values behind pointers to stack-allocated memory.
 			// We need to load them (or their fields) before using them.
 			// Similarly, we need to use global values or their fields before use.
-			llvm::Value* accessed_ptr = GepPointerToLirPlace(output, builder);
+			llvm::Value* accessed_ptr = gepPointerToLirPlace(output, builder);
 			builder.CreateStore(value.get(), accessed_ptr);
 		}
 
@@ -534,10 +534,10 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
 							// ================== Int -> Pointer ==================
-							constexpr auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
 							const auto ptr_int_ty
-								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							llvm::Value* int_for_ptr
 								= builder.CreateIntCast(argument, ptr_int_ty, src_signed);
 							return builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
@@ -608,10 +608,10 @@ namespace compiler::backend_llvm {
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
-							constexpr auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
 							const auto ptr_int_ty
-								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
 						}
@@ -621,10 +621,10 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Pointer -> Float ==================
-							constexpr auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
 							const auto ptr_int_ty
-								= llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateUIToFP(int_from_ptr, llvm_dst_ty);
 						}
@@ -640,13 +640,13 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                        \
-	{                                                                               \
-		const auto lhs   = LoadLirValue(lir_instruction.arguments.at(0), builder); \
-		const auto rhs   = LoadLirValue(lir_instruction.arguments.at(1), builder); \
-		const auto value = builder.Create##op(lhs, rhs);                            \
-		storeOutput(lir_instruction.output.value(), value, builder);                \
-		break;                                                                      \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                       \
+	{                                                                              \
+		const auto lhs   = loadLirValue(lir_instruction.arguments.at(0), builder); \
+		const auto rhs   = loadLirValue(lir_instruction.arguments.at(1), builder); \
+		const auto value = builder.Create##op(lhs, rhs);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);               \
+		break;                                                                     \
 	}
 
 		/**
@@ -663,7 +663,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case ReturnValue: {
-				builder.CreateRet(LoadLirValue(lir_instruction.arguments.at(0), builder));
+				builder.CreateRet(loadLirValue(lir_instruction.arguments.at(0), builder));
 				break;
 			}
 			case Jump: {
@@ -674,7 +674,7 @@ namespace compiler::backend_llvm {
 			}
 			case Branch: {
 				// here for lir locals we need more stuff:
-				const auto cond = LoadLirValue(lir_instruction.arguments.at(0), builder);
+				const auto cond = loadLirValue(lir_instruction.arguments.at(0), builder);
 				const auto true_block
 					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
 				const auto false_block
@@ -683,7 +683,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Assign: {
-				const auto value = LoadLirValue(lir_instruction.arguments.at(0), builder);
+				const auto value = loadLirValue(lir_instruction.arguments.at(0), builder);
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
@@ -723,7 +723,7 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
-				const auto argument = LoadLirValue(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLirValue(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
 				storeOutput(output, value, builder);
 				break;
@@ -733,13 +733,13 @@ namespace compiler::backend_llvm {
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
 			case BooleanNot: {
-				const auto argument = LoadLirValue(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLirValue(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNot(argument);
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
 			case Cast: {
-				const auto argument = LoadLirValue(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLirValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();
 
 				// get cast parameters:
@@ -760,7 +760,7 @@ namespace compiler::backend_llvm {
 					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
 				);
 
-				const auto args = LoadLirValueList(
+				const auto args = loadLirValueList(
 					std::vector(
 						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
 					),

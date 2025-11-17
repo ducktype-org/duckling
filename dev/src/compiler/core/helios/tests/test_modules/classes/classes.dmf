@@ -22,6 +22,8 @@ class FirstClassEver {
     FirstClassEver.destroy() = {}
 }
 
+class SecondClass extends FirstClassEver {}
+
 let a: FirstClassEver = FirstClassEver(1, f32(2.0));
 let b = a;
 

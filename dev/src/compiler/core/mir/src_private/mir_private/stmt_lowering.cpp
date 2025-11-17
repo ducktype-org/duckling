@@ -240,7 +240,7 @@ namespace compiler::mir {
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto local_construction_hole = continuation->addHole();
-					auto assignment_scope = function.newScope(parent_scope);
+					auto assignment_scope        = function.newScope(parent_scope);
 					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
 
 					expr_result.storeResultInGivenPlace(

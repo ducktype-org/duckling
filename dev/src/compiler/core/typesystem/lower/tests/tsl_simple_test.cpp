@@ -298,7 +298,8 @@ private:
 			variant_match(tuple_layout->getVariant()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfComponentIndex(0) == Bytes(0) && l.getOffsetOfComponentIndex(1) == Bytes(2)
+						l.getOffsetOfComponentIndex(0) == Bytes(0)
+							&& l.getOffsetOfComponentIndex(1) == Bytes(2)
 							&& l.getOffsetOfComponentIndex(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
