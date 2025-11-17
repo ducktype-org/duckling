@@ -1,12 +1,8 @@
-use std::{
-    fs::{File, create_dir_all},
-    io::ErrorKind,
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use paste::item;
-use soft_canonicalize::soft_canonicalize;
+use rustvil::fs::{MkdirOptions, PathExt};
 
 use crate::{
     DuckCtx, QuackResult,
@@ -31,16 +27,16 @@ pub struct QPCtx<'duck> {
 macro_rules! path_getters {
     (
         $(
-            $name:ident, $toml_key:literal, $message_name:literal
-        );*
+            $name:ident, $toml_key:literal, $message_name:literal $(;)?
+        )*
     ) => {
             $(
                 pub fn $name(&self) -> QuackResult<PathBuf> {
-                    soft_canonicalize(
-                    self.inner.toml_cfg().get_path($toml_key)?.or_else(|| $name(self.inner.env()))
+                    let path_buf = self.inner.toml_cfg().get_path($toml_key)?.or_else(|| $name(self.inner.env()))
                         .ok_or_else(
                             || anyhow!("Could not decide where the {} should be placed", $message_name)
-                        )?).map_err(|e| e.into())
+                        )?;
+                    Ok(path_buf.as_path().full_canonicalize()?)
                 }
             )*
     };
@@ -50,14 +46,15 @@ macro_rules! path_getters {
 macro_rules! file_ensurers {
     (
         $(
-            $name:ident
-        );*
+            $name:ident $(;)?
+        )*
     ) => {
         item! {
             $(
-                pub fn [<ensure_ $name>](&self) -> QuackResult<()> {
+                pub fn [<ensure_ $name>](&self) -> QuackResult<PathBuf> {
                     let path = self.$name()?;
-                    self.ensure_file(&path)
+                    path.touch()?;
+                    Ok(path)
                 }
             )*
         }
@@ -68,14 +65,15 @@ macro_rules! file_ensurers {
 macro_rules! dir_ensurers {
     (
         $(
-            $name:ident
-        );*
+            $name:ident $(;)?
+        )*
     ) => {
         item! {
             $(
-                pub fn [<ensure_ $name>](&self) -> QuackResult<()> {
+                pub fn [<ensure_ $name>](&self) -> QuackResult<PathBuf> {
                     let path = self.$name()?;
-                    self.ensure_dir(&path)
+                    path.mkdir(MkdirOptions::WithParents)?;
+                    Ok(path)
                 }
             )*
         }
@@ -93,50 +91,24 @@ impl<'duck> QPCtx<'duck> {
         self.inner.console()
     }
 
-    /// Helper function, ensures that a given directory is present in the filesystem.
-    fn ensure_dir(&self, path: &Path) -> QuackResult<()> {
-        create_dir_all(path)?;
-        Ok(())
-    }
-
-    /// Helper function, ensures that a given file is present in the filesystem.
-    fn ensure_file(&self, path: &Path) -> QuackResult<()> {
-        if let Some(parent) = path.parent() {
-            self.ensure_dir(parent)?;
-            // create() truncates the file, thus this work-around is needed.
-            match File::create_new(path) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    if matches!(e.kind(), ErrorKind::AlreadyExists) {
-                        Ok(())
-                    } else {
-                        Err(anyhow::Error::from(e))
-                    }
-                }
-            }
-        } else {
-            Err(anyhow!("The provided path does not point to a file"))
-        }
-    }
-
     path_getters! {
-        "artifacts_dir", "cache.artifacts_dir", "artifacts directory";
-        "download_dir", "cache.download_dir", "download directory";
-        "storage_dir", "storage.dir", "quackpack storage directory";
-        "fetcher_lockfile", "cache.fetcher_lockfile", "fetcher lockfile";
-        "global_venv_dir", "global_venv", "global venv's manifest directory";
-        "metadata_db", "cache.metadata_db_path", "manifests metadata database"
+        artifacts_dir, "cache.artifacts_dir", "artifacts directory";
+        download_dir, "cache.download_dir", "download directory";
+        storage_dir, "storage.dir", "quackpack storage directory";
+        fetcher_lockfile, "cache.fetcher_lockfile", "fetcher lockfile";
+        global_venv_dir, "global_venv", "global venv's manifest directory";
+        metadata_db, "cache.metadata_db_path", "manifests metadata database";
     }
 
     file_ensurers! {
         fetcher_lockfile;
-        metadata_db
+        metadata_db;
     }
 
     dir_ensurers! {
         artifacts_dir;
         download_dir;
         storage_dir;
-        global_venv_dir
+        global_venv_dir;
     }
 }

@@ -17,7 +17,7 @@ clap_complete = { version = "4.5.58", optional = true }
 console = "0.16.1"
 itertools = "0.14.0"
 paste = "1.0.15"
-rustvil = "0.6.0"
+rustvil = { version = "0.8.1", features = ["full-canonicalize"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde-untagged = "0.1.9"
 serde_ignored = "0.1.14"
