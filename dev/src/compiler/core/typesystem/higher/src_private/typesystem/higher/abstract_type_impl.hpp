@@ -55,15 +55,9 @@ namespace tsh {
 		 * This is applicable for types which require being at some point "incomplete".
 		 * @return The TypeInterface of the type described by this class.
 		 */
-		// @TODO: Remove the default for the interface. Each type should know its interface.
-		// The interface default is to be removed when interfaces for each type are determined.
-		// Then, this definition should become pure virtual.
 		[[nodiscard]]
-		virtual const TypeInterface& getInterface(query::Context& ctx) const {
-			(void) ctx;
-			static TypeInterface empty{};
-			return empty;
-		}
+		virtual CRef<TypeInterface> getInterface(query::Context& ctx) const
+			= 0;
 
 		/**
 		 * @brief Determines weather the type has a no-op destructor, i.e. destructor that does not
@@ -173,6 +167,9 @@ namespace tsh {
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -192,6 +189,8 @@ namespace tsh {
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
+
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -215,6 +214,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class BoolAbstractTypeImpl final: public AbstractTypeImpl {
@@ -238,6 +240,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class CharAbstractTypeImpl final: public AbstractTypeImpl {
@@ -261,6 +266,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class IntegralAbstractTypeImpl final: public AbstractTypeImpl {
@@ -309,6 +317,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class FloatAbstractTypeImpl final: public AbstractTypeImpl {
@@ -341,6 +352,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class RawPointerAbstractTypeImpl final: public AbstractTypeImpl {
@@ -376,6 +390,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 
 	private:
 		Mutability mutability;
@@ -413,6 +430,9 @@ namespace tsh {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
@@ -434,6 +454,9 @@ namespace tsh {
 		 * free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -469,6 +492,9 @@ namespace tsh {
 		 * requires to free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -496,6 +522,9 @@ namespace tsh {
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 
 		[[nodiscard]] bool hasNoOpDestructor() const override;
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
@@ -548,6 +577,9 @@ namespace tsh {
 			// @TODO #1273: this is a placeholder, implemnt proper logic
 			return false;
 		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	/** @TODO:
@@ -582,6 +614,9 @@ namespace tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override;
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class ClassAbstractTypeImpl final: public AbstractTypeImpl {
@@ -599,7 +634,7 @@ namespace tsh {
 		static constexpr Kind STATIC_KIND = Kind::Class;
 
 		[[nodiscard]]
-		const TypeInterface& getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 
 		explicit ClassAbstractTypeImpl(compiler::helios::SymID symbol);
 
@@ -629,7 +664,7 @@ namespace tsh {
 		[[nodiscard]]
 		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
 			const auto& elements_with_same_name
-				= getInterface(ctx).getElementsByName().at(name(sym));
+				= getInterface(ctx)->getElementsByName().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");
@@ -660,6 +695,9 @@ namespace tsh {
 		NamespaceAbstractTypeImpl() = default;
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -680,6 +718,9 @@ namespace tsh {
 			// @TODO #1275: this is a placeholder, implemnt proper logic
 			return false;
 		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
@@ -697,6 +738,9 @@ namespace tsh {
 		explicit MetaAbstractTypeImpl() { representation = "META"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 
 	class ImportAbstractTypeImpl final: public AbstractTypeImpl {
@@ -714,5 +758,8 @@ namespace tsh {
 		explicit ImportAbstractTypeImpl() = default;
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
 }

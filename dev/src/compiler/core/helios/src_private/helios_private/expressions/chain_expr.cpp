@@ -257,7 +257,7 @@ namespace compiler::helios::code {
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
-			// @TODO: #520 Perform proper lookup in type for different cases.
+			// @TODO: #982 #1532 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
@@ -414,9 +414,8 @@ namespace compiler::helios::code {
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
 
-			// @TODO #520 improve type lookup and provide correct
-			// candidates for processFunctionCall
-			// @TODO write tests for this case, when it will be implemented
+			// @TODO: #982 improve type lookup and provide correct
+			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
@@ -443,8 +442,6 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO: #520 for now it is a mock as we don't have lookup in type instance and proper
-			// helios access expr.
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
@@ -468,8 +465,12 @@ namespace compiler::helios::code {
 			} else if (kind(sym) == SymbolKind::Namespace) {
 				result_sequence.push_back(std::move(current_expr));
 				return ChainState::ofNamespaceLike(sym);
+			} else if (kind(sym) == SymbolKind::Method) {
+				throw base::NotYetImplemented(
+					"Handling of access to method without a call is not implemented yet"
+				);
 			}
-			// @TODO: #1412 #1485 Support lookup of other kinds of symbols in classes.
+			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 			return query::QError(errors::Failed());
 		}
 
