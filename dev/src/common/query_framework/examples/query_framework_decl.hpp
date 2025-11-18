@@ -32,9 +32,9 @@ struct Value {
  * Query declaration.
  * Under the hood it will create a struct called `MyQuery`.
  */
-DECLARE_QUERY(MyQuery, Key, Value)
+DECLARE_QUERY(MyQuery, Key, Value, {})
 
 /**
  * This query just takes uint64_t as an argument and returns std::string.
  */
-DECLARE_QUERY(Query2, u64, std::string)
+DECLARE_QUERY(Query2, u64, std::string, {})

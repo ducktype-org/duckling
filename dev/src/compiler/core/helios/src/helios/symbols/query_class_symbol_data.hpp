@@ -52,6 +52,6 @@ namespace compiler::helios {
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in its definition.
 	 */
-	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
+	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>, {})
 
 }
