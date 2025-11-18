@@ -1,3 +1,7 @@
+/**
+ * Utilities for key hashes.
+ */
+
 #pragma once
 
 #include <base/types/bit256.hpp>
@@ -42,7 +46,7 @@ namespace query {
 	 * @brief Gets "perfect" hash from a key: prefer stable if queryStablePerfectHash exists,
 	 * otherwise use queryUnstablePerfectHash. Keeps the u64/bool fast-paths.
 	 */
-	template<typename KeyType, bool use_stable_hash>
+	template<bool use_stable_hash, typename KeyType>
 	auto perfectHashKey(const KeyType& key) {
 		if constexpr (use_stable_hash)
 			return key.queryStablePerfectHash();

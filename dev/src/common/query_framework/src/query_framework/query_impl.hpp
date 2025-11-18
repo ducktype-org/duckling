@@ -27,14 +27,6 @@
 
 namespace query::internal {
 
-	// Concept: implementation provides loadFromDisc with either exact PResult signature
-	// or Optional<PResult> signature (used to signal absence of on-disk artifact).
-	// @TODO: #1433 replace this with proper query tag
-	template<typename Impl>
-	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
-		{ Impl::loadFromDisc(key) };
-	} && (std::same_as<decltype(Impl::loadFromDisc(std::declval<const typename Impl::QKey&>())), base::Optional<typename Impl::PResult>>);
-
 	/**
 	 * @brief Internal function implementing the call to a query.
 	 *
@@ -48,7 +40,7 @@ namespace query::internal {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		const auto perfect_hash = perfectHashKey(key);
+		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
 
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{
@@ -74,9 +66,10 @@ namespace query::internal {
 			// Conditions:
 			//  - QueryImplType provides loadFromDisc(QKey) -> PResult
 			//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
-			if constexpr (HasLoadFromDiscWithSignature<QueryImplType>) {
+			if constexpr (QueryImplType::IS_CACHED_ON_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
+
 					QUERY_DEBUG_LOG(
 						"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Loading from disk.\n"
 					);
@@ -134,12 +127,16 @@ namespace query::internal {
 		using PResult     = PResult_tp;
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
+
+		// Some forwards used to simplify the code:
+		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.tags.isHashStable();
+		constexpr static bool IS_CACHED_ON_DISK = QueryType_tp::QUERY_DATA.tags.is_cached_on_disk;
 		
 		/**
 		 * Type of the perfect key-hash values used in the query.
 		 */
 		using KHash = std::conditional_t<
-			QueryType_tp::QUERY_DATA.tags.isHashStable(),
+			IS_HASH_STABLE,
 			query::KHashStable<QKey>,
 			query::KHashUnstable<QKey>
 		>;
@@ -164,6 +161,21 @@ namespace query::internal {
 #define IMPLEMENT_QUERY(query_type, PResult) \
 	ImplementationOf_##query_type final:     \
 		  public query::internal::QueryImplementation<query_type, PResult>
+
+
+
+
+
+// @TODO PR: add /update assertions bellow
+
+// in particular use it:
+	// Concept: implementation provides loadFromDisc with either exact PResult signature
+	// or Optional<PResult> signature (used to signal absence of on-disk artifact).
+	// template<typename Impl>
+	// concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
+	// 	{ Impl::loadFromDisc(key) };
+	// } && (std::same_as<decltype(Impl::loadFromDisc(std::declval<const typename Impl::QKey&>())), base::Optional<typename Impl::PResult>>);
+
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by
