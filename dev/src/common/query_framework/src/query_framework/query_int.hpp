@@ -51,7 +51,7 @@ namespace query::internal {
                                                                                          \
 	public:                                                                              \
 		static auto        getID() { return id; }                                        \
-		static const auto& getData() { return query_data; }                              \
+		static constexpr auto& getData() { return query_data; }                              \
 	};
 
 /**
