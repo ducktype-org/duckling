@@ -6,7 +6,7 @@ namespace dia_app {
 	namespace dia_file {
 		using view_manager::Component, view_manager::InteractiveComponent,
 			view_manager::ConcatComponent, view_manager::TextComponent, view_manager::CodeComponent,
-			view_manager::StartLineComponent, view_manager::hl_id_t;
+			view_manager::StartLineComponent, view_manager::PointerMessageID;
 
 		DisplayElement::DisplayElement(const DisplayElement& other):
 			  assoc_infos(other.assoc_infos),

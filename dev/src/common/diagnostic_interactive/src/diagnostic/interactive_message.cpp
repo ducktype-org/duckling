@@ -11,7 +11,7 @@ using nlohmann::json;
 json dia::InteractiveMessage::tojson() const {
 	const SerializationParams& params = InteractiveLogger::params();
 	json                       res    = json::object();
-	res["main_info"]                  = content;
+	res["main_message"]                  = content;
 	res["displayed_secondary_infos"]  = json::array();
 	res["secondary_infos"]            = notes;
 	res["entities"]                   = json::object();

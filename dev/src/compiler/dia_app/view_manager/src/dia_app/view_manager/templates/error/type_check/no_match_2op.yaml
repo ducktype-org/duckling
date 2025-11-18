@@ -11,14 +11,16 @@ header_message:
   - param: "operator"
   - "` "
   - "operator"
-  - " for types `"
+  - " for types "
   - param: "left_type"
-  - "`"
-  - macro: "opt_expanded_left_type"
   - " and `"
   - param: "right_type"
   - "`"
-  - macro: "opt_expanded_right_type"
+  - codeblock:
+    - param: "code"
+
+description:
+  - param: code
 
 pointer_messages:
   cause:
@@ -29,49 +31,17 @@ pointer_messages:
 params:
   operator:
     description: "The operator which does not match."
+  
   left_type:
     description: "Type of the left operand."
+    component_type: "template"
+    type: "component/general/type_with_alias"
+  
   right_type:
     description: "Type of the right operand."
-  is_static:
-    description: "Whether the error is displayed in a static message."
-  has_expanded_left_type:
-    description: "Whether the type of the left operand can be expanded."
-  expanded_left_type:
-    description: "Expanded type of the left operand."
-    optional: true
-  has_expanded_right_type:
-    description: "Whether the type of the right operand can be expanded."
-  expanded_right_type:
-    description: "Expanded type of the right operand."
-    optional: true
-
-macros:
-  opt_expanded_left_type:
-    - case:
-        param: "is_static"
-      of:
-        true:
-          - case:
-              param: "has_expanded_left_type"
-            of:
-              true:
-                - " (aka `"
-                - param: "expanded_left_type"
-                - "`)"
-              "[other]": []
-        "[other]": []
-  opt_expanded_right_type:
-    - case:
-        param: "is_static"
-      of:
-        true:
-          - case:
-              param: "has_expanded_right_type"
-            of:
-              true:
-                - " (aka `"
-                - param: "expanded_right_type"
-                - "`)"
-              "[other]": []
-        "[other]": []
+    component_type: "template"
+    template: "component/general/type_with_alias"
+  
+  code:
+    description: "The code snippet where the error occurs."
+    component_type: "code_with_location"

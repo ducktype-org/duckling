@@ -63,7 +63,6 @@ namespace dia_app {
 			// corresponding explore edge templates.
 			std::vector<ExploreEdgeParams> explore_edges;
 
-			InfoParams();
 			// Construct `InfoParams` corresponding to a non-parametrized info
 			// templated identified by `metadata`.
 			InfoParams(const ShortMetadata& metadata);

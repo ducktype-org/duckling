@@ -11,7 +11,7 @@
         "kind": "features_button"
       }
     },
-    "main_info": {
+    "main_message": {
       "metadata": {
         "family": "features",
         "name": "why_instanced_feature_on",

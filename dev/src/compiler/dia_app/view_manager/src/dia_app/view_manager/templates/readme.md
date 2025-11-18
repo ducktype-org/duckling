@@ -66,6 +66,7 @@ an info code which has not yet been taken.
 
 ~~~~~yaml
 metadata:
+  template_type: "message / component"
   type: "note"
   family: "declaration"
   name: "variable_decl"
@@ -134,10 +135,10 @@ There are two main messages displayed within an info:
 Both of these are defined at the root level of an info template file
 in the following way:
 ~~~~~yaml
-header_message: <message>
-description: <message>
+header_message: <message_components>
+description: <message_components>
 ~~~~~
-where `<message>` is a message template (more on those in the
+where `<message_components>` is a message template (more on those in the
 [**Anatomy of a message template**](#anatomy-of-a-message-template) section of this document).
 The `description` field is optional.
 
@@ -163,7 +164,7 @@ pointer_messages:
   <group_name>:
     priority: <priority>
     type: <type>
-    content: <message>
+    content: <message_components>
 ~~~~~
 > A scheme for defining a pointer message in the template
 file. All pointer messages should be defined under
@@ -217,7 +218,7 @@ explore edge's text.
 ~~~~~yaml
 explore_edges:
   <edge_class>:
-    content: <message>
+    content: <message_components>
     params: <params>
 ~~~~~
 > A scheme for defining an explore edge in the template file.
@@ -233,7 +234,7 @@ templates.
 
 ~~~~~yaml
 macros:
-  <macro_name>: <message>
+  <macro_name>: <message_components>
 ~~~~~
 > A scheme for defining a macro in the template file.
 All macros should be defined under the `macros` node
@@ -241,7 +242,7 @@ at the root of the file.
 
 ## Anatomy of a message template
 
-A message template (`<message>`) is represented as a tree, where each node
+A message template (`<message_components>`) is represented as a tree, where each node
 introduces new content or functionality to the message. There are a couple
 of node types, depending on their purpose:
 - text node,
@@ -342,11 +343,11 @@ which always produces a match.
 introduced when needed.
 
 ~~~~~yaml
-case: <message>
+case: <message_components>
 of:
-  <case_1>: <message>
-  <case_2>: <message>
-  "[other]": <message>
+  <case_1>: <message_components>
+  <case_2>: <message_components>
+  "[other]": <message_components>
 ~~~~~
 > A scheme for defining a matching node. Any number of cases can be introduced.
 The `[other]` class case is required.

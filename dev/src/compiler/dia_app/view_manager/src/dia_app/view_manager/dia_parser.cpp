@@ -9,7 +9,7 @@ namespace dia_app {
 			ASSUME_HAS_STR_ASSIGN(edge, info_id);
 			ASSUME_HAS(edge, "params");
 			params
-				= json_to_map<DisplayPtr>(edge["params"], [](const json& el) { return parse(el); });
+				= jsonToMap<DisplayPtr>(edge["params"], [](const json& el) { return parse(el); });
 		}
 
 		CodeData::Location::Location() {}
@@ -30,7 +30,6 @@ namespace dia_app {
 			content = parse(data["content"]);
 		}
 
-		InfoParams::InfoParams() {}
 
 		InfoParams::InfoParams(const ShortMetadata& metadata): metadata(metadata) {}
 
@@ -42,7 +41,7 @@ namespace dia_app {
 			// Parse required params.
 			ASSUME_HAS(info, "params");
 			params
-				= json_to_map<DisplayPtr>(info["params"], [](const json& el) { return parse(el); });
+				= jsonToMap<DisplayPtr>(info["params"], [](const json& el) { return parse(el); });
 
 			// Parse optional code section.
 			if (info.contains("code")) code = CodeData(info["code"]);
@@ -64,7 +63,7 @@ namespace dia_app {
 			}
 
 			// Parse other fields.
-			fields = json_to_map<json>(entity);
+			fields = jsonToMap<json>(entity);
 			fields.erase("assoc_infos");
 		}
 	}

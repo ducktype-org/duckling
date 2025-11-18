@@ -15,14 +15,14 @@ namespace dia_app {
 		struct TemplateElement;
 		using TemplatePtr = std::shared_ptr<TemplateElement>;
 
-		struct TextTElement;
+		struct TextComponent;
 		struct ConcatTElement;
 		struct ParamTElement;
 		struct MacroTElement;
 		struct CaseOfTElement;
 
 		MAKE_VISITOR(TemplateElement,
-			TextTElement,
+			TextComponent,
 			ConcatTElement,
 			ParamTElement,
 			MacroTElement,
@@ -57,10 +57,10 @@ namespace dia_app {
 		 * @brief A template element representing simple text.
 		 *
 		 */
-		struct TextTElement: public TemplateElement {
+		struct TextComponent: public TemplateElement {
 			std::string text;
 
-			TextTElement(const std::string& text);
+			TextComponent(const std::string& text);
 
 			virtual void accept(TemplateElementVisitor& visitor) {
 				visitor.visitTextTElement(*this);
@@ -161,7 +161,7 @@ namespace dia_app {
 				const base::HashMap<std::string, dia_file::DisplayPtr> aux_params = {}
 			);
 
-			virtual void visitTextTElement(const TextTElement& el);
+			virtual void visitTextTElement(const TextComponent& el);
 			virtual void visitConcatTElement(const ConcatTElement& el);
 			virtual void visitParamTElement(const ParamTElement& el);
 			virtual void visitMacroTElement(const MacroTElement& el);

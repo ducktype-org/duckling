@@ -27,14 +27,14 @@ namespace dia_app {
 		 */
 		class HlMessage {
 		private:
-			hl_id_t                    tag;
+			PointerMessageID                    tag;
 			priority_t                 priority;
 			InfoType                   type;
 			std::shared_ptr<Component> content;
 
 		public:
 			HlMessage(
-				hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
+				PointerMessageID tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
 			);
 
 			/**
@@ -95,9 +95,9 @@ namespace dia_app {
 			static base::Optional<base::Box<CodeSection>> createFromInfo(
 				const message_template::Info&              info,
 				ViewConstructor&                           view_constructor,
-				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 				const std::function<u32()>&                get_next_id,
-				const std::function<hl_id_t(std::string)>& group_to_id
+				const std::function<PointerMessageID(std::string)>& group_to_id
 			);
 
 			base::Box<::view::Section> getView(ViewConstructor& vc) const override;
@@ -143,9 +143,9 @@ namespace dia_app {
 			static Info createFromInfo(
 				const message_template::Info&              info,
 				ViewConstructor&                           view_constructor,
-				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 				const std::function<u32()>&                get_next_id,
-				const std::function<hl_id_t(std::string)>& group_to_id
+				const std::function<PointerMessageID(std::string)>& group_to_id
 			);
 
 			base::Box<::view::Info> getView(ViewConstructor& vc) const;
@@ -167,9 +167,9 @@ namespace dia_app {
 			 */
 			static Diagnostic createFromViewConstructor(
 				ViewConstructor&                           view_constructor,
-				const std::function<hl_id_t(std::string)>& hl_name_to_id,
+				const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 				const std::function<u32()>&                get_next_id,
-				const std::function<hl_id_t(std::string)>& group_to_id
+				const std::function<PointerMessageID(std::string)>& group_to_id
 			);
 
 			base::Box<::view::Diagnostic> getView(ViewConstructor& vc) const;

@@ -17,12 +17,14 @@ namespace dia_app {
 		ViewManager ViewManager::createFromJson(json input) {
 			fetcher::initialize(std::move(input));
 
-			hl_id_t              next_component_id = 0;
+			PointerMessageID              next_component_id = 0;
 			std::function<u32()> get_next_id
 				= [&next_component_id]() { return next_component_id++; };
-			base::HashMap<std::string, hl_id_t>               group_to_id_map;
-			hl_id_t                                           next_group_id = 0;
-			std::function<view_manager::hl_id_t(std::string)> group_to_id
+				
+			base::HashMap<std::string, PointerMessageID>               group_to_id_map;
+			PointerMessageID                                           next_group_id = 0;
+			
+			std::function<view_manager::PointerMessageID(std::string)> group_to_id
 				= [&group_to_id_map, &next_group_id](const std::string& str) {
 					  auto ptr = group_to_id_map.find(str);
 					  if (ptr == group_to_id_map.end()) {
@@ -31,9 +33,11 @@ namespace dia_app {
 					  }
 					  return group_to_id_map[str];
 				  };
-			base::HashMap<std::string, hl_id_t>               hl_name_to_id_map;
-			hl_id_t                                           next_hl_id = 0;
-			std::function<view_manager::hl_id_t(std::string)> hl_name_to_id
+			
+			base::HashMap<std::string, PointerMessageID>               hl_name_to_id_map;
+			PointerMessageID                                           next_hl_id = 0;
+			
+			std::function<view_manager::PointerMessageID(std::string)> hl_name_to_id
 				= [&hl_name_to_id_map, &next_hl_id](const std::string& str) {
 					  auto ptr = hl_name_to_id_map.find(str);
 					  if (ptr == hl_name_to_id_map.end()) {
@@ -44,9 +48,9 @@ namespace dia_app {
 				  };
 
 			std::vector<std::pair<Diagnostic, ViewConstructor>> diagnostics;
-			for (uint info_group_id = 0; info_group_id < fetcher::getInfoGroupCount();
-			     ++info_group_id) {
-				auto vc = fetcher::generateViewConstructor(info_group_id);
+			for (uint thread_id = 0; thread_id < fetcher::getInfoGroupCount();
+			     ++thread_id) {
+				auto vc = fetcher::generateViewConstructor(thread_id);
 
 				diagnostics.emplace_back(
 					Diagnostic::createFromViewConstructor(

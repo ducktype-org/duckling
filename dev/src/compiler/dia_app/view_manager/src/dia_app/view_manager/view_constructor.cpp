@@ -4,26 +4,26 @@
 
 namespace dia_app {
 
-	ViewConstructor::ViewConstructor(const json& info_group) {
+	ViewConstructor::ViewConstructor(const json& thread) {
 		// Parse the main info parameters.
-		main_info = InfoParams(info_group["main_info"]);
+		main_message = InfoParams(thread["main_message"]);
 
 		// Parse the collection of secondary info parameters.
-		ASSUME_HAS(info_group, "secondary_infos");
-		ASSUME_OBJ(info_group["secondary_infos"]);
-		for (auto& [id, info]: info_group["secondary_infos"].items())
+		ASSUME_HAS(thread, "secondary_infos");
+		ASSUME_OBJ(thread["secondary_infos"]);
+		for (auto& [id, info]: thread["secondary_infos"].items())
 			secondary_infos.put(id, InfoParams(info));
 
 		// Parse the optional list of displayed secondary infos.
-		if (info_group.contains("displayed_secondary_infos")) {
-			ASSUME_ARR(info_group, "displayed_secondary_infos");
-			for (auto& el: info_group["displayed_secondary_infos"])
+		if (thread.contains("displayed_secondary_infos")) {
+			ASSUME_ARR(thread, "displayed_secondary_infos");
+			for (auto& el: thread["displayed_secondary_infos"])
 				displayed_secondary_infos.push_back(el);
 		}
 
 		// Parse the collection of entities.
-		ASSUME_HAS(info_group, "entities");
-		entities = json_to_map<Entity>(info_group["entities"]);
+		ASSUME_HAS(thread, "entities");
+		entities = jsonToMap<Entity>(thread["entities"]);
 	}
 
 	message_template::Info ViewConstructor::getSecondaryInfo(InfoID id) {
@@ -41,7 +41,7 @@ namespace dia_app {
 		return result;
 	}
 
-	message_template::Info ViewConstructor::getMainInfo() { return getInfo(main_info); }
+	message_template::Info ViewConstructor::getMainInfo() { return getInfo(main_message); }
 
 	const ViewConstructor::Entity& ViewConstructor::getEntity(EntityID id) {
 		// Fetch data if needed.

@@ -28,7 +28,7 @@ namespace dia_app {
 		// HlMessage
 
 		HlMessage::HlMessage(
-			hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
+			PointerMessageID tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
 		):
 			  tag(tag),
 			  priority(priority),
@@ -136,9 +136,9 @@ namespace dia_app {
 		base::Optional<base::Box<CodeSection>> CodeSection::createFromInfo(
 			const message_template::Info&              info,
 			ViewConstructor&                           view_constructor,
-			const std::function<hl_id_t(std::string)>& hl_name_to_id,
+			const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 			const std::function<u32()>&                get_next_id,
-			const std::function<hl_id_t(std::string)>& group_to_id
+			const std::function<PointerMessageID(std::string)>& group_to_id
 		) {
 			if (!info.code.has_value()) return {};
 			auto& code = info.code.value();
@@ -261,9 +261,9 @@ namespace dia_app {
 		Info Info::createFromInfo(
 			const message_template::Info&              info,
 			ViewConstructor&                           view_constructor,
-			const std::function<hl_id_t(std::string)>& hl_name_to_id,
+			const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 			const std::function<u32()>&                get_next_id,
-			const std::function<hl_id_t(std::string)>& group_to_id
+			const std::function<PointerMessageID(std::string)>& group_to_id
 		) {
 			auto                            metadata = Metadata::createFromInfo(info);
 			std::vector<base::Box<Section>> sections;
@@ -310,9 +310,9 @@ namespace dia_app {
 
 		Diagnostic Diagnostic::createFromViewConstructor(
 			ViewConstructor&                           view_constructor,
-			const std::function<hl_id_t(std::string)>& hl_name_to_id,
+			const std::function<PointerMessageID(std::string)>& hl_name_to_id,
 			const std::function<u32()>&                get_next_id,
-			const std::function<hl_id_t(std::string)>& group_to_id
+			const std::function<PointerMessageID(std::string)>& group_to_id
 		) {
 			std::vector<Info> infos;
 			infos.emplace_back(Info::createFromInfo(

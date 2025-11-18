@@ -11,7 +11,7 @@ namespace dia_app {
 
 	namespace view_manager {
 		class Component;
-		using hl_id_t = u32;
+		using PointerMessageID = u32;
 	}
 
 	namespace dia_file {
@@ -138,7 +138,7 @@ namespace dia_app {
 
 			DisplayPtr copy() const;
 
-			virtual void accept(DisplayElementVisitor& visitor) {
+			void accept(DisplayElementVisitor& visitor) override {
 				visitor.visitTextDElement(*this);
 			}
 
@@ -162,7 +162,7 @@ namespace dia_app {
 
 			DisplayPtr copy() const;
 
-			virtual void accept(DisplayElementVisitor& visitor) {
+			void accept(DisplayElementVisitor& visitor) override {
 				visitor.visitConcatDElement(*this);
 			}
 
@@ -344,7 +344,7 @@ namespace dia_app {
 			// Data accumulated during the search.
 			DisplayElement::AccData                           acc_data;
 			std::function<u32()>                              get_next_id;
-			std::function<view_manager::hl_id_t(std::string)> group_to_id;
+			std::function<view_manager::PointerMessageID(std::string)> group_to_id;
 
 			void accumulateData(const DisplayElement& el);
 
@@ -353,7 +353,7 @@ namespace dia_app {
 				ViewConstructor&                                  vc,
 				DisplayElement::AccData                           acc_data,
 				std::function<u32()>                              get_next_id,
-				std::function<view_manager::hl_id_t(std::string)> group_to_id
+				std::function<view_manager::PointerMessageID(std::string)> group_to_id
 			):
 				  vc(vc),
 				  acc_data(std::move(acc_data)),

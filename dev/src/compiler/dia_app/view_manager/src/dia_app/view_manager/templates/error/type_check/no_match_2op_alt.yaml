@@ -33,6 +33,7 @@ header_message:
       name: general
   - " for types `{{ left_type }}`{{ opt_expanded_left_type }}"
   - " and `{{ right_type }}`{{ opt_expanded_right_type }}"
+  - param: "code"
 
 pointer_messages:
   cause:
@@ -45,7 +46,8 @@ fragments:
     - case: "{{ is_static }}"
       of:
         true:
-          - case: "{{ has_expanded_left_type }}"
+          - case:
+              is_param_provided: "has_expanded_left_type"
             of:
               true: " (aka `{{ expanded_left_type }}`)"
               "[other]":

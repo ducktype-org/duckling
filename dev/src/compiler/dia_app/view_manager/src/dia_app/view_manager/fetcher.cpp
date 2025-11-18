@@ -11,27 +11,10 @@ namespace dia_app {
 		base::HashMap<EntityID, json>      entities;
 		base::HashMap<LazyDisplayID, json> elements;
 
-		void initialize(json&& diagnostic_file) {
-			if (!diagnostic_file.is_array()) {
-				// Parse the diagnostic file format with a laziness mock enabled.
-				ASSUME_HAS(diagnostic_file, "content");
-
-				// Store lazy infos (do not evaluate).
-				if (diagnostic_file.contains("lazy_infos"))
-					infos = json_to_map<json>(diagnostic_file["lazy_infos"]);
-				// Store lazy entities (do not evaluate).
-				if (diagnostic_file.contains("lazy_entities"))
-					entities = json_to_map<json>(diagnostic_file["lazy_entities"]);
-				// Store lazy elements (do not evaluate).
-				if (diagnostic_file.contains("lazy_elements"))
-					elements = json_to_map<json>(diagnostic_file["lazy_elements"]);
-
-				// Set diagnostic file to the actual file contents.
-				diagnostic_file = diagnostic_file["content"];
-				CORE_ASSERT(
-					diagnostic_file.is_array(), "Diagnostic file contents must be an array."
-				);
-			}
+		void initialize(const json& diagnostic_file) {
+			CORE_ASSERT(
+				diagnostic_file.is_array(), "Diagnostic file contents must be an array."
+			);
 			// Convert the diagnostic file contents into a vector.
 			info_pointer_messages = diagnostic_file;
 		}

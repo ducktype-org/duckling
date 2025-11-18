@@ -4,12 +4,11 @@
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
-
+#include <base/box.hpp>
 #include <json/json.hpp>
 
 #include <expected>
 #include <functional>
-#include <iostream>
 
 #define UNIMPLEMENTED() \
 	do {                \
@@ -58,8 +57,10 @@ namespace dia_app {
 		std::string(jf[key])                               \
 	)
 
-	// Location of message templates.
-	extern std::string MESSAGE_TEMPLATE_PATH;
+#define YAML_ASSUME_HAS_SCALAR(node, key) \
+	CORE_ASSERT(node[key] && node[key].IsScalar(), "YAML node missing scalar key: %s", key)
+
+#define YAML_ASSUME_HAS(node, key) CORE_ASSERT(node[key], "YAML node missing key: %s", key)
 
 	/**
 	 * @brief An info type.
@@ -110,6 +111,35 @@ namespace dia_app {
 		}
 	}
 
+	template<typename T>
+	inline base::HashMap<std::string, T> yamlToMap(
+		const YAML::Node& parent_node, const char* field_name
+	) {
+		base::HashMap<std::string, T> result;
+		if (const auto map_node = parent_node[field_name]; map_node && map_node.IsMap()) {
+			for (const auto& entry: map_node) {
+				auto key = entry.first.as<std::string>();
+				result.put(key, T::fromYaml(key, entry.second));
+			}
+		}
+		return result;
+	}
+
+	// yamlToBox map
+	template<typename T>
+	inline base::HashMap<std::string, Box<T>> yamlToBoxMap(
+		const YAML::Node& parent_node, const char* field_name
+	) {
+		base::HashMap<std::string, Box<T>> result;
+		if (const auto map_node = parent_node[field_name]; map_node && map_node.IsMap()) {
+			for (const auto& entry: map_node) {
+				auto key = entry.first.as<std::string>();
+				result.put(key, T::fromYaml(entry.second));
+			}
+		}
+		return result;
+	}
+
 	/**
 	 * @brief Conversion from a `json` element to a hash map with element
 	 * transformation.
@@ -121,7 +151,7 @@ namespace dia_app {
 	 * @return base::HashMap<std::string, V>
 	 */
 	template<typename V>
-	base::HashMap<std::string, V> json_to_map(
+	base::HashMap<std::string, V> jsonToMap(
 		const json& data, std::function<V(const json&)> fun = [](const json& el) { return el; }
 	) {
 		ASSUME_OBJ(data);

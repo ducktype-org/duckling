@@ -25,7 +25,7 @@ namespace dia_app {
 		using DisplayPtr = dia_file::DisplayPtr;
 
 		// The main info (has to be of type error or warning).
-		InfoParams main_info;
+		InfoParams main_message;
 		// The collection of secondary infos which can appear in the info group.
 		base::HashMap<InfoID, InfoParams> secondary_infos;
 		// The collection of entities shared across all infos in the info group.
@@ -46,9 +46,9 @@ namespace dia_app {
 		/**
 		 * @brief Construct a new View Constructor for an info group.
 		 *
-		 * @param info_group The info group data in JSON format.
+		 * @param thread The info group data in JSON format.
 		 */
-		ViewConstructor(const json& info_group);
+		ViewConstructor(const json& thread);
 
 		// Get the main info of this info group after applying the info
 		// template.

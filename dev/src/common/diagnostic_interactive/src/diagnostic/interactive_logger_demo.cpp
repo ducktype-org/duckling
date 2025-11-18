@@ -55,9 +55,9 @@ json create_demo_from(json j) {
 	json x_el_alt                  = alt_of(x_el, b_el);
 	json plus_el                   = entity_of(plus_id, code_of("+"));
 	json a_plus_a                  = { a_el, code_of(" "), plus_el, code_of(" "), a_el };
-	err["main_info"]["operator"]   = plus_el;
-	err["main_info"]["left_type"]  = i32_el;
-	err["main_info"]["right_type"] = i64_el;
+	err["main_message"]["operator"]   = plus_el;
+	err["main_message"]["left_type"]  = i32_el;
+	err["main_message"]["right_type"] = i64_el;
 
 	json line_1   = code_of("fun foo() = {");
 	json line_2   = { code_of("    "), code_of("let a: "), i32_el, code_of(" = 0;") };
@@ -71,8 +71,8 @@ json create_demo_from(json j) {
 	json code     = { start_line(1), line_1,        start_line(2), line_2, start_line(3),
 		              line_3,        start_line(4), start_line(5), line_5, start_line(6),
 		              start_line(7), line_7,        start_line(8), line_8 };
-	err["main_info"]["code"]["content"] = code;
-	json loc                            = err["main_info"]["code"]["location"];
+	err["main_message"]["code"]["content"] = code;
+	json loc                            = err["main_message"]["code"]["location"];
 
 	json a_decl_loc          = loc;
 	a_decl_loc["line"]       = 2;
@@ -207,7 +207,7 @@ json edge(uint handle, std::string desc, bool is_main = false) {
 
 json better_demo() {
 	json j;
-	j["main_info"] = { { "metadata", meta("warning", "features", "why_instanced_feature_on") },
+	j["main_message"] = { { "metadata", meta("warning", "features", "why_instanced_feature_on") },
 		               { "params", json::object_t() } };
 	// Main function
 	std::string A_id   = "type_A_1010";
@@ -580,7 +580,7 @@ json error_demo() {
 		    { "params",
 		      json{ { "type", i64_el }, { "bit_count", "64" }, { "is_signed", "true" } } } };
 
-	j["main_info"] = { { "metadata", meta("error", "type_check", "no_match_2op") },
+	j["main_message"] = { { "metadata", meta("error", "type_check", "no_match_2op") },
 		               { "params",
 		                 json{ { "operator", code_of("+") },
 		                       { "left_type", T_el },
@@ -606,7 +606,7 @@ json error_demo() {
 
 json graph_demo() {
 	json j;
-	j["main_info"] = { { "metadata", meta("warning", "features", "why_instanced_feature_on") },
+	j["main_message"] = { { "metadata", meta("warning", "features", "why_instanced_feature_on") },
 		               { "params", json::object_t() } };
 	std::string button_id = "features_button_1010";
 	json dep_tracking_req = { { "metadata", meta("note", "features", "dep_tracking_requested") },
