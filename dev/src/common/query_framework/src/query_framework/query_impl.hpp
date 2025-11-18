@@ -121,11 +121,11 @@ namespace query::internal {
 	 * The reason PResult is defined here is that in some cases
 	 * it might allow to remove big dependencies from .hpp files.
 	 *
-	 * @tparam QueryType_tp Query to implement
+	 * @tparam QueryType_tp Interface struct of Query to implement
 	 * @tparam PResult_tp PResult of a query
 	 */
 	template<typename QueryType_tp, typename PResult_tp>
-	struct QueryImplementation {
+	struct QueryImplementation final {
 		using QueryType = QueryType_tp;
 
 		using QKey        = typename QueryType_tp::QKey;
@@ -134,10 +134,15 @@ namespace query::internal {
 		using PResult     = PResult_tp;
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
+		
 		/**
-		 * Unstable key hash type
+		 * Type of the perfect key-hash values used in the query.
 		 */
-		using KHash = query::KHash<QKey>;
+		using KHash = std::conditional_t<
+			QueryType_tp::QUERY_DATA.tags.isHashStable(),
+			query::KHashStable<QKey>,
+			query::KHashUnstable<QKey>
+		>;
 
 		using Context = ::query::Context;
 
@@ -148,14 +153,6 @@ namespace query::internal {
 		 *  static auto store(KHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
-
-		// @TODO: #1433 implement proper tags for cache-on-disk queries
-		/**
-		 * Whether query is cached on disk.
-		 * Queries cached on disk must use stable hashing.
-		 * @note Currently this is not used. It is waiting for query-tags
-		 */
-		static constexpr bool CACHE_ON_DISK = false;
 	};
 }
 
@@ -222,7 +219,7 @@ namespace query::internal {
 		"Load function must be callable with hash of QKey"                                        \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
-		registerQuery(type::QueryType::getData(), ::query::HasStablePerfectHash<type::QKey>);
+		registerQuery(type::QueryType::QUERY_DATA, ::query::HasStablePerfectHash<type::QKey>);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

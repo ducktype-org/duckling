@@ -48,6 +48,12 @@ namespace query::internal {
 		 */
 		bool is_cached_on_disk = false;
 
+		// additional methods:
+
+		[[nodiscard]]
+		bool isHashStable() const {
+			return used_hashes == UsedHashes::StableHash;
+		}
 
 		/**
 		 * Verify that the tags are consistent.

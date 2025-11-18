@@ -42,5 +42,8 @@ namespace query::internal {
 		query_type,                                                                        \
 		key,                                                                               \
 		query::internal::SideInputMockValue,                                               \
-		::query::internal::QueryData(::query::internal::QueryType::SideInput, #query_type) \
+		::query::internal::QueryData(::query::internal::QueryType::SideInput, #query_type, {}) \
 	)
+	// @TODO: PR: adjust the tags above and impl
+
+	

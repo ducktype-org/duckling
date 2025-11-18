@@ -41,14 +41,15 @@ namespace query::internal {
 	private:                                                                           \
 		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult; \
 		static ::query::internal::QueryID             id;                              \
-		static constexpr ::query::internal::QueryData query_data = query_data_mp;      \
 		friend struct ::query::Context;                                                \
 		friend struct ::query::internal::EntryPointHelper;                             \
                                                                                        \
 	public:                                                                            \
+		static constexpr ::query::internal::QueryData QUERY_DATA = query_data_mp;      \
 		static auto            getID() { return id; }                                  \
-		static constexpr auto& getData() { return query_data; }                        \
+		static constexpr auto& getData() { return QUERY_DATA; }                        \
 	};
+	// @TODO PR: remove get_data accessor, its constexpr anyway
 
 /**
  * @brief Macro used do delcare queries.
