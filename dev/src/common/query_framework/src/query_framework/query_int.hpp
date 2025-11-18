@@ -57,9 +57,9 @@ namespace query::internal {
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
 #define DECLARE_QUERY(query_type, key, value, tags)                                           \
-	DECLARE_QUERY_AUX(                                                                  \
-		query_type,                                                                     \
-		key,                                                                            \
-		value,                                                                          \
+	DECLARE_QUERY_AUX(                                                                        \
+		query_type,                                                                           \
+		key,                                                                                  \
+		value,                                                                                \
 		::query::internal::QueryData(::query::internal::QueryType::Normal, #query_type, tags) \
 	)

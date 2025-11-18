@@ -130,7 +130,9 @@ namespace compiler::helios {
 	 * @note This will have some issues for now. The potential errors from parsed subexpression
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 */
-	DECLARE_QUERY(QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, {})
+	DECLARE_QUERY(
+		QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, {}
+	)
 
 	/**
 	 * @brief Root scope of main module file.

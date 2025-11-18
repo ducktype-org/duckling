@@ -39,7 +39,12 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates a ctor function for a global data.
 	 */
-	DECLARE_QUERY(LowerGlobalDataToMIRCtor, KeyOf_LowerGlobalDataToMIRFunction, CRef<LowerGlobalDataToMIRFunctionResult>, {})
+	DECLARE_QUERY(
+		LowerGlobalDataToMIRCtor,
+		KeyOf_LowerGlobalDataToMIRFunction,
+		CRef<LowerGlobalDataToMIRFunctionResult>,
+		{}
+	)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
