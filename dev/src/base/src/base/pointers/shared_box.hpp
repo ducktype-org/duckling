@@ -1,20 +1,19 @@
 #pragma once
 
-// #include <atomic>
-
 #include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/pointers/default_deleter.hpp>
 
 namespace base {
-	template<class DataDeleter, class ControlBlockDeleter>
+	template<class DataDeleter>
 	class ControlBlock final {
 	public:
         usize n_owners;
 		[[no_unique_address]] DataDeleter data_deleter;
+
 		ControlBlock() = delete;
-		ControlBlock(Deleter deleter) noexcept: n_owners{ 0 }, deleter { std::move(deleter) } {}
+		ControlBlock(DataDeleter deleter) noexcept: n_owners{ 0 }, data_deleter { std::move(deleter) } {}
     };
 
     template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
@@ -37,15 +36,26 @@ namespace base {
 		template<class U, class UDeleter>
 		friend class SharedBox;
 
-		//template<class U, class UDeleter>
-		//friend class MBox;
-
 		constexpr void assertNotNull() const {
-			if (data_ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
+			if (data_ptr == nullptr) CORE_PANIC("SharedBox was in null state, when non-null was required!");
 		}
 
 		explicit SharedBox(T* ptr, ControlBlock<Deleter>* ctrl) noexcept: data_ptr{ ptr }, ctrl_ptr{ ctrl } {
 			assertNotNull();
+		}
+
+		/**
+		 * @brief Decrements the number of the owners of the object pointed to.
+		 * If the counter reaches 0, deletes the object and the control block.
+		*/
+		void renounce_ownership() {
+			ctrl_ptr->n_owners--;
+			if (ctrl_ptr->n_owners == 0) {
+				ctrl_ptr->deleter.del(data_ptr);
+				delete ctrl_ptr;
+			}
+			data_ptr = nullptr;
+			ctrl_ptr = nullptr;
 		}
     public:
         SharedBox() = delete;
@@ -55,7 +65,7 @@ namespace base {
 		 * @brief Constructs a SharedBox from a raw pointer.
 		 * It takes ownership of the pointer.
 		 *
-		 * For a regular construction use `makeBox` instead.
+		 * For a regular construction use `makeSharedBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
@@ -69,36 +79,134 @@ namespace base {
 			return fromPointerWithCustomDeleter(ptr, Deleter{});
 		}
 
-        SharedBox(const SharedBox& other) = delete;
+        SharedBox(const SharedBox& other) noexcept:
+			  data_ptr{ other.data_ptr },
+			  ctrl_ptr{ other.ctrl_ptr } {
+				ctrl_ptr->n_owners++;
+		}
+		
+		SharedBox(SharedBox&& other) noexcept:
+			  data_ptr{ std::move(other).data_ptr },
+			  ctrl_ptr{ std::move(other).ctrl_ptr } {
+			other.data_ptr = nullptr;
+			other.ctrl_ptr = nullptr;
+		}
+
+		template<class U, class UDeleter>
+		requires std::is_constructible_v<Deleter, UDeleter&&>
+		SharedBox(SharedBox<U, UDeleter>&& other) noexcept:
+			  data_ptr{ std::move(other).data_ptr },
+			  ctrl_ptr{ std::move(other).ctrl_ptr } {
+			other.data_ptr = nullptr;
+			other.ctrl_ptr = nullptr;
+		}
 
 		/**
-		 * @brief Assignment increments counter in the control block.
+		 * @brief Copy assignment. The ownership of the object previously pointed to is renounced.
+		 * The ownership of the object pointed to by `oth` is taken (the number of owners is increased).
+		 * 
+		 * @param other
+		 * @return SharedBox&
+		 */
+		SharedBox& operator=(const SharedBox& other) noexcept {
+			this.renounce_ownership();
+
+			data_ptr = other.data_ptr;
+			ctrl_ptr = other.ctrl_ptr;
+			ctrl_ptr->n_owners++;
+			return *this;
+		}
+
+		/**
+		 * @brief Move assignment. The ownership of the object previously pointed to is renounced.
 		 *
 		 * @tparam U
-		 * @param oth
+		 * @param other
 		 * @return SharedBox&
 		 */
 		template<class U, class UDeleter>
-		requires std::is_same<Deleter, UDeleter&&>
-		SharedBox& operator=(Box<U, UDeleter>&& oth) noexcept {
+		requires std::is_constructible_v<Deleter, UDeleter&&>
+		SharedBox& operator=(Box<U, UDeleter>&& other) noexcept {
 			this.renounce_ownership();
 
-			data_ptr = std::move(oth).data_ptr;
-			ctlr_ptr = std::move(oth).ctrl_ptr;
-			ctrl_ptr->n_owners++;
+			data_ptr = std::move(other).data_ptr;
+			ctlr_ptr = std::move(other).ctrl_ptr;
+
+			other.data_ptr = nullptr;
+			other.ctrl_ptr = nullptr;
+			return *this;
 		}
 
-		void renounce_ownership() {
-			ctrl_ptr->n_owners--;
-			if (ctrl_ptr->n_owners == 0) {
-				ctrl_ptr->deleter.del(data_ptr);
-				data_ptr = nullptr;
+		friend void swap(SharedBox& first, SharedBox& second) noexcept {
+			std::swap(first.data_ptr, second.data_ptr);
+			std::swap(first.ctrl_ptr, second.ctrl_ptr);
+		}
 
-				delete ctrl_ptr;
-				ctrl_ptr = nullptr;
-			}
+		/**
+		 * @brief Returns a mutable pointer to the pointed value, wrapped in Ref type.
+		 *
+		 * @return Ref<T>
+		 */
+		[[nodiscard]]
+		Ref<T> refMut() const noexcept {
+			return Ref<T>(data_ptr);
+		}
+
+		/**
+		 * @brief Returns an immutable pointer to the pointed value, wrapped in Ref type.
+		 *
+		 * @return Ref<const T>
+		 */
+		[[nodiscard]]
+		Ref<const T> ref() const noexcept {
+			return Ref<const T>(data_ptr);
+		}
+
+		T* operator->() const {
+			assertNotNull();
+			return data_ptr;
+		}
+
+		T* get() const {
+			assertNotNull();
+			return data_ptr;
+		}
+
+		T& operator*() const {
+			assertNotNull();
+			return *data_ptr;
+		}
+
+		bool operator==(const Box& other) const { return ctrl_ptr == other.ctrl_ptr; }
+
+		~SharedBox() {
+			this.renounce_ownership();
 		}
     };
+
+	/**
+	 * @brief Constructs a Box by forwarding the arguments to T constructor
+	 * and allocating memory with new operator.
+	 * @note default initialization of Deleter is used.
+	 */
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>, class... Args>
+	inline SharedBox<T, Deleter> makeSharedBox(Args&&... args) {
+		static_assert(
+			std::is_default_constructible_v<Deleter>,
+			"Deleter must be default constructible."
+			"This requirement is not "
+			"expressed as a requires clause/concept "
+			"usage, to prevent the need to write it in friend declarations."
+			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
+			"is especially important as some conflicting declaration errors are "
+			"no-diagnostic-required cases on non matching requirement friend "
+			"redefinition."
+
+		);
+		return SharedBox<T, Deleter>::fromPointerWithCustomDeleter(
+			new T(std::forward<Args>(args)...), Deleter{}
+		);
+	}
 }
 
 using base::SharedBox;
