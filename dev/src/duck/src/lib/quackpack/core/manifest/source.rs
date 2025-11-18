@@ -2,6 +2,34 @@ use std::path::{Path, PathBuf};
 
 use crate::StrId;
 
+#[derive(Debug, Clone)]
+/// General dependency source.
+pub enum Source {
+    /// A package from a registry.
+    Registry(Registry),
+    /// A local package on disk.
+    Local(Local),
+    /// A package from a git repository.
+    Git(Git),
+}
+
+impl Source {
+    /// Helper around `matches!(self, Source::Git(..))`.
+    pub fn is_git(&self) -> bool {
+        matches!(self, Source::Git(..))
+    }
+
+    /// Helper around `matches!(self, Source::Local(..))`.
+    pub fn is_local(&self) -> bool {
+        matches!(self, Source::Local(..))
+    }
+
+    /// Helper around `matches!(self, Source::Registry(..))`.
+    pub fn is_registry(&self) -> bool {
+        matches!(self, Source::Registry(..))
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
@@ -43,34 +71,6 @@ impl Local {
 }
 
 #[derive(Debug, Clone, Copy)]
-/// A type-safe approach for specifying a git tag or a branch.
-pub enum GitRevision {
-    /// The main branch.
-    Main,
-    /// A specific tag.
-    Tag(StrId),
-    /// A specific branch.
-    Branch(StrId),
-}
-
-impl GitRevision {
-    /// Helper around `matches!(self, GitRevision::Main)`.
-    pub fn is_main(&self) -> bool {
-        matches!(self, GitRevision::Main)
-    }
-
-    /// Helper around `matches!(self, GitRevision::Tag(..))`.
-    pub fn is_tag(&self) -> bool {
-        matches!(self, GitRevision::Tag(..))
-    }
-
-    /// Helper around `matches!(self, GitRevision::Branch(..))`.
-    pub fn is_branch(&self) -> bool {
-        matches!(self, GitRevision::Branch(..))
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
 /// Represents a source a dependency cloned from git.
 pub struct Git {
     url: StrId,
@@ -100,30 +100,30 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone)]
-/// General dependency source.
-pub enum Source {
-    /// A package from a registry.
-    Registry(Registry),
-    /// A local package on disk.
-    Local(Local),
-    /// A package from a git repository.
-    Git(Git),
+#[derive(Debug, Clone, Copy)]
+/// A type-safe approach for specifying a git tag or a branch.
+pub enum GitRevision {
+    /// The main branch.
+    Main,
+    /// A specific tag.
+    Tag(StrId),
+    /// A specific branch.
+    Branch(StrId),
 }
 
-impl Source {
-    /// Helper around `matches!(self, Source::Git(..))`.
-    pub fn is_git(&self) -> bool {
-        matches!(self, Source::Git(..))
+impl GitRevision {
+    /// Helper around `matches!(self, GitRevision::Main)`.
+    pub fn is_main(&self) -> bool {
+        matches!(self, GitRevision::Main)
     }
 
-    /// Helper around `matches!(self, Source::Local(..))`.
-    pub fn is_local(&self) -> bool {
-        matches!(self, Source::Local(..))
+    /// Helper around `matches!(self, GitRevision::Tag(..))`.
+    pub fn is_tag(&self) -> bool {
+        matches!(self, GitRevision::Tag(..))
     }
 
-    /// Helper around `matches!(self, Source::Registry(..))`.
-    pub fn is_registry(&self) -> bool {
-        matches!(self, Source::Registry(..))
+    /// Helper around `matches!(self, GitRevision::Branch(..))`.
+    pub fn is_branch(&self) -> bool {
+        matches!(self, GitRevision::Branch(..))
     }
 }

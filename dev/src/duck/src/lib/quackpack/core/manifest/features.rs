@@ -7,7 +7,7 @@ use crate::{QuackResult, StrId};
 /// Name of a feature.
 pub type FeatureName = StrId;
 /// List of feature names that have been pulled in.
-pub type PulledFeatures = Vec<FeatureName>;
+pub type PulledFeatures = HashSet<FeatureName>;
 
 #[derive(Debug)]
 /// Features exposed by a root package we are working on.
@@ -45,28 +45,26 @@ impl Features {
         &self,
         root_features: impl IntoIterator<Item = FeatureName>,
     ) -> QuackResult<PulledFeatures> {
-        let mut already_visited = HashSet::new();
+        let mut visited = HashSet::new();
         let mut current_stack = root_features.into_iter().collect::<VecDeque<_>>();
-        let mut result = vec![];
         while let Some(feature) = current_stack.pop_front() {
-            if already_visited.contains(&feature) {
+            if visited.contains(&feature) {
                 continue;
             }
             let Some(pulled_features) = self.0.get(&feature) else {
                 bail!("there is no such feature as `{feature}`")
             };
             let to_insert = pulled_features.iter().filter_map(|feature| {
-                if already_visited.contains(feature) {
+                if visited.contains(feature) {
                     None
                 } else {
                     Some(*feature)
                 }
             });
             current_stack.extend(to_insert);
-            already_visited.insert(feature);
-            result.push(feature);
+            visited.insert(feature);
         }
-        Ok(result)
+        Ok(visited)
     }
 
     /// Get the underlying feature map.
@@ -111,7 +109,11 @@ mod tests {
         let features = Features::new(make_features_map());
         assert!(features.is_ok());
         let features = features.unwrap();
-        let mut from_a = features.expand_features([FeatureName::new("a")]).unwrap();
+        let mut from_a = features
+            .expand_features([FeatureName::new("a")])
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>();
         from_a.sort();
         let mut expected = [
             FeatureName::new("a"),
@@ -123,11 +125,17 @@ mod tests {
 
         let mut from_a_and_b = features
             .expand_features([FeatureName::new("b"), FeatureName::new("a")])
-            .unwrap();
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>();
         from_a_and_b.sort();
         assert_eq!(from_a_and_b, from_a);
 
-        let mut from_d = features.expand_features([FeatureName::new("d")]).unwrap();
+        let mut from_d = features
+            .expand_features([FeatureName::new("d")])
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>();
         from_d.sort();
         let mut expected = [FeatureName::new("d"), FeatureName::new("e")];
         expected.sort();
@@ -135,7 +143,9 @@ mod tests {
 
         let mut from_d_and_f = features
             .expand_features([FeatureName::new("d"), FeatureName::new("f")])
-            .unwrap();
+            .unwrap()
+            .into_iter()
+            .collect::<Vec<_>>();
         from_d_and_f.sort();
         let mut expected = [
             FeatureName::new("d"),
@@ -147,7 +157,11 @@ mod tests {
         assert_eq!(from_d_and_f, expected);
 
         assert_eq!(
-            features.expand_features([FeatureName::new("c")]).unwrap(),
+            features
+                .expand_features([FeatureName::new("c")])
+                .unwrap()
+                .into_iter()
+                .collect::<Vec<_>>(),
             [FeatureName::new("c")]
         );
     }
