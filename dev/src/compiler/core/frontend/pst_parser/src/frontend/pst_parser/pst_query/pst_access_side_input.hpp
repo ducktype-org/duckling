@@ -11,11 +11,11 @@ namespace pst::internal {
 
 		PSTAccessKey(query::QueryStableHash stable_hash): hash(stable_hash) {}
 
-		// @TODO: #1433 remove this method
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			CORE_PANIC("Unstable hash should not be used for PST access side input");
-		}
+		// @TODO PR: remove the comment, validate that it works
+		// [[nodiscard]]
+		// u64 queryUnstablePerfectHash() const {
+		// 	CORE_PANIC("Unstable hash should not be used for PST access side input");
+		// }
 
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const {

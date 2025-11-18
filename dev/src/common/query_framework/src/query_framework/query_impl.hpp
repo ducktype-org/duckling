@@ -231,7 +231,7 @@ namespace query::internal {
 		"Load function must be callable with hash of QKey"                                        \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
-		registerQuery(type::QueryType::QUERY_DATA, ::query::HasStablePerfectHash<type::QKey>);
+		registerQuery(type::QueryType::QUERY_DATA);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

@@ -25,6 +25,7 @@ namespace query {
 		  };
 
 	/** Concept to validate queryStablePerfectHash signature */
+	// @TODO PR: validate if we need it now
 	template<typename KeyType>
 	concept HasStablePerfectHash = requires(KeyType t) {
 		{ t.queryStablePerfectHash() } -> std::same_as<QueryStableHash>;
