@@ -28,6 +28,8 @@ namespace query::internal {
  * @brief Internal macro used do delcare queries.
  * Should not be used directly.
  *
+ * @note QUERY_INTERFACE_TAG is just a dummy member to tag query interfaces.
+ *
  * @param query_type Name of the query
  * @param key_mp Type of the query key
  * @param result_mp Type of the query result
@@ -47,6 +49,7 @@ namespace query::internal {
                                                                                        \
 	public:                                                                            \
 		static constexpr ::query::internal::QueryData QUERY_DATA = query_data_mp;      \
+		static constexpr bool QUERY_INTERFACE_TAG = true;      \
 		static auto                                   getID() { return id; }           \
 		static constexpr auto&                        getData() { return QUERY_DATA; } \
 	};
