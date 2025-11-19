@@ -11,6 +11,7 @@
 #include <query_framework/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/simple_keys.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -73,11 +74,11 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
-DECLARE_QUERY(FibonacciStringAutoCache, u64, std::string, ({}));
+DECLARE_QUERY(FibonacciStringAutoCache, query::U64Key, std::string, ({}));
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key.value }));
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -106,12 +107,12 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 
-DECLARE_QUERY(CallingEntryPoint, u64, u64, ({}));
+DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 	static auto provide(Context&, QKey key) -> PResult {
 		// call another query without context:
-		return query::entryPoint<Fibonacci>({ key });
+		return query::entryPoint<Fibonacci>( {key.value} );
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -120,10 +121,10 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
 
-DECLARE_QUERY(ReferenceQuery, u64, CRef<u64>, ({}));
+DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({}));
 
 struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
-	static auto provide(Context&, QKey key) -> PResult { return key; }
+	static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
 	QUERY_AUTO_CACHE_REF
 };
@@ -131,10 +132,10 @@ struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(ReferenceQuery);
 
 
-DECLARE_QUERY(VectorReferenceQuery, u64, CRef<std::vector<u64>>, ({}));
+DECLARE_QUERY(VectorReferenceQuery, query::U64Key, CRef<std::vector<u64>>, ({}));
 
 struct IMPLEMENT_QUERY(VectorReferenceQuery, std::vector<u64>) {
-	static auto provide(Context&, QKey key) -> PResult { return { 1, 2, key }; }
+	static auto provide(Context&, QKey key) -> PResult { return { 1, 2, key.value }; }
 
 	QUERY_AUTO_CACHE_REF
 };
@@ -172,7 +173,7 @@ struct Result {
 	}
 };
 
-DECLARE_QUERY(LifeTimeQueryStable, u64, Result, ({}));
+DECLARE_QUERY(LifeTimeQueryStable, query::U64Key, Result, ({}));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -182,7 +183,7 @@ struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryStable);
 
-DECLARE_QUERY(LifeTimeQueryUnstable, u64, Result, ({}));
+DECLARE_QUERY(LifeTimeQueryUnstable, query::U64Key, Result, ({}));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -193,8 +194,8 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
 
-DECLARE_QUERY(CyclicQuery1, u64, u64, ({}));
-DECLARE_QUERY(CyclicQuery2, u64, u64, ({}));
+DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({}));
+DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CyclicQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult { return ctx.query<CyclicQuery2>(key); }
@@ -222,10 +223,10 @@ struct ConstructTo {
 	ConstructTo(ConstructFrom from): v(from.v) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructCacheTest, u64, ConstructTo, ({}));
+DECLARE_QUERY(ConstructCacheTest, query::U64Key, ConstructTo, ({}));
 
 struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
-	static auto provide(Context&, QKey key) -> PResult { return { key }; }
+	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
 
 	QUERY_AUTO_CACHE_CONSTRUCT
 };
@@ -240,12 +241,12 @@ namespace context_leak {
 	// assertions did not prevent it
 	bool use_leaked_query_happened = false;
 
-	DECLARE_QUERY(IdentityQuery, u64, u64, ({}));
-	DECLARE_QUERY(LeakQuery, u64, u64, ({}));
-	DECLARE_QUERY(UseLeakedContext, u64, u64, ({}));
+	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({}));
+	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({}));
+	DECLARE_QUERY(UseLeakedContext, query::U64Key, u64, ({}));
 
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
-		static auto provide(Context&, QKey key) -> PResult { return key; }
+		static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
 		QUERY_AUTO_NO_CACHE
 	};
@@ -255,8 +256,8 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(LeakQuery, u64) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			leaked_context = &ctx;
-			ctx.query<UseLeakedContext>(1);
-			return key;
+			ctx.query<UseLeakedContext>({1});
+			return key.value;
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -267,8 +268,8 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(UseLeakedContext, u64) {
 		static auto provide(Context&, QKey key) -> PResult {
 			use_leaked_query_happened = true;
-			leaked_context->query<IdentityQuery>(1);
-			return key;
+			leaked_context->query<IdentityQuery>({1});
+			return key.value;
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -296,22 +297,22 @@ struct KeyOf_SideInput {
 DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
-DECLARE_QUERY(EmptyQuery, u64, u64, ({}));
+DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
-	static auto provide(Context&, QKey key) -> PResult { return key; }
+	static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
 	QUERY_AUTO_NO_CACHE
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
 
-DECLARE_QUERY(CallEmptyQueryNTimes, u64, u64, ({}));
+DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		for (u64 i = 0; i < key; i++) ctx.query<EmptyQuery>(i);
-		return key;
+		for (u64 i = 0; i < key.value; i++) ctx.query<EmptyQuery>({i});
+		return key.value;
 	}
 
 	QUERY_AUTO_NO_CACHE
@@ -319,12 +320,12 @@ struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
 
-DECLARE_QUERY(CallSideInputNTimes, u64, u64, ({}));
+DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		for (u64 i = 0; i < key; i++) ctx.query<SideInput>(i);
-		return key;
+		for (u64 i = 0; i < key.value; i++) ctx.query<SideInput>({i});
+		return key.value;
 	}
 
 	QUERY_AUTO_NO_CACHE
@@ -396,7 +397,6 @@ struct KeyStable {
 DECLARE_QUERY(StableHashTest, KeyStable, u64, ({}));
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
-	using KHash = query::KHash<QKey>;
 	// record the hash value passed to load()
 	static inline query::QueryStableHash last_hash;
 
@@ -447,9 +447,9 @@ private:
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
 		assertTrue(query::entryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
-		assertTrue(*query::entryPoint<ReferenceQuery>(88) == 88, "Bad query output (5)");
+		assertTrue(*query::entryPoint<ReferenceQuery>({88}) == 88, "Bad query output (5)");
 		assertTrue(
-			*query::entryPoint<VectorReferenceQuery>(6) == std::vector<u64>{ 1, 2, 6 },
+			*query::entryPoint<VectorReferenceQuery>({6}) == std::vector<u64>{ 1, 2, 6 },
 			"Bad query output (6)"
 		);
 	}
@@ -457,8 +457,8 @@ private:
 	void autoCacheTest() {
 		// note: construct cache is tested in testConstructCache
 
-		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
-		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
+		assertTrue(query::entryPoint<FibonacciStringAutoCache>({10}) == "55", "Bad query output (5)");
+		assertTrue(query::entryPoint<FibonacciStringAutoCache>({10}) == "55", "Bad query output (6)");
 	}
 
 	void testDeps() {
@@ -466,34 +466,34 @@ private:
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
-			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>({1}); }, "Query deps present before query call."
 		);
 
-		query::entryPoint<EmptyQuery>(1);
-		auto deps = graph.getNodeDeps<EmptyQuery>(1);
+		query::entryPoint<EmptyQuery>({1});
+		auto deps = graph.getNodeDeps<EmptyQuery>({1});
 		ASSERT_EQUAL(deps.size(), 1);
 
 		assertThrows<base::Panic>(
-			[&]() { graph.getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>({2}); }, "Query deps present before query call."
 		);
 
-		query::entryPoint<CallEmptyQueryNTimes>(10);
-		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>(10);
+		query::entryPoint<CallEmptyQueryNTimes>({10});
+		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>({10});
 		// 10 + 1 for the query itself:
 		ASSERT_EQUAL(deps2.size(), 11);
 		{
 			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, EmptyQuery::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
 			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, CallEmptyQueryNTimes::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, CallEmptyQueryNTimes::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{
 			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
 #endif
@@ -504,8 +504,8 @@ private:
 
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
-			query::entryPoint<CallSideInputNTimes>(10);
-			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
+			query::entryPoint<CallSideInputNTimes>({10});
+			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>({10}, SideInput::getID());
 			ASSERT_EQUAL(deps.size(), 10);
 		}
 	}
@@ -513,7 +513,7 @@ private:
 	void entryPointSanityTest() {
 #if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<CallingEntryPoint>(1); },
+			[&]() { query::entryPoint<CallingEntryPoint>({1}); },
 			"Calling entry point from query did not panicked."
 		);
 #endif
@@ -522,18 +522,18 @@ private:
 	template<class Query>
 	void resultLifetimeTest() {
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>(0);
+			auto res1 = ctx.query<Query>({0});
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<Query>(0);
+			auto res2 = ctx.query<Query>({0});
 			ASSERT_TRUE(res2.validate());
 		});
 
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>(0);
+			auto res1 = ctx.query<Query>({0});
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<Query>(0);
+			auto res2 = ctx.query<Query>({0});
 			ASSERT_TRUE(res2.validate());
 		});
 	}
@@ -576,7 +576,7 @@ private:
 		// note: this test will change when proper cycle handling will
 		// be introduced.
 		assertThrows<base::NotYetImplemented>(
-			[&]() { query::entryPoint<CyclicQuery1>(1); }, "Cycle detection did not throw."
+			[&]() { query::entryPoint<CyclicQuery1>({1}); }, "Cycle detection did not throw."
 		);
 	}
 
@@ -591,15 +591,15 @@ private:
 	void testConstructCache() {
 		ConstructTo::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<ConstructCacheTest>(10);
+			auto res1 = ctx.query<ConstructCacheTest>({10});
 			ASSERT_TRUE(res1.v == 10);
 			ASSERT_TRUE(ConstructTo::construct_count == 1);
 
-			auto res2 = ctx.query<ConstructCacheTest>(10);
+			auto res2 = ctx.query<ConstructCacheTest>({10});
 			ASSERT_TRUE(res2.v == 10);
 			ASSERT_TRUE(ConstructTo::construct_count == 2);
 
-			auto res3 = ctx.query<ConstructCacheTest>(20);
+			auto res3 = ctx.query<ConstructCacheTest>({20});
 			ASSERT_TRUE(res3.v == 20);
 			ASSERT_TRUE(ConstructTo::construct_count == 3);
 		});
@@ -608,7 +608,7 @@ private:
 	void testContextSanityCheck() {
 #if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
+			[&]() { query::entryPoint<context_leak::LeakQuery>({1}); },
 			"Bad context usage not detected"
 		);
 		assertTrue(
@@ -776,8 +776,8 @@ private:
 
 		query::entryPoint<StableHashTest>(key);
 
-		query::perfectHashKey(key);
-		std::cout << ImplementationOf_StableHashTest::CACHE_ON_DISK << "\n";
+		query::perfectHashKey<true>(key);
+		std::cout << ImplementationOf_StableHashTest::QueryType::QUERY_DATA.tags.usesStableHashing() << "\n";
 		std::cout << "Last hash: " << ImplementationOf_StableHashTest::last_hash << "\n";
 		std::cout << "Expected : " << key.stable << "\n";
 		std::cout << "Unexpected: " << key.unstable << "\n";
