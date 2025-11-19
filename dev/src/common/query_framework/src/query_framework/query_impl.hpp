@@ -156,6 +156,19 @@ namespace query::internal {
 		 * QResult;
 		 */
 	};
+
+
+	/** Checks if query implementation provides loadFromDisc with either exact PResult signature
+	or Optional<PResult> signature (used to signal absence of on-disk artifact).
+	*/
+	template<typename Impl>
+	concept HasLoadFromDiscWithSignature =
+	requires(const typename Impl::QKey& key) {
+			  { Impl::loadFromDisc(key) } -> std::same_as<typename Impl::PResult>;
+		  } || requires(const typename Impl::QKey& key) {
+			  { Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
+		  };
+
 }
 
 /**
@@ -168,18 +181,6 @@ namespace query::internal {
 		  public query::internal::QueryImplementation<query_type, PResult>
 
 
-
-
-
-// @TODO PR: add /update assertions bellow
-
-// in particular use it:
-	// Concept: implementation provides loadFromDisc with either exact PResult signature
-	// or Optional<PResult> signature (used to signal absence of on-disk artifact).
-	// template<typename Impl>
-	// concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
-	// 	{ Impl::loadFromDisc(key) };
-	// } && (std::same_as<decltype(Impl::loadFromDisc(std::declval<const typename Impl::QKey&>())), base::Optional<typename Impl::PResult>>);
 
 
 /**
@@ -238,6 +239,10 @@ namespace query::internal {
 	static_assert(                                                                                \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                                              \
 		"queryStablePerfectHash must be implemented and return QueryStableHash"                   \
+	);                                                                                            \
+	static_assert(                                                                                \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.is_cached_on_disk, ::query::internall::HasLoadFromDiscWithSignature<type>),                                              \
+		"loadFromDisk must be implemented for queries that are cached on disk"                   \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
 		registerQuery(type::QueryType::QUERY_DATA);
