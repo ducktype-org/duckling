@@ -27,7 +27,7 @@ namespace query::internal {
 	 * @note We use aggrate initialization for QueryTags, we can emulate default value + named
 	 * arguments, since most queries will only set a few tags different than default (or none).
 	 *
-	 * @TODO PR: move it out of internall?
+	 * @TODO PR: move it out of internal? Also keep tags super simple, and move methods to data
 	 */
 	struct QueryTags final {
 		// Helper type definitions:
@@ -45,10 +45,10 @@ namespace query::internal {
 		UsedHashes used_hashes = UsedHashes::UnstableHash;
 
 		/**
-		 * Whether query is cached on disk.
+		 * Whether query is cached on disk and can be loaded from there in incremental compilation.
 		 * Queries cached on disk must use stable hashing and provide loadFromDisc function.
 		 */
-		bool is_cached_on_disk = false;
+		bool can_be_loaded_from_disk = false;
 
 		// additional methods:
 
@@ -64,14 +64,14 @@ namespace query::internal {
 
 		/**
 		 * Verify that the tags are consistent.
-		 * For example, if is_cached_on_disk is true, then used_hashes must be StableHash.
+		 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
 		 * Is run in comptime time in query implementation boilerplate.
 		 *
 		 * @TODO PR: also validate if query type and tags are consistent
 		 */
 		[[nodiscard]]
 		constexpr bool verify() const {
-			if (is_cached_on_disk and used_hashes != UsedHashes::StableHash) {
+			if (can_be_loaded_from_disk and used_hashes != UsedHashes::StableHash) {
 				// queries that are cached on disk must use stable hashing
 				return false;
 			}

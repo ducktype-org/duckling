@@ -82,7 +82,10 @@ namespace tsh {
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(
-		QueryImplicitCoercibilityOnAbstractType, KeyFor_QueryImplicitCoercibilityOnAbstractType, bool
+		QueryImplicitCoercibilityOnAbstractType,
+		KeyFor_QueryImplicitCoercibilityOnAbstractType,
+		bool,
+		({})
 	)
 
 	/**
@@ -126,7 +129,10 @@ namespace tsh {
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(
-		QueryImplicitCoercibilityOnSymbolType, KeyFor_QueryImplicitCoercibilityOnSymbolType, bool
+		QueryImplicitCoercibilityOnSymbolType,
+		KeyFor_QueryImplicitCoercibilityOnSymbolType,
+		bool,
+		({})
 	)
 
 	/**
@@ -172,6 +178,7 @@ namespace tsh {
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnExpressionType,
 		KeyFor_QueryImplicitCoercibilityOnExpressionType,
-		bool
+		bool,
+		({})
 	)
 }

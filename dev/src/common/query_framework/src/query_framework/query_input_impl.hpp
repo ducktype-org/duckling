@@ -28,4 +28,4 @@
 		"queryStablePerfectHash must be implemented for side inputs keys"                        \
 	);                                                                                           \
 	decltype(query_type::id) query_type::id                                                      \
-		= ::query::internal::registerQuery(query_type::getData(), true);
+		= ::query::internal::registerQuery(query_type::getData());
