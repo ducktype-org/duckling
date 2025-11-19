@@ -66,6 +66,8 @@ namespace query::internal {
 		 * Verify that the tags are consistent.
 		 * For example, if is_cached_on_disk is true, then used_hashes must be StableHash.
 		 * Is run in comptime time in query implementation boilerplate.
+		 *
+		 * @TODO PR: also validate if query type and tags are consistent
 		 */
 		[[nodiscard]]
 		constexpr bool verify() const {
