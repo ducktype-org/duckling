@@ -31,18 +31,19 @@ namespace query {
 		{ t.queryStablePerfectHash() } -> std::same_as<QueryStableHash>;
 	};
 
-	/**
-	 * @brief Type alias for the perfect stable hash type of a given key type.
-	 */
-	template<typename KeyType>
-	using KHashStable = QueryStableHash;
+	template<typename KeyType, bool use_stable_hash>
+	struct KHashSelectorHelper final {
+		using type = QueryStableHash;
+	};
 
-	/**
-	 * @brief Type alias for the perfect unstable hash type of a given key type.
-	 */
 	template<typename KeyType>
-	using KHashUnstable
-		= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
+	struct KHashSelectorHelper<KeyType, false> final {
+		using type
+			= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
+	};
+
+	template<typename KeyType, bool USE_STABLE_HASH>
+	using KHashSelector = typename KHashSelectorHelper<KeyType, USE_STABLE_HASH>::type;
 
 	/**
 	 * @brief Gets "perfect" hash from a key.

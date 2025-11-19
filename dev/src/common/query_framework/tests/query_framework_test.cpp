@@ -18,8 +18,6 @@
 #include <sstream>
 #include <type_traits>
 
-// @TODO PR: fix u64/bool queries
-
 struct Key1 {
 	u64            v;
 	constexpr auto operator<=>(const Key1& oth) const = default;

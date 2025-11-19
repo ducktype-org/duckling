@@ -134,11 +134,11 @@ namespace query::internal {
 		constexpr static bool IS_CACHED_ON_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
 
+
 		/**
 		 * Type of the perfect key-hash values used in the query.
 		 */
-		using KHash
-			= std::conditional_t<IS_HASH_STABLE, query::KHashStable<QKey>, query::KHashUnstable<QKey>>;
+		using KHash = KHashSelector<QKey, IS_HASH_STABLE>;
 
 		using Context = ::query::Context;
 
@@ -214,7 +214,7 @@ namespace query::internal {
 		std::is_invocable_v<decltype(type::load), type::KHash>,                                                                        \
 		"Load function must be callable with hash of QKey"                                                                             \
 	);                                                                                                                                 \
-	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                          \
+	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                \
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),             \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                        \
