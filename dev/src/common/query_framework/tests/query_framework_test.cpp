@@ -374,13 +374,13 @@ struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
 QUERY_IMPLEMENTATION_BOILERPLATE(DoNotCopyKeys);
 
 // New: key and query to test stable-vs-unstable perfect hash selection
-struct KeyStable {
+struct KeyStable final {
 	u64                    unstable;
 	query::QueryStableHash stable;
 
 	[[nodiscard]]
 	u64 queryUnstablePerfectHash() const {
-		CORE_PANIC("Should never be called because stable hash is present (for now)");
+		CORE_PANIC("Should never be called, since StableHashTest uses stable hashes.");
 		return unstable;
 	}
 
@@ -390,7 +390,7 @@ struct KeyStable {
 	}
 };
 
-DECLARE_QUERY(StableHashTest, KeyStable, u64, ({}));
+DECLARE_QUERY(StableHashTest, KeyStable, u64, ({.used_hashes = query::internal::QueryTags::UsedHashes::StableHash}));
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	// record the hash value passed to load()
