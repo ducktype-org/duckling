@@ -199,6 +199,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string funcType(query::Context& ctx, SymID symbol_id) {
+			// @TODO: #1568 use type mangling for parameter and return types.
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
@@ -334,7 +335,14 @@ namespace compiler::helios::mangler {
 				}
 				CORE_UNREACHABLE();
 			}
+			case SymbolKind::Class: {
+				// @TODO: #1568 generalise type mangling?
+				return path(ctx, symbol_id);
+			}
 
+				// Currently, we are handling constructor mangling differently (as functions).
+				// However, this code existed earlier and provided a different mangling scheme
+				// for constructors and destructors, which we may want to reference in the future.
 				// case SymbolKind::Constructor:
 				// case SymbolKind::Destructor:
 				// 	return path(ctx, symbol_id, false) + specialMemberType(ctx, symbol_id);
@@ -417,6 +425,7 @@ namespace compiler::helios::mangler {
 					return base::StrID{ "main" };
 				} else if (kind(std::get<0>(key.symbol_key)) == SymbolKind::BuiltinFunction) {
 					// Builtin functions are not mangled
+					// @TODO: #1419 Simplify this handling of builtin functions.
 					return name(std::get<0>(key.symbol_key));
 				}
 			}

@@ -683,7 +683,7 @@ namespace compiler::helios {
 			}
 
 			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
-				// Generated symbols have no specifiers
+				// Generated symbols have no specifiers (for now)
 				return {};
 			}
 

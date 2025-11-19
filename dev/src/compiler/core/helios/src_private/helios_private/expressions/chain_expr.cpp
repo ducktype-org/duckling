@@ -295,6 +295,7 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
@@ -526,7 +527,7 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			// @TODO #981: make it better:
+			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));

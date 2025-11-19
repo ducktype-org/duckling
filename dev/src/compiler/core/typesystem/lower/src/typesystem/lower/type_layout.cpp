@@ -2,6 +2,7 @@
 
 #include "queries.hpp"
 
+#include <helios/mangler/mangler.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -126,9 +127,10 @@ namespace tsl {
 		 * @return A vector which has the field symbols in the order in which they appear in the
 		 * layout.
 		 */
-		std::vector<compiler::helios::SymID> layoutsIndicesToSymIDs(
+		std::vector<compiler::helios::SymID> getLayoutIndicesToSymIDs(
 			const std::vector<tsh::InterfaceElement>& fields, const std::vector<Bytes>& offsets
 		) {
+			CORE_ASSERT(fields.size() == offsets.size(), "Input vectors must have the same size.");
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
 			std::vector<compiler::helios::SymID> result;
 			result.reserve(permutation.size());
@@ -222,10 +224,24 @@ namespace tsl {
 	}
 
 	struct TupleTypeLayoutConstructionHelper {
-		tsh::TupleAbstractType        tuple_type;
+		tsh::TupleAbstractType tuple_type;
+		/**
+		 * The layouts of the components in the abstract tuple type.
+		 */
 		std::vector<CRef<TypeLayout>> component_layouts;
-		std::vector<Bytes>            component_offsets;
-		std::vector<usize>            layout_idx_to_component_idx;
+		/**
+		 * The offsets of the components in the abstract tuple type.
+		 * Note, the offsets are not necessarily increasing.
+		 */
+		std::vector<Bytes> component_offsets;
+		/**
+		 * Mapping from the order of appearance of sub-objects in the layout
+		 * to the index of the component in the abstract tuple type.
+		 */
+		std::vector<usize> layout_idx_to_component_idx;
+		/**
+		 * The layouts of the sub-objects, in the order of appearance in the tuple layout.
+		 */
 		std::vector<CRef<TypeLayout>> layout_idx_to_component_layout;
 		Bits                          total_size;
 
@@ -288,11 +304,29 @@ namespace tsl {
 	}
 
 	struct ClassTypeLayoutConstructionHelper {
-		tsh::ClassAbstractType               class_type;
-		std::vector<tsh::InterfaceElement>   field_elements;
-		std::vector<CRef<TypeLayout>>        field_layouts;
-		std::vector<Bytes>                   field_offsets;
-		std::vector<usize>                   layout_idx_to_field_idx;
+		tsh::ClassAbstractType class_type;
+		/**
+		 * The fields of the class, in declaration order.
+		 */
+		std::vector<tsh::InterfaceElement> field_elements;
+		/**
+		 * The layouts of the fields, in declaration order.
+		 */
+		std::vector<CRef<TypeLayout>> field_layouts;
+		/**
+		 * The offsets of the fields, in declaration order.
+		 * Note, the offsets are not necessarily increasing.
+		 */
+		std::vector<Bytes> field_offsets;
+		/**
+		 * Mapping from the order of appearance of sub-objects
+		 * in the layout to the declaration index of the field.
+		 */
+		std::vector<usize> layout_idx_to_field_idx;
+		/**
+		 * Mapping from the order of appearance of sub-objects
+		 * in the layout to the symbol ID of the field.
+		 */
 		std::vector<compiler::helios::SymID> layout_idx_to_sym_id;
 		Bits                                 total_size;
 
@@ -327,7 +361,7 @@ namespace tsl {
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
-			  layout_idx_to_sym_id(layoutsIndicesToSymIDs(field_elements, field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
 			  total_size(
 				  field_layouts.empty()
 					  ? Bits(0)
@@ -336,12 +370,17 @@ namespace tsl {
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
-		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx)) {}
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
-	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper):
+	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(helper.total_size, helper.class_type),
 		  num_fields(helper.field_layouts.size()),
-		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
+		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id),
+		  mangled_name(ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
+			  compiler::helios::mangler::KeyOf_MangledSymbol{
+				  .symbol_key = helper.class_type.getSymbol(),
+			  }
+		  )) {
 		for (u32 i = 0; i < num_fields; i++) {
 			// Fill out the map based on the subsequent field symbols and their offsets.
 			sym_id_to_offset.put(

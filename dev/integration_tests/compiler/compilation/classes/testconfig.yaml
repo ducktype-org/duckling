@@ -6,4 +6,4 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n42\n1\n"
+          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n"
