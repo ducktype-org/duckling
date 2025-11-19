@@ -131,7 +131,7 @@ namespace compiler::helios {
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 */
 	DECLARE_QUERY(
-		QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, {}
+		QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, ({})
 	)
 
 	/**

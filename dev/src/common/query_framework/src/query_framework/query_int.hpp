@@ -60,6 +60,10 @@ namespace query::internal {
  *
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue, ({ / * non-default tags * / }))`
+ *
+ * @note Tags must be passed as parenthesized list, e.g. `({})` or `({Tag1, Tag2})`.
+ * This way there are no issues with commas in macro arguments.
+ * Lack of parentheses should produce compilation errors.
  */
 #define DECLARE_QUERY(query_type, key, value, tags)               \
 	DECLARE_QUERY_AUX(                                            \

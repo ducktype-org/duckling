@@ -43,7 +43,7 @@ namespace compiler::mir {
 		LowerGlobalDataToMIRCtor,
 		KeyOf_LowerGlobalDataToMIRFunction,
 		CRef<LowerGlobalDataToMIRFunctionResult>,
-		{}
+		({})
 	)
 
 	/**
