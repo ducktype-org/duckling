@@ -39,25 +39,28 @@ namespace query::internal {
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
 		typename QueryImplType::QResult {
-		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
+
+		using QueryIntType = QueryImplType::QueryType;
+
+		QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Enter.\n");
 
 		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
 
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{
-			QueryImplType::QueryType::getID()
+			QueryIntType::getID()
 		};
 
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
+				"[QUERY \"", QueryIntType::getName(), "\"]: Cached. Done.\n"
 			);
 
 			return std::move(v.value().data);
 		} else {
-			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
+			auto node_id = makeNodeID<QueryIntType>(key);
 			auto context = ContextAccess::make(node_id);
 
 			// @FUTURE: provide legit acd here
@@ -71,7 +74,7 @@ namespace query::internal {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
 					QUERY_DEBUG_LOG(
-						"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Loading from disk.\n"
+						"[QUERY \"", QueryIntType::getName(), "\"]: Loading from disk.\n"
 					);
 
 					auto loaded = QueryImplType::loadFromDisc(key);
@@ -96,10 +99,10 @@ namespace query::internal {
 			// prolog:
 			ContextAccess::getState()->setEntry(node_id, from);
 
-			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
+			QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Calculating.\n");
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Done.\n"));
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 

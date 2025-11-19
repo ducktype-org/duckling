@@ -8,7 +8,7 @@
 #include "context.hpp"
 #include "empty_key.hpp"
 #include "internal/query_data/query_id.hpp"
-#include "internal/query_graph/node_making.hpp"
+#include "internal/query_graph/node_id.hpp"
 
 #include <base/except/exceptions.hpp>
 
@@ -22,8 +22,9 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
+				// We create a node id here directly, so we can insert "outside world" as caller.
 				return QueryType::internal_query(
-					key, internal::makeNodeID(internal::outsideWorldQueryID(), EmptyKey())
+					key, NodeID(internal::outsideWorldQueryID(), {EmptyKey().queryStablePerfectHash()})
 				);
 			}
 		};

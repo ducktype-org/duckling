@@ -11,5 +11,10 @@ namespace query {
 		u64 queryUnstablePerfectHash() const {
 			return 0;
 		}
+
+		[[nodiscard]]
+		u64 queryStablePerfectHash() const {
+			return 0;
+		}
 	};
 }

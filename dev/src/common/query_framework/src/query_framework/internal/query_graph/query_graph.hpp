@@ -60,7 +60,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDeps(typename Query::QKey key) const {
-			internal::NodeID node_id = makeNodeID(Query::getID(), key);
+			internal::NodeID node_id = makeNodeID<Query>(key);
 			return this->getNodeDeps(node_id);
 		}
 
@@ -69,7 +69,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDepsFiltered(typename Query::QKey key, internal::QueryID dependency_id) const {
-			internal::NodeID node_id = makeNodeID(Query::getID(), key);
+			internal::NodeID node_id = makeNodeID<Query>(key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
 
