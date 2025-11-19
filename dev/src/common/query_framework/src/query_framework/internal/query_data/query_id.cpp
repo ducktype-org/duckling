@@ -47,7 +47,7 @@ namespace query::internal {
 		return dataMap().at(*this);
 	}
 
-	bool QueryID::hasStableHash() const { return getData().tags.isHashStable(); }
+	bool QueryID::hasStableHash() const { return getData().tags.usesStableHashing(); }
 
 	bool QueryID::registered() const { return dataMap().contains(*this); }
 

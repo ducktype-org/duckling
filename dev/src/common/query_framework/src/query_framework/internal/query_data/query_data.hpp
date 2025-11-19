@@ -53,17 +53,28 @@ namespace query::internal {
 		// additional methods:
 
 		[[nodiscard]]
-		bool isHashStable() const {
+		bool usesStableHashing() const {
 			return used_hashes == UsedHashes::StableHash;
+		}
+
+		[[nodiscard]]
+		bool usesUnstableHashing() const {
+			return used_hashes == UsedHashes::UnstableHash;
 		}
 
 		/**
 		 * Verify that the tags are consistent.
 		 * For example, if is_cached_on_disk is true, then used_hashes must be StableHash.
-		 * Is run in runtime by the query framework when registering the query.
-		 * @TODO PR: do it
+		 * Is run in comptime time in query implementation boilerplate.
 		 */
-		void verify() const;
+		 [[nodiscard]]
+		constexpr bool verify() const {
+			if (is_cached_on_disk and used_hashes != UsedHashes::StableHash) {
+				// queries that are cached on disk must use stable hashing
+				return false;
+			}
+			return true;
+		}
 	};
 
 	/**

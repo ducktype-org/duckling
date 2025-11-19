@@ -14,7 +14,7 @@ namespace query {
 	using QueryStableHash = base::Bit256;
 
 	/**
-	 *  Concept to validate queryUnstablePerfectHash signature
+	 * Concept that checks if a key provides queryUnstablePerfectHash method with valid signature.
 	 */
 	template<typename KeyType>
 	concept HasUnstablePerfectHash
@@ -24,8 +24,9 @@ namespace query {
 			  { t.queryUnstablePerfectHash() } -> std::same_as<base::Bit256>;
 		  };
 
-	/** Concept to validate queryStablePerfectHash signature */
-	// @TODO PR: validate if we need it now
+	/**
+	 * Concept that checks if a key provides queryStablePerfectHash method with valid signature.
+	 */
 	template<typename KeyType>
 	concept HasStablePerfectHash = requires(KeyType t) {
 		{ t.queryStablePerfectHash() } -> std::same_as<QueryStableHash>;
@@ -44,8 +45,7 @@ namespace query {
 	using KHashUnstable = decltype(std::declval<std::remove_cvref_t<KeyType>>().queryStablePerfectHash());
 
 	/**
-	 * @brief Gets "perfect" hash from a key: prefer stable if queryStablePerfectHash exists,
-	 * otherwise use queryUnstablePerfectHash. Keeps the u64/bool fast-paths.
+	 * @brief Gets "perfect" hash from a key.
 	 */
 	template<bool use_stable_hash, typename KeyType>
 	auto perfectHashKey(const KeyType& key) {

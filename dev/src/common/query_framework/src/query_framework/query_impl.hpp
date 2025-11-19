@@ -21,6 +21,7 @@
 #include <base/extend_cpp/defer.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/misc/lazy_implies.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>
@@ -119,6 +120,10 @@ namespace query::internal {
 	 */
 	template<typename QueryType_tp, typename PResult_tp>
 	struct QueryImplementation final {
+
+		/**
+		 * Type of query interface struct (i.e. declaration struct).
+		 */
 		using QueryType = QueryType_tp;
 
 		using QKey        = typename QueryType_tp::QKey;
@@ -129,7 +134,7 @@ namespace query::internal {
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		// Some forwards used to simplify the code:
-		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.tags.isHashStable();
+		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.tags.usesStableHashing();
 		constexpr static bool IS_CACHED_ON_DISK = QueryType_tp::QUERY_DATA.tags.is_cached_on_disk;
 		
 		/**
@@ -217,18 +222,22 @@ namespace query::internal {
 		not std::is_reference_v<type::QKey>,                                                      \
 		"Query key type should not be a reference (use custom struct instead)"                    \
 	);                                                                                            \
-	static_assert(                                                                                \
-		::query::HasUnstablePerfectHash<type::QKey>,                                              \
-		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                   \
-	);                                                                                            \
-	static_assert(                                                                                \
-		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
-		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
-		"(QueryStableHash)."                                                                      \
-	);                                                                                            \
+	                                                                                          \
 	static_assert(                                                                                \
 		std::is_invocable_v<decltype(type::load), query::KHash<type::QKey>>,                      \
 		"Load function must be callable with hash of QKey"                                        \
+	);\
+	static_assert(                                                                                \
+		type::QUERY_DATA.tags.verify(),                                                           \
+		"Query tags are inconsistent."                                                            \
+	);                                                                                            \
+	static_assert(                                                                                \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                   \
+	);                                                                                            \
+	static_assert(                                                                                \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                                              \
+		"queryStablePerfectHash must be implemented and return QueryStableHash"                   \
 	);                                                                                            \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::                       \
 		registerQuery(type::QueryType::QUERY_DATA);
