@@ -26,6 +26,8 @@ namespace query::internal {
 	 *
 	 * @note We use aggrate initialization for QueryTags, we can emulate default value + named
 	 * arguments, since most queries will only set a few tags different than default (or none).
+	 *
+	 * @TODO PR: move it out of internall?
 	 */
 	struct QueryTags final {
 		// Helper type definitions:

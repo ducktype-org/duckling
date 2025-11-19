@@ -55,11 +55,11 @@ namespace compiler::driver {
 	 */
 	DECLARE_QUERY(
 		CompileModule,
-		KeyOf_CompileModule, artifacts::FileArtifact,
+		KeyOf_CompileModule,
+		artifacts::FileArtifact,
 		({
-			.used_hashes = a,
+			.used_hashes = query::internal::QueryTags::UsedHashes::StableHash,
 			.is_cached_on_disk = true,
-			.
 		})
 	);
 }

@@ -46,8 +46,7 @@ namespace query::internal {
 		friend struct ::query::internal::EntryPointHelper;                             \
                                                                                        \
 	public:                                                                            \
-		static constexpr ::query::internal::QueryData QUERY_DATA = \
-			REMOVE_PARENTHESES(query_data_mp);      \
+		static constexpr ::query::internal::QueryData QUERY_DATA = query_data_mp;      \
 		static auto            getID() { return id; }                                  \
 		static constexpr auto& getData() { return QUERY_DATA; }                        \
 	};
@@ -64,5 +63,10 @@ namespace query::internal {
 		query_type,                                                                           \
 		key,                                                                                  \
 		value,                                                                                \
-		::query::internal::QueryData(::query::internal::QueryType::Normal, #query_type, tags) \
+		::query::internal::QueryData( \
+			::query::internal::QueryType::Normal, \
+			#query_type, \
+			::query::internal::QueryTags REMOVE_PARENTHESES(tags)\
+		)\
+			\
 	)
