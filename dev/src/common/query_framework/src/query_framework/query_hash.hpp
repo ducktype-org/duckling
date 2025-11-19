@@ -42,7 +42,7 @@ namespace query {
 	 */
 	template<typename KeyType>
 	using KHashUnstable
-		= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryStablePerfectHash());
+		= decltype(std::declval<std::remove_cvref_t<KeyType>>().queryUnstablePerfectHash());
 
 	/**
 	 * @brief Gets "perfect" hash from a key.

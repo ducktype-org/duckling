@@ -53,12 +53,12 @@ namespace query::internal {
 		// additional methods:
 
 		[[nodiscard]]
-		bool usesStableHashing() const {
+		constexpr bool usesStableHashing() const {
 			return used_hashes == UsedHashes::StableHash;
 		}
 
 		[[nodiscard]]
-		bool usesUnstableHashing() const {
+		constexpr bool usesUnstableHashing() const {
 			return used_hashes == UsedHashes::UnstableHash;
 		}
 

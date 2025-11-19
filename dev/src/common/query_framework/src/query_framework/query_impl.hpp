@@ -118,7 +118,7 @@ namespace query::internal {
 	 * @tparam PResult_tp PResult of a query
 	 */
 	template<typename QueryType_tp, typename PResult_tp>
-	struct QueryImplementation final {
+	struct QueryImplementation {
 		/**
 		 * Type of query interface struct (i.e. declaration struct).
 		 */
