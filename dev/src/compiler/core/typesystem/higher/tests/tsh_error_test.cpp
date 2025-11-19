@@ -37,7 +37,7 @@ private:
 	void floatSizeErrorTest() {
 		query::Context::logger.clear();
 		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
-		query::entryPoint<QueryFloatType>({42});
+		query::entryPoint<QueryFloatType>({ 42 });
 
 		std::stringstream dumped_logs;
 		assertTrue(

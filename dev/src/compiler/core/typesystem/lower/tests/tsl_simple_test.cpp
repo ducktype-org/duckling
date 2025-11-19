@@ -105,7 +105,7 @@ private:
 
 			for (constexpr std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
 			     usize                          size: float_sizes) {
-				FloatAbstractType float_type   = ctx.query<QueryFloatType>({size});
+				FloatAbstractType float_type   = ctx.query<QueryFloatType>({ size });
 				auto              float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
 				assertTrue(
 					float_layout->getSize() == Bits(size),
@@ -234,7 +234,7 @@ private:
 	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			SymbolType<>              i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
-			SymbolType<>              f16_type = st(ctx.query<QueryFloatType>({16}));
+			SymbolType<>              f16_type = st(ctx.query<QueryFloatType>({ 16 }));
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
 			auto variant_layout = ctx.query<QueryAbstractTypeLayout>(variant_type);
@@ -276,12 +276,12 @@ private:
 	void tupleTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const SymbolType<> i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
-			const SymbolType<> f16_type = st(ctx.query<QueryFloatType>({16}));
-			const SymbolType<> f64_type = st(ctx.query<QueryFloatType>({64}));
+			const SymbolType<> f16_type = st(ctx.query<QueryFloatType>({ 16 }));
+			const SymbolType<> f64_type = st(ctx.query<QueryFloatType>({ 64 }));
 			const SymbolType<> f16_ref
-				= SymbolType<>{ ctx.query<QueryFloatType>({16}), ReferenceKind::Ref, Immutable };
+				= SymbolType<>{ ctx.query<QueryFloatType>({ 16 }), ReferenceKind::Ref, Immutable };
 			const SymbolType<> f16_box
-				= SymbolType<>{ ctx.query<QueryFloatType>({16}), ReferenceKind::Box, Immutable };
+				= SymbolType<>{ ctx.query<QueryFloatType>({ 16 }), ReferenceKind::Box, Immutable };
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });

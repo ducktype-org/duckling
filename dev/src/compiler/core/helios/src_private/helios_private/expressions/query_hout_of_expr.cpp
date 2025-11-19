@@ -282,19 +282,19 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({80}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 80 }));
 					break;
 				case pst::Keyword::f128:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({128}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 128 }));
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({64}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 64 }));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({32}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 32 }));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({16}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 16 }));
 					break;
 
 

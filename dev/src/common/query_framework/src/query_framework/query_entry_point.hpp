@@ -6,9 +6,9 @@
 #pragma once
 
 #include "context.hpp"
-#include "simple_keys.hpp"
 #include "internal/query_data/query_id.hpp"
 #include "internal/query_graph/node_id.hpp"
+#include "simple_keys.hpp"
 
 #include <base/except/exceptions.hpp>
 
