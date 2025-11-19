@@ -112,7 +112,7 @@ DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({}));
 struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 	static auto provide(Context&, QKey key) -> PResult {
 		// call another query without context:
-		return query::entryPoint<Fibonacci>( {key.value} );
+		return query::entryPoint<Fibonacci>({ key.value });
 	}
 
 	QUERY_AUTO_CACHE_COPY
@@ -256,7 +256,7 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(LeakQuery, u64) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			leaked_context = &ctx;
-			ctx.query<UseLeakedContext>({1});
+			ctx.query<UseLeakedContext>({ 1 });
 			return key.value;
 		}
 
@@ -268,7 +268,7 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(UseLeakedContext, u64) {
 		static auto provide(Context&, QKey key) -> PResult {
 			use_leaked_query_happened = true;
-			leaked_context->query<IdentityQuery>({1});
+			leaked_context->query<IdentityQuery>({ 1 });
 			return key.value;
 		}
 
@@ -311,7 +311,7 @@ DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		for (u64 i = 0; i < key.value; i++) ctx.query<EmptyQuery>({i});
+		for (u64 i = 0; i < key.value; i++) ctx.query<EmptyQuery>({ i });
 		return key.value;
 	}
 
@@ -324,7 +324,7 @@ DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({}));
 
 struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		for (u64 i = 0; i < key.value; i++) ctx.query<SideInput>({i});
+		for (u64 i = 0; i < key.value; i++) ctx.query<SideInput>({ i });
 		return key.value;
 	}
 
@@ -447,9 +447,9 @@ private:
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
 		assertTrue(query::entryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
-		assertTrue(*query::entryPoint<ReferenceQuery>({88}) == 88, "Bad query output (5)");
+		assertTrue(*query::entryPoint<ReferenceQuery>({ 88 }) == 88, "Bad query output (5)");
 		assertTrue(
-			*query::entryPoint<VectorReferenceQuery>({6}) == std::vector<u64>{ 1, 2, 6 },
+			*query::entryPoint<VectorReferenceQuery>({ 6 }) == std::vector<u64>{ 1, 2, 6 },
 			"Bad query output (6)"
 		);
 	}
@@ -457,8 +457,12 @@ private:
 	void autoCacheTest() {
 		// note: construct cache is tested in testConstructCache
 
-		assertTrue(query::entryPoint<FibonacciStringAutoCache>({10}) == "55", "Bad query output (5)");
-		assertTrue(query::entryPoint<FibonacciStringAutoCache>({10}) == "55", "Bad query output (6)");
+		assertTrue(
+			query::entryPoint<FibonacciStringAutoCache>({ 10 }) == "55", "Bad query output (5)"
+		);
+		assertTrue(
+			query::entryPoint<FibonacciStringAutoCache>({ 10 }) == "55", "Bad query output (6)"
+		);
 	}
 
 	void testDeps() {
@@ -466,34 +470,35 @@ private:
 		const auto& graph = query::Context::getState().getGraph();
 
 		assertThrows<base::Panic>(
-			[&]() { graph.getNodeDeps<EmptyQuery>({1}); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>({ 1 }); }, "Query deps present before query call."
 		);
 
-		query::entryPoint<EmptyQuery>({1});
-		auto deps = graph.getNodeDeps<EmptyQuery>({1});
+		query::entryPoint<EmptyQuery>({ 1 });
+		auto deps = graph.getNodeDeps<EmptyQuery>({ 1 });
 		ASSERT_EQUAL(deps.size(), 1);
 
 		assertThrows<base::Panic>(
-			[&]() { graph.getNodeDeps<EmptyQuery>({2}); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>({ 2 }); }, "Query deps present before query call."
 		);
 
-		query::entryPoint<CallEmptyQueryNTimes>({10});
-		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>({10});
+		query::entryPoint<CallEmptyQueryNTimes>({ 10 });
+		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>({ 10 });
 		// 10 + 1 for the query itself:
 		ASSERT_EQUAL(deps2.size(), 11);
 		{
 			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, EmptyQuery::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({ 10 }, EmptyQuery::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
-			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, CallEmptyQueryNTimes::getID());
+			auto deps2_filtered = graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(
+				{ 10 }, CallEmptyQueryNTimes::getID()
+			);
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{
 			auto deps2_filtered
-				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({10}, Fibonacci::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>({ 10 }, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
 #endif
@@ -504,8 +509,8 @@ private:
 
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
-			query::entryPoint<CallSideInputNTimes>({10});
-			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>({10}, SideInput::getID());
+			query::entryPoint<CallSideInputNTimes>({ 10 });
+			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>({ 10 }, SideInput::getID());
 			ASSERT_EQUAL(deps.size(), 10);
 		}
 	}
@@ -513,7 +518,7 @@ private:
 	void entryPointSanityTest() {
 #if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<CallingEntryPoint>({1}); },
+			[&]() { query::entryPoint<CallingEntryPoint>({ 1 }); },
 			"Calling entry point from query did not panicked."
 		);
 #endif
@@ -522,18 +527,18 @@ private:
 	template<class Query>
 	void resultLifetimeTest() {
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>({0});
+			auto res1 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<Query>({0});
+			auto res2 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res2.validate());
 		});
 
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>({0});
+			auto res1 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<Query>({0});
+			auto res2 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res2.validate());
 		});
 	}
@@ -576,7 +581,7 @@ private:
 		// note: this test will change when proper cycle handling will
 		// be introduced.
 		assertThrows<base::NotYetImplemented>(
-			[&]() { query::entryPoint<CyclicQuery1>({1}); }, "Cycle detection did not throw."
+			[&]() { query::entryPoint<CyclicQuery1>({ 1 }); }, "Cycle detection did not throw."
 		);
 	}
 
@@ -591,15 +596,15 @@ private:
 	void testConstructCache() {
 		ConstructTo::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<ConstructCacheTest>({10});
+			auto res1 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res1.v == 10);
 			ASSERT_TRUE(ConstructTo::construct_count == 1);
 
-			auto res2 = ctx.query<ConstructCacheTest>({10});
+			auto res2 = ctx.query<ConstructCacheTest>({ 10 });
 			ASSERT_TRUE(res2.v == 10);
 			ASSERT_TRUE(ConstructTo::construct_count == 2);
 
-			auto res3 = ctx.query<ConstructCacheTest>({20});
+			auto res3 = ctx.query<ConstructCacheTest>({ 20 });
 			ASSERT_TRUE(res3.v == 20);
 			ASSERT_TRUE(ConstructTo::construct_count == 3);
 		});
@@ -608,7 +613,7 @@ private:
 	void testContextSanityCheck() {
 #if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<context_leak::LeakQuery>({1}); },
+			[&]() { query::entryPoint<context_leak::LeakQuery>({ 1 }); },
 			"Bad context usage not detected"
 		);
 		assertTrue(
@@ -777,7 +782,8 @@ private:
 		query::entryPoint<StableHashTest>(key);
 
 		query::perfectHashKey<true>(key);
-		std::cout << ImplementationOf_StableHashTest::QueryType::QUERY_DATA.tags.usesStableHashing() << "\n";
+		std::cout << ImplementationOf_StableHashTest::QueryType::QUERY_DATA.tags.usesStableHashing()
+				  << "\n";
 		std::cout << "Last hash: " << ImplementationOf_StableHashTest::last_hash << "\n";
 		std::cout << "Expected : " << key.stable << "\n";
 		std::cout << "Unexpected: " << key.unstable << "\n";
