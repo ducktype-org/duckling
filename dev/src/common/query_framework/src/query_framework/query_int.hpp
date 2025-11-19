@@ -15,6 +15,7 @@
 #include "empty_key.hpp"                     // IWYU pragma: export
 
 #include <string_view>  // IWYU pragma: export
+#include <base/preproc/remove_parentheses.hpp>
 
 // clang-format on
 
@@ -45,7 +46,8 @@ namespace query::internal {
 		friend struct ::query::internal::EntryPointHelper;                             \
                                                                                        \
 	public:                                                                            \
-		static constexpr ::query::internal::QueryData QUERY_DATA = query_data_mp;      \
+		static constexpr ::query::internal::QueryData QUERY_DATA = \
+			REMOVE_PARENTHESES(query_data_mp);      \
 		static auto            getID() { return id; }                                  \
 		static constexpr auto& getData() { return QUERY_DATA; }                        \
 	};
@@ -55,7 +57,7 @@ namespace query::internal {
  * @brief Macro used do delcare queries.
  *
  * For example:
- * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
+ * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue, ({ / * non-default tags * / }))`
  */
 #define DECLARE_QUERY(query_type, key, value, tags)                                           \
 	DECLARE_QUERY_AUX(                                                                        \

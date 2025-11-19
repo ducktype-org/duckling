@@ -9,10 +9,10 @@ namespace tsl {
 	/**
 	 * @brief Get a TypeLayout for a given AbstractType.
 	 */
-	DECLARE_QUERY(QueryAbstractTypeLayout, tsh::AbstractType, CRef<TypeLayout>, {})
+	DECLARE_QUERY(QueryAbstractTypeLayout, tsh::AbstractType, CRef<TypeLayout>, ({}))
 
 	/**
 	 * @brief Get a TypeLayout for a given SymbolType, taking reference indirection into account.
 	 */
-	DECLARE_QUERY(QuerySymbolTypeLayout, tsh::SymbolType<>, CRef<TypeLayout>, {})
+	DECLARE_QUERY(QuerySymbolTypeLayout, tsh::SymbolType<>, CRef<TypeLayout>, ({}))
 }

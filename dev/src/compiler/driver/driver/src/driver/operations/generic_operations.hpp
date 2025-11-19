@@ -53,5 +53,13 @@ namespace compiler::driver {
 	/**
 	 * Query that produces .dbc/.o file for given Duckling module.
 	 */
-	DECLARE_QUERY(CompileModule, KeyOf_CompileModule, artifacts::FileArtifact, {});
+	DECLARE_QUERY(
+		CompileModule,
+		KeyOf_CompileModule, artifacts::FileArtifact,
+		({
+			.used_hashes = a,
+			.is_cached_on_disk = true,
+			.
+		})
+	);
 }

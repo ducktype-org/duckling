@@ -20,5 +20,5 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryTypeFromDefinition_Result>, {});
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryTypeFromDefinition_Result>, ({}));
 }
