@@ -39,7 +39,6 @@ namespace query::internal {
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
 		typename QueryImplType::QResult {
-
 		using QueryIntType = QueryImplType::QueryType;
 
 		QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Enter.\n");
@@ -47,16 +46,12 @@ namespace query::internal {
 		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
 
 		[[maybe_unused]]
-		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{
-			QueryIntType::getID()
-		};
+		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{ QueryIntType::getID() };
 
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			// @FUTURE: Add ACD check here...
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryIntType::getName(), "\"]: Cached. Done.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Cached. Done.\n");
 
 			return std::move(v.value().data);
 		} else {

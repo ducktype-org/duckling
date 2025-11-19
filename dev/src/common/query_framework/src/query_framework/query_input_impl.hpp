@@ -11,7 +11,7 @@
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
 	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \
 		-> query_type::QResult {                                                                 \
-		auto node_id = query::internal::makeNodeID<query_type>(key);                         \
+		auto node_id = query::internal::makeNodeID<query_type>(key);                             \
 		query::internal::ContextAccess::getState()->getGraphMutable()->addDependency(            \
 			from, node_id                                                                        \
 		);                                                                                       \

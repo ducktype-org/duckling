@@ -21,10 +21,12 @@ namespace query::internal {
 	template<typename QueryInteface>
 	internal::NodeID makeNodeID(const typename QueryInteface::QKey& key) {
 		static_assert(
-			QueryInteface::QUERY_INTERFACE_TAG,
-			"makeNodeID can be used only with query interfaces"
+			QueryInteface::QUERY_INTERFACE_TAG, "makeNodeID can be used only with query interfaces"
 		);
 
-		return NodeID(QueryInteface::getID(), { .val = perfectHashKey<QueryInteface::QUERY_DATA.tags.usesStableHashing()>(key) });
+		return NodeID(
+			QueryInteface::getID(),
+			{ .val = perfectHashKey<QueryInteface::QUERY_DATA.tags.usesStableHashing()>(key) }
+		);
 	}
 }

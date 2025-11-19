@@ -1,7 +1,8 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
 #include <base/types/ints.hpp>
+
+#include <query_framework/query_int.hpp>
 
 #include <string>  // std::string
 
