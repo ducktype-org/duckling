@@ -67,7 +67,7 @@ namespace query::internal {
 		 * For example, if is_cached_on_disk is true, then used_hashes must be StableHash.
 		 * Is run in comptime time in query implementation boilerplate.
 		 */
-		 [[nodiscard]]
+		[[nodiscard]]
 		constexpr bool verify() const {
 			if (is_cached_on_disk and used_hashes != UsedHashes::StableHash) {
 				// queries that are cached on disk must use stable hashing

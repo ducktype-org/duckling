@@ -41,16 +41,16 @@ namespace query::internal {
                                                                                        \
 	private:                                                                           \
 		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult; \
-		static ::query::internal::QueryID             id;                              \
+		static ::query::internal::QueryID id;                                          \
 		friend struct ::query::Context;                                                \
 		friend struct ::query::internal::EntryPointHelper;                             \
                                                                                        \
 	public:                                                                            \
 		static constexpr ::query::internal::QueryData QUERY_DATA = query_data_mp;      \
-		static auto            getID() { return id; }                                  \
-		static constexpr auto& getData() { return QUERY_DATA; }                        \
+		static auto                                   getID() { return id; }           \
+		static constexpr auto&                        getData() { return QUERY_DATA; } \
 	};
-	// @TODO PR: remove get_data accessor, its constexpr anyway
+// @TODO PR: remove get_data accessor, its constexpr anyway
 
 /**
  * @brief Macro used do delcare queries.
@@ -58,15 +58,15 @@ namespace query::internal {
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue, ({ / * non-default tags * / }))`
  */
-#define DECLARE_QUERY(query_type, key, value, tags)                                           \
-	DECLARE_QUERY_AUX(                                                                        \
-		query_type,                                                                           \
-		key,                                                                                  \
-		value,                                                                                \
-		::query::internal::QueryData( \
-			::query::internal::QueryType::Normal, \
-			#query_type, \
-			::query::internal::QueryTags REMOVE_PARENTHESES(tags)\
-		)\
-			\
+#define DECLARE_QUERY(query_type, key, value, tags)               \
+	DECLARE_QUERY_AUX(                                            \
+		query_type,                                               \
+		key,                                                      \
+		value,                                                    \
+		::query::internal::QueryData(                             \
+			::query::internal::QueryType::Normal,                 \
+			#query_type,                                          \
+			::query::internal::QueryTags REMOVE_PARENTHESES(tags) \
+		)                                                         \
+                                                                  \
 	)

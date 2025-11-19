@@ -37,13 +37,11 @@ namespace query::internal {
  * @note Query side-inputs have to be called by hand, when given data is read.
  * Special care should be taken to always do it, to prevent non registered input being used.
  */
-#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                                          \
-	DECLARE_QUERY_AUX(                                                                     \
-		query_type,                                                                        \
-		key,                                                                               \
-		query::internal::SideInputMockValue,                                               \
+#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                                              \
+	DECLARE_QUERY_AUX(                                                                         \
+		query_type,                                                                            \
+		key,                                                                                   \
+		query::internal::SideInputMockValue,                                                   \
 		::query::internal::QueryData(::query::internal::QueryType::SideInput, #query_type, {}) \
 	)
-	// @TODO: PR: adjust the tags above and impl
-
-	
+// @TODO: PR: adjust the tags above and impl
