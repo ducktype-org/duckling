@@ -71,5 +71,4 @@ namespace query::internal {
 			#query_type,                                          \
 			::query::internal::QueryTags REMOVE_PARENTHESES(tags) \
 		)                                                         \
-                                                                  \
 	)

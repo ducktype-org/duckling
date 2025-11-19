@@ -174,7 +174,7 @@ namespace tsh {
 
 			if (!cache.contains(size.value)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size));
+				context.log(makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size.value));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}
