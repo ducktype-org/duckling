@@ -44,6 +44,8 @@ namespace query::internal {
 		 * Unregistered query does not have QueryData associated with it.
 		 * This also means that unregistered queries don't have any kind associated with it, but
 		 * they should be viewed as implicitly dummy.
+		 *
+		 * @TODO PR: see todo above. For now we do keep it, this change is orthogonal to #1433
 		 */
 		[[nodiscard]] bool registered() const;
 

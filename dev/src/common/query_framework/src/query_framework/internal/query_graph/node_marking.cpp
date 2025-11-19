@@ -37,7 +37,7 @@ namespace query::internal {
 				continue;
 			}
 
-			// @TODO: #1433 use tags
+			// @TODO: PR use tags -- just adjust the usage, when hasStableHash is removed
 			CORE_ASSERT(
 				node.q_id.hasStableHash(),
 				"Side/Input nodes must have stable hashes: ",
