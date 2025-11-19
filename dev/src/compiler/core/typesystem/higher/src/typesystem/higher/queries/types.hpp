@@ -75,9 +75,6 @@ namespace tsh {
 	 */
 	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({}))
 
-
-	// @TODO PR: fix u64/bool queries
-
 	/**
 	 * @brief Query to get a RawPointer type.
 	 * The boolean key denotes whether the raw pointer points to mutable data.

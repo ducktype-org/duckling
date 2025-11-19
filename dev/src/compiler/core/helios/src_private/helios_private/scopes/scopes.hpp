@@ -78,7 +78,8 @@ namespace compiler::helios {
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
 	 */
-	DECLARE_QUERY(QueryPrimaryCodeScopeFor, pst::GenericPSTQueryKey<>, ScopeID, ({}));
+	DECLARE_QUERY(QueryPrimaryCodeScopeFor, pst::GenericPSTQueryKey<>, ScopeID, ({.used_hashes =
+			query::internal::QueryTags::UsedHashes::StableHash}));
 
 	/**
 	 * @brief A helper function, to make scope API consistent.
@@ -131,7 +132,8 @@ namespace compiler::helios {
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 */
 	DECLARE_QUERY(
-		QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, ({})
+		QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>, ({.used_hashes =
+			query::internal::QueryTags::UsedHashes::StableHash})
 	)
 
 	/**

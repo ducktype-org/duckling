@@ -17,6 +17,7 @@ namespace compiler::helios {
 	using CompTimeEvalResult = query::QResult<CompileTimeValue, errors::Failed>;
 
 	DECLARE_QUERY(
-		QueryEvaluateExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult, ({})
+		QueryEvaluateExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult, ({.used_hashes =
+			query::internal::QueryTags::UsedHashes::StableHash})
 	)
 }

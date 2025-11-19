@@ -27,12 +27,6 @@ namespace pst {
 		 */
 		AccessLocked<T> element;
 
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			CORE_PANIC("Unstable hash should not be used for PST elements");
-			return element.illegalAccess().value()->getID().asInt();
-		}
-
 		auto queryStablePerfectHash() const { return element.illegalAccess().value()->getHash(); }
 	};
 }

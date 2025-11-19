@@ -214,7 +214,7 @@ namespace query::internal {
 		std::is_invocable_v<decltype(type::load), type::KHash>,                                                                        \
 		"Load function must be callable with hash of QKey"                                                                             \
 	);                                                                                                                                 \
-	static_assert(type::QueryType::QUERY_DATA.tags.verify(), "Query tags are inconsistent.");                                          \
+	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                          \
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),             \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                        \

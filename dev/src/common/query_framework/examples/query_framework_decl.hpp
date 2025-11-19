@@ -6,8 +6,6 @@
 
 #include <string>  // std::string
 
-// @TODO PR: fix u64/bool queries
-
 /**
  * Query Key.
  * note that it does not have to declared here.

@@ -61,22 +61,6 @@ namespace query::internal {
 		constexpr bool usesUnstableHashing() const {
 			return used_hashes == UsedHashes::UnstableHash;
 		}
-
-		/**
-		 * Verify that the tags are consistent.
-		 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
-		 * Is run in comptime time in query implementation boilerplate.
-		 *
-		 * @TODO PR: also validate if query type and tags are consistent
-		 */
-		[[nodiscard]]
-		constexpr bool verify() const {
-			if (can_be_loaded_from_disk and used_hashes != UsedHashes::StableHash) {
-				// queries that are cached on disk must use stable hashing
-				return false;
-			}
-			return true;
-		}
 	};
 
 	/**
@@ -96,5 +80,29 @@ namespace query::internal {
 			  tags(tags) {}
 
 		constexpr QueryData(const QueryData&) = default;
+
+		[[nodiscard]]
+		constexpr bool isInputQuery() const {
+			return type == QueryType::Input or type == QueryType::SideInput;
+		}
+
+		/**
+		 * Verify that the query data is consistent, including the tag data.
+		 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
+		 * Is run in comptime time in query implementation boilerplate.
+		 */
+		[[nodiscard]]
+		constexpr bool verify() const {
+			if (tags.can_be_loaded_from_disk) {
+				// queries that are cached on disk must use stable hashing:
+				if (tags.used_hashes != QueryTags::UsedHashes::StableHash) return false;
+			}
+			if (isInputQuery()) {
+				// input queries must use stable hashing:
+				if (tags.used_hashes != QueryTags::UsedHashes::StableHash) return false;
+			}
+
+			return true;
+		}
 	};
 };
