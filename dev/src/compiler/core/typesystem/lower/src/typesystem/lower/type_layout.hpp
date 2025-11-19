@@ -537,7 +537,9 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		base::StrID getMangledName() const { return mangled_name; }
+		base::StrID getMangledName() const {
+			return mangled_name;
+		}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
