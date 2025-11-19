@@ -333,8 +333,6 @@ struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
 
-DECLARE_QUERY(CallEmptyQueryNTimesSideInput, u64, u64, ({}));
-
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
