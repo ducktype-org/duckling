@@ -467,6 +467,7 @@ namespace dia {
 	 * @deprecated Make your own, specialised message class by inheriting after Error, Warning, or
 	 * Info, picking an appropriate name, choosing appropriate data which describe the message and
 	 * implementing user-facing message contents.
+	 * @TODO #941 replace this class with something alike TODOError / NotYetImplementedError when we introduce DIA 2.0 in main.
 	 *
 	 * @tparam BASE_MESSAGE_CLASS The base class of the message, either Error, Warning, or Info.
 	 * @tparam DOMAIN The domain of the message. Pick Message::Domain::Misc if unsure.
@@ -481,10 +482,7 @@ namespace dia {
 			return DOMAIN;
 		}
 
-		[[deprecated(
-			"Placeholder message should not be instantiated. "
-			"Make your own, specialised message class."
-		)]] PlaceholderMessage(const SourcePosition& source_position, std::string message):
+		PlaceholderMessage(const SourcePosition& source_position, std::string message):
 			  BASE_MESSAGE_CLASS(source_position),
 			  message(std::move(message)) {}
 
