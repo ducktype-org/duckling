@@ -15,8 +15,6 @@ namespace query::internal {
 
 	/**
 	 * @brief Helper function for construing NodeID from the query key.
-	 *
-	 * @TODO PR: update usage of this function.
 	 */
 	template<typename QueryInteface>
 	internal::NodeID makeNodeID(const typename QueryInteface::QKey& key) {
@@ -26,7 +24,7 @@ namespace query::internal {
 
 		return NodeID(
 			QueryInteface::getID(),
-			{ .val = perfectHashKey<QueryInteface::QUERY_DATA.tags.usesStableHashing()>(key) }
+			KeyHash{ .val = perfectHashKey<QueryInteface::QUERY_DATA.tags.usesStableHashing()>(key) }
 		);
 	}
 }

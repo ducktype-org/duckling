@@ -12,7 +12,7 @@
 #include "context_fd.hpp"                    // IWYU pragma: export
 #include "internal/query_graph/node_id.hpp"  // IWYU pragma: export
 #include "internal/query_data/query_id.hpp"  // IWYU pragma: export
-#include "empty_key.hpp"                     // IWYU pragma: export
+#include "simple_keys.hpp"                     // IWYU pragma: export
 
 #include <string_view>  // IWYU pragma: export
 #include <base/preproc/remove_parentheses.hpp>

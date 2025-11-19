@@ -6,7 +6,7 @@
 #pragma once
 
 #include "context.hpp"
-#include "empty_key.hpp"
+#include "simple_keys.hpp"
 #include "internal/query_data/query_id.hpp"
 #include "internal/query_graph/node_id.hpp"
 

@@ -6,6 +6,7 @@
 #include <base/collections/maps.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/simple_keys.hpp>
 
 namespace tsh {
 	/**
@@ -72,7 +73,7 @@ namespace tsh {
 	/**
 	 * @brief Query to get a Float (floating point) type.
 	 */
-	DECLARE_QUERY(QueryFloatType, usize, FloatAbstractType, ({}))
+	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({}))
 
 
 	// @TODO PR: fix u64/bool queries
@@ -81,7 +82,7 @@ namespace tsh {
 	 * @brief Query to get a RawPointer type.
 	 * The boolean key denotes whether the raw pointer points to mutable data.
 	 */
-	DECLARE_QUERY(QueryRawPointerType, bool, RawPointerAbstractType, ({}))
+	DECLARE_QUERY(QueryRawPointerType, query::BoolKey, RawPointerAbstractType, ({}))
 
 	/**
 	 * @brief Query to get a typed Pointer type.

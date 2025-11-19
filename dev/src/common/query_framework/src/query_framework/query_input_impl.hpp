@@ -6,8 +6,6 @@
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
 #include "query_hash.hpp"                        // IWYU pragma: export
 
-// @TODO PR: update input tags
-
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
 	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \
 		-> query_type::QResult {                                                                 \
