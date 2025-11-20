@@ -20,11 +20,11 @@ namespace base {
 }
 
 namespace base::internal {
-	inline void strConcat(std::string& out, Bits bits) {
+	constexpr void strConcat(std::string& out, Bits bits) {
 		out.append(std::to_string(usize(bits)) + "b");
 	}
 
-	inline void strConcat(std::string& out, Bytes bytes) {
+	constexpr void strConcat(std::string& out, Bytes bytes) {
 		out.append(std::to_string(usize(bytes)) + "B");
 	}
 }

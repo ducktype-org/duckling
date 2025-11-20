@@ -241,9 +241,9 @@ namespace compiler::helios {
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
 			const SymID                              class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+			auto                                     class_interface = class_type.getInterface(ctx);
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
@@ -606,7 +606,10 @@ namespace compiler::helios {
 						return;  // fail
 					}
 
-					output(code::VariableStmt({}, symbol_type, symbol));
+					throw base::NotYetImplemented(
+						"Variable declarations without initial value are not supported in HOUT yet."
+						" We should add default initialization here."
+					);
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
