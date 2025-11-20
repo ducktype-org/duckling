@@ -1,14 +1,15 @@
-var c: i64 = 20 + g;
+var c: i64 = 20i64 + g;
 var g: i64 = hoo();
 
 fun foo() = {
 	c = g;
-	var a: i64 = 23;
-	while (9) {
-		var b: i64 = 7;
+	var a: i64 = 23i64;
+	# @TODO: #1543 Change '9i64' to '9' once `NumericValue::createOfType()` gets implemented. 
+	while (9i64) {
+		var b: i64 = 7i64;
 	}
-	if (9) {
-		var b: i64 = 7;
+	if (9i64) {
+		var b: i64 = 7i64;
 	}
 	return 0;
 }
@@ -20,7 +21,7 @@ fun goo() = {
 }
 
 fun hoo() -> i64 = {
-	c = c + 1;
+	c = c + 1i64;
 	g = c + hoo();
 	return 33;
 }

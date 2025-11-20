@@ -177,6 +177,7 @@ private:
 	Local(6) :=  Assign           15               Flags[], Params{}, scope:38
 			     FunctionEnd                       Flags[], Params{}, scope:36
 			 */
+			// TODOP: Fix that
 			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 6);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
