@@ -39,6 +39,9 @@ namespace base {
 
 		~MapWrapper() = default;
 
+		MapWrapper(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
+			  ContainerType(init) {}
+
 		MapWrapper& operator=(const MapWrapper& map) {
 			ContainerType::operator=(map);
 			return *this;

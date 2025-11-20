@@ -117,6 +117,11 @@ namespace base {
 			assertNotNull();
 			return *ptr;
 		}
+		
+		T* get() const {
+			assertNotNull();
+			return ptr;
+		}
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 

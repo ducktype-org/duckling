@@ -38,8 +38,9 @@ set(REGISTRY_ENTRIES "")
 
 # Process each template file
 foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
-    # Get the relative path (this becomes the key in the map)
+    # Get the relative path and remove the file extension for the hashmap key
     set(TEMPLATE_KEY "${TEMPLATE_FILE}")
+    string(REGEX REPLACE "\\.(yaml|yml)$" "" TEMPLATE_KEY "${TEMPLATE_KEY}")
     
     # Create a safe symbol name by replacing / and . with _
     string(REPLACE "/" "_" SYMBOL_NAME "${TEMPLATE_FILE}")

@@ -49,7 +49,7 @@ namespace dia_app::template_file {
 	struct Component {
 		virtual ~Component() {}
 
-		virtual void acceptVisitor(ComponentVisitor& visitor) = 0;
+		virtual void acceptVisitor(ComponentVisitor& visitor) const = 0;
 
 		static Box<Component> fromYaml(const YAML::Node& elem);
 	};
@@ -63,7 +63,11 @@ namespace dia_app::template_file {
 
 		TextComponent(std::string text): text(std::move(text)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final { visitor.visitTextComponent(*this); }
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitTextComponent(*this);
+		}
+
+		static Box<TextComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
 	/**
@@ -78,7 +82,9 @@ namespace dia_app::template_file {
 
 		ConcatComponent(std::vector<Box<Component>> elements): elements(std::move(elements)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final { visitor.visitConcatComponent(*this); }
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitConcatComponent(*this);
+		}
 
 		static Box<ConcatComponent> fromYaml(const YAML::Node& elem_node);
 	};
@@ -93,7 +99,9 @@ namespace dia_app::template_file {
 
 		ParamComponent(std::string param): param(std::move(param)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final { visitor.visitParamComponent(*this); }
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitParamComponent(*this);
+		}
 
 		static Box<ParamComponent> fromYaml(const YAML::Node& elem_node);
 	};
@@ -107,7 +115,7 @@ namespace dia_app::template_file {
 
 		IsParamProvidedComponent(std::string param): param(std::move(param)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final {
+		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitIsParamProvidedComponent(*this);
 		}
 
@@ -124,7 +132,9 @@ namespace dia_app::template_file {
 
 		MacroComponent(std::string macro): macro(std::move(macro)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final { visitor.visitMacroComponent(*this); }
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitMacroComponent(*this);
+		}
 
 		static Box<MacroComponent> fromYaml(const YAML::Node& elem_node);
 	};
@@ -142,7 +152,9 @@ namespace dia_app::template_file {
 			  pattern(std::move(pattern)),
 			  cases(std::move(cases)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final { visitor.visitCaseOfComponent(*this); }
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitCaseOfComponent(*this);
+		}
 
 		static Box<CaseOfComponent> fromYaml(const YAML::Node& elem_node);
 	};
@@ -152,7 +164,7 @@ namespace dia_app::template_file {
 
 		CodeBlockComponent(Box<Component> code_elements): code_elements(std::move(code_elements)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final {
+		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitCodeBlockComponent(*this);
 		}
 
@@ -167,7 +179,7 @@ namespace dia_app::template_file {
 			  content(std::move(content)),
 			  target_message(std::move(url)) {}
 
-		void acceptVisitor(ComponentVisitor& visitor) final {
+		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitMessageLinkComponent(*this);
 		}
 
@@ -223,11 +235,11 @@ namespace dia_app::template_file {
 	};
 
 	struct Edge {
-		Box<Component>                        content;
+		std::string                           name;
 		base::HashMap<std::string, Parameter> params;
 
-		Edge(Box<Component> content, base::HashMap<std::string, Parameter> params):
-			  content(std::move(content)),
+		Edge(std::string name, base::HashMap<std::string, Parameter> params):
+			  name(std::move(name)),
 			  params(std::move(params)) {}
 
 		static Edge fromYaml(const YAML::Node& node);
@@ -311,5 +323,14 @@ namespace dia_app::template_file {
 		std::variant<MessageTemplate, ComponentTemplate, PointerMessageTemplate> content;
 
 		static DiagnosticTemplate fromYaml(const YAML::Node& node);
+
+		Metadata& getMetadata() const {
+			return std::visit(
+				[](auto& tpl) -> Metadata& {
+					return tpl.metadata;
+				},
+				content
+			);
+		}
 	};
 }

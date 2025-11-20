@@ -1,5 +1,7 @@
 #include "template_file.hpp"
 
+#include "diagnostic_interactive/core/utils.hpp"
+
 namespace dia_app::template_file {
 	Box<Component> Component::fromYaml(const YAML::Node& elem) {
 		if (elem.IsScalar()) return TextComponent::fromYaml(elem);
@@ -14,37 +16,35 @@ namespace dia_app::template_file {
 		CORE_PANIC("Unknown template component.");
 	}
 
-	Box<ConcatComponent> ConcatComponent::fromYaml(const YAML::Node& elem_node
-	) {
+	Box<TextComponent> TextComponent::fromYaml(const YAML::Node& elem_node) {
+		return base::makeBox<TextComponent>(elem_node.as<std::string>());
+	}
+
+	Box<ConcatComponent> ConcatComponent::fromYaml(const YAML::Node& elem_node) {
 		CORE_ASSERT(elem_node.IsSequence(), "Concat component must be a sequence.");
 		std::vector<Box<Component>> elements;
 		for (const auto& el: elem_node) elements.push_back(Component::fromYaml(el));
 		return base::makeBox<ConcatComponent>(std::move(elements));
 	}
 
-	Box<ParamComponent> ParamComponent::fromYaml(const YAML::Node& elem_node
-	) {
+	Box<ParamComponent> ParamComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS_SCALAR(elem_node, "param");
 		return base::makeBox<ParamComponent>(elem_node["param"].as<std::string>());
 	}
 
-	Box<IsParamProvidedComponent> IsParamProvidedComponent::fromYaml(
-		const YAML::Node& elem_node
-	) {
+	Box<IsParamProvidedComponent> IsParamProvidedComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS_SCALAR(elem_node, "is_param_provided");
 		return base::makeBox<IsParamProvidedComponent>(
 			elem_node["is_param_provided"].as<std::string>()
 		);
 	}
 
-	Box<MacroComponent> MacroComponent::fromYaml(const YAML::Node& elem_node
-	) {
+	Box<MacroComponent> MacroComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS_SCALAR(elem_node, "macro");
 		return base::makeBox<MacroComponent>(elem_node["macro"].as<std::string>());
 	}
 
-	Box<CaseOfComponent> CaseOfComponent::fromYaml(const YAML::Node& elem_node
-	) {
+	Box<CaseOfComponent> CaseOfComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS(elem_node, "case");
 		CORE_ASSERT(
 			elem_node["of"] && elem_node["of"].IsMap(),
@@ -60,17 +60,13 @@ namespace dia_app::template_file {
 		return base::makeBox<CaseOfComponent>(std::move(pattern), std::move(cases));
 	}
 
-	Box<CodeBlockComponent> CodeBlockComponent::fromYaml(
-		const YAML::Node& elem_node
-	) {
+	Box<CodeBlockComponent> CodeBlockComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS(elem_node, "codeblock");
 		auto code_elements = Component::fromYaml(elem_node["codeblock"]);
 		return base::makeBox<CodeBlockComponent>(std::move(code_elements));
 	}
 
-	Box<MessageLinkComponent> MessageLinkComponent::fromYaml(
-		const YAML::Node& elem_node
-	) {
+	Box<MessageLinkComponent> MessageLinkComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS(elem_node, "content");
 		YAML_ASSUME_HAS(elem_node, "url");
 		auto content = Component::fromYaml(elem_node["content"]);
@@ -78,8 +74,7 @@ namespace dia_app::template_file {
 		return base::makeBox<MessageLinkComponent>(std::move(content), std::move(url));
 	}
 
-	Metadata Metadata::fromYaml(const YAML::Node& node
-	) {
+	Metadata Metadata::fromYaml(const YAML::Node& node) {
 		CORE_ASSERT(node && node.IsMap(), "Metadata definition must be a map.");
 
 		YAML_ASSUME_HAS_SCALAR(node, "template_type");
@@ -112,9 +107,7 @@ namespace dia_app::template_file {
 		);
 	}
 
-	Parameter Parameter::fromYaml(
-		const YAML::Node& node
-	) {
+	Parameter Parameter::fromYaml(const YAML::Node& node) {
 		CORE_ASSERT(node && node.IsMap(), "Parameter definition must be a map.");
 		YAML_ASSUME_HAS_SCALAR(node, "description");
 
@@ -129,17 +122,14 @@ namespace dia_app::template_file {
 
 	Edge Edge::fromYaml(const YAML::Node& node) {
 		CORE_ASSERT(node && node.IsMap(), "Explore edge definition must be a map.");
-		YAML_ASSUME_HAS(node, "content");
+		YAML_ASSUME_HAS_SCALAR(node, "name");
 		YAML_ASSUME_HAS(node, "params");
-
-		auto content    = Component::fromYaml(node["content"]);
+		auto name       = node["name"].as<std::string>();
 		auto params_map = yamlToMap<Parameter>(node, "params");
-		return Edge(std::move(content), std::move(params_map));
+		return Edge(std::move(name), std::move(params_map));
 	}
 
-	PointerMessage PointerMessage::fromYaml(
-		const YAML::Node& node
-	) {
+	PointerMessage PointerMessage::fromYaml(const YAML::Node& node) {
 		CORE_ASSERT(node && node.IsMap(), "Pointer message definition must be a map.");
 		YAML_ASSUME_HAS(node, "content");
 		YAML_ASSUME_HAS_SCALAR(node, "type");
@@ -150,9 +140,7 @@ namespace dia_app::template_file {
 		return { node["type"].as<std::string>(), priority, std::move(content) };
 	}
 
-	CommonTemplate CommonTemplate::fromYaml(
-		const YAML::Node& node
-	) {
+	CommonTemplate CommonTemplate::fromYaml(const YAML::Node& node) {
 		CORE_ASSERT(node && node.IsMap(), "Template definition must be a map.");
 		YAML_ASSUME_HAS(node, "metadata");
 

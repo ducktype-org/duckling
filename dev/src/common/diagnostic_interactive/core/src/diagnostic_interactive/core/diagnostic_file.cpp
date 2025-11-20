@@ -104,9 +104,9 @@ namespace dia_app::dia_file {
 	}
 
 	auto ConcatComponent::fromJson(const json& elem) -> Box<ConcatComponent> {
-		CORE_ASSERT(elem.is_array(), "Concat component must be an array.");
+		ASSUME_ARR(elem, "content");
 		std::vector<Box<Component>> elements;
-		for (auto& el: elem) elements.push_back(Component::fromJson(el));
+		for (auto& el: elem["content"]) elements.push_back(Component::fromJson(el));
 		return base::makeBox<ConcatComponent>(std::move(elements));
 	}
 
@@ -125,7 +125,7 @@ namespace dia_app::dia_file {
 		auto content = Component::fromJson(elem["content"]);
 
 		std::vector<PointerMessage> pointer_messages;
-		for (auto& fpm_json: elem["foreign_pointer_messages"])
+		for (auto& fpm_json: elem["pointer_messages"])
 			pointer_messages.push_back(PointerMessage::fromJson(fpm_json));
 
 		return base::makeBox<PointedComponent>(std::move(content), std::move(pointer_messages));
@@ -191,20 +191,23 @@ namespace dia_app::dia_file {
 
 	json Metadata::toJson() const {
 		json result;
-		result["type"]   = type;
-		result["family"] = family;
-		result["name"]   = name;
+		result["template_type"] = template_type;
+		result["type"]          = type;
+		result["family"]        = family;
+		result["name"]          = name;
 		return result;
 	}
 
 	Metadata Metadata::fromJson(const json& meta_json) {
+		ASSUME_HAS_STR(meta_json, "template_type");
 		ASSUME_HAS_STR(meta_json, "type");
 		ASSUME_HAS_STR(meta_json, "family");
 		ASSUME_HAS_STR(meta_json, "name");
 		Metadata result;
-		result.type   = meta_json["type"];
-		result.family = meta_json["family"];
-		result.name   = meta_json["name"];
+		result.template_type = meta_json["template_type"];
+		result.type          = meta_json["type"];
+		result.family        = meta_json["family"];
+		result.name          = meta_json["name"];
 		return result;
 	}
 
@@ -218,7 +221,6 @@ namespace dia_app::dia_file {
 
 	ExploreEdge ExploreEdge::fromJson(const json& edge_json) {
 		ASSUME_HAS_STR(edge_json, "name");
-		ASSUME_HAS_STR(edge_json, "info_id");
 		ASSUME_HAS(edge_json, "params");
 
 		ExploreEdge result;
@@ -239,6 +241,11 @@ namespace dia_app::dia_file {
 			result["explore_edges"] = json::array();
 			for (const auto& edge: explore_edges) result["explore_edges"].push_back(edge.toJson());
 		}
+		if (!attached_messages.empty()) {
+			result["attached_messages"] = json::array();
+			for (const auto& info_id: attached_messages)
+				result["attached_messages"].push_back(info_id);
+		}
 		return result;
 	}
 
@@ -258,13 +265,19 @@ namespace dia_app::dia_file {
 				result.explore_edges.push_back(ExploreEdge::fromJson(edge_json));
 		}
 
+		if (msg_json.contains("attached_messages")) {
+			ASSUME_ARR(msg_json, "attached_messages");
+			std::vector<MessageID> attached_messages
+				= msg_json["attached_messages"].get<std::vector<MessageID>>();
+		}
+
 		return result;
 	}
 
 	json Entity::toJson() const {
 		json result;
 		result["assoc_infos"] = json::array();
-		for (const auto& info_id: assoc_infos) result["assoc_infos"].push_back(info_id);
+		for (const auto& info_id: attached_messages) result["assoc_infos"].push_back(info_id);
 		return result;
 	}
 
@@ -275,18 +288,17 @@ namespace dia_app::dia_file {
 		Entity result;
 		for (const auto& info_id_json: entity_json["assoc_infos"]) {
 			CORE_ASSERT(info_id_json.is_string(), "Info ID in assoc_infos must be a string.");
-			result.assoc_infos.push_back(info_id_json);
+			result.attached_messages.push_back(info_id_json);
 		}
 		return result;
 	}
 
 	json Thread::toJson() const {
 		json result;
-		result["main_message"]                = main_message.toJson();
-		result["displayed_attached_messages"] = displayed_attached_messages;
-		result["attached_messages"]           = json::object();
+		result["main_message"]      = main_message.toJson();
+		result["attached_messages"] = json::object();
 
-		for (const auto& [info_id, msg]: attached_messages)
+		for (const auto& [info_id, msg]: additional_messages)
 			result["attached_messages"][info_id] = msg.toJson();
 
 		result["entities"] = json::object();
@@ -304,12 +316,11 @@ namespace dia_app::dia_file {
 		ASSUME_HAS(thread_json, "entities");
 
 		Thread result;
-		result.main_message                = Message::fromJson(thread_json["main_message"]);
-		result.displayed_attached_messages = thread_json["displayed_attached_messages"];
+		result.main_message = Message::fromJson(thread_json["main_message"]);
 
 		ASSUME_HAS(thread_json, "attached_messages");
 		for (const auto& [info_id, msg_json]: thread_json["attached_messages"].items())
-			result.attached_messages.put(info_id, Message::fromJson(msg_json));
+			result.additional_messages.put(info_id, Message::fromJson(msg_json));
 
 		ASSUME_HAS(thread_json, "entities");
 		for (const auto& [entity_id, entity_json]: thread_json["entities"].items())
@@ -334,7 +345,7 @@ namespace dia_app::dia_file {
 
 	json PointerMessage::toJson() const {
 		json result;
-		result["message_id"]         = message_id;
+		if (message_id.has_value()) result["message_id"] = message_id.value();
 		result["pointer_message_id"] = pointer_message_id;
 		return result;
 	}

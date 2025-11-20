@@ -168,8 +168,8 @@ namespace dia_app::dia_file {
 		PointerMessageID          pointer_message_id;
 
 		PointerMessage(PointerMessageID pointer_message_id, base::Optional<MessageID> message_id):
-			  pointer_message_id(std::move(pointer_message_id)),
-			  message_id(std::move(message_id)) {}
+			  message_id(std::move(message_id)),
+			  pointer_message_id(std::move(pointer_message_id)) {}
 
 		[[nodiscard]] json toJson() const;
 
@@ -270,6 +270,7 @@ namespace dia_app::dia_file {
 	};
 
 	struct Metadata {
+		std::string template_type;
 		std::string type;
 		std::string family;
 		std::string name;
@@ -292,6 +293,7 @@ namespace dia_app::dia_file {
 		Metadata                                   metadata;
 		base::HashMap<std::string, Box<Component>> params;
 		std::vector<ExploreEdge>                   explore_edges;
+		std::vector<MessageID>                     attached_messages;
 
 		[[nodiscard]] json toJson() const;
 
@@ -299,7 +301,7 @@ namespace dia_app::dia_file {
 	};
 
 	struct Entity {
-		std::vector<MessageID> assoc_infos;
+		std::vector<MessageID> attached_messages;
 
 		[[nodiscard]] json toJson() const;
 
@@ -308,8 +310,7 @@ namespace dia_app::dia_file {
 
 	struct Thread {
 		Message                           main_message;
-		std::vector<MessageID>            displayed_attached_messages;
-		base::HashMap<MessageID, Message> attached_messages;
+		base::HashMap<MessageID, Message> additional_messages;
 		base::HashMap<EntityID, Entity>   entities;
 
 		[[nodiscard]] json toJson() const;

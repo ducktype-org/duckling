@@ -15,7 +15,7 @@ const std::unordered_map<std::string_view, std::string_view> error_template_map 
 @REGISTRY_ENTRIES@
 };
 
-namespace view_manager {
+namespace dia_embedded {
 
 std::optional<std::string_view> loadTemplateFromPath(std::string_view path) {
     auto it = error_template_map.find(path);
@@ -25,4 +25,4 @@ std::optional<std::string_view> loadTemplateFromPath(std::string_view path) {
     return it->second;
 }
 
-} // namespace view_manager
+}
