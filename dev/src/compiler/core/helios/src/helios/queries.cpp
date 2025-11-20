@@ -606,7 +606,10 @@ namespace compiler::helios {
 						return;  // fail
 					}
 
-					output(code::VariableStmt({}, symbol_type, symbol));
+					throw base::NotYetImplemented(
+						"Variable declarations without initial value are not supported in HOUT yet."
+						" We should add default initialization here."
+					);
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())

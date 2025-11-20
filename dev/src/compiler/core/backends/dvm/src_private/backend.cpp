@@ -288,7 +288,7 @@ namespace compiler::backend_vm {
 		) {
 			if (!lir_instruction.output.has_value()) return {};
 
-			// @TODO: #500 handle access into fields.
+			// @TODO: #1560 handle access into fields.
 			variant_match(lir_instruction.output.value().base) {
 				variant_case(lir::LIRLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
@@ -311,7 +311,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LIRPlace, place) {
-					// @TODO: #500 handle access into fields.
+					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
 						variant_case(lir::LIRLocalRef, local_ref) {
 							auto&& var_type = ctx.lir_local_types[local_ref];
@@ -643,7 +643,8 @@ namespace compiler::backend_vm {
 				dtors.emplace_back(global.global_dtor.value());
 			}
 
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
+			// GlobalVariables
 			compiled_collection.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}

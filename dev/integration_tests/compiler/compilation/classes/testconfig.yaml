@@ -1,0 +1,9 @@
+# Expression tests
+
+Tests:
+  records:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n"

@@ -29,7 +29,7 @@ let b = a;
 
 class ClassWithMember {
     member: FirstClassEver = FirstClassEver(3, 4.0);
-    
+
     fun getMemberA() -> i64 = {
         return member.getA();
     }
