@@ -199,10 +199,11 @@ namespace compiler::backend_llvm {
 					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
 						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
 					);
-					const u64 actual_offset
-						= struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx));
+					const auto actual_offset = Bytes(
+						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
+					);
 					CORE_ASSERT(
-						expected_offset == Bytes(actual_offset),
+						expected_offset == actual_offset,
 						base::strConcat(
 							"LLVM struct layout mismatch for class '",
 							class_name,
@@ -211,7 +212,7 @@ namespace compiler::backend_llvm {
 							": expected offset ",
 							base::toString(expected_offset),
 							", got ",
-							base::toString(Bytes(actual_offset))
+							base::toString(actual_offset)
 						)
 					);
 				}

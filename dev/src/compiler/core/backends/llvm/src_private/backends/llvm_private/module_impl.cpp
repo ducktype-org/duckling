@@ -15,6 +15,13 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 namespace compiler::backend_llvm {
+	ModuleImpl::ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {
+		const std::string target_triple = llvm::sys::getDefaultTargetTriple();
+		setTargetMachine(target_triple);
+		this->module->setDataLayout(target_machine->createDataLayout());
+		this->module->setTargetTriple(target_machine->getTargetTriple().getTriple());
+	}
+
 	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {
 		if (target_triple == llvm::sys::getDefaultTargetTriple()) {
 			if (llvm::InitializeNativeTarget())

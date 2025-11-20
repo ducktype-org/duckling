@@ -340,9 +340,10 @@ namespace compiler::helios::mangler {
 				return path(ctx, symbol_id);
 			}
 
-				// Currently, we are handling constructor mangling differently (as functions).
+				// @note Currently, we are handling constructor mangling differently (as functions).
 				// However, this code existed earlier and provided a different mangling scheme
 				// for constructors and destructors, which we may want to reference in the future.
+				//
 				// case SymbolKind::Constructor:
 				// case SymbolKind::Destructor:
 				// 	return path(ctx, symbol_id, false) + specialMemberType(ctx, symbol_id);

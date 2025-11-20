@@ -825,6 +825,7 @@ private:
 				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
 				ASSERT_EQUAL(var1.type, st(i32_type));
 
+				// @TODO: #803 support variant types
 				// auto& var2 = get_var_block(1, if_stmt.then_body);
 				// ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
 				// ASSERT_EQUAL(var2.type, st(i32_or_f32));
