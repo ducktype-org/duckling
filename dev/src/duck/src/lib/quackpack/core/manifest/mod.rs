@@ -6,7 +6,6 @@
 //! Parsing will be implemented in a `parse` module, in future PRs.
 mod compiler_options;
 mod dependency;
-mod dependency_description;
 mod features;
 // NOTE: This module has a different name, because rust emits lints, when there's file in a module with the same name.
 mod manifest_struct;
@@ -16,7 +15,6 @@ mod summary;
 
 pub use compiler_options::*;
 pub use dependency::*;
-pub use dependency_description::*;
 pub use features::*;
 pub use manifest_struct::*;
 pub use root_description::*;

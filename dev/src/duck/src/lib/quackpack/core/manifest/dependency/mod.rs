@@ -1,9 +1,8 @@
-use crate::{
-    QuackResult, StrId,
-    quackpack::core::{DependencyDescription, FeatureName},
-};
+use crate::{QuackResult, StrId, quackpack::core::FeatureName};
 
 mod conditions;
+mod dependency_description;
+pub use dependency_description::*;
 mod dependencies;
 mod dependency_feature;
 use anyhow::bail;
