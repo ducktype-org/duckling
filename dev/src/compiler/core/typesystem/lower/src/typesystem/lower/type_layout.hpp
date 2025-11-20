@@ -369,6 +369,8 @@ namespace tsl {
 
 		/**
 		 * @brief The component layout indices of the components in the original tuple type.
+		 * @note This is not used and not tested for now,
+		 * revisit and add tests in #802 (legit tuple types)
 		 */
 		std::vector<usize> component_idx_to_layout_idx;
 
@@ -480,7 +482,9 @@ namespace tsl {
 		base::StrID mangled_name;
 
 		// Delegate constructor.
-		ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx);
+		explicit ClassTypeLayout(
+			struct ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx
+		);
 
 		ClassTypeLayout(tsh::ClassAbstractType class_type, query::Context& ctx);
 

@@ -223,7 +223,7 @@ namespace tsl {
 		return ss.str();
 	}
 
-	struct TupleTypeLayoutConstructionHelper {
+	struct TupleTypeLayoutConstructionHelper final {
 		tsh::TupleAbstractType tuple_type;
 		/**
 		 * The layouts of the components in the abstract tuple type.
@@ -237,6 +237,7 @@ namespace tsl {
 		/**
 		 * Mapping from the order of appearance of sub-objects in the layout
 		 * to the index of the component in the abstract tuple type.
+		 * @note This is effectively a permutation represented by an integer vector.
 		 */
 		std::vector<usize> layout_idx_to_component_idx;
 		/**
@@ -303,7 +304,7 @@ namespace tsl {
 		return ss.str();
 	}
 
-	struct ClassTypeLayoutConstructionHelper {
+	struct ClassTypeLayoutConstructionHelper final {
 		tsh::ClassAbstractType class_type;
 		/**
 		 * The fields of the class, in declaration order.

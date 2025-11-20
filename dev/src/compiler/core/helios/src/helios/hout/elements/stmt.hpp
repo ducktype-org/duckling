@@ -85,6 +85,7 @@ namespace compiler::helios::code {
 			  type(type),
 			  helios_symbol(helios_symbol) {}
 
+		// Friend for constructing VariableStmt without initial value.
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 	};
 

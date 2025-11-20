@@ -1,4 +1,5 @@
 class RecordClass {
+    # @TODO: #1546 fix types here
     a: i64 = 0;
     b: f32 = 0;
     c: i16 = 0;
