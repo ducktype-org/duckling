@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// An extension of DuckCtx with quackpack-specific functionalities.
-pub struct QPCtx<'duck> {
+pub struct QpCtx<'duck> {
     inner: &'duck DuckCtx,
 }
 
@@ -80,8 +80,8 @@ macro_rules! dir_ensurers {
     };
 }
 
-impl<'duck> QPCtx<'duck> {
-    /// Creates QPCtx from DuckCtx.
+impl<'duck> QpCtx<'duck> {
+    /// Creates QpCtx from DuckCtx.
     pub fn new(duck_ctx: &'duck DuckCtx) -> Self {
         Self { inner: duck_ctx }
     }
