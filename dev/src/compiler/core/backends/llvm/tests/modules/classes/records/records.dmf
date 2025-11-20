@@ -5,9 +5,9 @@ class RecordClass {
 }
 
 class BiggerRecordClass {
-    x: i8 = 0;
+    x: i8 = i8(0);
     y: RecordClass = RecordClass(1, f32(2.0), i16(3));
-    z: f64 = 0;
+    z: f64 = f64(0);
 }
 
 fun printRecordClass(r: RecordClass) = {
@@ -17,7 +17,7 @@ fun printRecordClass(r: RecordClass) = {
 
 let a: RecordClass = RecordClass(1, f32(2.0), i16(3));
 
-let big = BiggerRecordClass(i8(1), RecordClass(2, f32(3.0), i16(4)), f64(5.0));
+let big = BiggerRecordClass(i8(1), RecordClass(i64(2), f32(3.0), i16(4)), f64(5));
 
 fun main() -> i64 = {
     var b = a;
