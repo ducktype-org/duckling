@@ -92,6 +92,11 @@ impl<'duck> QpCtx<'duck> {
         self.inner.console()
     }
 
+    /// Retrieves the underlying DuckCtx's error console.
+    pub fn error_console(&self) -> &Terminal {
+        self.inner.error_console()
+    }
+
     path_getters! {
         artifacts_dir, "cache.artifacts_dir", "artifacts directory";
         download_dir, "cache.download_dir", "download directory";
