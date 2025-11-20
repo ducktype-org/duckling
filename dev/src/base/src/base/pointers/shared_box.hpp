@@ -49,6 +49,8 @@ namespace base {
 		 * If the counter reaches 0, deletes the object and the control block.
 		*/
 		void renounce_ownership() {
+			if (ctrl_ptr == nullptr)
+				return;
 			ctrl_ptr->n_owners--;
 			if (ctrl_ptr->n_owners == 0) {
 				ctrl_ptr->data_deleter.del(data_ptr);
@@ -84,12 +86,28 @@ namespace base {
 			  ctrl_ptr{ other.ctrl_ptr } {
 				ctrl_ptr->n_owners++;
 		}
-		
-		SharedBox(SharedBox&& other) noexcept = delete;
 
+		/**
+		 * @note: Since `other.ctrl_ptr` is set to `null_ptr`, `renounce_ownership` won't do anything.
+		 */
+		SharedBox(SharedBox&& other) noexcept:
+			  data_ptr{ std::move(other).data_ptr },
+			  ctrl_ptr{ std::move(other).ctrl_ptr } {
+			other.data_ptr = nullptr;
+			other.ctrl_ptr = nullptr;
+		}
+
+		/**
+		 * @note: Since `other.ctrl_ptr` is set to `null_ptr`, `renounce_ownership` won't do anything.
+		 */
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox(SharedBox<U, UDeleter>&& other) = delete;
+		SharedBox(SharedBox<U, UDeleter>&& other) noexcept:
+			  data_ptr{ std::move(other).data_ptr },
+			  ctrl_ptr{ std::move(other).ctrl_ptr } {
+			other.data_ptr = nullptr;
+			other.ctrl_ptr = nullptr;
+		}
 
 		/**
 		 * @brief Copy assignment. The ownership of the object previously pointed to is renounced.
@@ -109,7 +127,12 @@ namespace base {
 
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox& operator=(SharedBox<U, UDeleter>&& other) = delete;
+		SharedBox& operator=(SharedBox<U, UDeleter>&& other) noexcept {
+			renounce_ownership();
+			data_ptr = std::move(other).data_ptr;
+			ctrl_ptr = std::move(other).ctrl_ptr;
+
+		}
 
 		friend void swap(SharedBox& first, SharedBox& second) noexcept {
 			std::swap(first.data_ptr, second.data_ptr);
