@@ -1,4 +1,4 @@
-before_cmd: export QP_CONFIG=.
+before_cmd: export QP_CONFIG="$(pwd)"
 
 Tests:
   test-basic-flow:
