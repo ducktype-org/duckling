@@ -13,7 +13,7 @@ namespace base {
 		[[no_unique_address]] DataDeleter data_deleter;
 
 		ControlBlock() = delete;
-		ControlBlock(DataDeleter deleter) noexcept: n_owners{ 0 }, data_deleter { std::move(deleter) } {}
+		ControlBlock(DataDeleter deleter) noexcept: n_owners{ 1 }, data_deleter { std::move(deleter) } {}
     };
 
     template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
@@ -51,7 +51,7 @@ namespace base {
 		void renounce_ownership() {
 			ctrl_ptr->n_owners--;
 			if (ctrl_ptr->n_owners == 0) {
-				ctrl_ptr->deleter.del(data_ptr);
+				ctrl_ptr->data_deleter.del(data_ptr);
 				delete ctrl_ptr;
 			}
 			data_ptr = nullptr;
@@ -69,7 +69,7 @@ namespace base {
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, *(new ControlBlock(deleter)));
+			return SharedBox(ptr, new ControlBlock(deleter));
 		}
 
 		/**
@@ -109,7 +109,7 @@ namespace base {
 		 * @return SharedBox&
 		 */
 		SharedBox& operator=(const SharedBox& other) noexcept {
-			this.renounce_ownership();
+			renounce_ownership();
 
 			data_ptr = other.data_ptr;
 			ctrl_ptr = other.ctrl_ptr;
@@ -126,11 +126,11 @@ namespace base {
 		 */
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox& operator=(Box<U, UDeleter>&& other) noexcept {
-			this.renounce_ownership();
+		SharedBox& operator=(SharedBox<U, UDeleter>&& other) noexcept {
+			renounce_ownership();
 
 			data_ptr = std::move(other).data_ptr;
-			ctlr_ptr = std::move(other).ctrl_ptr;
+			ctrl_ptr = std::move(other).ctrl_ptr;
 
 			other.data_ptr = nullptr;
 			other.ctrl_ptr = nullptr;
@@ -177,15 +177,15 @@ namespace base {
 			return *data_ptr;
 		}
 
-		bool operator==(const Box& other) const { return ctrl_ptr == other.ctrl_ptr; }
+		bool operator==(const SharedBox& other) const { return ctrl_ptr == other.ctrl_ptr; }
 
 		~SharedBox() {
-			this.renounce_ownership();
+			renounce_ownership();
 		}
     };
 
 	/**
-	 * @brief Constructs a Box by forwarding the arguments to T constructor
+	 * @brief Constructs a SharedBox by forwarding the arguments to T constructor
 	 * and allocating memory with new operator.
 	 * @note default initialization of Deleter is used.
 	 */
@@ -210,3 +210,4 @@ namespace base {
 }
 
 using base::SharedBox;
+using base::makeSharedBox;
