@@ -54,7 +54,7 @@ namespace compiler::lir {
 
 				parameter_indexes.insert(index);
 				if (index >= parameter_layouts.size()) return base::BAD;
-				if (local.layout != parameter_layouts.at(index)) return base::BAD;
+				if (*local.layout != *parameter_layouts.at(index)) return base::BAD;
 			}
 		}
 

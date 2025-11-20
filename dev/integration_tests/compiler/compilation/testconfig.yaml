@@ -47,3 +47,4 @@ SubDirs:
   - statements
   - functions
   - constants
+  - classes

@@ -33,6 +33,7 @@ public:
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(ffiTest);
 	}
 
@@ -46,10 +47,10 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+			auto module_hout = ctx.query<helios::QueryModuleHOUT>(module);
 
-			for (auto& hout_glob: top_level->glob_data) {
-				if (!hout_glob.type.getType().carriesInformation()) continue;
+			for (auto& hout_glob: module_hout.glob_data) {
+				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
 				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
 				variant_match(hout_glob.value) {
@@ -104,7 +105,7 @@ private:
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			}
 
-			for (auto& fun: top_level->functions) {
+			for (auto& fun: module_hout.functions) {
 				CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 				llvm_module.addFunctionToModule(ctx, lir_fun);
@@ -182,8 +183,11 @@ private:
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
 		runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit_class", 3, 4);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
+
+	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 
