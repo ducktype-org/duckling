@@ -16,6 +16,7 @@
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
+#include "base/str/str_utils.hpp"
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
@@ -121,24 +122,30 @@ namespace compiler::helios {
 						if constexpr (std::is_same_v<LhsT, NumericValue>
 					                  && std::is_same_v<RhsT, NumericValue>) {
 							return std::visit(
-								[&](auto&& lhs_val, auto&& rhs_val) -> TreeEvalResult {
+								[&](auto&& lhs_val) -> TreeEvalResult {
 									using LhsNumT = std::decay_t<decltype(lhs_val)>;
-									using RhsNumT = std::decay_t<decltype(rhs_val)>;
 
 									// @note: We assume both sides of the binary operation have the
 							        // same types. If types differ, they should be casted with the
 							        // cast expr beforehand.
+									auto maybe_rhs_val = rhs.template get<LhsNumT>();
+									if (!maybe_rhs_val.has_value()) {
+										CORE_PANIC(
+											base::strConcat(
+												"Operands on binary expression evaluated at "
+												"compile "
+												"time are of different type. This should be "
+												"prevented by casts. Left side is:",
+												lhs.getTypeOfStoredValue(ctx).getType().toString(),
+												"Right side is: ",
+												rhs.getTypeOfStoredValue(ctx).getType().toString()
+											)
+										);
+									}
 
-									static_assert(
-										std::is_same_v<LhsNumT, RhsNumT>,
-										"Operands on binary expression evaluated at compile time "
-										"are of different type"
-									);
-
+									LhsNumT rhs_val = maybe_rhs_val.value();
 
 									using ResultT = LhsNumT;
-
-
 									ResultT result;
 									switch (expr.operation) {
 									case IntegerAdd:
@@ -178,8 +185,7 @@ namespace compiler::helios {
 
 									return CompileTimeValue{ NumericValue{ result } };
 								},
-								lhs.getStorage(),
-								rhs.getStorage()
+								lhs.getStorage()
 							);
 						} else if constexpr (std::is_same_v<LhsT, bool>
 					                         && std::is_same_v<RhsT, bool>) {
@@ -190,8 +196,9 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented("Other binary operators for bool type"
-							    );
+								throw base::NotYetImplemented(
+									"Other binary operators for bool type"
+								);
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -286,8 +293,8 @@ namespace compiler::helios {
 					return;
 				}
 
-				const auto& cond_ctv   = cond_result.value();
-				auto        maybe_bool = cond_ctv.get<bool>();
+				bool        condition_is_true = false;
+				const auto& cond_ctv          = cond_result.value();
 				match_optional(cond_ctv.get<bool>()) {
 					opt_some(value) { condition_is_true = value; }
 					opt_none {
@@ -305,25 +312,32 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto compare = [](const NumericValue& first,
+				auto compare = [this](const NumericValue& first,
 				                  const NumericValue& second,
 				                  code::BuiltinBinary operation) {
 					return std::visit(
-						[&](auto&& lhs_num, auto&& rhs_num) -> bool {
-							using LhsNumT = std::decay_t<decltype(lhs)>;
-							using RhsNumT = std::decay_t<decltype(rhs)>;
+						[&](auto&& lhs_num) -> bool {
+							using LhsNumT = std::decay_t<decltype(lhs_num)>;
 
-							// @note: We assume both sides of the comparison operation have the
+							// @note: We assume both sides of the binary operation have the
 						    // same types. If types differ, they should be casted with the
 						    // cast expr beforehand.
+							auto maybe_rhs_val = second.get<LhsNumT>();
+							if (!maybe_rhs_val.has_value()) {
+								CORE_PANIC(
+									base::strConcat(
+										"Operands on binary expression evaluated at "
+										"compile "
+										"time are of different type. This should be "
+										"prevented by casts. Left side is:",
+										first.getTypeOfStoredValue(ctx).getType().toString(),
+										"Right side is: ",
+										second.getTypeOfStoredValue(ctx).getType().toString()
+									)
+								);
+							}
 
-							static_assert(
-								std::is_same_v<LhsNumT, RhsNumT>,
-								"Operands on binary comparison expression evaluated at compile "
-								"time are of different type"
-							);
-
-
+							LhsNumT rhs_num = maybe_rhs_val.value();
 							using enum code::BuiltinBinary;
 							switch (operation) {
 							case IntegerLt:
@@ -348,8 +362,7 @@ namespace compiler::helios {
 								CORE_UNREACHABLE();
 							}
 						},
-						first.getStorage(),
-						second.getStorage()
+						first.getStorage()
 					);
 				};
 
@@ -414,8 +427,7 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?

@@ -70,8 +70,6 @@ namespace compiler::numeric_value {
 
 			if (int_type.getSignedness() == IntegralAbstractType::Signedness::Signed) {
 				switch (width) {
-				case 8:
-					return cast.template operator()<i8>();
 				case 16:
 					return cast.template operator()<i16>();
 				case 32:
@@ -83,8 +81,6 @@ namespace compiler::numeric_value {
 				}
 			} else {
 				switch (width) {
-				case 8:
-					return cast.template operator()<u8>();
 				case 16:
 					return cast.template operator()<u16>();
 				case 32:
@@ -107,9 +103,6 @@ namespace compiler::numeric_value {
 			default:
 				CORE_PANIC("Unsupported float width in compile-time cast");
 			}
-		}
-		case tsh::Kind::Bool: {
-			return cast.template operator()<bool>();
 		}
 		default:
 			CORE_PANIC("Invalid compile-time cast to a non-numeric type");

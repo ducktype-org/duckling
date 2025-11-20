@@ -17,10 +17,10 @@
 namespace compiler::numeric_value {
 	/**
 	 * @brief Represents a numeric value representing a numeric literal.
-	 * @TODO: #1498 Add support for f16, f128, i128.
+	 * @TODO: #1498 Add support for i8, u8, f16, f128, i128.
 	 */
 	class NumericValue {
-		using Storage = std::variant<i8, i16, i32, i64, u8, u16, u32, u64, f32, f64>;
+		using Storage = std::variant<i16, i32, i64, u16, u32, u64, f32, f64>;
 		Storage value;
 
 	public:
@@ -83,8 +83,9 @@ namespace compiler::numeric_value {
 		[[nodiscard]] base::Optional<TargetType> coerceTo() const {
 			return std::visit(
 				[&](auto&& stored_val) -> base::Optional<TargetType> {
-					if constexpr (std::is_same_v<TargetType, bool>) return stored_val != 0;
-					if (base::fitsIn<TargetType>(stored_val))
+					if constexpr (std::is_same_v<TargetType, bool>)
+						return stored_val != 0;
+					else if (base::fitsIn<TargetType>(stored_val))
 						return static_cast<TargetType>(stored_val);
 					return {};
 				},
@@ -120,7 +121,6 @@ namespace compiler::numeric_value {
 		 * @return A new NumericValue with the casted value, or an empty optional if the
 		 *         cast failed (e.g., overflow).
 		 */
-		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type
-		) const;
+		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type) const;
 	};
 }
