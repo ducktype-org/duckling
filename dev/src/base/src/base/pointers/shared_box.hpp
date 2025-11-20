@@ -85,21 +85,11 @@ namespace base {
 				ctrl_ptr->n_owners++;
 		}
 		
-		SharedBox(SharedBox&& other) noexcept:
-			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			other.data_ptr = nullptr;
-			other.ctrl_ptr = nullptr;
-		}
+		SharedBox(SharedBox&& other) noexcept = delete;
 
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox(SharedBox<U, UDeleter>&& other) noexcept:
-			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			other.data_ptr = nullptr;
-			other.ctrl_ptr = nullptr;
-		}
+		SharedBox(SharedBox<U, UDeleter>&& other) = delete;
 
 		/**
 		 * @brief Copy assignment. The ownership of the object previously pointed to is renounced.
@@ -117,25 +107,9 @@ namespace base {
 			return *this;
 		}
 
-		/**
-		 * @brief Move assignment. The ownership of the object previously pointed to is renounced.
-		 *
-		 * @tparam U
-		 * @param other
-		 * @return SharedBox&
-		 */
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox& operator=(SharedBox<U, UDeleter>&& other) noexcept {
-			renounce_ownership();
-
-			data_ptr = std::move(other).data_ptr;
-			ctrl_ptr = std::move(other).ctrl_ptr;
-
-			other.data_ptr = nullptr;
-			other.ctrl_ptr = nullptr;
-			return *this;
-		}
+		SharedBox& operator=(SharedBox<U, UDeleter>&& other) = delete;
 
 		friend void swap(SharedBox& first, SharedBox& second) noexcept {
 			std::swap(first.data_ptr, second.data_ptr);
