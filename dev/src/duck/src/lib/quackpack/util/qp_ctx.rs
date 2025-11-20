@@ -32,6 +32,7 @@ macro_rules! path_getters {
     ) => {
             $(
                 pub fn $name(&self) -> QuackResult<PathBuf> {
+                    // @TODO: #1555 (point 2) We may decide to only allow the configuration of the top level DUCK_HOME folder.
                     let path_buf = self.inner.toml_cfg().get_path($toml_key)?.or_else(|| $name(self.inner.env()))
                         .ok_or_else(
                             || anyhow!("Could not decide where the {} should be placed", $message_name)
