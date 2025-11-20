@@ -6,6 +6,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -118,7 +119,13 @@ namespace compiler::mir {
 			const auto other_argument_type = typeOfMIRValue(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
-				"Binary operator with different argument types"
+				base::strConcat(
+					"Binary operator with different argument types. Left side is: '",
+					argument_type.toString(),
+					"' Right side is: '",
+					other_argument_type.toString(),
+					"'"
+				)
 			);
 			const auto      result_type = expr.expression_type.getSymbolType();
 			const Operation operation   = builtinBinaryToOperation(expr.operation);
@@ -149,7 +156,8 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(
+			const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -183,13 +191,17 @@ namespace compiler::mir {
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-			});
+			condition_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ lowered_condition.getResult(function),
+			          then_block->getID(),
+			          else_block->getID() },
+					{},
+					expr_scope,
+				}
+			);
 
 			// Return (always value).
 			valueOutput(lowered_condition.begin, target_location);
@@ -250,8 +262,9 @@ namespace compiler::mir {
 			auto prev_cmp_hole         = last_comparison_block->addHole();
 
 			// After the last comparison, continue regardless of the result.
-			last_comparison_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+			last_comparison_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
@@ -273,21 +286,24 @@ namespace compiler::mir {
 				// Place for the next comparison.
 				BlockBuilderRef new_comparison_block = function.newBlock();
 				auto            new_cmp_hole         = new_comparison_block->addHole();
-				new_comparison_block->setTerminator(Instruction{
-					Operation::Branch,
-					{},
-					{ boolean_output, prev_block->getID(), continuation->getID() },
-					{},
-					expr_scope });  // We evaluate prev_value only after this comparison is true, as
-				                    // prev_cmp will be the first comparison it is a part of.
+				new_comparison_block->setTerminator(
+					Instruction{ Operation::Branch,
+				                 {},
+				                 { boolean_output, prev_block->getID(), continuation->getID() },
+				                 {},
+				                 expr_scope }
+				);  // We evaluate prev_value only after this comparison is true, as
+				    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
 				auto [new_block, new_value]
 					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
 
 				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
+				prev_cmp_hole.fill(
+					Instruction{
+						comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope }
+				);
 
 				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
@@ -301,11 +317,13 @@ namespace compiler::mir {
 				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
 
 			// The first comparison to be performed.
-			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
-			                                { boolean_output },
-			                                { first_value, prev_value },
-			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
+			prev_cmp_hole.fill(
+				Instruction{ mir_operators.front(),
+			                 { boolean_output },
+			                 { first_value, prev_value },
+			                 { flagConstruct(boolean_output) },
+			                 expr_scope }
+			);
 
 			valueOutput(first_block, boolean_output);
 		}
@@ -505,13 +523,15 @@ namespace compiler::mir {
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
-				hole.fill(Instruction{
-					Operation::Assign,
-					target,
-					{ val },
-					flags,
-					scope,
-				});
+				hole.fill(
+					Instruction{
+						Operation::Assign,
+						target,
+						{ val },
+						flags,
+						scope,
+					}
+				);
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");

@@ -435,6 +435,10 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
+			std::cout << "Query hout of expr failed for: \n";
+			element.unlock(ctx)->debugPrint(std::cout);
+			std::cout << '\n';
+
 			return query::QError(errors::Failed());
 		}
 	}

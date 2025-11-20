@@ -2,7 +2,7 @@ fun foo(a: i32) = {}
 
 fun foo2() = { return 2; }
 
-const M: i64 = 123 + A_alias;
+const M: i64 = 123i64 + A_alias;
 
 fun foo3() = {
 	if (0) {
@@ -14,9 +14,9 @@ fun foo3() = {
 	return A;
 }
 
-const A: i64 = 2;
+const A: i64 = 2i64;
 
-var B: i64 = 4;
+var B: i64 = 4i64;
 
 alias foo2_alias = foo2;
 alias A_alias = A;

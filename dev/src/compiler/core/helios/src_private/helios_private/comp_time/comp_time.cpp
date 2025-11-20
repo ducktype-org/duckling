@@ -27,6 +27,8 @@
 #include <ranges>
 #include <type_traits>
 
+#define DEBUG(TEXT) std::cout << "\n[COMP TIME]: " << TEXT << '\n';
+
 namespace compiler::helios {
 	using namespace ctv;
 
@@ -97,6 +99,7 @@ namespace compiler::helios {
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
+				DEBUG("Binary operator");
 				using enum code::BuiltinBinary;
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
 				if (lhs_result.hasError()) {
@@ -135,9 +138,9 @@ namespace compiler::helios {
 												"Operands on binary expression evaluated at "
 												"compile "
 												"time are of different type. This should be "
-												"prevented by casts. Left side is:",
+												"prevented by casts.\nLeft side is:",
 												lhs.getTypeOfStoredValue(ctx).getType().toString(),
-												"Right side is: ",
+												"\nRight side is: ",
 												rhs.getTypeOfStoredValue(ctx).getType().toString()
 											)
 										);
@@ -312,9 +315,12 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				auto compare = [this](const NumericValue& first,
-				                  const NumericValue& second,
-				                  code::BuiltinBinary operation) {
+				DEBUG("CHAIN expr");
+				auto compare = [this](
+								   const NumericValue& first,
+								   const NumericValue& second,
+								   code::BuiltinBinary operation
+							   ) {
 					return std::visit(
 						[&](auto&& lhs_num) -> bool {
 							using LhsNumT = std::decay_t<decltype(lhs_num)>;
@@ -329,9 +335,9 @@ namespace compiler::helios {
 										"Operands on binary expression evaluated at "
 										"compile "
 										"time are of different type. This should be "
-										"prevented by casts. Left side is:",
+										"prevented by casts.\nLeft side is:",
 										first.getTypeOfStoredValue(ctx).getType().toString(),
-										"Right side is: ",
+										"\nRight side is: ",
 										second.getTypeOfStoredValue(ctx).getType().toString()
 									)
 								);
@@ -556,10 +562,15 @@ namespace compiler::helios {
 		static auto evalHoutExpr(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			// Try evaluating with TreeEval(Short Path).
 			TreeEvalResult tree_eval_result = evaluateWithTreeEval(ctx, expr);
-
+			DEBUG("Eval hout expr, entry");
 			if (tree_eval_result.hasError()) {
 				variant_match(tree_eval_result.error()) {
-					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
+					variant_case(errors::Failed, failed) {
+						DEBUG("Eval hout expr, tree eval failed for:");
+						expr->debugPrint(std::cout);
+
+						return query::QError(errors::Failed());
+					}
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
 						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());

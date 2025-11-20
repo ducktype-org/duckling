@@ -108,17 +108,22 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
 		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("N.X", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("A", root_scope));
-		ASSERT_EQUAL(-3, getConstValueAs<i64>("B", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
+		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
 		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
-		ASSERT_EQUAL(6, getConstValueAs<i64>("E", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i64>("MAX_I32", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
 		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
+
+		// Floating point.
+		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
+		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
+		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
 
 		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
@@ -153,10 +158,10 @@ private:
 
 		// Test minimization logic.
 		// TODOP: Probably remove if we decide on no minimization in constants.
-		// ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
-		// ASSERT_EQUAL(2'147'483'648, getConstValueAs<i64>("NEEDS_I64", root_scope));
-		// ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
-		// ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
+		ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
+		ASSERT_EQUAL(21'474'836'412, getConstValueAs<i64>("NEEDS_I64", root_scope));
+		ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
+		ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
 
 		// TODOP: Figure out what to do with this, with the current casting logic.
 		ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));
@@ -437,8 +442,8 @@ private:
 
 	void testEdgeEvals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/edge_evals")));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("M1", root_scope));
-		ASSERT_EQUAL(6, getConstValueAs<i64>("M2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("M1", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i32>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
 	}
@@ -760,19 +765,19 @@ private:
 
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 
-		ASSERT_EQUAL(1, getConstValueAs<i64>("V1", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("V1", root_scope));
 		auto              sym_v1  = getChain("V1", root_scope).back();
 		auto              tree_v1 = getExprOfConst(sym_v1);
 		std::stringstream out_v1;
 		tree_v1->debugPrint(out_v1);
 
-		ASSERT_EQUAL(-1, getConstValueAs<i64>("VM1", root_scope));
+		ASSERT_EQUAL(-1, getConstValueAs<i32>("VM1", root_scope));
 		auto              sym_vm1  = getChain("VM1", root_scope).back();
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
 
-		ASSERT_EQUAL(256, getConstValueAs<i64>("V256", root_scope));
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
 
 		auto              sym_v256 = getChain("V256", root_scope).back();
 		std::stringstream out_v256;
@@ -1446,23 +1451,43 @@ private:
 	void testTypeOfConstAndVar() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
 
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		const auto f32_type = query::entryPoint<tsh::QueryFloatType>({ 32 });
+		const auto f64_type = query::entryPoint<tsh::QueryFloatType>({ 64 });
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
 
-		// @TODO: #925 fix how floats are deduced
 		// @TODO: #925 fix how tuples are deduced
 
 		// Vars
-		ASSERT_EQUAL(int64_type, getTypeOf("EasyInt", foo_body_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("EasyIntI32", foo_body_scope));
+		ASSERT_EQUAL(int64_type, getTypeOf("EasyIntI64", foo_body_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("EasyBinIntI32", foo_body_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("EasyOctIntI32", foo_body_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("EasyHexIntI32", foo_body_scope));
+
+		ASSERT_EQUAL(f32_type, getTypeOf("EasyFloatF32", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("EasyFloatF32_2", foo_body_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("EasyFloatF64", foo_body_scope));
+		
 		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
 		// Consts
-		ASSERT_EQUAL(int64_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleIntI32", root_scope));
+		ASSERT_EQUAL(int64_type, getTypeOf("SimpleIntI64", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleBinIntI32", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleOctIntI32", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleHexIntI32", root_scope));
+
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32_2", foo_body_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloatF64", foo_body_scope));
+
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 
@@ -1470,9 +1495,9 @@ private:
 		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
 		const auto let_type   = getSymbolTypeOf("let_no_type", root_scope);
 		const auto var_type   = getSymbolTypeOf("var_no_type", root_scope);
-		ASSERT_EQUAL(const_type.getType(), int64_type);
-		ASSERT_EQUAL(let_type.getType(), int64_type);
-		ASSERT_EQUAL(var_type.getType(), int64_type);
+		ASSERT_EQUAL(const_type.getType(), int32_type);
+		ASSERT_EQUAL(let_type.getType(), int32_type);
+		ASSERT_EQUAL(var_type.getType(), int32_type);
 		ASSERT_EQUAL(const_type.getMutability(), tsh::Mutability::Immutable);
 		ASSERT_EQUAL(let_type.getMutability(), tsh::Mutability::Immutable);
 		ASSERT_EQUAL(var_type.getMutability(), tsh::Mutability::Mutable);

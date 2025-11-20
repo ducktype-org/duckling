@@ -30,6 +30,8 @@
 #include <unordered_set>
 #include <vector>
 
+#define DEBUG(TEXT) std::cout << "\n[QUERY CONST VALUE]: " << TEXT << '\n';
+
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -624,11 +626,17 @@ namespace compiler::helios {
 			const auto const_symbol
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
+			DEBUG("Called");
 
 			auto ctv = ctx.query<QueryEvaluateExpression>(
 				const_symbol->getValue().value().unlock(ctx)->getExpr()
 			);
-			if (ctv.hasError()) return query::QError(errors::Failed());
+			if (ctv.hasError()) {
+				DEBUG("comp time failed for: ");
+				const_symbol->getValue().value().unlock(ctx)->getExpr().unlock(ctx)->debugPrint(std::cout);
+				std::cout << "\n";
+				return query::QError(errors::Failed());
+			}
 			return ctv.value();
 		}
 
