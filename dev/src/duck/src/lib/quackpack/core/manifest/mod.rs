@@ -5,7 +5,6 @@
 //!
 //! Parsing will be implemented in a `parse` module, in future PRs.
 mod compiler_options;
-mod dependencies;
 mod dependency;
 mod dependency_description;
 mod features;
@@ -16,7 +15,6 @@ mod source;
 mod summary;
 
 pub use compiler_options::*;
-pub use dependencies::*;
 pub use dependency::*;
 pub use dependency_description::*;
 pub use features::*;

@@ -4,9 +4,11 @@ use crate::{
 };
 
 mod conditions;
+mod dependencies;
 mod dependency_feature;
 use anyhow::bail;
 pub use conditions::*;
+pub use dependencies::*;
 pub use dependency_feature::*;
 
 #[derive(Debug)]
@@ -80,16 +82,17 @@ impl Dependency {
     }
 
     /// Get an iterator over features that are enabled for the given features.
-    pub fn enabled_features(
-        &self,
-        enabled_features: impl IntoIterator<Item = FeatureName> + Clone,
-    ) -> impl Iterator<Item = FeatureName> {
-        self.features.iter().filter_map(move |feature| {
-            if feature.is_enabled_for(enabled_features.clone()) {
-                Some(feature.name())
-            } else {
-                None
-            }
-        })
+    // NOTE: We take `Vec`, because it has trivially a copyable iterator (iterator over a slice).
+    pub fn enabled_features(&self, enabled_features: Vec<FeatureName>) -> Vec<FeatureName> {
+        self.features
+            .iter()
+            .filter_map(|feature| {
+                if feature.is_enabled_for(enabled_features.iter().copied()) {
+                    Some(feature.name())
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
