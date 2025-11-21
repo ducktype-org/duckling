@@ -121,6 +121,7 @@ namespace compiler::numeric_value {
 		 * @return A new NumericValue with the casted value, or an empty optional if the
 		 *         cast failed (e.g., overflow).
 		 */
-		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type) const;
+		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type
+		) const;
 	};
 }

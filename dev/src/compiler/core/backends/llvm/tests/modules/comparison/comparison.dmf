@@ -1,6 +1,6 @@
 fun main() -> i64 = {
-    let x: i64 = i64(1);
-    let y: i64 = i64(1);
+    let x: i64 = 1;
+    let y: i64 = 1;
 
     if (1 > 2) { 
         builtin_output_i64(1); # not printed

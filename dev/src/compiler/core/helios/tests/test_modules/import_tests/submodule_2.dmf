@@ -1,2 +1,2 @@
 
-const my_value: i64 = 777666;
+const my_value: i64 = 777666i64;

@@ -17,7 +17,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include "ctv/numeric_value.hpp"
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -364,7 +363,8 @@ private:
 			assertTrue(
 				lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
 			);
-			auto const_numeric = lir_global.initial_value.value().get<numeric_value::NumericValue>();
+			auto const_numeric
+				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
 			auto const_value = const_numeric->get<i64>();
 			ASSERT_EQUAL(const_value, 55);
 		});

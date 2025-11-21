@@ -157,13 +157,11 @@ private:
 		ASSERT_EQUAL(-10.125, getConstValueAs<f32>("neg", root_scope));
 
 		// Test minimization logic.
-		// TODOP: Probably remove if we decide on no minimization in constants.
 		ASSERT_EQUAL(32'767, getConstValueAs<i32>("NEEDS_I32", root_scope));
 		ASSERT_EQUAL(21'474'836'412, getConstValueAs<i64>("NEEDS_I64", root_scope));
 		ASSERT_EQUAL(1.0f + 1.0f / 2048.0f, getConstValueAs<f32>("NEEDS_F32", root_scope));
 		ASSERT_EQUAL(1.0 + 1.0 / 16777216.0, getConstValueAs<f64>("NEEDS_F64", root_scope));
 
-		// TODOP: Figure out what to do with this, with the current casting logic.
 		ASSERT_EQUAL(26, getConstValueAs<i16>("hex", root_scope));
 		ASSERT_EQUAL(15, getConstValueAs<i16>("oct", root_scope));
 		ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
@@ -218,12 +216,6 @@ private:
 		verify_type_and_mutability("var", "u64", u64_type, Mutable);
 		verify_type_and_mutability("var", "f32", f32_type, Mutable);
 		verify_type_and_mutability("var", "f64", f64_type, Mutable);
-
-		// // Test literals with different bases
-		// // TODOP: Write about the default approach.
-		// ASSERT_EQUAL(i64_type, getTypeOf("hex", root_scope));
-		// ASSERT_EQUAL(i64_type, getTypeOf("oct", root_scope));
-		// ASSERT_EQUAL(i64_type, getTypeOf("bin", root_scope));
 	}
 
 	void testClassSymbolData() {
@@ -733,11 +725,11 @@ private:
 				if (gb.original_name == name) {
 					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
-						auto val
-							= ctv.get<compiler::numeric_value::NumericValue>()->coerceTo<i64>();
+						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
 							this->fail(base::strConcat(
-								"Got a constant with a different type than expected", name.strView()
+								"Got a constant with a different type than expected: ",
+								name.strView()
 							));
 						}
 						ASSERT_EQUAL(exp_val, val);
@@ -1453,8 +1445,8 @@ private:
 
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
-		const auto f32_type = query::entryPoint<tsh::QueryFloatType>({ 32 });
-		const auto f64_type = query::entryPoint<tsh::QueryFloatType>({ 64 });
+		const auto f32_type   = query::entryPoint<tsh::QueryFloatType>({ 32 });
+		const auto f64_type   = query::entryPoint<tsh::QueryFloatType>({ 64 });
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
@@ -1473,7 +1465,7 @@ private:
 		ASSERT_EQUAL(f32_type, getTypeOf("EasyFloatF32", foo_body_scope));
 		ASSERT_EQUAL(f32_type, getTypeOf("EasyFloatF32_2", foo_body_scope));
 		ASSERT_EQUAL(f64_type, getTypeOf("EasyFloatF64", foo_body_scope));
-		
+
 		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
@@ -1837,10 +1829,8 @@ private:
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
 
 
-
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		// TODOP: Add some bad tests here
 		try {
 			getConstValueAs<i64>("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
@@ -1873,6 +1863,34 @@ private:
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<i64>("INVALID_TYPES", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<f32>("INVALID_ADD", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.

@@ -14,10 +14,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
-
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -26,8 +22,6 @@
 #include <cmath>
 #include <ranges>
 #include <type_traits>
-
-#define DEBUG(TEXT) std::cout << "\n[COMP TIME]: " << TEXT << '\n';
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -99,7 +93,6 @@ namespace compiler::helios {
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
-				DEBUG("Binary operator");
 				using enum code::BuiltinBinary;
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
 				if (lhs_result.hasError()) {
@@ -133,17 +126,15 @@ namespace compiler::helios {
 							        // cast expr beforehand.
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
-										CORE_PANIC(
-											base::strConcat(
-												"Operands on binary expression evaluated at "
-												"compile "
-												"time are of different type. This should be "
-												"prevented by casts.\nLeft side is:",
-												lhs.getTypeOfStoredValue(ctx).getType().toString(),
-												"\nRight side is: ",
-												rhs.getTypeOfStoredValue(ctx).getType().toString()
-											)
-										);
+										CORE_PANIC(base::strConcat(
+											"Operands on binary expression evaluated at "
+											"compile "
+											"time are of different type. This should be "
+											"prevented by casts.\nLeft side is:",
+											lhs.getTypeOfStoredValue(ctx).getType().toString(),
+											"\nRight side is: ",
+											rhs.getTypeOfStoredValue(ctx).getType().toString()
+										));
 									}
 
 									LhsNumT rhs_val = maybe_rhs_val.value();
@@ -199,9 +190,8 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented(
-									"Other binary operators for bool type"
-								);
+								throw base::NotYetImplemented("Other binary operators for bool type"
+							    );
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -315,7 +305,6 @@ namespace compiler::helios {
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
-				DEBUG("CHAIN expr");
 				auto compare = [this](
 								   const NumericValue& first,
 								   const NumericValue& second,
@@ -330,17 +319,15 @@ namespace compiler::helios {
 						    // cast expr beforehand.
 							auto maybe_rhs_val = second.get<LhsNumT>();
 							if (!maybe_rhs_val.has_value()) {
-								CORE_PANIC(
-									base::strConcat(
-										"Operands on binary expression evaluated at "
-										"compile "
-										"time are of different type. This should be "
-										"prevented by casts.\nLeft side is:",
-										first.getTypeOfStoredValue(ctx).getType().toString(),
-										"\nRight side is: ",
-										second.getTypeOfStoredValue(ctx).getType().toString()
-									)
-								);
+								CORE_PANIC(base::strConcat(
+									"Operands on binary expression evaluated at "
+									"compile "
+									"time are of different type. This should be "
+									"prevented by casts.\nLeft side is:",
+									first.getTypeOfStoredValue(ctx).getType().toString(),
+									"\nRight side is: ",
+									second.getTypeOfStoredValue(ctx).getType().toString()
+								));
 							}
 
 							LhsNumT rhs_num = maybe_rhs_val.value();
@@ -433,7 +420,8 @@ namespace compiler::helios {
 				} };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -562,15 +550,9 @@ namespace compiler::helios {
 		static auto evalHoutExpr(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			// Try evaluating with TreeEval(Short Path).
 			TreeEvalResult tree_eval_result = evaluateWithTreeEval(ctx, expr);
-			DEBUG("Eval hout expr, entry");
 			if (tree_eval_result.hasError()) {
 				variant_match(tree_eval_result.error()) {
-					variant_case(errors::Failed, failed) {
-						DEBUG("Eval hout expr, tree eval failed for:");
-						expr->debugPrint(std::cout);
-
-						return query::QError(errors::Failed());
-					}
+					variant_case(errors::Failed, failed) { return query::QError(errors::Failed()); }
 					variant_case(CouldNotShortPath, _) {
 						// If TreeEval failed, try to evaluate with VM.
 						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());

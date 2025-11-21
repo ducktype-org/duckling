@@ -65,7 +65,6 @@ namespace compiler::helios {
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {
-					// TODOP: Add a sanity check that the type of expression matches the actual type.
 					setSymbolTypeByTypeExpr(
 						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx),
 						tsh::Mutability::Immutable

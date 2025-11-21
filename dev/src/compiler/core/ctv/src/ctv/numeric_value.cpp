@@ -1,11 +1,8 @@
 #include "numeric_value.hpp"
 
-#include "typesystem/higher/types.hpp"
-
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 

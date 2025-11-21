@@ -130,7 +130,7 @@ private:
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
-			// those assertions might change when we improve mir generaration:
+			// those assertions might change when we improve mir generation:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
 			// Check that the first instruction assigns to a global
@@ -177,8 +177,10 @@ private:
 	Local(6) :=  Assign           15               Flags[], Params{}, scope:38
 			     FunctionEnd                       Flags[], Params{}, scope:36
 			 */
-			// TODOP: Fix that
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 7);
+
+			goo_mir.debugPrint(std::cout);
+
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 6);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
 				compiler::mir::Operation::Cast
@@ -191,11 +193,10 @@ private:
 				goo_mir.blocks[first_block_id].instructions.at(4).operation,
 				compiler::mir::Operation::Call
 			);
-			// TODOP
-			// ASSERT_EQUAL(
-			// 	goo_mir.blocks[first_block_id].instructions.at(5).operation,
-			// 	compiler::mir::Operation::Call
-			// );
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(5).operation,
+				compiler::mir::Operation::Assign
+			);
 		});
 	}
 
