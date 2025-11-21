@@ -288,7 +288,7 @@ namespace compiler::backend_vm {
 		) {
 			if (!lir_instruction.output.has_value()) return {};
 
-			// @TODO: #500 handle access into fields.
+			// @TODO: #1560 handle access into fields.
 			variant_match(lir_instruction.output.value().base) {
 				variant_case(lir::LIRLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
@@ -311,7 +311,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LIRPlace, place) {
-					// @TODO: #500 handle access into fields.
+					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
 						variant_case(lir::LIRLocalRef, local_ref) {
 							auto&& var_type = ctx.lir_local_types[local_ref];

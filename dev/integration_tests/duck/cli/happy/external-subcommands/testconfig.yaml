@@ -6,7 +6,7 @@ prepare: |
   EOF
   chmod +x duck-echo
 
-before_cmd: export PATH=.:'${PATH}' && export QP_CONFIG=.
+before_cmd: export PATH="$(pwd)" && export QP_CONFIG="$(pwd)"
 
 PostTest: rm duck-echo
 
