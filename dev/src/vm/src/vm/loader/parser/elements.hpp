@@ -79,8 +79,6 @@ namespace vm::loader::parser {
 		~ByteCode() override = default;
 	};
 
-	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
-
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;
 

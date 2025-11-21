@@ -3,7 +3,8 @@ fun foo1(a: i32) = {}
 fun foo2() = { return 2; }
 
 fun foo3() = {
-	if (0) {
+	# @TODO: #1543 Change '0i64' to '0' once `NumericValue::createOfType()` gets implemented. 
+	if (0i64) {
 		return 0;
 	}
 	return 123;

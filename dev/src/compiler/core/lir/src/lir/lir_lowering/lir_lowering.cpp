@@ -395,7 +395,7 @@ namespace compiler::lir {
 				}
 			}
 
-			static bool isArgSigned(const mir::MIRValue location) {
+			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MIRIntegerConst) { return true; }
 					variant_case(mir::MIRPlace, place) {
