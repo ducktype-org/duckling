@@ -37,8 +37,8 @@ namespace base {
 			if constexpr (sizeof(TargetType) >= sizeof(SourceType)) return true;
 			if (std::isnan(value)) return true;
 			if (std::isinf(value)) return std::numeric_limits<TargetType>::has_infinity;
-			return value >= -std::numeric_limits<TargetType>::max()
-			    && value <= std::numeric_limits<TargetType>::max();
+			// Check if we lose no precision when casting to the designated floating point type.
+			return static_cast<SourceType>(static_cast<TargetType>(value)) == value;
 		}
 	}
 
