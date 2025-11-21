@@ -16,7 +16,18 @@
 namespace compiler::helios {
 	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, errors::Failed>;
 
+	struct KeyFor_QueryEvaluateHOUTExpression {
+		CRef<code::Expr> expr;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return expr->getID().asInt();
+		}
+	};
+
+	DECLARE_QUERY(QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult)
+
 	DECLARE_QUERY(
-		QueryEvaluateExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult
+		QueryEvaluatePSTExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult
 	)
 }

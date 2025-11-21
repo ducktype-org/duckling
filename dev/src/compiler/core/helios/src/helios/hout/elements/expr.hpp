@@ -20,6 +20,12 @@ namespace compiler::helios::code {
 	friend base::Box<T, Deleter> base::makeBox(Args&&... args);
 
 	/**
+	 * @brief Unique ID for each HOUT Expr element.
+	 * It can be used as session-unstable HOUT Expr element hash.
+	 */
+	STRONG_TYPEDEF_ID(HOUTExprID);
+
+	/**
 	 * @brief Base class for all HOUT expressions.
 	 * All subclasses shall have a "Expr" suffix.
 	 */
@@ -44,7 +50,16 @@ namespace compiler::helios::code {
 		 * Use with caution.
 		 * @return Box<Expr> ownership of the copy of the expression.
 		 */
-		[[nodiscard]] virtual Box<Expr> clone() const = 0;
+		[[nodiscard]]
+		virtual Box<Expr> clone() const = 0;
+
+		[[nodiscard]]
+		HOUTExprID getID() const {
+			return id;
+		}
+
+	private:
+		HOUTExprID id = HOUTExprID::next();
 	};
 
 	/***********************\
