@@ -390,9 +390,7 @@ struct KeyStable final {
 	}
 };
 
-DECLARE_QUERY(
-	StableHashTest, KeyStable, u64, ({ .used_hashes = query::UsedHashes::StableHash })
-);
+DECLARE_QUERY(StableHashTest, KeyStable, u64, ({ .used_hashes = query::UsedHashes::StableHash }));
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	// record the hash value passed to load()

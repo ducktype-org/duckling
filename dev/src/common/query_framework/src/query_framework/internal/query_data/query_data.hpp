@@ -62,8 +62,9 @@ namespace query {
 		 * - name of the query
 		 * - various tags associated with the query (see QueryTags)
 		 *
-		 * @note QueryData and QueryTags struct are internal, since they should probably not be named directly outside the query framework.
-		 * Its however valid, to use it, when there is some indirect access to it, e.g. via QueryID or query interface struct. 
+		 * @note QueryData and QueryTags struct are internal, since they should probably not be
+		 * named directly outside the query framework. Its however valid, to use it, when there is
+		 * some indirect access to it, e.g. via QueryID or query interface struct.
 		 */
 		struct QueryData final {
 			QueryType        type;
