@@ -58,7 +58,7 @@ namespace compiler::driver {
 		KeyOf_CompileModule,
 		artifacts::FileArtifact,
 		({
-			.used_hashes             = query::internal::QueryTags::UsedHashes::StableHash,
+			.used_hashes             = query::internal::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,
 		})
 	);
