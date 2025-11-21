@@ -32,8 +32,8 @@ namespace query::internal {
 			// Skip unregistered nodes - these are dummy nodes with unstable hashes
 			if (!node.q_id.registered()) continue;
 
-			if (node.q_id.getData().type != query::internal::QueryType::SideInput
-			    && node.q_id.getData().type != query::internal::QueryType::Input) {
+			if (node.q_id.getData().type != query::QueryType::SideInput
+			    && node.q_id.getData().type != query::QueryType::Input) {
 				continue;
 			}
 

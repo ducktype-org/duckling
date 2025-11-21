@@ -20,6 +20,6 @@ namespace compiler::helios {
 		QueryEvaluateExpression,
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		CompTimeEvalResult,
-		({ .used_hashes = query::internal::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash })
 	)
 }

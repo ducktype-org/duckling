@@ -35,7 +35,7 @@ namespace compiler::helios {
 		QuerySymbolOfSTMT,
 		pst::GenericPSTQueryKey<>,
 		SymID,
-		({ .used_hashes = query::internal::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash })
 	);
 
 	struct KeyOf_LookupInSymbol {

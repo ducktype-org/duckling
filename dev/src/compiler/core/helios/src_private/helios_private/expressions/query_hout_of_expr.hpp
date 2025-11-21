@@ -21,6 +21,6 @@ namespace compiler::helios {
 		QueryHoutOfExpr,
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		ExprConstructionResult,
-		({ .used_hashes = query::internal::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash })
 	)
 }

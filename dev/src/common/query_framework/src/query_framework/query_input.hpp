@@ -43,10 +43,10 @@ namespace query::internal {
 		key,                                                                        \
 		query::internal::SideInputMockValue,                                        \
 		::query::internal::QueryData(                                               \
-			::query::internal::QueryType::SideInput,                                \
+			::query::QueryType::SideInput,                                \
 			#query_type,                                                            \
 			::query::internal::QueryTags{                                           \
-				.used_hashes             = query::internal::UsedHashes::StableHash, \
+				.used_hashes             = query::UsedHashes::StableHash, \
 				.can_be_loaded_from_disk = false,                                   \
 			}                                                                       \
 		)                                                                           \

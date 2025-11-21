@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace query::internal {
+namespace query {
 
 	/**
 	 * General type of the query.
@@ -24,86 +24,92 @@ namespace query::internal {
 		StableHash,
 	};
 
-	/**
-	 * @brief Query tags are various, lightweight attributes or properties that can be associated
-	 * with a query, other then its primary type and a name.
-	 * Query tags provide additional metadata about the query's behavior,
-	 * characteristics, or requirements.
-	 *
-	 * @note Some of the tags are only relevant to the query implementation,
-	 * but all the tags are kept in QueryData for simplicity.
-	 *
-	 * @note We use aggrate initialization for QueryTags, we can emulate default value + named
-	 * arguments, since most queries will only set a few tags different than default (or none).
-	 */
-	struct QueryTags final {
-		/**
-		 * Type of hash used by the query.
-		 */
-		UsedHashes used_hashes = UsedHashes::UnstableHash;
+	namespace internal {
 
 		/**
-		 * Whether query is cached on disk and can be loaded from there in incremental compilation.
-		 * Queries cached on disk must use stable hashing and provide loadFromDisc function.
+		 * @brief Query tags are various, lightweight attributes or properties that can be
+		 * associated with a query, other then its primary type and a name. Query tags provide
+		 * additional metadata about the query's behavior, characteristics, or requirements.
+		 *
+		 * @note Some of the tags are only relevant to the query implementation,
+		 * but all the tags are kept in QueryData for simplicity.
+		 *
+		 * @note We use aggrate initialization for QueryTags, we can emulate default value + named
+		 * arguments, since most queries will only set a few tags different than default (or none).
 		 */
-		bool can_be_loaded_from_disk = false;
-	};
+		struct QueryTags final {
+			/**
+			 * Type of hash used by the query.
+			 */
+			UsedHashes used_hashes = UsedHashes::UnstableHash;
 
-	/**
-	 * Struct holding universal, comp-time meta data of each query type.
-	 * It is set per query, and stored in the query-interface struct, so it can be accessed anywhere
-	 * in the pogram. Additionally it is stored in QueryID data, so it can be accessed from QueryID
-	 * as well, without knowning the comp-time type of the query.
-	 *
-	 * Query data consist of three main parts:
-	 * - type of the query (e.g. normal, input, side-input, dummy, see: QueryType)
-	 * - name of the query
-	 * - various tags associated with the query (see QueryTags)
-	 */
-	struct QueryData final {
-		QueryType        type;
-		std::string_view name;
-		QueryTags        tags;
-
-		constexpr QueryData(QueryType type, std::string_view name, QueryTags tags):
-			  type(type),
-			  name(name),
-			  tags(tags) {}
-
-		constexpr QueryData(const QueryData&) = default;
-
-		[[nodiscard]]
-		constexpr bool isInputQuery() const {
-			return type == QueryType::Input or type == QueryType::SideInput;
-		}
-
-		[[nodiscard]]
-		constexpr bool usesStableHashing() const {
-			return tags.used_hashes == UsedHashes::StableHash;
-		}
-
-		[[nodiscard]]
-		constexpr bool usesUnstableHashing() const {
-			return tags.used_hashes == UsedHashes::UnstableHash;
-		}
+			/**
+			 * Whether query is cached on disk and can be loaded from there in incremental
+			 * compilation. Queries cached on disk must use stable hashing and provide loadFromDisc
+			 * function.
+			 */
+			bool can_be_loaded_from_disk = false;
+		};
 
 		/**
-		 * Verify that the query data is consistent, including the tag data.
-		 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
-		 * Is run in comptime time in query implementation boilerplate.
+		 * Struct holding universal, comp-time meta data of each query type.
+		 * It is set per query, and stored in the query-interface struct, so it can be accessed
+		 * anywhere in the pogram. Additionally it is stored in QueryID data, so it can be accessed
+		 * from QueryID as well, without knowning the comp-time type of the query.
+		 *
+		 * Query data consist of three main parts:
+		 * - type of the query (e.g. normal, input, side-input, dummy, see: QueryType)
+		 * - name of the query
+		 * - various tags associated with the query (see QueryTags)
+		 *
+		 * @note QueryData and QueryTags struct are internal, since they should probably not be named directly outside the query framework.
+		 * Its however valid, to use it, when there is some indirect access to it, e.g. via QueryID or query interface struct. 
 		 */
-		[[nodiscard]]
-		constexpr bool verify() const {
-			if (tags.can_be_loaded_from_disk) {
-				// queries that are cached on disk must use stable hashing:
-				if (tags.used_hashes != UsedHashes::StableHash) return false;
-			}
-			if (isInputQuery()) {
-				// input queries must use stable hashing:
-				if (tags.used_hashes != UsedHashes::StableHash) return false;
+		struct QueryData final {
+			QueryType        type;
+			std::string_view name;
+			QueryTags        tags;
+
+			constexpr QueryData(QueryType type, std::string_view name, QueryTags tags):
+				  type(type),
+				  name(name),
+				  tags(tags) {}
+
+			constexpr QueryData(const QueryData&) = default;
+
+			[[nodiscard]]
+			constexpr bool isInputQuery() const {
+				return type == QueryType::Input or type == QueryType::SideInput;
 			}
 
-			return true;
-		}
-	};
+			[[nodiscard]]
+			constexpr bool usesStableHashing() const {
+				return tags.used_hashes == UsedHashes::StableHash;
+			}
+
+			[[nodiscard]]
+			constexpr bool usesUnstableHashing() const {
+				return tags.used_hashes == UsedHashes::UnstableHash;
+			}
+
+			/**
+			 * Verify that the query data is consistent, including the tag data.
+			 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
+			 * Is run in comptime time in query implementation boilerplate.
+			 */
+			[[nodiscard]]
+			constexpr bool verify() const {
+				if (tags.can_be_loaded_from_disk) {
+					// queries that are cached on disk must use stable hashing:
+					if (tags.used_hashes != UsedHashes::StableHash) return false;
+				}
+				if (isInputQuery()) {
+					// input queries must use stable hashing:
+					if (tags.used_hashes != UsedHashes::StableHash) return false;
+				}
+
+				return true;
+			}
+		};
+	}
 };
