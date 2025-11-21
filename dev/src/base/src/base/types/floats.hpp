@@ -24,8 +24,6 @@
 using f32 = std::float32_t;
 using f64 = std::float64_t;
 #else
-	#warning "Using fallback floating_point types. C++23 <stdfloat> support is not detected"
-
 // @note: floats and doubles are USUALLY 32 and 64 bits in size. This is not guaranteed by the
 // standard though. Here we assert that the sizes and mantissa sizes are what we expect.
 static_assert(

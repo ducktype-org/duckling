@@ -70,7 +70,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
-			// @TODO 1499: All numeric literals are interpreted as i64 in MIR and LIR for now.
+			// @TODO: #1499 All numeric literals are interpreted as i64 in MIR and LIR for now.
 			valueOutput(
 				continuation, MIRValue{ MIRIntegerConst{ value.value.coerceTo<i64>().value() } }
 			);
