@@ -130,7 +130,7 @@ namespace query::internal {
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		// Some forwards used to simplify the code:
-		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.tags.usesStableHashing();
+		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
 		constexpr static bool IS_CACHED_ON_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
 
@@ -216,11 +216,11 @@ namespace query::internal {
 	);                                                                                                                                 \
 	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                \
 	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),             \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),             \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                        \
 	);                                                                                                                                 \
 	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                 \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                 \
 		"queryStablePerfectHash must be implemented and return QueryStableHash"                                                        \
 	);                                                                                                                                 \
 	static_assert(                                                                                                                     \

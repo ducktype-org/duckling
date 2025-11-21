@@ -24,7 +24,7 @@ namespace query::internal {
 
 		return NodeID(
 			QueryInteface::getID(),
-			KeyHash{ .val = perfectHashKey<QueryInteface::QUERY_DATA.tags.usesStableHashing()>(key) }
+			KeyHash{ .val = perfectHashKey<QueryInteface::QUERY_DATA.usesStableHashing()>(key) }
 		);
 	}
 }

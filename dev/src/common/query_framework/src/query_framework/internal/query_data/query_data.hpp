@@ -17,8 +17,17 @@ namespace query::internal {
 	};
 
 	/**
+	 * Hash used by the query.
+	 */
+	enum class UsedHashes {
+		UnstableHash,
+		StableHash,
+	};
+
+	/**
 	 * @brief Query tags are various, lightweight attributes or properties that can be associated
-	 * with a query. Query tags provide additional metadata about the query's behavior,
+	 * with a query, other then its primary type and a name.
+	 * Query tags provide additional metadata about the query's behavior,
 	 * characteristics, or requirements.
 	 *
 	 * @note Some of the tags are only relevant to the query implementation,
@@ -26,18 +35,8 @@ namespace query::internal {
 	 *
 	 * @note We use aggrate initialization for QueryTags, we can emulate default value + named
 	 * arguments, since most queries will only set a few tags different than default (or none).
-	 *
-	 * @TODO PR: move it out of internal? Also keep tags super simple, and move methods to data
 	 */
 	struct QueryTags final {
-		// Helper type definitions:
-		enum class UsedHashes {
-			UnstableHash,
-			StableHash,
-		};
-
-
-		// Tags:
 
 		/**
 		 * Type of hash used by the query.
@@ -49,18 +48,6 @@ namespace query::internal {
 		 * Queries cached on disk must use stable hashing and provide loadFromDisc function.
 		 */
 		bool can_be_loaded_from_disk = false;
-
-		// additional methods:
-
-		[[nodiscard]]
-		constexpr bool usesStableHashing() const {
-			return used_hashes == UsedHashes::StableHash;
-		}
-
-		[[nodiscard]]
-		constexpr bool usesUnstableHashing() const {
-			return used_hashes == UsedHashes::UnstableHash;
-		}
 	};
 
 	/**
@@ -68,6 +55,11 @@ namespace query::internal {
 	 * It is set per query, and stored in the query-interface struct, so it can be accessed anywhere
 	 * in the pogram. Additionally it is stored in QueryID data, so it can be accessed from QueryID
 	 * as well, without knowning the comp-time type of the query.
+	 *
+	 * Query data consist of three main parts:
+	 * - type of the query (e.g. normal, input, side-input, dummy, see: QueryType)
+	 * - name of the query
+	 * - various tags associated with the query (see QueryTags)
 	 */
 	struct QueryData final {
 		QueryType        type;
@@ -86,6 +78,17 @@ namespace query::internal {
 			return type == QueryType::Input or type == QueryType::SideInput;
 		}
 
+
+		[[nodiscard]]
+		constexpr bool usesStableHashing() const {
+			return tags.used_hashes == UsedHashes::StableHash;
+		}
+
+		[[nodiscard]]
+		constexpr bool usesUnstableHashing() const {
+			return tags.used_hashes == UsedHashes::UnstableHash;
+		}
+
 		/**
 		 * Verify that the query data is consistent, including the tag data.
 		 * For example, if can_be_loaded_from_disk is true, then used_hashes must be StableHash.
@@ -95,11 +98,11 @@ namespace query::internal {
 		constexpr bool verify() const {
 			if (tags.can_be_loaded_from_disk) {
 				// queries that are cached on disk must use stable hashing:
-				if (tags.used_hashes != QueryTags::UsedHashes::StableHash) return false;
+				if (tags.used_hashes != UsedHashes::StableHash) return false;
 			}
 			if (isInputQuery()) {
 				// input queries must use stable hashing:
-				if (tags.used_hashes != QueryTags::UsedHashes::StableHash) return false;
+				if (tags.used_hashes != UsedHashes::StableHash) return false;
 			}
 
 			return true;

@@ -46,7 +46,7 @@ namespace query::internal {
 			::query::internal::QueryType::SideInput,                                           \
 			#query_type,                                                                       \
 			::query::internal::QueryTags{                                                      \
-				.used_hashes             = query::internal::QueryTags::UsedHashes::StableHash, \
+				.used_hashes             = query::internal::UsedHashes::StableHash, \
 				.can_be_loaded_from_disk = false,                                              \
 			}                                                                                  \
 		)                                                                                      \

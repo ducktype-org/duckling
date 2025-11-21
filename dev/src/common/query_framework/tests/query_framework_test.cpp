@@ -394,7 +394,7 @@ DECLARE_QUERY(
 	StableHashTest,
 	KeyStable,
 	u64,
-	({ .used_hashes = query::internal::QueryTags::UsedHashes::StableHash })
+	({ .used_hashes = query::internal::UsedHashes::StableHash })
 );
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
@@ -783,7 +783,7 @@ private:
 		query::entryPoint<StableHashTest>(key);
 
 		query::perfectHashKey<true>(key);
-		std::cout << ImplementationOf_StableHashTest::QueryType::QUERY_DATA.tags.usesStableHashing()
+		std::cout << ImplementationOf_StableHashTest::QueryType::QUERY_DATA.usesStableHashing()
 				  << "\n";
 		std::cout << "Last hash: " << ImplementationOf_StableHashTest::last_hash << "\n";
 		std::cout << "Expected : " << key.stable << "\n";
