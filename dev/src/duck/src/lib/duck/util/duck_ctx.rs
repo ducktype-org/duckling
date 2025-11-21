@@ -3,6 +3,7 @@ use rustvil::os::env::Env;
 use crate::{
     QuackResult,
     duck::util::{duck_cfg::DuckCfg, terminal::Terminal},
+    util_common::toml_config::TomlConfig,
 };
 
 #[derive(Debug)]
@@ -45,6 +46,10 @@ impl DuckCtx {
 
     pub fn duck_cfg(&self) -> &DuckCfg {
         &self.duck_cfg
+    }
+
+    pub fn toml_cfg(&self) -> &TomlConfig {
+        self.duck_cfg().toml_config()
     }
 
     #[cfg(test)]
