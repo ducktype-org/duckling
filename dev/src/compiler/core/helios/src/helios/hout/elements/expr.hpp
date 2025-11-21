@@ -51,7 +51,8 @@ namespace compiler::helios::code {
 		 * @return Box<Expr> ownership of the copy of the expression.
 		 */
 		[[nodiscard]]
-		virtual Box<Expr> clone() const = 0;
+		virtual Box<Expr> clone() const
+			= 0;
 
 		[[nodiscard]]
 		HOUTExprID getID() const {
