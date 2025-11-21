@@ -391,10 +391,7 @@ struct KeyStable final {
 };
 
 DECLARE_QUERY(
-	StableHashTest,
-	KeyStable,
-	u64,
-	({ .used_hashes = query::internal::UsedHashes::StableHash })
+	StableHashTest, KeyStable, u64, ({ .used_hashes = query::internal::UsedHashes::StableHash })
 );
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {

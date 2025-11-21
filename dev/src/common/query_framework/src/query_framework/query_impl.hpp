@@ -216,11 +216,11 @@ namespace query::internal {
 	);                                                                                                                                 \
 	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                \
 	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),             \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                  \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                        \
 	);                                                                                                                                 \
 	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                 \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                      \
 		"queryStablePerfectHash must be implemented and return QueryStableHash"                                                        \
 	);                                                                                                                                 \
 	static_assert(                                                                                                                     \

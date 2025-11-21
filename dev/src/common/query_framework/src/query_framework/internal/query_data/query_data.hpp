@@ -37,7 +37,6 @@ namespace query::internal {
 	 * arguments, since most queries will only set a few tags different than default (or none).
 	 */
 	struct QueryTags final {
-
 		/**
 		 * Type of hash used by the query.
 		 */
@@ -77,7 +76,6 @@ namespace query::internal {
 		constexpr bool isInputQuery() const {
 			return type == QueryType::Input or type == QueryType::SideInput;
 		}
-
 
 		[[nodiscard]]
 		constexpr bool usesStableHashing() const {
