@@ -559,22 +559,22 @@ private:
 	}
 
 	void queryNamesTest() {
-		assertTrue(Fibonacci::getData().name == "Fibonacci", "Bad query name (1)");
-		assertTrue(FibonacciSum::getData().name == "FibonacciSum", "Bad query name (2)");
+		assertTrue(Fibonacci::QUERY_DATA.name == "Fibonacci", "Bad query name (1)");
+		assertTrue(FibonacciSum::QUERY_DATA.name == "FibonacciSum", "Bad query name (2)");
 		assertTrue(
-			FibonacciStringAutoCache::getData().name == "FibonacciStringAutoCache",
+			FibonacciStringAutoCache::QUERY_DATA.name == "FibonacciStringAutoCache",
 			"Bad query name (3)"
 		);
-		assertTrue(CallingEntryPoint::getData().name == "CallingEntryPoint", "Bad query name (4)");
-		assertTrue(ReferenceQuery::getData().name == "ReferenceQuery", "Bad query name (5)");
+		assertTrue(CallingEntryPoint::QUERY_DATA.name == "CallingEntryPoint", "Bad query name (4)");
+		assertTrue(ReferenceQuery::QUERY_DATA.name == "ReferenceQuery", "Bad query name (5)");
 		assertTrue(
-			VectorReferenceQuery::getData().name == "VectorReferenceQuery", "Bad query name (6)"
+			VectorReferenceQuery::QUERY_DATA.name == "VectorReferenceQuery", "Bad query name (6)"
 		);
 		assertTrue(
-			LifeTimeQueryStable::getData().name == "LifeTimeQueryStable", "Bad query name (7)"
+			LifeTimeQueryStable::QUERY_DATA.name == "LifeTimeQueryStable", "Bad query name (7)"
 		);
 		assertTrue(
-			LifeTimeQueryUnstable::getData().name == "LifeTimeQueryUnstable", "Bad query name (8)"
+			LifeTimeQueryUnstable::QUERY_DATA.name == "LifeTimeQueryUnstable", "Bad query name (8)"
 		);
 	}
 

@@ -51,9 +51,7 @@ namespace query::internal {
 		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp; \
 		static constexpr bool                         QUERY_INTERFACE_TAG = true;          \
 		static auto                                   getID() { return id; }               \
-		static constexpr auto&                        getData() { return QUERY_DATA; }     \
 	};
-// @TODO PR: remove get_data accessor, its constexpr anyway
 
 /**
  * @brief Macro used do delcare queries.
