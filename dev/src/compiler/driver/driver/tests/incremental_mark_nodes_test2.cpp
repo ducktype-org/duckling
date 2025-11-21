@@ -60,7 +60,9 @@ private:
 				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
 				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
 			} else {
-				ASSERT_TRUE(!node.q_id.getData().usesStableHashing() || prev->getNodeDeps(node).size() > 1);
+				ASSERT_TRUE(
+					!node.q_id.getData().usesStableHashing() || prev->getNodeDeps(node).size() > 1
+				);
 			}
 		}
 
