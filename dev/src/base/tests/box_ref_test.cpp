@@ -367,7 +367,7 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// Ref from Box:
+		// Ref from MBox:
 		{
 			MBox<LiveCounter> a = makeBox<LiveCounter>(123);
 			ASSERT_EQUAL(LiveCounter::count, 1);

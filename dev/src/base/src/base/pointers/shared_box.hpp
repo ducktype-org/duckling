@@ -6,16 +6,29 @@
 #include <base/pointers/default_deleter.hpp>
 
 namespace base {
-	template<class DataDeleter>
-	class ControlBlock final {
-	public:
+	/**
+	 * @brief: A control block of SharedBox type.
+	 * Stores the number of owners.
+	 */
+	struct ControlBlock final {
         usize n_owners;
-		[[no_unique_address]] DataDeleter data_deleter;
 
-		ControlBlock() = delete;
-		ControlBlock(DataDeleter deleter) noexcept: n_owners{ 1 }, data_deleter { std::move(deleter) } {}
+		ControlBlock() noexcept: n_owners(1) {}
     };
 
+	/**
+	 * @brief A pointer wrapper type, that shares the ownership of the pointer and deletes it
+	 * when all of the owners go out of scope.
+	 * @note: An invariant is kept, that either both `data_ptr` and `ctrl_ptr` are either `nullptr`
+	 * (which initially happens by move and can propagate through copying) or neither is `nullptr`.
+	 *
+	 * @note Currently deleters are supported in a simple, copy-based way. If the need for
+	 * more complex behavior arises, we can add it as needed.
+	 *
+	 * @tparam T pointed type
+	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>. It has
+	 * to define static method `void del(T*)`.
+	 */
     template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
     class SharedBox final {
     private:
@@ -31,31 +44,44 @@ namespace base {
 		);
 
 		T* data_ptr;
-        ControlBlock<Deleter>* ctrl_ptr;
+        ControlBlock* ctrl_ptr;
+		[[no_unique_address]] Deleter deleter;
 
 		template<class U, class UDeleter>
 		friend class SharedBox;
 
 		constexpr void assertNotNull() const {
-			if (data_ptr == nullptr) CORE_PANIC("SharedBox was in null state, when non-null was required!");
+			if (data_ptr == nullptr || ctrl_ptr == nullptr) CORE_PANIC("SharedBox was in null state, when non-null was required!");
 		}
 
-		explicit SharedBox(T* ptr, ControlBlock<Deleter>* ctrl) noexcept: data_ptr{ ptr }, ctrl_ptr{ ctrl } {
+		constexpr bool isFullyNull() const {
+			return (data_ptr == nullptr && ctrl_ptr == nullptr);
+		}
+
+		explicit SharedBox(T* ptr, ControlBlock* ctrl, Deleter deleter) noexcept: data_ptr{ ptr }, ctrl_ptr{ ctrl }, deleter{ deleter } {
 			assertNotNull();
 		}
 
 		/**
-		 * @brief Decrements the number of the owners of the object pointed to.
+		 * @brief: Decrements the number of the owners of the object pointed to.
 		 * If the counter reaches 0, deletes the object and the control block.
 		*/
-		void renounce_ownership() {
-			if (ctrl_ptr == nullptr)
+		void renounce_ownership() noexcept {
+			if (isFullyNull())
 				return;
+			assertNotNull();
 			ctrl_ptr->n_owners--;
 			if (ctrl_ptr->n_owners == 0) {
-				ctrl_ptr->data_deleter.del(data_ptr);
+				deleter.del(data_ptr);
 				delete ctrl_ptr;
 			}
+			nullify();
+		}
+
+		/**
+		 * @brief: Helper function to put the SharedBox into a null state.
+		 */
+		void nullify() noexcept {
 			data_ptr = nullptr;
 			ctrl_ptr = nullptr;
 		}
@@ -71,7 +97,7 @@ namespace base {
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, new ControlBlock(deleter));
+			return SharedBox(ptr, new ControlBlock(), deleter);
 		}
 
 		/**
@@ -83,30 +109,34 @@ namespace base {
 
         SharedBox(const SharedBox& other) noexcept:
 			  data_ptr{ other.data_ptr },
-			  ctrl_ptr{ other.ctrl_ptr } {
-				ctrl_ptr->n_owners++;
+			  ctrl_ptr{ other.ctrl_ptr },
+			  deleter{ other.deleter } {
+			if (isFullyNull())
+				return;
+			assertNotNull();
+			ctrl_ptr->n_owners++;
 		}
 
-		/**
-		 * @note: Since `other.ctrl_ptr` is set to `null_ptr`, `renounce_ownership` won't do anything.
-		 */
 		SharedBox(SharedBox&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			other.data_ptr = nullptr;
-			other.ctrl_ptr = nullptr;
+			  ctrl_ptr{ std::move(other).ctrl_ptr },
+			  deleter{ std::move(other).deleter } {
+			if (isFullyNull())
+				return;
+			assertNotNull();
+			other.nullify();
 		}
 
-		/**
-		 * @note: Since `other.ctrl_ptr` is set to `null_ptr`, `renounce_ownership` won't do anything.
-		 */
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
 		SharedBox(SharedBox<U, UDeleter>&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			other.data_ptr = nullptr;
-			other.ctrl_ptr = nullptr;
+			  ctrl_ptr{ std::move(other).ctrl_ptr },
+			  deleter{ std::move(other).deleter} {
+			if (isFullyNull())
+				return;
+			assertNotNull();
+			other.nullify();
 		}
 
 		/**
@@ -121,22 +151,37 @@ namespace base {
 
 			data_ptr = other.data_ptr;
 			ctrl_ptr = other.ctrl_ptr;
-			ctrl_ptr->n_owners++;
+			deleter = other.deleter;
+			if (!isFullyNull()) {
+				assertNotNull();
+				ctrl_ptr->n_owners++;
+			}
 			return *this;
 		}
 
+		/**
+		 * @brief Move assignment. The ownership of the object previously pointed to is renounced.
+		 * The number of the owners stays the same.
+		 */
 		template<class U, class UDeleter>
 		requires std::is_constructible_v<Deleter, UDeleter&&>
 		SharedBox& operator=(SharedBox<U, UDeleter>&& other) noexcept {
 			renounce_ownership();
+
 			data_ptr = std::move(other).data_ptr;
 			ctrl_ptr = std::move(other).ctrl_ptr;
-
+			deleter = std::move(other).deleter;
+			if (!isFullyNull()) {
+				assertNotNull();
+				other.nullify();
+			}
+			return *this;
 		}
 
 		friend void swap(SharedBox& first, SharedBox& second) noexcept {
 			std::swap(first.data_ptr, second.data_ptr);
 			std::swap(first.ctrl_ptr, second.ctrl_ptr);
+			std::swap(first.deleter, second.deleter);
 		}
 
 		/**
@@ -204,7 +249,11 @@ namespace base {
 			new T(std::forward<Args>(args)...), Deleter{}
 		);
 	}
+
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
+	using CSharedBox = SharedBox<const T, Deleter>;
 }
 
 using base::SharedBox;
+using base::CSharedBox;
 using base::makeSharedBox;

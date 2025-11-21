@@ -4,15 +4,15 @@
 // SharedBox asserts:
 static_assert(std::is_copy_constructible_v<SharedBox<int>>, "SharedBox should be copy constructible");
 
-static_assert(not std::is_move_constructible_v<SharedBox<int>>, "SharedBox should not be move constructible");
+static_assert(std::is_move_constructible_v<SharedBox<int>>, "SharedBox should be move constructible");
 
 static_assert(std::is_copy_assignable_v<SharedBox<int>>, "SharedBox should be copy assignable");
 
-static_assert(not std::is_move_assignable_v<SharedBox<int>>, "SharedBox should not be move assignable");
+static_assert(std::is_move_assignable_v<SharedBox<int>>, "SharedBox should be move assignable");
 
 static_assert(
 	not std::is_constructible_v<SharedBox<int>, std::nullptr_t>,
-	"Box should not be constructible from nullptr"
+	"SharedBox should not be constructible from nullptr"
 );
 
 struct InstancesCounter {
@@ -39,6 +39,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
+		TESTER_ADD_TEST(testDeleters);
 	}
 
 private:
@@ -99,6 +100,26 @@ private:
 		}
 		ASSERT_EQUAL(InstancesCounter::count, 0);
 
+		// Move constructor and assignment:
+		{
+			auto a = makeSharedBox<InstancesCounter>(1);
+			{
+				auto b(std::move(a));
+				ASSERT_EQUAL(b->state, 1);
+				ASSERT_EQUAL(InstancesCounter::count, 1);
+				assertThrows<base::Panic>([&]() { *a; }, "Use after move did not throw!");
+			}
+			ASSERT_EQUAL(InstancesCounter::count, 0);
+			auto c = makeSharedBox<InstancesCounter>(2);
+			{
+				auto d = makeSharedBox<InstancesCounter>(3);
+				ASSERT_EQUAL(InstancesCounter::count, 2);
+				d = std::move(c);
+				ASSERT_EQUAL(InstancesCounter::count, 1);
+			}
+			ASSERT_EQUAL(InstancesCounter::count, 0);
+		}
+
 		// Ref from SharedBox:
 		{
 			SharedBox<InstancesCounter> a = makeSharedBox<InstancesCounter>(123);
@@ -144,6 +165,83 @@ private:
 		ASSERT_EQUAL(42, *ptr);
 		auto b = SharedBox<int>::fromPointer(ptr);
 		ASSERT_EQUAL(42, *b);
+	}
+
+	template<class T>
+	struct StatefulDeleter final {
+		int               state   = 0;
+		static inline int s_state = 0;
+
+		void del(T* ptr) {
+			delete ptr;
+			if (ptr != nullptr) {
+				state++;
+				s_state++;
+			}
+		}
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByValue final {
+		FromStatefulDeleterByValue() = default;
+
+		FromStatefulDeleterByValue(StatefulDeleter<T>) {}
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByCopy final {
+		FromStatefulDeleterByCopy() = default;
+
+		FromStatefulDeleterByCopy(const StatefulDeleter<T>&) {}
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	template<class T>
+	struct FromStatefulDeleterByMove final {
+		FromStatefulDeleterByMove() = default;
+
+		FromStatefulDeleterByMove(StatefulDeleter<T>&& a) { (void) std::move(a); }
+
+		void del(T* ptr) { delete ptr; }
+	};
+
+	void testDeleters() {
+		{
+			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			ASSERT_EQUAL(*ib, 42);
+			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
+
+		static_assert(
+			not std::is_constructible_v<SharedBox<int, StatefulDeleter<int>>, SharedBox<int>>,
+			"SharedBox with custom deleter should not be constructible from Box with default deleter"
+		);
+
+		{
+			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			SharedBox<int, FromStatefulDeleterByValue<int>> jb = std::move(ib);
+		}
+		{
+			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			SharedBox<int, FromStatefulDeleterByCopy<int>> jb = std::move(ib);
+		}
+		{
+			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+				new int(42), StatefulDeleter<int>{ 7 }
+			);
+			SharedBox<int, FromStatefulDeleterByMove<int>> jb = std::move(ib);
+		}
+		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 	}
 };
 
