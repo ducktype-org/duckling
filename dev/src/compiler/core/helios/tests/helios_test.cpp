@@ -175,8 +175,8 @@ private:
 		const auto u16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
 		const auto u32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
 		const auto u64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
-		const auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
+		const auto f32_type = query::entryPoint<tsh::QueryFloatType>({32});
+		const auto f64_type = query::entryPoint<tsh::QueryFloatType>({64});
 
 		auto verify_type_and_mutability = [&](std::string_view  keyword,
 		                                      std::string_view  type_suffix,
