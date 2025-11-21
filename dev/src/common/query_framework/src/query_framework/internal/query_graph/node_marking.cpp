@@ -37,9 +37,8 @@ namespace query::internal {
 				continue;
 			}
 
-			// @TODO: PR use tags -- just adjust the usage, when hasStableHash is removed
 			CORE_ASSERT(
-				node.q_id.hasStableHash(),
+				node.q_id.getData().usesStableHashing(),
 				"Side/Input nodes must have stable hashes: ",
 				node.q_id.getData().name
 			);

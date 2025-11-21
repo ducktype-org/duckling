@@ -30,11 +30,6 @@ namespace query::internal {
 		[[nodiscard]]
 		const QueryData& getData() const;
 
-		// @TODO PR: remove this
-		// or loads cache from disk
-		[[nodiscard]]
-		bool hasStableHash() const;
-
 		/**
 		 * @TODO: #1514 determinate if we should keep this method
 		 * This method is used to determinate whether the query is registered - it points to query
