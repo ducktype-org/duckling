@@ -182,7 +182,6 @@ dependencies = [
  "serde-untagged",
  "serde_ignored",
  "serde_json",
- "soft-canonicalize",
  "symbol_table",
  "tempfile",
  "toml",
