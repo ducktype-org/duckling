@@ -6,8 +6,8 @@
 
 #include "generated_symbol_data.hpp"
 
+#include <ctv/ctv.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -74,7 +74,7 @@ namespace compiler::helios {
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = query::QResult<CompileTimeValue, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, errors::Failed>;
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

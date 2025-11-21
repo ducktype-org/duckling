@@ -17,7 +17,7 @@ fun printRecordClass(r: RecordClass) = {
 
 let a: RecordClass = RecordClass(1, f32(2.0), i16(3));
 
-let big = BiggerRecordClass(i8(1), RecordClass(2, f32(3.0), i16(4)), f64(5.0));
+let big = BiggerRecordClass(i8(1), RecordClass(i64(2), f32(3.0), i16(4)), f64(5));
 
 fun main() -> i64 = {
     var b = a;

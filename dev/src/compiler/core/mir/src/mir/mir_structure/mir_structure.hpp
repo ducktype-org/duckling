@@ -619,7 +619,7 @@ namespace compiler::mir {
 		ScopeRef no_lifetime_scope;
 
 		/**
-		 * HELIOS SymID releted to the function.
+		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
 		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;

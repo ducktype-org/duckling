@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
 	EXPR_VISITOR(LiteralUnitExpr)
-	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralNumericExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
@@ -57,29 +57,22 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type); }
 
-	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
-		  Expr(
-
-			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on type of literal.
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
+	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value):
+		  Expr(tsh::ExpressionType<>(
+			  value.getTypeOfStoredValue(ctx), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )),
 		  value(value) {}
 
-	LiteralIntExpr::LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value):
+	LiteralNumericExpr::LiteralNumericExpr(
+		tsh::ExpressionType<> expression_type, numeric_value::NumericValue value
+	):
 		  Expr(expression_type),
 		  value(value) {}
 
-	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	void LiteralNumericExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
 
-	Box<Expr> LiteralIntExpr::clone() const {
-		return makeBox<LiteralIntExpr>(expression_type, value);
+	Box<Expr> LiteralNumericExpr::clone() const {
+		return makeBox<LiteralNumericExpr>(expression_type, value);
 	}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
@@ -197,6 +190,12 @@ namespace compiler::helios::code {
 		case IntegerDiv:
 		case IntegerMod:
 		case IntegerPow:
+		case FloatAdd:
+		case FloatSub:
+		case FloatMul:
+		case FloatDiv:
+		case FloatMod:
+		case FloatPow:
 			return argument_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -204,6 +203,12 @@ namespace compiler::helios::code {
 		case IntegerGteq:
 		case IntegerEq:
 		case IntegerNeq:
+		case FloatLt:
+		case FloatGt:
+		case FloatLteq:
+		case FloatGteq:
+		case FloatEq:
+		case FloatNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -251,21 +256,26 @@ namespace compiler::helios::code {
 		using enum BuiltinBinary;
 		switch (operation) {
 		case IntegerAdd:
+		case FloatAdd:
 			out << "+";
 			break;
 		case IntegerSub:
+		case FloatSub:
 			out << "-";
 			break;
 		case IntegerMul:
+		case FloatMul:
 			out << "*";
 			break;
 		case IntegerDiv:
+		case FloatDiv:
 			out << "/";
 			break;
 		case IntegerMod:
 			out << "%";
 			break;
 		case IntegerPow:
+		case FloatPow:
 			out << "**";
 			break;
 		case IntegerLt:
@@ -447,6 +457,7 @@ namespace compiler::helios::code {
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
 			out << "-";
 			expr->debugPrint(out);
 			break;
@@ -611,16 +622,22 @@ namespace compiler::helios::code {
 			using enum BuiltinBinary;
 			switch (comp) {
 			case IntegerLt:
+			case FloatLt:
 				return "<";
 			case IntegerLteq:
+			case FloatLteq:
 				return "<=";
 			case IntegerGt:
+			case FloatGt:
 				return ">";
 			case IntegerGteq:
+			case FloatGteq:
 				return ">=";
 			case IntegerEq:
+			case FloatEq:
 				return "==";
 			case IntegerNeq:
+			case FloatNeq:
 				return "!=";
 			default:
 				CORE_UNREACHABLE();

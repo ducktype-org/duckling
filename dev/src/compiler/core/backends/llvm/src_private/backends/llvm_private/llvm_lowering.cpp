@@ -21,6 +21,7 @@ LLVM_INCLUDE_END()
 
 #include "module_impl.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -43,15 +44,18 @@ namespace {
 	 * @param llvm_type The expected type.
 	 * @return The created llvm::Constant*.
 	 */
-	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
-			variant_case(i64, val) {
+			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				if (!llvm_type->isIntegerTy()) {
-					CORE_PANIC(
-						"LLVM lowering : Type mismatch. CTV is an integer, but LLVM type is not"
+					CORE_PANIC("LLVM lowering : Type mismatch. CTV is numeric, but LLVM type is not"
 					);
 				}
-				return llvm::ConstantInt::getSigned(llvm_type, val);
+
+				// @TODO: #1499 For now every numeric value is casted to i64 (including floating
+				// point literals).
+				i64 coerced_value = numeric.coerceTo<i64>().value();
+				return llvm::ConstantInt::getSigned(llvm_type, coerced_value);
 			}
 			variant_case(bool, val) {
 				if (!llvm_type->isIntegerTy(1)) {

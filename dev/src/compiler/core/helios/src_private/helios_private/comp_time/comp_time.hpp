@@ -1,7 +1,7 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements/expr.hpp>
 
@@ -14,7 +14,7 @@
  * evaluates it on DVM.
  */
 namespace compiler::helios {
-	using CompTimeEvalResult = query::QResult<CompileTimeValue, errors::Failed>;
+	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, errors::Failed>;
 
 	DECLARE_QUERY(
 		QueryEvaluateExpression,
