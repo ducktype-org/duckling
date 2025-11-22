@@ -203,8 +203,10 @@ clah::Clah getClahForMain() {
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
 								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-							   for (const auto& hout_unit: hout_units)
-								   std::cout << hout_unit.debugPrint();
+							   query::utils::withContextDo([&](query::Context& ctx) {
+								   for (const auto& hout_unit: hout_units)
+									   std::cout << hout_unit.debugPrint(ctx);
+							   });
 
 							   return exit_code;
 						   }))
