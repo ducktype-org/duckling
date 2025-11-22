@@ -20,13 +20,21 @@ namespace compiler::helios {
 		CRef<code::Expr> expr;
 
 		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return expr->getID().asInt();
 		}
 	};
 
+	/**
+	 * @brief Evaluate a HOUT expression in compile time.
+	 */
 	DECLARE_QUERY(QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult)
 
+	/**
+	 * @brief Evaluate a PST expression in compile time.
+	 * @note Effectively generates the HOUT of a PST expression and
+	 * evaluates it using QueryEvaluateHOUTExpression.
+	 */
 	DECLARE_QUERY(
 		QueryEvaluatePSTExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult
 	)
