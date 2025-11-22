@@ -49,7 +49,7 @@ namespace compiler::helios {
 				const pst::Access<pst::ExprElement> expr, const tsh::Mutability expected_mutability
 			) {
 				const auto locked = pst::AccessLocked<pst::ExprElement>(expr);
-				if (auto ctv = ctx.query<QueryEvaluateExpression>(locked))
+				if (auto ctv = ctx.query<QueryEvaluatePSTExpression>(locked))
 					setTypeOfSymbol(
 						ctv.value().getType(ctx).value().withMutability(expected_mutability)
 					);

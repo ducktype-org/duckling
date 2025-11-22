@@ -188,10 +188,19 @@ jobs:
               -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
-              
+      
+      # Build all tests.
+      # We additionally build coverage targets in case of coverage enabled,
+      # so they are nicely parallelized and cached.
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
+        run: |
+          cmake                                 \
+          --build ${{ env.BUILD_DIR }}          \
+          -j ${{ steps.set-jobs.outputs.jobs }} \
+          --                                    \
+          build_all_tests                       \
+          ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
