@@ -16,9 +16,12 @@
 
 #### Debian/Ubuntu
 
+
+Note that the dependencies listed bellow are listed without versions. Update the command accordingly, depending on package names on you system / you version preferences. 
+
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
 ```
 
 
