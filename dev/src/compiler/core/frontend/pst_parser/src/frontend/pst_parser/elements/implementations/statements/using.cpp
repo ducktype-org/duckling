@@ -21,4 +21,11 @@ namespace pst {
 	}
 
 	void Using::acceptVisitor(PstVisitor& visitor) const { visitor.visitUsing(*this); }
+
+	base::Optional<base::StrID> Using::getDeclSymbolName() const {
+		std::string result = "<USING><";
+		for (const auto& name: names.internal()->getNames()) result += name.value.str();
+		result += ">";
+		return base::StrID(result.c_str());
+	}
 }
