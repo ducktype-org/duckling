@@ -14,6 +14,11 @@
 #include <filesystem/file.hpp>
 
 namespace dia_app {
+	template<typename T>
+	T getNewID() {
+		static T current_id = 1;
+		return current_id++;
+	}
 
 	base::Optional<std::string_view> TemplateResistryEmbeddedProvider::loadTemplate(
 		std::string_view path
@@ -50,8 +55,7 @@ namespace dia_app {
 		TemplateRegistry&       registry;
 		const dia_file::Thread& thread;
 
-		base::HashMap<dia_file::MessageID, state::MessageID>               message_mapping;
-		base::HashMap<dia_file::PointerMessageID, state::PointerMessageID> pointer_message_mapping;
+		base::HashMap<dia_file::MessageID, state::MessageID> message_mapping;
 	};
 
 	/**
@@ -68,6 +72,8 @@ namespace dia_app {
 
 		// Diagnostic file
 
+
+
 		// This is the evaluation result
 		base::HashMap<state::PointerMessageID, state::PointerMessage> evaluated_pointer_messages;
 		base::HashMap<dia_file::PointerMessageID, state::PointerMessageID> pointer_message_mapping;
@@ -83,6 +89,8 @@ namespace dia_app {
 			  params(params),
 			  macros(macros),
 			  pointer_messages(pointer_messages) {}
+
+		state::PointerMessageID evaluatePointerMessage(const dia_file::PointerMessage& pm);
 	};
 
 	/**
@@ -146,13 +154,14 @@ namespace dia_app {
 	 */
 	class EvaluateDiagnosticFileVisitor: public dia_file::ComponentVisitor {
 	public:
-		MBox<state::Component>                res;
-		MessageEvaluationContext              ctx;
+		MessageEvaluationContext&             ctx;
 		std::vector<state::MessageID>&        current_message_ids;
 		std::vector<state::PointerMessageID>& current_pointer_message_ids;
 
+		MBox<state::Component> res;
+
 		EvaluateDiagnosticFileVisitor(
-			MessageEvaluationContext              ctx,
+			MessageEvaluationContext&             ctx,
 			std::vector<state::MessageID>&        message_ids,
 			std::vector<state::PointerMessageID>& pointer_message_ids
 		):
@@ -496,7 +505,7 @@ namespace dia_app {
 	void EvaluateDiagnosticFileVisitor::visitEvaluatedTemplateComponent(
 		const dia_file::EvaluatedTemplateComponent& el
 	) {
-		if (auto attached_msg = ctx.thread.attached_messages.atMaybe(el.message_id);
+		if (auto attached_msg = ctx.thread_ctx.thread.additional_messages.atMaybe(el.message_id);
 		    attached_msg.has_value()) {
 			const auto& msg = *attached_msg.value();
 
@@ -510,7 +519,7 @@ namespace dia_app {
 					if constexpr (std::is_same_v<T, template_file::ComponentTemplate>) {
 						// New evalution context should have the parameters from the message
 						MessageEvaluationContext component_ctx{
-							ctx.registry, msg.params, tmpl.macros, {}, {}
+							ctx, msg.params, tmpl.macros, {}, {}
 						};
 
 						auto result = EvaluateTemplateFileVisitor::evaluateWithValues(
@@ -553,7 +562,7 @@ namespace dia_app {
 	state::Message evaluateMessage(
 		ThreadEvaluationContext&              thread_ctx,
 		const template_file::MessageTemplate& message_template,
-		const dia_file::Message&              message,
+		const dia_file::Message&              message
 	) {
 		MessageEvaluationContext ctx(
 			thread_ctx, message.params, message_template.macros, message_template.pointer_messages
@@ -561,20 +570,20 @@ namespace dia_app {
 
 		// Evaluate header message
 		auto header
-			= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref());
-		if (!header.has_value()) CORE_PANIC("Header message evaluation failed.");
+			= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref())
+		          .expect("The header message template evaluation failed.");
 
 		// Evaluate description if present
 		base::MBox<state::Component> description;
 		if (message_template.description.ref().toOpt().has_value()) {
 			auto desc = EvaluateTemplateFileVisitor::evaluate(
-				ctx, message_template.description.ref().toOpt().value()
-			);
-			if (!desc.has_value()) CORE_PANIC("Description message evaluation failed.");
-			description = base::MBox<state::Component>(std::move(desc).value());
+							ctx, message_template.description.ref().toOpt().value()
+			)
+			                .expect("The description template evaluation failed.");
+			description = base::MBox<state::Component>(std::move(desc));
 		}
 
-		return { message_template.metadata, std::move(header).value(), std::move(description) };
+		return { message_template.metadata, std::move(header), std::move(description) };
 	}
 
 	base::Optional<state::Message> evaluateTemplate(
@@ -605,12 +614,11 @@ namespace dia_app {
 			                                .pointer_message_mapping = {} };
 
 		state::MessageID message_id_generator = 1;
-		for (const auto&& [message_id, message]: thread.additional_messages)
+		for (const auto& [message_id, message]: thread.additional_messages)
 			if (message.metadata.template_type == "message")
 				thread_ctx.message_mapping.insert_or_assign(message_id, message_id_generator++);
 
 		std::vector<state::Message> messages;
-		// Process main message
 
 		auto& main_template = registry.loadTemplate(thread.main_message.metadata);
 		messages.push_back(evaluateTemplate(thread_ctx, main_template, thread.main_message)
@@ -622,7 +630,6 @@ namespace dia_app {
 					.expect("The template is not a message template.")
 			);
 		}
-
 
 		// Load the main message template
 		std::vector<state::MessageID> displayed_messages = { 0 };
@@ -643,5 +650,31 @@ namespace dia_app {
 		ConstructTextViewVisitor text_visitor;
 		component->acceptVisitor(text_visitor);
 		return text_visitor.result;
+	}
+
+	state::PointerMessageID MessageEvaluationContext::evaluatePointerMessage(
+		const dia_file::PointerMessage& pm
+	) {
+		if (pointer_message_mapping.contains(pm.pointer_message_id))
+			return pointer_message_mapping.at(pm.pointer_message_id);
+
+		if (pm.message_id.empty()) {
+			auto& pointer_message_content = pointer_messages.at(pm.pointer_message_id);
+			auto  evaluated_component
+				= EvaluateTemplateFileVisitor::evaluate(*this, pointer_message_content.content.ref())
+			          .expect(base::strConcat(
+						  "Pointer message '", pm.pointer_message_id, "' evaluation failed."
+					  ));
+			auto new_id = getNewID<state::PointerMessageID>();
+			evaluated_pointer_messages.put(
+				new_id,
+				state::PointerMessage{
+					pointer_message_content.type,
+					std::move(evaluated_component),
+					pointer_message_content.priority
+				}
+			);
+			pointer_message_mapping.put(pm.pointer_message_id, new_id);
+		}
 	}
 }

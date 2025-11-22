@@ -3,7 +3,7 @@ add_library(
     src/diagnostic_interactive/core/diagnostic_file.cpp
     src/diagnostic_interactive/core/template_evaluation.cpp
     src/diagnostic_interactive/core/template_file.cpp
-    src/diagnostic_interactive/core/thread_state.cpp
+    src/diagnostic_interactive/core/diagnostic_state.cpp
 )
 
 make_module(DiagnosticInteractiveCore USES JSON yaml-cpp::yaml-cpp Base DiaTemplates Filesystem)

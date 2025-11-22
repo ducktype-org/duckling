@@ -609,7 +609,7 @@ pointer_messages:
 		state::Diagnostic diagnostic = evaluateDiagnostic(diagnostic_file);
 
 
-        auto result = constructTextView(diagnostic);
+        auto result = constructTextView(diagnostic.messages[0].header.ref());
         
 
 		// Note: We can't actually test full evaluation without a TemplateRegistry
