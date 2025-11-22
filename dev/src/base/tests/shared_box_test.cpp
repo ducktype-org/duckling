@@ -57,7 +57,9 @@ private:
 			auto a = new SharedBox<InstancesCounter>(makeSharedBox<InstancesCounter>());
 			ASSERT_EQUAL(InstancesCounter::count, 1);
 			{
+				// NOLINTBEGIN
 				SharedBox<InstancesCounter> b(*a);
+				// NOLINTEND
 				ASSERT_EQUAL(InstancesCounter::count, 1);
 				delete a;
 				ASSERT_EQUAL(InstancesCounter::count, 1);
@@ -125,17 +127,19 @@ private:
 		{
 			SharedBox<InstancesCounter> a = makeSharedBox<InstancesCounter>(123);
 
-			auto a_ref = a.refMut();
-			ASSERT_EQUAL(a_ref->state, 123);
+			auto a_ref_mut = a.refMut();
+			ASSERT_EQUAL(a_ref_mut->state, 123);
 
-			a_ref->state = 456;
+			a_ref_mut->state = 456;
 			ASSERT_EQUAL(a->state, 456);
 
+			// NOLINTBEGIN
 			auto b(a);
 			auto b_ref_const = b.ref();
+			// NOLINTEND
 			ASSERT_EQUAL(b->state, 456);
 
-			a_ref->state = 789;
+			a_ref_mut->state = 789;
 			ASSERT_EQUAL(b->state, 789);
 
 			// decltype(b_ref_const->state) is just int for some reason, but "it" is still a const.

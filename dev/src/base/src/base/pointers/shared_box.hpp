@@ -3,6 +3,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 namespace base {
 	/**
@@ -204,6 +205,12 @@ namespace base {
 			return Ref<const T>(data_ptr);
 		}
 
+		explicit operator bool() const {
+			if (isFullyNull()) return false;
+			assertNotNull();
+			return true;
+		}
+
 		T* operator->() const {
 			assertNotNull();
 			return data_ptr;
@@ -219,7 +226,7 @@ namespace base {
 			return *data_ptr;
 		}
 
-		bool operator==(const SharedBox& other) const { return ctrl_ptr == other.ctrl_ptr; }
+		bool operator==(const SharedBox& other) const { return data_ptr == other.data_ptr; }
 
 		~SharedBox() { renounceOwnership(); }
 	};
