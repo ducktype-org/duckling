@@ -123,7 +123,18 @@ function(add_custom_test_pack NAME)
 	set_target_properties("test_${NAME}" PROPERTIES EXCLUDE_FROM_ALL true)
 endfunction()
 
+# note:
+# We use custom CTEST_PARALLEL_LEVEL environment variable to control parallelism in tests.
+# This works only when this variable is set during the cmake configuration step.
+# To run tests in parallel locally, you can invoke ctest -j <num_jobs> [options] directly.	
+
 add_custom_target(memcheck_test
 	COMMAND ${CMAKE_CTEST_COMMAND}
-	--force-new-ctest-process --test-action memcheck
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)
+
+add_custom_target(test_parallel
+	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)

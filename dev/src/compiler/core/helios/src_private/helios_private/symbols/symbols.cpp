@@ -111,7 +111,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
