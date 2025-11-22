@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
@@ -7,7 +8,9 @@
 
 #include <string>
 
-namespace compiler::helios {
+namespace compiler::ctv {
+	using numeric_value::NumericValue;
+
 	/**
 	 * @brief Represents a value known at compile time.
 	 */
@@ -16,7 +19,7 @@ namespace compiler::helios {
 		class UnitCTV {};
 
 	private:
-		using Storage = std::variant<UnitCTV, i64, bool, tsh::SymbolType<>>;
+		using Storage = std::variant<UnitCTV, NumericValue, bool, tsh::SymbolType<>>;
 		Storage value;
 
 	public:
@@ -42,22 +45,17 @@ namespace compiler::helios {
 		[[nodiscard]] std::string toString() const;
 
 		/**
-		 * @brief Retrieves the value of type UnitCTV from the CTV.
-		 * @return A UnitCTV or an empty optional if the CTV didn't store a value of type UnitCTV.
+		 * @brief Retrieves the value of the given type from the CTV.
+		 * @return A stored value or an empty optional if the CTV didn't store the requested type.
 		 */
-		[[nodiscard]] base::Optional<UnitCTV> asUnit() const;
-
-		/**
-		 * @brief Retrieves the value of type i64 from the CTV.
-		 * @return An i64 value or an empty optional if the CTV didn't store a value of type i64.
-		 */
-		[[nodiscard]] base::Optional<i64> asI64() const;
-
-		/**
-		 * @brief Retrieves the value of type bool from the CTV.
-		 * @return A bool value or an empty optional if the CTV didn't store a value of type bool.
-		 */
-		[[nodiscard]] base::Optional<bool> asBool() const;
+		template<typename T>
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>)
+		[[nodiscard]] base::Optional<T> get() const {
+			variant_match(value) {
+				variant_case(T, val) { return val; }
+			}
+			return {};
+		}
 
 		/**
 		 * @brief Retrieves the value of type from the CTV.
@@ -65,6 +63,14 @@ namespace compiler::helios {
 		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return A type value or an empty optional if the CTV didn't store a type.
 		 */
-		[[nodiscard]] base::Optional<tsh::SymbolType<>> asType(query::Context& ctx) const;
+		[[nodiscard]] base::Optional<tsh::SymbolType<>> getType(query::Context& ctx) const;
+
+		/**
+		 * @brief Returns the tsh::SymbolType based on the value stored in the CTV.
+		 * @note Possibly converts tuple and unit values to types. @TODO: #1373 reconsider this.
+		 * @param ctx The query context for lifting unit value to unit type.
+		 * @return A type value of the value stored in the CTV.
+		 */
+		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 	};
 }

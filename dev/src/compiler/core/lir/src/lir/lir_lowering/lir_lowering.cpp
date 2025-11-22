@@ -249,7 +249,7 @@ namespace compiler::lir {
 			[[nodiscard]]
 			base::Optional<LIRPlace> getOutput(const base::Optional<mir::MIRPlace>& output) const {
 				if (!output.has_value()) return {};
-				if (!output->carriesInformation()) return {};
+				if (!output->carriesInformation(ctx)) return {};
 				return getPlace(*output);
 			}
 
@@ -261,7 +261,7 @@ namespace compiler::lir {
 			 */
 			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
 				// Discard information-less location.
-				if (!loc.carriesInformation()) return {};
+				if (!loc.carriesInformation(ctx)) return {};
 
 				variant_match(loc.getVariant()) {
 					variant_case_novalue(mir::MIRUnitConst) {
@@ -293,7 +293,7 @@ namespace compiler::lir {
 			void makeLocals() {
 				for (const auto& mir_local: key.function->local_list) {
 					// Discard data-less variables.
-					if (!mir_local.carriesInformation()) continue;
+					if (!mir_local.carriesInformation(ctx)) continue;
 
 					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
 					locals.pushBack(std::move(lir_local));
@@ -371,7 +371,7 @@ namespace compiler::lir {
 			) {
 				for (const auto& [flag, local]: mir_instruction.flags) {
 					// Discard flags for information-less locals.
-					if (!local->carriesInformation()) continue;
+					if (!local->carriesInformation(ctx)) continue;
 
 					[[maybe_unused]]
 					//< temporary for linter
@@ -395,7 +395,7 @@ namespace compiler::lir {
 				}
 			}
 
-			static bool isArgSigned(const mir::MIRValue location) {
+			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MIRIntegerConst) { return true; }
 					variant_case(mir::MIRPlace, place) {
@@ -575,7 +575,7 @@ namespace compiler::lir {
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)
 					// Discard information-less parameters from LIR function parameter lists.
-					if (param.getType().carriesInformation())
+					if (param.getType().carriesInformation(ctx))
 						parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 
@@ -726,7 +726,7 @@ namespace compiler::lir {
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
 			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation())
+			if (param.getType().carriesInformation(ctx))
 				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 		return FunctionLiteral{

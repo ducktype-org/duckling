@@ -617,7 +617,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -679,6 +679,11 @@ namespace compiler::helios {
 
 			if (kind(key) == SymbolKind::BuiltinFunction) {
 				// Builtin functions have no specifiers
+				return {};
+			}
+
+			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+				// Generated symbols have no specifiers (for now)
 				return {};
 			}
 

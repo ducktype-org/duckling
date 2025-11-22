@@ -21,6 +21,8 @@ LLVM_INCLUDE_END()
 
 #include "module_impl.hpp"
 
+#include <ctv/numeric_value.hpp>
+#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -42,15 +44,18 @@ namespace {
 	 * @param llvm_type The expected type.
 	 * @return The created llvm::Constant*.
 	 */
-	auto ctvToLLVMConstant(const compiler::helios::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
-			variant_case(i64, val) {
+			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				if (!llvm_type->isIntegerTy()) {
-					CORE_PANIC(
-						"LLVM lowering : Type mismatch. CTV is an integer, but LLVM type is not"
+					CORE_PANIC("LLVM lowering : Type mismatch. CTV is numeric, but LLVM type is not"
 					);
 				}
-				return llvm::ConstantInt::getSigned(llvm_type, val);
+
+				// @TODO: #1499 For now every numeric value is casted to i64 (including floating
+				// point literals).
+				i64 coerced_value = numeric.coerceTo<i64>().value();
+				return llvm::ConstantInt::getSigned(llvm_type, coerced_value);
 			}
 			variant_case(bool, val) {
 				if (!llvm_type->isIntegerTy(1)) {
@@ -75,8 +80,8 @@ namespace compiler::backend_llvm {
 	 * @note it *should* be safe to call it multiple times
 	 */
 	void init() {
-		bool v1 = llvm::InitializeNativeTarget();
-		bool v2 = llvm::InitializeNativeTargetAsmPrinter();
+		const bool v1 = llvm::InitializeNativeTarget();
+		const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
 		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
@@ -123,12 +128,32 @@ namespace compiler::backend_llvm {
 	 */
 	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
 
-	auto typeFromLayout(llvm::LLVMContext& context, CRef<tsl::TypeLayout> layout) -> llvm::Type* {
+	/**
+	 * @brief Converts a TypeLayout into its corresponding llvm::Type representation.
+	 *
+	 * Simple types usually have direct counterparts, such as integral and empty layouts. Composite
+	 * types may require the creation of LLVM struct types, which are checked against the types
+	 * already cached in the LLVM context.
+	 *
+	 * @param module The LLVM module to get the LLVM Context and Module DataLayout.
+	 * @param layout The TypeLayout to convert.
+	 * @return The created llvm::Type*.
+	 */
+	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
+		-> llvm::Type* {
+		auto& llvm_context = module->getContext();
+		// If the layout is empty, return the void type.
+		// Sometimes, empty layouts may appear in LIR, despite being eliminated during MIR -> LIR.
+		// This is because they are function return types. They should then be converted to void.
+		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(llvm_context);
+
 		variant_match(layout->getVariant()) {
-			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
+			variant_case_novalue(tsl::EmptyTypeLayout) {
+				return llvm::Type::getVoidTy(llvm_context);
+			}
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(
-					context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
+					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
@@ -136,15 +161,71 @@ namespace compiler::backend_llvm {
 				// floating point types
 				switch (static_cast<usize>(layout->getSize())) {
 				case 32:
-					return llvm::Type::getFloatTy(context);
+					return llvm::Type::getFloatTy(llvm_context);
 				case 64:
-					return llvm::Type::getDoubleTy(context);
+					return llvm::Type::getDoubleTy(llvm_context);
 				default:
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
+			variant_case(tsl::ClassTypeLayout, class_layout) {
+				const auto class_name = class_layout.getMangledName().strView();
+
+				// Get the struct from the context, if it has been previously defined.
+				if (llvm::StructType* struct_type
+				    = llvm::StructType::getTypeByName(llvm_context, class_name);
+				    struct_type) {
+					return struct_type;
+				}
+
+				// Otherwise, define the struct in LLVM.
+				// - First, create an opaque type.
+				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
+				// - Then, collect the member types.
+				const usize              num_fields = class_layout.getNumFields();
+				std::vector<llvm::Type*> member_types;
+				member_types.reserve(num_fields);
+				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+					const CRef<tsl::TypeLayout> field_layout
+						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					member_types.push_back(typeFromLayout(module, field_layout));
+				}
+				// - Finally, set the body of the struct and return it.
+				struct_type->setBody(member_types, /*is_packed=*/false);
+
+				// Now, confirm that the LLVM struct layout matches the TSL type layout.
+				// - First, get the LLVM struct layout.
+				const llvm::DataLayout&   data_layout   = module->getDataLayout();
+				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
+
+				// - Then, check each field's offset.
+				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
+						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+					);
+					const auto actual_offset = Bytes(
+						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
+					);
+					CORE_ASSERT(
+						expected_offset == actual_offset,
+						base::strConcat(
+							"LLVM struct layout mismatch for class '",
+							class_name,
+							"' at field index ",
+							base::toString(layout_idx),
+							": expected offset ",
+							base::toString(expected_offset),
+							", got ",
+							base::toString(actual_offset)
+						)
+					);
+				}
+
+				// Finally, return the struct type.
+				return struct_type;
+			}
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
-				return llvm::PointerType::getUnqual(context);
+				return llvm::PointerType::getUnqual(llvm_context);
 			}
 			variant_default {
 				CORE_PANIC(
@@ -156,16 +237,16 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(
-		llvm::LLVMContext&                        context,
+		const Ref<llvm::Module>                   module,
 		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		CRef<tsl::TypeLayout>                     return_type
+		const CRef<tsl::TypeLayout>               return_type
 	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
 		for (const auto& param: parameters)
-			llvm_parameters.push_back(typeFromLayout(context, param));
+			llvm_parameters.push_back(typeFromLayout(module, param));
 
-		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
+		return llvm::FunctionType::get(typeFromLayout(module, return_type), llvm_parameters, false);
 	}
 
 	llvm::CallingConv::ID getCallingConvFromABI(const helios::SymbolABI& abi) {
@@ -188,19 +269,18 @@ namespace compiler::backend_llvm {
 	 * module.
 	 */
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
-		Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
+		const Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
 	) {
-		auto mangled_name = function_literal.mangled_name;
+		const auto mangled_name = function_literal.mangled_name;
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(mangled_name.strView())) return func;
+		if (const auto func = module->getFunction(mangled_name.strView())) return func;
 
-		auto&                context = module->getContext();
-		llvm::FunctionCallee callee  = module->getOrInsertFunction(
-            mangled_name.strView(),
-            getFunType(
-                context, *function_literal.parameter_layouts, function_literal.return_type_layout
-            )
-        );
+		llvm::FunctionCallee callee = module->getOrInsertFunction(
+			mangled_name.strView(),
+			getFunType(
+				module, *function_literal.parameter_layouts, function_literal.return_type_layout
+			)
+		);
 
 		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee()))
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
@@ -209,7 +289,7 @@ namespace compiler::backend_llvm {
 	}
 
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLIRFunction(
-		Ref<llvm::Module> module, const lir::Function& lir_function
+		const Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		return getOrInsertFunctionPrototypeFromLiteral(
 			module, lir::FunctionLiteral::fromFunction(lir_function)
@@ -217,15 +297,13 @@ namespace compiler::backend_llvm {
 	}
 
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
-		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
-		auto mangled_name = lir_global.mangled_name.strView();
+		const auto mangled_name = lir_global.mangled_name.strView();
 
-		if (auto global = module->getGlobalVariable(mangled_name)) return global;
+		if (const auto global = module->getGlobalVariable(mangled_name)) return global;
 
-		auto& context = module->getContext();
-
-		auto global_type = typeFromLayout(context, lir_global.layout);
+		const auto global_type = typeFromLayout(module, lir_global.layout);
 
 		return module->getOrInsertGlobal(mangled_name, global_type);
 	}
@@ -236,10 +314,10 @@ namespace compiler::backend_llvm {
 	 * for constants it sets the initial value to the provided constant value.
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
 		getOrInsertGlobalVariable(module, lir_global);
-		Ref<llvm::GlobalVariable> global
+		const Ref<llvm::GlobalVariable> global
 			= module->getNamedGlobal(lir_global.mangled_name.strView());
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
@@ -273,21 +351,20 @@ namespace compiler::backend_llvm {
 	 * on provided LIRFunction.
 	 */
 	struct LIRFunction2LLVM {
+		Ref<llvm::Module>   module;
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;
 		CRef<lir::Function> lir_function;
-		Ref<llvm::Module>   module;
 
 		LIRFunction2LLVM(
-			llvm::LLVMContext&  context,
-			query::Context&     ctx,
-			CRef<lir::Function> lir_function,
-			Ref<llvm::Module>   module
+			query::Context&           ctx,
+			const CRef<lir::Function> lir_function,
+			const Ref<llvm::Module>   module
 		):
-			  context(context),
+			  module(module),
+			  context(module->getContext()),
 			  ctx(ctx),
-			  lir_function(lir_function),
-			  module(module) {}
+			  lir_function(lir_function) {}
 
 	private:
 		/**
@@ -309,7 +386,7 @@ namespace compiler::backend_llvm {
 
 		base::Map<lir::LIRLocalRef, u64> lir_local_ids;
 
-		std::string llvmLocalName(lir::LIRLocalRef lir_local) {
+		std::string llvmLocalName(const lir::LIRLocalRef lir_local) {
 			// @TODO.. this might have to change in the future
 			if (lir_local->helios_id)
 				return base::strConcat("helios_", lir_local_ids[lir_local]);
@@ -344,7 +421,7 @@ namespace compiler::backend_llvm {
 					"local variable with size 0 is not allowed in LLVM"
 				);
 				auto reg = locals_builder.CreateAlloca(
-					typeFromLayout(context, var.layout), nullptr, llvmLocalName(&var)
+					typeFromLayout(module, var.layout), nullptr, llvmLocalName(&var)
 				);
 
 				// If local is a parameter we initialize it from
@@ -365,7 +442,58 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
-		 * @brief Maps LIRValue to LLVM Value.
+		 * @brief Maps LIRPlace to an LLVM pointer Value.
+		 *
+		 * This function may generate new LLVM instructions if necessary. For example,
+		 * it may need to generate a GEP instruction to access a field of a struct.
+		 *
+		 * @param place The LIRPlace to convert into an LLVM pointer Value.
+		 * @param builder The LLVM IRBuilder to use for generating the pointer, if necessary.
+		 * @return Pointer to the place described by `lir_place`.
+		 */
+		auto gepPointerFromLIRPlace(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
+			// First, get the pointer and type of the base value.
+			const auto base_ptr = [&] -> llvm::Value* {
+				variant_match(place.base) {
+					variant_case(lir::LIRLocalRef, lir_local) {
+						return local_register_map[lir_local].get();
+					}
+					variant_case(lir::LIRGlobal, lir_global) {
+						return getOrInsertGlobalVariable(module, lir_global).get();
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			// Then, perform appropriate pointer modification based on the access chain.
+			// If there is no access chain, we can return the base pointer directly.
+			if (not place.hasAccess()) return base_ptr;
+
+			// Otherwise, we need to get the layout indices of the accessed fields.
+			// - First, collect the subsequent layout indices.
+			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
+			std::vector<llvm::Value*> access_indices;
+			access_indices.reserve(place.access_chain.size() + 1);
+			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			for (const auto& field_sym: place.access_chain) {
+				const auto& current_class_layout
+					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+				const auto layout_idx = current_class_layout.getLayoutIndexOfFieldSymbol(field_sym);
+				access_indices.push_back(
+					llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
+				);
+				current_layout = current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+			}
+
+			// - Then, create the GEP instruction to get the final pointer.
+			const auto base_llvm_type = typeFromLayout(module, place.getBaseLayout());
+			return builder.CreateGEP(base_llvm_type, base_ptr, access_indices);
+		}
+
+		/**
+		 * @brief Maps LIRValue to an LLVM Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
 		 * when loading the value of a local variable (which we store behind a pointer
@@ -377,9 +505,9 @@ namespace compiler::backend_llvm {
 		 * it's based on inheritance.
 		 * @param lir_location The LIRValue to convert into an LLVM Value.
 		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
-		 * @return llvm::Value*
+		 * @return The loaded LLVM Value.
 		 */
-		auto lirValue2LLVM(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
+		auto loadLIRValue(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
@@ -387,24 +515,12 @@ namespace compiler::backend_llvm {
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LIRPlace, place) {
-					// @TODO: #500 handle field access.
-					variant_match(place.base) {
-						variant_case(lir::LIRLocalRef, lir_local) {
-							// We store local values behind pointers to stack-allocated memory.
-							// We need to load them before using them.
-							const auto local_ptr = local_register_map[lir_local].get();
-							return builder.CreateLoad(
-								typeFromLayout(builder.getContext(), lir_local->layout), local_ptr
-							);
-						}
-						variant_case(lir::LIRGlobal, lir_global) {
-							auto global_ptr = getOrInsertGlobalVariable(module, lir_global);
-							return builder.CreateLoad(
-								typeFromLayout(builder.getContext(), lir_global.layout),
-								global_ptr.get()
-							);
-						}
-					}
+					// We store local values behind pointers to stack-allocated memory.
+					// We need to load them (or their fields) before using them.
+					// Similarly, we need to use global values or their fields before use.
+					const auto   llvm_type    = typeFromLayout(module, place.layout);
+					llvm::Value* accessed_ptr = gepPointerFromLIRPlace(place, builder);
+					return builder.CreateLoad(llvm_type, accessed_ptr);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -412,43 +528,48 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lirValueList2LLVM(
+		/**
+		 * @brief Maps a collection of LIRValues to a LLVM Values.
+		 *
+		 * This function may generate new LLVM instructions if necessary, see `loadLIRValue`.
+		 *
+		 * @param lir_locations The LIRValues to convert into LLVM Values.
+		 * @param builder The LLVM IRBuilder to use for loading the values, if necessary.
+		 * @return The vector of loaded LLVM Values.
+		 */
+		auto loadLIRValueList(
 			const std::vector<lir::LIRValue>& lir_locations, llvm::IRBuilder<>& builder
 		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
-				llvm_locations.push_back(lirValue2LLVM(lir_location, builder));
+				llvm_locations.push_back(loadLIRValue(lir_location, builder));
 			return llvm_locations;
 		}
 
-		void storeOutput(lir::LIRPlace output, Ref<llvm::Value> value, llvm::IRBuilder<>& builder) {
-			// @TODO: #500 handle field access.
-			variant_match(output.base) {
-				variant_case(lir::LIRLocalRef, lir_local) {
-					builder.CreateStore(value.get(), local_register_map[lir_local].get());
-				}
-				variant_case(lir::LIRGlobal, global_lir) {
-					auto global = getOrInsertGlobalVariable(module, global_lir);
-					builder.CreateStore(value.get(), global.get());
-				}
-				variant_default { CORE_PANIC("unknown lir output type"); }
-			}
+		void storeOutput(
+			const lir::LIRPlace& output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
+		) {
+			// We store local values behind pointers to stack-allocated memory.
+			// We need to load them (or their fields) before using them.
+			// Similarly, we need to use global values or their fields before use.
+			llvm::Value* accessed_ptr = gepPointerFromLIRPlace(output, builder);
+			builder.CreateStore(value.get(), accessed_ptr);
 		}
 
 		llvm::Value* castOperation(
 			llvm::Value* argument, llvm::IRBuilder<>& builder, const lir::CastParameters& cast_params
-		) {
+		) const {
 			const auto  target_layout = cast_params.target_layout;
 			const auto  source_layout = cast_params.source_layout;
 			const auto& source_type   = cast_params.source_type;
 			const auto& target_type   = cast_params.target_type;
 
-			auto llvm_dst_ty = typeFromLayout(builder.getContext(), target_layout);
+			const auto llvm_dst_ty = typeFromLayout(module, target_layout);
 
-			auto src_bits
+			const auto src_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(source_layout->getSize()));
-			auto dst_bits
+			const auto dst_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
 			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
@@ -465,7 +586,7 @@ namespace compiler::backend_llvm {
 			variant_match(source_layout->getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
-					bool src_signed = is_signed(source_type);
+					const bool src_signed = is_signed(source_type);
 
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -479,9 +600,10 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
 							// ================== Int -> Pointer ==================
-							auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							llvm::Value* int_for_ptr
 								= builder.CreateIntCast(argument, ptr_int_ty, src_signed);
 							return builder.CreateIntToPtr(int_for_ptr, llvm_dst_ty);
@@ -510,7 +632,7 @@ namespace compiler::backend_llvm {
 
 							// Here is a problem when the float is NaN or out of range of the int
 							// then the behavior is undefined.
-							bool to_signed = is_signed(target_type);
+							const bool to_signed = is_signed(target_type);
 
 							// Some other solution to consider in the future;
 							// bool use_saturating_float_casts = true;
@@ -529,7 +651,7 @@ namespace compiler::backend_llvm {
 							);
 
 							// name =  llvm.{fptosi, fptoui}.sat.i{int_width}.f{float_width}
-							std::string name = base::strConcat(
+							const std::string name = base::strConcat(
 								"llvm.",
 								instr,
 								".sat.i",
@@ -538,7 +660,7 @@ namespace compiler::backend_llvm {
 								std::to_string(src_bits)
 							);
 
-							llvm::FunctionCallee fdecl
+							const llvm::FunctionCallee fdecl
 								= module->getOrInsertFunction(name, func_type);
 							return builder.CreateCall(fdecl, { argument });
 						}
@@ -552,10 +674,11 @@ namespace compiler::backend_llvm {
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
-							auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
+							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
 						}
 						variant_case_novalue(tsl::PointerTypeLayout) {
@@ -564,10 +687,11 @@ namespace compiler::backend_llvm {
 						}
 						variant_case_novalue(tsl::FloatTypeLayout) {
 							// ================== Pointer -> Float ==================
-							auto ptr_bits
+							constexpr auto PTR_BITS
 								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
-							auto ptr_int_ty = llvm::Type::getIntNTy(builder.getContext(), ptr_bits);
-							auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
+							const auto ptr_int_ty
+								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
+							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateUIToFP(int_from_ptr, llvm_dst_ty);
 						}
 						variant_default {
@@ -582,13 +706,13 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                        \
-	{                                                                               \
-		const auto lhs   = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
-		const auto rhs   = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
-		const auto value = builder.Create##op(lhs, rhs);                            \
-		storeOutput(lir_instruction.output.value(), value, builder);                \
-		break;                                                                      \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                       \
+	{                                                                              \
+		const auto lhs   = loadLIRValue(lir_instruction.arguments.at(0), builder); \
+		const auto rhs   = loadLIRValue(lir_instruction.arguments.at(1), builder); \
+		const auto value = builder.Create##op(lhs, rhs);                           \
+		storeOutput(lir_instruction.output.value(), value, builder);               \
+		break;                                                                     \
 	}
 
 		/**
@@ -605,7 +729,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case ReturnValue: {
-				builder.CreateRet(lirValue2LLVM(lir_instruction.arguments.at(0), builder));
+				builder.CreateRet(loadLIRValue(lir_instruction.arguments.at(0), builder));
 				break;
 			}
 			case Jump: {
@@ -616,7 +740,7 @@ namespace compiler::backend_llvm {
 			}
 			case Branch: {
 				// here for lir locals we need more stuff:
-				const auto cond = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto cond = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto true_block
 					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
 				const auto false_block
@@ -625,7 +749,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Assign: {
-				const auto value = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto value = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
@@ -665,7 +789,7 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
-				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
 				storeOutput(output, value, builder);
 				break;
@@ -675,17 +799,18 @@ namespace compiler::backend_llvm {
 			case BooleanOr:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
 			case BooleanNot: {
-				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNot(argument);
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
 			case Cast: {
-				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				const auto output   = lir_instruction.output.value();
 
 				// get cast parameters:
-				auto cast_params = std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
+				const auto cast_params
+					= std::get_if<lir::CastParameters>(&lir_instruction.extra_params);
 
 				CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
 
@@ -701,7 +826,7 @@ namespace compiler::backend_llvm {
 					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
 				);
 
-				const auto args = lirValueList2LLVM(
+				const auto args = loadLIRValueList(
 					std::vector(
 						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
 					),
@@ -739,7 +864,7 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			Ref fun = llvm::cast<llvm::Function>(
+			const Ref fun = llvm::cast<llvm::Function>(
 				getOrInsertFunctionPrototypeFromLIRFunction(module, *lir_function).getCallee()
 			);
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
@@ -747,8 +872,8 @@ namespace compiler::backend_llvm {
 			generateMainBlocksAndLocals(fun.get());
 
 			for (auto& block: lir_function->block_order) {
-				auto              llvm_block = block_mapping[block];
-				llvm::IRBuilder<> builder(llvm_block.get());
+				auto            llvm_block = block_mapping[block];
+				llvm::IRBuilder builder(llvm_block.get());
 				for (const auto& instruction: block->instructions)
 					lirInstruction2LLVM(instruction, builder);
 				lirInstruction2LLVM(block->terminator, builder);
@@ -758,7 +883,7 @@ namespace compiler::backend_llvm {
 		}
 	};
 
-	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
+	Box<ModuleImpl> initModuleImpl(const base::StrID module_id) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
@@ -766,8 +891,8 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
-		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
+	Box<ModuleImpl> parseIRCodeToModuleImpl(const std::string_view llvm_ir_code) {
+		const auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
 		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
@@ -783,22 +908,22 @@ namespace compiler::backend_llvm {
 	}
 
 	llvm::Function* addFunctionToModuleInternal(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
-		LIRFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		LIRFunction2LLVM lir2llvm{ ctx, lir_function, module->module.refMut() };
 		return lir2llvm.createFunction();
 	}
 
 	void addFunctionToModuleImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
 		addFunctionToModuleInternal(ctx, module, lir_function);
 	}
 
 	void addFunctionToModuleCtorsImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
-		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		const auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
 		// 65535 is the default priority for global constructors in LLVM.
 		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
 		// global variable associated with the constructor. However, the problem is that the
@@ -809,13 +934,13 @@ namespace compiler::backend_llvm {
 	}
 
 	void addFunctionToModuleDtorsImpl(
-		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
-		auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
+		const auto fun = addFunctionToModuleInternal(ctx, module, lir_function);
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
+	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }

@@ -363,7 +363,9 @@ private:
 			assertTrue(
 				lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
 			);
-			auto const_value = lir_global.initial_value.value().asI64().value();
+			auto const_numeric
+				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
+			auto const_value = const_numeric->get<i64>();
 			ASSERT_EQUAL(const_value, 55);
 		});
 	}

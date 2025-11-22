@@ -10,7 +10,7 @@ import submodule_2 as sm2;
 # import cyclic:
 import cyclic.cyclic_1 as c1;
 
-const my_value: i64 = 19923;
+const my_value: i64 = 19923i64;
 
 
 # other:

@@ -129,7 +129,7 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 
 		/**
-		 * The temporaty buffor for the currently built value from left to current place of
+		 * The temporary buffor for the currently built value from left to current place of
 		 the chain. So for example after processing "a.b.c" it will contain hout expr:
 		 "access(access(a, field=b), field=c))"".
 		 */
@@ -295,6 +295,7 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
@@ -526,7 +527,7 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			// @TODO #981: make it better:
+			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
@@ -574,7 +575,7 @@ namespace compiler::helios::code {
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
-		 * Perform a procesing step on the current element of the chain.
+		 * Perform a processing step on the current element of the chain.
 		 * @warning It assumes that the current element exist.
 		 */
 		template<typename T>
@@ -597,7 +598,7 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Perform a procesing step on current element of the chain and next one.
+		 * Perform a processing step on current element of the chain and next one.
 		 * @warning It assumes that the current element and next one exist.
 		 */
 		template<typename T1, typename T2>

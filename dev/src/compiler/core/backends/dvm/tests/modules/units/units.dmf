@@ -5,7 +5,7 @@ let a: () = ();
 # @TODO: #902 when type consts work, use the above type somewhere below.
 
 fun foo(u: ()) -> () = {
-    builtin_output_i64(1);
+    builtin_output_i64(1i64);
     return u;
 }
 

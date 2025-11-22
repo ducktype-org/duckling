@@ -5,8 +5,8 @@ fun square(a: i64) -> i64 = {
 fun foo(a: i64, b: i64) -> i64 = {
     let a_squared: i64 = square(a);
  
-    var V1: i64 = 1;
-    let bb: i64 = 1 + V1;
+    var V1: i64 = 1i64;
+    let bb: i64 = 1i64 + V1;
 
     return square(a_squared + b);
 }

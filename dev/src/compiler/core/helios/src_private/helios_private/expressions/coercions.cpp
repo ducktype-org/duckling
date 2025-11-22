@@ -1,5 +1,6 @@
 #include "coercions.hpp"
 
+#include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/context.hpp>
@@ -11,7 +12,9 @@ namespace compiler::helios {
 	 * @brief Create a zero literal HOUT expression of the given symbol type.
 	 */
 	Box<code::Expr> createZeroLiteralOfType(query::Context& ctx, const tsh::SymbolType<> type) {
-		auto zero_literal = makeBox<code::LiteralIntExpr>(ctx, 0);
+		// @TODO: #1543 Implement `NumericValue::createOfType()` and use it instead of
+		// createZeroLiteralOfType.
+		auto zero_literal = makeBox<code::LiteralNumericExpr>(ctx, i64(0));
 		if (zero_literal->expression_type.getType() == type.getType()) return zero_literal;
 
 		auto coerced = makeBox<code::CastExpr>(ctx, std::move(zero_literal), type);

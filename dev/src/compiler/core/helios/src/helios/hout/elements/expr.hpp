@@ -2,6 +2,7 @@
 
 #include "../../scope_symbol_id.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
@@ -71,14 +72,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an integer literal value written in the expression.
+	 * @brief Represents an numeric literal value written in the expression.
+	 * Stores both integer constants and floating point constants.
 	 */
-	struct LiteralIntExpr final: public Expr {
-		// @TODO: ctv + type for consts?
-		// @note: this is a mock
-		i64 value;
+	struct LiteralNumericExpr final: public Expr {
+		numeric_value::NumericValue value;
 
-		LiteralIntExpr(query::Context& ctx, i64 value);
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -88,7 +88,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
+		LiteralNumericExpr(tsh::ExpressionType<> expression_type, numeric_value::NumericValue value);
 	};
 
 	/**
@@ -218,6 +218,13 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatMod,
+		FloatPow,
+
 		// Comparison operators
 		IntegerLt,    // Less then
 		IntegerLteq,  // Less then or equal to
@@ -225,6 +232,13 @@ namespace compiler::helios::code {
 		IntegerGteq,  // Greater then or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
+
+		FloatLt,      // Less then
+		FloatLteq,    // Less then or equal to
+		FloatGt,      // Greater then
+		FloatGteq,    // Greater then or equal to
+		FloatEq,      // Equal
+		FloatNeq,     // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -267,6 +281,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,
@@ -368,7 +383,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup, doesn't work.
+	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
+	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
 	 */
 	struct AccessExpr final: public Expr {
 		Box<Expr> base;

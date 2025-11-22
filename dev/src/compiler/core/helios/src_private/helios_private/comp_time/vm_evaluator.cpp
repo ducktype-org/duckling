@@ -1,5 +1,7 @@
 #include "vm_evaluator.hpp"
 
+#include <typesystem/higher/types.hpp>
+
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -8,26 +10,53 @@
 
 namespace {
 	using namespace compiler::helios;
+	using namespace compiler::ctv;
 
 	/**
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		vm::PID pid, const compiler::helios::CompileTimeValue& ctv
+		vm::PID pid, const CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
-			variant_case(i64, val) {
-				auto vm_value_response = vm::api::getVmValue(pid, "i64");
-				if (!vm_value_response.has_value())
-					return std::unexpected(VmEvaluationError(
-						VmEvaluationError::Kind::ArgConversionFailed,
-						"Failed to get VM value for 'i64' type."
-					));
+			variant_case(NumericValue, val) {
+				return std::visit(
+					[&](auto&& num_val) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+						using NumT = std::decay_t<decltype(num_val)>;
 
-				auto res = std::move(vm_value_response->vm_value);
-				res->writeBytes<i64>(val);
-				return res;
+						// @TODO: #899 Once CTV will be VmValue based (contain the VMValue and
+					    // tsh::SymbolType) we should perform this conversion based on the
+					    // `SymbolType` not C++ type sizes.
+						base::StrID dvm_type_name;
+						if constexpr (sizeof(NumT) <= 2)
+							dvm_type_name = base::StrID("i16");
+						else if constexpr (sizeof(NumT) <= 4)
+							dvm_type_name = base::StrID("i32");
+						else if constexpr (sizeof(NumT) <= 8)
+							dvm_type_name = base::StrID("i64");
+						else {
+							throw base::NotYetImplemented(
+								"Conversion from CTV to VmValue for bigger numeric sizes"
+							);
+						}
+
+						auto vm_value_response = vm::api::getVmValue(pid, dvm_type_name.str());
+						if (!vm_value_response.has_value())
+							return std::unexpected(VmEvaluationError(
+								VmEvaluationError::Kind::ArgConversionFailed,
+								base::strConcat(
+									"Failed to get VM value for '",
+									dvm_type_name.strView(),
+									"' type."
+								)
+							));
+						auto res = std::move(vm_value_response->vm_value);
+						res->writeBytes<NumT>(num_val);
+						return res;
+					},
+					val.getStorage()
+				);
 			}
 			variant_case(bool, val) {
 				auto vm_value_response = vm::api::getVmValue(pid, "byte");
@@ -64,13 +93,48 @@ namespace {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
 		case tsh::Kind::Integral: {
-			if (vm_value->type->getName() != base::StrID("i64"))
-				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::ReturnConversionFailed,
-					"Expected i64 VM value but received type: " + vm_value->type->getName().str()
-				));
-			return CompileTimeValue{ vm_value->readBytes<i64>() };
+			tsh::IntegralAbstractType int_type(type.getType());
+			auto                      bit_size     = int_type.getSize();
+			base::StrID               vm_type_name = vm_value->type->getName();
+
+			if (int_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed) {
+				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i16>() } };
+				else if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i32>() } };
+				else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i64>() } };
+			} else {
+				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u16>() } };
+				if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u32>() } };
+				if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+					return CompileTimeValue{ NumericValue{ vm_value->readBytes<u64>() } };
+			}
+
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				"Expected an integer VM value (i16/i32/i64), but received: " + vm_type_name.str()
+			));
 		}
+		case tsh::Kind::Float: {
+			tsh::FloatAbstractType float_type(type.getType());
+			auto                   bit_size     = float_type.getSize();
+			base::StrID            vm_type_name = vm_value->type->getName();
+
+			if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
+				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
+			else if (bit_size <= Bits{ 64 } && vm_type_name == "i64")
+				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f64>() } };
+
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				"Mismatched VM value type for float return. Expected size "
+					+ base::toString(bit_size) + " bits, but got VM type: " + vm_type_name.str()
+			));
+		}
+
 		case tsh::Kind::Bool: {
 			if (vm_value->type->getName() != base::StrID("byte"))
 				return std::unexpected(VmEvaluationError(
@@ -173,11 +237,11 @@ namespace {
 }
 
 namespace compiler::helios {
-	std::expected<CompileTimeValue, VmEvaluationError> executeInVm(
-		const std::string&                   func_name,
-		const vm::code::CodeCollection&      code,
-		const std::vector<CompileTimeValue>& args,
-		const tsh::SymbolType<>&             return_type
+	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
+		const std::string&                        func_name,
+		const vm::code::CodeCollection&           code,
+		const std::vector<ctv::CompileTimeValue>& args,
+		const tsh::SymbolType<>&                  return_type
 	) {
 		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process)
 		// once upon the first call to executeInVm and its lifetime extends for the duration of
