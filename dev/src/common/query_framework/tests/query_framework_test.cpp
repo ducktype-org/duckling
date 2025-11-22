@@ -439,6 +439,7 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(testConstructCache);
+		TESTER_ADD_TEST(testConstructFromCRefCache);
 		TESTER_ADD_TEST(testDeps);
 		TESTER_ADD_TEST(testSideInput);
 		TESTER_ADD_TEST(entryPointSanityTest);
@@ -621,19 +622,19 @@ private:
 	}
 
 	void testConstructFromCRefCache() {
-		ConstructTo::construct_count = 0;
+		ConstructToViaCRef::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
 			auto res1 = ctx.query<ConstructFromCRefCacheTest>(10);
 			ASSERT_TRUE(res1.v->v == 10);
-			ASSERT_TRUE(ConstructTo::construct_count == 1);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 1);
 
 			auto res2 = ctx.query<ConstructFromCRefCacheTest>(10);
 			ASSERT_TRUE(res2.v->v == 10);
-			ASSERT_TRUE(ConstructTo::construct_count == 2);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 2);
 
 			auto res3 = ctx.query<ConstructFromCRefCacheTest>(20);
 			ASSERT_TRUE(res3.v->v == 20);
-			ASSERT_TRUE(ConstructTo::construct_count == 3);
+			ASSERT_TRUE(ConstructToViaCRef::construct_count == 3);
 		});
 	}
 
