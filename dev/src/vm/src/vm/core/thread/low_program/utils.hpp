@@ -40,11 +40,11 @@ namespace vm::low::instruction_tags {
 #undef HANDLE_MICRO_INSTR_2ARGS
 
 	namespace detail {
-			template<typename T>
-			constexpr bool IS_MICRO_TAG = false;
+		template<typename T>
+		constexpr bool IS_MICRO_TAG = false;
 
-			template<typename T, usize N>
-			constexpr bool IS_ARG_LABEL = false;
+		template<typename T, usize N>
+		constexpr bool IS_ARG_LABEL = false;
 
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
 	template<>                          \
