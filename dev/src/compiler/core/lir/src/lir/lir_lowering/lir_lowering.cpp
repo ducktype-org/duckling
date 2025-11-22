@@ -653,7 +653,7 @@ namespace compiler::lir {
 			return fun;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLIRFunction);

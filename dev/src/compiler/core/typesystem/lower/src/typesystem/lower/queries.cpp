@@ -40,7 +40,7 @@ namespace tsl {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
@@ -52,7 +52,7 @@ namespace tsl {
 			return PointerTypeLayout(key, ctx);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)

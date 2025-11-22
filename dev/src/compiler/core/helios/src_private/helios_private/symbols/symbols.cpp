@@ -458,7 +458,7 @@ namespace compiler::helios {
 					return output;
 				}
 
-				QUERY_AUTO_CACHE_REF
+				QUERY_AUTO_CACHE_CREF
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -502,7 +502,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
@@ -612,7 +612,7 @@ namespace compiler::helios {
 			return lookup_chain;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
@@ -720,7 +720,7 @@ namespace compiler::helios {
 			return specifiers;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
@@ -849,7 +849,7 @@ namespace compiler::helios {
 			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
@@ -886,7 +886,7 @@ namespace compiler::helios {
 			return all_dependencies;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);

@@ -265,7 +265,7 @@ namespace compiler::mir {
 			return function_reachable;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
@@ -289,7 +289,7 @@ namespace compiler::mir {
 			return function_no_func_end;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);

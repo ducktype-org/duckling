@@ -188,7 +188,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);

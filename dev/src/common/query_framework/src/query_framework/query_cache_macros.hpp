@@ -1,9 +1,8 @@
 #pragma once
 
 /**
- * @brief Macro defining typical hash based cache for fast prototyping.
+ * @brief Macro defining typical hash based cache.
  * It caches PResults using base::HashMap and returns copies of results on cache hit.
- * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_COPY                                                   \
 	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;       \
@@ -27,22 +26,21 @@
 	);
 
 /**
- * @brief Macro defining typical hash based cache for fast prototyping.
+ * @brief Macro defining typical hash based cache.
  * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.
  * @note Cannot be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
- * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
 	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;               \
 	static auto load(KHash key_hash) -> LoadResult {                                    \
 		if (const auto& value = cache.atMaybe(key_hash)) {                              \
-			return QResWithACD{ (*value)->data, (*value)->acd };                        \
+			return QResWithACD{ QResult((*value)->data), (*value)->acd };               \
 		}                                                                               \
 		return {};                                                                      \
 	}                                                                                   \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {         \
 		cache.put(key_hash, { std::move(res), acd });                                   \
-		return cache.at(key_hash).data;                                                 \
+		return QResult(cache.at(key_hash).data);                                        \
 	}                                                                                   \
 	static_assert(                                                                      \
 		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
@@ -50,14 +48,37 @@
 		"QUERY_AUTO_CACHE_CONSTRUCT"                                                    \
 	);
 
-
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::HashMap and returns QResults constructed
+ * from a CRef<PResult> on cache hit.
+ * @note Cannot be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
+ */
+#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF                                                        \
+	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;                           \
+	static auto load(KHash key_hash) -> LoadResult {                                                \
+		if (const auto& value = cache.atMaybe(key_hash)) {                                          \
+			return QResWithACD{ QResult(CRef<PResult>(&(*value)->data)), (*value)->acd };           \
+		}                                                                                           \
+		return {};                                                                                  \
+	}                                                                                               \
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {                     \
+		cache.put(key_hash, { std::move(res), acd });                                               \
+		return QResult(CRef<PResult>(&cache.at(key_hash).data));                                    \
+	}                                                                                               \
+	static_assert(                                                                                  \
+		std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
+		"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
+		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+	);
+
+
+/**
+ * @brief Macro defining typical hash based cache.
  * It caches PResults using base::StableHashMap and returns stable references to results
  * on cache hit.
- * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_REF                                                               \
+#define QUERY_AUTO_CACHE_CREF                                                              \
 	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \

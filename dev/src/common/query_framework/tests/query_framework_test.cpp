@@ -123,7 +123,7 @@ DECLARE_QUERY(ReferenceQuery, u64, CRef<u64>);
 struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key; }
 
-	QUERY_AUTO_CACHE_REF
+	QUERY_AUTO_CACHE_CREF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ReferenceQuery);
@@ -134,7 +134,7 @@ DECLARE_QUERY(VectorReferenceQuery, u64, CRef<std::vector<u64>>);
 struct IMPLEMENT_QUERY(VectorReferenceQuery, std::vector<u64>) {
 	static auto provide(Context&, QKey key) -> PResult { return { 1, 2, key }; }
 
-	QUERY_AUTO_CACHE_REF
+	QUERY_AUTO_CACHE_CREF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(VectorReferenceQuery);
@@ -229,6 +229,23 @@ struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ConstructCacheTest);
+
+struct ConstructToViaCRef {
+	static inline u64   construct_count = 0;
+	CRef<ConstructFrom> v;
+
+	ConstructToViaCRef(CRef<ConstructFrom> from): v(from) { construct_count++; }
+};
+
+DECLARE_QUERY(ConstructFromCRefCacheTest, u64, ConstructToViaCRef);
+
+struct IMPLEMENT_QUERY(ConstructFromCRefCacheTest, ConstructFrom) {
+	static auto provide(Context&, QKey key) -> PResult { return { key }; }
+
+	QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ConstructFromCRefCacheTest);
 
 namespace context_leak {
 	query::Context* leaked_context = nullptr;
@@ -599,6 +616,23 @@ private:
 
 			auto res3 = ctx.query<ConstructCacheTest>(20);
 			ASSERT_TRUE(res3.v == 20);
+			ASSERT_TRUE(ConstructTo::construct_count == 3);
+		});
+	}
+
+	void testConstructFromCRefCache() {
+		ConstructTo::construct_count = 0;
+		withContextDo([&](query::Context& ctx) {
+			auto res1 = ctx.query<ConstructFromCRefCacheTest>(10);
+			ASSERT_TRUE(res1.v->v == 10);
+			ASSERT_TRUE(ConstructTo::construct_count == 1);
+
+			auto res2 = ctx.query<ConstructFromCRefCacheTest>(10);
+			ASSERT_TRUE(res2.v->v == 10);
+			ASSERT_TRUE(ConstructTo::construct_count == 2);
+
+			auto res3 = ctx.query<ConstructFromCRefCacheTest>(20);
+			ASSERT_TRUE(res3.v->v == 20);
 			ASSERT_TRUE(ConstructTo::construct_count == 3);
 		});
 	}
