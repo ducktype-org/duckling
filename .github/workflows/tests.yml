@@ -267,7 +267,7 @@ jobs:
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
+        run: cmake --build ${{ env.BUILD_DIR }} -- test_parallel
 
       - name: Test Coverage
         id: test-coverage
