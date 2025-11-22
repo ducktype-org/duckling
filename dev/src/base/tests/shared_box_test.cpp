@@ -1,4 +1,5 @@
 #include <base/pointers/shared_box.hpp>
+
 #include <tester/tester.hpp>
 
 // SharedBox asserts:
@@ -43,7 +44,7 @@ public:
 	}
 
 private:
-    void testSharedBox() {
+	void testSharedBox() {
 		// basic SharedBox:
 		{
 			SharedBox<InstancesCounter> a = makeSharedBox<InstancesCounter>();
@@ -53,7 +54,7 @@ private:
 
 		// SharedBox owners counter (and copy constructor):
 		{
-			SharedBox<InstancesCounter>* a = new SharedBox<InstancesCounter>(makeSharedBox<InstancesCounter>());
+			auto a = new SharedBox<InstancesCounter>(makeSharedBox<InstancesCounter>());
 			ASSERT_EQUAL(InstancesCounter::count, 1);
 			{
 				SharedBox<InstancesCounter> b(*a);
@@ -158,7 +159,7 @@ private:
 			ASSERT_EQUAL(a.ref(), b_ref);
 			ASSERT_EQUAL(b.ref(), a_ref);
 		}
-    }
+	}
 
 	void testSharedBoxFromPtr() {
 		int* ptr = new int(42);
@@ -220,7 +221,8 @@ private:
 
 		static_assert(
 			not std::is_constructible_v<SharedBox<int, StatefulDeleter<int>>, SharedBox<int>>,
-			"SharedBox with custom deleter should not be constructible from Box with default deleter"
+			"SharedBox with custom deleter should not be constructible from Box with default "
+			"deleter"
 		);
 
 		{

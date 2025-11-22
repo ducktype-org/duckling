@@ -1,5 +1,9 @@
+#pragma once
+
+#include <base/comptime/is_complete.hpp>
+
 namespace base {
-    /**
+	/**
 	 * @brief Default deleter functor used by Box, MBox.
 	 *
 	 * @note Adding specialization for custom types with macros
@@ -33,7 +37,6 @@ namespace base {
 		}
 	};
 }
-
 
 /**
  * @brief Macro for declaring a specialization of DefaultBoxPtrDeleter for type T.

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
-#include <base/pointers/ref.hpp>
 #include <base/pointers/default_deleter.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace base {
 	/**
@@ -16,8 +15,8 @@ namespace base {
 	 * more complex behavior arises, we can add it as needed.
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>. It has
-	 * to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>.
+	 * It has to define static method `void del(T*)`.
 	 */
 	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 	class Box final {
@@ -166,8 +165,8 @@ namespace base {
 	 * [no_unique_address]] Deleter deleter;).
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>. It has
-	 * to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>.
+	 * It has to define static method `void del(T*)`.
 	 */
 	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 	class MBox final {
