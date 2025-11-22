@@ -4,7 +4,7 @@
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
 			static auto unit_impl = UnitAbstractTypeImpl{};

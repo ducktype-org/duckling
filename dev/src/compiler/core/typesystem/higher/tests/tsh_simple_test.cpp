@@ -7,7 +7,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 
 /**
  * This test class contains tests checking the most basic and boring functionality of the

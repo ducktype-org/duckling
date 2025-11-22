@@ -7,7 +7,7 @@
 
 #include <utility>
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief Creates a human-readable string representation of a vector of symbol types.
 	 * @param types Vector of symbol types to stringify.

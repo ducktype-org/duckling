@@ -89,10 +89,10 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral {
-		base::StrID                                         mangled_name;
-		helios::SymbolABI                                   abi;
-		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
-		CRef<tsl::TypeLayout>                               return_type_layout;
+		base::StrID                                                   mangled_name;
+		helios::SymbolABI                                             abi;
+		std::shared_ptr<std::vector<CRef<compiler::tsl::TypeLayout>>> parameter_layouts;
+		CRef<compiler::tsl::TypeLayout>                               return_type_layout;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};
@@ -109,7 +109,7 @@ namespace compiler::lir {
 		 */
 		base::Optional<helios::SymID> helios_id;
 
-		CRef<tsl::TypeLayout> layout;
+		CRef<compiler::tsl::TypeLayout> layout;
 
 		/**
 		 * @brief Index of the parameter in the function, if this is a function parameter.
@@ -118,15 +118,17 @@ namespace compiler::lir {
 
 	private:
 		LIRLocal(
-			const base::Optional<helios::SymID> helios_id,
-			const CRef<tsl::TypeLayout>         layout,
-			const base::Optional<u64>           parameter_index
+			const base::Optional<helios::SymID>   helios_id,
+			const CRef<compiler::tsl::TypeLayout> layout,
+			const base::Optional<u64>             parameter_index
 		):
 			  helios_id(helios_id),
 			  layout(layout),
 			  parameter_index(parameter_index) {}
 
-		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
+		explicit LIRLocal(const CRef<compiler::tsl::TypeLayout> layout):
+			  helios_id({}),
+			  layout(layout) {}
 
 		friend Function;
 		friend LIRLocalRef;
@@ -158,7 +160,7 @@ namespace compiler::lir {
 		 */
 		helios::SymID helios_id;
 
-		CRef<tsl::TypeLayout> layout;
+		CRef<compiler::tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
 
@@ -169,7 +171,7 @@ namespace compiler::lir {
 	private:
 		LIRGlobal(
 			const helios::SymID                          helios_id,
-			const CRef<tsl::TypeLayout>                  layout,
+			const CRef<compiler::tsl::TypeLayout>        layout,
 			const base::StrID&                           mangled_name,
 			const LIRGlobalType                          type          = LIRGlobalType::Variable,
 			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
@@ -216,7 +218,7 @@ namespace compiler::lir {
 		 * @brief Get the type layout of the base variable.
 		 */
 		[[nodiscard]]
-		CRef<tsl::TypeLayout> getBaseLayout() const {
+		CRef<compiler::tsl::TypeLayout> getBaseLayout() const {
 			variant_match(base) {
 				variant_case(LIRLocalRef, local) { return local->layout; }
 				variant_case(LIRGlobal, global) { return global.layout; }
@@ -239,7 +241,7 @@ namespace compiler::lir {
 		 * @note This type layout may be different from the layout of the base variable,
 		 * especially when the access chain is not empty.
 		 */
-		CRef<tsl::TypeLayout> layout;
+		CRef<compiler::tsl::TypeLayout> layout;
 
 		LIRPlace(
 			query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
@@ -327,11 +329,11 @@ namespace compiler::lir {
 		/**
 		 * @brief The source type layout of the cast operation.
 		 */
-		CRef<tsl::TypeLayout> source_layout;
+		CRef<compiler::tsl::TypeLayout> source_layout;
 		/**
 		 * @brief The target type layout of the cast operation.
 		 */
-		CRef<tsl::TypeLayout> target_layout;
+		CRef<compiler::tsl::TypeLayout> target_layout;
 	};
 
 	/**
@@ -385,8 +387,8 @@ namespace compiler::lir {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
 
-		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
-		CRef<tsl::TypeLayout>              return_type_layout;
+		std::vector<CRef<compiler::tsl::TypeLayout>> parameter_layouts;
+		CRef<compiler::tsl::TypeLayout>              return_type_layout;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LIRLocal> local_list;

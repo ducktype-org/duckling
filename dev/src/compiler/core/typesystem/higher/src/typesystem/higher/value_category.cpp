@@ -3,7 +3,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = kind(symbol);
 		// @TODO Properly check whether the symbol is local or global.

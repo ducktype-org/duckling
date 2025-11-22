@@ -9,7 +9,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsl;
+using namespace compiler::tsl;
 using namespace tsh;
 using query::utils::withContextDo;
 

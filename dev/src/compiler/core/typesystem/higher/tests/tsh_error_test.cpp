@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-using namespace tsh;
+using namespace compiler::tsh;
 
 class HigherTypeSystemErrorTest final: public tester::TestSuite {
 #undef TESTER_CLASS

@@ -139,7 +139,7 @@ namespace compiler::backend_llvm {
 	 * @param layout The TypeLayout to convert.
 	 * @return The created llvm::Type*.
 	 */
-	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
+	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<compiler::tsl::TypeLayout> layout)
 		-> llvm::Type* {
 		auto& llvm_context = module->getContext();
 		// If the layout is empty, return the void type.
@@ -148,15 +148,15 @@ namespace compiler::backend_llvm {
 		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(llvm_context);
 
 		variant_match(layout->getVariant()) {
-			variant_case_novalue(tsl::EmptyTypeLayout) {
+			variant_case_novalue(compiler::tsl::EmptyTypeLayout) {
 				return llvm::Type::getVoidTy(llvm_context);
 			}
-			variant_case_novalue(tsl::IntegralTypeLayout) {
+			variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(
 					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
 				);
 			}
-			variant_case_novalue(tsl::FloatTypeLayout) {
+			variant_case_novalue(compiler::tsl::FloatTypeLayout) {
 				// see https://llvm.org/docs/LangRef.html#floating-point-types for docs on LLVM
 				// floating point types
 				switch (static_cast<usize>(layout->getSize())) {
@@ -168,7 +168,7 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
-			variant_case(tsl::ClassTypeLayout, class_layout) {
+			variant_case(compiler::tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
 				// Get the struct from the context, if it has been previously defined.
@@ -186,7 +186,7 @@ namespace compiler::backend_llvm {
 				std::vector<llvm::Type*> member_types;
 				member_types.reserve(num_fields);
 				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const CRef<tsl::TypeLayout> field_layout
+					const CRef<compiler::tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
 				}
@@ -224,7 +224,7 @@ namespace compiler::backend_llvm {
 				// Finally, return the struct type.
 				return struct_type;
 			}
-			variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			variant_case(compiler::tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(llvm_context);
 			}
 			variant_default {
@@ -237,9 +237,9 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(
-		const Ref<llvm::Module>                   module,
-		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		const CRef<tsl::TypeLayout>               return_type
+		const Ref<llvm::Module>                             module,
+		const std::vector<CRef<compiler::tsl::TypeLayout>>& parameters,
+		const CRef<compiler::tsl::TypeLayout>               return_type
 	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
@@ -475,11 +475,11 @@ namespace compiler::backend_llvm {
 			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
 			std::vector<llvm::Value*> access_indices;
 			access_indices.reserve(place.access_chain.size() + 1);
-			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+			CRef<compiler::tsl::TypeLayout> current_layout = place.getBaseLayout();
 			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 			for (const auto& field_sym: place.access_chain) {
 				const auto& current_class_layout
-					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+					= std::get<compiler::tsl::ClassTypeLayout>(current_layout->getVariant());
 				const auto layout_idx = current_class_layout.getLayoutIndexOfFieldSymbol(field_sym);
 				access_indices.push_back(
 					llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
@@ -584,24 +584,25 @@ namespace compiler::backend_llvm {
 			};
 
 			variant_match(source_layout->getVariant()) {
-				variant_case_novalue(tsl::IntegralTypeLayout) {
+				variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
 					const bool src_signed = is_signed(source_type);
 
 					variant_match(target_layout->getVariant()) {
-						variant_case_novalue(tsl::IntegralTypeLayout) {
+						variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
 						}
-						variant_case_novalue(tsl::FloatTypeLayout) {
+						variant_case_novalue(compiler::tsl::FloatTypeLayout) {
 							// ================== Int -> Float ==================
 							return src_signed ? builder.CreateSIToFP(argument, llvm_dst_ty)
 							                  : builder.CreateUIToFP(argument, llvm_dst_ty);
 						}
-						variant_case_novalue(tsl::PointerTypeLayout) {
+						variant_case_novalue(compiler::tsl::PointerTypeLayout) {
 							// ================== Int -> Pointer ==================
-							constexpr auto PTR_BITS
-								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							constexpr auto PTR_BITS = static_cast<unsigned>(
+								static_cast<usize>(compiler::tsl::POINTER_SIZE)
+							);
 							const auto ptr_int_ty
 								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							llvm::Value* int_for_ptr
@@ -614,9 +615,9 @@ namespace compiler::backend_llvm {
 					}
 				}
 
-				variant_case_novalue(tsl::FloatTypeLayout) {
+				variant_case_novalue(compiler::tsl::FloatTypeLayout) {
 					variant_match(target_layout->getVariant()) {
-						variant_case_novalue(tsl::FloatTypeLayout) {
+						variant_case_novalue(compiler::tsl::FloatTypeLayout) {
 							// ================== Float -> Float ==================
 
 							if (dst_bits > src_bits)
@@ -626,7 +627,7 @@ namespace compiler::backend_llvm {
 							else
 								return argument;
 						}
-						variant_case_novalue(tsl::IntegralTypeLayout) {
+						variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
 							// ================== Float -> Int ==================
 
 
@@ -670,25 +671,27 @@ namespace compiler::backend_llvm {
 					}
 				}
 
-				variant_case_novalue(tsl::PointerTypeLayout) {
+				variant_case_novalue(compiler::tsl::PointerTypeLayout) {
 					variant_match(target_layout->getVariant()) {
-						variant_case_novalue(tsl::IntegralTypeLayout) {
+						variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
 							// ================== Pointer -> Int  ==================
-							constexpr auto PTR_BITS
-								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							constexpr auto PTR_BITS = static_cast<unsigned>(
+								static_cast<usize>(compiler::tsl::POINTER_SIZE)
+							);
 							const auto ptr_int_ty
 								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);
 							return builder.CreateIntCast(int_from_ptr, llvm_dst_ty, false);
 						}
-						variant_case_novalue(tsl::PointerTypeLayout) {
+						variant_case_novalue(compiler::tsl::PointerTypeLayout) {
 							// =================== Pointer -> Pointer ==================
 							return builder.CreateBitCast(argument, llvm_dst_ty);
 						}
-						variant_case_novalue(tsl::FloatTypeLayout) {
+						variant_case_novalue(compiler::tsl::FloatTypeLayout) {
 							// ================== Pointer -> Float ==================
-							constexpr auto PTR_BITS
-								= static_cast<unsigned>(static_cast<usize>(tsl::POINTER_SIZE));
+							constexpr auto PTR_BITS = static_cast<unsigned>(
+								static_cast<usize>(compiler::tsl::POINTER_SIZE)
+							);
 							const auto ptr_int_ty
 								= llvm::Type::getIntNTy(builder.getContext(), PTR_BITS);
 							const auto int_from_ptr = builder.CreatePtrToInt(argument, ptr_int_ty);

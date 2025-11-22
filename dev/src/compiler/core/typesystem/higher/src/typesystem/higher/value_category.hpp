@@ -12,7 +12,7 @@
 
 #include <base/extend_cpp/flag.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
 	// Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
 	// information
@@ -34,7 +34,7 @@ namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 }
 
-MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
+MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
 	REINIT,
@@ -42,7 +42,7 @@ MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	DESTROY
 )
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * Value category class describes properties of a value other than its type.
 	 */

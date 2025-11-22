@@ -4,7 +4,7 @@
 
 #include <set>
 
-namespace tsh {
+namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return key.source == key.target
