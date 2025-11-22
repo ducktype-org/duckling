@@ -1,3 +1,9 @@
+/**
+ * @file raw_view.hpp
+ * @brief Provides shared array view.
+ * Separate from `raw_view.hpp` because of includes cycle.
+ */
+
 #pragma once
 
 #include "base/misc/raw_view.hpp"
@@ -18,7 +24,7 @@ namespace base {
 		SharedView& operator=(SharedView&&)      = default;
 
 		/**
-		 * @note Takes ownership of shared_ptr
+		 * @note Takes ownership of SharedBox
 		 */
 		explicit SharedView(SharedBox<OwningView> content): content(std::move(content)) {}
 
@@ -32,8 +38,7 @@ namespace base {
 		}
 
 		// Makes copy
-		explicit SharedView(const char* const c_str):
-			  content(makeSharedBox<OwningView>(c_str)) {}
+		explicit SharedView(const char* const c_str): content(makeSharedBox<OwningView>(c_str)) {}
 
 		[[nodiscard]]
 		const RawView view() const;
