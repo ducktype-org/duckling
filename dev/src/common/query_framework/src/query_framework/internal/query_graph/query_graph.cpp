@@ -231,7 +231,7 @@ namespace query::internal {
 			// Add the deserialized entry to the graph
 			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
 			if (!inserted)
-				throw std::runtime_error("Duplicate node detected during deserialization");
+				CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
 		// Check here oif offset is equal to data_size
