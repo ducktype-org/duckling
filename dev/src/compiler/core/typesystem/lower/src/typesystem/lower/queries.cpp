@@ -2,7 +2,7 @@
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsl {
+namespace compiler::tsl {
 	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using enum tsh::Kind;

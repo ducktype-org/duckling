@@ -18,7 +18,7 @@
  * @brief The namespace of all definitions of the Lower Type System.
  * Short for "Type System: Low(er)".
  */
-namespace tsl {
+namespace compiler::tsl {
 	/**
 	 * @brief The abstract base class of a Type Layout object.
 	 */

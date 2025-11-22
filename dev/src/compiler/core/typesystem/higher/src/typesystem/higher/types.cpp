@@ -28,7 +28,7 @@
 
 // NOLINTEND
 
-namespace tsh {
+namespace compiler::tsh {
 
 #define toCPimpl(pimpl) (CPimpl(reinterpret_cast<const Impl*>(pimpl.get())))
 

@@ -19,7 +19,7 @@
 
 #include <ranges>
 
-namespace tsh {
+namespace compiler::tsh {
 	enum class ClassMemberVisibility { Public, Protected, Private };
 
 	/**

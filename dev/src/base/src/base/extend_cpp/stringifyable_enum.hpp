@@ -74,7 +74,7 @@ namespace base::internal {
  * @note This macro has to be used in global namespace for technical reasons.
  *
  * @note Writing source docs for these enums is very tricky.
- * See tsh::Kind or other usages for an example.
+ * See compiler::tsh::Kind or other usages for an example.
  */
 #define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                            \
 	static_assert(std::is_integral_v<base_type>, "base_type must be integral");                  \
