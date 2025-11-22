@@ -10,7 +10,7 @@
 #include <tester/tester.hpp>
 
 using namespace compiler::tsl;
-using namespace tsh;
+using namespace compiler::tsh;
 using query::utils::withContextDo;
 
 class LowerTypeSystemSimpleTest final: public tester::TestSuite {
