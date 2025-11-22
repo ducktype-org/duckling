@@ -11,14 +11,17 @@
 - **g++** with version 14 or higher is required for building the project.
 - [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
 - **lcov** is used for generating coverage reports.
-- **LLVM** is required for building the project.
+- **LLVM** with version 19 is required for building the project.
 
 
 #### Debian/Ubuntu
 
+
+Note that the dependencies listed bellow are listed without versions. Update the command accordingly, depending on package names on you system / you version preferences. 
+
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
 ```
 
 
@@ -148,10 +151,9 @@ ninja docs
 ```
 
 This will compile the documentation and put it in the `build/docs` subdirectory.
-There are also custom targets for opening the documentation in the browser:
+There is also a custom target for opening the documentation in the browser:
 
 ```bash
-ninja open-sphinx-docs
 ninja open-doxygen-docs
 ```
 
@@ -183,10 +185,10 @@ There is also a CMake command to compile
 and run tests:
 
 ```bash
-ninja test                     # to compile and run
 ninja build_all_tests          # to compile all tests
+ninja test                     # to compile and run
 ninja build_<test_suite>_tests # to compile a specific test suite
-ninja <test_file_name>         # to compile a specific test file
+ninja test_<test_suite>        # to compile and run a specific test suite
 ```
 
 You can compile a specific test. For example, if you want to run the `lexer_test_simple` test, 

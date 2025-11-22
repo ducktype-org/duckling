@@ -11,6 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+        message(FATAL_ERROR 
+				"We know the project won't compile on version lower than 14. "
+				"If it is a mistake feel free to reomve this.")
+    endif()
+
+
 	string(CONCAT ADDITIONAL_GNU_FLAGS
 		"-Werror=return-type "
 		"-Werror=terminate "
@@ -29,6 +36,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
+
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
+		message(FATAL_ERROR 
+				"We know the project won't compile on version lower than 19. "
+				"If it is a mistake feel free to reomve this.")
+	endif()
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
