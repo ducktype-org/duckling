@@ -50,6 +50,16 @@ endif()
 # for more info see dev/VM/tests/debugger/debugger_infinite_tests.cpp
 set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
+# We set parallel level for ctest to the same as for cmake build.
+# Note:
+#  This takes value of `-j` flag passed to cmake during configuration, it will not
+#  work when passing `-j` flag to make/ninja or to `cmake --build ...`.
+#
+# If you want to run tests in parallel locally, you can use `ctest -j <num_jobs>`.
+#
+# Note: This must be set before including CTest module.
+set(CMAKE_CTEST_ARGUMENTS "-j ${CMAKE_BUILD_PARALLEL_LEVEL}")
+
 include(CTest)
 enable_testing()
 

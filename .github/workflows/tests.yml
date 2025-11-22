@@ -173,12 +173,15 @@ jobs:
             ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', env.GCOV_VERSION) || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
+      # Configure CMake.
+      # The parallel flag is set here for CTest, in other places we set it explicitly in the build commands.
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
+              --parallel ${{ steps.set-jobs.outputs.jobs }} \
               -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
               -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
