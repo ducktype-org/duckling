@@ -1,4 +1,5 @@
-add_library(MIR
+# This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time.
+add_library(MIR STATIC
 	src_private/mir_private/stmt_lowering.cpp
 	src_private/mir_private/expr_lowering.cpp
 	src_private/mir_private/mir_builders.cpp
