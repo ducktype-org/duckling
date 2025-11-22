@@ -20,6 +20,8 @@ GENERAL_VARIABLES = {
     COMPILE,
     RUN,
     CLEAN,
+    PRE_NODE,
+    POST_NODE,
     PRE_TEST,
     POST_TEST,
     PRE_CASE,
