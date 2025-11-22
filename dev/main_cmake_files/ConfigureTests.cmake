@@ -50,16 +50,6 @@ endif()
 # for more info see dev/VM/tests/debugger/debugger_infinite_tests.cpp
 set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
-# We set parallel level for ctest to the same as for cmake build.
-# Note:
-#  This takes value of `-j` flag passed to cmake during configuration, it will not
-#  work when passing `-j` flag to make/ninja or to `cmake --build ...`.
-#
-# If you want to run tests in parallel locally, you can use `ctest -j <num_jobs>`.
-#
-# Note: This must be set before including CTest module.
-set(CMAKE_CTEST_ARGUMENTS "-j ${CMAKE_BUILD_PARALLEL_LEVEL}")
-
 include(CTest)
 enable_testing()
 
@@ -133,7 +123,18 @@ function(add_custom_test_pack NAME)
 	set_target_properties("test_${NAME}" PROPERTIES EXCLUDE_FROM_ALL true)
 endfunction()
 
+# note:
+# We use custom CTEST_PARALLEL_LEVEL environment variable to control parallelism in tests.
+# This works only when this variable is set during the cmake configuration step.
+# To run tests in parallel locally, you can invoke ctest -j <num_jobs> [options] directly.	
+
 add_custom_target(memcheck_test
 	COMMAND ${CMAKE_CTEST_COMMAND}
-	--force-new-ctest-process --test-action memcheck
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)
+
+add_custom_target(test_parallel
+	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)
