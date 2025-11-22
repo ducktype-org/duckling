@@ -40,8 +40,6 @@ namespace vm::low::instruction_tags {
 #undef HANDLE_MICRO_INSTR_2ARGS
 
 	namespace detail {
-		namespace {
-
 			template<typename T>
 			constexpr bool IS_MICRO_TAG = false;
 
@@ -70,7 +68,6 @@ namespace vm::low::instruction_tags {
 #undef HANDLE_MICRO_INSTR_0ARGS
 #undef HANDLE_MICRO_INSTR_1ARGS
 #undef HANDLE_MICRO_INSTR_2ARGS
-		}
 	}
 
 	/// Concept for detecting vm::low::instruction_tags::Op_*
