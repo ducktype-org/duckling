@@ -1,13 +1,13 @@
 /**
- * @file raw_view.hpp
+ * @file shared_view.hpp
  * @brief Provides shared array view.
  * Separate from `raw_view.hpp` because of includes cycle.
  */
 
 #pragma once
 
-#include "base/misc/raw_view.hpp"
-#include "base/pointers/shared_box.hpp"
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/shared_box.hpp>
 
 namespace base {
 	/**
