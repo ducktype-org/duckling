@@ -7,7 +7,7 @@
 
 #include <typesystem/higher/abstract_type_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	[[nodiscard]]
 	Kind AbstractType::getKind() const {
 		return pimpl->getKind();

@@ -61,7 +61,7 @@
 		checkDynamicCast<SomeAbstractType>(other.getPimpl());     \
 	}
 
-namespace tsh {
+namespace compiler::tsh {
 
 	class AbstractTypeImpl;
 	class AbstractType;

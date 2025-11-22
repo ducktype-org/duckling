@@ -26,7 +26,7 @@ namespace {
 						using NumT = std::decay_t<decltype(num_val)>;
 
 						// @TODO: #899 Once CTV will be VmValue based (contain the VMValue and
-					    // tsh::SymbolType) we should perform this conversion based on the
+					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
 						if constexpr (sizeof(NumT) <= 2)
@@ -88,16 +88,17 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		const tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
-		case tsh::Kind::Integral: {
-			tsh::IntegralAbstractType int_type(type.getType());
-			auto                      bit_size     = int_type.getSize();
-			base::StrID               vm_type_name = vm_value->type->getName();
+		case compiler::tsh::Kind::Integral: {
+			compiler::tsh::IntegralAbstractType int_type(type.getType());
+			auto                                bit_size     = int_type.getSize();
+			base::StrID                         vm_type_name = vm_value->type->getName();
 
-			if (int_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed) {
+			if (int_type.getSignedness()
+			    == compiler::tsh::IntegralAbstractType::Signedness::Signed) {
 				if (bit_size <= Bits{ 16 } && vm_type_name == "i16")
 					return CompileTimeValue{ NumericValue{ vm_value->readBytes<i16>() } };
 				else if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
@@ -118,10 +119,10 @@ namespace {
 				"Expected an integer VM value (i16/i32/i64), but received: " + vm_type_name.str()
 			));
 		}
-		case tsh::Kind::Float: {
-			tsh::FloatAbstractType float_type(type.getType());
-			auto                   bit_size     = float_type.getSize();
-			base::StrID            vm_type_name = vm_value->type->getName();
+		case compiler::tsh::Kind::Float: {
+			compiler::tsh::FloatAbstractType float_type(type.getType());
+			auto                             bit_size     = float_type.getSize();
+			base::StrID                      vm_type_name = vm_value->type->getName();
 
 			if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
 				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
@@ -135,7 +136,7 @@ namespace {
 			));
 		}
 
-		case tsh::Kind::Bool: {
+		case compiler::tsh::Kind::Bool: {
 			if (vm_value->type->getName() != base::StrID("byte"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,

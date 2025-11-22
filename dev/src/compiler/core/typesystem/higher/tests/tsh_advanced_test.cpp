@@ -7,7 +7,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
 

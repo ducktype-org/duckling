@@ -108,8 +108,8 @@ namespace compiler::numeric_value {
 		}
 
 		/**
-		 * @brief Returns the tsh::SymbolType based on the value stored in the NumericValue
-		 * @return The tsh::SymbolType of the value stored in the NumericValue.
+		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the NumericValue
+		 * @return The compiler::tsh::SymbolType of the value stored in the NumericValue.
 		 */
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 

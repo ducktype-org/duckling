@@ -7,7 +7,7 @@
 
 #include <query_framework/context.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	namespace {
 		base::Map<base::StrID, std::vector<InterfaceElement>> groupElementsByName(
 			const std::vector<InterfaceElement>& elements

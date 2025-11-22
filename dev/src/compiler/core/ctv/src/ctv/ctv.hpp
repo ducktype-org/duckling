@@ -66,7 +66,7 @@ namespace compiler::ctv {
 		[[nodiscard]] base::Optional<tsh::SymbolType<>> getType(query::Context& ctx) const;
 
 		/**
-		 * @brief Returns the tsh::SymbolType based on the value stored in the CTV.
+		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the CTV.
 		 * @note Possibly converts tuple and unit values to types. @TODO: #1373 reconsider this.
 		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return A type value of the value stored in the CTV.
