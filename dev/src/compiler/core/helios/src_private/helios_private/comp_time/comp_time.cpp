@@ -26,7 +26,7 @@
 namespace compiler::helios {
 	using namespace ctv;
 
-	struct IMPLEMENT_QUERY(QueryEvaluateExpression, CompTimeEvalResult) {
+	struct IMPLEMENT_QUERY(QueryEvaluateHOUTExpression, CompTimeEvalResult) {
 		/**
 		 * @brief Error indicating that an expression was to complex for a simple tree evaluation.
 		 */
@@ -564,14 +564,24 @@ namespace compiler::helios {
 			return tree_eval_result.value();
 		}
 
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasError()) return query::QError(errors::Failed());
-			return evalHoutExpr(ctx, expr.value().ref());
+		static auto provide(query::Context& ctx, const QKey key) -> PResult {
+			return evalHoutExpr(ctx, key.expr);
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateExpression);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateHOUTExpression);
+
+	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
+			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
+			if (expr.hasError()) return query::QError(errors::Failed());
+			return ctx.query<QueryEvaluateHOUTExpression>({ expr.value().ref() });
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluatePSTExpression);
 }
