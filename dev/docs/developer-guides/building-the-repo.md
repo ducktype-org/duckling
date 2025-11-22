@@ -35,6 +35,41 @@ sudo pacman -Sy python python-pip python-click doxygen graphviz lcov --noconfirm
 > Some dependencies might be installed by default on your system, but if that's not the case, take a look at the list for Debian/Ubuntu.
 
 
+#### MacOS
+
+First of all, the toolbox requires at least Python3.12, while macOS default Python is Python3.9.
+Secondly, there are two ways of installing clang on MacOS:
+1. using official Apple clang provided by Xcode,
+2. installing it from the Homebrew.
+
+You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.
+You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).
+```bash
+# For macOS clang
+xcode-select --install
+
+# For LLVM clang
+brew install llvm@19
+```
+
+```bash
+# Install remaining dependencies
+brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format
+```
+
+Also, unlike many Linuxes, Homebrew doesn't provide a lot of Python packages in their repositories.
+Therefore, you have to create a local virtual environment and use it when running the toolbox.
+```bash
+cd dev/
+# Verify you are running at least Python3.12
+python3 --version
+python3 -m venv .venv
+source .venv/bin/activate
+# Manually install Python dependencies
+pip3 install click
+pip3 install -r requirements.txt
+```
+
 ## Toolbox
 
 The toolbox script is a Python script that helps with the initialization of the repository,
