@@ -57,13 +57,6 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
 	             .build())
 	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("let-it-throw")
-	             .addShortDesc("Disables exception handling in main (debug option)")
-	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                          "It should be used for debugging only in order to preserve "
-	                          "stack-trace. It can prevent stack-unwinding from happening.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
