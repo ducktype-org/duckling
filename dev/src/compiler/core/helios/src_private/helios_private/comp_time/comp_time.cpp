@@ -431,7 +431,7 @@ namespace compiler::helios {
 						return;
 					}
 
-					match_optional(sub_type_result.value().getType(ctx)) {
+					match_optional(sub_type_result.value().get<tsh::SymbolType<>>()) {
 						opt_some(sub_type) { subtypes.emplace_back(sub_type); }
 						opt_none { CORE_PANIC("Type evaluation returned not a type\n"); }
 					}

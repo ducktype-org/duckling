@@ -62,10 +62,6 @@ namespace compiler::helios::test_utils {
 		if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
 			auto maybe_numeric_value = ctv_result.get<numeric_value::NumericValue>();
 			maybe_value              = maybe_numeric_value->get<T>();
-		} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
-			query::utils::withContextDo([&](query::Context& ctx) {
-				maybe_value = ctv_result.getType(ctx);
-			});
 		} else {
 			maybe_value = ctv_result.get<T>();
 		}
