@@ -128,7 +128,7 @@ namespace tsh {
 
 		[[nodiscard]]
 		AbstractType toAbstractType() const {
-			return this;
+			return CRef(this);
 		}
 
 		virtual ~AbstractTypeImpl() = default;
