@@ -1,5 +1,12 @@
 name: docs
 
+concurrency:
+  # This worflow runs only on main branch, so no need to distinguish between PRs.
+  # github.workflow reffers to the name of the workflow. "docs" in this case.
+  # new run of the worflow from the same group will cancel the previous ones
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
