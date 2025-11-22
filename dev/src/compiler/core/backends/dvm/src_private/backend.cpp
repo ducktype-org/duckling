@@ -50,12 +50,12 @@ namespace {
 
 namespace compiler::backend_vm {
 	namespace {
-		vm::code::TypeOfData getTypeFromLayout(CRef<compiler::tsl::TypeLayout> layout) {
+		vm::code::TypeOfData getTypeFromLayout(CRef<tsl::TypeLayout> layout) {
 			variant_match(layout->getVariant()) {
-				variant_case_novalue(compiler::tsl::EmptyTypeLayout) {
+				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
-				variant_case_novalue(compiler::tsl::IntegralTypeLayout) {
+				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout->getSize());
 					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
@@ -64,7 +64,7 @@ namespace compiler::backend_vm {
 
 					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 				}
-				variant_case_novalue(compiler::tsl::FloatTypeLayout) {
+				variant_case_novalue(tsl::FloatTypeLayout) {
 					auto bits = usize(layout->getSize());
 					CORE_ASSERT(
 						bits == 16 || bits == 32 || bits == 64 || bits == 80,
@@ -86,8 +86,8 @@ namespace compiler::backend_vm {
 		}
 
 		vm::code::FuncSignature getDVMSignatureFromLayouts(
-			const std::vector<CRef<compiler::tsl::TypeLayout>>& parameter_layouts,
-			const CRef<compiler::tsl::TypeLayout>               return_layout
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			const CRef<tsl::TypeLayout>               return_layout
 		) {
 			vm::code::FuncSignature signature;
 			signature.parameters.reserve(parameter_layouts.size());

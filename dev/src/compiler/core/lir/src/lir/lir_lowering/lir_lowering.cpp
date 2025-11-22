@@ -55,20 +55,20 @@ namespace compiler::lir {
 	 * @return LIRLocal
 	 */
 	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
-		auto type_layout = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(mir_local->type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
 		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<compiler::tsl::QueryAbstractTypeLayout>(bool_type);
+		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LIRLocal{ bool_layout };
 	}
 
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
-		auto type_layout = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(mir_global.type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 
@@ -76,7 +76,7 @@ namespace compiler::lir {
 	}
 
 	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(hout_global.type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
 
@@ -111,7 +111,7 @@ namespace compiler::lir {
 		  layout(
 			  this->access_chain.size() == 0
 				  ? getBaseLayout()
-				  : ctx.query<compiler::tsl::QuerySymbolTypeLayout>(
+				  : ctx.query<tsl::QuerySymbolTypeLayout>(
 						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
 					)
 		  ) {}
@@ -501,14 +501,12 @@ namespace compiler::lir {
 						output,
 						std::move(args),
 						CastParameters{
-							.source_type   = cast_parameters->source_type,
-							.target_type   = cast_parameters->target_type,
-							.source_layout = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(
-								cast_parameters->source_type
-							),
-							.target_layout = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(
-								cast_parameters->target_type
-							) }
+							.source_type = cast_parameters->source_type,
+							.target_type = cast_parameters->target_type,
+							.source_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type),
+							.target_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
 					);
 					return curr_block;
 				}
@@ -572,16 +570,13 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
-				auto return_type
-					= ctx.query<compiler::tsl::QuerySymbolTypeLayout>(key.function->return_type);
-				std::vector<CRef<compiler::tsl::TypeLayout>> parameter_types;
+				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				std::vector<CRef<tsl::TypeLayout>> parameter_types;
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)
 					// Discard information-less parameters from LIR function parameter lists.
 					if (param.getType().carriesInformation(ctx))
-						parameter_types.push_back(
-							ctx.query<compiler::tsl::QuerySymbolTypeLayout>(param)
-						);
+						parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 
 				auto abi = [&]() -> helios::SymbolABI {
@@ -677,8 +672,7 @@ namespace compiler::lir {
 			},
 		});
 
-		auto return_type
-			= ctx.query<compiler::tsl::QuerySymbolTypeLayout>(function_type.getResultType());
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
@@ -727,20 +721,19 @@ namespace compiler::lir {
 			CORE_UNREACHABLE();
 		}();
 
-		auto return_type = ctx.query<compiler::tsl::QuerySymbolTypeLayout>(type.getResultType());
-		std::vector<CRef<compiler::tsl::TypeLayout>> parameter_types;
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
 			// Discard information-less parameters from LIR function parameter lists.
 			if (param.getType().carriesInformation(ctx))
-				parameter_types.push_back(ctx.query<compiler::tsl::QuerySymbolTypeLayout>(param));
+				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 		return FunctionLiteral{
-			.mangled_name      = mangled_name,
-			.abi               = symbol_abi,
-			.parameter_layouts = std::make_shared<std::vector<CRef<compiler::tsl::TypeLayout>>>(
-				std::move(parameter_types)
-			),
+			.mangled_name = mangled_name,
+			.abi          = symbol_abi,
+			.parameter_layouts
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
 		};
 	}
