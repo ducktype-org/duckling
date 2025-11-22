@@ -132,12 +132,12 @@ clah::Clah getClahForMain() {
 					} else {
 						auto& tokens = token_file->getTokenData();
 						for (auto& token: tokens.tokens) {
-							std::string token_str{token.getStrValue()};
+							std::string token_str{ token.getStrValue() };
 							printer::StreamPrinter::printNL(
 								{
 									"Token: ",
 									token_str,
-									std::string(20 - token_str.length(), ' '), // alignment
+									std::string(20 - token_str.length(), ' '),  // alignment
 									" at ",
 									std::to_string(token.getPosition().getStartLineColumn().first),
 									":",
