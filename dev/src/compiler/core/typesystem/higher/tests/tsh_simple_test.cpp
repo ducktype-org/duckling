@@ -1,4 +1,8 @@
-#include <typesystem/higher/all.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/types.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/implicit_coercibility.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
