@@ -37,7 +37,7 @@ namespace tsh {
 		return pimpl->toString();
 	}
 
-	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl); }
+	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl.get()); }
 
 	// Specialized template definition and explicit instantiation.
 	template<>

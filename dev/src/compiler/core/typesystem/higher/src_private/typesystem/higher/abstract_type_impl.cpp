@@ -9,15 +9,6 @@
 
 namespace tsh {
 	/**
-	 * @brief Gets the global AbstractTypeImpl storage structure.
-	 * @return The global AbstractTypeImpl storage structure.
-	 */
-	std::vector<Box<const AbstractTypeImpl>>& getTypes() {
-		static std::vector<Box<const AbstractTypeImpl>> abstract_type_impl_storage{};
-		return abstract_type_impl_storage;
-	}
-
-	/**
 	 * @brief Creates a human-readable string representation of a vector of symbol types.
 	 * @param types Vector of symbol types to stringify.
 	 * @return A human-readable string representing a sequence of symbol types.

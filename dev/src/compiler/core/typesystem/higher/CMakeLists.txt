@@ -6,7 +6,6 @@ add_library(TypeSystemHigher STATIC
         src/typesystem/higher/types.cpp
         src/typesystem/higher/type_interface.cpp
         src/typesystem/higher/value_category.cpp
-        src/typesystem/higher/all.cpp
         src_private/typesystem/higher/abstract_type_impl.cpp
         src_private/typesystem/higher/queries.cpp
 )
