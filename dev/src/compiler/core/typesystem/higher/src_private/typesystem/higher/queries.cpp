@@ -46,7 +46,7 @@ namespace tsh {
 			return TypeInterface(elements);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfClass)
