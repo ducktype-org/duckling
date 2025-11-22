@@ -130,6 +130,8 @@ clah::Clah getClahForMain() {
 						std::cout << "\n";
 						return 1;
 					} else {
+						std::cout << "This prints only top-level tokens (will not print tokens "
+									 "within parentheses).\n";
 						auto& tokens = token_file->getTokenData();
 						for (auto& token: tokens.tokens) {
 							std::string token_str{ token.getStrValue() };
