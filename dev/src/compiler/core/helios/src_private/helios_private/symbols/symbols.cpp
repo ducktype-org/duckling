@@ -111,7 +111,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -178,9 +178,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
-		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-	) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -254,12 +252,7 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
-					)
-			                          .c_str()),
+					.name        = using_stmt->getDeclSymbolName().value(),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -397,7 +390,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}

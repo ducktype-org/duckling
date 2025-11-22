@@ -1,5 +1,9 @@
 name: tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "dev" ]
@@ -176,6 +180,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
+          CTEST_PARALLEL_LEVEL=${{ steps.set-jobs.outputs.jobs }} \
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
@@ -266,7 +271,7 @@ jobs:
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
+        run: cmake --build ${{ env.BUILD_DIR }} -- test_parallel
 
       - name: Test Coverage
         id: test-coverage

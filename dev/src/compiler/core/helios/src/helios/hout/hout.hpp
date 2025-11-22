@@ -150,7 +150,7 @@ namespace compiler::helios {
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 
 	/**
@@ -170,6 +170,6 @@ namespace compiler::helios {
 		std::vector<HOUTFunction> functions;
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 }

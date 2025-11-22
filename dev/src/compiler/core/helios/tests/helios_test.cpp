@@ -560,7 +560,9 @@ private:
 		ASSERT_EQUAL(hout->glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
-		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
+		query::utils::withContextDo([&](query::Context& ctx) {
+			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+		});
 	}
 
 	void testSingleFileModuleHOUT() {
@@ -855,7 +857,6 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/variables")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		std::cerr << hout->debugPrint();
 
 		ASSERT_EQUAL(hout->functions.size(), 1);
 
@@ -945,7 +946,9 @@ private:
 		}
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
+		query::utils::withContextDo([&](query::Context& ctx) {
+			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+		});
 	}
 
 	void testKeywordLiterals() {
@@ -1151,7 +1154,6 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 		ASSERT_EQUAL(4, hout->functions.size());
-		std::cerr << hout->debugPrint() << '\n';
 		auto function = hout->functions.at(1);
 		ASSERT_EQUAL(function.declaration->original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
@@ -1166,6 +1168,11 @@ private:
 		ASSERT_EQUAL(
 			square_symbol, compiler::helios::getIdentifierExprSymID(call_expr->callee.ref()).value()
 		);
+
+		// just for cov and to see if it does not throw:
+		query::utils::withContextDo([&](query::Context& ctx) {
+			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+		});
 	}
 
 	void testFunctions() {
