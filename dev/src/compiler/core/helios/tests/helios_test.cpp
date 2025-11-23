@@ -141,7 +141,6 @@ private:
 	}
 
 	void testNumericLiterals() {
-		CORE_PANIC("Kajk");
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
 
 		// General literal handling.
@@ -716,6 +715,7 @@ private:
 	}
 
 	void testImport() {
+		CORE_PANIC("Kajak");
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -1018,6 +1018,8 @@ private:
 	}
 
 	void testFunctionParameters() {
+
+		CORE_PANIC("Kajak");
 		auto [module, _] = getModule(fs::File(path("test_modules/parameters")));
 
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
