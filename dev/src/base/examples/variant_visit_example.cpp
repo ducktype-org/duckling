@@ -7,8 +7,9 @@ int main() {
 
 	VARIANT_VISIT(
 		variant,
-		VISIT_CASE(int&, i, std::cout << i++) VISIT_CASE(bool, b, std::cout << int(b))
-			VISIT_CASE(char, c, std::cout << int(c))
+		VISIT_CASE(int&, i, std::cout << i++),
+		VISIT_CASE(bool, b, std::cout << int(b)),
+		VISIT_CASE(char, c, std::cout << int(c))
 	);
 
 	std::cout << VISIT(variant, aut, return int(aut)) << "\n";
