@@ -101,7 +101,7 @@ namespace base::internal {
 				);                                                                               \
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
-						std::string_view(string_vector.at(base::safeIntConv<usize>(i)).data()),  \
+						std::string_view(string_vector.at(base::safeIntConv<usize>(i))),         \
 						static_cast<namespace_name::name>(i)                                     \
 					);                                                                           \
 				}                                                                                \
@@ -117,7 +117,7 @@ namespace base::internal {
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
 						static_cast<namespace_name::name>(i),                                    \
-						std::string_view(string_vector.at(base::safeIntConv<usize>(i)).data())   \
+						std::string_view(string_vector.at(base::safeIntConv<usize>(i)))          \
 					);                                                                           \
 				}                                                                                \
 				return out;                                                                      \
