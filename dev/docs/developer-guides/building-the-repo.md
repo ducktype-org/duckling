@@ -142,6 +142,31 @@ The installed library is placed in the `scripts/downloads` directory.
 Press "enter" on every prompt to leave default options.
 
 
+#### MacOS caveats
+
+CMake may not found LLVM installed from the Homebrew.
+To prevent that set the LLVM directory **before** executing the above command.
+
+```bash
+export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@19
+```
+
+It's also possible to add it to the `$CMAKE_PREFIX_PATH` variable, but this can resolve in compiling with the upstream clang instead of the Apple one.
+
+Also, ICU bundled with Apple Xcode doesn't provide the `<unicode/unistr.h>` header, therefore you are advised to install it with the Homebrew too.
+
+```bash
+brew install icu4c
+```
+
+As is the case with LLVM, CMake doesn't find ICU either.
+Set the `$ICU_ROOT` variable **before** executing the `setup-build` toolbox command.
+
+```bash
+export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
+```
+
+
 ## Compiling the project
 
 Ninja and Unix Makefiles are two alternative build systems that can be used to compile the project.
