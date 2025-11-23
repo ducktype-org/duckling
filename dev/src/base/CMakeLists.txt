@@ -64,6 +64,9 @@ duck_add_test(base map tests/map_test.cpp USES Base)
 
 duck_add_test(base numeric_utils tests/numeric_utils_test.cpp USES Base)
 
+duck_add_test(base base tests/best_test.cpp USES Base)
+
+
 add_example(anycast_example examples/anycast_example.cpp
         USES Base)
 
