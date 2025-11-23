@@ -4,6 +4,9 @@
 
 #include <cctype>
 #include <chrono>
+#include <ranges>
+#include <string>
+#include <unordered_set>
 
 namespace tester {
 
@@ -76,6 +79,25 @@ namespace tester {
 		}));
 	}
 
+	void TestSuite::filterTests(const std::vector<std::string>& tests_to_run) {
+		if (tests_to_run.empty()) return;
+
+		// Check for bad test names and report.
+		for (const auto& requested_name: tests_to_run) {
+			auto it = std::ranges::find(tests, requested_name, &TestData::name);
+			if (it == tests.end()) {
+				printer::StreamPrinter::print({ { "Warning: Test '", printer::Color::Yellow },
+				                                { requested_name, printer::Color::Yellow },
+				                                { "' not found and will be skipped.\n",
+				                                  printer::Color::Yellow } });
+			}
+		}
+
+		std::unordered_set<std::string> allowed(tests_to_run.begin(), tests_to_run.end());
+		tests = tests | std::views::filter([&](const auto& t) { return allowed.contains(t.name); })
+		      | std::ranges::to<std::vector>();
+	}
+
 	bool TestSuite::run() {
 		prolog();
 		usize passed = 0;
@@ -90,8 +112,13 @@ namespace tester {
 			if (t.should_fail) res.success = !res.success;
 			resultHandler(t, res);
 
-			passed += curr_global_res->success;
-			failed += !curr_global_res->success;
+			if (curr_global_res->success) {
+				passed++;
+			} else {
+				failed++;
+				failed_tests.push_back(t.name);
+			}
+
 			if (curr_global_res->stop) break;
 		}
 		auto end     = std::chrono::steady_clock::now();
@@ -99,7 +126,7 @@ namespace tester {
 
 		epilog(passed, failed, double(elapsed) / 1'000);
 
-		return failed == 0 && passed == tests.size();
+		return failed == 0;
 	}
 
 	void TestSuite::addTest(TestType test, std::string_view test_name, bool should_fail) {
@@ -181,5 +208,16 @@ namespace tester {
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
 		} });
+
+		if (failed > 0) {
+			stream_printer.print({ { "List of failed tests:\n", printer::Color::Red } });
+			for (const auto& failed_name: failed_tests)
+				stream_printer.print({ { "  - " + failed_name + "\n", printer::Color::Default } });
+
+			stream_printer.print({ {
+				std::string(fullEqualSignL(name.length() + 2), '='),
+				"\n",
+			} });
+		}
 	}
 }
