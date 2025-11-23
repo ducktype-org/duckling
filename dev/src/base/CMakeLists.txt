@@ -75,7 +75,7 @@ add_example(optional_simple_example examples/optional_simple_example.cpp
         USES Base)
 
 add_example(str_utils_example examples/str_utils_example.cpp
-        USES Base)
+        USES Base StringID)
 
 add_example(stringifyable_enum_example examples/stringifyable_enum_example.cpp
         USES Base)
