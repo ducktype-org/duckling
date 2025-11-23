@@ -101,7 +101,18 @@ namespace tester {
 		std::vector<std::string> failed_tests;
 
 	public:
+		/**
+		 * @brief Runs all the tests in the test suite. Prints tests statistics and list of failed
+		 * tests in case of failure.
+		 * @return True if all tests passed, false otherwise
+		 */
 		bool run();
+
+		/**
+		 * @brief Filters the tests in the TestSuite. Removes all tests from the test suite which
+		 * don't appear in `tests_to_run` vector. Prints warning messages when `tests_to_run`
+		 * contains a test name which doesn't exist in the test suite.
+		 */
 		void filterTests(const std::vector<std::string>& tests_to_run);
 
 		virtual ~TestSuite() = default;
