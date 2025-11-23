@@ -7,6 +7,7 @@
 #pragma once
 #include "parameter.hpp"
 
+#include "base/collections/stable_hashmap.hpp"
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/misc/anycast.hpp>
@@ -118,8 +119,9 @@ namespace clah {
 		 */
 		template<class N>
 		base::Optional<std::string> getRaw(const N& name) const {
-			if_opt_some(getID(name), id) return id_to_value.at(id).raw_source;
-			return {};
+			
+			if_opt_some(getID(name), id) {
+				if_opt_some(id_to_value.atMaybe(id), parsed_value)
 		}
 
 		/**

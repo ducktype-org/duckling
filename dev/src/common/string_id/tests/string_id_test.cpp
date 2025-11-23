@@ -1,4 +1,4 @@
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/misc/raw_view.hpp>
 
 #include <string_id/string_id.hpp>

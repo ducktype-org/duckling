@@ -98,8 +98,8 @@ namespace base {
 	/**
 	 * @brief Wrapped std::unordered_map for use in our code.
 	 */
-	template<typename KEY_T, typename DATA_T, class HashT = std::hash<KEY_T>>
-	using HashMap = MapWrapper<std::unordered_map<KEY_T, DATA_T, HashT>>;
+	/*template<typename KEY_T, typename DATA_T, class HashT = std::hash<KEY_T>>
+	using HashMap = MapWrapper<std::unordered_map<KEY_T, DATA_T, HashT>>;*/
 
 	/**
 	 * @brief Vector based map that keeps O(max_used_key) memory but has constant time access.

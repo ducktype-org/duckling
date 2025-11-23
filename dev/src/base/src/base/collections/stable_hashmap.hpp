@@ -27,7 +27,7 @@ namespace base {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class StableHashMap final {
+	class HashMap final {
 	public:
 		/**
 		 * Key Value pair stored in the map.
@@ -63,7 +63,7 @@ namespace base {
 		[[nodiscard]]
 		u64 keyToBucket(const KEY_T& key) const
 			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
-			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
+			CORE_ASSERT(!buckets.empty(), "No buckets in HashMap");
 
 			u64  hash = keyHash(key);
 			auto res  = hash % buckets.size();
@@ -119,11 +119,11 @@ namespace base {
 		}
 
 	public:
-		StableHashMap(): buckets(INITIAL_BUCKETS) {}
+		HashMap(): buckets(INITIAL_BUCKETS) {}
 
-		StableHashMap(const StableHashMap&) = delete;
+		HashMap(const HashMap&) = delete;
 
-		StableHashMap(StableHashMap&& other) noexcept:
+		HashMap(HashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
 			  node_allocator(std::move(other.node_allocator)),
 			  element_count(other.element_count) {
@@ -131,7 +131,7 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		~StableHashMap() {
+		~HashMap() {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
@@ -180,7 +180,7 @@ namespace base {
 				  buckets_size(buckets_size) {}
 
 
-			friend class StableHashMap;
+			friend class HashMap;
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
@@ -257,7 +257,7 @@ namespace base {
 
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
-				not this->contains(new_node->key_value.key), "Key already exists in StableHashMap"
+				not this->contains(new_node->key_value.key), "Key already exists in HashMap"
 			);
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);

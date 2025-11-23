@@ -1,5 +1,6 @@
 #include "string_id.hpp"
 
+#include "base/collections/stable_hashmap.hpp"
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
@@ -65,9 +66,12 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
-		if (getToIDMap()->contains(data)) {
-			id = getToIDMap()->at(data);
-			return;
+		match_optional(getToIDMap()->atMaybe(data)) {
+			opt_some(id_existing) {
+				id = *id_existing;
+				return;
+			}
+			opt_none {}
 		}
 
 		id = InnerID::next();

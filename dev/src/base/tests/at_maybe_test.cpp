@@ -1,4 +1,4 @@
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <tester/tester.hpp>
