@@ -10,7 +10,7 @@
 #include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
+#include <ctv/ctv.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/str/string_id.hpp>
@@ -108,7 +108,7 @@ namespace compiler::helios {
 	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst final {
-		CompileTimeValue value;
+		ctv::CompileTimeValue value;
 	};
 
 	struct HOUTGlobalVariable final {
@@ -150,7 +150,7 @@ namespace compiler::helios {
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 
 	/**
@@ -170,6 +170,6 @@ namespace compiler::helios {
 		std::vector<HOUTFunction> functions;
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 }

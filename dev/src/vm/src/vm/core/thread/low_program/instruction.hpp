@@ -34,7 +34,7 @@
 #define RETURN_TYPE_OPFUN_REF void
 #define RETURN_TYPE_OPFUN_TC  void
 
-namespace {
+namespace internal {
 	/**
 	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
 	 * Used for `vm::OP_CASES_COUNT`.
@@ -66,7 +66,7 @@ namespace vm {
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr u64 OP_CASES_COUNT = countOpCases();
+	constexpr u64 OP_CASES_COUNT = ::internal::countOpCases();
 
 	struct MicroInstruction final {
 		union {

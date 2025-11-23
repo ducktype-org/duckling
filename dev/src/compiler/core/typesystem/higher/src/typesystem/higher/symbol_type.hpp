@@ -3,7 +3,7 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
 	 */

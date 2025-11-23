@@ -19,29 +19,32 @@ namespace compiler::driver {
 
 		for (const auto& hout_global: hout_unit->glob_data) {
 			// Discard information-less globals.
-			if (not hout_global.type.getType().carriesInformation()) continue;
+			if (not hout_global.type.getType().carriesInformation(ctx)) continue;
 
-			auto lir_global = lir::LirGlobal::fromHOUT(ctx, hout_global);
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
 
 			variant_match(hout_global.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_function
-						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_global })->value();
-					auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->value();
+					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
-						// @TODO: add legit dtors when implemented #929
+						// @TODO: #929 add legit dtors when implemented
 						.global_ctor = lir_function,
 						.global_dtor = std::nullopt,
 					});
 				}
-				// @TODO: add ctors and dtors for Global Consts when implemented
 				variant_case(helios::HOUTGlobalConst, global_const) {
-					CORE_PANIC(base::strConcat(
-						"Creating ctors for constant variables is not implemented yet. "
-						"Global constant: ",
-						hout_global.original_name.strView()
-					));
+					// @future #1554 -- const ctors will probably be added here
+					// Note: The CTV initial value for constants is already set in lir_global (by
+					// the fromHOUT function used above). Backends should handle constant
+					// initialization appropriately.
+					globals.emplace_back(LIRModuleGlobal{
+						.lir_global  = lir_global,
+						.global_ctor = std::nullopt,
+						.global_dtor = std::nullopt,
+					});
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(
@@ -56,8 +59,8 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
-			CRef mir_function = &ctx.query<mir::LowerToMirFunction>({ hout_function })->value();
-			auto lir_function = ctx.query<lir::LowerToLirFunction>({ mir_function });
+			CRef mir_function = &ctx.query<mir::LowerToMIRFunction>({ hout_function })->value();
+			auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 			functions.push_back(lir_function);
 		}
 

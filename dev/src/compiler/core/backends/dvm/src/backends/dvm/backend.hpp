@@ -9,7 +9,7 @@
 namespace compiler::backend_vm {
 
 	struct BackendDVMGlobal {
-		lir::LirGlobal                      lir_global;
+		lir::LIRGlobal                      lir_global;
 		base::Optional<CRef<lir::Function>> global_ctor;
 		base::Optional<CRef<lir::Function>> global_dtor;
 	};

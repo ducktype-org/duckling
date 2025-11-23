@@ -4,7 +4,7 @@ import unit_simple_submodule as unit_simple_submodule;
 
 let a: () = ();
 # const unitType: type = ();
-# @TODO: #1312 when consts are fixed, use the above type somewhere below.
+# @TODO: #902 when type consts work, use the above type somewhere below.
 
 fun main() -> i64 = {
     unit_simple_submodule.foo(a);

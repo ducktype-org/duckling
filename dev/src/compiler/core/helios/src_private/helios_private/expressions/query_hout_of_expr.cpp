@@ -1,5 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
+#include "numeric_literals.hpp"
+
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
@@ -76,8 +78,14 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+
+				if (parsed_numeric_value.has_value()) {
+					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
+				} else {
+					// Error was logged in fromExprValue.
+					return;
+				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {

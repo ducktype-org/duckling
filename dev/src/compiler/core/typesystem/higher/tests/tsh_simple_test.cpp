@@ -1,9 +1,13 @@
-#include <typesystem/higher/all.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 
 /**
  * This test class contains tests checking the most basic and boring functionality of the
@@ -543,10 +547,10 @@ private:
 			"Smaller int should be coercible into a bigger one."
 		);
 
-		// assertTrue(
-		// 	!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, int_2 }),
-		// 	"Bigger int should not be coercible into a smaller one."
-		// ); @TODO: #1461 Make implicit narrowing conversion illegal
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, int_2 }),
+			"Bigger int should not be coercible into a smaller one."
+		);
 
 		const auto void_type = query::entryPoint<QueryVoidType>({});
 		assertTrue(
@@ -574,7 +578,7 @@ private:
 			"Mutable value should be coercible to a bigger, immutable one."
 		);
 		//
-		// @TODO: #1461 Deal with this conversion on integer literals
+		// @TODO: #1488 Deal with this conversion on integer literals
 		// assertTrue(
 		// 	!query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i2_mut }),
 		// 	"Immutable value should not be coercible to a mutable one."

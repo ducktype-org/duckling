@@ -1,7 +1,7 @@
 
 class SimpleClass {
-    a: i32 = 0;
-    b: f32 = 0;
+    a: i32 = i32(0);
+    b: f32 = f32(0);
 
     fun getA() -> i32 = {
         return a;

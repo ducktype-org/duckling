@@ -2,7 +2,7 @@
  * @file abstract_type.hpp
  * @brief Interface of the AbstractType class.
  *
- * The interface is not aware of the internal implementation hierarchy
+ * The interface is not aware of the private implementation hierarchy (AbstractTypeImpl)
  * in any way other than its existence and name.
  */
 
@@ -10,6 +10,7 @@
 
 #include "kind.hpp"
 
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context_fd.hpp>
@@ -18,27 +19,27 @@
 
 /**
  * @brief Several type definitions for quick reference,
- * like Impl=internal::SomeAbstractType##Impl and Pimpl=Impl*.
+ * like Impl=SomeAbstractType##Impl and Pimpl=Impl*.
  * @param SomeAbstractType The class name from the `AbstractType` hierarchy.
  */
-#define SETUP_TYPE(SomeAbstractType)                 \
-	using Impl   = internal::SomeAbstractType##Impl; \
-	using Pimpl  = Impl*;                            \
-	using CPimpl = const Impl*;
+#define SETUP_TYPE(SomeAbstractType)       \
+	using Impl   = SomeAbstractType##Impl; \
+	using Pimpl  = Ref<Impl>;              \
+	using CPimpl = CRef<Impl>;
 
 /**
  * @brief Several type definitions for quick reference,
- * like Impl=internal::SomeAbstractType##Impl and Pimpl=Impl*.
+ * like Impl=SomeAbstractType##Impl and Pimpl=Impl*.
  * @param SomeAbstractType The class name from the AbstractType hierarchy.
  * @param BaseAbstractType The base class of SomeAbstractType. Since AbstractType itself does not
  * have a base class, this macro should not be used in the definition of AbstractType.
  */
 #define SETUP_TYPE_WITH_BASE(SomeAbstractType, BaseAbstractType) \
 	SETUP_TYPE(SomeAbstractType)                                 \
-	using BImpl   = internal::BaseAbstractType##Impl;            \
+	using BImpl   = BaseAbstractType##Impl;                      \
 	using Base    = BaseAbstractType;                            \
-	using BPimpl  = BImpl*;                                      \
-	using CBPimpl = const BImpl*;
+	using BPimpl  = Ref<BImpl>;                                  \
+	using CBPimpl = CRef<BImpl>;
 
 /**
  * @brief Constructor from SomeAbstractType##Impl*.
@@ -46,7 +47,8 @@
  * @param SomeAbstractType The class name from the AbstractType hierarchy.
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(SomeAbstractType) \
-	SomeAbstractType(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+	SomeAbstractType(const CPimpl pimpl):               \
+		  Base(CBPimpl(reinterpret_cast<const BImpl*>(pimpl.get()))) {}
 
 /**
  * @brief Template constructor from the AbstractTypeImpl* hierarchy with a dynamic cast check.
@@ -55,26 +57,24 @@
 #define CONSTRUCT_WITH_CHECKED_CAST(SomeAbstractType)             \
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>       \
 	explicit(false) SomeAbstractType(const ABSTRACT_TYPE& other): \
-		  Base((const BPimpl) other.getPimpl()) {                 \
+		  Base((const CBPimpl) other.getPimpl()) {                \
 		checkDynamicCast<SomeAbstractType>(other.getPimpl());     \
 	}
 
-namespace tsh {
-	namespace internal {
-		class AbstractTypeImpl;
-	}
+namespace compiler::tsh {
 
+	class AbstractTypeImpl;
 	class AbstractType;
 	class TypeInterface;
 
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	typename ABSTRACT_TYPE::CPimpl checkDynamicCast(const internal::AbstractTypeImpl*);
+	typename ABSTRACT_TYPE::CPimpl checkDynamicCast(CRef<AbstractTypeImpl> pimpl);
 
 	/**
 	 * @brief The AbstractType class and its subclasses form a lightweight type interface hierarchy.
 	 *
 	 * An object from the AbstractType hierarchy, like IntegralInfo, FunctionInfo etc. hold a
-	 * pointer to an implementation object (pImpl) from the internal::AbstractTypeImpl hierarchy.
+	 * pointer to an implementation object (pImpl) from the AbstractTypeImpl hierarchy.
 	 *
 	 * The AbstractType hierarchy is meant to be maximally lightweight. A type represented by a
 	 * AbstractType object is uniquely identified by its underlying pImpl. This means that types
@@ -82,7 +82,7 @@ namespace tsh {
 	 * method calls are forwarded to the pImpl, which makes them cost extra in terms of jumps.
 	 *
 	 * Note, that the AbstractType hierarchy is visible to the rest of the compiler, while the
-	 * internal::AbstractTypeImpl hierarchy is only visible in the .cpp file of the typesystem
+	 * AbstractTypeImpl hierarchy is only visible in the .cpp file of the typesystem
 	 * module.
 	 */
 	class AbstractType {
@@ -102,7 +102,7 @@ namespace tsh {
 		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		const TypeInterface& getInterface(query::Context& ctx) const;
+		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
@@ -165,7 +165,7 @@ namespace tsh {
 		 * @return Pointer to the underlying AbstractTypeImpl object.
 		 */
 		[[nodiscard]]
-		const internal::AbstractTypeImpl* getPimpl() const {
+		CRef<AbstractTypeImpl> getPimpl() const {
 			return pimpl;
 		}
 
@@ -200,10 +200,11 @@ namespace tsh {
 		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
+		 * @param ctx Query context needed to process complex types, esp. classes.
 		 * @return Whether the type carries information.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const;
+		bool carriesInformation(query::Context& ctx) const;
 
 		/**
 		 * @brief Get the text representation of this type.
@@ -217,17 +218,17 @@ namespace tsh {
 
 	protected:
 		/**
-		 * @brief Construct from an object from the internal::AbstractTypeImpl hierarchy.
+		 * @brief Construct from an object from the AbstractTypeImpl hierarchy.
 		 * @param pimpl A pointer to a type implementation object.
 		 */
-		AbstractType(const internal::AbstractTypeImpl* pimpl): pimpl(pimpl) {}
+		AbstractType(const CRef<AbstractTypeImpl> pimpl): pimpl(pimpl) {}
 
-		friend class internal::AbstractTypeImpl;
+		friend class AbstractTypeImpl;
 
 		/**
 		 * @brief The pointer to the (probably significantly heavier) object carrying
 		 * the implementation which describes the types represented by this object.
 		 */
-		const internal::AbstractTypeImpl* pimpl;
+		CRef<AbstractTypeImpl> pimpl;
 	};
 }

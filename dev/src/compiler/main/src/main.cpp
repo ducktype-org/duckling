@@ -57,13 +57,6 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
 	             .build())
 	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("let-it-throw")
-	             .addShortDesc("Disables exception handling in main (debug option)")
-	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                          "It should be used for debugging only in order to preserve "
-	                          "stack-trace. It can prevent stack-unwinding from happening.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
@@ -130,13 +123,22 @@ clah::Clah getClahForMain() {
 						std::cout << "\n";
 						return 1;
 					} else {
+						std::cout << "This prints only top-level tokens (will not print tokens "
+									 "within parentheses).\n";
 						auto& tokens = token_file->getTokenData();
 						for (auto& token: tokens.tokens) {
-							// @TODO: more detailed printing. This should change in #1111.
+							std::string token_str{ token.getStrValue() };
 							printer::StreamPrinter::printNL(
 								{
 									"Token: ",
-									std::string(token.getStrValue()),
+									token_str,
+									std::string(20 - token_str.length(), ' '),  // alignment
+									" at ",
+									std::to_string(token.getPosition().getStartLineColumn().first),
+									":",
+									std::to_string(token.getPosition().getStartLineColumn().second),
+									",\t type=",
+									std::to_string(static_cast<int>(token.getType())),
 								},
 								std::cout
 							);
@@ -194,8 +196,10 @@ clah::Clah getClahForMain() {
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
 								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-							   for (const auto& hout_unit: hout_units)
-								   std::cout << hout_unit.debugPrint();
+							   query::utils::withContextDo([&](query::Context& ctx) {
+								   for (const auto& hout_unit: hout_units)
+									   std::cout << hout_unit.debugPrint(ctx);
+							   });
 
 							   return exit_code;
 						   }))

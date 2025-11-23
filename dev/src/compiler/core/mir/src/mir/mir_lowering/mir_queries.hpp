@@ -10,7 +10,7 @@
 
 namespace compiler::mir {
 
-	struct KeyOf_LowerToMirFunction {
+	struct KeyOf_LowerToMIRFunction {
 		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
 		helios::HOUTFunction function;
 
@@ -18,34 +18,33 @@ namespace compiler::mir {
 		u64 queryUnstablePerfectHash() const;
 	};
 
-	using LowerToMirFunctionResult = query::QResult<Function, helios::errors::Failed>;
+	using LowerToMIRFunctionResult = query::QResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
+	DECLARE_QUERY(LowerToMIRFunction, KeyOf_LowerToMIRFunction, CRef<LowerToMIRFunctionResult>)
 
-	struct KeyOf_LowerGlobalDataToMirFunction {
+	struct KeyOf_LowerGlobalDataToMIRFunction {
 		helios::HOUTGlobalData global_data;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 	};
 
-	using LowerGlobalDataToMirFunctionResult = query::QResult<Function, helios::errors::Failed>;
+	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Creates a ctor function for a global data.
 	 */
-	DECLARE_QUERY(LowerGlobalDataToMirCtor, KeyOf_LowerGlobalDataToMirFunction, CRef<LowerGlobalDataToMirFunctionResult>)
+	DECLARE_QUERY(LowerGlobalDataToMIRCtor, KeyOf_LowerGlobalDataToMIRFunction, CRef<LowerGlobalDataToMIRFunctionResult>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
 	 * @note Exposed in the interface mostly for tests
 	 */
-	Function lowerToPreMirFunction(query::Context&, const helios::HOUTFunction& function);
-
+	Function lowerToPreMIRFunction(query::Context&, const helios::HOUTFunction& function);
 }

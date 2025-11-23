@@ -129,7 +129,7 @@ namespace compiler::helios {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
@@ -158,8 +158,9 @@ namespace compiler::helios {
 
 				if (ret.has_value()) {
 					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType(ctx))
+					    = ctx.query<QueryEvaluatePSTExpression>(ret.value().unlock(ctx)->getExpr()
+					    )) {
+						if (auto maybe_type = ctv.value().getType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -241,9 +242,9 @@ namespace compiler::helios {
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
 			const SymID                              class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+			auto                                     class_interface = class_type.getInterface(ctx);
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
@@ -362,7 +363,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
@@ -516,7 +517,7 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.value().coerce(std::move(new_value_expr));
+				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -546,6 +547,18 @@ namespace compiler::helios {
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (If)");
+				if (condition->expression_type.getType().getKind() != tsh::Kind::Bool) {
+					auto coercion = canCoerce(
+						ctx,
+						condition->expression_type.getSymbolType(),
+						tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
+					                        tsh::ReferenceKind::Direct,
+					                        tsh::Mutability::Mutable })
+					);
+					if (coercion.hasError())
+						CORE_PANIC("Not handling errors here yet... (If condition coercion)");
+					condition = coercion.value().coerce(ctx, std::move(condition));
+				}
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
@@ -594,18 +607,19 @@ namespace compiler::helios {
 						return;  // fail
 					}
 
-					output(code::VariableStmt({}, symbol_type, symbol));
+					throw base::NotYetImplemented(
+						"Variable declarations without initial value are not supported in HOUT yet."
+						" We should add default initialization here."
+					);
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 					          .expect("Not handling errors here yet... (variable initial value)");
-
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
-
-					auto coercion = canCoerce(
-						ctx, initial_value->expression_type.getSymbolType(), symbol_type
-					);
+					auto coercion           = canCoerce(
+                        ctx, initial_value->expression_type.getSymbolType(), symbol_type
+                    );
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -624,12 +638,14 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.value().coerce(std::move(initial_value)), symbol_type, symbol
+						coercion.value().coerce(ctx, std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override {}
+			void visitConst(pst::Access<pst::Const>) override {
+				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

@@ -51,9 +51,9 @@ namespace pst {
 			return internal::parseStmt<Method>(state, ctx);
 		case Keyword::Const:
 			return internal::parseStmt<Field>(state, ctx);
-		case Keyword::Pattern:
 		case Keyword::Alias:
 		case Keyword::Using:
+		case Keyword::Class:
 			return internal::parseStmt<NonClassStmt>(state, ctx);
 		default:
 			break;
