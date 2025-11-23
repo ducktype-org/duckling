@@ -1,8 +1,7 @@
-# TODO na razie testy są bardzo podstawowe, dodać:
-# - testy usuwania wziętego locka, może przy wielu procesach?
-# - ewentualnie mockowanie, aby zweryfikować, że wszystko się rzeczywiście
-#   dzieje dobrze (ale tego bardzo nie chcę pisać)
-
+# TODO for now the tests are very basic, add:
+# - tests for removing an acquired lock, maybe with multiple processes?
+# - possibly mocking, to verify that everything is actually
+#   working correctly (but I really don't want to write that)
 
 import os
 import sys
