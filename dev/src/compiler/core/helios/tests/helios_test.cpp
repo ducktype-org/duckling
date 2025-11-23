@@ -169,25 +169,14 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
-<<<<<<< HEAD
-		const auto i16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
-		const auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
-		const auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
-		const auto u16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
-		const auto u32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
-		const auto u64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type = query::entryPoint<tsh::QueryFloatType>({ 32 });
-		const auto f64_type = query::entryPoint<tsh::QueryFloatType>({ 64 });
-=======
 		const auto i16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
 		const auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
 		const auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 		const auto u16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Unsigned });
 		const auto u32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Unsigned });
 		const auto u64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>(32);
-		const auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>(64);
->>>>>>> origin/main
+		const auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
+		const auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
 
 		auto verify_type_and_mutability = [&](std::string_view            keyword,
 		                                      std::string_view            type_suffix,
