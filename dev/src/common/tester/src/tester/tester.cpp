@@ -4,6 +4,9 @@
 
 #include <cctype>
 #include <chrono>
+#include <ranges>
+#include <string>
+#include <unordered_set>
 
 namespace tester {
 
@@ -71,13 +74,28 @@ namespace tester {
 
 	void TestSuite::message(std::string_view mess) {
 		std::string indent_mess = std::string("       ") + std::string(mess) + "\n";
-		curr_global_res->output.push_back(
-			printer::PrinterContent(
-				{
-					indent_mess,
-				}
-			)
-		);
+		curr_global_res->output.push_back(printer::PrinterContent({
+			indent_mess,
+		}));
+	}
+
+	void TestSuite::filterTests(const std::vector<std::string>& tests_to_run) {
+		if (tests_to_run.empty()) return;
+
+		// Check for bad test names and report.
+		for (const auto& requested_name: tests_to_run) {
+			auto it = std::ranges::find(tests, requested_name, &TestData::name);
+			if (it == tests.end()) {
+				printer::StreamPrinter::print({ { "Warning: Test '", printer::Color::Yellow },
+				                                { requested_name, printer::Color::Yellow },
+				                                { "' not found and will be skipped.\n",
+				                                  printer::Color::Yellow } });
+			}
+		}
+
+		std::unordered_set<std::string> allowed(tests_to_run.begin(), tests_to_run.end());
+		tests = tests | std::views::filter([&](const auto& t) { return allowed.contains(t.name); })
+		      | std::ranges::to<std::vector>();
 	}
 
 	bool TestSuite::run() {
@@ -112,9 +130,8 @@ namespace tester {
 	}
 
 	void TestSuite::addTest(TestType test, std::string_view test_name, bool should_fail) {
-		tests.push_back(
-			TestData{ .test = test, .name = std::string(test_name), .should_fail = should_fail }
-		);
+		tests.push_back(TestData{
+			.test = test, .name = std::string(test_name), .should_fail = should_fail });
 	}
 
 	void TestSuite::runTest(TestType test) {
@@ -150,65 +167,57 @@ namespace tester {
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {
-		printer::StreamPrinter::print(
-			{ {
-				test.name,
-				": ",
-				res.success ? printer::PrinterContent("OK", printer::Color::Green)
-							: printer::PrinterContent("FAIL", printer::Color::Red),
-				"\n",
-			} }
-		);
+		printer::StreamPrinter::print({ {
+			test.name,
+			": ",
+			res.success ? printer::PrinterContent("OK", printer::Color::Green)
+						: printer::PrinterContent("FAIL", printer::Color::Red),
+			"\n",
+		} });
 		for (auto& mess: res.output) printer::StreamPrinter::print(mess);
 		if (res.output.empty()) printer::StreamPrinter::newline();
 	}
 
 	void TestSuite::prolog() {
-		printer::StreamPrinter::print(
-			{ {
-				std::string(beginEqualSignL(name.length() + 2), '='),
-				" ",
-				name,
-				" ",
-				std::string(endEqualSignL(name.length() + 2), '='),
-				"\n",
-				"Running ",
-				std::to_string(tests.size()),
-				" tests.\n",
-			} }
-		);
+		printer::StreamPrinter::print({ {
+			std::string(beginEqualSignL(name.length() + 2), '='),
+			" ",
+			name,
+			" ",
+			std::string(endEqualSignL(name.length() + 2), '='),
+			"\n",
+			"Running ",
+			std::to_string(tests.size()),
+			" tests.\n",
+		} });
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		stream_printer.print(
-			{ {
-				"\n",
-				std::string(fullEqualSignL(name.length() + 2), '='),
-				"\n",
-				"Elapsed time: ",
-				std::to_string(time),
-				" s",
-				{ "\nPassed:       ", printer::Color::Green },
-				{ std::to_string(passed), printer::Color::Green },
-				{ "\nFailed:       ", failed ? printer::Color::Red : printer::Color::Default },
-				{ std::to_string(failed), failed ? printer::Color::Red : printer::Color::Default },
-				"\n",
-				std::string(fullEqualSignL(name.length() + 2), '='),
-				"\n",
-			} }
-		);
+		stream_printer.print({ {
+			"\n",
+			std::string(fullEqualSignL(name.length() + 2), '='),
+			"\n",
+			"Elapsed time: ",
+			std::to_string(time),
+			" s",
+			{ "\nPassed:       ", printer::Color::Green },
+			{ std::to_string(passed), printer::Color::Green },
+			{ "\nFailed:       ", failed ? printer::Color::Red : printer::Color::Default },
+			{ std::to_string(failed), failed ? printer::Color::Red : printer::Color::Default },
+			"\n",
+			std::string(fullEqualSignL(name.length() + 2), '='),
+			"\n",
+		} });
 
 		if (failed > 0) {
 			stream_printer.print({ { "List of failed tests:\n", printer::Color::Red } });
 			for (const auto& failed_name: failed_tests)
 				stream_printer.print({ { "  - " + failed_name + "\n", printer::Color::Default } });
 
-			stream_printer.print(
-				{ {
-					std::string(fullEqualSignL(name.length() + 2), '='),
-					"\n",
-				} }
-			);
+			stream_printer.print({ {
+				std::string(fullEqualSignL(name.length() + 2), '='),
+				"\n",
+			} });
 		}
 	}
 }
