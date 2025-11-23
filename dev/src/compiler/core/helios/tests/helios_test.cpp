@@ -840,7 +840,7 @@ private:
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = query::entryPoint<compiler::tsh::QueryFloatType>({16});
+		const auto f16_type    = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
 		const auto f16box_type = st(f16_type)
 		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
 		                             .withMutability(Immutable);
@@ -890,8 +890,8 @@ private:
 			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.body); };
 
 
-		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({32});
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({32});
+		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
+		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
 		auto i32_or_f32
 			= query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
 
@@ -977,12 +977,12 @@ private:
 		auto u64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
 		auto u128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Unsigned });
 
-		auto f16_type = query::entryPoint<compiler::tsh::QueryFloatType>({16});
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({32});
-		auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({64});
+		auto f16_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
+		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
+		auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
 
-		auto f80_type  = query::entryPoint<compiler::tsh::QueryFloatType>({80});
-		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({128});
+		auto f80_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 80 });
+		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
 
 		auto char_type = query::entryPoint<compiler::tsh::QueryCharType>({});
 
