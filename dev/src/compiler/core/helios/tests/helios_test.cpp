@@ -715,7 +715,6 @@ private:
 	}
 
 	void testImport() {
-		CORE_PANIC("Kajak");
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -1018,8 +1017,6 @@ private:
 	}
 
 	void testFunctionParameters() {
-
-		CORE_PANIC("Kajak");
 		auto [module, _] = getModule(fs::File(path("test_modules/parameters")));
 
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
