@@ -28,9 +28,9 @@
 
 // NOLINTEND
 
-namespace tsh {
+namespace compiler::tsh {
 
-#define toCPimpl(pimpl) (reinterpret_cast<CPimpl>(pimpl))
+#define toCPimpl(pimpl) (CPimpl(reinterpret_cast<const Impl*>(pimpl.get())))
 
 	/******************\
 	|    BASIC TYPES   |
@@ -150,11 +150,11 @@ namespace tsh {
 	}
 
 	template<std::derived_from<AbstractType> TYPE_AbstractType>
-	typename TYPE_AbstractType::CPimpl checkDynamicCast(AbstractType::CPimpl p) {
-		auto result = dynamic_cast<typename TYPE_AbstractType::CPimpl>(p);
+	typename TYPE_AbstractType::CPimpl checkDynamicCast(const AbstractType::CPimpl pimpl) {
+		auto result = dynamic_cast<const typename TYPE_AbstractType::Impl*>(pimpl.get());
 		if (result == nullptr) {
 			std::stringstream ss;
-			const Kind        original_kind = p->getKind();
+			const Kind        original_kind = pimpl->getKind();
 			const Kind        target_kind   = TYPE_AbstractType::Impl::STATIC_KIND;
 			CORE_PANIC(
 				"Type cast between TypeAbstractType kinds failed. ",

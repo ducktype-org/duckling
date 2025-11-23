@@ -1,3 +1,4 @@
+# This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp

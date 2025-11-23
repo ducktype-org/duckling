@@ -9,8 +9,8 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsl;
-using namespace tsh;
+using namespace compiler::tsl;
+using namespace compiler::tsh;
 using query::utils::withContextDo;
 
 class LowerTypeSystemSimpleTest final: public tester::TestSuite {

@@ -9,7 +9,7 @@ using n1.*;
 
 struct T {
   var x;
-  using x.*;
+  using x.a.b.c.*;
 }
 
 var t: T;

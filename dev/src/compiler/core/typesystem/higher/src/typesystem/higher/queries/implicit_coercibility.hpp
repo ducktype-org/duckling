@@ -40,7 +40,7 @@
 // The current coercion implementation has not yet been tested.
 // @TODO: Consider the above and add tests
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */

@@ -3,7 +3,7 @@
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
-namespace tsl {
+namespace compiler::tsl {
 	// This may become const instead of constexpr because it might be defined during runtime.
 
 	// Size constants in bytes.

@@ -111,7 +111,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -178,9 +178,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
-		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-	) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -254,12 +252,7 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
-					)
-			                          .c_str()),
+					.name        = using_stmt->getDeclSymbolName().value(),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -397,7 +390,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -458,7 +451,7 @@ namespace compiler::helios {
 					return output;
 				}
 
-				QUERY_AUTO_CACHE_REF
+				QUERY_AUTO_CACHE_CREF
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -502,7 +495,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
@@ -612,7 +605,7 @@ namespace compiler::helios {
 			return lookup_chain;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
@@ -625,7 +618,7 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			auto ctv = ctx.query<QueryEvaluateExpression>(
+			auto ctv = ctx.query<QueryEvaluatePSTExpression>(
 				const_symbol->getValue().value().unlock(ctx)->getExpr()
 			);
 			if (ctv.hasError()) return query::QError(errors::Failed());
@@ -720,7 +713,7 @@ namespace compiler::helios {
 			return specifiers;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
@@ -849,7 +842,7 @@ namespace compiler::helios {
 			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
@@ -886,7 +879,7 @@ namespace compiler::helios {
 			return all_dependencies;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);

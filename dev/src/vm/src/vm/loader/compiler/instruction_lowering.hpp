@@ -127,12 +127,11 @@ namespace vm::loader::compiler::detail {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
-		// clang-format off
-            VARIANT_VISIT(instruction, 
-                VISIT_CASE(code::ZeroArgumentOpcode auto, i, lower<decltype(i)>();)
-                VISIT_CASE(code::OneArgumentOpcode auto, i, lower<decltype(i)>(i.arg0);)
-                VISIT_CASE(code::TwoArgumentOpcode auto, i, lower<decltype(i)>(i.arg0, i.arg1);)
-            );
-		// clang-format on
+		VARIANT_VISIT(
+			instruction,
+			VISIT_CASE(code::ZeroArgumentOpcode auto, i, lower<decltype(i)>();),
+			VISIT_CASE(code::OneArgumentOpcode auto, i, lower<decltype(i)>(i.arg0);),
+			VISIT_CASE(code::TwoArgumentOpcode auto, i, lower<decltype(i)>(i.arg0, i.arg1);)
+		);
 	}
 }

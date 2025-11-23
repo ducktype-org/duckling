@@ -1,5 +1,9 @@
 name: tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "dev" ]
@@ -176,6 +180,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
+          CTEST_PARALLEL_LEVEL=${{ steps.set-jobs.outputs.jobs }} \
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
@@ -188,10 +193,19 @@ jobs:
               -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
-              
+      
+      # Build all tests.
+      # We additionally build coverage targets in case of coverage enabled,
+      # so they are nicely parallelized and cached.
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
+        run: |
+          cmake                                 \
+          --build ${{ env.BUILD_DIR }}          \
+          -j ${{ steps.set-jobs.outputs.jobs }} \
+          --                                    \
+          build_all_tests                       \
+          ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
@@ -257,7 +271,7 @@ jobs:
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
+        run: cmake --build ${{ env.BUILD_DIR }} -- test_parallel
 
       - name: Test Coverage
         id: test-coverage
