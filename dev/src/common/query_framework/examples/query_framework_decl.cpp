@@ -77,7 +77,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(MyQuery);
 
 struct IMPLEMENT_QUERY(Query2, std::string) {
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
-		return std::to_string(key);
+		return std::to_string(key.v);
 	}
 
 	static auto load([[maybe_unused]] KHash key_hash) -> LoadResult { return {}; }
