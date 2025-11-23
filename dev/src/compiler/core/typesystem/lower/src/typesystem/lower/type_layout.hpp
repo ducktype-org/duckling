@@ -347,9 +347,8 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(
-			query::Context& ctx, bool recursive, u32 indent
-		) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -445,9 +444,8 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(
-			query::Context& ctx, bool recursive, u32 indent
-		) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -549,9 +547,8 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(
-			query::Context& ctx, bool recursive, u32 indent
-		) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -696,9 +693,8 @@ namespace compiler::tsl {
 		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
-		std::string toStringDefinition(
-			query::Context& ctx, bool recursive = true, u32 indent = 0
-		) const;
+		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
+			const;
 
 		/**
 		 * @brief Get a relatively short string identifying the type layout.

@@ -334,8 +334,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(
-		const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);

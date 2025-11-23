@@ -154,8 +154,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(
-	const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()

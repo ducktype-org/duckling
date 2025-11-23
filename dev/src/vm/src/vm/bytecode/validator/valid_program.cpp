@@ -24,8 +24,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;

@@ -76,7 +76,7 @@
 				if (in_brackets) ss << "[";                                                    \
 				for (int i = 0; i < static_cast<u32>(enum_name::COUNT); i++) {                 \
 					if (data & (1 << i)) {                                                     \
-						ss << separator << base::enumToStr(static_cast<enum_name>(i));   \
+						ss << separator << base::enumToStr(static_cast<enum_name>(i));         \
 						separator = "|";                                                       \
 					}                                                                          \
 				}                                                                              \

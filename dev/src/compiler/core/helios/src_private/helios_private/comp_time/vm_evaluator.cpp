@@ -146,14 +146,11 @@ namespace {
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
 		default: {
-			throw base::NotYetImplemented{ 
-				base::strConcat(
-					"VMValue to CTV conversion for type: ",
-				   base::enumToStr(kind),
-				   " is not implemented yet."
-				)
-			};
-				
+			throw base::NotYetImplemented{ base::strConcat(
+				"VMValue to CTV conversion for type: ",
+				base::enumToStr(kind),
+				" is not implemented yet."
+			) };
 		}
 		}
 	}
