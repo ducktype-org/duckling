@@ -5,6 +5,7 @@
 #include "elements/elements_list.hpp"
 #include "pst_id.hpp"
 
+#include "base/collections/stable_hashmap.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>

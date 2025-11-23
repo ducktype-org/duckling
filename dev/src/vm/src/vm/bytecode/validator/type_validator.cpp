@@ -221,7 +221,7 @@ namespace {
 		for (const auto& implementation: inh.implementations) {
 			if (implementations.contains(implementation.name))
 				throw DuplicatedVirtualMethodImplementationError(inh, implementation.name);
-			implementations.put(implementation.name);
+			implementations.putEmpty(implementation.name);
 
 			if (!virtual_methods.contains(implementation.name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
@@ -234,7 +234,7 @@ namespace {
 			if (!functions.contains(impl_name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
 
-			const auto& impl_signature = functions.at(impl_name);
+			const auto& impl_signature = functions[impl_name];
 			validateMethodFirstArgumentImpl(inh, impl_signature, impl_name, ctx);
 			validateMethodSignatureMatchImpl(inh, vmethod_type, impl_signature, impl_name);
 		}
@@ -281,7 +281,7 @@ namespace {
 		base::HashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: inh.implements) {
 			if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh, impl);
-			interfaces.put(impl);
+			interfaces.putEmpty(impl);
 		}
 	}
 }

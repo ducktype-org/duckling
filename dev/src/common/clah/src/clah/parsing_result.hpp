@@ -7,8 +7,7 @@
 #pragma once
 #include "parameter.hpp"
 
-#include "base/collections/stable_hashmap.hpp"
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
@@ -40,7 +39,19 @@ namespace clah {
 	public:
 		ParsingResult() = default;
 
-		ParsingResult(const ParsingResult& other) noexcept = default;
+		ParsingResult(const ParsingResult& other):
+			  file_path(other.file_path),
+			  args(other.args),
+			  command(other.command),
+			  command_list(other.command_list),
+			  id_counter(other.id_counter),
+			  short_names_to_id(other.short_names_to_id.copy()),
+			  long_names_to_id(other.long_names_to_id.copy()),
+			  id_to_value(other.id_to_value.copy()),
+			  positional_values(other.positional_values),
+			  extra_values(other.extra_values),
+			  flags(other.flags) {}
+
 		ParsingResult(ParsingResult&& other) noexcept      = default;
 
 		/**
@@ -107,7 +118,7 @@ namespace clah {
 		 */
 		template<class T, class N>
 		base::Optional<T> getValue(const N& name) const {
-			if_opt_some(getID(name), id) return base::anyCast<T>(id_to_value.at(id).value);
+			if_opt_some(getID(name), id) return base::anyCast<T>(id_to_value[id].value);
 			return {};
 		}
 
@@ -119,9 +130,8 @@ namespace clah {
 		 */
 		template<class N>
 		base::Optional<std::string> getRaw(const N& name) const {
-			
-			if_opt_some(getID(name), id) {
-				if_opt_some(id_to_value.atMaybe(id), parsed_value)
+			if_opt_some(getID(name), id) return id_to_value[id].raw_source;
+			return {};
 		}
 
 		/**

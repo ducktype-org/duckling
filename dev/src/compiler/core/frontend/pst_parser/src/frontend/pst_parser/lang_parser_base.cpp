@@ -3,6 +3,7 @@
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
+#include "base/collections/stable_hashmap.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -91,7 +92,7 @@ namespace pst {
 
 	void LangElement::calcHash() {
 		hash = calcStableHash().finalize();
-		pst_hash_map.emplace(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		pst_hash_map.maybePut(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
@@ -152,6 +153,6 @@ namespace pst {
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
-		return pst_hash_map.at(stable_hash);
+		return pst_hash_map[stable_hash];
 	}
 }

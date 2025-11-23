@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "base/collections/optional.hpp"
 #include <base/collections/maps.hpp>
 #include <base/memory/single_type_memory_pool_allocator.hpp>
 #include <base/pointers/box.hpp>
@@ -131,6 +132,14 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
+		HashMap& operator=(HashMap&& other) noexcept {
+			clearAndFree();
+			for(auto it = other.begin(); it != other.end(); it++) {
+				put(it->key, std::move(it)->value);
+			}
+			return *this;
+		}
+
 		~HashMap() {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
@@ -243,6 +252,20 @@ namespace base {
 		);
 
 		/**
+		 * Naively copies the hashmap.
+		 * Not a constructor, to make this call explicit.
+		 * @returns A copy of the hashmap.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		HashMap<K, D> copy() const {
+			auto result = HashMap<K, D>();
+			for (auto it = begin(); it != end(); it++) {
+				result.put(it->key, it->value);
+			}
+			return result;
+		}
+
+		/**
 		 * Inserts key->value into the container.
 		 * Panics if key already exists.
 		 * @param key Data key
@@ -293,6 +316,50 @@ namespace base {
 			maybeRehash();
 
 			return &new_node->key_value;
+		}
+
+		/**
+		 * If key is not in the container, inserts key->value into the container.
+		 * Otherwise substitutes the value assigned to key.
+		 * @param key Data key
+		 * @param value The data
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		bool putOrAssign(K&& key, D&& value) RELEASE_NOEXCEPT {
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
+
+			// @OPT: make this more efficient, by direct, one-pass implementation
+			if (this->contains(new_node->key_value.key)) {
+				node_allocator.deallocateDestroy(new_node);
+				(*this)[key] = value;
+				return false;
+			}
+
+			addToBucket(keyToBucket(new_node->key_value.key), new_node);
+
+			element_count++;
+			maybeRehash();
+
+			return true;
+		}
+
+		/**
+		 * Inserts empty value at a given key.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void putEmpty(K&& key) RELEASE_NOEXCEPT {
+			put(std::forward(key), D());
+		}
+
+		/**
+		 * Inserts empty value at a given key.
+		 * If the value exists, does nothing.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void maybePutEmpty(K&& key) RELEASE_NOEXCEPT {
+			maybePut(std::forward(key), D());
 		}
 
 		[[nodiscard]]
@@ -377,6 +444,23 @@ namespace base {
 				while (current_node) {
 					MRef next_node = current_node->next;
 					node_allocator.justDestroy(current_node.toOpt().value());
+					current_node = next_node;
+				}
+				bucket = nullptr;
+			}
+			element_count = 0;
+		}
+
+		/**
+		 * Clears the map, destroying all stored elements.
+		 * @note Frees the memory used to store the elements.
+		 */
+		void clearAndFree() RELEASE_NOEXCEPT {
+			for (auto& bucket: buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					MRef next_node = current_node->next;
+					node_allocator.deallocateDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
 				bucket = nullptr;

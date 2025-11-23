@@ -3,7 +3,7 @@
 #include "node_id.hpp"
 #include "node_making.hpp"
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <ostream>
 #include <vector>

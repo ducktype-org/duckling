@@ -1,6 +1,7 @@
 #include "query_state.hpp"
 
-#include <base/collections/maps.hpp>
+#include "base/collections/optional.hpp"
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/internal/query_data/query_data.hpp>
@@ -14,8 +15,8 @@ namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
 
-		if (node_data.contains(node)) {
-			if (node_data.at(node).color == Color::Visiting) {
+		if_opt_some (node_data.atMaybe(node), node_val) {
+			if (node_val->color == Color::Visiting) {
 				// Detect and print the cycle
 				std::cerr << "Cycle detected in dependency graph: \n";
 				NodeID              current = from;
@@ -24,7 +25,7 @@ namespace query::internal {
 				cycle.push_back(node);
 				while (current != node && node_data.contains(current)) {
 					cycle.push_back(current);
-					current = node_data.at(current).parent;
+					current = node_data[current].parent;
 				}
 				cycle.push_back(node);
 
@@ -32,15 +33,15 @@ namespace query::internal {
 				throw base::NotYetImplemented("Query Cycle!");
 			}
 		}
-		node_data.insert_or_assign(node, NodeData(Color::Visiting, from));
-		query_graph.node_deps.insert_or_assign(node, std::vector<NodeID>{});
+		node_data.putOrAssign(node, NodeData(Color::Visiting, from));
+		query_graph.node_deps.putOrAssign(node, std::vector<NodeID>{});
 	}
 
 	void QueryState::setExit(NodeID node) {
 		CORE_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
 		query_stack_size--;
 
-		node_data.at(node).color = Color::Done;
+		node_data[node].color = Color::Done;
 	}
 
 	base::Optional<base::CRef<QueryGraph>> QueryState::getPreviousGraph() const {
@@ -52,7 +53,7 @@ namespace query::internal {
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
 		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");
-		previous->node_colors.insert_or_assign(node, color);
+		previous->node_colors.putOrAssign(node, color);
 	}
 
 	base::CRef<base::HashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
@@ -79,7 +80,7 @@ namespace query::internal {
 		if (!prev_graph.nodeExists(start_node)) return PrevColor::Red;
 
 		// If color is already known for this node, return it
-		if (auto it = node_colors.find(start_node); it != node_colors.end()) return it->second;
+		if_opt_some(node_colors.atMaybe(start_node), it) return *it;
 
 		// Iterative DFS (post-order) over previous graph starting from start_node.
 		// A node becomes Green iff all its direct dependencies are Green; otherwise Red.
@@ -111,12 +112,12 @@ namespace query::internal {
 			// At this point, node must exist in previous graph because its a child of an existing node
 			CORE_ASSERT(prev_graph.node_deps.contains(node), "Node should exist in previous graph");
 
-			const auto& deps = prev_graph.node_deps.at(node);
+			const auto& deps = prev_graph.node_deps[node];
 
 			// If node has no entry or no deps -> treat as leaf; mark Green if not colored yet
 			// If node is not colored that means node is not input, so we can safely mark it Green
 			if (deps.empty()) {
-				node_colors.insert_or_assign(node, PrevColor::Green);
+				node_colors.putOrAssign(node, PrevColor::Green);
 				in_stack.erase(node);
 				stack.pop_back();
 				continue;
@@ -141,18 +142,26 @@ namespace query::internal {
 			// All children processed. Determine this node's color from its direct dependencies.
 			bool all_green = true;
 			for (const auto& c: deps) {
-				auto itc = node_colors.find(c);
-				if (itc == node_colors.end() || itc->second != PrevColor::Green) {
-					all_green = false;
-					break;
+				auto itc = node_colors.atMaybe(c);
+				match_optional(itc) {
+					opt_some(color) {
+						if (*color != PrevColor::Green) {
+							all_green = false;
+							break;
+						}
+					}
+					opt_none {
+						all_green = false;
+							break;
+					}
 				}
 			}
-			node_colors.insert_or_assign(node, all_green ? PrevColor::Green : PrevColor::Red);
+			node_colors.putOrAssign(node, all_green ? PrevColor::Green : PrevColor::Red);
 			in_stack.erase(node);
 			stack.pop_back();
 		}
 
-		return node_colors.at(start_node);
+		return node_colors[start_node];
 	}
 
 	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
@@ -187,12 +196,12 @@ namespace query::internal {
 			if (node.q_id.registered() && node.q_id.getData().usesStableHashing())
 				return node;
 			else if (old_to_new.contains(node.q_id))
-				return { old_to_new.at(node.q_id), node.hash };
+				return { old_to_new[node.q_id], node.hash };
 			QueryData new_data(
 				QueryKind::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
 			);
 			QueryID new_qid = registerQuery(new_data);
-			old_to_new.insert_or_assign(node.q_id, new_qid);
+			old_to_new.putOrAssign(node.q_id, new_qid);
 			return { new_qid, node.hash };
 		};
 
@@ -216,13 +225,13 @@ namespace query::internal {
 
 			// Insert the node with an empty dependency list first (ensures parent exists for
 			// addDependency)
-			query_graph.node_deps.emplace(get_node_id_mapping(node), std::vector<NodeID>{});
+			query_graph.node_deps.maybePut(get_node_id_mapping(node), std::vector<NodeID>{});
 
 			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(
 				prev_graph.node_deps.contains(node), "Node to merge should exist in previous graph"
 			);
-			const auto& prev_deps = prev_graph.node_deps.at(node);
+			const auto& prev_deps = prev_graph.node_deps[node];
 
 			// For each child, add the dependency edge and ensure the child will be processed
 			for (const auto& child: prev_deps) {

@@ -129,7 +129,7 @@ namespace compiler::backend_vm {
 					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()),
-				  SIGNATURES(signatures) {
+				  SIGNATURES(signatures.copy()) {
 				if (lir_function->mangled_name == "main") {
 					bytecode_func.signature.parameters.emplace_back(base::StrID("i64"));
 					bytecode_func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
@@ -167,7 +167,7 @@ namespace compiler::backend_vm {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
-							vm_type == ctx.TYPE_OF_DATA.at(func_signature.parameters.at(param_idx)),
+							vm_type == ctx.TYPE_OF_DATA[func_signature.parameters.at(param_idx)],
 							"getTypeFromLayout created an invalid type..."
 						);
 
@@ -416,7 +416,7 @@ namespace compiler::backend_vm {
 			args.pop_front();
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-			auto called_func_signature = ctx.SIGNATURES.at(called_func_name);
+			auto called_func_signature = ctx.SIGNATURES[called_func_name];
 
 			// Init result type
 			usize call_id     = ctx.next_call_id++;

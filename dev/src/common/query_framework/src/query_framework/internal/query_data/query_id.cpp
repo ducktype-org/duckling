@@ -8,7 +8,7 @@
 
 #include "query_data.hpp"
 
-#include <base/collections/maps.hpp>
+#include "base/collections/stable_hashmap.hpp"
 
 namespace query::internal {
 
@@ -44,7 +44,7 @@ namespace query::internal {
 
 	const QueryData& QueryID::getData() const {
 		CORE_ASSERT(dataMap().contains(*this), "QueryID not found in dataMap: ", this->asInt());
-		return dataMap().at(*this);
+		return dataMap()[*this];
 	}
 
 	bool QueryID::registered() const { return dataMap().contains(*this); }

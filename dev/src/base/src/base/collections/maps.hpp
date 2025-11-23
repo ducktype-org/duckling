@@ -11,7 +11,6 @@
 
 #include <map>
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 namespace base {
@@ -94,12 +93,6 @@ namespace base {
 	 */
 	template<typename KEY_T, typename DATA_T>
 	using Map = MapWrapper<std::map<KEY_T, DATA_T>>;
-
-	/**
-	 * @brief Wrapped std::unordered_map for use in our code.
-	 */
-	/*template<typename KEY_T, typename DATA_T, class HashT = std::hash<KEY_T>>
-	using HashMap = MapWrapper<std::unordered_map<KEY_T, DATA_T, HashT>>;*/
 
 	/**
 	 * @brief Vector based map that keeps O(max_used_key) memory but has constant time access.

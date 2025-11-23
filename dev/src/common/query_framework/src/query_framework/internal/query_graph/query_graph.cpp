@@ -2,6 +2,8 @@
 
 #include "node_id.hpp"
 
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
@@ -19,7 +21,7 @@ namespace query::internal {
 		CORE_ASSERT(
 			node_deps.contains(from), "Node not found in dep graph, call the given query first."
 		);
-		node_deps.at(from).emplace_back(to);
+		node_deps[from].emplace_back(to);
 
 		// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
 		return DependencyStatus::OK;
@@ -50,7 +52,7 @@ namespace query::internal {
 				visited_node_id.hash.val.toStringHex()
 			);
 
-			const auto& node = node_deps.at(visited_node_id);
+			const auto& node = node_deps[visited_node_id];
 			for (auto& dep: node)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
@@ -95,7 +97,7 @@ namespace query::internal {
 	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
 		for (const auto& n: nodes) {
-			const auto& node_data_entry = node_deps.at(n);
+			const auto& node_data_entry = node_deps[n];
 			out << "    > Query - " << std::setw(5) << std::left;
 			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
@@ -111,13 +113,23 @@ namespace query::internal {
 		if (node_deps.size() != other.node_deps.size()) return false;
 
 		for (const auto& [node, deps]: node_deps) {
-			auto it = other.node_deps.find(node);
-			if (it == other.node_deps.end() || deps != it->second) return false;
+			match_optional(other.node_deps.atMaybe(node)) {
+				opt_some(val) {
+					if (deps != *val)
+						return false;
+				}
+				opt_none return false;
+			}
 		}
 
 		for (const auto& [node, deps]: other.node_deps) {
-			auto it = node_deps.find(node);
-			if (it == node_deps.end() || deps != it->second) return false;
+			match_optional(other.node_deps.atMaybe(node)) {
+				opt_some(val) {
+					if (deps != *val)
+						return false;
+				}
+				opt_none return false;
+			}
 		}
 
 		return true;
@@ -229,8 +241,8 @@ namespace query::internal {
 			for (usize j = 0; j < deps_size; ++j) deps.emplace_back(read_node_id());
 
 			// Add the deserialized entry to the graph
-			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
-			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
+			auto key_val_pair = graph.node_deps.maybePut(node, std::move(deps));
+			if (!key_val_pair) CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
 		// Check here oif offset is equal to data_size
@@ -247,7 +259,12 @@ namespace query::internal {
 	}
 
 	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
-		auto it = node_deps.find(node_id);
-		return it != node_deps.end() && !it->second.empty();
+		match_optional(node_deps.atMaybe(node_id)) {
+			opt_some(val) {
+				return !val->empty();
+			}
+			opt_none return false;
+		}
+		CORE_UNREACHABLE();
 	}
 }

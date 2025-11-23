@@ -2,7 +2,7 @@
 
 #include <timer/timer.hpp>
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <iostream>
@@ -30,7 +30,7 @@ namespace query {
 		 */
 		Ref<QueryStatData> getQueryStatData(internal::QueryID query_id) {
 			if (!data.contains(query_id)) data.put(query_id, {});
-			return &data.at(query_id);
+			return &data[query_id];
 		}
 	}
 

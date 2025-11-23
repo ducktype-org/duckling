@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>

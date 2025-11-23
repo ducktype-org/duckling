@@ -202,14 +202,14 @@ namespace vm {
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
-			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
+			// @note: We're using putOrAssign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a
 			// called function) will overwrite the old mappings.
-			frame->local_offset_to_block_idx.insert_or_assign(
+			frame->local_offset_to_block_idx.putOrAssign(
 				frame->local_stack_head, frame->block_stack.size()
 			);
-			frame->block_idx_to_local_offset.insert_or_assign(
+			frame->block_idx_to_local_offset.putOrAssign(
 				frame->block_stack.size(), frame->local_stack_head
 			);
 			frame->block_stack.push_back(block);

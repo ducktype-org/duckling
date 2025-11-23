@@ -3,6 +3,7 @@
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
+#include "base/collections/optional.hpp"
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 
@@ -43,14 +44,14 @@ namespace compiler::frontend {
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
 		files.pushBack(SourceFile(std::move(file), linked_module));
-		files_map.at(abs_path).emplace_back(files.last());
+		files_map[abs_path].emplace_back(files.last());
 		files.last()->file_id = FileID(files.last());
 		return files.last();
 	}
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
 		auto abs_path = file.getFilePath().absolute().getPath();
-		if (files_map.contains(abs_path)) return files_map.at(abs_path);
+		if (files_map.contains(abs_path)) return files_map[abs_path];
 		return {};
 	}
 
@@ -85,7 +86,7 @@ namespace compiler::frontend {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		if (to_content.contains(abs_path)) {
 			CORE_ASSERT(
-				to_content.at(abs_path).view() == file.getContent().view(),
+				to_content[abs_path].view() == file.getContent().view(),
 				base::strConcat(
 					"SourceFile with path '",
 					abs_path.string(),
@@ -97,8 +98,8 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-		auto it = to_content.find(abs_path);
-		if (it != to_content.end()) return it->second;
+		if_opt_some(to_content.atMaybe(abs_path), content)
+			return *content;
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
 	}

@@ -158,7 +158,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionA
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
 	base::StrID collection_name
 ) {
-	return sub_collections.at(collection_name).refMut();
+	return sub_collections[collection_name].refMut();
 }
 
 base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
@@ -200,7 +200,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 
 const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
 ) const {
-	return file_artifacts.at(artifact_name);
+	return file_artifacts[artifact_name];
 }
 
 base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
@@ -230,7 +230,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 
 const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
 ) const {
-	return blob_artifacts.at(artifact_name);
+	return blob_artifacts[artifact_name];
 }
 
 base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(

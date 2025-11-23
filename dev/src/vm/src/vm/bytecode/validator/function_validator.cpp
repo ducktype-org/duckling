@@ -193,7 +193,7 @@ public:
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
-		auto& curr_type  = local_name_to_type.at(local_name);
+		auto& curr_type  = local_name_to_type[local_name];
 		auto  new_type   = tod_map->at(type.type_name);
 		curr_type        = new_type;
 		for (auto& entry: stack_state)
@@ -202,7 +202,7 @@ public:
 
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
-	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
+	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type[local_name]; }
 };
 
 /**
@@ -232,7 +232,7 @@ class FunctionValidator {
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
             if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
                 return &ext_c_signatures.at(instr.arg0.function_name)->signature;
-            return &signatures.at(instr.arg0.function_name);
+            return &signatures[instr.arg0.function_name];
 		}();
 
 		bool check_ret_val = signature->result_type.str != base::StrID("void");
@@ -274,7 +274,7 @@ class FunctionValidator {
 		impl_name            = inh_meta->vtable[instr.arg1.method_name];
 
 		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
-		auto signature     = signatures.at(impl_name);
+		auto signature     = signatures[impl_name];
 		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
 		if (signature.parameters.size() > local_stack.size() + check_ret_val)
@@ -306,7 +306,7 @@ class FunctionValidator {
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
-		auto signature   = signatures.at(fun_name);
+		auto signature   = signatures[fun_name];
 
 		if (!(signature.result_type.str == current_signature.result_type.str
 		      && signature.parameters == current_signature.parameters))
@@ -1010,19 +1010,19 @@ class FunctionValidator {
 	}
 
 	usize getLabelTarget(const opargs::Label& label) const {
-		return index_of_label.at(label.label_name);
+		return index_of_label[label.label_name];
 	}
 
 	void preprocessLabels() {
 		auto register_jump = [&](const auto& instr) {
-			jumps_to_label.try_emplace(instr.arg0.label_name);
-			jumps_to_label.at(instr.arg0.label_name).push_back(instr);
+			jumps_to_label.maybePutEmpty(instr.arg0.label_name);
+			jumps_to_label[instr.arg0.label_name].push_back(instr);
 		};
 
 		for (usize index = 0; index < function.body.size(); index++) {
 			variant_match(function.body[index]) {
 				variant_case(Op_label, instr) {
-					auto [_, added] = index_of_label.insert_or_assign(instr.arg0.label_name, index);
+					bool added = index_of_label.putOrAssign(instr.arg0.label_name, index);
 					if (!added) throw DuplicatedLabelError(instr.arg0);
 				}
 				variant_case(Op_jmp_label, instr) { register_jump(instr); }
@@ -1072,7 +1072,7 @@ class FunctionValidator {
 						opt_some(label_state) {
 							if (*label_state != local_stack.getStackState())
 								throw StackStructureMismatchError(
-									instr, jumps_to_label.at(instr.arg0.label_name)
+									instr, jumps_to_label[instr.arg0.label_name]
 								);
 							std::tie(index, local_stack) = dfs_stack.back();
 							dfs_stack.pop_back();
@@ -1176,7 +1176,7 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const Function&                                  function
 ) {
-	FuncSignature signature = signatures.at(function.name);
+	FuncSignature signature = signatures[function.name];
 
 	FunctionValidator validator(
 		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function

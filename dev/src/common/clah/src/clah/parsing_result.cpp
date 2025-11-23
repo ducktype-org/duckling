@@ -15,12 +15,12 @@ namespace clah {
 	const std::string& ParsingResult::getArgs() const { return args; }
 
 	base::Optional<usize> ParsingResult::getID(char name) const {
-		if (short_names_to_id.contains(name)) return short_names_to_id.at(name);
+		if (short_names_to_id.contains(name)) return short_names_to_id[name];
 		return {};
 	}
 
 	base::Optional<usize> ParsingResult::getID(const base::RawView& name) const {
-		if (long_names_to_id.contains(name)) return long_names_to_id.at(name);
+		if (long_names_to_id.contains(name)) return long_names_to_id[name];
 		return {};
 	}
 
@@ -28,7 +28,7 @@ namespace clah {
 		usize id = 0;
 		if_opt_some(parameter.getShortName(), name) {
 			if (short_names_to_id.contains(name))
-				id = short_names_to_id.at(name);
+				id = short_names_to_id[name];
 			else {
 				short_names_to_id.put(name, id_counter);
 				id = id_counter++;
@@ -40,7 +40,7 @@ namespace clah {
 			} else {
 				// id == 0 => parameter.getShortName() has no value
 				if (long_names_to_id.contains(name))
-					id = long_names_to_id.at(name);
+					id = long_names_to_id[name];
 				else {
 					long_names_to_id.put(name, id_counter);
 					id = id_counter++;
@@ -96,10 +96,10 @@ namespace clah {
 		extra_values      = other.extra_values;
 		flags             = other.flags;
 		for (const auto& elem: other.short_names_to_id)
-			short_names_to_id.put(elem.first, elem.second);
+			short_names_to_id.put(elem.key, elem.value);
 		for (const auto& elem: other.long_names_to_id)
-			long_names_to_id.put(elem.first, elem.second);
-		for (const auto& elem: other.id_to_value) id_to_value.put(elem.first, elem.second);
+			long_names_to_id.put(elem.key, elem.value);
+		for (const auto& elem: other.id_to_value) id_to_value.put(elem.key, elem.value);
 		return *this;
 	}
 }

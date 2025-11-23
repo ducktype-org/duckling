@@ -325,7 +325,7 @@ namespace compiler::frontend {
 		base::StrID ext_id(extension.c_str());
 
 		if (!m_other_files.contains(ext_id)) m_other_files.put(ext_id, std::vector<fs::File>());
-		m_other_files.at(ext_id).push_back(file);
+		m_other_files[ext_id].push_back(file);
 	}
 
 	void ModuleTreeBuilder::setName(base::StrID name) {
@@ -482,7 +482,7 @@ namespace compiler::frontend {
 
 		CORE_ASSERT(
 			!std::ranges::any_of(
-				module->m_other_files.at(ext_id),
+				module->m_other_files[ext_id],
 				[&file](const fs::File& f) { return f.getFilePath() == file.getFilePath(); }
 			),
 			base::strConcat(
@@ -493,7 +493,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		module->m_other_files.at(ext_id).push_back(file);
+		module->m_other_files[ext_id].push_back(file);
 		//@TODO: do we need to update the module here? #1253
 		// module->update();
 	}
@@ -522,7 +522,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		auto& files = module->m_other_files.at(ext_id);
+		auto& files = module->m_other_files[ext_id];
 		auto  it    = std::ranges::find_if(files, [&file](const fs::File& f) {
             return f.getFilePath() == file.getFilePath();
         });
@@ -559,7 +559,7 @@ namespace compiler::frontend {
 		auto  parent     = module->m_parent.value();
 		auto& submodules = parent->m_submodules;
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.second == module;
+            return pair.value == module;
         });
 		CORE_ASSERT(
 			it != submodules.end(),
@@ -570,7 +570,7 @@ namespace compiler::frontend {
 				parent->getName().strView()
 			)
 		);
-		submodules.erase(it);
+		submodules.erase(it->key);
 
 		module->m_parent = {};
 
@@ -615,7 +615,7 @@ namespace compiler::frontend {
 			// Remove the submodule from the parent's submodules
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
+                return pair.value == module;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
@@ -628,7 +628,7 @@ namespace compiler::frontend {
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(it->key);
 		}
 
 		// @TODO: we also want to remove the module from vector here #1252
