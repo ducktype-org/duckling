@@ -1,5 +1,3 @@
-Here is the English translation of the document:
-
 # Element Class Hierarchy
 
 Forward declarations are saved in a separate file/files.
@@ -10,7 +8,7 @@ Classes can have a static `parse` method that parses any expression, depending o
 │ Main class that defines a common parsing and allocator interface.
 │ `inline void* operator new(usize size);` - for creating custom allocators in the future
 │ `inline void operator delete(void* p)` - as above
-│ `virtual @TODO dprint() const = 0;` - Creates printer message of element debug representation
+│ `virtual [some type] dprint() const = 0;` - Creates printer message of element debug representation
 │
 ├─ **StmtList** final
 │  │ Effectively `std::vector<Stmt*>`, but implementing `Element`
@@ -33,7 +31,7 @@ Classes can have a static `parse` method that parses any expression, depending o
 │  │  │  
 │  │  ├─ **Fun**
 │  │  │  │ Function 
-│  │  │  │ todo 
+│  │  │  │ ? 
 │  │  │ 
 │  │  ├─ All declarations (while, for, var?, let?, block, macro, with, loop ...)  
 │  │  │  │ @IDEA: If, for example, `for` had a few variants, 
@@ -49,12 +47,12 @@ Classes can have a static `parse` method that parses any expression, depending o
 │  │  ├─ **Break** 
 │  │  ├─ **Continue** 
 │  │  ├─ **Redo** 
-│  │  ├─ **Exit** @TODO: do we want this type? 
+│  │  ├─ **Exit** Do we want this type? 
 │  │  ├─ ...
 │  │  
 │  │  
 │  ├─ **Attr** final  
-│  │  │ @TODO: Maybe `NotStmt`?
+│  │  │ ? Maybe `NotStmt`?
 │  │  │ Single attribute `@name(params)` or `@name`  
 │  │  
 │  │  
@@ -75,11 +73,11 @@ Classes can have a static `parse` method that parses any expression, depending o
 │  │  │ List of arguments (of a function, macro, attribute, ...)
 |  | 
 |  ├─ **CodeBlock**
-|  |  | @TODO: maybe this is a `Stmt`?
+|  |  | ? maybe this is a `Stmt`?
 |  |  | Reads `StmtList` inside `{}`.
 |  |
 |  ├─ **CodeBlockOrStmt**
-|  |  | @TODO: maybe this is a `Stmt`?
+|  |  | ? maybe this is a `Stmt`?
 |  |  | Reads `StmtList` inside `{}`, or a single `Stmt` inside nothing.
 |  |
 |  ├─ Any `NotStmt` like fragments of a for-loop
@@ -87,7 +85,7 @@ Classes can have a static `parse` method that parses any expression, depending o
 
 
 **Generators**
-| @TODO: Should they inherit from `Element` -- do they have a common interface
+| ? Should they inherit from `Element` -- do they have a common interface ?
 | Generator interface, like `template<...> class ParseInOrder`, or `template<T, Separator> class ListOf`
 | @IDEA: Maybe not classes?
 | Using generators, we still write a new class in the `Element` hierarchy. 

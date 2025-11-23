@@ -1,4 +1,4 @@
-# TODO for now the tests are very basic, add:
+# @TODO: #1599 for now the tests are very basic, add:
 # - tests for removing an acquired lock, maybe with multiple processes?
 # - possibly mocking, to verify that everything is actually
 #   working correctly (but I really don't want to write that)
@@ -151,7 +151,7 @@ def test_posix_filelock_interrupt(
     common_interrupt_test(tmp_path, "posix", PosixFileLock)
 
 
-# TODO signals work completely differently on windows, needs fixing
+# @TODO: #1600 signals work completely differently on windows, needs fixing
 # @pytest.mark.skipif(sys.platform != "win32", reason="requires windows system")
 # def test_windows_filelock_interrupt(
 #     tmp_path: Path,  # built-in fixture
@@ -161,7 +161,7 @@ def test_posix_filelock_interrupt(
 #     common_interrupt_test(tmp_path, "windows", WindowsFileLock)
 
 
-# TODO signals work completely differently on windows, needs fixing
+# @TODO: #1600 signals work completely differently on windows, needs fixing
 @pytest.mark.skipif(sys.platform == "win32", reason="Currently broken")
 def test_software_filelock_interrupt(
     tmp_path: Path,  # built-in fixture
@@ -180,7 +180,7 @@ def test_posix_filelock_delete(
     common_delete_test(tmp_path, "posix", PosixFileLock)
 
 
-# TODO signals work completely differently on windows, needs fixing
+# @TODO: #1600 signals work completely differently on windows, needs fixing
 # @pytest.mark.skipif(sys.platform != "win32", reason="requires windows system")
 # def test_windows_filelock_delete(
 #     tmp_path: Path,  # built-in fixture
@@ -190,7 +190,7 @@ def test_posix_filelock_delete(
 #     common_delete_test(tmp_path, "windows", WindowsFileLock)
 
 
-# TODO signals work completely differently on windows, needs fixing
+# @TODO: #1600 signals work completely differently on windows, needs fixing
 @pytest.mark.skipif(sys.platform == "win32", reason="Currently broken")
 def test_software_filelock_delete(
     tmp_path: Path,  # built-in fixture

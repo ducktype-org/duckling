@@ -52,8 +52,8 @@
 
 12. In the future: move semantics where appropriate.
 
-13. In the future: optimizations... todo
+13. In the future: optimizations...
 
 ### From this, it exposes (in .hpp):
 
-todo
+...

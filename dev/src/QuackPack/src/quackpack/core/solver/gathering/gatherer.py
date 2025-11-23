@@ -187,7 +187,7 @@ async def _fetch_git(
     else:
         storage_path = git_access.git_path(url=cached.url, commit=cached.commit)
         schema = create_schema(storage_path / PackageLoader.MANIFEST_NAME)
-        # TODO I really don't like passing ctx here; maybe we need to additionally 
+        # @TODO: #1598 I really don't like passing ctx here; maybe we need to additionally 
         # store RegistryManifest in storage within packages? (currently ctx can 
         # e.g. change the default registry, which doesn't sound right)
         summary = summary_from_schema(schema, storage_path, ctx)
