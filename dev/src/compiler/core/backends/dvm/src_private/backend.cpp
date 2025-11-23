@@ -364,11 +364,11 @@ namespace compiler::backend_vm {
 			case lir::Operation::IntegerMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:

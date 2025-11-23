@@ -34,7 +34,6 @@
 #include <base/misc/int_conv.hpp>              // IWYU pragma: export
 #include <base/misc/simple_char_classifications.hpp>
 #include <base/preproc/argument_splitter.hpp>  // IWYU pragma: export
-#include <base/str/string_id.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <type_traits>  // IWYU pragma: export
@@ -42,10 +41,10 @@
 
 namespace base::internal {
 	template<typename EnumType>
-	using StrToEnumType = base::Map<base::StrID, EnumType>;
+	using StrToEnumType = base::Map<std::string_view, EnumType>;
 
 	template<typename EnumType>
-	using EnumToStrType = base::Map<EnumType, base::StrID>;
+	using EnumToStrType = base::Map<EnumType, std::string_view>;
 
 	/**
 	 * Validates that VA_ARGS passed to `MAKE_STRINGIFYABLE_ENUM` are valid, that is
@@ -94,7 +93,7 @@ namespace base::internal {
 		namespace name##enum_helper {                                                            \
 			constexpr auto ENUM_ELEMENT_COUNT = std::to_underlying(namespace_name::name::COUNT); \
 			inline ::base::internal::StrToEnumType<namespace_name::name> strToEnumMaker() {      \
-				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
+				static const auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
 				::base::internal::StrToEnumType<namespace_name::name> out;                       \
 				CORE_ASSERT(                                                                     \
 					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),        \
@@ -102,14 +101,14 @@ namespace base::internal {
 				);                                                                               \
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
-						base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data()),       \
+						std::string_view(string_vector.at(base::safeIntConv<usize>(i)).data()),       \
 						static_cast<namespace_name::name>(i)                                     \
 					);                                                                           \
 				}                                                                                \
 				return out;                                                                      \
 			}                                                                                    \
 			inline ::base::internal::EnumToStrType<namespace_name::name> enumToStrMaker() {      \
-				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
+				static const auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
 				::base::internal::EnumToStrType<namespace_name::name> out;                       \
 				CORE_ASSERT(                                                                     \
 					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),        \
@@ -118,7 +117,7 @@ namespace base::internal {
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
 						static_cast<namespace_name::name>(i),                                    \
-						::base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data())      \
+						std::string_view(string_vector.at(base::safeIntConv<usize>(i)).data())  \
 					);                                                                           \
 				}                                                                                \
 				return out;                                                                      \
@@ -128,14 +127,14 @@ namespace base::internal {
                                                                                                  \
 	namespace base {                                                                             \
 		template<>                                                                               \
-		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrID id) {      \
+		inline ::namespace_name::name strToEnum<::namespace_name::name>(std::string_view str) {      \
 			static ::base::internal::StrToEnumType<namespace_name::name> mapping                 \
 				= namespace_name::name##enum_helper::strToEnumMaker();                           \
-			CORE_ASSERT(mapping.contains(id), "Enum value not found");                           \
-			return mapping[id];                                                                  \
+			CORE_ASSERT(mapping.contains(str), "Enum value not found");                           \
+			return mapping[str];                                                                  \
 		}                                                                                        \
 		template<>                                                                               \
-		inline ::base::StrID enumToStr<::namespace_name::name>(::namespace_name::name v) {       \
+		inline std::string_view enumToStr<::namespace_name::name>(::namespace_name::name v) {       \
 			static ::base::internal::EnumToStrType<::namespace_name::name> mapping               \
 				= namespace_name::name##enum_helper::enumToStrMaker();                           \
 			CORE_ASSERT(mapping.contains(v), "Enum value not found");                            \
@@ -145,8 +144,8 @@ namespace base::internal {
 
 namespace base {
 	template<typename EnumType>
-	EnumType strToEnum(StrID id);
+	EnumType strToEnum(std::string_view str);
 
 	template<typename EnumType>
-	StrID enumToStr(EnumType v);
+	std::string_view enumToStr(EnumType v);
 }

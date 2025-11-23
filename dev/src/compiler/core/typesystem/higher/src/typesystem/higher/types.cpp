@@ -159,9 +159,9 @@ namespace compiler::tsh {
 			CORE_PANIC(
 				"Type cast between TypeAbstractType kinds failed. ",
 				"A cast from ",
-				base::enumToStr(original_kind).str(),
+				base::enumToStr(original_kind),
 				" to ",
-				base::enumToStr(target_kind).str(),
+				base::enumToStr(target_kind),
 				" was attempted."
 			);
 		}

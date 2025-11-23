@@ -8,6 +8,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/str/string_id.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context_fd.hpp>

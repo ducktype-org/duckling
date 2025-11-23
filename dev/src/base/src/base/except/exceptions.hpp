@@ -62,6 +62,11 @@ namespace base {
 
 	public:
 		LogicError(std::string message);
+
+		LogicError(const char* message): LogicError(std::string(message)) {}
+
+		LogicError(std::string_view message): LogicError(std::string(message)) {}
+
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
@@ -74,6 +79,11 @@ namespace base {
 
 	public:
 		NotYetImplemented(const std::string& message);
+
+		NotYetImplemented(const char* message): NotYetImplemented(std::string(message)) {}
+
+		NotYetImplemented(std::string_view message): NotYetImplemented(std::string(message)) {}
+
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
