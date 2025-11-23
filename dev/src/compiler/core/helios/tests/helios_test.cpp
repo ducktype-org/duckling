@@ -141,6 +141,7 @@ private:
 	}
 
 	void testNumericLiterals() {
+		CORE_PANIC("Kajk");
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
 
 		// General literal handling.

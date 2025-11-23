@@ -98,6 +98,7 @@ namespace tester {
 
 		std::string           name;
 		std::vector<TestData> tests;
+		std::vector<std::string> failed_tests;
 
 	public:
 		bool run();
