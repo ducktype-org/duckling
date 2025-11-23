@@ -1,7 +1,8 @@
 #pragma once
+#include <string_id/string_id.hpp>
+
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/str/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
@@ -86,14 +87,16 @@ namespace vm::code {
 		constexpr const static std::string_view ERR_MSG = "Missing function declaration for ";
 
 		MissingGlobalCtorDtorError(bool is_ctor, base::StrID func_name, base::StrID global_name):
-			  ValidationError(base::strConcat(
-				  ERR_MSG,
-				  is_ctor ? "constructor '" : "destructor '",
-				  func_name,
-				  "' of global variable '",
-				  global_name,
-				  "'"
-			  )) {}
+			  ValidationError(
+				  base::strConcat(
+					  ERR_MSG,
+					  is_ctor ? "constructor '" : "destructor '",
+					  func_name,
+					  "' of global variable '",
+					  global_name,
+					  "'"
+				  )
+			  ) {}
 	};
 
 	/**

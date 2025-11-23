@@ -2,13 +2,13 @@
 
 #include "size_constants.hpp"
 
+#include <string_id/string_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context_fd.hpp>
@@ -347,8 +347,9 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(
+			query::Context& ctx, bool recursive, u32 indent
+		) const override;
 	};
 
 	/**
@@ -444,8 +445,9 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(
+			query::Context& ctx, bool recursive, u32 indent
+		) const override;
 	};
 
 	/**
@@ -547,8 +549,9 @@ namespace compiler::tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(
+			query::Context& ctx, bool recursive, u32 indent
+		) const override;
 	};
 
 	/**
@@ -693,8 +696,9 @@ namespace compiler::tsl {
 		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
-			const;
+		std::string toStringDefinition(
+			query::Context& ctx, bool recursive = true, u32 indent = 0
+		) const;
 
 		/**
 		 * @brief Get a relatively short string identifying the type layout.

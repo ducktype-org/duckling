@@ -11,8 +11,9 @@
  */
 #pragma once
 
+#include <string_id/string_id.hpp>
+
 #include <base/extend_cpp/flag.hpp>
-#include <base/str/string_id.hpp>
 
 #include <init/init.hpp>
 

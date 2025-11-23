@@ -3,9 +3,10 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
@@ -153,7 +154,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(
+	const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()

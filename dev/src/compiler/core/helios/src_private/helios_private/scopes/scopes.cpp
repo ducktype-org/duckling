@@ -17,12 +17,12 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <string_id/string_id.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
@@ -202,13 +202,15 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			return putInScopeTable(ScopeData{
-				.parent              = {},
-				.is_root             = true,
-				.related_pst_element = {},
-				.parent_module       = key,
-				.depth               = 0,
-			});
+			return putInScopeTable(
+				ScopeData{
+					.parent              = {},
+					.is_root             = true,
+					.related_pst_element = {},
+					.parent_module       = key,
+					.depth               = 0,
+				}
+			);
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -225,10 +227,13 @@ namespace compiler::helios {
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
-				CORE_PANIC(base::strConcat(
-					"Scope of element for which scope does not make sense (or was not added.): ",
-					typeid(*element_ptr).name()
-				));
+				CORE_PANIC(
+					base::strConcat(
+						"Scope of element for which scope does not make sense (or was not "
+				        "added.): ",
+						typeid(*element_ptr).name()
+					)
+				);
 			}
 
 			ScopeID parent = element->getParent().has_value()
@@ -251,12 +256,14 @@ namespace compiler::helios {
 				parent_map.put(element->getID(), parent);
 			}
 
-			return putInScopeTable(ScopeData{
-				.parent              = parent,
-				.related_pst_element = element,
-				.parent_module       = module(parent),
-				.depth               = scopeDepth(parent) + 1,
-			});
+			return putInScopeTable(
+				ScopeData{
+					.parent              = parent,
+					.related_pst_element = element,
+					.parent_module       = module(parent),
+					.depth               = scopeDepth(parent) + 1,
+				}
+			);
 		}
 
 		QUERY_AUTO_CACHE_COPY

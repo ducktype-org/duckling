@@ -11,8 +11,8 @@
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
+#include <string_id/string_id.hpp>
 
-#include <base/str/string_id.hpp>
 #include <base/types/bit256.hpp>
 
 #include <query_framework/query_int.hpp>

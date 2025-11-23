@@ -2,12 +2,13 @@
 
 #include "instruction_lowering.hpp"
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -333,7 +334,8 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+	void Compiler::compileNewExtCFunctions(
+		const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
 			program_ctx.ext_c_functions.insert(new_func, new_func.name);

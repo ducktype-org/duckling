@@ -5,11 +5,12 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/response.hpp>
@@ -352,7 +353,8 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma(
+			"GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -623,15 +625,19 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = index,  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id  = index,  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

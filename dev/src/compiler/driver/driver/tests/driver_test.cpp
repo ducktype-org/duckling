@@ -4,8 +4,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
-
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -76,8 +75,10 @@ private:
 
 		global_state::getDynamicDebugOptions()->llvm_dump_ir  = true;
 		global_state::getDynamicDebugOptions()->llvm_dump_asm = true;
-		defer(global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
-		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
+		defer(
+			global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
+			global_state::getDynamicDebugOptions()->llvm_dump_asm = false;
+		);
 
 		auto module
 			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
@@ -86,12 +87,12 @@ private:
 			// This method can fail on module verification
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  frontend::ModuleTree::getComponentHash(module).hash.toStringHex()
+			auto module_name = base::StrID(
+				base::strConcat(
+					"module_", frontend::ModuleTree::getComponentHash(module).hash.toStringHex()
 				)
-			                      .c_str());
+					.c_str()
+			);
 
 			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
