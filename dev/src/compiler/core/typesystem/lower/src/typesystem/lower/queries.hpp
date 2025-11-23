@@ -5,7 +5,7 @@
 
 #include <query_framework/query_int.hpp>
 
-namespace tsl {
+namespace compiler::tsl {
 	/**
 	 * @brief Get a TypeLayout for a given AbstractType.
 	 */

@@ -13,7 +13,7 @@
 
 using base::bytes2bits;
 
-namespace tsl {
+namespace compiler::tsl {
 	namespace {
 		/**
 		 * @brief Get a vector of TypeLayouts for a vector of SymbolType.

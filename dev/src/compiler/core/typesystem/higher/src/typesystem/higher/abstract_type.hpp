@@ -10,6 +10,7 @@
 
 #include "kind.hpp"
 
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context_fd.hpp>
@@ -23,8 +24,8 @@
  */
 #define SETUP_TYPE(SomeAbstractType)       \
 	using Impl   = SomeAbstractType##Impl; \
-	using Pimpl  = Impl*;                  \
-	using CPimpl = const Impl*;
+	using Pimpl  = Ref<Impl>;              \
+	using CPimpl = CRef<Impl>;
 
 /**
  * @brief Several type definitions for quick reference,
@@ -37,8 +38,8 @@
 	SETUP_TYPE(SomeAbstractType)                                 \
 	using BImpl   = BaseAbstractType##Impl;                      \
 	using Base    = BaseAbstractType;                            \
-	using BPimpl  = BImpl*;                                      \
-	using CBPimpl = const BImpl*;
+	using BPimpl  = Ref<BImpl>;                                  \
+	using CBPimpl = CRef<BImpl>;
 
 /**
  * @brief Constructor from SomeAbstractType##Impl*.
@@ -46,7 +47,8 @@
  * @param SomeAbstractType The class name from the AbstractType hierarchy.
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(SomeAbstractType) \
-	SomeAbstractType(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+	SomeAbstractType(const CPimpl pimpl):               \
+		  Base(CBPimpl(reinterpret_cast<const BImpl*>(pimpl.get()))) {}
 
 /**
  * @brief Template constructor from the AbstractTypeImpl* hierarchy with a dynamic cast check.
@@ -55,18 +57,18 @@
 #define CONSTRUCT_WITH_CHECKED_CAST(SomeAbstractType)             \
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>       \
 	explicit(false) SomeAbstractType(const ABSTRACT_TYPE& other): \
-		  Base((const BPimpl) other.getPimpl()) {                 \
+		  Base((const CBPimpl) other.getPimpl()) {                \
 		checkDynamicCast<SomeAbstractType>(other.getPimpl());     \
 	}
 
-namespace tsh {
+namespace compiler::tsh {
 
 	class AbstractTypeImpl;
 	class AbstractType;
 	class TypeInterface;
 
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	typename ABSTRACT_TYPE::CPimpl checkDynamicCast(const AbstractTypeImpl*);
+	typename ABSTRACT_TYPE::CPimpl checkDynamicCast(CRef<AbstractTypeImpl> pimpl);
 
 	/**
 	 * @brief The AbstractType class and its subclasses form a lightweight type interface hierarchy.
@@ -100,7 +102,7 @@ namespace tsh {
 		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		base::CRef<TypeInterface> getInterface(query::Context& ctx) const;
+		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
@@ -163,7 +165,7 @@ namespace tsh {
 		 * @return Pointer to the underlying AbstractTypeImpl object.
 		 */
 		[[nodiscard]]
-		const AbstractTypeImpl* getPimpl() const {
+		CRef<AbstractTypeImpl> getPimpl() const {
 			return pimpl;
 		}
 
@@ -219,7 +221,7 @@ namespace tsh {
 		 * @brief Construct from an object from the AbstractTypeImpl hierarchy.
 		 * @param pimpl A pointer to a type implementation object.
 		 */
-		AbstractType(const AbstractTypeImpl* pimpl): pimpl(pimpl) {}
+		AbstractType(const CRef<AbstractTypeImpl> pimpl): pimpl(pimpl) {}
 
 		friend class AbstractTypeImpl;
 
@@ -227,6 +229,6 @@ namespace tsh {
 		 * @brief The pointer to the (probably significantly heavier) object carrying
 		 * the implementation which describes the types represented by this object.
 		 */
-		const AbstractTypeImpl* pimpl;
+		CRef<AbstractTypeImpl> pimpl;
 	};
 }

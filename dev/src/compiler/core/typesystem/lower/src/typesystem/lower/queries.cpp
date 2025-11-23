@@ -2,7 +2,7 @@
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsl {
+namespace compiler::tsl {
 	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using enum tsh::Kind;
@@ -40,7 +40,7 @@ namespace tsl {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
@@ -52,7 +52,7 @@ namespace tsl {
 			return PointerTypeLayout(key, ctx);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)

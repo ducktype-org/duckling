@@ -8,7 +8,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/simple_keys.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief Query to get the Unit type.
 	 */
