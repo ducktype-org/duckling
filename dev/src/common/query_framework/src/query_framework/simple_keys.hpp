@@ -5,6 +5,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
+#include <base/types/bit256.hpp>
 
 namespace query {
 	/**
@@ -13,11 +14,6 @@ namespace query {
 	struct EmptyKey final {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return 0;
-		}
-
-		[[nodiscard]]
-		u64 queryStablePerfectHash() const {
 			return 0;
 		}
 	};
@@ -34,7 +30,7 @@ namespace query {
 		}
 
 		[[nodiscard]]
-		u64 queryStablePerfectHash() const {
+		base::Bit256 queryStablePerfectHash() const {
 			return value;
 		}
 	};
@@ -51,7 +47,7 @@ namespace query {
 		}
 
 		[[nodiscard]]
-		u64 queryStablePerfectHash() const {
+		base::Bit256 queryStablePerfectHash() const {
 			return static_cast<u64>(value);
 		}
 	};

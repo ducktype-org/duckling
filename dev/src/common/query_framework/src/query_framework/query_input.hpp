@@ -41,7 +41,7 @@ namespace query::internal {
 	DECLARE_QUERY_AUX(                                                    \
 		query_type,                                                       \
 		key,                                                              \
-		query::internal::SideInputMockValue,                              \
+		::query::internal::SideInputMockValue,                              \
 		::query::internal::QueryData(                                     \
 			::query::internal::QueryKind::SideInput,                                \
 			#query_type,                                                  \

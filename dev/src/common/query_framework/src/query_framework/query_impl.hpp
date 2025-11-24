@@ -156,8 +156,6 @@ namespace query::internal {
 	*/
 	template<typename Impl>
 	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
-		{ Impl::loadFromDisc(key) } -> std::same_as<typename Impl::PResult>;
-	} || requires(const typename Impl::QKey& key) {
 		{ Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
 	};
 
