@@ -152,7 +152,7 @@ namespace compiler::lir {
 			output << output_value.str() << " ";
 
 			output << std::left << std::setw(15);
-			output << base::enumToStr(instruction.operation).strView() << "  ";
+			output << base::enumToStr(instruction.operation) << "  ";
 
 
 			std::string_view sep = "";
