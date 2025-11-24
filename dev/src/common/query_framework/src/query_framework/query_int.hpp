@@ -69,7 +69,7 @@ namespace query::internal {
 		key,                                                      \
 		value,                                                    \
 		::query::internal::QueryData(                             \
-			::query::QueryType::Normal,                           \
+			::query::internal::QueryKind::Normal,                           \
 			#query_type,                                          \
 			::query::internal::QueryTags REMOVE_PARENTHESES(tags) \
 		)                                                         \

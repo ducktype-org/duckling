@@ -43,7 +43,7 @@ namespace query::internal {
 		key,                                                              \
 		query::internal::SideInputMockValue,                              \
 		::query::internal::QueryData(                                     \
-			::query::QueryType::SideInput,                                \
+			::query::internal::QueryKind::SideInput,                                \
 			#query_type,                                                  \
 			::query::internal::QueryTags{                                 \
 				.used_hashes             = query::UsedHashes::StableHash, \

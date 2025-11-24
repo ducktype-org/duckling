@@ -189,7 +189,7 @@ namespace query::internal {
 			else if (old_to_new.contains(node.q_id))
 				return { old_to_new.at(node.q_id), node.hash };
 			QueryData new_data(
-				QueryType::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
+				QueryKind::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
 			);
 			QueryID new_qid = registerQuery(new_data);
 			old_to_new.insert_or_assign(node.q_id, new_qid);

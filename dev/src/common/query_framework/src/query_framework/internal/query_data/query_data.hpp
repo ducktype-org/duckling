@@ -5,18 +5,6 @@
 namespace query {
 
 	/**
-	 * General type of the query.
-	 */
-	enum class QueryType {
-		Normal,
-		SideInput,
-		Input,
-		Dummy  //> Query with that type should never be called or implemented. This is used in
-		       // incremental compilation when inserting dummy nodes to current graph from previous
-		       // graph.
-	};
-
-	/**
 	 * Hash used by the query.
 	 */
 	enum class UsedHashes {
@@ -25,6 +13,18 @@ namespace query {
 	};
 
 	namespace internal {
+
+		/**
+		 * General type of the query.
+		 */
+		enum class QueryKind {
+			Normal,
+			SideInput,
+			Input,
+			Dummy  //> Query with that type should never be called or implemented. This is used in
+				// incremental compilation when inserting dummy nodes to current graph from previous
+				// graph.
+		};
 
 		/**
 		 * @brief Query tags are various, lightweight attributes or properties that can be
@@ -58,7 +58,7 @@ namespace query {
 		 * from QueryID as well, without knowning the comp-time type of the query.
 		 *
 		 * Query data consist of three main parts:
-		 * - type of the query (e.g. normal, input, side-input, dummy, see: QueryType)
+		 * - type of the query (e.g. normal, input, side-input, dummy, see: QueryKind)
 		 * - name of the query
 		 * - various tags associated with the query (see QueryTags)
 		 *
@@ -67,11 +67,11 @@ namespace query {
 		 * some indirect access to it, e.g. via QueryID or query interface struct.
 		 */
 		struct QueryData final {
-			QueryType        type;
+			QueryKind        type;
 			std::string_view name;
 			QueryTags        tags;
 
-			constexpr QueryData(QueryType type, std::string_view name, QueryTags tags):
+			constexpr QueryData(QueryKind type, std::string_view name, QueryTags tags):
 				  type(type),
 				  name(name),
 				  tags(tags) {}
@@ -80,7 +80,7 @@ namespace query {
 
 			[[nodiscard]]
 			constexpr bool isInputQuery() const {
-				return type == QueryType::Input or type == QueryType::SideInput;
+				return type == QueryKind::Input or type == QueryKind::SideInput;
 			}
 
 			[[nodiscard]]
