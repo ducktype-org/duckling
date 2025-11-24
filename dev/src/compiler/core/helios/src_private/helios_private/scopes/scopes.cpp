@@ -17,12 +17,12 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <string_id/string_id.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
@@ -226,7 +226,8 @@ namespace compiler::helios {
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
-					"Scope of element for which scope does not make sense (or was not added.): ",
+					"Scope of element for which scope does not make sense (or was not "
+					"added.): ",
 					typeid(*element_ptr).name()
 				));
 			}
@@ -383,11 +384,6 @@ namespace compiler::helios {
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else {
-						// Currently only "using stmt" has transparent decl kind, but>>F declares a
-						// symbol #1319
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
-						symbols.emplace_back(sym_id);
 					}
 					break;
 				}

@@ -7,7 +7,7 @@
 
 #include <typesystem/higher/abstract_type_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	[[nodiscard]]
 	Kind AbstractType::getKind() const {
 		return pimpl->getKind();
@@ -37,7 +37,7 @@ namespace tsh {
 		return pimpl->toString();
 	}
 
-	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl); }
+	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl.get()); }
 
 	// Specialized template definition and explicit instantiation.
 	template<>

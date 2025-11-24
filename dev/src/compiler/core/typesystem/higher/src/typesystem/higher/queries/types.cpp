@@ -4,7 +4,7 @@
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
 			static auto unit_impl = UnitAbstractTypeImpl{};
@@ -200,15 +200,12 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
-	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			auto pointer_pimpl = makeBox<PointerAbstractTypeImpl>(key);
-			auto ref           = pointer_pimpl.refMut().get();
-			pushType(std::move(pointer_pimpl));
-			return ref;
+			return PointerAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
@@ -224,68 +221,49 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
 
-	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey key) -> PResult {
-			auto dynamic_array_pimpl = makeBox<DynamicArrayAbstractTypeImpl>(key);
-			auto ref                 = dynamic_array_pimpl.refMut().get();
-			pushType(std::move(dynamic_array_pimpl));
-			return ref;
-		}
+	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
 
-	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey& key) -> PResult {
-			auto tuple_pimpl = makeBox<TupleAbstractTypeImpl>(key.components);
-			auto ref         = tuple_pimpl.refMut().get();
-			pushType(std::move(tuple_pimpl));
-			return ref;
-		}
+	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Impl) {
+		static auto provide(Context&, const QKey& key) -> PResult { return { key.components }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
-	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			auto variant_pimpl = makeBox<VariantAbstractTypeImpl>(key.underlying_types);
-			auto ref           = variant_pimpl.refMut().get();
-			pushType(std::move(variant_pimpl));
-			return ref;
+			return VariantAbstractTypeImpl(key.underlying_types);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
-	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
-			auto function_pimpl = makeBox<FunctionAbstractTypeImpl>(params, result, pure, free);
-			auto ref            = function_pimpl.refMut().get();
-			pushType(std::move(function_pimpl));
-			return ref;
+			return { params, result, pure, free };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
-	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			auto class_pimpl = makeBox<ClassAbstractTypeImpl>(key);
-			auto ref         = class_pimpl.refMut().get();
-			pushType(std::move(class_pimpl));
-			return ref;
+			return ClassAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)

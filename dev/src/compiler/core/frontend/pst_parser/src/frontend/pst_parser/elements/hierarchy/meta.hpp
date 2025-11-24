@@ -5,7 +5,7 @@
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>

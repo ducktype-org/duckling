@@ -24,7 +24,7 @@ private:
 	template<class EnumType>
 	void checkThatCountDoesNotConvert() {
 		assertThrows<base::Panic>(
-			[]() { base::strToEnum<EnumType>(base::StrID("COUNT")); },
+			[]() { base::strToEnum<EnumType>("COUNT"); },
 			"Bad conversion from string to enum was valid"
 		);
 		assertThrows<base::Panic>(
@@ -36,22 +36,22 @@ private:
 	void badConversionTest() {
 #if defined(BUILD_TYPE_DEV)
 		assertThrows<base::Panic>(
-			[]() { base::strToEnum<n::ZeroElements>(base::StrID("A")); },
+			[]() { base::strToEnum<n::ZeroElements>("A"); },
 			"Bad conversion from string to enum was valid"
 		);
 
 		assertThrows<base::Panic>(
-			[]() { base::strToEnum<n::OneElement>(base::StrID("B")); },
+			[]() { base::strToEnum<n::OneElement>("B"); },
 			"Bad conversion from string to enum was valid"
 		);
 
 		assertThrows<base::Panic>(
-			[]() { base::strToEnum<n::TwoElements>(base::StrID("C")); },
+			[]() { base::strToEnum<n::TwoElements>("C"); },
 			"Bad conversion from string to enum was valid"
 		);
 
 		assertThrows<base::Panic>(
-			[]() { base::strToEnum<n::ThreeElements>(base::StrID("D")); },
+			[]() { base::strToEnum<n::ThreeElements>("D"); },
 			"Bad conversion from string to enum was valid"
 		);
 
@@ -64,29 +64,29 @@ private:
 	}
 
 	void goodConversionTest() {
-		ASSERT_EQUAL(base::strToEnum<n::OneElement>(base::StrID("A")), n::OneElement::A);
+		ASSERT_EQUAL(base::strToEnum<n::OneElement>("A"), n::OneElement::A);
 
-		ASSERT_EQUAL(base::strToEnum<n::TwoElements>(base::StrID("A")), n::TwoElements::A);
-		ASSERT_EQUAL(base::strToEnum<n::TwoElements>(base::StrID("B")), n::TwoElements::B);
+		ASSERT_EQUAL(base::strToEnum<n::TwoElements>("A"), n::TwoElements::A);
+		ASSERT_EQUAL(base::strToEnum<n::TwoElements>("B"), n::TwoElements::B);
 
-		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>(base::StrID("A")), n::ThreeElements::A);
-		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>(base::StrID("B")), n::ThreeElements::B);
-		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>(base::StrID("C")), n::ThreeElements::C);
+		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>("A"), n::ThreeElements::A);
+		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>("B"), n::ThreeElements::B);
+		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>("C"), n::ThreeElements::C);
 
-		ASSERT_EQUAL(base::strToEnum<n::SingedInt>(base::StrID("A")), n::SingedInt::A);
-		ASSERT_EQUAL(base::strToEnum<n::SingedInt>(base::StrID("B")), n::SingedInt::B);
+		ASSERT_EQUAL(base::strToEnum<n::SingedInt>("A"), n::SingedInt::A);
+		ASSERT_EQUAL(base::strToEnum<n::SingedInt>("B"), n::SingedInt::B);
 
-		ASSERT_EQUAL(base::enumToStr(n::OneElement::A), base::StrID("A"));
+		ASSERT_EQUAL(base::enumToStr(n::OneElement::A), "A");
 
-		ASSERT_EQUAL(base::enumToStr(n::TwoElements::A), base::StrID("A"));
-		ASSERT_EQUAL(base::enumToStr(n::TwoElements::B), base::StrID("B"));
+		ASSERT_EQUAL(base::enumToStr(n::TwoElements::A), "A");
+		ASSERT_EQUAL(base::enumToStr(n::TwoElements::B), "B");
 
-		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::A), base::StrID("A"));
-		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::B), base::StrID("B"));
-		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::C), base::StrID("C"));
+		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::A), "A");
+		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::B), "B");
+		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::C), "C");
 
-		ASSERT_EQUAL(base::enumToStr(n::SingedInt::A), base::StrID("A"));
-		ASSERT_EQUAL(base::enumToStr(n::SingedInt::B), base::StrID("B"));
+		ASSERT_EQUAL(base::enumToStr(n::SingedInt::A), "A");
+		ASSERT_EQUAL(base::enumToStr(n::SingedInt::B), "B");
 	}
 
 	void countTest() {

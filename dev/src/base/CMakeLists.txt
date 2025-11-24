@@ -8,7 +8,6 @@ add_library(Base
         src/base/misc/convert.cpp
         src/base/misc/init_guards.cpp
         
-        src/base/str/string_id.cpp
         src/base/str/str_utils.cpp
         
         src/base/types/bit256.cpp
@@ -26,7 +25,6 @@ duck_add_test(base flag_type tests/flag_type_test.cpp USES Base)
 
 duck_add_test(base stable_container tests/stable_container_test.cpp USES Base)
 
-duck_add_test(base string_id tests/string_id_test.cpp USES Base)
 
 duck_add_test(base optional tests/optional_test.cpp USES Base)
 
@@ -74,9 +72,6 @@ add_example(defer_example examples/defer_example.cpp
         USES Base)
 
 add_example(optional_simple_example examples/optional_simple_example.cpp
-        USES Base)
-
-add_example(str_utils_example examples/str_utils_example.cpp
         USES Base)
 
 add_example(stringifyable_enum_example examples/stringifyable_enum_example.cpp
