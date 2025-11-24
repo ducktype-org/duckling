@@ -64,16 +64,16 @@ namespace compiler::helios {
 		}
 	}
 
-	std::vector<ScopeID> getAllHeliosScopes() {
-		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
-			"getAllHeliosScopes called from within query!"
-		);
-		std::vector<ScopeID> out;
-		for (auto& scope_data: scope_table)
-			out.emplace_back(ScopeAccess_Functor::idOf(&scope_data));
-		return out;
-	}
+	// std::vector<ScopeID> getAllHeliosScopes() {
+	// 	CORE_ASSERT(
+	// 		query::Context::getState().queryStackSize() == 0,
+	// 		"getAllHeliosScopes called from within query!"
+	// 	);
+	// 	std::vector<ScopeID> out;
+	// 	for (auto& scope_data: scope_table)
+	// 		out.emplace_back(ScopeAccess_Functor::idOf(&scope_data));
+	// 	return out;
+	// }
 
 	/**
 	 * @brief A way helios creates scope for given pst element.
@@ -266,6 +266,7 @@ namespace compiler::helios {
 		}
 
 		QUERY_AUTO_CACHE_COPY
+		// QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);

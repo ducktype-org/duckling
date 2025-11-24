@@ -63,9 +63,9 @@ namespace compiler::helios {
 		void debugPrintScopeAndParents(std::ostream& os) const;
 
 	private:
-		Ref<ScopeData> ref;
+		CRef<ScopeData> ref;
 
-		ScopeID(const Ref<ScopeData> ref): ref(ref) {}
+		ScopeID(const CRef<ScopeData> ref): ref(ref) {}
 		friend struct ScopeAccess_Functor;
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
