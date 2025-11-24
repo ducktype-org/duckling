@@ -2,6 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -34,19 +35,37 @@ namespace compiler::helios {
 		bool is_target_bool = to.getType().getKind() == tsh::Kind::Bool;
 
 		if (source_type == to.getType()) {
+			// No coercion
 			return from;
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
+			// Numeric type promotion
 			return makeBox<code::CastExpr>(ctx, std::move(from), to);
 		} else if (is_source_numeric and is_target_bool) {
+			// Numeric zero-check to bool
 			auto comparison = makeBox<code::BinaryOperatorExpr>(
 				ctx,
 				code::BuiltinBinary::IntegerNeq,
 				std::move(from),
 				createZeroLiteralOfType(ctx, from->expression_type.getSymbolType())
 			);
-
 			return comparison;
+		} else if (source_type.getKind() == tsh::Kind::Unit
+		           and to.getType().getKind() == tsh::Kind::Meta) {
+			// Lift unit value to unit type
+			auto result_value = makeBox<code::LiteralTypeExpr>(tsh::SymbolType<>{
+				ctx.query<tsh::QueryUnitType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			});
+			// Return sequence which computes the original expression and then yields the type.
+			return makeBox<code::SequenceExpr>(
+				ctx, std::vector<Box<code::Expr>>{ std::move(from), std::move(result_value) }
+			);
+		} else if (source_type.getKind() == tsh::Kind::Tuple
+		           and to.getType().getKind() == tsh::Kind::Meta) {
+			// Lift tuple value to tuple type
+			// TODO
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
