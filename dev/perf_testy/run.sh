@@ -26,7 +26,9 @@ for case_dir in ./cases/*/; do
     # measure time taken to compile Duck code:
     ts=$(date +%s%N)  
     # /usr/bin/time -f "Duck compilation time: $time_format"
-    $duck_c_path compile_package $duck_module -n duck --no-incremental -a $duck_binary
+    duckc_command_string="$duck_c_path compile_package $duck_module -n duck --no-incremental -a $duck_binary"
+    $duckc_command_string
+    # echo "Executed command: $duckc_command_string"
     te=$(date +%s%N)
     elapsed=$((te - ts))
     elapsed_ms=$((elapsed / 1000000))
