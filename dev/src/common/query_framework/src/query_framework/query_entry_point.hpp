@@ -23,9 +23,9 @@ namespace query {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
 				// We create a node id here directly, so we can insert "outside world" as caller.
+				// The node is is always the same, it is essentially the root of the query graph.
 				return QueryType::internal_query(
-					key,
-					NodeID(internal::outsideWorldQueryID(), { EmptyKey().queryStablePerfectHash() })
+					key, NodeID(internal::outsideWorldQueryID(), { 0 })
 				);
 			}
 		};
