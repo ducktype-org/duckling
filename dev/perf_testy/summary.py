@@ -67,6 +67,8 @@ def print_summary(summary):
     avg_coeff_display = f"{avg_coeff:.2f}" if avg_coeff is not None else 'N/A'
     print(f"{'Average':<30} {avg_duck_display:<15} {avg_cpp_display:<15} {avg_coeff_display:<10}")
 
+    print(f"Sum Duck / Sum C++: {sum(duck_times) / sum(cpp_times):.2f}")
+
 
 if __name__ == "__main__":
     results_file = 'results.csv'
