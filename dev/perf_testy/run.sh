@@ -1,5 +1,6 @@
 cpp_c_path=g++-14
-duck_c_path=../build_no_debug/bin/duckc
+# duck_c_path=../build_no_debug/bin/duckc
+duck_c_path=../build_rel/bin/duckc
 
 # iterate all folders in cases and measure compiler performance:
 for case_dir in ./cases/*/; do
