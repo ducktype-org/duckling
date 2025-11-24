@@ -119,11 +119,11 @@ class CodeGenerator(ABC):
     
     @abstractmethod
     def while_loop(self, scope: ScopeData):
-        pass
+        assert False
     
     # Literals
     def int_literal(self, value: int):
-        self.indenter.add_fragment(f"{value}")
+        assert False
 
     # Simple elements
     def operator(self, operator: str):

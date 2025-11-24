@@ -430,7 +430,7 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
-				std::cerr << "Initializing: " << type_name.str.str() << '\n';
+				// std::cerr << "Initializing: " << type_name.str.str() << '\n';
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
 				initType(ctx, arg_name, type_name);

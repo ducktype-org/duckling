@@ -1,4 +1,5 @@
 import random
+import random
 
 from contextlib import contextmanager
 
@@ -6,6 +7,11 @@ from code_generator import CodeGenerator, ScopeData, FunctionData
 from utils import PROB, random_identifier
 
 class DucklingCodeGenerator(CodeGenerator):
+
+    def int_literal(self, value: int):
+        self.indenter.add_fragment(f"{value}i64")
+
+        
     # Variables
     def variable_declaration(self, var_name: str, scope: ScopeData):
         self.indenter.add_fragment(f"var {var_name}: i64 = ")
@@ -114,7 +120,7 @@ class DucklingCodeGenerator(CodeGenerator):
         # Generate main body elsewhere
         with self.indenter:
             yield        
-            self.indenter.add_text("return 0;\n")
+            self.indenter.add_text("return 0i64;\n")
         
         # Close the function definition
         self.indenter.add_text("}\n")

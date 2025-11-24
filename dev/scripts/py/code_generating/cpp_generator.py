@@ -6,15 +6,21 @@ from code_generator import CodeGenerator, ScopeData, FunctionData
 from utils import PROB, random_identifier
 
 class CppCodeGenerator(CodeGenerator):
+
+
+    def int_literal(self, value: int):
+        self.indenter.add_fragment(f"{value}ll")
+
+
     # Variables
     def variable_declaration(self, var_name: str, scope: ScopeData):
-        self.indenter.add_fragment(f"int {var_name} = ")
+        self.indenter.add_fragment(f"long {var_name} = ")
         self.logic_generator.generate_expression(scope, PROB)
         self.indenter.add_fragment(";\n")
         self.indenter.flush_fragment()
 
     def constant_declaration(self, var_name: str, scope: ScopeData):
-        self.indenter.add_fragment(f"const int {var_name} = ")
+        self.indenter.add_fragment(f"const long {var_name} = ")
         self.logic_generator.generate_expression(scope, PROB)
         self.indenter.add_fragment(";\n")
         self.indenter.flush_fragment()
@@ -28,7 +34,7 @@ class CppCodeGenerator(CodeGenerator):
     # Functions
     def function_definition(self, func_name: str, scope: ScopeData) -> FunctionData:
         # Generate function signature
-        self.indenter.add_fragment(f"int {func_name}(")
+        self.indenter.add_fragment(f"long {func_name}(")
         args = self.argument_list(random.randint(0, 3))                    
         self.indenter.add_fragment(") {\n")
         self.indenter.flush_fragment()
@@ -50,9 +56,9 @@ class CppCodeGenerator(CodeGenerator):
         for i in range(length):
             arg_name = random_identifier(8)
             if i < length - 1:
-                self.indenter.add_fragment(f"int {arg_name}, ")
+                self.indenter.add_fragment(f"long {arg_name}, ")
             else:
-                self.indenter.add_fragment(f"int {arg_name}")
+                self.indenter.add_fragment(f"long {arg_name}")
             args.append(arg_name)
         return args
     

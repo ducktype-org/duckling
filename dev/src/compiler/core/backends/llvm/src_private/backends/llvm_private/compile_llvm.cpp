@@ -74,6 +74,6 @@ namespace compiler::backend_llvm {
 		else
 			emitObject(m, target_machine, &output_stream);
 
-		llvm::errs() << "Compiled LLVM module to the file: " << output_file.string() << "\n";
+		// llvm::errs() << "Compiled LLVM module to the file: " << output_file.string() << "\n";
 	}
 }
