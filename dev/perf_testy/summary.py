@@ -1,7 +1,9 @@
 # read results.csv and summarize data:
 
 import os
+import sys
 import csv
+
 
 
 def summarize_results(file_path):
@@ -71,7 +73,8 @@ def print_summary(summary):
 
 
 if __name__ == "__main__":
-    results_file = 'results.csv'
+    # read first cli argument to get file:
+    results_file = sys.argv[1]
     if os.path.exists(results_file):
         summary = summarize_results(results_file)
         print_summary(summary)
