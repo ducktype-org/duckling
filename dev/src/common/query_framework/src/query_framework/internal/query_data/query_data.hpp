@@ -67,12 +67,12 @@ namespace query {
 		 * some indirect access to it, e.g. via QueryID or query interface struct.
 		 */
 		struct QueryData final {
-			QueryKind        type;
+			QueryKind        kind;
 			std::string_view name;
 			QueryTags        tags;
 
-			constexpr QueryData(QueryKind type, std::string_view name, QueryTags tags):
-				  type(type),
+			constexpr QueryData(QueryKind kind, std::string_view name, QueryTags tags):
+				  kind(kind),
 				  name(name),
 				  tags(tags) {}
 
@@ -80,7 +80,7 @@ namespace query {
 
 			[[nodiscard]]
 			constexpr bool isInputQuery() const {
-				return type == QueryKind::Input or type == QueryKind::SideInput;
+				return kind == QueryKind::Input or kind == QueryKind::SideInput;
 			}
 
 			[[nodiscard]]
