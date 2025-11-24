@@ -17,7 +17,7 @@ csv_collect="Test Case,Language,Compilation Time (ms)\n"
 for case_dir in ./cases/*/; do
     echo "Running performance test for case: $case_dir"
 
-    duck_module="$case_dir/duck"
+    duck_module="$case_dir/duck.dmf"
     cpp_file="$case_dir/cpp.cpp"
 
     binary_output_dir="./binary_outputs/$(basename $case_dir)"
