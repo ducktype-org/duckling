@@ -41,7 +41,7 @@ namespace compiler::helios::mangler {
 	/**
 	 * @brief Gets the mangled name of a symbol from SymID.
 	 */
-	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID);
+	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({}));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
 

@@ -28,7 +28,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Evaluate a HOUT expression in compile time.
 	 */
-	DECLARE_QUERY(QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult)
+	DECLARE_QUERY(
+		QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult, ({})
+	)
 
 	/**
 	 * @brief Evaluate a PST expression in compile time.
@@ -36,6 +38,10 @@ namespace compiler::helios {
 	 * evaluates it using QueryEvaluateHOUTExpression.
 	 */
 	DECLARE_QUERY(
-		QueryEvaluatePSTExpression, pst::GenericPSTQueryKey<pst::ExprElement>, CompTimeEvalResult
+		QueryEvaluatePSTExpression,
+		pst::GenericPSTQueryKey<pst::ExprElement>,
+		CompTimeEvalResult,
+		({ .used_hashes = query::UsedHashes::StableHash })
+
 	)
 }
