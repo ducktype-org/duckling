@@ -1,9 +1,10 @@
 #pragma once
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 
 #include <filesystem/file.hpp>
 

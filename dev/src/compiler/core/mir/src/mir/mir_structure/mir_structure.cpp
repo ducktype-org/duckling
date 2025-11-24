@@ -145,7 +145,7 @@ namespace compiler::mir {
 		os << " ";
 
 		os << std::left << std::setw(15);
-		os << base::enumToStr(operation).strView() << "  ";
+		os << base::enumToStr(operation) << "  ";
 
 		std::stringstream args;
 

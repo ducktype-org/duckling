@@ -23,6 +23,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 
@@ -34,13 +35,13 @@ namespace base {
 
 	// This is forward declaration to prevent circular header dependency
 	template<typename EnumType>
-	StrID enumToStr(EnumType v);
+	std::string_view enumToStr(EnumType v);
 
 	namespace internal {
 
 		template<typename T>
 		concept HasEnumToStr = std::is_enum_v<T> && requires(T t) {
-			{ base::enumToStr(t) } -> std::convertible_to<base::StrID>;
+			{ base::enumToStr(t) } -> std::convertible_to<std::string_view>;
 		};
 
 		template<typename T>

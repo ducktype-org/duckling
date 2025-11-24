@@ -1,6 +1,7 @@
+#include <string_id/string_id.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/misc/raw_view.hpp>
-#include <base/str/string_id.hpp>
 
 #include <tester/tester.hpp>
 
