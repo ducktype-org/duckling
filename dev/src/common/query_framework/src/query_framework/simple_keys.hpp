@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/types/bit256.hpp>
+#include <base/types/ints.hpp>
 
 namespace query {
 	/**
@@ -51,6 +51,4 @@ namespace query {
 			return static_cast<u64>(value);
 		}
 	};
-
-
 }

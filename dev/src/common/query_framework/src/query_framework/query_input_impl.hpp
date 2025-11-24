@@ -9,13 +9,13 @@
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
 	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \
 		-> query_type::QResult {                                                                 \
-		auto node_id = ::query::internal::makeNodeID<query_type>(key);                             \
-		::query::internal::ContextAccess::getState()->getGraphMutable()->addDependency(            \
+		auto node_id = ::query::internal::makeNodeID<query_type>(key);                           \
+		::query::internal::ContextAccess::getState()->getGraphMutable()->addDependency(          \
 			from, node_id                                                                        \
 		);                                                                                       \
-		::query::internal::ContextAccess::getState()->setEntry(node_id, from);                     \
-		::query::internal::ContextAccess::getState()->setExit(node_id);                            \
-		return ::query::internal::SideInputMockValue{};                                            \
+		::query::internal::ContextAccess::getState()->setEntry(node_id, from);                   \
+		::query::internal::ContextAccess::getState()->setExit(node_id);                          \
+		return ::query::internal::SideInputMockValue{};                                          \
 	}                                                                                            \
 	static_assert(                                                                               \
 		not std::is_reference_v<query_type::QKey>,                                               \
