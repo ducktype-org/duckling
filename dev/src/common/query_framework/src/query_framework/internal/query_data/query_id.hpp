@@ -30,13 +30,8 @@ namespace query::internal {
 		[[nodiscard]]
 		const QueryData& getData() const;
 
-		// @TODO: #1433 change this to use query tags to determine whether the query has stable hash
-		// or loads cache from disk
-		[[nodiscard]]
-		bool hasStableHash() const;
-
 		/**
-		 * @TODO: #1433 determinate if we should keep this method
+		 * @TODO: #1514 determinate if we should keep this method
 		 * This method is used to determinate whether the query is registered - it points to query
 		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
 		 * All other queries should be registered.
@@ -59,14 +54,11 @@ namespace query::internal {
 	};
 
 	/**
-	 * @brief A function for generering query id for each query.
+	 * @brief A function for generating query id for each query.
 	 * This function should never be used outside the framework.
-	 * @param query_data data of given query. Framework will keep a copy of the data for easy acces
-	 * @param has_stable_hash whether the query has a stable hash function
-	 * @TODO: #1433 change this to use query tags to determine whether the query has stable hash /
-	 * cache loads from disk from just query id
+	 * @param query_data data of given query. Framework will keep a copy of the data for easy access.
 	 */
-	QueryID registerQuery(QueryData query_data, bool has_stable_hash = false);
+	QueryID registerQuery(QueryData query_data);
 
 	/**
 	 * @brief Provides query id of "outside world" query.

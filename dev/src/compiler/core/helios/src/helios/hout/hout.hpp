@@ -11,9 +11,9 @@
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <string_id/string_id.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 
 #include <memory>
 #include <variant>

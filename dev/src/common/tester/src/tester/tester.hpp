@@ -167,17 +167,17 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                       \
-	int main(int argc, const char* const* argv) {                           \
-		init::InitObject _;                                                 \
-		auto             config = tester::getTestConfig(test_path);         \
-                                                                            \
-		TESTER_CLASS test(std::move(config));                               \
-                                                                            \
-		std::vector<std::string> tests_to_run;                              \
-		for (int i = 1; i < argc; i++) { tests_to_run.push_back(argv[i]); } \
-		test.filterTests(tests_to_run);                                     \
-		if (!test.run()) return 1;                                          \
+#define TESTER_COMMON_MAIN(test_path)                                          \
+	int main(int argc, const char* const* argv) {                              \
+		init::InitObject _;                                                    \
+		auto             config = tester::getTestConfig(test_path);            \
+                                                                               \
+		TESTER_CLASS test(std::move(config));                                  \
+                                                                               \
+		std::vector<std::string> tests_to_run;                                 \
+		for (int i = 1; i < argc; i++) { tests_to_run.emplace_back(argv[i]); } \
+		test.filterTests(tests_to_run);                                        \
+		if (!test.run()) return 1;                                             \
 	}
 
 }

@@ -1,11 +1,11 @@
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <string_id/string_id.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -364,11 +364,11 @@ namespace compiler::backend_vm {
 			case lir::Operation::IntegerMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
