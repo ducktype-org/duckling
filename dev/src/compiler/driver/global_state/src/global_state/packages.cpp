@@ -1,9 +1,5 @@
 #include "packages.hpp"
 
-#include <string_id/string_id.hpp>
-
-#include <string_view>
-
 namespace global_state {
 
 	namespace {
@@ -20,13 +16,13 @@ namespace global_state {
 	}
 
 	namespace setters {
-		void addPackage(std::string_view name, const fs::FilePath& path) {
-			packages.push_back({ base::StrID(name.data()), path });
+		void addPackage(compiler::frontend::ModuleID root_module) {
+			packages.push_back({ root_module });
 		}
 
-		void addMainPackage(std::string_view name, const fs::FilePath& path) {
+		void addMainPackage(compiler::frontend::ModuleID root_module) {
 			CORE_ASSERT(!main_package_set, "Main package has already been added!");
-			packages.insert(packages.begin(), { base::StrID(name.data()), path });
+			packages.insert(packages.begin(), { root_module });
 			main_package_set = true;
 		}
 	}

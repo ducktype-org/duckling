@@ -4,5 +4,5 @@ add_library(GlobalState
 	src/global_state/packages.cpp
 )
 
-make_module(GlobalState USES Artifacts)
+make_module(GlobalState USES Artifacts ModuleTree)
 
