@@ -10,8 +10,11 @@ class RecordClass {
     b: i64 = 2;
 }
 
+var countdown: i64 = 0;
+
 fun getRecordClass() -> RecordClass = {
-    builtin_output_i64(-1);
+    builtin_output_i64(countdown);
+    countdown = countdown - i64(1);
     return RecordClass();
 }
 

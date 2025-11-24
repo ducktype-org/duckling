@@ -12,4 +12,4 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "-1\n11\n1\n2\n13\n-1\n21\n1\n2\n23\n11\n1\n32\n13\n"
+          String: "0\n11\n1\n2\n13\n-1\n21\n1\n2\n23\n11\n1\n32\n13\n"
