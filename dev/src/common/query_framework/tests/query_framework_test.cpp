@@ -238,10 +238,10 @@ struct ConstructToViaCRef {
 	ConstructToViaCRef(CRef<ConstructFrom> from): v(from) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructFromCRefCacheTest, u64, ConstructToViaCRef);
+DECLARE_QUERY(ConstructFromCRefCacheTest, query::U64Key, ConstructToViaCRef, ({}));
 
 struct IMPLEMENT_QUERY(ConstructFromCRefCacheTest, ConstructFrom) {
-	static auto provide(Context&, QKey key) -> PResult { return { key }; }
+	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
 
 	QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 };
@@ -627,15 +627,15 @@ private:
 	void testConstructFromCRefCache() {
 		ConstructToViaCRef::construct_count = 0;
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<ConstructFromCRefCacheTest>(10);
+			auto res1 = ctx.query<ConstructFromCRefCacheTest>({ 10 });
 			ASSERT_TRUE(res1.v->v == 10);
 			ASSERT_TRUE(ConstructToViaCRef::construct_count == 1);
 
-			auto res2 = ctx.query<ConstructFromCRefCacheTest>(10);
+			auto res2 = ctx.query<ConstructFromCRefCacheTest>({ 10 });
 			ASSERT_TRUE(res2.v->v == 10);
 			ASSERT_TRUE(ConstructToViaCRef::construct_count == 2);
 
-			auto res3 = ctx.query<ConstructFromCRefCacheTest>(20);
+			auto res3 = ctx.query<ConstructFromCRefCacheTest>({ 20 });
 			ASSERT_TRUE(res3.v->v == 20);
 			ASSERT_TRUE(ConstructToViaCRef::construct_count == 3);
 		});
