@@ -109,9 +109,11 @@ class CppCodeGenerator(CodeGenerator):
         return ScopeData()
     
     def print(self, scope: ScopeData):
-        self.indenter.add_fragment("print(")
+        # self.indenter.add_fragment("print(")
+        self.indenter.add_fragment("std::cout << ")
         self.logic_generator.generate_expression(scope, PROB)
-        self.indenter.add_fragment(");\n")
+        self.indenter.add_fragment(";\n")
+        # self.indenter.add_fragment(");\n")
         self.indenter.flush_fragment()
         
     @contextmanager
