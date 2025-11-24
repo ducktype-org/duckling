@@ -159,7 +159,7 @@ namespace query::internal {
 		// NodeID with unstable hash might have diferent ID and graph in previous graph
 		// So merging from such NodeID is not allowed
 		CORE_ASSERT(
-			start_node.q_id.registered() && start_node.q_id.hasStableHash(),
+			start_node.q_id.registered() && start_node.q_id.getData().usesStableHashing(),
 			"Cannot merge previous graph starting from QueryID that does not have stable hash"
 		);
 
@@ -184,12 +184,12 @@ namespace query::internal {
 		// Helper to get the corresponding NodeID in current graph for a NodeID in previous graph
 		// It handles QueryIDs mapping for nodes with unstable hashes
 		auto get_node_id_mapping = [&](NodeID node) -> NodeID {
-			if (node.q_id.registered() && node.q_id.hasStableHash())
+			if (node.q_id.registered() && node.q_id.getData().usesStableHashing())
 				return node;
 			else if (old_to_new.contains(node.q_id))
 				return { old_to_new.at(node.q_id), node.hash };
 			QueryData new_data(
-				QueryType::Dummy, "Dummed Query for unstable hash merge from prev graph"
+				QueryKind::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
 			);
 			QueryID new_qid = registerQuery(new_data);
 			old_to_new.insert_or_assign(node.q_id, new_qid);

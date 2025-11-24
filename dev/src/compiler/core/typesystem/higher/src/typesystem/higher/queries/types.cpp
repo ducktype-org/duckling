@@ -172,14 +172,16 @@ namespace compiler::tsh {
 				{ 128, Impl{ 128 } },  // Quad precision
 			};
 
-			if (!cache.contains(size)) {
+			if (!cache.contains(size.value)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size));
+				context.log(
+					makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size.value)
+				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}
 
-			return &cache.at(size);
+			return &cache.at(size.value);
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -192,7 +194,7 @@ namespace compiler::tsh {
 			static auto raw_pointer_impl
 				= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
 				              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-			return &raw_pointer_impl.at(key);
+			return &raw_pointer_impl.at(key.value);
 		}
 
 		QUERY_AUTO_NO_CACHE
