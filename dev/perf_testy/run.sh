@@ -9,6 +9,10 @@ duck_c_path=../build_rel/bin/duckc
 # time_format="%E real, %U user, %S sys"
 time_format="%E"
 
+# variable to collect data in csv format
+csv_collect=""
+csv_collect="Test Case,Language,Compilation Time (ms)\n"
+
 # iterate all folders in cases and measure compiler performance:
 for case_dir in ./cases/*/; do
     echo "Running performance test for case: $case_dir"
@@ -22,6 +26,8 @@ for case_dir in ./cases/*/; do
     duck_binary="$binary_output_dir/duck_binary"
     cpp_binary="$binary_output_dir/cpp_binary"
 
+    
+
 
     # measure time taken to compile Duck code:
     ts=$(date +%s%N)  
@@ -34,6 +40,7 @@ for case_dir in ./cases/*/; do
     elapsed_ms=$((elapsed / 1000000))
     echo "Duck compilation time: $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
 
+    csv_collect+="$(basename $case_dir),duck,$elapsed_ms\n"
 
     # measure time taken to compile C++ code:
     ts=$(date +%s%N)  
@@ -44,9 +51,15 @@ for case_dir in ./cases/*/; do
     elapsed_ms=$((elapsed / 1000000))
     echo "C++ compilation time:  $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
 
+    csv_collect+="$(basename $case_dir),cpp,$elapsed_ms\n"
+
 
     echo "-----------------------------------"
 done
+
+
+echo -e "\nPerformance Test Results (in CSV format):"
+echo -e "$csv_collect"
 
 
 
