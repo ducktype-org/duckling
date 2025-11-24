@@ -65,7 +65,7 @@ namespace query::internal {
 			// Conditions:
 			//  - QueryImplType provides loadFromDisc(QKey) -> PResult
 			//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
-			if constexpr (QueryImplType::IS_CACHED_ON_DISK) {
+			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
 					QUERY_DEBUG_LOG(
@@ -131,7 +131,7 @@ namespace query::internal {
 
 		// Some forwards used to simplify the code:
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
-		constexpr static bool IS_CACHED_ON_DISK
+		constexpr static bool CAN_BE_LOADED_FROM_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
 
 
@@ -151,9 +151,11 @@ namespace query::internal {
 		 */
 	};
 
-	/** Checks if query implementation provides loadFromDisc with either exact PResult signature
-	or Optional<PResult> signature (used to signal absence of on-disk artifact).
-	*/
+	/**
+	 * Checks if query implementation provides loadFromDisc with correct signature.
+	 * @note loadFromDisc should return Optional<PResult>. Empty optional is used to signal absence
+	 * of on-disk artifact.
+	 */
 	template<typename Impl>
 	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
 		{ Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
