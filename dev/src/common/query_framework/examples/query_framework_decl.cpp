@@ -9,8 +9,8 @@
 /**
  * PResult type for MyQuery
  */
-struct PResult {
-	uint64_t v;
+struct PResult final {
+	u64 v;
 };
 
 struct IMPLEMENT_QUERY(MyQuery, PResult) {
@@ -41,7 +41,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
-		[[maybe_unused]] auto result = context.query<Query2>(123);
+		[[maybe_unused]] auto result = context.query<Query2>({ 123 });
 
 		// Normally we would do it because we need
 		// it in some computation.
@@ -77,7 +77,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(MyQuery);
 
 struct IMPLEMENT_QUERY(Query2, std::string) {
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
-		return std::to_string(key);
+		return std::to_string(key.v);
 	}
 
 	static auto load([[maybe_unused]] KHash key_hash) -> LoadResult { return {}; }

@@ -11,9 +11,9 @@
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <string_id/string_id.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 
 #include <memory>
 #include <variant>
@@ -150,7 +150,7 @@ namespace compiler::helios {
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 
 	/**
@@ -170,6 +170,6 @@ namespace compiler::helios {
 		std::vector<HOUTFunction> functions;
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 }

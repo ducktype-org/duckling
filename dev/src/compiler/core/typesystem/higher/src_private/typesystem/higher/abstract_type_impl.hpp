@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief The AbstractTypeImpl class and its subclasses are a heavy type implementation
 	 * hierarchy.
@@ -128,7 +128,7 @@ namespace tsh {
 
 		[[nodiscard]]
 		AbstractType toAbstractType() const {
-			return this;
+			return CRef(this);
 		}
 
 		virtual ~AbstractTypeImpl() = default;

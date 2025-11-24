@@ -851,7 +851,7 @@ namespace compiler::backend_llvm {
 			}
 			default:
 				std::cerr << "unknown lir operation (skip): "
-						  << base::enumToStr(lir_instruction.operation).strView() << "\n";
+						  << base::enumToStr(lir_instruction.operation) << "\n";
 				// throw base::NotYetImplemented("some lir operation in llvm backend");
 			}
 		}

@@ -7,7 +7,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
-MAKE_STRINGIFYABLE_ENUM(tsh, u32, Kind
+MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	/**
 		@brief Enum which identifies the features of a type described in the Type System.
 	*//**

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief Enum representing mutability used in the type system.
 	 */

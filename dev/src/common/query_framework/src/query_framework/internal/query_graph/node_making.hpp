@@ -14,10 +14,17 @@
 namespace query::internal {
 
 	/**
-	 * @brief Helper function for construing NodeID.
+	 * @brief Helper function for construing NodeID from the query key.
 	 */
-	template<typename KeyType>
-	internal::NodeID makeNodeID(QueryID id, const KeyType& key) {
-		return NodeID(id, { .val = perfectHashKey(key) });
+	template<typename QueryInteface>
+	internal::NodeID makeNodeID(const typename QueryInteface::QKey& key) {
+		static_assert(
+			QueryInteface::QUERY_INTERFACE_TAG, "makeNodeID can be used only with query interfaces"
+		);
+
+		return NodeID(
+			QueryInteface::getID(),
+			KeyHash{ .val = perfectHashKey<QueryInteface::QUERY_DATA.usesStableHashing()>(key) }
+		);
 	}
 }

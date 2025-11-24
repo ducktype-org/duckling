@@ -15,7 +15,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	class UnitAbstractTypeImpl;
 	class VoidAbstractTypeImpl;
 	class ByteAbstractTypeImpl;

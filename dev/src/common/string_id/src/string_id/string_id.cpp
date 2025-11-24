@@ -1,7 +1,8 @@
+#include "string_id.hpp"
+
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/str/string_id.hpp>
 
 #include <cstring>
 #include <iostream>

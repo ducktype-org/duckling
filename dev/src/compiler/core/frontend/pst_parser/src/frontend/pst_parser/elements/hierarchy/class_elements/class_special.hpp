@@ -33,8 +33,8 @@ namespace pst {
 			base::StrID res;
 			VARIANT_VISIT(
 				kind,
-				VISIT_CASE(Identifier, ident, res = base::StrID(ident))
-					VISIT_CASE(Keyword, key, res = keywordToStr(key))
+				VISIT_CASE(Identifier, ident, res = base::StrID(ident)),
+				VISIT_CASE(Keyword, key, res = keywordToStr(key))
 			);
 			return res;
 		}

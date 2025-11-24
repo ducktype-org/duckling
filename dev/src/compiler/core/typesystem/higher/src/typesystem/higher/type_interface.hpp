@@ -13,13 +13,13 @@
 #include "symbol_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/str/string_id.hpp>
 
 #include <ranges>
 
-namespace tsh {
+namespace compiler::tsh {
 	enum class ClassMemberVisibility { Public, Protected, Private };
 
 	/**

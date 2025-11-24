@@ -15,6 +15,7 @@
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <string_id/string_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -22,7 +23,6 @@
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -49,7 +49,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -111,7 +111,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -178,9 +178,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
-		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-	) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -254,12 +252,7 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
-					)
-			                          .c_str()),
+					.name        = using_stmt->getDeclSymbolName().value(),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -397,7 +390,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -413,7 +406,7 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {

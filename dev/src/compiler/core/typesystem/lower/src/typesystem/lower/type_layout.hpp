@@ -2,6 +2,7 @@
 
 #include "size_constants.hpp"
 
+#include <string_id/string_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -18,7 +19,7 @@
  * @brief The namespace of all definitions of the Lower Type System.
  * Short for "Type System: Low(er)".
  */
-namespace tsl {
+namespace compiler::tsl {
 	/**
 	 * @brief The abstract base class of a Type Layout object.
 	 */

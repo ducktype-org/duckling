@@ -33,8 +33,7 @@ Query Framework is responsible for following things:
 * **Query declaration and implementation base** -- Query Framework provides tools to easily declare and implement queries in the "one-correct-way".
 * **Dependency tracking and cycle detection** -- Query Framework automatically tracks dependencies in the back and will report when query calls will create a cycle.
 * **Error reporting** -- Query Framework formalize how errors should be reported. It does not however implement an error/diagnostic class itself.
-
-In the future Query Framework will also implement big part of incremental compilation.
+* **Incremental compilation** -- Query Framework is a backbone of the incremental compilation.
 
 
 Side-effect Provide Load Store Model {#s-psl-model}
@@ -81,10 +80,11 @@ Declaring the query is very simple and requires the programmer to provide three 
 - Query Name -- just a name of the declaration that will represent the query in the program
 - Query Key Type (`QKey`) -- a type of value that the query takes as a parameter
 - Query Result Type (`QResult`) -- a type of value that the query outputs
+- Set of query tags (see query tags section bellow) 
 
 @attention 
 Query keys need to have two critical functionalities: they need to be copyable,
-and they need to implement `customPerfectHash` (see: @ref perfect_hash.hpp) in a way that is per-query-collision free.
+and they need to implement a perfect hash (see: @ref perfect_hash.hpp) in a way that is per-query-collision free.
 See: @ref qkey-requirements for more details.
 
 @include query_framework_decl.hpp
@@ -318,6 +318,28 @@ Important:
     As of right now when the Query Framework detects cycles, it just throws a `panic`.
     In future versions, it will report a critical compilation error.
     Even later, proper handling of cyclic queries will be added.
+
+### Query Tags
+
+Query framework defines a set of tags that can customize the query behavior or link some additional properties to it. Tags are set in a query declaration like so:
+
+~~~~~cpp
+    :caption: Query tags example
+
+    DECLARE_QUERY(
+        Name,
+        Key,
+        Result,
+        ({
+            /* non-default tags go here: */
+            .tag1 = value,
+            .tag2 = value,
+            // ...
+        })
+    )
+~~~~~
+
+For meaning and default values of each tag refer to `query_data.hpp`.
 
 Running queries from outside the query framework
 ================================================

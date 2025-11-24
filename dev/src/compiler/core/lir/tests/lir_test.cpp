@@ -18,7 +18,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
 using namespace compiler;
@@ -141,16 +141,16 @@ private:
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
@@ -262,8 +262,8 @@ private:
 					found_a = true;
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
