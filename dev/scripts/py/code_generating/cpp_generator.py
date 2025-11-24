@@ -105,12 +105,13 @@ class CppCodeGenerator(CodeGenerator):
     # Special elements
     def preambule(self) -> ScopeData:
         self.indenter.add_text("#include <iostream>\n\n")
+        self.indenter.add_text("void print(long n) { std::cout << n; }\n")
         return ScopeData()
     
     def print(self, scope: ScopeData):
-        self.indenter.add_fragment("std::cout << ")
+        self.indenter.add_fragment("print(")
         self.logic_generator.generate_expression(scope, PROB)
-        self.indenter.add_fragment(";\n")
+        self.indenter.add_fragment(");\n")
         self.indenter.flush_fragment()
         
     @contextmanager

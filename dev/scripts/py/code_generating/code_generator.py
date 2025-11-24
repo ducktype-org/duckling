@@ -188,7 +188,7 @@ class LogicGenerator:
             else:
                 action = random.choices(
                     ['symbol', 'literal', 'function_call'],
-                    weights=[40, 30, 30*int(allow_function_calls)],
+                    weights=[70, 20, 10*int(allow_function_calls)],
                     k=1
                 )[0]
                 if action == 'symbol' and len(scope.vars) > 0:
