@@ -22,7 +22,7 @@ namespace compiler::driver {
 	 * It compiler every module into the .o/.dbc files (via queries),
 	 * and also for LLVM backend it links them into a single binary.
 	 */
-	void compilerEntirePackage(
+	void compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
