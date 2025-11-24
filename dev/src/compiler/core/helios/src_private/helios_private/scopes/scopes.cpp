@@ -23,6 +23,7 @@
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/config/build_type.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
@@ -217,7 +218,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
-		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+		IF_BUILD_TYPE_DEV(
+			inline static base::HashMap<pst::PstID COMMA ScopeID> parent_map;
+		)
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
@@ -239,18 +242,20 @@ namespace compiler::helios {
 								 );
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
-
-			// simple parent sanity check:
-			// it is technically not needed anymore, but it left as an additional
-			// layer of bug detection.
-			if (parent_map.contains(element->getID())) {
-				CORE_ASSERT(
-					parent_map.at(element->getID()) == parent,
-					"Parent mismatch in QueryPrimaryCodeScopeFor"
-				);
-			} else {
-				parent_map.put(element->getID(), parent);
-			}
+			
+			IF_BUILD_TYPE_DEV(
+				// simple parent sanity check:
+				// it is technically not needed anymore, but it left as an additional
+				// layer of bug detection.
+				if (parent_map.contains(element->getID())) {
+					CORE_ASSERT(
+						parent_map.at(element->getID()) == parent,
+						"Parent mismatch in QueryPrimaryCodeScopeFor"
+					);
+				} else {
+					parent_map.put(element->getID(), parent);
+				}
+			)
 
 			return putInScopeTable(ScopeData{
 				.parent              = parent,
