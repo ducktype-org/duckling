@@ -20,10 +20,10 @@ namespace system_command {
 			out += arg;
 			out += " ";
 		}
-		if (echo) std::cerr << "[CMD] " << out << "\n";
+		// if (echo) std::cerr << "[CMD] " << out << "\n";
 
-		std::cerr.flush();
-		std::cout.flush();
+		// std::cerr.flush();
+		// std::cout.flush();
 
 		// Only on POSIX systems
 		i32 exit_code = std::system(out.c_str());  // NOLINT(concurrency-mt-unsafe)
