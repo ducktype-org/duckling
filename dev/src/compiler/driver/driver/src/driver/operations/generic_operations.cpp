@@ -146,14 +146,12 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(
+	void compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = frontend::createModuleTree(
-			package_info.package_path, package_info.package_name.strView()
-		);
+		auto root = package_info.root_module;
 
 		std::vector<artifacts::FileArtifact> objects;
 

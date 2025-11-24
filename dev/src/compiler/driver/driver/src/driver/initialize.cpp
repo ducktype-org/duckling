@@ -1,6 +1,7 @@
 #include "initialize.hpp"
 
 #include <driver_private/collect_input.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
@@ -51,10 +52,11 @@ namespace compiler::driver {
 		}
 
 		void handlePackageOptions(const options_types::PackageInfo& package_info) {
-			// Add package name and path to global state
-			global_state::setters::addPackage(
-				package_info.package_name, fs::FilePath(package_info.package_path)
+			// Create the module tree for the main package and add it to global state
+			auto root_module = compiler::frontend::createModuleTree(
+				package_info.package_path, package_info.package_name
 			);
+			global_state::setters::addMainPackage(root_module);
 		}
 
 		/**

@@ -1,10 +1,7 @@
 #pragma once
 
-#include <string_id/string_id.hpp>
+#include <frontend/module_tree/module_id.hpp>
 
-#include <filesystem/file.hpp>
-
-#include <string_view>
 #include <vector>
 
 namespace global_state {
@@ -13,8 +10,7 @@ namespace global_state {
 	 * Global state for managing package information.
 	 */
 	struct PackageInfo {
-		base::StrID  package_name;
-		fs::FilePath package_path;
+		compiler::frontend::ModuleID root_module;
 	};
 
 	/**
@@ -32,9 +28,9 @@ namespace global_state {
 		/**
 		 * Adds a package to the global state.
 		 */
-		void addPackage(std::string_view name, const fs::FilePath& path);
+		void addPackage(compiler::frontend::ModuleID root_module);
 
 		/** Adds the main package to the global state. */
-		void addMainPackage(std::string_view name, const fs::FilePath& path);
+		void addMainPackage(compiler::frontend::ModuleID root_module);
 	}
 }
