@@ -25,6 +25,9 @@ namespace compiler::driver {
 		auto module_ref = getModuleRef(module_id);
 
 		auto collect_from_pst = [&](auto& pst_ref) {
+
+			// std::cerr << " > collect_from_pst\n";
+			
 			auto root = pst_ref->getRootElement();
 			if (auto maybe = root.illegalAccess()) {
 				auto el = maybe.value();

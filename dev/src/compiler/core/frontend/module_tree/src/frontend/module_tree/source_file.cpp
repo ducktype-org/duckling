@@ -72,6 +72,11 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
+		// std::cerr << ">> GET PST FOR FILE: " << this->file.getFilePath().string() << "\n";
+		// std::cerr << "   parse_tree has value: " << (parse_tree.has_value() ? "yes" : "no") << "\n";
+		// std::cerr << "   component_hash has value: "
+		//           << (component_hash.has_value() ? "yes" : "no") << "\n";
+
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
