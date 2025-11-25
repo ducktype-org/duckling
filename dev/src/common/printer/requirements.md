@@ -46,7 +46,7 @@
     - it skips the message if the number of printed messages of that type exceeds the corresponding value.
     - the two cases above result in the printing of an additional short message, not counted towards the limits, explaining what happened.
     
-    Additionally, it has a `clear` function, which removes all messages held by the console.
+    Additionally, it has a `clear` method, which removes all messages held by the console.
 
 11. In the future: type `MessageTemplate`.
 
