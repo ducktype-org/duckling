@@ -1,7 +1,7 @@
 
 class FirstClass {
     a: i64 = 0;
-    b: f32 = 0;
+    b: f32 = 0.0;
 }
 
 class ClassWithMember {
