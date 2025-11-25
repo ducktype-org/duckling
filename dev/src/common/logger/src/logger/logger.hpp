@@ -3,6 +3,9 @@
 #include "configuration/configuration.hpp" // IWYU pragma: keep
 #include <string_view>
 
+#include <base/str/str_utils.hpp>  // IWYU pragma: export
+
+
 namespace logger {
     /**
      * Categories of logs.
@@ -34,22 +37,31 @@ namespace logger {
 
 /**
  * Macro to log user messages.
+ * Message is evaluated only if user logs and logs of the given category are enabled.
+ *
  * Usage: CORE_USER_LOG(category, message)
  * Example: CORE_USER_LOG(logger::LogCategories::General, "This is a user log message.");
+ *
+ * @note Category should be passed without the ::logger::LogCategories:: prefix.
+ * @note message is a variadic list of arguments that will be concatenated into a single string by base::strConcat.
  */
-#define CORE_USER_LOG(category, message) \
-    if (logger::enable_user_logs && logger::internal::isCategoryEnabled(category)) { \
-        logger::internal::logMessage(message); \
+#define CORE_USER_LOG(category, ...) \
+    if (logger::enable_user_logs && logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
+        logger::internal::logMessage(base::strConcat(__VA_ARGS__)); \
     }
 
 
 /**
  * Macro to log messages usefull mostly to developers and/or debug.
+ * Message is evaluated only if dev logs and logs of the given category are enabled.
+ * 
  * Usage: CORE_DEV_LOG(category, message)
  * Example: CORE_DEV_LOG(logger::LogCategories::Lexer, "This is a dev log message.");
+ *
+ * @note Category should be passed without the ::logger::LogCategories:: prefix.
+ * @note message is a variadic list of arguments that will be concatenated into a single string by base::strConcat.
  */
-#define CORE_DEV_LOG(category, message) \
-    if (logger::enable_dev_logs && logger::internal::isCategoryEnabled(category)) { \
-        logger::internal::logMessage(message); \
+#define CORE_DEV_LOG(category, ...) \
+    if (logger::enable_dev_logs && logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
+        logger::internal::logMessage(base::strConcat(__VA_ARGS__)); \
     }
-
