@@ -18,6 +18,7 @@
 #include <base/collections/optional.hpp>
 
 #include <hashing/component_hash.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -44,6 +45,21 @@ namespace compiler::driver {
 	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
+
+		/**
+		 * Helper function to get full module name for logging purposes.
+		 */
+		static std::string getModuleFullName(frontend::ModuleID module_id) {
+			std::string out;
+			if (getModuleRef(module_id)->getParentModule().has_value()) {
+				out += getModuleFullName(
+					getModuleRef(module_id)->getParentModule().value()->getModuleID()
+				);
+				out += ".";
+			}
+			out += getModuleRef(module_id)->getName().strView();
+			return out;
+		}
 
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {

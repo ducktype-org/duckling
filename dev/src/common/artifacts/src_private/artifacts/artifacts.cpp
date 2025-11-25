@@ -96,7 +96,12 @@ void artifacts::ArtifactCollection::loadData() {
 
 void artifacts::ArtifactCollection::flushDown() {
 	auto artc_file_path = getArtcFile();
-	CORE_DEV_LOG(Artifacts, "Flushing ArtifactCollection at: ", std::filesystem::absolute(artc_file_path), "\n");
+	CORE_DEV_LOG(
+		Artifacts,
+		"Flushing ArtifactCollection at: ",
+		std::filesystem::absolute(artc_file_path),
+		"\n"
+	);
 
 	std::ofstream file(artc_file_path.getPath());
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;

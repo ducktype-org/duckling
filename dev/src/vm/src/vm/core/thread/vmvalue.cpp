@@ -1,7 +1,8 @@
 #include "vmvalue.hpp"
 
-#include <vm/core/process/vmprocess.hpp>
 #include <logger/logger.hpp>
+
+#include <vm/core/process/vmprocess.hpp>
 
 #include <ostream>
 

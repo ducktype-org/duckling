@@ -317,15 +317,11 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("--dev-logs")
-	                     .addShortDesc(
-							 "Enable developer logs."
-						 )
+	                     .addShortDesc("Enable developer logs.")
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("--dev-logs")
-	                     .addShortDesc(
-							 "Enable developer logs."
-						 )
+	                     .addShortDesc("Enable developer logs.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);

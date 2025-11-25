@@ -42,7 +42,7 @@ namespace query::internal {
 		typename QueryImplType::QResult {
 		using QueryIntType = QueryImplType::QueryType;
 
-		CORE_DEV_LOG(Query,"[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
+		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
 
 		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
 
@@ -52,7 +52,7 @@ namespace query::internal {
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			// @FUTURE: Add ACD check here...
-			CORE_DEV_LOG(Query,"[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
+			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
 
 			return std::move(v.value().data);
 		} else {
@@ -69,8 +69,11 @@ namespace query::internal {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
-					CORE_DEV_LOG(Query,
-						"[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Loading from disk.\n"
+					CORE_DEV_LOG(
+						Query,
+						"[QUERY \"",
+						QueryIntType::QUERY_DATA.name,
+						"\"]: Loading from disk.\n"
 					);
 
 					auto loaded = QueryImplType::loadFromDisc(key);
@@ -95,10 +98,10 @@ namespace query::internal {
 			// prolog:
 			ContextAccess::getState()->setEntry(node_id, from);
 
-			CORE_DEV_LOG(Query,"[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
+			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
 			// epilog:
-			defer(CORE_DEV_LOG(Query,"[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
+			defer(CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 

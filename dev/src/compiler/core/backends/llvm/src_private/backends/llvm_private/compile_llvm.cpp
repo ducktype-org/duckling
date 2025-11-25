@@ -15,10 +15,10 @@ LLVM_INCLUDE_END()
 #include "compile_llvm.hpp"
 #include "module_impl.hpp"
 
-#include <logger/logger.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
+
+#include <logger/logger.hpp>
 
 namespace compiler::backend_llvm {
 	void emitCode(
