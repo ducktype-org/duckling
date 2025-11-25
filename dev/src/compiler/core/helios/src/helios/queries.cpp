@@ -285,13 +285,27 @@ namespace compiler::helios {
 							);
 					}
 				);
+				auto init_expr_coerced_opt
+					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) {
+						  const auto init_expr_type = expr->expression_type.getSymbolType();
+						  const auto field_type     = field.getType(ctx);
+						  const auto coercion
+							  = canCoerce(ctx, init_expr_type, field_type)
+					                .expect(base::strConcat(
+										"Cannot coerce default field value of type ",
+										init_expr_type.toString(),
+										" to the field's expected type ",
+										field_type.toString()
+									));
+						  return coercion.coerce(ctx, std::move(expr));
+					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
 				parameters.emplace_back(
 					name(argument_symbol),
 					field.getType(ctx),
-					std::move(init_expr_opt),
+					std::move(init_expr_coerced_opt),
 					argument_symbol
 				);
 				argument_index++;

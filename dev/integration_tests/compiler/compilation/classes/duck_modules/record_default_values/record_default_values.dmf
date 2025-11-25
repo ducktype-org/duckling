@@ -32,15 +32,15 @@ fun main() -> i64 = {
     builtin_output_i64(big1.y.b); # 2
     builtin_output_i64(big1.z); # 13
 
-    var big2 = BiggerRecordClass(z = 23, x = 21);
+    var big2 = BiggerRecordClass(z = 23, x = i32(21));
     builtin_output_i64(big2.x); # 21
     builtin_output_i64(big2.y.a); # 1
     builtin_output_i64(big2.y.b); # 2
     builtin_output_i64(big2.z); # 23
 
-    var big3 = BiggerRecordClass(y = RecordClass(b = 32));
+    var big3 = BiggerRecordClass(y = RecordClass(b = i16(32)));
     builtin_output_i64(big3.x); # 11
-    builtin_output_i64(big3.y.a); # 31
+    builtin_output_i64(big3.y.a); # 1
     builtin_output_i64(big3.y.b); # 32
     builtin_output_i64(big3.z); # 13
 
