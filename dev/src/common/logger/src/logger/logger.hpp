@@ -14,15 +14,25 @@ namespace logger {
 	 * @note General category is enabled by default, all other categories are disabled by default.
 	 */
 	enum class LogCategories {
-		General,    ///< General logs, without specific category.
+		/**
+		 * General logs, without specific category.
+		 * Can be also used for user logs that we expect to be always enabled. 
+		 */
+		General,
 
+		// Common modules:
 		Lexer,      ///< Logs related to lexical analysis.
 		Printer,    ///< Logs related to printing operations.
 		Artifacts,  ///< Logs related to artifacts.
 		Query,      ///< Logs related to query framework.
-		Compiler,   ///< Logs related to compiler pipeline.
-		Backend,    ///< Logs related to the backend components.
 		Command,    ///< Logs related to system commands.
+		
+		// Compiler:
+		Compiler,   ///< Logs related to compiler pipeline.	
+		Backend,    ///< Logs related to the backend components.
+		Linker,     ///< Logs related to the linker component.
+
+		// DVM:
 		DVM,        ///< Logs related to the DVM component.
 	};
 
@@ -46,10 +56,10 @@ namespace logger {
  * Message is evaluated only if user logs and logs of the given category are enabled.
  *
  * Usage: CORE_USER_LOG(category, message)
- * Example: CORE_USER_LOG(logger::LogCategories::General, "This is a user log message.");
+ * Example: CORE_USER_LOG(General, "This is a user log message.");
  *
- * @note Category should be passed without the ::logger::LogCategories:: prefix.
- * @note message is a variadic list of arguments that will be concatenated into a single string by
+ * @note Category should be one of the enumerators of logger::LogCategories enum.
+ * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
 #define CORE_USER_LOG(category, ...)                                                 \
@@ -64,10 +74,10 @@ namespace logger {
  * Message is evaluated only if dev logs and logs of the given category are enabled.
  *
  * Usage: CORE_DEV_LOG(category, message)
- * Example: CORE_DEV_LOG(logger::LogCategories::Lexer, "This is a dev log message.");
+ * Example: CORE_DEV_LOG(Lexer, "This is a dev log message.");
  *
- * @note Category should be passed without the ::logger::LogCategories:: prefix.
- * @note message is a variadic list of arguments that will be concatenated into a single string by
+ * @note Category should be one of the enumerators of logger::LogCategories enum.
+ * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
 #define CORE_DEV_LOG(category, ...)                                                  \
