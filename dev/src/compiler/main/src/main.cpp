@@ -87,7 +87,11 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	const clah::ParsingResult& parsing_result
 ) {
+	// @TODO PR: change it
 	return compiler::driver::options_types::DebugOptions{
+		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("--dev-logs")
+		                        .copyValueOr(std::vector<std::string>{}),
+
 		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
 		.logger_cerr   = parsing_result.isFlag("logger-cerr"),
 		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
@@ -315,13 +319,9 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("--dev-logs")
-	                     .addShortDesc("Enable developer logs.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("--dev-logs")
-	                     .addShortDesc("Enable developer logs.")
+				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
+	                     .addLongName("dev-logs") // @TODO PR: move to global options
+	                     .addShortDesc("Enable developer logs for given categories.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);

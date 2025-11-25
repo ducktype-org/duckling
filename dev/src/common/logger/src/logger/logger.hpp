@@ -17,6 +17,7 @@ namespace logger {
 		/**
 		 * General logs, without specific category.
 		 * Can be also used for user logs that we expect to be always enabled.
+		 * @note Is enabled by default.
 		 */
 		General,
 

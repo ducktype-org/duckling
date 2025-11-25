@@ -13,6 +13,7 @@
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
 #include <query_framework/external/api.hpp>
+#include <logger/logger.hpp>
 
 namespace compiler::driver {
 
@@ -23,6 +24,35 @@ namespace compiler::driver {
 			// @TODO PR:
 			// lexer::Lexer::setTokenMessages(debug_options.lexer_cerr);
 			// dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
+
+			// bool at_least_one_category_enabled = false;
+			// @TODO PR: make it better XD
+			logger::enable_dev_logs = true;
+
+			for (const auto& category_name : debug_options.dev_log_categories) {
+				if (category_name == "General")
+					logger::enableCategory(logger::LogCategories::General);
+				else if (category_name == "Lexer")
+					logger::enableCategory(logger::LogCategories::Lexer);
+				else if (category_name == "Printer")
+					logger::enableCategory(logger::LogCategories::Printer);
+				else if (category_name == "Artifacts")
+					logger::enableCategory(logger::LogCategories::Artifacts);
+				else if (category_name == "Query")
+					logger::enableCategory(logger::LogCategories::Query);
+				else if (category_name == "Command")
+					logger::enableCategory(logger::LogCategories::Command);
+				else if (category_name == "Diagnostics")
+					logger::enableCategory(logger::LogCategories::Diagnostics);
+				else if (category_name == "Compiler")
+					logger::enableCategory(logger::LogCategories::Compiler);
+				else if (category_name == "Backend")
+					logger::enableCategory(logger::LogCategories::Backend);
+				else if (category_name == "Linker")
+					logger::enableCategory(logger::LogCategories::Linker);
+				else if (category_name == "DVM")
+					logger::enableCategory(logger::LogCategories::DVM);
+			}
 
 			global_state::getDynamicDebugOptions()->llvm_dump_ir  = debug_options.dump_llvm_ir;
 			global_state::getDynamicDebugOptions()->llvm_dump_asm = debug_options.dump_llvm_asm;

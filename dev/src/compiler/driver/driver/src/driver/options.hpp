@@ -54,6 +54,8 @@ namespace compiler::driver {
 		};
 
 		struct DebugOptions final {
+			std::vector<std::string> dev_log_categories;
+			
 			bool lexer_cerr    = false;
 			bool logger_cerr   = false;
 			bool dump_llvm_ir  = false;
