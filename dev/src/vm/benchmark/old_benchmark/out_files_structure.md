@@ -1,39 +1,39 @@
 # File Structure
 
-Kolejność języków:
+Languages order:
 
 * C++
 * C++ + Valgrind
 * C++ + gdb
 * Java + JIT
-* Java bez JIT
+* Java without JIT
 * NodeJS + JIT
-* NodeJS bez JIT
+* NodeJS without JIT
 * Python
 * RiftVM
 * RiftVM + debug
 
-Ogólna struktura pliku:
+General file structure:
 ~~~~~~~~~~
-Opis języka 1
-Opis języka 2
-Opis języka 3
+Description of first language
+Description of second language
+Description of third language
 ...
 ~~~~~~~~~~
 
 
-Struktura opisu języka:
+Structure of the description of the language:
 ~~~~~~~~~~
 Test case 1
 Test case 2
 Test case 3
 ~~~~~~~~~~
 
-Struktura test case:
+Structure of the test case:
 ~~~~~~~~~~
-Uruchomienie 1
-Uruchomienie 2
-Uruchomienie 3
+Run 1
+Run 2
+Run 3
 ...
 ~~~~~~~~~~
 

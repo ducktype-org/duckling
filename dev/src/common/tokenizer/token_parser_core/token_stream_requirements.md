@@ -1,21 +1,21 @@
 # Token Stream Requirements
 
-# class Token stream:
+# class TokenStream:
 
-* `where` - pozycja stream-a, aktualny token to `token_data.tokens[where]`. Innych rzeczy z `token_data` nie tykamy
-Stream idzie do przodu, czyli kolejne tokeny są na pozycjach `where+1`, `where+2, `...
+* `where` - the position of the stream; the current token is `token_data.tokens[where]`. We do not touch other things from `token_data`.
+The stream advances forward, meaning subsequent tokens are at positions `where+1`, `where+2`, ...
 
-* `TokenStream(TokenData&& token_data)` - prosty konstruktor
-* `Token& next();` - zwraca token na który aktualnie patrzy `where`, przesuwa `where` do przodu
-* `Token& peek(usize fwd = 0) const;` zwraca `fwd`-ty token w stream-ie
-* `void skip(usize n = 1);` - przesuwa stream - `n` do przodu
-* `TokenStreamState state() const;` - zwraca aktualny stan stream-u
-* `void restore(TokenStreamState state);` - przywraca dany stan stream-u 
+* `TokenStream(TokenData&& token_data)` - simple constructor.
+* `Token& next();` - returns the token currently pointed to by `where`, moves `where` forward.
+* `Token& peek(usize fwd = 0) const;` returns the `fwd`-th token in the stream.
+* `void skip(usize n = 1);` - advances the stream `n` positions forward.
+* `TokenStreamState state() const;` - returns the current state of the stream.
+* `void restore(TokenStreamState state);` - restores a given state of the stream.
 
-* isKeyword, asKeyword, isSpecial, asSpecial - forward metod z `peek(fwd)`
-* `bool isOperator(usize fwd = 0) const;` - sprawdza czy `peek(fwd).getType() == Token::Type::Operator`
-* `bool isOperator(base::StrID oper, usize fwd = 0) const;` - sprawdza czy `isOperator(fwd)` oraz`peek(fwd).isStr(oper)`
+* isKeyword, asKeyword, isSpecial, asSpecial - forwards methods from `peek(fwd)`.
+* `bool isOperator(usize fwd = 0) const;` - checks if `peek(fwd).getType() == Token::Type::Operator`.
+* `bool isOperator(base::StrID oper, usize fwd = 0) const;` - checks if `isOperator(fwd)` and `peek(fwd).isStr(oper)`.
 
-* `usize size() const;` - zwraca pozostałą liczbę token-ów w streamie
+* `usize size() const;` - returns the remaining number of tokens in the stream.
 
-Gdy cokolwiek patrzy poza zakres to powinien być zwracany `sentinel` (póki co nie istnieje metoda makeSentinel, ale będzie istnieć).
+When anything looks out of bounds, a `sentinel` should be returned (the `makeSentinel` method does not exist yet, but it will).
