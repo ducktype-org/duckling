@@ -4,8 +4,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
-
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -125,11 +124,11 @@ private:
 		// this also checks if llvm IR lib compile and link into the executable:
 
 		global_state::PackageInfo package_info{
-			.package_name = base::StrID(package_name.c_str()),
-			.package_path = fs::FilePath(path("modules/functions_4")),
+			.root_module
+			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name),
 		};
 
-		driver::compilerEntirePackage(
+		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::LLVM,
 			{ .external_static_libraries = {}, .link_c_standard_library = true }
@@ -141,8 +140,7 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		package_info.package_name = base::StrID((package_name + "_dvm").c_str());
-		driver::compilerEntirePackage(
+		driver::compileEntirePackage(
 			package_info,
 			driver::BackendType::DVM,
 			{ .external_static_libraries = {}, .link_c_standard_library = true }

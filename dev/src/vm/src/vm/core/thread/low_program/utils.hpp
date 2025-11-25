@@ -41,28 +41,28 @@ namespace vm::low::instruction_tags {
 
 	namespace detail {
 		template<typename T>
-		constexpr bool IS_MICRO_TAG = false;
+		inline constexpr bool IS_MICRO_TAG = false;
 
 		template<typename T, usize N>
-		constexpr bool IS_ARG_LABEL = false;
+		inline constexpr bool IS_ARG_LABEL = false;
 
 #define HANDLE_MICRO_INSTR_0ARGS(INSTR) \
 	template<>                          \
-	constexpr bool IS_MICRO_TAG<Op_##INSTR> = true;
+	inline constexpr bool IS_MICRO_TAG<Op_##INSTR> = true;
 
-#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)       \
-	template<>                                      \
-	constexpr bool IS_MICRO_TAG<Op_##INSTR> = true; \
-	template<>                                      \
-	constexpr bool IS_ARG_LABEL<Op_##INSTR, 0> = std::same_as<ARG0, opargs::Label>;
+#define HANDLE_MICRO_INSTR_1ARGS(INSTR, ARG0)              \
+	template<>                                             \
+	inline constexpr bool IS_MICRO_TAG<Op_##INSTR> = true; \
+	template<>                                             \
+	inline constexpr bool IS_ARG_LABEL<Op_##INSTR, 0> = std::same_as<ARG0, opargs::Label>;
 
-#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                                 \
-	template<>                                                                      \
-	constexpr bool IS_MICRO_TAG<Op_##INSTR> = true;                                 \
-	template<>                                                                      \
-	constexpr bool IS_ARG_LABEL<Op_##INSTR, 0> = std::same_as<ARG0, opargs::Label>; \
-	template<>                                                                      \
-	constexpr bool IS_ARG_LABEL<Op_##INSTR, 1> = std::same_as<ARG1, opargs::Label>;
+#define HANDLE_MICRO_INSTR_2ARGS(INSTR, ARG0, ARG1)                                        \
+	template<>                                                                             \
+	inline constexpr bool IS_MICRO_TAG<Op_##INSTR> = true;                                 \
+	template<>                                                                             \
+	inline constexpr bool IS_ARG_LABEL<Op_##INSTR, 0> = std::same_as<ARG0, opargs::Label>; \
+	template<>                                                                             \
+	inline constexpr bool IS_ARG_LABEL<Op_##INSTR, 1> = std::same_as<ARG1, opargs::Label>;
 
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR_0ARGS
@@ -79,7 +79,7 @@ namespace vm::low::instruction_tags {
 	 * This is used for inspecting lowered untyped vm::MicroInstruction structs
 	 * when linking labels.
 	 */
-	constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::array<bool, 2>>({
+	inline constexpr auto IS_ARGUMENT_LABEL = std::to_array<std::array<bool, 2>>({
 #define HANDLE_MICRO_INSTR(INSTR) \
 	{ detail::IS_ARG_LABEL<Op_##INSTR, 0>, detail::IS_ARG_LABEL<Op_##INSTR, 1> },
 #include "micro_instruction_definitions.hpp"

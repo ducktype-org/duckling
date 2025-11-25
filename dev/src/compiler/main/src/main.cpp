@@ -350,7 +350,7 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compilerEntirePackage(
+					compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 

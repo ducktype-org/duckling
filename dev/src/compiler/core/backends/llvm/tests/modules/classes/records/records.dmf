@@ -1,13 +1,13 @@
 class RecordClass {
     a: i64 = 0;
-    b: f32 = 0;
-    c: i16 = 0;
+    b: f32 = 0.0;
+    c: i16 = 0i16;
 }
 
 class BiggerRecordClass {
-    x: i8 = 0;
+    x: i8 = i8(0);
     y: RecordClass = RecordClass(1, f32(2.0), i16(3));
-    z: f64 = 0;
+    z: f64 = 0.0;
 }
 
 fun printRecordClass(r: RecordClass) = {
