@@ -39,7 +39,7 @@
     * (4) Values of type `usize` defining the maximum number of messages for each type.
         (likely `std::array<usize, typeCount>`).
 
-    It also has a `printErr` function, which prints all messages to `stderr` (with colors), but:
+    It also has a `printErr` method, which prints all messages to `stderr` (with colors), but:
     - a single MessagePack is treated as multiple separate messages contained within it.
     - it skips the message if the message type should be ignored due to (2).
     - it stops if the number of printed messages exceeds `generalMax`.
