@@ -61,6 +61,23 @@ namespace compiler::driver {
 			return out;
 		}
 
+		/**
+		 * Helper function to log module compilation info.
+		 */
+		static void moduleLog(const QKey& key, std::string_view info) {
+			CORE_USER_LOG(
+				General,
+				"[?/?] Compiling ",
+				getModuleFullName(key.module_id),
+				" (",
+				backendTypeToStr(key.backend_type),
+				")",
+				": ",
+				info,
+				"!\n"
+			);
+		}
+
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {
 			case BackendType::LLVM:
@@ -73,6 +90,9 @@ namespace compiler::driver {
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
+			
+			moduleLog(key, "Recompiling");
+
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
 			auto output_name
@@ -144,18 +164,13 @@ namespace compiler::driver {
 			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
 			if (!output_maybe.has_value()) {
-				std::cerr
-					<< "\n\nCompileModule artifact not found in artifacts collection for module "
-					<< getModuleRef(key.module_id)->getName().strView() << " and backend "
-					<< backendTypeToStr(key.backend_type) << "\n\n";
+				moduleLog(key, "artifact not found in artifacts collection");
 				return {};
 			}
 
 			auto output = *output_maybe.value();
 
-			std::cerr << "\n\nLoading CompileModule artifact from disk for module "
-					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
-					  << backendTypeToStr(key.backend_type) << "\n\n";
+			moduleLog(key, "Cached, loading artifact from disk");
 			return output;
 		}
 	};

@@ -43,12 +43,11 @@ namespace system_command {
 		 * @brief Executes the command.
 		 * @warning Is not thread safe.
 		 *
-		 * @param echo if true, the command will be echoed to stderr.
 		 * @param error_on_exit_code if true, the command will panic if the exit code is not 0.
 		 * @return i32 exit code of the command.
 		 */
-		i32 execute(bool echo = true, bool error_on_exit_code = true);
-
+		i32 execute(bool error_on_exit_code = true);
+		
 		~SystemCommand() = default;
 	};
 }

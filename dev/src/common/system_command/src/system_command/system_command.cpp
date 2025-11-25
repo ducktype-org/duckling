@@ -2,6 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
+#include <logger/logger.hpp>
 
 #include <iostream>
 
@@ -12,7 +13,7 @@ namespace system_command {
 		return *this;
 	}
 
-	i32 SystemCommand::execute(bool echo, bool error_on_exit_code) {
+	i32 SystemCommand::execute(bool error_on_exit_code) {
 		std::string out = program_name;
 		out += " ";
 
@@ -20,7 +21,8 @@ namespace system_command {
 			out += arg;
 			out += " ";
 		}
-		if (echo) std::cerr << "[CMD] " << out << "\n";
+
+		CORE_DEV_LOG(Command, "[CMD]", out, "\n");
 
 		std::cerr.flush();
 		std::cout.flush();

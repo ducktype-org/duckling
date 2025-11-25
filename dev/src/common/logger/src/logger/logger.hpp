@@ -19,6 +19,7 @@ namespace logger {
 		Artifacts,  ///< Logs related to artifacts.
 		Query,      ///< Logs related to query framework.
 		Backend,    ///< Logs related to the backend components.
+		Command,    ///< Logs related to system commands.
 		DVM,        ///< Logs related to the DVM component.
 	};
 
