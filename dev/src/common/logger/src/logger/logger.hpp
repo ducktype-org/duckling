@@ -14,10 +14,12 @@ namespace logger {
     enum class LogCategories {
         General, ///< General logs, without specific category.
         
-        Lexer,   ///< Logs related to lexical analysis.
-        Printer, ///< Logs related to printing operations.
-        Query,   ///< Logs related to query framework.
-        DVM,     ///< Logs related to the DVM component.
+        Lexer,     ///< Logs related to lexical analysis.
+        Printer,   ///< Logs related to printing operations.
+        Artifacts, ///< Logs related to artifacts.
+        Query,     ///< Logs related to query framework.
+        Backend,   ///< Logs related to the backend components.
+        DVM,       ///< Logs related to the DVM component.
     };
 
     /**

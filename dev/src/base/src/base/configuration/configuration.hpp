@@ -14,5 +14,5 @@ namespace base {
      * If set, base will output logs
      * useful mostly in development and debugging.
      */
-    constexpr bool ENABLE_DEV_LOGS = true;
+    constexpr bool ENABLE_DEV_LOGS = false;
 }
