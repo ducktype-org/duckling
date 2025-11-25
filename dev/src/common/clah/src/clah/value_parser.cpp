@@ -9,6 +9,7 @@
 #include "exceptions.hpp"
 
 #include <filesystem/file.hpp>
+#include <iostream>
 
 #include <charconv>
 
@@ -164,6 +165,8 @@ namespace clah {
 		auto string_list_content
 			= string_result_trimmed.substr(1, string_result_trimmed.size() - 2);
 
+		std::cerr << "String list content: '" << string_list_content << "'\n";
+
 		// split by commas:
 		std::vector<std::string> values;
 		usize                    pos = 0;
@@ -173,6 +176,7 @@ namespace clah {
 			if (comma_pos == std::string::npos) comma_pos = string_list_content.size();
 
 			auto value = trim_spaces(string_list_content.substr(pos, comma_pos - pos));
+			std::cerr << "Parsed value: '" << value << "'\n";
 			if (!value.empty()) values.emplace_back(value);
 
 			pos = comma_pos + 1;

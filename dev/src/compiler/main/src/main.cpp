@@ -89,7 +89,7 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 ) {
 	// @TODO PR: change it
 	return compiler::driver::options_types::DebugOptions{
-		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("--dev-logs")
+		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                        .copyValueOr(std::vector<std::string>{}),
 
 		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
