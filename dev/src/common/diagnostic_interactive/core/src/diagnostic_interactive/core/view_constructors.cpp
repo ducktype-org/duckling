@@ -1,3 +1,5 @@
+#include "view_constructors.hpp"
+
 #include "diagnostic_state.hpp"
 
 namespace dia_app {
@@ -35,5 +37,180 @@ namespace dia_app {
 		ConstructTextViewVisitor text_visitor;
 		component->acceptVisitor(text_visitor);
 		return text_visitor.result;
+	}
+
+	namespace term_ui_view {
+
+		StyleType styleTypeFromString(const std::string& type) {
+			if (type == "error") return StyleType::Error;
+			if (type == "warning") return StyleType::Warning;
+			if (type == "note") return StyleType::Note;
+			if (type == "hint") return StyleType::Hint;
+			if (type == "docs") return StyleType::Docs;
+			return StyleType::Error;
+		}
+
+		class CodeSectionBuilder: public state::ComponentVisitor {
+			std::vector<CodeLine>& lines;
+			std::vector<CodePiece> current_line_pieces;
+			base::Optional<u64>    current_line_no;
+
+		public:
+			CodeSectionBuilder(std::vector<CodeLine>& lines): lines(lines) {}
+
+			void flushLine() {
+				if (!current_line_pieces.empty() || current_line_no.has_value()) {
+					lines.emplace_back();
+					lines.back().line_no = current_line_no;
+					lines.back().pieces  = std::move(current_line_pieces);
+
+					current_line_pieces.clear();
+					current_line_no.reset();
+				}
+			}
+
+			void visitStartLineComponent(const state::StartLineComponent& c) override {
+				flushLine();
+				current_line_no = c.number;
+			}
+
+			void visitCodeComponent(const state::CodeComponent& c) override {
+				CodePiece piece;
+				piece.text = c.content;
+				for (auto id: c.pointer_messages) piece.pointer_ids.insert(id);
+				current_line_pieces.push_back(std::move(piece));
+			}
+
+			void visitTextComponent(const state::TextComponent& c) override {
+				CodePiece piece;
+				piece.text = c.content;
+				current_line_pieces.push_back(std::move(piece));
+			}
+
+			void visitConcatComponent(const state::ConcatComponent& c) override {
+				for (auto& child: c.components) child->acceptVisitor(*this);
+			}
+
+			void visitInteractiveComponent(const state::InteractiveComponent& c) override {
+				c.primary->acceptVisitor(*this);
+			}
+
+			void visitCodeBlockComponent(const state::CodeBlockComponent& c) override {
+				c.content->acceptVisitor(*this);
+			}
+
+			void visitCodeLocationComponent(const state::CodeLocationComponent& c) override {}
+		};
+
+		CodeSection build_code_section(
+			const state::CodeBlockComponent&                                     block,
+			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+			StyleType                                                            style_type
+		) {
+			CodeSection section;
+			if (block.location.has_value()) {
+				section.file = block.location->file;
+				section.line = block.location->line;
+				section.col  = block.location->column;
+			} else {
+				section.file = "";
+				section.line = 0;
+				section.col  = 0;
+			}
+
+			CodeSectionBuilder builder(section.lines);
+			block.content->acceptVisitor(builder);
+			builder.flushLine();
+
+			// Extract pointers used in lines
+			for (const auto& line: section.lines) {
+				for (const auto& piece: line.pieces) {
+					for (auto id: piece.pointer_ids) {
+						if (pointer_msgs.contains(id) && !section.pointers.contains(id)) {
+							const auto&    msg = pointer_msgs.at(id);
+							PointerMessage ptr_msg;
+							ptr_msg.text     = msg.content;
+							ptr_msg.priority = msg.priority;
+							ptr_msg.type     = style_type;  // Inherit style from message
+							section.pointers.put(id, std::move(ptr_msg));
+						}
+					}
+				}
+			}
+			return section;
+		}
+
+		class MessageBuilder: public state::ComponentVisitor {
+			std::vector<Section>&                                                sections;
+			std::string                                                          current_text;
+			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs;
+			StyleType                                                            style_type;
+
+		public:
+			MessageBuilder(
+				std::vector<Section>&                                                sections,
+				const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+				StyleType                                                            style_type
+			):
+				  sections(sections),
+				  pointer_msgs(pointer_msgs),
+				  style_type(style_type) {}
+
+			void flushText() {
+				if (!current_text.empty()) {
+					sections.emplace_back(current_text);
+					current_text.clear();
+				}
+			}
+
+			void visitTextComponent(const state::TextComponent& c) override {
+				current_text += c.content;
+			}
+
+			void visitCodeBlockComponent(const state::CodeBlockComponent& c) override {
+				flushText();
+				sections.emplace_back(build_code_section(c, pointer_msgs, style_type));
+			}
+
+			void visitConcatComponent(const state::ConcatComponent& c) override {
+				for (auto& child: c.components) child->acceptVisitor(*this);
+			}
+
+			void visitInteractiveComponent(const state::InteractiveComponent& c) override {
+				c.primary->acceptVisitor(*this);
+			}
+
+			void visitCodeComponent(const state::CodeComponent& c) override {
+				current_text += c.content;
+			}
+
+			void visitStartLineComponent(const state::StartLineComponent& c) override {
+				current_text += "\n";
+			}
+
+			void visitCodeLocationComponent(const state::CodeLocationComponent& c) override {}
+		};
+
+		Diagnostic constructTreeView(const state::Diagnostic& state) {
+			Diagnostic diag;
+			for (auto id: state.displayed_messages) {
+				if (id < state.messages.size()) {
+					const auto& msg = state.messages[id];
+					Message     view_msg;
+					view_msg.type   = styleTypeFromString(msg.metadata.type);
+					view_msg.code   = msg.metadata.code;
+					view_msg.header = constructTextView(msg.header.ref());
+
+					if (msg.description) {
+						MessageBuilder builder(view_msg.sections, msg.pointer_messages, view_msg.type);
+						msg.description->acceptVisitor(builder);
+						builder.flushText();
+					}
+					diag.messages.push_back(std::move(view_msg));
+				}
+			}
+			return diag;
+		}
+
 	}
 }

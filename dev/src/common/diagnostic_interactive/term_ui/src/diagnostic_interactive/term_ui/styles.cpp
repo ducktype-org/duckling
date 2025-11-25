@@ -66,28 +66,11 @@ namespace term_ui {
 		reset_styles(out);
 	}
 
-	void Style::printName(u32 id, std::ostream& out) const {
+	void Style::printName(u64 id, std::ostream& out) const {
 		prepare(out);
 		out << name;
 		if (print_id) out << '[' << prefix << id << ']';
 		reset_styles(out);
-	}
-
-	StyleType style_type_of(view::InfoType type) {
-		switch (type) {
-		case view::InfoType::Error:
-			return StyleType::Error;
-		case view::InfoType::Warning:
-			return StyleType::Warning;
-		case view::InfoType::Note:
-			return StyleType::Note;
-		case view::InfoType::Hint:
-			return StyleType::Hint;
-		case view::InfoType::Docs:
-			return StyleType::Docs;
-		}
-		CORE_ASSERT(false, "Unknown info type.");
-		return StyleType::Error;
 	}
 
 	Style get_style(StyleType type) {
@@ -109,7 +92,7 @@ namespace term_ui {
 
 	void reset_styles(std::ostream& out) { out << rang::fg::reset << rang::style::reset; }
 
-	void print_line_start(u32 tab_space, u32 line_no, std::ostream& out) {
+	void print_line_start(u64 tab_space, u64 line_no, std::ostream& out) {
 		std::string line_no_str = std::to_string(line_no);
 		std::string line_start =
 			// Print line number.
@@ -122,7 +105,7 @@ namespace term_ui {
 		LINE_START_STYLE.printWith(line_start, out);
 	}
 
-	void print_line_start(u32 tab_space, std::ostream& out) {
+	void print_line_start(u64 tab_space, std::ostream& out) {
 		// Print tab space and line bar.
 		LINE_START_STYLE.printWith(std::string(tab_space, ' ') + "| ", out);
 	}

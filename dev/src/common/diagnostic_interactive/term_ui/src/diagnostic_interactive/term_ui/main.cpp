@@ -1,12 +1,13 @@
 #include "view.hpp"
 
-#include <dia_app/view_manager/view_manager.hpp>
+// #include <dia_app/view_manager/view_manager.hpp>
+// #include <json/json.hpp>
+#include <iostream>
 
-#include <json/json.hpp>
-
-#include <fstream>
-
-int main(int argc, char* argv[]) {
+int main(int /*argc*/, char* /*argv*/[]) {
+	std::cerr << "term_ui main is currently disabled due to refactoring. Needs update to use DiagnosticState.\n";
+	return 1;
+	/*
 	if (argc != 2) {
 		std::cerr << "Pass a single file as argument\n";
 		return 1;
@@ -23,9 +24,8 @@ int main(int argc, char* argv[]) {
 	view_manager.getView(vm_data);
 
 	// Format and print the static message to the terminal.
-	term_ui::View term_msg(*vm_data);
-	bool          use_color = true;
-	term_msg.print(std::cerr, use_color);
-
-	return 0;
+	// term_ui::View term_msg(*vm_data);
+	// bool          use_color = true;
+	// term_msg.print(std::cerr, use_color);
+	*/
 }

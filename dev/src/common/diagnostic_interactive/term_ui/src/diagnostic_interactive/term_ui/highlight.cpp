@@ -34,33 +34,19 @@ namespace term_ui {
 		return *this;
 	}
 
-	PointerMessage::PointerMessage(std::string text, StyleType type, u32 priority):
-		  text(text),
-		  type(type),
-		  priority(priority) {}
-
-	PointerMessage::PointerMessage(const view::HlMessage& message):
-		  text(TextPieces(message.message()).to_string()),
-		  type(style_type_of(message.type())),
-		  priority(message.priority()) {}
-
-	const std::string& PointerMessage::getText() const { return text; }
-
-	u32 PointerMessage::getPriority() const { return priority; }
-
-	LinePiece PointerMessage::intoLinePiece(PointerStage stage, int count) const {
+	LinePiece intoLinePiece(const dia_app::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count) {
 		std::string str;
-		Style       style = get_style(type);
+		Style       style = get_style(msg.type);
 		switch (stage) {
 		case PointerStage::Highlight: {
 			CORE_ASSERT(count > 0, "Cannot use a non-positive highlight width.");
-			str = std::string(count, style.underline_char);
+			str = std::string(count.value(), style.underline_char);
 			break;
 		}
 		case PointerStage::HighlightWithLowering: {
 			CORE_ASSERT(count > 0, "Cannot use a non-positive highlight width.");
 			str = std::string(1, style.lowering_attach_char)
-			    + std::string(count - 1, style.underline_char);
+			    + std::string(count.value() - 1, style.underline_char);
 			break;
 		}
 		case PointerStage::Lowering: {
@@ -68,10 +54,10 @@ namespace term_ui {
 			break;
 		}
 		case PointerStage::Message: {
-			str = text;
+			str = msg.text;
 			break;
 		}
 		}
-		return LinePiece(str, type);
+		return {str, msg.type};
 	}
 }

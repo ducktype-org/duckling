@@ -1,5 +1,5 @@
 #pragma once
-#include <proto/view.pb.h>
+#include <diagnostic_interactive/core/term_ui_view.hpp>
 #include <rang.hpp>
 
 #include <base/ints.hpp>
@@ -17,14 +17,7 @@ namespace term_ui {
 	 */
 	extern bool USE_COLOR;
 
-	/**
-	 * @brief Major style types.
-	 *
-	 * There are five style types - one for each of info types. Each one
-	 * has assigned a color, boldness, etc. (more on that in the `Style` class).
-	 *
-	 */
-	enum class StyleType { Error, Warning, Note, Hint, Docs };
+	using StyleType = dia_app::term_ui_view::StyleType;
 
 	/**
 	 * @brief A class containing information about a specific style.
@@ -160,7 +153,7 @@ namespace term_ui {
 		 * depending on the style's setup.
 		 * @param out The output stream.
 		 */
-		void printName(u32 id, std::ostream& out) const;
+		void printName(u64 id, std::ostream& out) const;
 
 	private:
 		// Prepare the output stream to print colored text in this style.
@@ -170,10 +163,6 @@ namespace term_ui {
 		void prepareMainText(std::ostream& out) const;
 	};
 
-	// Get a style type from a given info type.
-	StyleType style_type_of(view::InfoType type);
-
-	// Get a style object from a given style type.
 	Style get_style(StyleType type);
 
 	/**
@@ -195,7 +184,7 @@ namespace term_ui {
 	 * @param line_no The number of this line.
 	 * @param out The output stream.
 	 */
-	void print_line_start(u32 tab_space, u32 line_no, std::ostream& out);
+	void print_line_start(u64 tab_space, u64 line_no, std::ostream& out);
 
 	/**
 	 * @brief Print a start of a code line which *does not* have a number.
@@ -206,5 +195,5 @@ namespace term_ui {
 	 * @param tab_space The column in which the vertical bar should appear.
 	 * @param out The output stream.
 	 */
-	void print_line_start(u32 tab_space, std::ostream& out);
+	void print_line_start(u64 tab_space, std::ostream& out);
 }

@@ -5,6 +5,7 @@ add_library(
     src/diagnostic_interactive/core/template_registry.cpp
     src/diagnostic_interactive/core/template_file.cpp
     src/diagnostic_interactive/core/diagnostic_state.cpp
+    src/diagnostic_interactive/core/view_constructors.cpp
 )
 
 make_module(DiagnosticInteractiveCore USES JSON yaml-cpp::yaml-cpp Base DiaTemplates Filesystem)

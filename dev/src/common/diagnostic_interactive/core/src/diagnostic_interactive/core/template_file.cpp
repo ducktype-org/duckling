@@ -115,7 +115,7 @@ namespace dia_app::template_file {
 			node["type"].as<std::string>(),
 			node["family"].as<std::string>(),
 			node["name"].as<std::string>(),
-			node["code"].as<int>(),
+			node["code"].as<u64>(),
 			node["active_from"].as<std::string>(),
 			node["active_until"].as<std::string>()
 		);

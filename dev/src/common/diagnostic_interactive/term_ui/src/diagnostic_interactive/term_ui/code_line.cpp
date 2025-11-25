@@ -1,65 +1,57 @@
 #include "code_line.hpp"
 
 namespace term_ui {
-	CodeLine::CodeLine(u32 line_no, std::vector<CodePiece> pieces):
-		  line_no(line_no),
-		  pieces(pieces) {}
 
-	CodeLine::CodeLine(const view::CodeLine& line): pieces(CodePieces(line.content()).getPieces()) {
-		if (line.has_line_number()) line_no = line.line_number();
-	}
-
-	CodePiece& CodeLine::operator[](const u32 i) { return pieces[i]; }
-
-	u32 CodeLine::size() const { return pieces.size(); }
-
-	u32 CodeLine::minTabSpace() const {
-		u32 res = 1;
-		if (line_no.has_value()) {
-			u32 number = line_no.value();
+	u64 minTabSpace(const dia_app::term_ui_view::CodeLine& line) {
+		u64 res = 1;
+		if (line.line_no.has_value()) {
+			u64 number = line.line_no.value();
 			res        = std::to_string(number).size() + 1;
 		}
 		return res;
 	}
 
-	std::vector<Highlight> CodeLine::print(
-		u32 tab_space, const base::HashMap<u32, PointerMessage>& ctx, std::ostream& out
-	) const {
-		if_opt_some(line_no, number) { print_line_start(tab_space, number, out); }
+	std::vector<Highlight> print(
+		const dia_app::term_ui_view::CodeLine&            line,
+		u64                                               tab_space,
+		const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& ctx,
+		std::ostream&                                     out
+	) {
+		if_opt_some(line.line_no, number) { print_line_start(tab_space, number, out); }
 		else { print_line_start(tab_space, out); }
 
 		// This is the relative column from the start of the code line.
-		u32 col = 0;
+		u64 col = 0;
 
 		std::vector<Highlight>     lowered;
-		std::vector<std::set<u32>> visited_pointer_messages(pieces.size(), std::set<u32>());
+		std::vector<std::set<u64>> visited_pointer_messages(line.pieces.size(), std::set<u64>());
 
-		for (u32 i = 0; i < pieces.size(); ++i) {
-			auto& piece = pieces[i];
+		for (u64 i = 0; i < line.pieces.size(); ++i) {
+			const auto& piece = line.pieces[i];
 
-			if (piece.getpointer_messages().empty()) {
+			if (piece.pointer_ids.empty()) {
 				// Print the code piece.
-				out << piece.getText();
-				col += piece.getText().size();
+				out << piece.text;
+				col += piece.text.size();
 			} else {
 				// Buffer all pointer messages.
-				for (auto group: piece.getpointer_messages()) {
+				for (auto group: piece.pointer_ids) {
 					if (visited_pointer_messages[i].contains(group)) {
 						// This group on this piece has already been handled.
 						continue;
 					}
 
 					// Find all contigous pieces in this line and merge them.
-					u32 last_idx = i;
-					u32 last_col = col;
-					while (last_idx < pieces.size() && pieces[last_idx].getpointer_messages().contains(group)
+					u64 last_idx = i;
+					u64 last_col = col;
+					while (last_idx < line.pieces.size() && line.pieces[last_idx].pointer_ids.contains(group)
 					) {
 						visited_pointer_messages[last_idx].insert(group);
-						last_col += pieces[last_idx].getText().size();
+						last_col += line.pieces[last_idx].text.size();
 						++last_idx;
 					}
 					lowered.emplace_back(
-						ctx.at(group).getPriority(),
+						ctx.at(group).priority,
 						col,
 						last_col,
 						group,
@@ -69,8 +61,8 @@ namespace term_ui {
 				}
 
 				// Print the code piece.
-				out << piece.getText();
-				col += piece.getText().size();
+				out << piece.text;
+				col += piece.text.size();
 			}
 		}
 		out << '\n';

@@ -1,174 +1,129 @@
 #include "code_section.hpp"
+#include <algorithm>
+#include "diagnostic_interactive/term_ui/code_line.hpp"
+#include "diagnostic_interactive/term_ui/highlight.hpp"
+#include "diagnostic_interactive/term_ui/line.hpp"
 
 namespace term_ui {
-	CodeSection::Location::Location(const std::string& file, u32 line, u32 col):
-		  file(file),
-		  line(line),
-		  col(col) {}
 
-	CodeSection::Location::Location(const view::CodeMetadata& metadata):
-		  file(metadata.filename()),
-		  line(metadata.line()),
-		  col(metadata.column()) {}
+    namespace {
+        enum class HighlightResult {
+            LowerHighlight,
+            LowerMessageMedium,
+            LowerMessageLast,
+            Success
+        };
 
-	void CodeSection::Location::print(u32 tab_space, std::ostream& out) const {
-		out << std::string(tab_space, ' ');
-		out << "> " << file << ':' << line << ':' << col << '\n';
-	}
+        HighlightResult fitLoweredMessage(
+            Line& str, u64 beg, const dia_app::term_ui_view::PointerMessage& msg
+        ) {
+            if (!str.tryInsert(beg, intoLinePiece(msg, PointerStage::Message))) {
+                str.tryInsert(beg, intoLinePiece(msg, PointerStage::Lowering));
+                return HighlightResult::LowerMessageLast;
+            }
+            return HighlightResult::Success;
+        }
 
-	CodeSection::CodeSection(
-		Location location, std::vector<CodeLine> lines, base::HashMap<u32, PointerMessage> pointers
-	):
-		  location(location),
-		  lines(lines),
-		  pointers(pointers),
-		  tab_space(0) {
-		computeLastOfAndTabSpace();
-	}
+        HighlightResult underline(
+            Line& str,
+            Highlight highlight,
+            u64 line_no,
+            const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& pointers,
+            const base::HashMap<u64, std::pair<u64, u64>>& last_of_group
+        ) {
+            auto [priority, beg, end, group, idx, lowering] = highlight;
+            u64   len                                       = end - beg;
+            const auto& msg                                 = pointers.at(group);
 
-	CodeSection::CodeSection(const view::CodeSection& section):
-		  location(section.metadata()),
-		  tab_space(0) {
-		// Extract lines.
-		for (u32 i = 0; i < section.lines_size(); ++i) lines.emplace_back(section.lines(i));
-		// Extract pointers.
-		for (u32 i = 0; i < section.hl_messages_size(); ++i) {
-			auto& ptr = section.hl_messages(i);
-			pointers.put(ptr.tag(), PointerMessage(ptr));
-		}
-		// Perform pre-processing.
-		computeLastOfAndTabSpace();
-	}
+            if (lowering == LoweringStage::Medium) {
+                if (str.tryInsert(beg, intoLinePiece(msg, PointerStage::Lowering))) {
+                    return HighlightResult::LowerMessageLast;
+                } else {
+                    return HighlightResult::LowerMessageMedium;
+                }
+            }
+            if (lowering == LoweringStage::Last) {
+                return fitLoweredMessage(str, beg, msg);
+            }
 
-	void CodeSection::print(std::ostream& out) const {
-		location.print(tab_space, out);
-		print_line_start(tab_space, out);
-		out << std::endl;
-		for (u32 l = 0; l < lines.size(); ++l) {
-			auto lowered = lines[l].print(tab_space, pointers, out);
+            if (!str.isEmptyOn(beg, len)) {
+                return HighlightResult::LowerHighlight;
+            }
 
-			// Handle buffered pointer messages.
-			while (!lowered.empty()) {
-				print_line_start(tab_space, out);
+            if (std::make_pair(line_no, idx) != last_of_group.at(group)) {
+                str.tryInsert(beg, intoLinePiece(msg, PointerStage::Highlight, len));
+                return HighlightResult::Success;
+            }
 
-				auto this_lowered = std::move(lowered);
-				lowered           = std::vector<Highlight>();
+            if (!str.isEmptyOn(end, msg.text.size() + 2)) {
+                str.tryInsert(beg, intoLinePiece(msg, PointerStage::HighlightWithLowering, len));
+                return HighlightResult::LowerMessageMedium;
+            }
 
-				std::sort(this_lowered.begin(), this_lowered.end());
-				Line line;
+            str.tryInsert(beg, intoLinePiece(msg, PointerStage::Highlight, len));
+            str.tryInsert(end + 1, intoLinePiece(msg, PointerStage::Message));
+            return HighlightResult::Success;
+        }
+    }
 
-				for (auto& highlight: this_lowered) {
-					u32 beg = highlight.beg;
-					switch (underline(line, highlight, l)) {
-					case HighlightResult::LowerHighlight: {
-						// The highlight did not fit.
-						lowered.push_back(highlight);
-						break;
-					}
-					case HighlightResult::LowerMessageMedium: {
-						// The message did not fit.
-						lowered.push_back(highlight.withStage(LoweringStage::Medium));
-						break;
-					}
-					case HighlightResult::LowerMessageLast: {
-						// Lowered message's lowering char has been
-						// displayed.
-						lowered.push_back(highlight.withStage(LoweringStage::Last));
-						break;
-					}
-					case HighlightResult::Success: {
-						// The message has been displayed.
-						break;
-					}
-					}
-				}
-				line.print(out);
-			}
-		}
-	}
+    void print(const dia_app::term_ui_view::CodeSection& section, std::ostream& out) {
+        // Preprocessing
+        base::HashMap<u64, std::pair<u64, u64>> last_of_group;
+        u64 tab_space = 0;
 
-	void CodeSection::computeLastOfAndTabSpace() {
-		// For each group find the last of its pieces.
-		// That's where the message will appear.
-		for (u32 l = 0; l < lines.size(); ++l) {
-			auto& line = lines[l];
+        for (u64 l = 0; l < section.lines.size(); ++l) {
+            const auto& line = section.lines[l];
+            for (u64 i = 0; i < line.pieces.size(); ++i) {
+                const auto& piece = line.pieces[i];
+                if (!piece.pointer_ids.empty()) {
+                    for (u64 group : piece.pointer_ids) {
+                        last_of_group.put(group, { l, i });
+                    }
+                }
+            }
+            tab_space = std::max(tab_space, minTabSpace(line));
+        }
 
-			for (u32 i = 0; i < line.size(); ++i) {
-				auto& piece = line[i];
-				if (!piece.getpointer_messages().empty())
-					for (u32 group: piece.getpointer_messages()) last_of_group.put(group, { l, i });
-			}
-			tab_space = std::max(tab_space, line.minTabSpace());
-		}
-	}
+        // Print location
+        out << std::string(tab_space, ' ');
+        out << "> " << section.file << ':' << section.line << ':' << section.col << '\n';
 
-	CodeSection::HighlightResult CodeSection::fitLoweredMessage(
-		Line& str, u32 beg, const PointerMessage& msg
-	) const {
-		if (!str.tryInsert(beg, msg.intoLinePiece(PointerStage::Message))) {
-			// The message does not fit.
-			str.tryInsert(beg, msg.intoLinePiece(PointerStage::Lowering));
-			return HighlightResult::LowerMessageLast;
-		}
-		// The message fits.
-		return HighlightResult::Success;
-	}
+        print_line_start(tab_space, out);
+        out << std::endl;
 
-	CodeSection::HighlightResult CodeSection::underline(Line& str, Highlight highlight, u32 line_no)
-		const {
-		auto [priority, beg, end, group, idx, lowering] = highlight;
-		u32   len                                       = end - beg;
-		auto& msg                                       = pointers.at(group);
+        for (u64 l = 0; l < section.lines.size(); ++l) {
+            auto lowered = print(section.lines[l], tab_space, section.pointers, out);
 
-		// Handle lowering stages first.
-		if (lowering == LoweringStage::Medium) {
-			// The message was lowered but no lowering char has yet been
-			// placed (it is required).
+            while (!lowered.empty()) {
+                print_line_start(tab_space, out);
 
-			if (str.tryInsert(beg, msg.intoLinePiece(PointerStage::Lowering))) {
-				// A lowering char has been placed, now only need to fit
-				// the message.
-				return HighlightResult::LowerMessageLast;
-			} else {
-				// A lowering char must yet be displayed.
-				return HighlightResult::LowerMessageMedium;
-			}
-		}
-		if (lowering == LoweringStage::Last) {
-			// Fit the message (or the next lowering if the message does not
-			// fit).
-			return fitLoweredMessage(str, beg, msg);
-		}
-		// There has been no lowering yet.
+                auto this_lowered = std::move(lowered);
+                lowered           = std::vector<Highlight>();
 
-		// Check if the highlight can be placed in this line.
-		if (!str.isEmptyOn(beg, len)) {
-			// It cannot.
-			return HighlightResult::LowerHighlight;
-		}
+                std::sort(this_lowered.begin(), this_lowered.end());
+                Line line;
 
-		if (std::make_pair(line_no, idx) != last_of_group.at(group)) {
-			// No message attached, just underline (the message is to be
-			// displayed after some further code fragment).
-			str.tryInsert(beg, msg.intoLinePiece(PointerStage::Highlight, len));
-			return HighlightResult::Success;
-		}
-
-		// Check if the message can be placed in this line.
-		// ............... message ......
-		//                ^^^^^^^^^ these spots need to be free
-		//                ^ end
-		//                         ^ end + msg.text.size() + 2
-		if (!str.isEmptyOn(end, msg.getText().size() + 2)) {
-			// It cannot.
-			// We already know we can underline, do so with lowering.
-			str.tryInsert(beg, msg.intoLinePiece(PointerStage::HighlightWithLowering, len));
-			return HighlightResult::LowerMessageMedium;
-		}
-
-		// Both the highlight and the message fit.
-		str.tryInsert(beg, msg.intoLinePiece(PointerStage::Highlight, len));
-		str.tryInsert(end + 1, msg.intoLinePiece(PointerStage::Message));
-		return HighlightResult::Success;
-	}
+                for (auto& highlight: this_lowered) {
+                    switch (underline(line, highlight, l, section.pointers, last_of_group)) {
+                    case HighlightResult::LowerHighlight: {
+                        lowered.push_back(highlight);
+                        break;
+                    }
+                    case HighlightResult::LowerMessageMedium: {
+                        lowered.push_back(highlight.withStage(LoweringStage::Medium));
+                        break;
+                    }
+                    case HighlightResult::LowerMessageLast: {
+                        lowered.push_back(highlight.withStage(LoweringStage::Last));
+                        break;
+                    }
+                    case HighlightResult::Success: {
+                        break;
+                    }
+                    }
+                }
+                line.print(out);
+            }
+        }
+    }
 }

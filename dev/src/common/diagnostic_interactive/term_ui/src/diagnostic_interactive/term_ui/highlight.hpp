@@ -1,9 +1,9 @@
 #pragma once
-#include "component_pieces.hpp"
+#include "diagnostic_interactive/core/term_ui_view.hpp"
 #include "line.hpp"
 #include "styles.hpp"
 
-#include <proto/view.pb.h>
+
 
 namespace term_ui {
 	/**
@@ -92,39 +92,14 @@ namespace term_ui {
 	};
 
 	/**
-	 * @brief A pointer (highlight) message constructed from view manager data.
+	 * @brief Generate a printable line piece from this message, provided
+	 * it is in a given stage.
 	 *
+	 * @param msg The pointer message.
+	 * @param stage The stage this message is recorder at.
+	 * @param count The width of the highlight (only required for the
+	 * `Highlight` and `HighlightWithLowering` stages).
+	 * @return LinePiece
 	 */
-	class PointerMessage {
-		// The highlight message text.
-		std::string text;
-		// The style type this message and highlight should be displayed with.
-		StyleType type;
-		// The message priority, as read from the view manager data.
-		u32 priority;
-
-	public:
-		// Construct a new message from a view manager highlight message.
-		PointerMessage(const view::HlMessage& message);
-
-		// Get the message text.
-		const std::string& getText() const;
-
-		// Get the priority.
-		u32 getPriority() const;
-
-		/**
-		 * @brief Generate a printable line piece from this message, provided
-		 * it is in a given stage.
-		 *
-		 * @param stage The stage this message is recorder at.
-		 * @param count The width of the highlight (only required for the
-		 * `Highlight` and `HighlightWithLowering` stages).
-		 * @return LinePiece
-		 */
-		LinePiece intoLinePiece(PointerStage stage, int count = -1) const;
-
-		// Construct a new message from field values. For testing only.
-		PointerMessage(std::string text, StyleType type, u32 priority = 0);
-	};
+	LinePiece intoLinePiece(const dia_app::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count = {});
 }

@@ -9,16 +9,16 @@ namespace dia_app::state {
 	/**
 	 * @brief Unique identifier of a UI component inside a diagnostic.
 	 */
-	using ComponentID = u32;
+	using ComponentID = u64;
 
 	/**
 	 * @brief Identifier of a highlight group assigned to code pieces.
 	 */
-	using PointerMessageID = u32;
+	using PointerMessageID = u64;
 
-	using EntityID = u32;
+	using EntityID = u64;
 
-	using MessageID = u32;
+	using MessageID = u64;
 
 
 	class TextComponent;
@@ -192,11 +192,10 @@ namespace dia_app::state {
 	 * Line numbers are honored when placed within a code section.
 	 */
 	class StartLineComponent: public Component {
-	private:
-		base::Optional<u32> number;
-
 	public:
-		StartLineComponent(base::Optional<u32> number): Component(), number(number) {}
+		base::Optional<u64> number;
+
+		StartLineComponent(base::Optional<u64> number): Component(), number(number) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitStartLineComponent(*this);
@@ -207,8 +206,8 @@ namespace dia_app::state {
 
 	struct CodeLocation {
 		std::string file;
-		u64         line;
-		u64         column;
+		usize       line;
+		usize       column;
 	};
 
 	class CodeBlockComponent: public Component {
@@ -249,7 +248,7 @@ namespace dia_app::state {
 	public:
 		std::string type;
 		std::string content;
-		u32         priority;
+		u64         priority;
 	};
 
 	class ExploreEdge {

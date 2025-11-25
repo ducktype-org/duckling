@@ -7,10 +7,10 @@ namespace term_ui {
 
 	void LinePiece::print(std::ostream& out) const { get_style(type).printWith(text, out); }
 
-	bool Line::isEmptyOn(u32 beg, u32 len) const {
-		u32 end = beg + len;
+	bool Line::isEmptyOn(u64 beg, u64 len) const {
+		u64 end = beg + len;
 		for (auto& [col, piece]: pieces) {
-			u32 col_end = col + piece.getText().size();
+			u64 col_end = col + piece.getText().size();
 			if (col < beg && col_end <= beg) continue;
 			if (beg < col && end <= col) {
 				// Pieces are sorted.
@@ -21,14 +21,14 @@ namespace term_ui {
 		return true;
 	}
 
-	bool Line::tryInsert(u32 beg, const LinePiece& piece) {
+	bool Line::tryInsert(u64 beg, const LinePiece& piece) {
 		if (!isEmptyOn(beg, piece.getText().size())) return false;
 		pieces.put(beg, piece);
 		return true;
 	}
 
 	void Line::print(std::ostream& out) const {
-		u32 col = 0;
+		u64 col = 0;
 
 		for (auto& [beg, piece]: pieces) {
 			// Fill the gap with empty characters.

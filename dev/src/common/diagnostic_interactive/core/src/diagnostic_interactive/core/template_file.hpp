@@ -214,7 +214,7 @@ namespace dia_app::template_file {
 		std::string  family;
 		std::string  name;
 
-		int         code;
+		u64       code;
 		std::string active_from;
 		std::string active_until;
 
@@ -223,7 +223,7 @@ namespace dia_app::template_file {
 			std::string  type,
 			std::string  family,
 			std::string  name,
-			int          code,
+			u64          code,
 			std::string  active_from,
 			std::string  active_until
 		):
@@ -298,14 +298,14 @@ namespace dia_app::template_file {
 	struct MessageTemplate: public CommonTemplate {
 		Box<Component>                             header_message;
 		base::MBox<Component>                      description;
-		base::HashMap<std::string, ExploreLink>           explore_edges;
+		base::HashMap<std::string, ExploreLink>    explore_edges;
 		base::HashMap<std::string, PointerMessage> pointer_messages;
 
 		MessageTemplate(
 			CommonTemplate                             common,
 			Box<Component>                             header_message,
 			base::MBox<Component>                      description,
-			base::HashMap<std::string, ExploreLink>           explore_edges,
+			base::HashMap<std::string, ExploreLink>    explore_edges,
 			base::HashMap<std::string, PointerMessage> pointer_messages
 		):
 			  CommonTemplate(std::move(common)),

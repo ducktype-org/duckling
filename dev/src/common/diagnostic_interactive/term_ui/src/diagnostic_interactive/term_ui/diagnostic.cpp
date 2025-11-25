@@ -1,11 +1,8 @@
 #include "diagnostic.hpp"
+#include "info.hpp"
 
 namespace term_ui {
-	Diagnostic::Diagnostic(const view::Diagnostic& diag) {
-		for (u32 i = 0; i < diag.infos_size(); ++i) infos.emplace_back(diag.infos(i));
-	}
-
-	void Diagnostic::print(std::ostream& out) const {
-		for (auto& info: infos) info.print(out);
+	void print(const dia_app::term_ui_view::Diagnostic& diag, std::ostream& out) {
+		for (const auto& msg: diag.messages) { print(msg, out); }
 	}
 }

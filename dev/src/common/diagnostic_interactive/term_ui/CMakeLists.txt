@@ -4,8 +4,6 @@ add_executable(term_ui
     src/diagnostic_interactive/term_ui/code_line.cpp
     src/diagnostic_interactive/term_ui/code_section.hpp
     src/diagnostic_interactive/term_ui/code_section.cpp
-    src/diagnostic_interactive/term_ui/component_pieces.hpp
-    src/diagnostic_interactive/term_ui/component_pieces.cpp
     src/diagnostic_interactive/term_ui/diagnostic.hpp
     src/diagnostic_interactive/term_ui/diagnostic.cpp
     src/diagnostic_interactive/term_ui/highlight.hpp
@@ -20,15 +18,13 @@ add_executable(term_ui
     src/diagnostic_interactive/term_ui/view.hpp
     src/diagnostic_interactive/term_ui/view.cpp
 )
-target_link_libraries(term_ui PUBLIC JSON rang Base)
+target_link_libraries(term_ui PUBLIC JSON rang Base DiagnosticInteractiveCore)
 
 add_library(TERM_UI
     src/diagnostic_interactive/term_ui/code_line.hpp
     src/diagnostic_interactive/term_ui/code_line.cpp
     src/diagnostic_interactive/term_ui/code_section.hpp
     src/diagnostic_interactive/term_ui/code_section.cpp
-    src/diagnostic_interactive/term_ui/component_pieces.hpp
-    src/diagnostic_interactive/term_ui/component_pieces.cpp
     src/diagnostic_interactive/term_ui/diagnostic.hpp
     src/diagnostic_interactive/term_ui/diagnostic.cpp
     src/diagnostic_interactive/term_ui/highlight.hpp
@@ -43,4 +39,4 @@ add_library(TERM_UI
     src/diagnostic_interactive/term_ui/view.cpp
 )
 
-make_module(TERM_UI USES JSON rang Proto)
+make_module(TERM_UI USES DiagnosticInteractiveCore rang)

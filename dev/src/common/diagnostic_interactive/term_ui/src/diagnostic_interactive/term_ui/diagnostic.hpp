@@ -1,27 +1,13 @@
 #pragma once
-#include "info.hpp"
+#include <diagnostic_interactive/core/term_ui_view.hpp>
+#include <iostream>
 
 namespace term_ui {
 	/**
-	 * @brief The class responsible for displaying one info group
-	 * (or a *diagnostic* in the gRPC protocol naming convention).
+	 * @brief Print this diagnostic to output stream.
 	 *
+	 * @param diag The diagnostic to print.
+	 * @param out The output stream.
 	 */
-	class Diagnostic {
-		// The list of infos to be displayed in this diagnostic, one after
-		// another.
-		std::vector<Info> infos;
-
-	public:
-		// Construct the diagnostic from the corresponding data provided by
-		// the view manager.
-		Diagnostic(const view::Diagnostic& diag);
-
-		/**
-		 * @brief Print this diagnostic to output stream.
-		 *
-		 * @param out The output stream.
-		 */
-		void print(std::ostream& out) const;
-	};
+	void print(const dia_app::term_ui_view::Diagnostic& diag, std::ostream& out);
 }

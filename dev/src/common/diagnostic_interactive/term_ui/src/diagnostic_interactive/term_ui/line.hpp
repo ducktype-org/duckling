@@ -4,7 +4,6 @@
 #include <base/maps.hpp>
 
 #include <iostream>
-#include <vector>
 
 namespace term_ui {
 
@@ -23,7 +22,7 @@ namespace term_ui {
 		LinePiece(std::string text, StyleType type);
 
 		// Get the text.
-		const std::string getText() const;
+		[[nodiscard]] const std::string getText() const;
 
 		/**
 		 * @brief Print the line piece to the output stream
@@ -46,15 +45,15 @@ namespace term_ui {
 	class Line {
 		// The list of non-overlapping line pieces mapped by their starting
 		// position in the line.
-		base::Map<u32, LinePiece> pieces;
+		base::Map<u64, LinePiece> pieces;
 
 	public:
 		// Check if the line is empty on interval [beg, beg + len - 1].
-		bool isEmptyOn(u32 beg, u32 len) const;
+		bool isEmptyOn(u64 beg, u64 len) const;
 
 		// Try to insert a new line piece into this line starting on column beg.
 		// Return true on success and false on failure.
-		bool tryInsert(u32 beg, const LinePiece& piece);
+		bool tryInsert(u64 beg, const LinePiece& piece);
 
 		/**
 		 * @brief Print the entire line to the output stream, inserting
