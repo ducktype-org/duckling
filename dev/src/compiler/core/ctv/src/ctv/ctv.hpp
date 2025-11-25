@@ -24,7 +24,7 @@ namespace compiler::ctv {
 				// We require at least two elements to distinguish it from:
 				// - UnitCTV, which has zero elements, and
 				// - a single CTV that happens to appear in parentheses.
-				CORE_ASSERT(elements.size() >= 2, "TupleCTV must have at least two elements");
+				CORE_ASSERT(this->elements.size() >= 2, "TupleCTV must have at least two elements");
 			}
 
 			/**

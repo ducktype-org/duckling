@@ -11,6 +11,7 @@
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
@@ -365,18 +366,22 @@ namespace compiler::helios::code {
 		);
 	}
 
-	TupleExpr::TupleExpr(query::Context& ctx, std::vector<Box<Expr>> elements):
-		  Expr(
+	std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
+		std::vector<tsh::SymbolType<>> types;
+		types.reserve(exprs.size());
+		for (const auto& expr: exprs) types.push_back(expr->expression_type.getSymbolType());
+		return types;
+	}
 
-			  tsh::ExpressionType{
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
-			  }
-		  ),
+	TupleExpr::TupleExpr(query::Context& ctx, std::vector<Box<Expr>> elements):
+		  Expr(tsh::ExpressionType{
+			  tsh::SymbolType<>{
+				  ctx.query<tsh::QueryTupleType>({ std::move(extractTypesFromExprs(elements)) }),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+		  }),
 		  elements(std::move(elements)) {}
 
 	TupleExpr::TupleExpr(

@@ -398,26 +398,18 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				std::vector<tsh::SymbolType<>> subtypes;
+				std::vector<CompileTimeValue> ctv_elements;
 
-				for (auto& sub_type: expr.elements) {
-					auto sub_type_result = evalHoutExpr(ctx, sub_type.ref());
-					if (sub_type_result.hasError()) {
-						result = query::QError(errors::Failed(sub_type_result.error()));
+				for (auto& sub_expr: expr.elements) {
+					const auto ctv_element_result = evalHoutExpr(ctx, sub_expr.ref());
+					if (ctv_element_result.hasError()) {
+						result = query::QError(errors::Failed(ctv_element_result.error()));
 						return;
 					}
-
-					variant_match(sub_type_result.value().getStorage()) {
-						variant_case(tsh::SymbolType<>, type) { subtypes.emplace_back(type); }
-						variant_default { CORE_PANIC("Type evaluation returned not a type\n"); }
-					}
+					ctv_elements.emplace_back(ctv_element_result.value());
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryTupleType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				} };
+				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
@@ -509,8 +501,8 @@ namespace compiler::helios {
 			// @todo: Change this code to a single query once it gets implemented #826.
 			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
 
-			// Collect all function dependencies for this function. All functions needed in order to
-			// evaluate this one.
+			// Collect all function dependencies for this function. All functions needed in
+			// order to evaluate this one.
 			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
 
 			std::string                      func_to_call_name;
@@ -522,8 +514,8 @@ namespace compiler::helios {
 				CRef<mir::Function> mir_func = &mir_func_result->value();
 				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
-				// When lowering the top level function, we store it's mangled name to know which
-				// function to call in the VM.
+				// When lowering the top level function, we store it's mangled name to know
+				// which function to call in the VM.
 				if (func_id == function_sym_id)
 					func_to_call_name = lir_func_result->mangled_name.str();
 
@@ -558,8 +550,8 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Evaluates a HOUT expression using TreeEval.
-		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath error
-		 * if the expresion was to complicated for tree eval or a Failed error.
+		 * @return The calculated result represented by CompileTimeValue, a CouldNotShortPath
+		 * error if the expresion was to complicated for tree eval or a Failed error.
 		 */
 		static auto evaluateWithTreeEval(query::Context& ctx, CRef<code::Expr> expr)
 			-> TreeEvalResult {

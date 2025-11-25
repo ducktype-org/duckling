@@ -23,9 +23,8 @@ namespace compiler::tsh {
 		return res.str();
 	}
 
-	bool UnitAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& context
-	) const {
+	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
+		const {
 		// The unit type can be coerced to the meta type
 		// because unit values can be interpreted as unit types.
 		return target.getKind() == Kind::Meta;
@@ -88,7 +87,7 @@ namespace compiler::tsh {
 			for (const auto& component: components)
 				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
 						component.getType(),
-						target, //< target is the Meta type.
+						target,  //< target is the Meta type.
 					}))
 					return false;
 			return true;

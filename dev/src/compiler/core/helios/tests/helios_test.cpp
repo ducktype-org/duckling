@@ -493,9 +493,9 @@ private:
 
 			// Build sequence expressions
 			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleExpr>(
-				ctx, std::move(tuple_elements)
-			));
+			sequence_exprs.emplace_back(
+				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+			);
 			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
 				ctx,
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
@@ -1840,7 +1840,70 @@ private:
 	}
 
 	void testTypeLifting() {
+		// Load the small test module we added under test_modules/units_and_tuples
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/units_and_tuples")));
 
+		const auto unit1     = getChain("Unit1", root_scope).back();
+		const auto unit2     = getChain("Unit2", root_scope).back();
+		const auto unit_type = getChain("UnitType", root_scope).back();
+
+		const auto int1     = getChain("Int1", root_scope).back();
+		const auto int2     = getChain("Int2", root_scope).back();
+		const auto int_type = getChain("IntType", root_scope).back();
+
+		const auto int_type1     = getChain("IntType1", root_scope).back();
+		const auto int_type2     = getChain("IntType2", root_scope).back();
+		const auto int_type_type = getChain("IntTypeType", root_scope).back();
+
+		const auto tuple_ii1     = getChain("TupleII1", root_scope).back();
+		const auto tuple_ii2     = getChain("TupleII2", root_scope).back();
+		const auto tuple_ii_type = getChain("TupleIIType", root_scope).back();
+
+		const auto tuple_tt1     = getChain("TupleTT1", root_scope).back();
+		const auto tuple_tt2     = getChain("TupleTT2", root_scope).back();
+		const auto tuple_tt_type = getChain("TupleTTType", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto symTypeOf
+				= [&](const compiler::helios::SymID sym_id) -> compiler::tsh::SymbolType<> {
+				return ctx.query<compiler::helios::QueryTypeOfSymbol>(sym_id)->value();
+			};
+
+			const auto meta_st
+				= st(ctx.query<compiler::tsh::QueryMetaType>({})).withMutability(Immutable);
+			const auto unit_st
+				= st(ctx.query<compiler::tsh::QueryUnitType>({})).withMutability(Immutable);
+			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
+			                        .withMutability(Immutable);
+			const auto tuple_ii_st
+				= st(ctx.query<compiler::tsh::QueryTupleType>({ { int_st, int_st } })
+			    ).withMutability(Immutable);
+			const auto tuple_tt_st
+				= st(ctx.query<compiler::tsh::QueryTupleType>({ { meta_st, meta_st } })
+			    ).withMutability(Immutable);
+
+			assertEqual(symTypeOf(unit1), unit_st, "Unit1 should be of unit type.");
+			assertEqual(symTypeOf(unit2), unit_st, "Unit2 should be of unit type.");
+			assertEqual(symTypeOf(unit_type), meta_st, "UnitType should be of meta type.");
+
+			assertEqual(symTypeOf(int1), int_st, "Int1 should be of integer type.");
+			assertEqual(symTypeOf(int2), int_st, "Int2 should be of integer type.");
+			assertEqual(symTypeOf(int_type), meta_st, "IntType should be of meta type.");
+
+			assertEqual(symTypeOf(int_type1), meta_st, "IntType1 should be of integer type.");
+			assertEqual(symTypeOf(int_type2), meta_st, "IntType2 should be of integer type.");
+			assertEqual(symTypeOf(int_type_type), meta_st, "IntTypeType should be of integer type.");
+
+			std::cerr << symTypeOf(tuple_ii1).toString() << std::endl;
+			std::cerr << symTypeOf(tuple_ii2).toString() << std::endl;
+			assertEqual(symTypeOf(tuple_ii1), tuple_ii_st, "TupleII1 should be of tuple type.");
+			assertEqual(symTypeOf(tuple_ii2), tuple_ii_st, "TupleII2 should be of tuple type.");
+			assertEqual(symTypeOf(tuple_ii_type), meta_st, "TupleIIType should be of meta type.");
+
+			assertEqual(symTypeOf(tuple_tt1), tuple_tt_st, "TupleTT1 should be of tuple type.");
+			assertEqual(symTypeOf(tuple_tt2), tuple_tt_st, "TupleTT2 should be of tuple type.");
+			assertEqual(symTypeOf(tuple_tt_type), meta_st, "TupleTTType should be of meta type.");
+		});
 	}
 
 	void testErrorBadExpr() {
