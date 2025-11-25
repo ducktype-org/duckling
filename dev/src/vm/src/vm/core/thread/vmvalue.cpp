@@ -1,6 +1,7 @@
 #include "vmvalue.hpp"
 
 #include <vm/core/process/vmprocess.hpp>
+#include <logger/logger.hpp>
 
 #include <ostream>
 
@@ -41,7 +42,7 @@ vm::VmValue::VmValue(VMProcess& process, TypeCRef type, Pointer src): VmValue(pr
 }
 
 vm::VmValue::~VmValue() {
-	if (!pointer.isNull()) std::cerr << "VmValue not freed!\n";
+	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VmValue not freed!\n");
 }
 
 void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
