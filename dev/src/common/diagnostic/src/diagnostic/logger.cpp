@@ -1,24 +1,15 @@
 #include "logger.hpp"
 
-#include "diagnostic_converters.hpp"
-
 #include <base/misc/int_conv.hpp>
+
+#include <logger/logger.hpp>
 
 #include <ranges>
 
 namespace dia {
 
-	constinit bool Logger::immediately_dump = false;
-
-	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
-
-	void Logger::log(Box<Message> message_ptr, const bool detailed, const bool immediately_dump_arg) {
-		if (immediately_dump_arg) {
-			printer::StreamPrinter::print(
-				DiagnosticToUserConverter::toPrinterContents(message_ptr.ref(), detailed)
-			);
-			printer::StreamPrinter::newline(2);
-		}
+	void Logger::log(Box<Message> message_ptr) {
+		CORE_DEV_LOG(Diagnostics, "Diagnostic message: ", message_ptr->toString(true), "\n\n");
 
 		const auto severity_id
 			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));

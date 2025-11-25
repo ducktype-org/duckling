@@ -6,8 +6,8 @@
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer_class.hpp>
-#include <token_source/source.hpp>
 #include <logger/logger.hpp>
+#include <token_source/source.hpp>
 
 #include <iostream>
 

@@ -2,13 +2,11 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
-
 #include <logger/logger.hpp>
-
 #include <unicode_classification/classifications.hpp>
 
 namespace lexer {
-	
+
 	using Class = unicode::Classifications;
 
 	class TokenStartError final: public dia::Error {
@@ -259,7 +257,8 @@ namespace lexer {
 	}
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
-		CORE_DEV_LOG(Lexer,
+		CORE_DEV_LOG(
+			Lexer,
 			"Add token: ",
 			std::string(token_type),
 			"(",
@@ -611,10 +610,8 @@ namespace lexer {
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
-		
-		CORE_DEV_LOG(Lexer,
-			"group begin", generateLineColumnInfo(), "\n"
-			);
+
+		CORE_DEV_LOG(Lexer, "group begin", generateLineColumnInfo(), "\n");
 
 
 		Tokens inner_tokens;

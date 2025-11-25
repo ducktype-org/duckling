@@ -20,10 +20,10 @@ namespace compiler::driver {
 		constinit bool is_initialized = false;
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
-			dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
-
 			// @TODO PR:
 			// lexer::Lexer::setTokenMessages(debug_options.lexer_cerr);
+			// dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
+
 			global_state::getDynamicDebugOptions()->llvm_dump_ir  = debug_options.dump_llvm_ir;
 			global_state::getDynamicDebugOptions()->llvm_dump_asm = debug_options.dump_llvm_asm;
 		}

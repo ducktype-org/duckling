@@ -21,11 +21,12 @@ namespace logger {
 		General,
 
 		// Common modules:
-		Lexer,      ///< Logs related to lexical analysis.
-		Printer,    ///< Logs related to printing operations.
-		Artifacts,  ///< Logs related to artifacts.
-		Query,      ///< Logs related to query framework.
-		Command,    ///< Logs related to system commands.
+		Lexer,        ///< Logs related to lexical analysis.
+		Printer,      ///< Logs related to printing operations.
+		Artifacts,    ///< Logs related to artifacts.
+		Query,        ///< Logs related to query framework.
+		Command,      ///< Logs related to system commands.
+		Diagnostics,  ///< Logs related to the diagnostic messages.
 
 		// Compiler:
 		Compiler,  ///< Logs related to compiler pipeline.

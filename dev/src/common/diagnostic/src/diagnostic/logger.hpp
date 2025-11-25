@@ -55,7 +55,7 @@ namespace dia {
 	/**
 	 * @brief Class used to log diagnostic messages for later output.
 	 */
-	class Logger {
+	class Logger final {
 		/**
 		 * @brief Storage for messages of each severity.
 		 */
@@ -67,27 +67,13 @@ namespace dia {
 		Logger(Logger&&)            = default;
 		Logger& operator=(Logger&&) = default;
 
-		/**
-		 * @brief Whether or not to immediately dump a logged message to std::cerr by default.
-		 *
-		 * Immediately dumping logged messages may be useful when debugging.
-		 */
-		static bool immediately_dump;
-		static void setImmediatelyDump(bool value);
-
 
 		/**
 		 * @brief Log a message.
 		 *
 		 * @param message_ptr A Box to the Message to be logged.
-		 * @param detailed Whether to dump detailed logs if immediately dumping.
-		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 */
-		void log(
-			Box<Message> message_ptr,
-			bool         detailed         = true,
-			bool         immediately_dump = Logger::immediately_dump
-		);
+		void log(Box<Message> message_ptr);
 
 		/**
 		 * @brief Print all logged messages to a stream.
