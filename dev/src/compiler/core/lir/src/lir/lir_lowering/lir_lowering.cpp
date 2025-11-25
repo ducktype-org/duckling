@@ -23,10 +23,10 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
-#include <logger/logger.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <utility>

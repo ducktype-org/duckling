@@ -2,6 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
+
 #include <logger/logger.hpp>
 
 #include <iostream>

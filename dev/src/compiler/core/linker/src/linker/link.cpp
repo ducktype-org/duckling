@@ -1,8 +1,8 @@
 
 #include "link.hpp"
 
-#include <system_command/system_command.hpp>
 #include <logger/logger.hpp>
+#include <system_command/system_command.hpp>
 
 namespace compiler::linker {
 

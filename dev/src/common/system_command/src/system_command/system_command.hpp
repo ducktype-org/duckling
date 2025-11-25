@@ -47,7 +47,7 @@ namespace system_command {
 		 * @return i32 exit code of the command.
 		 */
 		i32 execute(bool error_on_exit_code = true);
-		
+
 		~SystemCommand() = default;
 	};
 }

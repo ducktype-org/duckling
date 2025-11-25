@@ -90,7 +90,6 @@ namespace compiler::driver {
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
-			
 			moduleLog(key, "Recompiling");
 
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);

@@ -1,8 +1,9 @@
 #include "logger.hpp"
 
+#include <base/pointers/ref.hpp>
+
 #include <iostream>
 #include <set>
-#include <base/pointers/ref.hpp>
 
 namespace logger {
 	namespace {

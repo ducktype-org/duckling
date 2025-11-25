@@ -7,8 +7,8 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <query_framework/context.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/context.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -431,7 +431,6 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
-			
 				CORE_DEV_LOG(Backend, "Initializing: ", type_name.str.str(), '\n');
 
 				auto arg_name
@@ -443,7 +442,7 @@ namespace compiler::backend_vm {
 
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
-				
+
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
@@ -656,10 +655,7 @@ namespace compiler::backend_vm {
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
-
-			CORE_DEV_LOG(Backend, "Adding function: ",
-			              lir_function->mangled_name.strView(),
-			              "\n");
+			CORE_DEV_LOG(Backend, "Adding function: ", lir_function->mangled_name.strView(), "\n");
 
 			AddLIRFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
 

@@ -16,7 +16,7 @@ namespace logger {
 	enum class LogCategories {
 		/**
 		 * General logs, without specific category.
-		 * Can be also used for user logs that we expect to be always enabled. 
+		 * Can be also used for user logs that we expect to be always enabled.
 		 */
 		General,
 
@@ -26,14 +26,14 @@ namespace logger {
 		Artifacts,  ///< Logs related to artifacts.
 		Query,      ///< Logs related to query framework.
 		Command,    ///< Logs related to system commands.
-		
+
 		// Compiler:
-		Compiler,   ///< Logs related to compiler pipeline.	
-		Backend,    ///< Logs related to the backend components.
-		Linker,     ///< Logs related to the linker component.
+		Compiler,  ///< Logs related to compiler pipeline.
+		Backend,   ///< Logs related to the backend components.
+		Linker,    ///< Logs related to the linker component.
 
 		// DVM:
-		DVM,        ///< Logs related to the DVM component.
+		DVM,  ///< Logs related to the DVM component.
 	};
 
 	/**
