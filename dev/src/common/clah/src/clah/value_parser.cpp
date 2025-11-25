@@ -135,4 +135,53 @@ namespace clah {
 
 		return { .value = filepath, .raw_source = result.raw_source, .position = result.position };
 	}
+
+	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
+		auto string_result
+			= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
+
+		// trim spaces from both ends:
+		auto trim_spaces = [](std::string_view sv) -> std::string {
+			std::string string_result_trimmed{ sv };
+			string_result_trimmed.erase(0, string_result_trimmed.find_first_not_of(" \t\n\r\f\v"));
+			string_result_trimmed.erase(string_result_trimmed.find_last_not_of(" \t\n\r\f\v") + 1);
+			return string_result_trimmed;
+		};
+
+		auto string_result_trimmed = trim_spaces(string_result);
+
+		if (string_result_trimmed.size() < 2 or string_result_trimmed.front() != '['
+		    or string_result_trimmed.back() != ']') {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(),
+				start,
+				start + string_result.size(),
+				raw_input,
+				"String list must be encapsulated in [ ]."
+			);
+		}
+
+		auto string_list_content
+			= string_result_trimmed.substr(1, string_result_trimmed.size() - 2);
+
+		// split by commas:
+		std::vector<std::string> values;
+		usize                    pos = 0;
+
+		while (pos < string_list_content.size()) {
+			auto comma_pos = string_list_content.find(',', pos);
+			if (comma_pos == std::string::npos) comma_pos = string_list_content.size();
+
+			auto value = trim_spaces(string_list_content.substr(pos, comma_pos - pos));
+			if (!value.empty()) values.emplace_back(value);
+
+			pos = comma_pos + 1;
+		}
+
+		return {
+			.value      = values,
+			.raw_source = string_result,
+			.position   = start + string_result.size(),
+		};
+	}
 }
