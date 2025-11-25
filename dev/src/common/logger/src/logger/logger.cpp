@@ -2,15 +2,19 @@
 
 #include <iostream>
 #include <set>
+#include <base/pointers/ref.hpp>
 
 namespace logger {
 	namespace {
-		std::set<LogCategories> enabled_categories;
+		Ref<std::set<LogCategories>> getEnabledCategories() {
+			static std::set<LogCategories> enabled_categories = { LogCategories::General };
+			return &enabled_categories;
+		}
 	}
 
 	namespace internal {
 		bool isCategoryEnabled(LogCategories category) {
-			return enabled_categories.find(category) != enabled_categories.end();
+			return getEnabledCategories()->find(category) != getEnabledCategories()->end();
 		}
 
 		void logMessage(std::string_view message) {
@@ -19,6 +23,5 @@ namespace logger {
 		}
 	}
 
-	void enableCategory(LogCategories category) { enabled_categories.insert(category); }
-
+	void enableCategory(LogCategories category) { getEnabledCategories()->insert(category); }
 }

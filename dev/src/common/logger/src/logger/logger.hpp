@@ -10,6 +10,8 @@ namespace logger {
 	/**
 	 * Categories of logs.
 	 * Feel free to extend/modify as needed.
+	 *
+	 * @note General category is enabled by default, all other categories are disabled by default.
 	 */
 	enum class LogCategories {
 		General,    ///< General logs, without specific category.
@@ -18,6 +20,7 @@ namespace logger {
 		Printer,    ///< Logs related to printing operations.
 		Artifacts,  ///< Logs related to artifacts.
 		Query,      ///< Logs related to query framework.
+		Compiler,   ///< Logs related to compiler pipeline.
 		Backend,    ///< Logs related to the backend components.
 		Command,    ///< Logs related to system commands.
 		DVM,        ///< Logs related to the DVM component.

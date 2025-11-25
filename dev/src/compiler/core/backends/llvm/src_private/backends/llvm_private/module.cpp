@@ -4,6 +4,8 @@
 #include "llvm_lowering.hpp"
 #include "module_impl.hpp"
 
+#include <logger/logger.hpp>
+
 #include <backends/llvm/llvm_backend.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -34,9 +36,15 @@ namespace compiler::backend_llvm {
 	}
 
 	base::OkBad Module::verify() const {
-		std::cerr << "LLVMVerification: \n";
-		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
-		std::cerr << "\n";
+		std::string llvm_verification;
+		llvm::raw_string_ostream llvm_verification_stream(llvm_verification);
+
+		bool error_found = llvm::verifyModule(*impl->module, &llvm_verification_stream);
+		
+		if (error_found) {
+			CORE_DEV_LOG(Backend, "LLVM Verification Failed!: ", "\n", llvm_verification, "\n");
+		}	
+
 		return error_found ? base::BAD : base::OK;
 	}
 
