@@ -818,7 +818,7 @@ namespace compiler::helios {
 				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
 			}
 
-			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			void visitTupleExpr(const code::TupleExpr& expr) override {
 				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
 			}
 

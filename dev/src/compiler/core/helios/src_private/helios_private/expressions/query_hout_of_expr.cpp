@@ -326,7 +326,7 @@ namespace compiler::helios::code {
 					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleTypeConstructorExpr>(ctx, std::move(expressions));
+				node = makeBox<TupleExpr>(ctx, std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {

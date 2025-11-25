@@ -1,6 +1,7 @@
 #include "coercions.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
@@ -50,22 +51,11 @@ namespace compiler::helios {
 				createZeroLiteralOfType(ctx, from->expression_type.getSymbolType())
 			);
 			return comparison;
-		} else if (source_type.getKind() == tsh::Kind::Unit
+		} else if ((source_type.getKind() == tsh::Kind::Unit
+		            or source_type.getKind() == tsh::Kind::Tuple)
 		           and to.getType().getKind() == tsh::Kind::Meta) {
-			// Lift unit value to unit type
-			auto result_value = makeBox<code::LiteralTypeExpr>(tsh::SymbolType<>{
-				ctx.query<tsh::QueryUnitType>({}),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			});
-			// Return sequence which computes the original expression and then yields the type.
-			return makeBox<code::SequenceExpr>(
-				ctx, std::vector<Box<code::Expr>>{ std::move(from), std::move(result_value) }
-			);
-		} else if (source_type.getKind() == tsh::Kind::Tuple
-		           and to.getType().getKind() == tsh::Kind::Meta) {
-			// Lift tuple value to tuple type
-			// TODO
+			// Lift value to type
+			return makeBox<code::LiftToTypeExpr>(ctx, std::move(from));
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}

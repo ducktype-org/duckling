@@ -205,7 +205,7 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
+		void visitTupleExpr(const hc::TupleExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
@@ -372,6 +372,10 @@ namespace compiler::mir {
 			                                 .target_type = expr.target_type } },
 				expr.expression_type.getSymbolType()
 			);
+		}
+
+		void visitLiftToTypeExpr(const helios::code::LiftToTypeExpr&) override {
+			throw base::NotYetImplemented("lift to type expr lowering");
 		}
 
 

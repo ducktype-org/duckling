@@ -397,7 +397,7 @@ namespace compiler::helios {
 				result = evalHoutExpr(ctx, expr.inner.ref());
 			}
 
-			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) final {
+			void visitTupleExpr(const code::TupleExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 
 				for (auto& sub_type: expr.elements) {
@@ -463,6 +463,32 @@ namespace compiler::helios {
 				result                 = maybe_new_numeric.has_value()
 				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
 				                           : query::QError(errors::Failed());
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
+				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Meta) {
+					// Lift unit to type by simply returning the unit type.
+					result = CompileTimeValue{ tsh::SymbolType<>{
+						ctx.query<tsh::QueryUnitType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					} };
+					return;
+				}
+
+				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
+					// Lift tuple to type by evaluating the CTV to a tuple,
+					// then recursively constructing the type from the elements.
+					auto expr_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
+					if (expr_to_lift.hasError()) {
+						result = query::QError(errors::Failed());
+						return;
+					}
+					const auto& ctv = expr_to_lift.value();
+					result          = CompileTimeValue{ ctv.getType(ctx).value() };
+				}
+
+				CORE_UNREACHABLE();
 			}
 		};
 

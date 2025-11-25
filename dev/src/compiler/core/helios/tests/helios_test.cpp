@@ -76,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testTypeLifting);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -492,7 +493,7 @@ private:
 
 			// Build sequence expressions
 			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleTypeConstructorExpr>(
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleExpr>(
 				ctx, std::move(tuple_elements)
 			));
 			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
@@ -1836,6 +1837,10 @@ private:
 				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 		}
+	}
+
+	void testTypeLifting() {
+
 	}
 
 	void testErrorBadExpr() {
