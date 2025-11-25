@@ -7,6 +7,7 @@
 #include <init/init.hpp>
 #include <lexer/lexer_class.hpp>
 #include <token_source/source.hpp>
+#include <logger/logger.hpp>
 
 #include <iostream>
 
@@ -19,7 +20,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	lexer::Lexer::setTokenMessages(true);
+	logger::enableCategory(logger::LogCategories::Lexer);
 
 	File path(argv[1]);
 	auto source = tokenizer::makeTokenSource(path);

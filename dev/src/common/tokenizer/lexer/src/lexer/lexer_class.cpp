@@ -2,13 +2,13 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
+
+#include <logger/logger.hpp>
+
 #include <unicode_classification/classifications.hpp>
 
 namespace lexer {
-	bool Lexer::token_messages = false;
-
-	void Lexer::setTokenMessages(bool value) { token_messages = value; }
-
+	
 	using Class = unicode::Classifications;
 
 	class TokenStartError final: public dia::Error {
@@ -259,15 +259,13 @@ namespace lexer {
 	}
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
-		if (token_messages) {
-			printer::StreamPrinter::printNL({
-				"Add token: ",
-				std::string(token_type),
-				"(",
-				std::string(file->getCharRange(begin, end + 1).stringView()),
-				")",
-			});
-		}
+		CORE_DEV_LOG(Lexer,
+			"Add token: ",
+			std::string(token_type),
+			"(",
+			std::string(file->getCharRange(begin, end + 1).stringView()),
+			")"
+		)
 	}
 
 	void Lexer::codeblock() { parseCodeblockInto(tokens); }
@@ -277,8 +275,8 @@ namespace lexer {
 	}
 
 	void Lexer::parseCodeblockInto(Tokens& output) {
-		constexpr auto stop_on_eof = [](const Lexer& lexer) { return lexer.isEOF(); };
-		parseUntil(output, stop_on_eof);
+		constexpr auto STOP_ON_EOF = [](const Lexer& lexer) { return lexer.isEOF(); };
+		parseUntil(output, STOP_ON_EOF);
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
@@ -613,8 +611,9 @@ namespace lexer {
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
-		if (token_messages)
-			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
+		
+		CORE_DEV_LOG(Lexer,
+			"group begin", generateLineColumnInfo(), "\n"
 			);
 
 
@@ -652,7 +651,7 @@ namespace lexer {
 			std::move(sentinel_end),
 			source_position
 		));
-		if (token_messages) printer::StreamPrinter::printNL("group end");
+		CORE_DEV_LOG(Lexer, "group end", "\n");
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::END_OF_FILE_VALUE); }
