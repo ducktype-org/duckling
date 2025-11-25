@@ -47,7 +47,8 @@ foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
     string(REPLACE "." "_" SYMBOL_NAME "${SYMBOL_NAME}")
     
     # Full path to the template file
-    set(TEMPLATE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/templates/${TEMPLATE_FILE}")
+    set(TEMPLATE_PATH_RELATIVE "${TEMPLATE_FILE}")
+    set(TEMPLATE_PATH_FULL "${CMAKE_CURRENT_SOURCE_DIR}/templates/${TEMPLATE_FILE}")
     
     # Output object file path
     set(OBJ_FILE "${EMBED_GEN_DIR}/${SYMBOL_NAME}.o")
@@ -57,8 +58,9 @@ foreach(TEMPLATE_FILE ${TEMPLATE_FILES})
         OUTPUT ${OBJ_FILE}
         COMMAND ${OBJCOPY_TOOL} -I binary -O ${OBJCOPY_FORMAT}
                 --rename-section .data=.rodata,alloc,load,readonly,data,contents
-                "${TEMPLATE_PATH}" "${OBJ_FILE}"
-        DEPENDS "${TEMPLATE_PATH}"
+                "${TEMPLATE_PATH_RELATIVE}" "${OBJ_FILE}"
+        DEPENDS "${TEMPLATE_PATH_FULL}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/templates"
         COMMENT "Embedding template: ${TEMPLATE_KEY}"
         VERBATIM
     )
@@ -99,7 +101,7 @@ add_custom_target(embedded_templates_generate
 )
 
 # Create an object library for the registry
-add_library(DiaTemplates OBJECT ${REGISTRY_CPP})
+add_library(DiaTemplates STATIC ${REGISTRY_CPP} ${EMBEDDED_OBJECTS})
 add_dependencies(DiaTemplates embedded_templates_generate)
 make_module(DiaTemplates USES)
 

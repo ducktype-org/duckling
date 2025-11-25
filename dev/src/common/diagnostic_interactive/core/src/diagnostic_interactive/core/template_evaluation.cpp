@@ -2,54 +2,28 @@
 
 #include "diagnostic_interactive/core/diagnostic_file.hpp"
 #include "diagnostic_interactive/core/template_file.hpp"
+#include "diagnostic_interactive/core/view_constructors.hpp"
+#include "exceptions.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_state.hpp>
 #include <diagnostic_interactive/core/yaml_buffer.hpp>
-#include <diagnostic_interactive/dia_templates/templates.hpp>
 
-#include "base/raw_view.hpp"
-#include "base/variant.hpp"
+#include "base/box.hpp"
 #include <base/str_utils.hpp>
 
 #include <filesystem/file.hpp>
 
 namespace dia_app {
+
 	template<typename T>
 	T getNewID() {
 		static T current_id = 1;
 		return current_id++;
 	}
 
-	base::Optional<std::string_view> TemplateResistryEmbeddedProvider::loadTemplate(
-		std::string_view path
-	) {
-		auto result = dia_embedded::loadTemplateFromPath(path);
-		if (result.has_value()) return dia_embedded::loadTemplateFromPath(path).value();
-		return {};
-	}
-
-	base::Optional<std::string_view> TemplateRegistryFilesystemProvider::loadTemplate(
-		std::string_view path
-	) {
-		std::string path_str(path);
-		auto        result = templates.atMaybe(path_str);
-		if (result.has_value()) return std::string_view(*result.value());
-
-		auto content_opt = fs::File(templates_root + path_str).getContentSafe();
-		if (content_opt.has_value()) {
-			std::string content_str(content_opt.value().view().stringView());
-			templates.put(path_str, std::move(content_str));
-			return std::string_view(*templates.atMaybe(path_str).value());
-		}
-		return {};
-	}
-
-	base::Optional<std::string_view> TemplateRegistryTestProvider::loadTemplate(std::string_view path
-	) {
-		return templates.atMaybe(std::string(path)).map([](Ref<std::string> str) {
-			return std::string_view{ *str };
-		});
-	}
+	// --------------------------------------------------------------------------------
+	// Evaluation Contexts
+	// --------------------------------------------------------------------------------
 
 	struct ThreadEvaluationContext {
 		TemplateRegistry&       registry;
@@ -58,51 +32,65 @@ namespace dia_app {
 		base::HashMap<dia_file::MessageID, state::MessageID> message_mapping;
 	};
 
-	/**
-	 * @brief Context for template evaluation with registry access.
-	 */
-	struct MessageEvaluationContext {
+	class MessageEvaluationContext {
+	private:
+		// This is part of the result
+		base::HashMap<dia_file::PointerMessage, state::PointerMessageID> pointer_message_mapping;
+		base::HashMap<state::PointerMessageID, state::PointerMessage>    evaluated_pointer_messages;
+
+	public:
 		ThreadEvaluationContext& thread_ctx;
 
-		// Template parameters and macros
-		const base::HashMap<std::string, Box<dia_file::Component>>&      params;
+		// This is the main context for evaluating a message template
+		const base::HashMap<std::string, Box<dia_file::Component>>&      arguments;
+		const base::HashMap<std::string, template_file::Parameter>&      parameters;
 		const base::HashMap<std::string, Box<template_file::Component>>& macros;
 		const base::HashMap<dia_file::PointerMessageID, template_file::PointerMessage>&
 			pointer_messages;
 
-		// Diagnostic file
-
-
-
-		// This is the evaluation result
-		base::HashMap<state::PointerMessageID, state::PointerMessage> evaluated_pointer_messages;
-		base::HashMap<dia_file::PointerMessageID, state::PointerMessageID> pointer_message_mapping;
-
 		MessageEvaluationContext(
 			ThreadEvaluationContext&                                         thread_ctx,
-			const base::HashMap<std::string, Box<dia_file::Component>>&      params,
+			const base::HashMap<std::string, Box<dia_file::Component>>&      arguments,
+			const base::HashMap<std::string, template_file::Parameter>&      parameters,
 			const base::HashMap<std::string, Box<template_file::Component>>& macros,
 			const base::HashMap<dia_file::PointerMessageID, template_file::PointerMessage>&
 				pointer_messages
 		):
 			  thread_ctx(thread_ctx),
-			  params(params),
+			  arguments(arguments),
+			  parameters(parameters),
 			  macros(macros),
 			  pointer_messages(pointer_messages) {}
 
+		/**
+		 * @brief Helper function that checks if a pointer message has already been evaluated
+		 * and if not takes the correct pointer message (inside the current Message or outside of
+		 * it) evaluates it and stores in the mapping.
+		 *
+		 * @param pm pointer message to evaluate
+		 * @return state::PointerMessageID generated ID of the evaluated pointer message
+		 */
 		state::PointerMessageID evaluatePointerMessage(const dia_file::PointerMessage& pm);
+
+		const base::HashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
+		) const {
+			return evaluated_pointer_messages;
+		}
 	};
+
+	// --------------------------------------------------------------------------------
+	// Visitors
+	// --------------------------------------------------------------------------------
+
 
 	/**
 	 * @brief Evaluate template component tree into state component tree.
-	 *
-	 * Accumulates message IDs and pointer message IDs along the way,
-	 * copying them to leaf nodes (TextComponent and CodeComponent).
 	 */
 	class EvaluateTemplateFileVisitor: public template_file::ComponentVisitor {
 	public:
-		MBox<state::Component>                res;
-		MessageEvaluationContext&             ctx;
+		MBox<state::Component>    res;
+		MessageEvaluationContext& ctx;
+
 		std::vector<state::MessageID>&        current_message_ids;
 		std::vector<state::PointerMessageID>& current_pointer_message_ids;
 
@@ -124,33 +112,15 @@ namespace dia_app {
 		void visitCaseOfComponent(const template_file::CaseOfComponent& el) override;
 		void visitCodeBlockComponent(const template_file::CodeBlockComponent& el) override;
 		void visitMessageLinkComponent(const template_file::MessageLinkComponent& el) override;
+		void visitVariantComponent(const template_file::VariantComponent& el) override;
 
-		static base::Optional<Box<state::Component>> evaluate(
+		static Box<state::Component> evaluate(
 			MessageEvaluationContext& ctx, CRef<template_file::Component> component
-		) {
-			std::vector<state::MessageID>        message_ids;
-			std::vector<state::PointerMessageID> pointer_message_ids;
-			EvaluateTemplateFileVisitor header_visitor(ctx, message_ids, pointer_message_ids);
-			component->acceptVisitor(header_visitor);
-			return std::move(header_visitor.res).toOptBox();
-		}
-
-		static base::Optional<Box<state::Component>> evaluateWithValues(
-			MessageEvaluationContext              ctx,
-			CRef<template_file::Component>        component,
-			std::vector<state::MessageID>&        message_ids,
-			std::vector<state::PointerMessageID>& pointer_message_ids
-		) {
-			EvaluateTemplateFileVisitor header_visitor(ctx, message_ids, pointer_message_ids);
-			component->acceptVisitor(header_visitor);
-			return std::move(header_visitor.res).toOptBox();
-		}
+		);
 	};
 
 	/**
 	 * @brief Convert diagnostic file components to state components.
-	 *
-	 * Handles accumulation of pointer messages and message IDs.
 	 */
 	class EvaluateDiagnosticFileVisitor: public dia_file::ComponentVisitor {
 	public:
@@ -171,7 +141,7 @@ namespace dia_app {
 
 		void visitTextComponent(const dia_file::TextComponent& el) override;
 		void visitCodeComponent(const dia_file::CodeComponent& el) override;
-		void visitCodeWithLocationComponent(const dia_file::CodeWithLocationComponent& el) override;
+		void visitCodeLocationComponent(const dia_file::CodeLocationComponent& el) override;
 		void visitStartLineComponent(const dia_file::StartLineComponent& el) override;
 		void visitConcatComponent(const dia_file::ConcatComponent& el) override;
 		void visitPointedComponent(const dia_file::PointedComponent& el) override;
@@ -180,108 +150,38 @@ namespace dia_app {
 		void visitEvaluatedTemplateComponent(const dia_file::EvaluatedTemplateComponent& el
 		) override;
 		void visitMessageIDComponent(const dia_file::MessageIDComponent& el) override;
-	};
 
-	/**
-	 * @brief Convert state components to plain text.
-	 *
-	 * Used for evaluating patterns in CaseOfComponent.
-	 */
-	class ConstructTextViewVisitor: public state::ComponentVisitorPanicky {
-	public:
-		std::string result;
-
-		void visitTextComponent(const state::TextComponent& el) override;
-		void visitCodeComponent(const state::CodeComponent& el) override;
-		void visitConcatComponent(const state::ConcatComponent& el) override;
-		void visitInteractiveComponent(const state::InteractiveComponent& el) override;
-		void visitStartLineComponent(const state::StartLineComponent& el) override;
-		void visitCodeBlockComponent(const state::CodeBlockComponent& el) override;
-	};
-
-	// EvaluateToTextVisitor methods
-
-	void ConstructTextViewVisitor::visitTextComponent(const state::TextComponent& el) {
-		result += el.content;
-	}
-
-	void ConstructTextViewVisitor::visitCodeComponent(const state::CodeComponent& el) {
-		result += el.content;
-	}
-
-	void ConstructTextViewVisitor::visitConcatComponent(const state::ConcatComponent& el) {
-		for (const auto& component: el.components) (*component).acceptVisitor(*this);
-	}
-
-	void ConstructTextViewVisitor::visitInteractiveComponent(const state::InteractiveComponent& el) {
-		(*el.primary).acceptVisitor(*this);
-	}
-
-	void ConstructTextViewVisitor::visitStartLineComponent(const state::StartLineComponent& el) {
-		// StartLineComponent doesn't produce visible text
-		result += "\n";
-	}
-
-	void ConstructTextViewVisitor::visitCodeBlockComponent(const state::CodeBlockComponent& el) {
-		(*el.content).acceptVisitor(*this);
-	}
-
-	bool checkMetadataMatch(
-		const template_file::DiagnosticTemplate& tmpl, const dia_file::Metadata& metadata
-	) {
-		auto& template_metadata = tmpl.getMetadata();
-
-		if (template_metadata.type != metadata.type) return false;
-		if (template_metadata.family != metadata.family) return false;
-		if (template_metadata.name != metadata.name) return false;
-
-		variant_match(tmpl.content) {
-			variant_case_novalue(template_file::MessageTemplate) {
-				return metadata.template_type == "message";
-			}
-			variant_case_novalue(template_file::ComponentTemplate) {
-				return metadata.template_type == "component";
-			}
-			variant_case_novalue(template_file::PointerMessageTemplate) {
-				return metadata.template_type == "pointer_message";
-			}
-		}
-		return false;
-	}
-
-	// TemplateRegistry methods
-	template_file::DiagnosticTemplate& TemplateRegistry::loadTemplate(
-		const dia_file::Metadata& metadata
-	) {
-		std::string key = metadata.type + "/" + metadata.family + "/" + metadata.name;
-
-		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
-
-		auto str_content_opt = provider->loadTemplate(key);
-		if (!str_content_opt.has_value()) {
-			CORE_PANIC(
-				"Template not found: type='{}', family='{}', name='{}'.",
-				metadata.type,
-				metadata.family,
-				metadata.name
-			);
-		}
-		string_view_streambuf buf(str_content_opt.value());
-		std::istream          is(&buf);
-		YAML::Node            yaml_node = YAML::Load(is);
-
-		auto diagnostic_template = template_file::DiagnosticTemplate::fromYaml(yaml_node);
-
-		CORE_ASSERT(
-			checkMetadataMatch(diagnostic_template, metadata),
-			"Loaded template metadata does not match requested metadata."
+		static Box<state::Component> evaluate(
+			MessageEvaluationContext&             ctx,
+			CRef<dia_file::Component>             component,
+			std::vector<state::MessageID>&        message_ids,
+			std::vector<state::PointerMessageID>& pointer_message_ids
 		);
+	};
 
-		cache.put(key, std::move(diagnostic_template));
-		return cache[key];
+	// --------------------------------------------------------------------------------
+	// Helper Functions
+	// --------------------------------------------------------------------------------
+
+	// --------------------------------------------------------------------------------
+	// Visitor Implementations
+	// --------------------------------------------------------------------------------
+
+
+	// EvaluateTemplateFileVisitor
+
+	Box<state::Component> EvaluateTemplateFileVisitor::evaluate(
+		MessageEvaluationContext& ctx, CRef<template_file::Component> component
+	) {
+		std::vector<state::MessageID>        message_ids;
+		std::vector<state::PointerMessageID> pointer_message_ids;
+		EvaluateTemplateFileVisitor          header_visitor(ctx, message_ids, pointer_message_ids);
+		component->acceptVisitor(header_visitor);
+		if (header_visitor.res.toOpt().has_value())
+			return std::move(header_visitor.res).toOptBox().value();
+		throw TemplateEvaluationException("Template evaluation returned no component.");
 	}
 
-	// EvaluateTemplateVisitor methods
 	void EvaluateTemplateFileVisitor::visitTextComponent(const template_file::TextComponent& el) {
 		res = base::makeBox<state::TextComponent>(el.text, current_message_ids);
 	}
@@ -297,40 +197,61 @@ namespace dia_app {
 			if (auto result = std::move(res).toOptBox(); result.has_value())
 				components.push_back(std::move(result).value());
 			else
-				CORE_PANIC("Template component evaluation returned no component.");
+				throw TemplateEvaluationException(
+					"Template component evaluation returned no component."
+				);
 		}
 
-		// Verify stacks weren't corrupted
-		CORE_ASSERT(
-			current_message_ids.size() == initial_message_ids,
-			"Message IDs stack corrupted during template evaluation."
-		);
-		CORE_ASSERT(
-			current_pointer_message_ids.size() == initial_pointer_ids,
-			"Pointer message IDs stack corrupted during template evaluation."
-		);
+		if (current_message_ids.size() != initial_message_ids) {
+			throw TemplateEvaluationException(
+				"Message IDs stack corrupted during template evaluation."
+			);
+		}
+		if (current_pointer_message_ids.size() != initial_pointer_ids) {
+			throw TemplateEvaluationException(
+				"Pointer message IDs stack corrupted during template evaluation."
+			);
+		}
 
 		res = base::makeBox<state::ConcatComponent>(std::move(components));
 	}
 
 	void EvaluateTemplateFileVisitor::visitParamComponent(const template_file::ParamComponent& el) {
-		// Look up parameter from diagnostic file and convert it
-		if (auto param = ctx.params.atMaybe(el.param); param.has_value()) {
-			// Convert diagnostic file component to state component
-			EvaluateDiagnosticFileVisitor converter(
-				ctx, current_message_ids, current_pointer_message_ids
+		if (not ctx.arguments.contains(el.param)) {
+			throw TemplateEvaluationException(
+				base::strConcat("Parameter '", el.param, "' not provided.")
 			);
-			(*param.value())->acceptVisitor(converter);
-			res = std::move(converter.res);
-		} else {
-			CORE_PANIC("Parameter '%s' not provided.", el.param.c_str());
+		}
+
+		auto argument = ctx.arguments.at(el.param).ref();
+		res           = EvaluateDiagnosticFileVisitor::evaluate(
+            ctx, argument, current_message_ids, current_pointer_message_ids
+        );
+
+		if (not ctx.parameters.contains(el.param)) {
+			throw TemplateEvaluationException(
+				base::strConcat("Parameter '", el.param, "' is not declared by the template.")
+			);
+		}
+		const auto& param = ctx.parameters.at(el.param);
+		if (param.argument_expected_type.has_value()
+		    && param.argument_expected_type.value() != argument->getTypeName()) {
+			throw TemplateEvaluationException(base::strConcat(
+				"Parameter '",
+				el.param,
+				"' has incorrect type. Expected: '",
+				param.argument_expected_type.value(),
+				"', got: '",
+				argument->getTypeName(),
+				"'."
+			));
 		}
 	}
 
 	void EvaluateTemplateFileVisitor::visitIsParamProvidedComponent(
 		const template_file::IsParamProvidedComponent& el
 	) {
-		std::string text = ctx.params.contains(el.param) ? "true" : "false";
+		std::string text = ctx.arguments.contains(el.param) ? "true" : "false";
 		res              = base::makeBox<state::TextComponent>(text, current_message_ids);
 	}
 
@@ -338,66 +259,103 @@ namespace dia_app {
 		if (auto macro = ctx.macros.atMaybe(el.macro); macro.has_value())
 			(*macro.value())->acceptVisitor(*this);
 		else
-			CORE_PANIC("Macro '%s' not defined.", el.macro.c_str());
+			throw TemplateEvaluationException(base::strConcat("Macro '", el.macro, "' not defined.")
+			);
 	}
 
 	void EvaluateTemplateFileVisitor::visitCaseOfComponent(const template_file::CaseOfComponent& el
 	) {
-		// Evaluate pattern from template to state
 		el.pattern->acceptVisitor(*this);
 
-		// Convert state to text for pattern matching
-		ConstructTextViewVisitor text_visitor;
-		if (auto pattern_box = std::move(res).toOptBox(); pattern_box.has_value())
-			(*pattern_box.value()).acceptVisitor(text_visitor);
-		else
-			CORE_PANIC("Pattern evaluation returned no component.");
+		if (!this->res.toOpt().has_value())
+			throw TemplateEvaluationException("Pattern evaluation failed.");
 
-		std::string pattern_value = text_visitor.result;
+		std::string pattern_value = constructTextView(this->res.toOpt().value());
 
-		// Find and evaluate matching case
 		if (auto case_content = el.cases.atMaybe(pattern_value); case_content.has_value())
 			(*case_content.value())->acceptVisitor(*this);
+		else if (auto default_case = el.cases.atMaybe("default"); default_case.has_value())
+			(*default_case.value())->acceptVisitor(*this);
 		else
-			CORE_PANIC("No case matched for pattern value: %s", pattern_value.c_str());
+			throw TemplateEvaluationException(
+				base::strConcat("No case matched for pattern value: ", pattern_value)
+			);
 	}
 
 	void EvaluateTemplateFileVisitor::visitCodeBlockComponent(
 		const template_file::CodeBlockComponent& el
 	) {
 		el.code_elements->acceptVisitor(*this);
-		if (auto content = std::move(res).toOptBox(); content.has_value())
-			res = base::makeBox<state::CodeBlockComponent>(std::move(content).value());
-		else
-			CORE_PANIC("CodeBlock evaluation returned no component.");
+		auto content = std::move(res).toOptBox();
+
+		if (!content.has_value())
+			throw TemplateEvaluationException("CodeBlock evaluation returned no component.");
+
+		base::Optional<state::CodeLocation> location;
+		if (el.location.ref().toOpt().has_value()) {
+			el.location.ref().toOpt().value()->acceptVisitor(*this);
+			if (auto loc_res = std::move(res).toOptBox(); loc_res.has_value()) {
+				if (auto loc_comp
+				    = dynamic_cast<state::CodeLocationComponent*>(loc_res.value().get())) {
+					location = loc_comp->location;
+				}
+			}
+		}
+
+		res = base::makeBox<state::CodeBlockComponent>(std::move(content).value(), location);
 	}
 
 	void EvaluateTemplateFileVisitor::visitMessageLinkComponent(
 		const template_file::MessageLinkComponent& el
 	) {
-		// Evaluate target_message from template to state
 		el.target_message->acceptVisitor(*this);
 
-		// Convert state to text to get message ID
-		ConstructTextViewVisitor text_visitor;
-		if (auto message_box = std::move(res).toOptBox(); message_box.has_value())
-			(*message_box.value()).acceptVisitor(text_visitor);
-		else
-			CORE_PANIC("Message link target evaluation returned no component.");
+		if (!this->res.toOpt().has_value())
+			throw TemplateEvaluationException("Message link target evaluation failed.");
 
-		std::string message_id_str = text_visitor.result;
+		std::string message_id_str = constructTextView(this->res.toOpt().value());
 
-		// Push message ID onto stack
-		current_message_ids.push_back(static_cast<state::MessageID>(std::stoul(message_id_str)));
+		if (not ctx.thread_ctx.message_mapping.contains(message_id_str))
+			throw TemplateEvaluationException(base::strConcat(
+				"Message link target ID '", message_id_str, "' not found in thread."
+			));
 
-		// Evaluate content with the message ID in scope
+		current_message_ids.push_back(ctx.thread_ctx.message_mapping.at(message_id_str));
 		el.content->acceptVisitor(*this);
-
-		// Pop message ID from stack
 		current_message_ids.pop_back();
 	}
 
-	// ConvertDiagnosticFileVisitor methods
+	void EvaluateTemplateFileVisitor::visitVariantComponent(const template_file::VariantComponent& el
+	) {
+		el.content->acceptVisitor(*this);
+		auto primary = std::move(res).toOptBox();
+		if (!primary.has_value())
+			throw TemplateEvaluationException("Variant primary content evaluation failed.");
+
+		el.alt_content->acceptVisitor(*this);
+		auto alternative = std::move(res).toOptBox();
+		if (!alternative.has_value())
+			throw TemplateEvaluationException("Variant alternative content evaluation failed.");
+
+		res = base::makeBox<state::InteractiveComponent>(
+			0, std::move(primary).value(), std::move(alternative).value()
+		);
+	}
+
+	// EvaluateDiagnosticFileVisitor
+
+	Box<state::Component> EvaluateDiagnosticFileVisitor::evaluate(
+		MessageEvaluationContext&             ctx,
+		CRef<dia_file::Component>             component,
+		std::vector<state::MessageID>&        message_ids,
+		std::vector<state::PointerMessageID>& pointer_message_ids
+	) {
+		EvaluateDiagnosticFileVisitor visitor(ctx, message_ids, pointer_message_ids);
+		component->acceptVisitor(visitor);
+		if (visitor.res.toOpt().has_value()) return std::move(visitor.res).toOptBox().value();
+		throw TemplateEvaluationException("Diagnostic file component evaluation failed.");
+	}
+
 	void EvaluateDiagnosticFileVisitor::visitTextComponent(const dia_file::TextComponent& el) {
 		res = base::makeBox<state::TextComponent>(el.content, current_message_ids);
 	}
@@ -411,11 +369,11 @@ namespace dia_app {
 		);
 	}
 
-	void EvaluateDiagnosticFileVisitor::visitCodeWithLocationComponent(
-		const dia_file::CodeWithLocationComponent& el
+	void EvaluateDiagnosticFileVisitor::visitCodeLocationComponent(
+		const dia_file::CodeLocationComponent& el
 	) {
-		// For now, just extract the content
-		el.content->acceptVisitor(*this);
+		res = base::makeBox<state::CodeLocationComponent>(state::CodeLocation{
+			.file = el.file, .line = el.line, .column = el.column });
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitStartLineComponent(const dia_file::StartLineComponent& el
@@ -434,184 +392,280 @@ namespace dia_app {
 				components.push_back(std::move(result).value());
 		}
 
-		CORE_ASSERT(
-			current_message_ids.size() == initial_message_ids, "Message IDs stack corrupted."
-		);
-		CORE_ASSERT(
-			current_pointer_message_ids.size() == initial_pointer_ids,
-			"Pointer message IDs stack corrupted."
-		);
+		if (current_message_ids.size() != initial_message_ids)
+			throw TemplateEvaluationException("Message IDs stack corrupted.");
+		if (current_pointer_message_ids.size() != initial_pointer_ids)
+			throw TemplateEvaluationException("Pointer message IDs stack corrupted.");
 
 		res = base::makeBox<state::ConcatComponent>(std::move(components));
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitPointedComponent(const dia_file::PointedComponent& el) {
-		// Push pointer message IDs onto stack
-		for (const auto& pm_id: el.pointer_messages) {
-			current_pointer_message_ids.push_back(
-				static_cast<state::PointerMessageID>(std::stoul(pm_id.pointer_message_id))
-			);
-		}
+		for (const auto& pm_id: el.pointer_messages)
+			current_pointer_message_ids.push_back(ctx.evaluatePointerMessage(pm_id));
 
-		// Evaluate content with pointer messages in scope
 		el.content->acceptVisitor(*this);
 
-		// Pop pointer message IDs from stack
 		for (size_t i = 0; i < el.pointer_messages.size(); ++i)
 			current_pointer_message_ids.pop_back();
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitVariantComponent(const dia_file::VariantComponent& el) {
-		// Evaluate both primary and alternative content
-		EvaluateDiagnosticFileVisitor primary_converter(
-			ctx, current_message_ids, current_pointer_message_ids
+		// We need to catch exceptions here? Or just let them propagate?
+		// The original code panicked if either failed.
+		auto primary = EvaluateDiagnosticFileVisitor::evaluate(
+			ctx, el.content.ref(), current_message_ids, current_pointer_message_ids
 		);
-		el.content->acceptVisitor(primary_converter);
-		auto primary = std::move(primary_converter.res).toOptBox();
 
-		EvaluateDiagnosticFileVisitor alt_converter(
-			ctx, current_message_ids, current_pointer_message_ids
+		auto alternative = EvaluateDiagnosticFileVisitor::evaluate(
+			ctx, el.alt_content.ref(), current_message_ids, current_pointer_message_ids
 		);
-		el.alt_content->acceptVisitor(alt_converter);
-		auto alternative = std::move(alt_converter.res).toOptBox();
 
-		if (primary.has_value() && alternative.has_value()) {
-			res = base::makeBox<state::InteractiveComponent>(
-				0, std::move(primary).value(), std::move(alternative).value()
-			);
-		} else {
-			CORE_PANIC("Variant component evaluation failed.");
-		}
+		res = base::makeBox<state::InteractiveComponent>(
+			0, std::move(primary), std::move(alternative)
+		);
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitEntityComponent(const dia_file::EntityComponent& el) {
-		// Push the attached messages to the entity to the current message stack.
-		auto entity
-			= ctx.thread.entities.atMaybe(el.entity_id)
-		          .expect(base::strConcat("Entity ", el.entity_id, " not found in context."));
-		auto no_links = entity->assoc_infos.size();
+		auto entity_opt = ctx.thread_ctx.thread.entities.atMaybe(el.entity_id);
+		if (!entity_opt.has_value()) {
+			throw TemplateEvaluationException(
+				base::strConcat("Entity ", el.entity_id, " not found in context.")
+			);
+		}
+		auto entity   = entity_opt.value();
+		auto no_links = entity->attached_messages.size();
 
-		// Add assoc infos to message IDs stack
-		for (const auto& assoc_info: entity->assoc_infos)
-			current_message_ids.push_back(static_cast<state::MessageID>(std::stoul(assoc_info)));
+		for (const auto& attached_message: entity->attached_messages)
+			current_message_ids.push_back(ctx.thread_ctx.message_mapping.at(attached_message));
 
-		// Evaluate content with entity ID in scope
 		el.content->acceptVisitor(*this);
 
-		// Pop entity ID from stack
 		for (size_t i = 0; i < no_links; ++i) current_message_ids.pop_back();
 	}
+
+	// Forward declaration needed for visitEvaluatedTemplateComponent
+	Box<state::Component> evaluateTemplateIfComponent(
+		ThreadEvaluationContext&                 thread_ctx,
+		const template_file::DiagnosticTemplate& generic_template,
+		const dia_file::Message&                 message
+	);
 
 	void EvaluateDiagnosticFileVisitor::visitEvaluatedTemplateComponent(
 		const dia_file::EvaluatedTemplateComponent& el
 	) {
-		if (auto attached_msg = ctx.thread_ctx.thread.additional_messages.atMaybe(el.message_id);
-		    attached_msg.has_value()) {
-			const auto& msg = *attached_msg.value();
-
-			// Load the template for this message
-			auto& diagnostic_template = ctx.registry.loadTemplate(msg.metadata);
-
-			// Apply template based on type
-			std::visit(
-				[&](auto&& tmpl) {
-					using T = std::decay_t<decltype(tmpl)>;
-					if constexpr (std::is_same_v<T, template_file::ComponentTemplate>) {
-						// New evalution context should have the parameters from the message
-						MessageEvaluationContext component_ctx{
-							ctx, msg.params, tmpl.macros, {}, {}
-						};
-
-						auto result = EvaluateTemplateFileVisitor::evaluateWithValues(
-							component_ctx,
-							tmpl.content.ref(),
-							current_message_ids,
-							current_pointer_message_ids
-						);
-
-						if (result.has_value())
-							res = std::move(result).value();
-						else
-							CORE_PANIC("Template component evaluation returned no component.");
-					} else {
-						CORE_PANIC(
-							"Template component reference points to non-component template: %s",
-							el.message_id.c_str()
-						);
-					}
-				},
-				diagnostic_template.content
-			);
-		} else {
-			CORE_PANIC(
-				"Template component references unknown message ID: %s", el.message_id.c_str()
-			);
+		auto attached_msg = ctx.thread_ctx.thread.additional_messages.atMaybe(el.message_id);
+		if (!attached_msg.has_value()) {
+			throw TemplateEvaluationException(base::strConcat(
+				"Evaluated template message ID '", el.message_id, "' not found in diagnostic thread."
+			));
 		}
+
+		const auto& msg = *attached_msg.value();
+
+		auto& diagnostic_template = ctx.thread_ctx.registry.loadTemplate(msg.metadata);
+		res = evaluateTemplateIfComponent(ctx.thread_ctx, diagnostic_template, msg);
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitMessageIDComponent(const dia_file::MessageIDComponent& el
 	) {
 		res = base::makeBox<state::TextComponent>(el.message_id);
-		CORE_ASSERT(
-			ctx.thread.attached_messages.contains(el.message_id),
-			"Message ID not found in attached messages."
+		if (!ctx.thread_ctx.thread.additional_messages.contains(el.message_id)) {
+			throw TemplateEvaluationException(
+				base::strConcat("Message ID '", el.message_id, "' not found in diagnostic thread.")
+			);
+		}
+	}
+
+	// --------------------------------------------------------------------------------
+	// Evaluation Logic
+	// --------------------------------------------------------------------------------
+
+	Box<state::Component> evaluateTemplateIfComponent(
+		ThreadEvaluationContext&                 thread_ctx,
+		const template_file::DiagnosticTemplate& generic_template,
+		const dia_file::Message&                 message
+	) {
+		return std::visit(
+			[&](auto&& tmpl) -> Box<state::Component> {
+				using T = std::decay_t<decltype(tmpl)>;
+				if constexpr (std::is_same_v<T, template_file::ComponentTemplate>) {
+					MessageEvaluationContext ctx(
+						thread_ctx, message.arguments, tmpl.params, tmpl.macros, {}
+					);
+					return EvaluateTemplateFileVisitor::evaluate(ctx, tmpl.content.ref());
+				} else {
+					throw TemplateEvaluationException("The template is not a component template.");
+				}
+			},
+			generic_template.content
 		);
 	}
 
-	// Free functions
 	state::Message evaluateMessage(
 		ThreadEvaluationContext&              thread_ctx,
 		const template_file::MessageTemplate& message_template,
 		const dia_file::Message&              message
 	) {
 		MessageEvaluationContext ctx(
-			thread_ctx, message.params, message_template.macros, message_template.pointer_messages
+			thread_ctx,
+			message.arguments,
+			message_template.params,
+			message_template.macros,
+			message_template.pointer_messages
 		);
 
-		// Evaluate header message
 		auto header
-			= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref())
-		          .expect("The header message template evaluation failed.");
+			= EvaluateTemplateFileVisitor::evaluate(ctx, message_template.header_message.ref());
 
-		// Evaluate description if present
 		base::MBox<state::Component> description;
 		if (message_template.description.ref().toOpt().has_value()) {
 			auto desc = EvaluateTemplateFileVisitor::evaluate(
-							ctx, message_template.description.ref().toOpt().value()
-			)
-			                .expect("The description template evaluation failed.");
+				ctx, message_template.description.ref().toOpt().value()
+			);
 			description = base::MBox<state::Component>(std::move(desc));
 		}
 
-		return { message_template.metadata, std::move(header), std::move(description) };
+		base::HashMap<std::string, state::ExploreEdge> evaluated_explore_edges;
+		for (const auto& edge_input: message.explore_edges) {
+			if (not message_template.explore_edges.contains(edge_input.name)) {
+				throw TemplateEvaluationException(
+					base::strConcat("Explore edge '", edge_input.name, "' not defined in template.")
+				);
+			}
+
+			const auto& edge_template = message_template.explore_edges.at(edge_input.name);
+
+			MessageEvaluationContext edge_ctx(
+				thread_ctx, edge_input.params, edge_template.params, message_template.macros, {}
+			);
+
+			auto content
+				= EvaluateTemplateFileVisitor::evaluate(edge_ctx, edge_template.content.ref());
+			evaluated_explore_edges.put(edge_input.name, state::ExploreEdge{ std::move(content) });
+		}
+
+		state::Message result(
+			message_template.metadata,
+			std::move(header),
+			std::move(description),
+			ctx.getEvaluatedPointerMessages(),
+			std::move(evaluated_explore_edges)
+		);
+		return result;
 	}
 
-	base::Optional<state::Message> evaluateTemplate(
+	state::Message evaluateTemplateIfMessage(
 		ThreadEvaluationContext&                 thread_ctx,
 		const template_file::DiagnosticTemplate& generic_template,
+		dia_file::MessageID                      message_id,
 		const dia_file::Message&                 message
 	) {
+		try {
+			return std::visit(
+				[&](auto&& tmpl) -> state::Message {
+					using T = std::decay_t<decltype(tmpl)>;
+					if constexpr (std::is_same_v<T, template_file::MessageTemplate>)
+						return evaluateMessage(thread_ctx, tmpl, message);
+					else
+						throw TemplateEvaluationException("The template is not a message template.");
+				},
+				generic_template.content
+			);
+		} catch (const TemplateEvaluationException& e) {
+			throw TemplateEvaluationException(
+				base::strConcat("Error while evaluating message '", message_id, "': ", e.what())
+			);
+		}
+	}
+
+	state::PointerMessage evaluateTemplateIfPointerMessage(
+		ThreadEvaluationContext&                 thread_ctx,
+		const template_file::DiagnosticTemplate& generic_template,
+		const dia_file::Message&                 pointer_message,
+		const dia_file::PointerMessageID&        pm_id
+	) {
 		return std::visit(
-			[&](auto&& tmpl) -> base::Optional<state::Message> {
+			[&](auto&& tmpl) -> state::PointerMessage {
 				using T = std::decay_t<decltype(tmpl)>;
-				if constexpr (std::is_same_v<T, template_file::MessageTemplate>)
-					return evaluateMessage(thread_ctx, tmpl, message);
-				else
-					return {};
+				if constexpr (std::is_same_v<T, template_file::PointerMessageTemplate>) {
+					MessageEvaluationContext ctx(
+						thread_ctx,
+						pointer_message.arguments,
+						tmpl.params,
+						tmpl.macros,
+						tmpl.pointer_messages
+					);
+					if (!tmpl.pointer_messages.contains(pm_id)) {
+						throw TemplateEvaluationException(base::strConcat(
+							"Pointer message ID '", pm_id, "' not found in template."
+						));
+					}
+
+					auto& dia_file_pointer_message = tmpl.pointer_messages.at(pm_id);
+					auto  content_component        = EvaluateTemplateFileVisitor::evaluate(
+                        ctx, dia_file_pointer_message.content.ref()
+                    );
+					auto text_view = constructTextView(content_component.ref());
+					return state::PointerMessage{
+						.type     = dia_file_pointer_message.type,
+						.content  = std::move(text_view),
+						.priority = static_cast<u32>(dia_file_pointer_message.priority)
+					};
+				} else {
+					throw TemplateEvaluationException(
+						"The template is not a pointer message template."
+					);
+				}
 			},
 			generic_template.content
 		);
 	}
 
+	state::PointerMessageID MessageEvaluationContext::evaluatePointerMessage(
+		const dia_file::PointerMessage& pm
+	) {
+		if (this->pointer_message_mapping.contains(pm)) return this->pointer_message_mapping.at(pm);
+
+		if (pm.message_id.empty()) {
+			auto& pointer_message_content = pointer_messages.at(pm.pointer_message_id);
+			auto  evaluated_component     = EvaluateTemplateFileVisitor::evaluate(
+                *this, pointer_message_content.content.ref()
+            );
+
+			auto text_view = constructTextView(evaluated_component.ref());
+			auto new_id    = getNewID<state::PointerMessageID>();
+			this->evaluated_pointer_messages.put(
+				new_id,
+				state::PointerMessage{ .type    = pointer_message_content.type,
+			                           .content = std::move(text_view),
+			                           .priority
+			                           = static_cast<u32>(pointer_message_content.priority) }
+			);
+			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			return new_id;
+		} else {
+			const auto& message = thread_ctx.thread.additional_messages.at(pm.message_id.value());
+			auto&       diagnostic_template = thread_ctx.registry.loadTemplate(message.metadata);
+			auto        evaluated_pointer_message = evaluateTemplateIfPointerMessage(
+                thread_ctx, diagnostic_template, message, pm.pointer_message_id
+            );
+			auto new_id = getNewID<state::PointerMessageID>();
+			this->evaluated_pointer_messages.put(new_id, std::move(evaluated_pointer_message));
+			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			return new_id;
+		}
+	}
+
 	state::Diagnostic evaluateDiagnostic(const dia_file::Thread& thread) {
-		TemplateRegistry& registry = TemplateRegistry::getInstance();
+		const state::MessageID main_message_id = 0;
+		TemplateRegistry&      registry        = TemplateRegistry::getInstance();
 
-
-		ThreadEvaluationContext thread_ctx{ .registry = registry,
-			                                .thread   = thread,
-			                                .message_mapping
-			                                = { { "<<main_message_not_used_id>>", 0 } },
-			                                .pointer_message_mapping = {} };
+		ThreadEvaluationContext thread_ctx{
+			.registry        = registry,
+			.thread          = thread,
+			.message_mapping = { { "<<main_message_not_used_id>>", main_message_id } },
+		};
 
 		state::MessageID message_id_generator = 1;
 		for (const auto& [message_id, message]: thread.additional_messages)
@@ -621,14 +675,16 @@ namespace dia_app {
 		std::vector<state::Message> messages;
 
 		auto& main_template = registry.loadTemplate(thread.main_message.metadata);
-		messages.push_back(evaluateTemplate(thread_ctx, main_template, thread.main_message)
-		                       .expect("The template is not a message template."));
+		messages.push_back(evaluateTemplateIfMessage(
+			thread_ctx, main_template, "main_message", thread.main_message
+		));
 
 		for (const auto& [message_id, message]: thread.additional_messages) {
-			messages.push_back(
-				evaluateTemplate(thread_ctx, registry.loadTemplate(message.metadata), message)
-					.expect("The template is not a message template.")
-			);
+			if (message.metadata.template_type == "message") {
+				messages.push_back(evaluateTemplateIfMessage(
+					thread_ctx, registry.loadTemplate(message.metadata), message_id, message
+				));
+			}
 		}
 
 		// Load the main message template
@@ -636,45 +692,7 @@ namespace dia_app {
 		for (auto&& msg_id: thread.main_message.attached_messages)
 			displayed_messages.push_back(thread_ctx.message_mapping.at(msg_id));
 
-
 		return { std::move(displayed_messages), std::move(messages) };
 	}
 
-	TemplateRegistry& TemplateRegistry::getInstance() { return *instance.toOpt().value(); }
-
-	void TemplateRegistry::setInstance(Box<TemplateRegistryProvider> provider) {
-		instance = base::makeBox<TemplateRegistry>(std::move(provider));
-	}
-
-	std::string constructTextView(CRef<state::Component> component) {
-		ConstructTextViewVisitor text_visitor;
-		component->acceptVisitor(text_visitor);
-		return text_visitor.result;
-	}
-
-	state::PointerMessageID MessageEvaluationContext::evaluatePointerMessage(
-		const dia_file::PointerMessage& pm
-	) {
-		if (pointer_message_mapping.contains(pm.pointer_message_id))
-			return pointer_message_mapping.at(pm.pointer_message_id);
-
-		if (pm.message_id.empty()) {
-			auto& pointer_message_content = pointer_messages.at(pm.pointer_message_id);
-			auto  evaluated_component
-				= EvaluateTemplateFileVisitor::evaluate(*this, pointer_message_content.content.ref())
-			          .expect(base::strConcat(
-						  "Pointer message '", pm.pointer_message_id, "' evaluation failed."
-					  ));
-			auto new_id = getNewID<state::PointerMessageID>();
-			evaluated_pointer_messages.put(
-				new_id,
-				state::PointerMessage{
-					pointer_message_content.type,
-					std::move(evaluated_component),
-					pointer_message_content.priority
-				}
-			);
-			pointer_message_mapping.put(pm.pointer_message_id, new_id);
-		}
-	}
 }

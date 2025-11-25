@@ -16,11 +16,12 @@ header_message:
   - " and `"
   - param: "right_type"
   - "`"
-  - codeblock:
-    - param: "code"
 
 description:
-  - param: code
+  - codeblock:
+      param: "code"
+    location:
+      param: "location"
 
 pointer_messages:
   cause:
@@ -33,15 +34,18 @@ params:
     description: "The operator which does not match."
   
   left_type:
-    description: "Type of the left operand."
+    description: "Type of the left operand, component component/general/type_with_alias."
     component_type: "template"
     template: "component/general/type_with_alias"
   
   right_type:
-    description: "Type of the right operand."
+    description: "Type of the right operand, should be a component component/general/type_with_alias."
     component_type: "template"
-    template: "component/general/type_with_alias"
   
   code:
     description: "The code snippet where the error occurs."
-    component_type: "code_with_location"
+    component_type: "code"
+  
+  location:
+    description: "Location of the error in the code."
+    component_type: "location"

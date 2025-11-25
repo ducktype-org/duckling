@@ -8,8 +8,8 @@ namespace dia_app::dia_file {
 			return TextComponent::fromJson(elem);
 		else if (type == CodeComponent::typeName())
 			return CodeComponent::fromJson(elem);
-		else if (type == CodeWithLocationComponent::typeName())
-			return CodeWithLocationComponent::fromJson(elem);
+		else if (type == CodeLocationComponent::typeName())
+			return CodeLocationComponent::fromJson(elem);
 		else if (type == StartLineComponent::typeName())
 			return StartLineComponent::fromJson(elem);
 		else if (type == ConcatComponent::typeName())
@@ -25,7 +25,7 @@ namespace dia_app::dia_file {
 		else if (type == MessageIDComponent::typeName())
 			return MessageIDComponent::fromJson(elem);
 		else
-			CORE_PANIC("Unknown component type '{}'.", type);
+			throw ParsingDiagnosticFileError(base::strConcat("Unknown component type '", type, "'."));
 	}
 
 	json TextComponent::toJson() const {
@@ -54,29 +54,24 @@ namespace dia_app::dia_file {
 		return base::makeBox<CodeComponent>(std::move(content));
 	}
 
-	json CodeWithLocationComponent::toJson() const {
+	json CodeLocationComponent::toJson() const {
 		json result;
-		result["type"]    = typeName();
-		result["file"]    = file;
-		result["line"]    = line;
-		result["column"]  = column;
-		result["content"] = content->toJson();
+		result["type"]   = typeName();
+		result["file"]   = file;
+		result["line"]   = line;
+		result["column"] = column;
 		return result;
 	}
 
-	auto CodeWithLocationComponent::fromJson(const json& elem) -> Box<CodeWithLocationComponent> {
+	auto CodeLocationComponent::fromJson(const json& elem) -> Box<CodeLocationComponent> {
 		ASSUME_HAS_STR(elem, "file");
 		ASSUME_UINT(elem, "line");
 		ASSUME_UINT(elem, "column");
-		ASSUME_HAS(elem, "content");
 
-		std::string file    = elem["file"];
-		u64         line    = elem["line"];
-		u64         column  = elem["column"];
-		auto        content = Component::fromJson(elem["content"]);
-		return base::makeBox<CodeWithLocationComponent>(
-			std::move(file), line, column, std::move(content)
-		);
+		std::string file   = elem["file"];
+		u64         line   = elem["line"];
+		u64         column = elem["column"];
+		return base::makeBox<CodeLocationComponent>(std::move(file), line, column);
 	}
 
 	json StartLineComponent::toJson() const {
@@ -235,7 +230,7 @@ namespace dia_app::dia_file {
 		json result;
 		result["metadata"] = metadata.toJson();
 		result["params"]   = json::object();
-		for (const auto& [key, val]: params) result["params"][key] = val->toJson();
+		for (const auto& [key, val]: arguments) result["params"][key] = val->toJson();
 
 		if (!explore_edges.empty()) {
 			result["explore_edges"] = json::array();
@@ -255,7 +250,7 @@ namespace dia_app::dia_file {
 
 		Message result;
 		result.metadata = Metadata::fromJson(msg_json["metadata"]);
-		result.params   = jsonToMap<Box<Component>>(msg_json["params"], [](const json& el) {
+		result.arguments   = jsonToMap<Box<Component>>(msg_json["params"], [](const json& el) {
             return Component::fromJson(el);
         });
 
@@ -267,8 +262,7 @@ namespace dia_app::dia_file {
 
 		if (msg_json.contains("attached_messages")) {
 			ASSUME_ARR(msg_json, "attached_messages");
-			std::vector<MessageID> attached_messages
-				= msg_json["attached_messages"].get<std::vector<MessageID>>();
+			result.attached_messages = msg_json["attached_messages"].get<std::vector<MessageID>>();
 		}
 
 		return result;
@@ -287,7 +281,8 @@ namespace dia_app::dia_file {
 
 		Entity result;
 		for (const auto& info_id_json: entity_json["assoc_infos"]) {
-			CORE_ASSERT(info_id_json.is_string(), "Info ID in assoc_infos must be a string.");
+			if (!info_id_json.is_string())
+				throw ParsingDiagnosticFileError("Info ID in assoc_infos must be a string.");
 			result.attached_messages.push_back(info_id_json);
 		}
 		return result;
@@ -311,7 +306,6 @@ namespace dia_app::dia_file {
 
 	Thread Thread::fromJson(const json& thread_json) {
 		ASSUME_HAS(thread_json, "main_message");
-		ASSUME_ARR(thread_json, "displayed_attached_messages");
 		ASSUME_HAS(thread_json, "attached_messages");
 		ASSUME_HAS(thread_json, "entities");
 

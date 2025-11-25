@@ -20,33 +20,32 @@
                     "type": "template",
                     "info_id": "1"
                 },
-                "code_with_location": {
-                    "location": {
-                        "file": "example.dmf",
-                        "line": 1,
-                        "column": 1
+                "code": [
+                    {
+                        "type": "start_line",
+                        "number": 30
                     },
-                    "content": [
-                        {
-                            "type": "start_line",
-                            "number": 30
-                        },
-                        {
-                            "type": "code",
-                            "content": "var x: i64 = "
-                        },
-                        {
-                            "type": "code",
-                            "content": "1 ? 2"
-                        },
-                        {
-                            "type": "code",
-                            "content": "; ",
-                            "pointer_messages": [
-                                "cause"
-                            ]
-                        }
-                    ]
+                    {
+                        "type": "code",
+                        "content": "var x: i64 = "
+                    },
+                    {
+                        "type": "code",
+                        "content": "1 ? 2"
+                    },
+                    {
+                        "type": "code",
+                        "content": "; ",
+                        "pointer_messages": [
+                            "cause"
+                        ]
+                    }
+                ],
+                "location": {
+                    "type": "code_location",
+                    "file": "example.dmf",
+                    "line": 1,
+                    "column": 1
                 }
             }
         },

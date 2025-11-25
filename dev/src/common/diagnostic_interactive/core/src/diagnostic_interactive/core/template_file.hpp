@@ -24,6 +24,7 @@ namespace dia_app::template_file {
 	struct CaseOfComponent;
 	struct CodeBlockComponent;
 	struct MessageLinkComponent;
+	struct VariantComponent;
 
 	MAKE_VISITOR(Component,
 			TextComponent,
@@ -33,7 +34,8 @@ namespace dia_app::template_file {
 			MacroComponent,
 			CaseOfComponent,
             CodeBlockComponent,
-            MessageLinkComponent
+            MessageLinkComponent,
+            VariantComponent
 		);
 
 	/**
@@ -160,9 +162,12 @@ namespace dia_app::template_file {
 	};
 
 	struct CodeBlockComponent: public Component {
-		Box<Component> code_elements;
+		Box<Component>        code_elements;
+		base::MBox<Component> location;
 
-		CodeBlockComponent(Box<Component> code_elements): code_elements(std::move(code_elements)) {}
+		CodeBlockComponent(Box<Component> code_elements, base::MBox<Component> location):
+			  code_elements(std::move(code_elements)),
+			  location(std::move(location)) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitCodeBlockComponent(*this);
@@ -184,6 +189,21 @@ namespace dia_app::template_file {
 		}
 
 		static Box<MessageLinkComponent> fromYaml(const YAML::Node& elem_node);
+	};
+
+	struct VariantComponent: public Component {
+		Box<Component> content;
+		Box<Component> alt_content;
+
+		VariantComponent(Box<Component> content, Box<Component> alt_content):
+			  content(std::move(content)),
+			  alt_content(std::move(alt_content)) {}
+
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitVariantComponent(*this);
+		}
+
+		static Box<VariantComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
 	struct Metadata {
@@ -223,26 +243,26 @@ namespace dia_app::template_file {
 		/**
 		 * Expected component type
 		 */
-		base::Optional<std::string> component_type;
+		base::Optional<std::string> argument_expected_type;
 		bool                        optional;
 
 		Parameter(std::string description, base::Optional<std::string> component_type, bool optional):
 			  description(std::move(description)),
-			  component_type(std::move(component_type)),
+			  argument_expected_type(std::move(component_type)),
 			  optional(optional) {}
 
 		static Parameter fromYaml(const YAML::Node& node);
 	};
 
-	struct Edge {
-		std::string                           name;
+	struct ExploreLink {
+		Box<Component>                        content;
 		base::HashMap<std::string, Parameter> params;
 
-		Edge(std::string name, base::HashMap<std::string, Parameter> params):
-			  name(std::move(name)),
+		ExploreLink(Box<Component> content, base::HashMap<std::string, Parameter> params):
+			  content(std::move(content)),
 			  params(std::move(params)) {}
 
-		static Edge fromYaml(const YAML::Node& node);
+		static ExploreLink fromYaml(const YAML::Node& node);
 	};
 
 	struct PointerMessage {
@@ -278,14 +298,14 @@ namespace dia_app::template_file {
 	struct MessageTemplate: public CommonTemplate {
 		Box<Component>                             header_message;
 		base::MBox<Component>                      description;
-		base::HashMap<std::string, Edge>           explore_edges;
+		base::HashMap<std::string, ExploreLink>           explore_edges;
 		base::HashMap<std::string, PointerMessage> pointer_messages;
 
 		MessageTemplate(
 			CommonTemplate                             common,
 			Box<Component>                             header_message,
 			base::MBox<Component>                      description,
-			base::HashMap<std::string, Edge>           explore_edges,
+			base::HashMap<std::string, ExploreLink>           explore_edges,
 			base::HashMap<std::string, PointerMessage> pointer_messages
 		):
 			  CommonTemplate(std::move(common)),
@@ -324,13 +344,8 @@ namespace dia_app::template_file {
 
 		static DiagnosticTemplate fromYaml(const YAML::Node& node);
 
-		Metadata& getMetadata() const {
-			return std::visit(
-				[](auto& tpl) -> Metadata& {
-					return tpl.metadata;
-				},
-				content
-			);
+		const Metadata& getMetadata() const {
+			return std::visit([](auto& tpl) -> const Metadata& { return tpl.metadata; }, content);
 		}
 	};
 }

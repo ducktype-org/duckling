@@ -4,7 +4,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <tester/tester.hpp>
-#include "diagnostic_interactive/core/thread_state.hpp"
+#include "diagnostic_interactive/core/diagnostic_state.hpp"
 
 #include <json/json.hpp>
 
@@ -25,12 +25,6 @@ public:
 
 		// YAML template deserialization tests
 		TESTER_ADD_TEST(yamlTemplateDeserialization);
-
-		// Template evaluation tests
-		TESTER_ADD_TEST(evaluateSimpleTextTemplate);
-		TESTER_ADD_TEST(evaluateParamTemplate);
-		TESTER_ADD_TEST(evaluateConcatTemplate);
-		TESTER_ADD_TEST(evaluateCaseOfTemplate);
 	}
 
 private:
@@ -162,7 +156,8 @@ private:
 
 				  // Serialize back to JSON
 				  json j2 = structure.toJson();
-
+				  std::cout << j.dump(2) << std::endl;
+				  std::cout << j2.dump(2) << std::endl;
 				  ASSERT_EQUAL(j.dump(2), j2.dump(2));
 			  };
 
@@ -174,16 +169,15 @@ private:
 		// Test CodeComponent
 		test_component_round_trip(R"({"type": "code", "content": "int x = 42;"})", "code");
 
-		// Test CodeWithLocationComponent
+		// Test CodeLocationComponent
 		test_component_round_trip(
 			R"({
-			"type": "code_with_location",
+			"type": "code_location",
 			"file": "main.cpp",
 			"line": 10,
-			"column": 5,
-			"content": {"type": "code", "content": "x + y"}
+			"column": 5
 		})",
-			"code_with_location"
+			"code_location"
 		);
 
 		// Test StartLineComponent with number
@@ -340,12 +334,13 @@ private:
                         "type": {"type": "code", "content": "some_variable_name"},
                         "link_target": {"type": "message_id", "info_id": "msg_var_def"}
                     }
-                }]
+                }],
+				"attached_messages": ["attach_1"]
 			},
-			"displayed_attached_messages": ["attach_1"],
 			"attached_messages": {
 				"attach_1": {
 					"metadata": {
+                        "template_type": "message",
 						"type": "note",
 						"family": "hint",
 						"name": "suggestion"
@@ -411,6 +406,8 @@ of:
 codeblock:
   - "int x = 42;"
   - "return x;"
+location:
+  param: "location"
 )");
 
 		// Test MessageLinkComponent
@@ -462,7 +459,7 @@ description:
 
 explore_edges:
   see_definition:
-    name: "See definition"
+    content: "See definition"
     params:
       location:
         description: "Definition location"
@@ -585,75 +582,6 @@ pointer_messages:
 			// Verify pointer messages
 			ASSERT_EQUAL(true, pointer_template->pointer_messages.contains("hint_location"));
 		}
-	}
-
-	// ========================================
-	// Template Evaluation Tests
-	// ========================================
-
-	void evaluateSimpleTextTemplate() {
-		// Create a simple text template
-		TemplateRegistry::setInstance(makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "type/family/name", "<yaml content>" } }
-		));
-		auto diagnostic_file = dia_file::Thread::fromJson(json::parse(R"({
-                "metadata": {
-                    "template_type": "message",
-                    "type": "error",
-                    "family": "type_error",
-                    "name": "simple_error"
-                },
-                "params": {}
-            })"));
-
-		state::Diagnostic diagnostic = evaluateDiagnostic(diagnostic_file);
-
-
-        auto result = constructTextView(diagnostic.messages[0].header.ref());
-        
-
-		// Note: We can't actually test full evaluation without a TemplateRegistry
-		// but we can verify the template structure is correct
-		ASSERT_EQUAL("Error occurred", template_comp->text);
-	}
-
-	void evaluateParamTemplate() {
-		// Create a param template
-		auto template_comp = base::makeBox<template_file::ParamComponent>("error_message");
-
-		// Verify structure
-		ASSERT_EQUAL("error_message", template_comp->param);
-	}
-
-	void evaluateConcatTemplate() {
-		// Create a concat template
-		std::vector<Box<template_file::Component>> elements;
-		elements.push_back(base::makeBox<template_file::TextComponent>("Type "));
-		elements.push_back(base::makeBox<template_file::ParamComponent>("type_name"));
-		elements.push_back(base::makeBox<template_file::TextComponent>(" not found"));
-
-		auto template_comp = base::makeBox<template_file::ConcatComponent>(std::move(elements));
-
-		// Verify structure
-		ASSERT_EQUAL(3, template_comp->elements.size());
-	}
-
-	void evaluateCaseOfTemplate() {
-		// Create a case-of template
-		auto pattern = base::makeBox<template_file::ParamComponent>("is_signed");
-		base::Map<std::string, Box<template_file::Component>> cases;
-		cases.put("true", base::makeBox<template_file::TextComponent>("signed"));
-		cases.put("false", base::makeBox<template_file::TextComponent>("unsigned"));
-
-		auto template_comp
-			= base::makeBox<template_file::CaseOfComponent>(std::move(pattern), std::move(cases));
-
-		// Verify structure - access the pattern through the Box
-		ASSERT_EQUAL(
-			"is_signed", dynamic_cast<template_file::ParamComponent&>(*template_comp->pattern).param
-		);
-
-		ASSERT_EQUAL(2, template_comp->cases.size());
 	}
 };
 

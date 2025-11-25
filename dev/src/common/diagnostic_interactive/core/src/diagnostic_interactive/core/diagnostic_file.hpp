@@ -15,7 +15,7 @@ namespace dia_app::dia_file {
 
 	struct TextComponent;
 	struct CodeComponent;
-	struct CodeWithLocationComponent;
+	struct CodeLocationComponent;
 	struct StartLineComponent;
 	struct ConcatComponent;
 	struct PointedComponent;
@@ -28,7 +28,7 @@ namespace dia_app::dia_file {
 	MAKE_VISITOR(Component,
 			TextComponent,
 			CodeComponent,
-            CodeWithLocationComponent,
+            CodeLocationComponent,
             StartLineComponent,
             ConcatComponent,
             PointedComponent,
@@ -62,6 +62,8 @@ namespace dia_app::dia_file {
 		[[nodiscard]] virtual json toJson() const = 0;
 
 		static Box<Component> fromJson(const json& elem);
+
+		[[nodiscard]] virtual std::string_view getTypeName() const = 0;
 	};
 
 	/**
@@ -81,6 +83,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const final;
 
 		[[nodiscard]] static std::string_view typeName() { return "text"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<TextComponent> fromJson(const json& elem);
 	};
@@ -99,31 +102,31 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "code"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<CodeComponent> fromJson(const json& elem);
 	};
 
-	struct CodeWithLocationComponent: public Component {
-		std::string    file;
-		u64            line;
-		u64            column;
-		Box<Component> content;
+	struct CodeLocationComponent: public Component {
+		std::string file;
+		u64         line;
+		u64         column;
 
-		CodeWithLocationComponent(std::string file, u64 line, u64 column, Box<Component> content):
+		CodeLocationComponent(std::string file, u64 line, u64 column):
 			  file(std::move(file)),
 			  line(line),
-			  column(column),
-			  content(std::move(content)) {}
+			  column(column) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
-			visitor.visitCodeWithLocationComponent(*this);
+			visitor.visitCodeLocationComponent(*this);
 		}
 
 		[[nodiscard]] json toJson() const override;
 
-		[[nodiscard]] static std::string_view typeName() { return "code_with_location"; }
+		[[nodiscard]] static std::string_view typeName() { return "code_location"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
-		static Box<CodeWithLocationComponent> fromJson(const json& elem);
+		static Box<CodeLocationComponent> fromJson(const json& elem);
 	};
 
 	struct StartLineComponent: public Component {
@@ -141,6 +144,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "start_line"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<StartLineComponent> fromJson(const json& elem);
 	};
@@ -159,6 +163,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "concat"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<ConcatComponent> fromJson(const json& elem);
 	};
@@ -170,6 +175,10 @@ namespace dia_app::dia_file {
 		PointerMessage(PointerMessageID pointer_message_id, base::Optional<MessageID> message_id):
 			  message_id(std::move(message_id)),
 			  pointer_message_id(std::move(pointer_message_id)) {}
+
+		bool operator==(const PointerMessage& other) const {
+			return message_id == other.message_id && pointer_message_id == other.pointer_message_id;
+		}
 
 		[[nodiscard]] json toJson() const;
 
@@ -191,6 +200,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "pointed"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<PointedComponent> fromJson(const json& elem);
 	};
@@ -210,6 +220,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "variant"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<VariantComponent> fromJson(const json& elem);
 	};
@@ -229,6 +240,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "entity"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<EntityComponent> fromJson(const json& elem);
 	};
@@ -249,6 +261,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "evaluated_template"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<EvaluatedTemplateComponent> fromJson(const json& elem);
 	};
@@ -265,6 +278,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "message_id"; }
+		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<MessageIDComponent> fromJson(const json& elem);
 	};
@@ -291,7 +305,7 @@ namespace dia_app::dia_file {
 
 	struct Message {
 		Metadata                                   metadata;
-		base::HashMap<std::string, Box<Component>> params;
+		base::HashMap<std::string, Box<Component>> arguments;
 		std::vector<ExploreEdge>                   explore_edges;
 		std::vector<MessageID>                     attached_messages;
 
@@ -318,3 +332,15 @@ namespace dia_app::dia_file {
 		static Thread fromJson(const json& thread_json);
 	};
 }  // namespace dia_app::dia_file
+
+namespace std {
+	template<>
+	struct hash<dia_app::dia_file::PointerMessage> {
+		std::size_t operator()(const dia_app::dia_file::PointerMessage& k) const {
+			std::size_t h1 = std::hash<std::string>{}(k.pointer_message_id);
+			std::size_t h2 = 0;
+			if (k.message_id) h2 = std::hash<std::string>{}(*k.message_id);
+			return h1 ^ (h2 << 1);
+		}
+	};
+}

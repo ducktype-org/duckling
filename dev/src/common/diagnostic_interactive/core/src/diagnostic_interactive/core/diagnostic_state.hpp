@@ -27,6 +27,7 @@ namespace dia_app::state {
 	class InteractiveComponent;
 	class StartLineComponent;
 	class CodeBlockComponent;
+	class CodeLocationComponent;
 
 	MAKE_VISITOR(Component,
 			TextComponent,
@@ -35,6 +36,7 @@ namespace dia_app::state {
 			ConcatComponent,
 			InteractiveComponent,
 			StartLineComponent,
+			CodeLocationComponent
 		);
 
 	/**
@@ -108,7 +110,7 @@ namespace dia_app::state {
 		std::vector<MessageID>        attached_messages;
 
 		CodeComponent(
-			ComponentID                   id,
+			ComponentID /* id */,
 			std::string                   content,
 			std::vector<PointerMessageID> pointer_messages,
 			std::vector<MessageID>        attached_messages
@@ -203,14 +205,24 @@ namespace dia_app::state {
 		void reset() final {}
 	};
 
+	struct CodeLocation {
+		std::string file;
+		u64         line;
+		u64         column;
+	};
+
 	class CodeBlockComponent: public Component {
 	private:
 
 	public:
-		Box<Component> content;
+		Box<Component>               content;
+		base::Optional<CodeLocation> location;
 
-		CodeBlockComponent(Box<Component> content): Component(), content(std::move(content)) {
-			content->setParent(this);
+		CodeBlockComponent(Box<Component> content, base::Optional<CodeLocation> location = {}):
+			  Component(),
+			  content(std::move(content)),
+			  location(std::move(location)) {
+			this->content->setParent(this);
 		}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
@@ -220,6 +232,19 @@ namespace dia_app::state {
 		void reset() override { content->reset(); }
 	};
 
+	class CodeLocationComponent: public Component {
+	public:
+		CodeLocation location;
+
+		CodeLocationComponent(CodeLocation location): Component(), location(std::move(location)) {}
+
+		void acceptVisitor(ComponentVisitor& visitor) const final {
+			visitor.visitCodeLocationComponent(*this);
+		}
+
+		void reset() final {}
+	};
+
 	class PointerMessage {
 	public:
 		std::string type;
@@ -227,17 +252,31 @@ namespace dia_app::state {
 		u32         priority;
 	};
 
+	class ExploreEdge {
+	public:
+		Box<Component> content;
+	};
+
 	class Message {
 	public:
 		template_file::Metadata                         metadata;
 		Box<Component>                                  header;
 		MBox<Component>                                 description;
-		base::HashMap<PointerMessageID, PointerMessage> params;
+		base::HashMap<PointerMessageID, PointerMessage> pointer_messages;
+		base::HashMap<std::string, ExploreEdge>         explore_edges;
 
-		Message(template_file::Metadata metadata, Box<Component> header, MBox<Component> description):
+		Message(
+			template_file::Metadata                         metadata,
+			Box<Component>                                  header,
+			MBox<Component>                                 description,
+			base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
+			base::HashMap<std::string, ExploreEdge>         explore_edges
+		):
 			  metadata(std::move(metadata)),
 			  header(std::move(header)),
-			  description(std::move(description)) {}
+			  description(std::move(description)),
+			  pointer_messages(std::move(pointer_messages)),
+			  explore_edges(std::move(explore_edges)) {}
 	};
 
 	class Diagnostic {

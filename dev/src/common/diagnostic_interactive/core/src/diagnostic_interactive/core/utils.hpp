@@ -1,9 +1,11 @@
 #pragma once
+#include "exceptions.hpp"
 #include <yaml-cpp/yaml.h>
 
 #include <base/box.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
+#include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
 #include <json/json.hpp>
@@ -20,15 +22,18 @@
 namespace dia_app {
 	using json = nlohmann::json;
 
-	struct TemplateFileNotFoundException: std::exception {};
+#define ASSUME_OBJ(jf) \
+	if (!jf.is_object()) throw ParsingDiagnosticFileError(#jf " is not an object")
+#define ASSUME_STR(jf, key) \
+	if (!jf[key].is_string()) throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not a string"))
+#define ASSUME_UINT(jf, key)                                                                     \
+	if (!jf[key].is_number_unsigned())                                                           \
+		throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not an unsigned integer"))
+#define ASSUME_ARR(jf, key) \
+	if (!jf[key].is_array()) throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not an array"))
 
-#define ASSUME_OBJ(jf)      CORE_ASSERT(jf.is_object(), #jf " is not an object")
-#define ASSUME_STR(jf, key) CORE_ASSERT(jf[key].is_string(), #jf "[ %s ] is not a string", key)
-#define ASSUME_UINT(jf, key) \
-	CORE_ASSERT(jf[key].is_number_unsigned(), #jf "[ %s ] is not an unsigned integer", key)
-#define ASSUME_ARR(jf, key) CORE_ASSERT(jf[key].is_array(), #jf "[ %s ] is not an array", key)
-
-#define ASSUME_HAS(jf, key) CORE_ASSERT(jf.contains(key), #jf " has no key %s", key)
+#define ASSUME_HAS(jf, key) \
+	if (!jf.contains(key)) throw ParsingDiagnosticFileError(base::strConcat(#jf " has no key ", key))
 #define ASSUME_HAS_STR(jf, key) \
 	do {                        \
 		ASSUME_HAS(jf, key);    \
@@ -50,18 +55,18 @@ namespace dia_app {
 		key_var = jf[#key_var];             \
 	} while (false)
 
-#define ASSUME_VAL(jf, key, value)                         \
-	CORE_ASSERT(                                           \
-		jf[key] == value,                                  \
-		"invalid " #key ", expected: %s but provided: %s", \
-		value,                                             \
-		std::string(jf[key])                               \
-	)
+#define ASSUME_VAL(jf, key, value)                                                               \
+	if (jf[key] != value)                                                                        \
+		throw ParsingDiagnosticFileError(base::strConcat(                                        \
+			"invalid ", #key, ", expected: ", value, " but provided: ", std::string(jf[key])     \
+		))
 
-#define YAML_ASSUME_HAS_SCALAR(node, key) \
-	CORE_ASSERT(node[key] && node[key].IsScalar(), "YAML node missing scalar key: %s", key)
+#define YAML_ASSUME_HAS_SCALAR(node, key)                                                        \
+	if (!node[key] || !node[key].IsScalar())                                                     \
+		throw ParsingTemplateFileError(base::strConcat("YAML node missing scalar key: ", key))
 
-#define YAML_ASSUME_HAS(node, key) CORE_ASSERT(node[key], "YAML node missing key: %s", key)
+#define YAML_ASSUME_HAS(node, key) \
+	if (!node[key]) throw ParsingTemplateFileError(base::strConcat("YAML node missing key: ", key))
 
 	template<typename T>
 	inline base::HashMap<std::string, T> yamlToMap(
