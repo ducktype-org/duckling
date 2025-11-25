@@ -315,6 +315,18 @@ clah::Clah getClahForMain() {
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("--dev-logs")
+	                     .addShortDesc(
+							 "Enable developer logs."
+						 )
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("--dev-logs")
+	                     .addShortDesc(
+							 "Enable developer logs."
+						 )
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
