@@ -1,6 +1,9 @@
 #include "configuration.hpp"
 
 namespace logger {
-    constinit bool enable_dev_logs  = true;
+    // Dev logs are disabled by default.
+    constinit bool enable_dev_logs  = false;
+
+    // User logs are enabled by default.
     constinit bool enable_user_logs = true;
 }
