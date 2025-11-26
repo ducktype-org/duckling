@@ -57,3 +57,15 @@ impl Error for InternalError {
         self.inner.source()
     }
 }
+
+#[cfg(test)]
+pub trait ErrorExt {
+    fn all_errors_to_vec(&self) -> Vec<String>;
+}
+
+#[cfg(test)]
+impl ErrorExt for anyhow::Error {
+    fn all_errors_to_vec(&self) -> Vec<String> {
+        self.chain().map(|err| err.to_string()).collect()
+    }
+}
