@@ -30,7 +30,7 @@ impl Conditions {
                 && vec.is_empty()
             {
                 bail!(
-                    "field `{name}` is present but empty, if you don't want to specify it, remove it from the manifest"
+                    "the field `{name}` is present but empty, if you don't want to specify it, remove it from the manifest"
                 )
             }
             Ok(())
@@ -38,7 +38,7 @@ impl Conditions {
 
         check_non_empty(&system_requirements, "system")?;
         check_non_empty(&arch_requirements, "arch")?;
-        check_non_empty(&required_root_package_features, "features")?;
+        check_non_empty(&required_root_package_features, "package_features")?;
         Ok(Self {
             system_requirements,
             arch_requirements,
@@ -108,19 +108,19 @@ mod tests {
         let err = result.unwrap_err();
         assert_eq!(
             err.to_string(),
-            "field `system` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `system` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
 
         let result = Conditions::new(None, Some(vec![]), None);
         assert_eq!(
             result.unwrap_err().to_string(),
-            "field `arch` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `arch` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
 
         let result = Conditions::new(None, None, Some(vec![]));
         assert_eq!(
             result.unwrap_err().to_string(),
-            "field `features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
     }
 

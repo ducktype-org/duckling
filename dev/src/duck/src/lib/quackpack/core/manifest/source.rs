@@ -30,6 +30,24 @@ impl Source {
     }
 }
 
+impl From<Registry> for Source {
+    fn from(val: Registry) -> Self {
+        Source::Registry(val)
+    }
+}
+
+impl From<Local> for Source {
+    fn from(val: Local) -> Self {
+        Source::Local(val)
+    }
+}
+
+impl From<Git> for Source {
+    fn from(val: Git) -> Self {
+        Source::Git(val)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
@@ -100,7 +118,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum GitRevision {
     /// The main branch.
