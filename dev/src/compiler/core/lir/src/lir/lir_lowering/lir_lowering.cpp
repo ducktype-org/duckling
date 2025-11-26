@@ -15,6 +15,7 @@
 
 #include "../lir_structure/lir_structure.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -435,16 +436,21 @@ namespace compiler::lir {
 					variant_case(
 						mir::MIRConstant, value
 					) {  // @TODO #899 Remove this visit once CTV is VMValue based and stores it's type.
-						return std::visit(
-							[&](auto&& val) {
-								using T = std::decay_t<decltype(val)>;
-								if constexpr (std::is_signed_v<T>)
-									return true;
-								else
-									return false;
-							},
-							value.value.getStorage()
-						);
+						match_optional(value.value.get<numeric_value::NumericValue>()) {
+							opt_some(numeric) {
+								return std::visit(
+									[&](auto&& val) {
+										using T = std::decay_t<decltype(val)>;
+										if constexpr (std::is_signed_v<T>)
+											return true;
+										else
+											return false;
+									},
+									numeric.getStorage()
+								);
+							}
+							opt_none { return false; }
+						}
 					}
 					variant_case(mir::MIRPlace, place) {
 						const auto arg_type = place.type.getType();

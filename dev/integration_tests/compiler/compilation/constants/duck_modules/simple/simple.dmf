@@ -5,7 +5,7 @@ fun fib(n: i64) -> i64 = {
    return fib(n - 1i64) + fib(n - 2i64);
 }
 
-fun takeUnit(u: ()) -> i64 = 42;
+fun takeUnit(u: ()) -> i64 = 42i64;
 
 fun unitIDentity(u: ()) -> () = u;
 
@@ -33,7 +33,7 @@ fun main() -> i64 = {
     builtin_output_i64(takeUnit(unit));
     builtin_output_i64(takeUnit(unitIDentity(unit)));
 
-    return 0;
+    return 0i64;
 }
 
 

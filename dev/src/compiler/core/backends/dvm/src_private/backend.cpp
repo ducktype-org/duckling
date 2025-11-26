@@ -658,7 +658,7 @@ namespace compiler::backend_vm {
 			variant_match(terminator.arguments.at(0).getVariant()) {
 				variant_case(lir::LIRConstant, constant) {
 					if (auto bool_val = constant.value.get<bool>(); bool_val.has_value()) {
-						if (bool_val)
+						if (*bool_val)
 							pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
 						else
 							pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
