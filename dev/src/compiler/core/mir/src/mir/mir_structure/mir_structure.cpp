@@ -228,8 +228,6 @@ namespace compiler::mir {
 		variant_match(value) {
 			variant_case_novalue(MIRUnitConst) { os << "()"; }
 			variant_case(MIRConstant, value) { os << value.value.toString(); }
-			variant_case(MIRIntegerConst, value) { os << value.value; }
-			variant_case(MIRBoolConst, value) { os << (value.value ? "true" : "false"); }
 			variant_case(MIRPlace, place) { place.debugPrint(os); }
 			variant_case(BlockID, block) { os << "Block(" << u64(block) << ")"; }
 			variant_case(MIRFunctionLiteral, func) {

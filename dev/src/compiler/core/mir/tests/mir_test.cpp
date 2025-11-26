@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "ctv/ctv.hpp"
+
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -278,8 +280,11 @@ private:
 			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
 			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
 
-			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MIRBoolConst>().value, true);
-			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MIRBoolConst>().value, false);
+			auto true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
+			auto false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
+
+			ASSERT_EQUAL(true_mir_const.value.get<bool>().value(), true);
+			ASSERT_EQUAL(false_mir_const.value.get<bool>().value(), false);
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir

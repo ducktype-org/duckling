@@ -121,16 +121,7 @@ namespace compiler::mir {
 		ctv::CompileTimeValue value;
 	};
 
-	// TODO: Remove those.
 	struct MIRUnitConst final {};
-
-	struct MIRIntegerConst final {
-		i64 value;
-	};
-
-	struct MIRBoolConst final {
-		bool value;
-	};
 
 	/**
 	 * Represent a direct reference to a function linked to a HELIOS SymID.
@@ -372,14 +363,8 @@ namespace compiler::mir {
 	 */
 	struct MIRValue final {
 	private:
-		using ValueType = std::variant<
-			MIRConstant,
-			MIRUnitConst,
-			MIRIntegerConst,
-			MIRBoolConst,
-			MIRPlace,
-			BlockID,
-			MIRFunctionLiteral>;
+		using ValueType
+			= std::variant<MIRConstant, MIRUnitConst, MIRPlace, BlockID, MIRFunctionLiteral>;
 
 		ValueType value;
 
@@ -387,10 +372,6 @@ namespace compiler::mir {
 		MIRValue(MIRUnitConst value): value(value) {}
 
 		MIRValue(MIRConstant value): value(value) {}
-
-		MIRValue(MIRIntegerConst value): value(value) {}
-
-		MIRValue(MIRBoolConst value): value(value) {}
 
 		MIRValue(MIRLocalRef value): value(MIRPlace(value)) {}
 

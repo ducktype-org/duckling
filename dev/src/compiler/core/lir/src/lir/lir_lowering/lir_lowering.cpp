@@ -446,7 +446,6 @@ namespace compiler::lir {
 							value.value.getStorage()
 						);
 					}
-					variant_case_novalue(mir::MIRIntegerConst) { return true; }
 					variant_case(mir::MIRPlace, place) {
 						const auto arg_type = place.type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral

@@ -176,8 +176,11 @@ private:
 		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
 
-		ASSERT_EQUAL(true_lir_value.get<bool>(), true);
-		ASSERT_EQUAL(false_lir_value.get<bool>(), false);
+		auto true_lir_constant  = true_lir_value.get<compiler::lir::LIRConstant>().value;
+		auto false_lir_constant = false_lir_value.get<compiler::lir::LIRConstant>().value;
+
+		ASSERT_EQUAL(true_lir_constant.get<bool>(), true);
+		ASSERT_EQUAL(false_lir_constant.get<bool>(), false);
 	}
 
 	void functionCallTest() {

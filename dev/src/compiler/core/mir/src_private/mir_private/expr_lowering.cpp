@@ -74,7 +74,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MIRBoolConst{ expr.value } });
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
@@ -465,20 +465,6 @@ namespace compiler::mir {
 			variant_match(value.getVariant()) {
 				variant_case(MIRConstant, constant) {
 					return constant.value.getTypeOfStoredValue(ctx);
-				}
-				variant_case_novalue(MIRIntegerConst) {
-					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryIntegralType>({ 64 }),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case_novalue(MIRBoolConst) {
-					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryBoolType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
 				}
 				variant_case(MIRPlace, place) { return place.type; }
 				variant_default { CORE_UNREACHABLE(); }
