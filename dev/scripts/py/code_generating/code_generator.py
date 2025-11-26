@@ -188,7 +188,7 @@ class LogicGenerator:
             else:
                 action = random.choices(
                     ['symbol', 'literal', 'function_call'],
-                    weights=[70, 20, 10*int(allow_function_calls)],
+                    weights=[70, 20, 20*int(allow_function_calls)],
                     k=1
                 )[0]
                 if action == 'symbol' and len(scope.vars) > 0:
@@ -233,8 +233,18 @@ class LogicGenerator:
 
     def generate_function_body(self, scope: ScopeData):
         with self.generator.indenter:
-            for _ in range(random.randint(1, 30)):
-                self.generator.logic_generator.generate_non_control_flow(scope)
+            for _ in range(random.randint(1, 15)):
+                action = random.choices(
+                    ['if_statement', 'while_loop', 'non_control_flow'],
+                    weights=[10, 10, 80],
+                    k=1
+                )[0]
+                if action == 'if_statement':
+                    self.generate_if_statement(scope)
+                elif action == 'while_loop':
+                    self.generate_while_loop(scope)
+                else:
+                    self.generate_non_control_flow(scope)
             self.generator.return_statement(scope)
             
         
