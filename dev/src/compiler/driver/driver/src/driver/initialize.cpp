@@ -21,11 +21,9 @@ namespace compiler::driver {
 		constinit bool is_initialized = false;
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
-			if (not debug_options.dev_log_categories.empty()) {
-				logger::enable_dev_logs = true;
-			}
+			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
 
-			for (const auto& category_name: debug_options.dev_log_categories) {
+			for (const auto& category_name: debug_options.dev_log_categories)
 
 				if (category_name == "General")
 					logger::enableCategory(logger::LogCategories::General);
@@ -49,7 +47,6 @@ namespace compiler::driver {
 					logger::enableCategory(logger::LogCategories::Linker);
 				else if (category_name == "DVM")
 					logger::enableCategory(logger::LogCategories::DVM);
-			}
 
 			global_state::getDynamicDebugOptions()->llvm_dump_ir  = debug_options.dump_llvm_ir;
 			global_state::getDynamicDebugOptions()->llvm_dump_asm = debug_options.dump_llvm_asm;

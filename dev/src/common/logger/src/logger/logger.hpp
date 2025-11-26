@@ -35,7 +35,8 @@ namespace logger {
 		Linker,    ///< Logs related to the linker component.
 
 		// DVM:
-		DVM,  ///< Logs related to the DVM component.
+		DVM,         ///< Logs related to the DVM component.
+		DVMDetails,  ///< Logs related to detailed logs of the DVM component.
 	};
 
 	/**
@@ -64,10 +65,11 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_USER_LOG(category, ...)                                                 \
-	if (logger::enable_user_logs                                                     \
-	    && logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
-		logger::internal::logMessage(base::strConcat(__VA_ARGS__));                  \
+#define CORE_USER_LOG(category, ...)                                                  \
+	if (logger::enable_user_logs) {                                                   \
+		if (logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
+			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
+		}                                                                             \
 	}
 
 
@@ -82,8 +84,9 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_DEV_LOG(category, ...)                                                  \
-	if (logger::enable_dev_logs                                                      \
-	    && logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
-		logger::internal::logMessage(base::strConcat(__VA_ARGS__));                  \
+#define CORE_DEV_LOG(category, ...)                                                   \
+	if (logger::enable_dev_logs) [[unlikely]] {                                       \
+		if (logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
+			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
+		}                                                                             \
 	}

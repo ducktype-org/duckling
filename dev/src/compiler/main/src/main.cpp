@@ -53,12 +53,13 @@ clah::Clah getStandardDucklingOptions() {
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
 	             .build())
-		// Note that dev-logs options are not handled in pre-handler below,
-		// they should be handled in each command by getDebugOptionsFromClap and passed to initializeTheCompiler.
-		.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
-				.addLongName("dev-logs")
-				.addShortDesc("Enable developer logs for given categories.")
-				.build())
+	    // Note that dev-logs options are not handled in pre-handler below,
+	    // they should be handled in each command by getDebugOptionsFromClap and passed to
+	    // initializeTheCompiler.
+	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
+	             .addLongName("dev-logs")
+	             .addShortDesc("Enable developer logs for given categories.")
+	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
