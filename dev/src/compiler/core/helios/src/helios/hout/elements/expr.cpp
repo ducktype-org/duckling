@@ -47,7 +47,7 @@ namespace compiler::helios::code {
 				  // @TODO: #1373 reconsider this approach.
 				  ctx.query<tsh::QueryUnitType>({}),
 				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Immutable,
+				  tsh::Mutability::Mutable,
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 		  )) {}
@@ -84,7 +84,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryBoolType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -108,7 +108,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryStringType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -134,7 +134,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -416,7 +416,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
@@ -604,7 +604,7 @@ namespace compiler::helios::code {
 			  tsh::SymbolType{
 				  ctx.query<tsh::QueryBoolType>({}),
 				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Immutable,
+				  tsh::Mutability::Mutable,
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
@@ -691,7 +691,7 @@ namespace compiler::helios::code {
 			  tsh::SymbolType<>(
 				  ctx.query<tsh::QueryMetaType>({}),
 				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Immutable
+				  tsh::Mutability::Mutable
 			  ),
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),

@@ -1876,10 +1876,14 @@ private:
 			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
 			                        .withMutability(Immutable);
 			const auto tuple_ii_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>({ { int_st, int_st } })
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+					 )
 			    ).withMutability(Immutable);
 			const auto tuple_tt_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>({ { meta_st, meta_st } })
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+					 )
 			    ).withMutability(Immutable);
 
 			assertEqual(symTypeOf(unit1), unit_st, "Unit1 should be of unit type.");

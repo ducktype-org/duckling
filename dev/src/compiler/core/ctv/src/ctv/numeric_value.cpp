@@ -30,7 +30,7 @@ namespace compiler::numeric_value {
 							IntegralAbstractType::Signedness::Signed,
 						}),
 						ReferenceKind::Direct,
-						Mutability::Immutable,
+						Mutability::Mutable,
 					};
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
 					return SymbolType{
@@ -39,13 +39,13 @@ namespace compiler::numeric_value {
 							IntegralAbstractType::Signedness::Unsigned,
 						}),
 						ReferenceKind::Direct,
-						Mutability::Immutable,
+						Mutability::Mutable,
 					};
 				} else {  // Floating point.
 					return SymbolType{
 						ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
 						ReferenceKind::Direct,
-						Mutability::Immutable,
+						Mutability::Mutable,
 					};
 				}
 			},
