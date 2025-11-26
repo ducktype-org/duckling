@@ -1,5 +1,6 @@
 #include "generic_operations.hpp"
 
+#include <driver/configuration/configuration.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -8,7 +9,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
-#include <global_state/options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
@@ -122,12 +122,12 @@ namespace compiler::driver {
 					);
 				}
 
-				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
+				if (driver::llvm_dump_ir) {
 					base::StrID llvm_ir_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
 					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
-				if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
+				if (driver::llvm_dump_asm) {
 					base::StrID assembly_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
 					llvm_module.compile(
