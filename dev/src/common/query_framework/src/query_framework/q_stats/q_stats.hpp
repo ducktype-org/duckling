@@ -2,8 +2,8 @@
 
 #include <timer/timer.hpp>  // @TODO #404: relax it, so query does not leak timer
 
+#include <query_framework/configuration/configuration.hpp>  // IWYU pragma: export (for USE_STATS)
 #include <query_framework/internal/query_data/query_id.hpp>
-#include <query_framework/configuration/configuration.hpp> // IWYU pragma: export (for USE_STATS)
 
 namespace query {
 
