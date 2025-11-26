@@ -10,11 +10,13 @@ compile_llvm_backend_cmd: "@{duckc_path} compile_package  -a build duck_modules/
 compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/query/query*/*.dbc" # ??
 
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
+
 Clean: "@{clean_cmd}"
-PreCase: "@{clean_cmd} && mkdir build &&
-  @{compile_duckc};
+PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
-    dvm)       @{compile_dvm} && @{compile_dvm_backend_cmd} ;;
+    dvm)       @{compile_dvm_backend_cmd}                   ;;
     llvm)      @{compile_llvm_backend_cmd}                  ;;
     nobackend) echo 'Backend undefined'; exit 1             ;;
     *)         echo 'Unknown backend';   exit 1             ;;
