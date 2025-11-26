@@ -10,6 +10,7 @@ namespace logger {
 	/**
 	 * Categories of logs.
 	 * Feel free to extend/modify as needed.
+	 * When doing so, also update the enableCategoryByStringName function.
 	 *
 	 * @note General category is enabled by default, all other categories are disabled by default.
 	 */
@@ -43,6 +44,13 @@ namespace logger {
 	 * Enables logging for the specified category.
 	 */
 	void enableCategory(LogCategories category);
+
+	/**
+	 * Enables logging for the specified category by its string name.
+	 *
+	 * @note If the category name is unknown, a warning message is printed to std::cerr.
+	 */
+	void enableCategoryByStringName(std::string_view category_name);
 
 	namespace internal {
 		/**
