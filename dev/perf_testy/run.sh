@@ -23,6 +23,11 @@ time_format="%E"
 csv_collect=""
 csv_collect="Category,Test Case,Language,Compilation Time (ms)\n"
 
+# c++ setup:
+cpp_flags="-std=c++20 -w -O0"
+$cpp_c_path $cpp_flags -c ./cpp_setup/print.cpp -o ./cpp_setup/print.o
+cpp_print_lib="./cpp_setup/print.o"
+
 
 # iterate all categories in cases:
 for category_dir in ./cases/*/; do
@@ -63,7 +68,7 @@ for category_dir in ./cases/*/; do
         # measure time taken to compile C++ code:
         ts=$(date +%s%N)  
         # /usr/bin/time -f "C++ compilation time: $time_format" \
-        $cpp_c_path -w -O0 -std=c++20 $cpp_file -o $cpp_binary
+        $cpp_c_path $cpp_flags $cpp_file $cpp_print_lib -o $cpp_binary
         te=$(date +%s%N)
         elapsed=$((te - ts))
         elapsed_ms=$((elapsed / 1000000))
