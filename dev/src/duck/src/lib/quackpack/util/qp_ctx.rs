@@ -1,17 +1,19 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
 use paste::item;
 use rustvil::fs::{MkdirOptions, PathExt};
 
 use crate::{
-    DuckCtx, QuackResult,
+    DuckCtx, QuackResult, StrId,
     duck::util::terminal::Terminal,
     quackpack::util::paths::{
         artifacts_dir, download_dir, fetcher_lockfile, global_venv_dir, metadata_db, storage_dir,
     },
+    static_str_id,
 };
 
+#[derive(Clone, Copy, Debug)]
 /// An extension of DuckCtx with quackpack-specific functionalities.
 pub struct QpCtx<'duck> {
     inner: &'duck DuckCtx,
@@ -33,11 +35,16 @@ macro_rules! path_getters {
             $(
                 pub fn $name(&self) -> QuackResult<PathBuf> {
                     // @TODO: #1555 (point 2) We may decide to only allow the configuration of the top level DUCK_HOME folder.
-                    let path_buf = self.inner.toml_cfg().get_path($toml_key)?.or_else(|| $name(self.inner.env()))
+                    let path_buf = self
+                        .inner
+                        .toml_cfg()
+                        .get_path($toml_key)?
+                        .map(|path| path.to_path_buf())
+                        .or_else(|| $name(self.inner.env()))
                         .ok_or_else(
-                            || anyhow!("Could not decide where the {} should be placed", $message_name)
+                            || anyhow!("Could not decide where the {} should be placed", $message_name),
                         )?;
-                    Ok(path_buf.as_path().full_canonicalize()?)
+                    Ok(path_buf.as_path().expand_user()?.resolve()?)
                 }
             )*
     };
@@ -95,6 +102,29 @@ impl<'duck> QpCtx<'duck> {
     /// Retrieves the underlying DuckCtx's error console.
     pub fn error_console(&self) -> &Terminal {
         self.inner.error_console()
+    }
+
+    pub fn registry_url(&self) -> QuackResult<StrId> {
+        Ok(self
+            .inner
+            .duck_cfg()
+            .toml_config()
+            .get_str("registry.url")?
+            .map(StrId::from)
+            // @TODO: #1572 Move this somewhere else.
+            .unwrap_or_else(|| static_str_id!("http://localhost:9001")))
+    }
+
+    pub fn cwd(&self) -> &Path {
+        self.inner.cwd()
+    }
+
+    pub fn user_home(&self) -> &Path {
+        self.inner.user_home()
+    }
+
+    pub fn duck_home(&self) -> &Path {
+        self.inner.duck_home()
     }
 
     path_getters! {

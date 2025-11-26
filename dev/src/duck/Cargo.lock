@@ -164,7 +164,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -466,9 +466,9 @@ dependencies = [
 
 [[package]]
 name = "rustvil"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fabf002b3ea6a26d4ec8a7d914b8dca9f6090c530a687bc12f6129da1fccf93e"
+checksum = "ae49916bd590af21c115b1ac3d43228590f002f02b3d21efb3ff997240ecd542"
 dependencies = [
  "libc",
  "shellexpand",
