@@ -109,7 +109,7 @@ namespace compiler::lir {
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
-				variant_case(ctv::CompileTimeValue, ctv) { output << ctv.toString(); }
+				variant_case(LIRConstant, constant) { output << constant.value.toString(); }
 				variant_case(LIRPlace, place) {
 					variant_match(place.base) {
 						variant_case(LIRLocalRef, local) { printLocal(local, output); }

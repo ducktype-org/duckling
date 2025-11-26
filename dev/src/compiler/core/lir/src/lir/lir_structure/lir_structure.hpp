@@ -279,15 +279,23 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Representation of a constant known at compile time.
+	 */
+	struct LIRConstant final {
+		ctv::CompileTimeValue value;
+		CRef<tsl::TypeLayout> layout;
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<ctv::CompileTimeValue, LIRPlace, BlockRef, FunctionLiteral>;
+		using ValueType = std::variant<LIRConstant, LIRPlace, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
-		LIRValue(ctv::CompileTimeValue value): value(value) {}
+		LIRValue(LIRConstant value): value(value) {}
 
 		LIRValue(LIRPlace value): value(value) {}
 
@@ -381,7 +389,7 @@ namespace compiler::lir {
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
-			  extra_params(std::move(extra_parameters)) {}
+			  extra_params(extra_parameters) {}
 	};
 
 	/**

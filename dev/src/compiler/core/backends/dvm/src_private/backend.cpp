@@ -1,4 +1,5 @@
 #include "ctv/ctv.hpp"
+#include "ctv/numeric_value.hpp"
 
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -19,9 +20,11 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <bit>
 #include <iostream>
 #include <ranges>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -250,15 +253,13 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(
-							base::strConcat(
-								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-								"supported YET, name: ",
-								primitive.name,
-								", size: ",
-								primitive.size
-							)
-						);
+						throw base::NotYetImplemented(base::strConcat(
+							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+							"supported YET, name: ",
+							primitive.name,
+							", size: ",
+							primitive.size
+						));
 					if (is_global) {
 						if (primitive.size == 8) return vm::opargs::Global64{ name };
 						if (primitive.size == 4) return vm::opargs::Global32{ name };
@@ -306,17 +307,41 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		constexpr vm::opargs::OpCodeArg lirConstantToOpArg(const lir::LIRConstant& constant) {
+			variant_match(constant.value.getStorage()) {
+				variant_case(numeric_value::NumericValue, numeric) {
+					return std::visit(
+						[&](auto&& val) -> vm::opargs::OpCodeArg {
+							using T      = std::decay_t<decltype(val)>;
+							u64 arg_bits = 0;
+
+							if constexpr (std::is_integral_v<T>) {
+								arg_bits = static_cast<u64>(val);
+							} else if (std::is_floating_point_v<T>) {
+								f64 val_as_64 = static_cast<f64>(val);
+								arg_bits      = std::bit_cast<u64>(val_as_64);
+							} else {
+								CORE_PANIC("Unsupported NumericValue type for a VM constant operand"
+							    );
+							}
+							return vm::opargs::Immediate{ arg_bits };
+						},
+						numeric.getStorage()
+					);
+				}
+				variant_case(bool, value) { return vm::opargs::Immediate{ value }; }
+				variant_default {
+					CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
 			AddLIRFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
-				variant_case(ctv::CompileTimeValue, value) {
-					CORE_PANIC("Here some non trivial conversion logic should happen");
-					// variant_case(i64, value) {
-					// 	return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
-					// }
-					// variant_case(bool, value) return vm::opargs::Immediate{ value };
-				}
+				variant_case(lir::LIRConstant, constant) { return lirConstantToOpArg(constant); }
 				variant_case(lir::LIRPlace, place) {
 					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
@@ -525,12 +550,9 @@ namespace compiler::backend_vm {
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
 				ctx.bytecode_func,
-				vm::code::instructions::Comment(
-					base::StrID(
-						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
-							.data()
-					)
-				)
+				vm::code::instructions::Comment(base::StrID(
+					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
+				))
 			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
@@ -623,11 +645,9 @@ namespace compiler::backend_vm {
 
 		pushInstruction(
 			ctx.bytecode_func,
-			instructions::Comment(
-				base::StrID(
-					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-				)
-			)
+			instructions::Comment(base::StrID(
+				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+			))
 		);
 
 		if (terminator.operation == lir::Operation::Branch) {
@@ -636,8 +656,8 @@ namespace compiler::backend_vm {
 			auto false_block = lirValueToOpArg(ctx, terminator.arguments.at(2));
 
 			variant_match(terminator.arguments.at(0).getVariant()) {
-				variant_case(ctv::CompileTimeValue, value) {
-					if (auto bool_val = value.get<bool>(); bool_val.has_value()) {
+				variant_case(lir::LIRConstant, constant) {
+					if (auto bool_val = constant.value.get<bool>(); bool_val.has_value()) {
 						if (bool_val)
 							pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
 						else
@@ -720,10 +740,8 @@ namespace compiler::backend_vm {
 
 			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
 			// GlobalVariables
-			compiled_collection.global_data.push_back(
-				GlobalData{
-					{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name }
-			);
+			compiled_collection.global_data.push_back(GlobalData{
+				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {

@@ -64,6 +64,7 @@ namespace compiler::lir {
 		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
+	// TODOP: Remove?
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
 		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
@@ -207,11 +208,9 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(
-				base::strConcat(
-					"Operation without direct counterpart", base::enumToStr(mir_operation)
-				)
-			);
+			CORE_PANIC(base::strConcat(
+				"Operation without direct counterpart", base::enumToStr(mir_operation)
+			));
 		}
 	}
 
@@ -301,7 +300,12 @@ namespace compiler::lir {
 					variant_case_novalue(mir::MIRUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
 					}
-					variant_case(mir::MIRConstant, value) { return LIRValue{ value.value }; }
+					variant_case(mir::MIRConstant, value) {
+						auto layout = ctx.query<tsl::QuerySymbolTypeLayout>(
+							value.value.getTypeOfStoredValue(ctx)
+						);
+						return LIRValue{ LIRConstant{ .value = value.value, .layout = layout } };
+					}
 					variant_case(mir::MIRPlace, place) { return LIRValue{ getPlace(place) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
@@ -571,13 +575,11 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"instruction ",
-							base::enumToStr(mir_instruction.operation),
-							" in LowerToLIRFunction"
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLIRFunction"
+					));
 				}
 			}
 
@@ -740,15 +742,13 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(
-				Instruction{
-					Operation::Call,
-					{},
-					{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
+			entry_block.instructions.push_back(Instruction{
+				Operation::Call,
+				{},
+				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
 
-					,
-				}
-			);
+				,
+			});
 		}
 
 		base::StableVector<Block> blocks;
