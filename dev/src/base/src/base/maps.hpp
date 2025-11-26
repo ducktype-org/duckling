@@ -86,6 +86,11 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
+		template<typename K = KEY_T, typename D = DATA_T>
+		auto insertOrAssign(K&& key, D&& data) {
+			return ContainerType::insert_or_assign(std::forward<K>(key), std::forward<D>(data));
+		}
+
 		[[nodiscard]]
 		bool notEmpty() const {
 			return !ContainerType::empty();

@@ -22,3 +22,8 @@ add_executable(term_ui_test
     tests/test.cpp
 )
 target_link_libraries(term_ui_test PUBLIC TerminalUI JSON rang Base DiagnosticInteractiveCore)
+
+add_executable(term_ui_demo
+    src/diagnostic_interactive/term_ui/main.cpp
+)
+target_link_libraries(term_ui_demo PUBLIC TerminalUI JSON DiagnosticInteractiveCore Base)

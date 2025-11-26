@@ -1,31 +1,50 @@
-#include "view.hpp"
+#include <diagnostic_interactive/term_ui/printers.hpp>
+#include <diagnostic_interactive/core/template_registry.hpp>
+#include <diagnostic_interactive/core/diagnostic_file.hpp>
+#include <diagnostic_interactive/core/view_constructors.hpp>
+#include <diagnostic_interactive/core/template_evaluation.hpp>
+#include <json/json.hpp>
 
-// #include <dia_app/view_manager/view_manager.hpp>
-// #include <json/json.hpp>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
-int main(int /*argc*/, char* /*argv*/[]) {
-	std::cerr << "term_ui main is currently disabled due to refactoring. Needs update to use DiagnosticState.\n";
-	return 1;
-	/*
-	if (argc != 2) {
-		std::cerr << "Pass a single file as argument\n";
-		return 1;
-	}
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <diagnostic_file>\n";
+        return 1;
+    }
 
-	// Parse the input file to JSON object.
-	std::ifstream  file(argv[1]);
-	nlohmann::json input = nlohmann::json::parse(file);
-	file.close();
+    std::string file_path = argv[1];
 
-	// Create a view manager and initialize it with the parsed JSON.
-	auto                  view_manager = dia_app::view_manager::ViewManager::createFromJson(input);
-	::view::ViewResponse* vm_data      = new ::view::ViewResponse;
-	view_manager.getView(vm_data);
+    // Set template registry to embedded templates
+    dia_app::TemplateRegistry::setInstance(
+        makeBox<dia_app::TemplateResistryEmbeddedProvider>()
+    );
 
-	// Format and print the static message to the terminal.
-	// term_ui::View term_msg(*vm_data);
-	// bool          use_color = true;
-	// term_msg.print(std::cerr, use_color);
-	*/
+    // Read the diagnostic file
+    std::ifstream f(file_path);
+    if (!f.is_open()) {
+        std::cerr << "Failed to open file: " << file_path << '\n';
+        return 1;
+    }
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    std::string content = buffer.str();
+
+    try {
+        auto j = nlohmann::json::parse(content);
+        auto thread = dia_app::dia_file::Thread::fromJson(j);
+
+        // Create a tree view constructor and display it in the term ui
+        auto state = dia_app::evaluateDiagnostic(thread);
+        auto view = dia_app::term_ui_view::constructTreeView(state);
+
+        term_ui::print(view, std::cout);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return 1;
+    }
+
+    return 0;
 }
