@@ -12,8 +12,8 @@
 #include <artifacts/artifacts.hpp>
 #include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
-#include <query_framework/external/api.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/external/api.hpp>
 
 namespace compiler::driver {
 
@@ -21,17 +21,12 @@ namespace compiler::driver {
 		constinit bool is_initialized = false;
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
-			// @TODO PR:
-			// lexer::Lexer::setTokenMessages(debug_options.lexer_cerr);
-			// dia::Logger::setImmediatelyDump(debug_options.logger_cerr);
+			if (not debug_options.dev_log_categories.empty()) {
+				logger::enable_dev_logs = true;
+			}
 
-			// bool at_least_one_category_enabled = false;
-			// @TODO PR: make it better XD
-			logger::enable_dev_logs = true;
+			for (const auto& category_name: debug_options.dev_log_categories) {
 
-			for (const auto& category_name : debug_options.dev_log_categories) {
-				std::cerr << "Enabling dev log category: " << category_name << "\n";
-				
 				if (category_name == "General")
 					logger::enableCategory(logger::LogCategories::General);
 				else if (category_name == "Lexer")

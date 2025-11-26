@@ -49,18 +49,16 @@ void printContextErrors() {
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("logger-cerr")
-	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("lexer-cerr")
-	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
 	             .build())
+		// Note that dev-logs options are not handled in pre-handler below,
+		// they should be handled in each command by getDebugOptionsFromClap and passed to initializeTheCompiler.
+		.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
+				.addLongName("dev-logs")
+				.addShortDesc("Enable developer logs for given categories.")
+				.build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				std::cout << "Duckling version: 0.0.1 pre-alpha\n";
@@ -90,10 +88,8 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	// @TODO PR: change it
 	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
-		                        .copyValueOr(std::vector<std::string>{}),
+		                          .copyValueOr(std::vector<std::string>{}),
 
-		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
-		.logger_cerr   = parsing_result.isFlag("logger-cerr"),
 		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
 		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
 	};
@@ -318,10 +314,6 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc(
 							 "Disable incremental compilation (do not load previous query graph)."
 						 )
-	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
-	                     .addLongName("dev-logs") // @TODO PR: move to global options
-	                     .addShortDesc("Enable developer logs for given categories.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
