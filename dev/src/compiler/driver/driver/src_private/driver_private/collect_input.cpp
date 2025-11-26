@@ -72,13 +72,7 @@ namespace compiler::driver {
 		std::vector<pst::LangElement::HashType> hashes;
 
 		const auto& packages = global_state::getPackages();
-		for (const auto& pkg: packages) {
-			std::filesystem::path p = pkg.package_path.getPath();
-			fs::File              file(pkg.package_path);
-			auto                  root_module
-				= compiler::frontend::createModuleTree(file, pkg.package_name.strView());
-			collectFromModule(root_module, base::Ref(&hashes));
-		}
+		for (const auto& pkg: packages) collectFromModule(pkg.root_module, base::Ref(&hashes));
 
 		std::vector<query::external::InputData> out;
 		out.reserve(hashes.size());

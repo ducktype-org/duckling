@@ -3,7 +3,7 @@
 Dependency solving pipeline and build rules construction.
 
 ## `solver.py`
-Façade entry for solver-related operations.
+Facade entry for solver-related operations.
 
 ## `util.py`
 Small helpers shared across solver subpackages.

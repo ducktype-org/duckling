@@ -1,101 +1,102 @@
 # Element Class Hierarchy
 
-Forward deklaracje są zapisane w odziemnym pliku/plikach
+Forward declarations are saved in a separate file/files.
 
-Klasy mogą mieć statyczną metodę `parse`, która parsuje dowolne wyrażenie, zależnie na jakie tokeny trafi.
+Classes can have a static `parse` method that parses any expression, depending on which tokens it encounters.
 
 **Element**  
-│ Główna klasa, która definiuje wspólny interface parse-owania i alokator-ów.  │ `inline void* operator new(usize size);` - to robienia custom-owych alokator-ów w przyszłości
-│ `inline void operator delete(void* p)` - j.w.
-│ `virtual @TODO dprint() const = 0;` - Creates printer message of element debug representation
+│ Main class that defines a common parsing and allocator interface.
+│ `inline void* operator new(usize size);` - for creating custom allocators in the future
+│ `inline void operator delete(void* p)` - as above
+│ `virtual [some type] dprint() const = 0;` - Creates printer message of element debug representation
 │
 ├─ **StmtList** final
-│  │ Efektywnie `std::vector<Stmt*>`, ale implementujące `Element`
+│  │ Effectively `std::vector<Stmt*>`, but implementing `Element`
 │
 ├─ **Stmt** 
-│  │ Element, który może występować samodzielnie
+│  │ An element that can appear on its own / A standalone element
 │  │  
 │  │   
 │  ├─ **Expr** final  
-│  │  │ Dowolne wyrażenie operatorów.
-│  │  │ Specjalnie ogarnia operator lambdy `=>`, i być może `:=`, `:`.    
-│  │  │ Może wprowadzać nowe symbole.  
-|  |  | Może zawierać bloki kodu (lambdy)
+│  │  │ Any operator expression.
+│  │  │ Specifically handles the lambda operator `=>`, and possibly `:=`, `:`.    
+│  │  │ Can introduce new symbols.  
+|  |  | Can contain code blocks (lambdas)
 │  │  
 │  │  
 │  ├─ **Decl**  
-│  │  │ Wszelkie takie jak funkcje, pętle, bloki kodu.  
-│  │  │ Mogą deklarować od 0 do dowolnej liczby symboli.
-│  │  │ Tutaj będzie prawdopodobnie większość logiki jak i mnóstwo boilerplate-u (na szczęście powtarzalnego)
+│  │  │ All items such as functions, loops, code blocks.  
+│  │  │ They can declare from 0 to any number of symbols.
+│  │  │ This is where most of the logic and a lot of boilerplate (fortunately repetitive) will likely be.
 │  │  │  
 │  │  ├─ **Fun**
-│  │  │  │ Funkcja 
-│  │  │  │ todo 
+│  │  │  │ Function 
+│  │  │  │ ? 
 │  │  │ 
-│  │  ├─ Wszelkie deklaracje (while, for, var?, let?, block, macro, with, loop ...)  
-│  │  │  │ @IDEA: Gdyby np `for` miał parę wariantów, 
-│  │  │  │ to pewnie warto aby były to podklasy wspólnego interface-u `For`,
-│  │  │  │ bardzo możliwe, że pustego 
+│  │  ├─ All declarations (while, for, var?, let?, block, macro, with, loop ...)  
+│  │  │  │ @IDEA: If, for example, `for` had a few variants, 
+│  │  │  │ it would probably be worth having them as subclasses of a common `For` interface,
+│  │  │  │ quite possibly an empty one.
 │  │  
 │  │  
 │  ├─ **Action**  
-│  │  │ Struktury takie jak `return 2;`, `break A;`.  
-│  │  │ Zazwyczaj będzie to słowo kluczowe, po którym występuje `Expr`.  
+│  │  │ Structures such as `return 2;`, `break A;`.  
+│  │  │ Usually, this will be a keyword followed by an `Expr`.  
 │  │  │  
 │  │  ├─ **Return**
 │  │  ├─ **Break** 
 │  │  ├─ **Continue** 
 │  │  ├─ **Redo** 
-│  │  ├─ **Exit** @TODO: chcemy tego typu? 
+│  │  ├─ **Exit** Do we want this type? 
 │  │  ├─ ...
 │  │  
 │  │  
 │  ├─ **Attr** final  
-│  │  │ @TODO: Może `NotStmt`?
-│  │  │ Pojedynczy atrybut `@name(params)` albo `@name`  
+│  │  │ ? Maybe `NotStmt`?
+│  │  │ Single attribute `@name(params)` or `@name`  
 │  │  
 │  │  
 │  ├─ **AttrList** final  
-│  │  │ Efektywnie `std::vector<Attr>`, ale implementujące `parse` - pewnie korzysta z generatora
+│  │  │ Effectively `std::vector<Attr>`, but implementing `parse` - probably uses a generator
 │  │  
 │  
 ├─ **NotStmt**
-│  │ Klasa, która służy na posegregowanie w jednym miejscu bloczków budujących elementy, które nie występującą samodzielnie
+│  │ A class serving to group together building blocks for elements that do not appear independently.
 │  │  
 │  ├─ **OptionalName** 
-│  │  │ Czyta identifier, jeśli jest, inaczej nic nie czyta. Zapisuje swój stan  
+│  │  │ Reads an identifier if present, otherwise reads nothing. Saves its state.  
 │  │
 │  ├─ **ParamList**
-│  │  │ Lista parametrów (funkcji, makra, atrybutu, ...)  
+│  │  │ List of parameters (of a function, macro, attribute, ...)  
 |  |
 │  ├─ **ArgList**
-│  │  │ Lista argumentów (funkcji, makra, atrybutu, ...)
+│  │  │ List of arguments (of a function, macro, attribute, ...)
 |  | 
 |  ├─ **CodeBlock**
-|  |  | @TODO: może to jest `Stmt`?
-|  |  | Czyta `StmtList` w `{}`.
+|  |  | ? maybe this is a `Stmt`?
+|  |  | Reads `StmtList` inside `{}`.
 |  |
 |  ├─ **CodeBlockOrStmt**
-|  |  | @TODO: może to jest `Stmt`?
-|  |  | Czyta `StmtList` w `{}`, lub jedno `Stmt` w niczym.
+|  |  | ? maybe this is a `Stmt`?
+|  |  | Reads `StmtList` inside `{}`, or a single `Stmt` inside nothing.
 |  |
-|  ├─ Wszelkie `NotStmt` typu fragmenty for-a
+|  ├─ Any `NotStmt` like fragments of a for-loop
 
 
 
 **Generators**
-| @TODO: Czy powinny dziedziczyć po `Element` -- czy mają wspólny interface
-| Interface generatorów, typu `template<...> class ParseInOrder`, albo `template<T, Separator> class ListOf`
-| @IDEA: Może nie klasy?
-| Korzystając z generatorów wciąż piszemy nową klasę w hierarchii `Element`. 
-| Raczej chcemy dużo korzystać z generatorów
-| Może ona zawierać generatory jako pola, zmienne, ...  
+| ? Should they inherit from `Element` -- do they have a common interface ?
+| Generator interface, like `template<...> class ParseInOrder`, or `template<T, Separator> class ListOf`
+| @IDEA: Maybe not classes?
+| Using generators, we still write a new class in the `Element` hierarchy. 
+| We rather want to use generators a lot.
+| It can contain generators as fields, variables, ...  
 |
 ├─ **ElemArray<T, uint32_t count>**
 ├─ **ElemList<T>**
 ├─ **Optional<T>**
 ├─ **ElemTuple<T...>**
 ├─ **SimpleExprAction<Key>**
-├─ @IDEA: Jakieś rzeczy do cięcia tokenów na fragmenty
-├─ @IDEA: Lista, ale ogarniająca separator (np `,`). Może być przydatne do wprowadzania potem `For A(), B(), C() {}` i podobnych
+├─ @IDEA: Some things for slicing tokens into fragments
+├─ @IDEA: A list, but handling a separator (e.g. `,`). Could be useful for later introducing `For A(), B(), C() {}` and similar.
 ├─ ...
