@@ -124,6 +124,9 @@ def _make_test_node(config: dict) -> TestNode:
         name=config[NAME],
         subtests=[_make_test_node(subdir) for subdir in config.get(SUBDIRS, [])],
         tests=[_make_test(config, test) for test in config.get(TESTS, [])],
+        cwd=config[CONFIG_FILE].parent,
+        pre_node=config_find_and_eval(config, PRE_NODE, default=""),
+        post_node=config_find_and_eval(config, POST_NODE, default=""),
     )
 
 
