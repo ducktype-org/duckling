@@ -2,7 +2,7 @@
 
 class FirstClassEver {
     a: i64 = 0;
-    b: f32 = 0;
+    b: f32 = 0.0;
 
     fun getA() -> i64 = {
         return a;

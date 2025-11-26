@@ -43,6 +43,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getInit() const {
+			if (init.has_value()) return { init.value().give() };
+			return {};
+		}
+
+		[[nodiscard]]
 		DeclKind isDeclaration() const final {
 			return DeclKind::Symbol;
 		}
