@@ -30,12 +30,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/**
 		@brief Placeholder.
 		@todo Some decisions here to be made about operations like that.
-	*//**
 		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 
 		Some operations are sign-sensitive and are prefixed with U or S, e.g. UDiv and SDiv.
 	*/
+
+	/** Integer arithmetic. */
 	IntegerAdd,
 	IntegerSub,
 	IntegerNeg,
@@ -45,6 +46,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerUMod,
 	IntegerSMod,
 
+	/** Floating point arithmetic. */
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatNeg,
+
+	/** Integer comparisons. */
 	IntegerULt,
 	IntegerUGt,
 	IntegerULteq,
@@ -55,6 +64,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSGteq,
 	IntegerEq,
 	IntegerNeq,
+
+	/** Floating point comparisons. */
+	FloatLt,
+	FloatGt,
+	FloatLteq,
+	FloatGteq,
+	FloatEq,
+	FloatNeq,
 
 	BooleanAnd,
 	BooleanOr,
@@ -266,13 +283,11 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LIRPlace, BlockRef, FunctionLiteral>;
+		using ValueType = std::variant<ctv::CompileTimeValue, LIRPlace, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
-		LIRValue(i64 value): value(value) {}
-
-		LIRValue(bool value): value(value) {}
+		LIRValue(ctv::CompileTimeValue value): value(value) {}
 
 		LIRValue(LIRPlace value): value(value) {}
 
@@ -280,6 +295,7 @@ namespace compiler::lir {
 
 		LIRValue(FunctionLiteral value): value(value) {}
 
+		// TODOP: Do we need == operator?
 		bool operator==(const LIRValue& other) const = default;
 
 		[[nodiscard]]

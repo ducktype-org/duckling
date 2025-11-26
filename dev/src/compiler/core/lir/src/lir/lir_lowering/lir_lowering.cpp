@@ -24,15 +24,19 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>
 
+#include <type_traits>
 #include <utility>
 
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
+	using std::move;
+
 
 	/**
 	 * @brief Mutable reference block in LIR.
@@ -168,6 +172,32 @@ namespace compiler::lir {
 		case mir::Operation::IntegerNeq:
 			return Operation::IntegerNeq;
 
+		/// Floating point arithmetic ///
+		case mir::Operation::FloatAdd:
+			return Operation::FloatAdd;
+		case mir::Operation::FloatSub:
+			return Operation::FloatSub;
+		case mir::Operation::FloatMul:
+			return Operation::FloatMul;
+		case mir::Operation::FloatDiv:
+			return Operation::FloatDiv;
+		case mir::Operation::FloatNeg:
+			return Operation::FloatNeg;
+
+		/// Floating point comparisons ///
+		case mir::Operation::FloatLt:
+			return Operation::FloatLt;
+		case mir::Operation::FloatGt:
+			return Operation::FloatGt;
+		case mir::Operation::FloatLteq:
+			return Operation::FloatLteq;
+		case mir::Operation::FloatGteq:
+			return Operation::FloatGteq;
+		case mir::Operation::FloatEq:
+			return Operation::FloatEq;
+		case mir::Operation::FloatNeq:
+			return Operation::FloatNeq;
+
 		// Logic
 		case mir::Operation::BooleanAnd:
 			return Operation::BooleanAnd;
@@ -177,7 +207,11 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC("Operation without direct counterpart");
+			CORE_PANIC(
+				base::strConcat(
+					"Operation without direct counterpart", base::enumToStr(mir_operation)
+				)
+			);
 		}
 	}
 
@@ -267,10 +301,7 @@ namespace compiler::lir {
 					variant_case_novalue(mir::MIRUnitConst) {
 						CORE_PANIC("Cannot get location of MIR unit.");
 					}
-					variant_case(mir::MIRIntegerConst, integer) {
-						return LIRValue{ integer.value };
-					}
-					variant_case(mir::MIRBoolConst, boolean) { return LIRValue{ boolean.value }; }
+					variant_case(mir::MIRConstant, value) { return LIRValue{ value.value }; }
 					variant_case(mir::MIRPlace, place) { return LIRValue{ getPlace(place) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
@@ -296,14 +327,14 @@ namespace compiler::lir {
 					if (!mir_local.carriesInformation(ctx)) continue;
 
 					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
-					locals.pushBack(std::move(lir_local));
+					locals.pushBack(lir_local);
 					auto local_index = locals.lastIndex();
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
 					if (!mir_local.type.hasNoOpDestructor()) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
-						locals.pushBack(std::move(lifetime_flag));
+						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
 						mir_to_lifetime_flag.put(&mir_local, locals[flag_index]);
 					}
@@ -397,6 +428,20 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
+					variant_case(
+						mir::MIRConstant, value
+					) {  // @TODO #899 Remove this visit once CTV is VMValue based and stores it's type.
+						return std::visit(
+							[&](auto&& val) {
+								using T = std::decay_t<decltype(val)>;
+								if constexpr (std::is_signed_v<T>)
+									return true;
+								else
+									return false;
+							},
+							value.value.getStorage()
+						);
+					}
 					variant_case_novalue(mir::MIRIntegerConst) { return true; }
 					variant_case(mir::MIRPlace, place) {
 						const auto arg_type = place.type.getType();
@@ -406,6 +451,7 @@ namespace compiler::lir {
 					}
 					variant_default { return false; }
 				}
+
 				CORE_UNREACHABLE();
 			}
 
@@ -458,6 +504,20 @@ namespace compiler::lir {
 				case mir::Operation::IntegerGteq:
 				case mir::Operation::IntegerEq:
 				case mir::Operation::IntegerNeq:
+
+				case mir::Operation::FloatAdd:
+				case mir::Operation::FloatSub:
+				case mir::Operation::FloatMul:
+				case mir::Operation::FloatDiv:
+				case mir::Operation::FloatNeg:
+
+				case mir::Operation::FloatLt:
+				case mir::Operation::FloatGt:
+				case mir::Operation::FloatLteq:
+				case mir::Operation::FloatGteq:
+				case mir::Operation::FloatEq:
+				case mir::Operation::FloatNeq:
+
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
 				case mir::Operation::BooleanNot: {
@@ -511,11 +571,13 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"instruction ",
-						base::enumToStr(mir_instruction.operation),
-						" in LowerToLIRFunction"
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"instruction ",
+							base::enumToStr(mir_instruction.operation),
+							" in LowerToLIRFunction"
+						)
+					);
 				}
 			}
 
@@ -678,13 +740,15 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(Instruction{
-				Operation::Call,
-				{},
-				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
+			entry_block.instructions.push_back(
+				Instruction{
+					Operation::Call,
+					{},
+					{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
 
-				,
-			});
+					,
+				}
+			);
 		}
 
 		base::StableVector<Block> blocks;

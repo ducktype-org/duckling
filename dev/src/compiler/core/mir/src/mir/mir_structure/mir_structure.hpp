@@ -3,6 +3,7 @@
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
+#include <ctv/ctv.hpp>
 #include <string_id/string_id.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -54,6 +55,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerEq,    // Equal to
 	IntegerNeq,   // Not equal to
 
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatNeg,
+
+	FloatLt,    // Less then
+	FloatGt,    // Greater then
+	FloatLteq,  // Less then or equal to
+	FloatGteq,  // Greater then or equal to
+	FloatEq,    // Equal to
+	FloatNeq,   // Not equal to
 
 	BooleanAnd,
 	BooleanOr,
@@ -102,6 +115,13 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
+	// TODOP: Is default constr enough?
+	// TODOP: == operator?
+	struct MIRConstant final {
+		ctv::CompileTimeValue value;
+	};
+
+	// TODO: Remove those.
 	struct MIRUnitConst final {};
 
 	struct MIRIntegerConst final {
@@ -352,13 +372,21 @@ namespace compiler::mir {
 	 */
 	struct MIRValue final {
 	private:
-		using ValueType
-			= std::variant<MIRUnitConst, MIRIntegerConst, MIRBoolConst, MIRPlace, BlockID, MIRFunctionLiteral>;
+		using ValueType = std::variant<
+			MIRConstant,
+			MIRUnitConst,
+			MIRIntegerConst,
+			MIRBoolConst,
+			MIRPlace,
+			BlockID,
+			MIRFunctionLiteral>;
 
 		ValueType value;
 
 	public:
 		MIRValue(MIRUnitConst value): value(value) {}
+
+		MIRValue(MIRConstant value): value(value) {}
 
 		MIRValue(MIRIntegerConst value): value(value) {}
 

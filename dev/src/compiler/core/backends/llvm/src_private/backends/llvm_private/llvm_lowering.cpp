@@ -333,7 +333,7 @@ namespace compiler::backend_llvm {
 				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
 			);
 		} else {
-			// Initialise the global variable to null, sice it will be initialised in the constructor:
+			// Initialise the global variable to null, since it will be initialised in the constructor:
 			CORE_ASSERT(
 				not lir_global.initial_value.has_value(),
 				"Non-constant global should not have initial value set"

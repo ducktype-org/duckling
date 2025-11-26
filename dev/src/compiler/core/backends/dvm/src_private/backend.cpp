@@ -1,3 +1,5 @@
+#include "ctv/ctv.hpp"
+
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <string_id/string_id.hpp>
@@ -248,13 +250,15 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(base::strConcat(
-							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-							"supported YET, name: ",
-							primitive.name,
-							", size: ",
-							primitive.size
-						));
+						throw base::NotYetImplemented(
+							base::strConcat(
+								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+								"supported YET, name: ",
+								primitive.name,
+								", size: ",
+								primitive.size
+							)
+						);
 					if (is_global) {
 						if (primitive.size == 8) return vm::opargs::Global64{ name };
 						if (primitive.size == 4) return vm::opargs::Global32{ name };
@@ -306,10 +310,13 @@ namespace compiler::backend_vm {
 			AddLIRFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
-				variant_case(i64, value) {
-					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
+				variant_case(ctv::CompileTimeValue, value) {
+					CORE_PANIC("Here some non trivial conversion logic should happen");
+					// variant_case(i64, value) {
+					// 	return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
+					// }
+					// variant_case(bool, value) return vm::opargs::Immediate{ value };
 				}
-				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LIRPlace, place) {
 					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
@@ -355,36 +362,88 @@ namespace compiler::backend_vm {
 		constexpr vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
 			using namespace vm::code::builders;
 			switch (operation) {
-			case lir::Operation::Assign:
-				return OpKind::mov;
+			/// Integer operations ///
 			case lir::Operation::IntegerAdd:
 				return OpKind::add;
 			case lir::Operation::IntegerSub:
 				return OpKind::sub;
-			case lir::Operation::IntegerMul:
-				return OpKind::mul;
-			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation));
-			case lir::Operation::IntegerSDiv:
-				return OpKind::div;
-			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation));
-			case lir::Operation::IntegerSMod:
-				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
 				return OpKind::neg;
-			case lir::Operation::Call:
-				return OpKind::call;
+			case lir::Operation::IntegerMul:
+				return OpKind::mul;
+			case lir::Operation::IntegerSDiv:
+				return OpKind::div;
+			case lir::Operation::IntegerSMod:
+				return OpKind::mod;
+			case lir::Operation::IntegerUDiv:
+				return OpKind::udiv;
+			case lir::Operation::IntegerUMod:
+				return OpKind::umod;
+
+			/// Floating point operations ///
+			case lir::Operation::FloatAdd:
+				return OpKind::fadd;
+			case lir::Operation::FloatSub:
+				return OpKind::fsub;
+			case lir::Operation::FloatMul:
+				return OpKind::fmul;
+			case lir::Operation::FloatDiv:
+				return OpKind::fdiv;
+			case lir::Operation::FloatNeg:
+				return OpKind::fneg;
+
+			/// Signed integer comparisons ///
+			case lir::Operation::IntegerEq:
+				return OpKind::cmpEq;
+			case lir::Operation::IntegerNeq:
+				return OpKind::cmpNeq;
+			case lir::Operation::IntegerSLt:
+				return OpKind::cmpL;
+			case lir::Operation::IntegerSLteq:
+				return OpKind::cmpLe;
+			case lir::Operation::IntegerSGt:
+				return OpKind::cmpG;
+			case lir::Operation::IntegerSGteq:
+				return OpKind::cmpGe;
+
+			/// Unsigned integer comparisons ///
+			case lir::Operation::IntegerULt:
+				return OpKind::ucmpL;
+			case lir::Operation::IntegerULteq:
+				return OpKind::ucmpLe;
+			case lir::Operation::IntegerUGt:
+				return OpKind::ucmpG;
+			case lir::Operation::IntegerUGteq:
+				return OpKind::ucmpGe;
+
+			/// Floating point comparisons ///
+			case lir::Operation::FloatLt:
+				return OpKind::fcmpL;
+			case lir::Operation::FloatGt:
+				return OpKind::fcmpG;
+			case lir::Operation::FloatLteq:
+				return OpKind::fcmpLe;
+			case lir::Operation::FloatGteq:
+				return OpKind::fcmpGe;
+			case lir::Operation::FloatEq:
+				return OpKind::fcmpEq;
+			case lir::Operation::FloatNeq:
+				return OpKind::fcmpNeq;
+
+			/// Logical operations ///
 			case lir::Operation::BooleanAnd:
 				return OpKind::log_and;
 			case lir::Operation::BooleanOr:
 				return OpKind::log_or;
 			case lir::Operation::BooleanNot:
 				return OpKind::log_not;
-			case lir::Operation::IntegerULt:
-				return OpKind::ucmpL;
-			case lir::Operation::IntegerSLt:
-				return OpKind::cmpL;
+
+			/// Other ///
+			case lir::Operation::Assign:
+				return OpKind::mov;
+			case lir::Operation::Call:
+				return OpKind::call;
+
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 			}
@@ -466,9 +525,12 @@ namespace compiler::backend_vm {
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
 				ctx.bytecode_func,
-				vm::code::instructions::Comment(base::StrID(
-					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
-				))
+				vm::code::instructions::Comment(
+					base::StrID(
+						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
+							.data()
+					)
+				)
 			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
@@ -484,8 +546,11 @@ namespace compiler::backend_vm {
 
 
 			// Transforms arguments.
+			// TODOP: Concept?
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
-			    || kind == OpKind::div || kind == OpKind::mod || kind == OpKind::log_and
+			    || kind == OpKind::div || kind == OpKind::udiv || kind == OpKind::mod
+			    || kind == OpKind::umod || kind == OpKind::fadd || kind == OpKind::fsub
+			    || kind == OpKind::fmul || kind == OpKind::fdiv || kind == OpKind::log_and
 			    || kind == OpKind::log_or || kind == OpKind::log_xor) {
 				CORE_ASSERT(args.size() == 3, "Invalid arithmetic/logical operation argument count");
 				if (args[0] == args[1]) {
@@ -502,8 +567,13 @@ namespace compiler::backend_vm {
 					args.pop_front();
 					args.push_front(output.value());
 				}
-			} else if (kind == OpKind::cmpL || kind == OpKind::ucmpL || kind == OpKind::cmpG
-			           || kind == OpKind::ucmpG || kind == OpKind::cmpEq) {
+				// TODOP: Concept?
+			} else if (kind == OpKind::cmpEq || kind == OpKind::cmpNeq || kind == OpKind::cmpL
+			           || kind == OpKind::cmpLe || kind == OpKind::cmpG || kind == OpKind::cmpGe
+			           || kind == OpKind::ucmpL || kind == OpKind::ucmpLe || kind == OpKind::ucmpG
+			           || kind == OpKind::ucmpGe || kind == OpKind::fcmpEq
+			           || kind == OpKind::fcmpNeq || kind == OpKind::fcmpL || kind == OpKind::fcmpLe
+			           || kind == OpKind::fcmpG || kind == OpKind::fcmpGe) {
 				CORE_ASSERT(args.size() == 3, "Invalid cmp argument count");
 				// This resolves e.g. `x = a < b;`
 				// by splitting it into two instructions:
@@ -514,7 +584,7 @@ namespace compiler::backend_vm {
 					ctx.bytecode_func, { OpKind::cmov, args[0], vm::opargs::Immediate{ 1 } }
 				);
 				return;
-			} else if (kind == OpKind::neg || kind == OpKind::log_not) {
+			} else if (kind == OpKind::neg || kind == OpKind::fneg || kind == OpKind::log_not) {
 				CORE_ASSERT(
 					args.size() == 2,
 					"Invalid argument count for ",
@@ -553,9 +623,11 @@ namespace compiler::backend_vm {
 
 		pushInstruction(
 			ctx.bytecode_func,
-			instructions::Comment(base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-			))
+			instructions::Comment(
+				base::StrID(
+					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+				)
+			)
 		);
 
 		if (terminator.operation == lir::Operation::Branch) {
@@ -564,11 +636,13 @@ namespace compiler::backend_vm {
 			auto false_block = lirValueToOpArg(ctx, terminator.arguments.at(2));
 
 			variant_match(terminator.arguments.at(0).getVariant()) {
-				variant_case(bool, value) {
-					if (value)
-						pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
-					else
-						pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
+				variant_case(ctv::CompileTimeValue, value) {
+					if (auto bool_val = value.get<bool>(); bool_val.has_value()) {
+						if (bool_val)
+							pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
+						else
+							pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
+					}
 				}
 				variant_default {
 					pushInstruction(
@@ -578,8 +652,9 @@ namespace compiler::backend_vm {
 					pushInstruction(ctx.bytecode_func, { OpKind::jmpIfNot, false_block });
 				}
 			}
+		}
 
-		} else {
+		else {
 			InstructionBuilder terminator_instr;
 			terminator_instr.setKind(lirTerminatorToOpKind(terminator.operation));
 
@@ -645,8 +720,10 @@ namespace compiler::backend_vm {
 
 			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
 			// GlobalVariables
-			compiled_collection.global_data.push_back(GlobalData{
-				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
+			compiled_collection.global_data.push_back(
+				GlobalData{
+					{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name }
+			);
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
