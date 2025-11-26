@@ -403,7 +403,6 @@ jobs:
                     \n## Coverage of Integration Tests \
                     \n⭐ Lines covered by integration tests on the **current** branch: **${{ needs.build.outputs.itest-coverage-value }}%** \
                     \n⭐ Lines covered by integration tests on the main branch: ${{ steps.read-main-itest-coverage.outputs.value }}% \
-                    \n${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
                     \n## TODOs \
                     \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
                     \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \
