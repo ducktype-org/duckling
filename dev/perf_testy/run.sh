@@ -11,55 +11,64 @@ time_format="%E"
 
 # variable to collect data in csv format
 csv_collect=""
-csv_collect="Test Case,Language,Compilation Time (ms)\n"
-
-# iterate all folders in cases and measure compiler performance:
-for case_dir in ./cases/*/; do
-    echo "Running performance test for case: $case_dir"
-
-    duck_module="$case_dir/duck.dmf"
-    cpp_file="$case_dir/cpp.cpp"
-
-    binary_output_dir="./binary_outputs/$(basename $case_dir)"
-    mkdir -p $binary_output_dir
-
-    duck_binary="$binary_output_dir/duck_binary"
-    cpp_binary="$binary_output_dir/cpp_binary"
-
-    
+csv_collect="Category,Test Case,Language,Compilation Time (ms)\n"
 
 
-    # measure time taken to compile Duck code:
-    ts=$(date +%s%N)  
-    # /usr/bin/time -f "Duck compilation time: $time_format"
-    duckc_command_string="$duck_c_path compile_package $duck_module -n duck --no-incremental -a $duck_binary"
-    $duckc_command_string
-    # echo "Executed command: $duckc_command_string"
-    te=$(date +%s%N)
-    elapsed=$((te - ts))
-    elapsed_ms=$((elapsed / 1000000))
-    echo "Duck compilation time: $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
+# iterate all categories in cases:
+for category_dir in ./cases/*/; do
+    [ -d "$category_dir" ] || continue
 
-    csv_collect+="$(basename $case_dir),duck,$elapsed_ms\n"
+    for case_dir in "$category_dir"*/; do
+        [ -d "$case_dir" ] || continue
+        
+        category="$(basename "$category_dir")"
+        case_name="$(basename "$case_dir")"
 
-    # measure time taken to compile C++ code:
-    ts=$(date +%s%N)  
-    # /usr/bin/time -f "C++ compilation time: $time_format" \
-    $cpp_c_path -w -O0 -std=c++20 $cpp_file -o $cpp_binary
-    te=$(date +%s%N)
-    elapsed=$((te - ts))
-    elapsed_ms=$((elapsed / 1000000))
-    echo "C++ compilation time:  $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
-
-    csv_collect+="$(basename $case_dir),cpp,$elapsed_ms\n"
+        echo "Running performance test for category: $category, case: $case_name"!
 
 
-    echo "-----------------------------------"
+        duck_module="$case_dir/duck.dmf"
+        cpp_file="$case_dir/cpp.cpp"
+
+        binary_output_dir="./binary_outputs/$category/$case_name"
+        mkdir -p $binary_output_dir
+
+        duck_binary="$binary_output_dir/duck_binary"
+        cpp_binary="$binary_output_dir/cpp_binary"
+
+
+        # measure time taken to compile Duck code:
+        ts=$(date +%s%N)  
+        # /usr/bin/time -f "Duck compilation time: $time_format"
+        duckc_command_string="$duck_c_path compile_package $duck_module -n duck --no-incremental -a $duck_binary"
+        $duckc_command_string
+        # echo "Executed command: $duckc_command_string"
+        te=$(date +%s%N)
+        elapsed=$((te - ts))
+        elapsed_ms=$((elapsed / 1000000))
+        echo "Duck compilation time: $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
+
+        csv_collect+="$category,$case_name,duck,$elapsed_ms\n"
+
+        # measure time taken to compile C++ code:
+        ts=$(date +%s%N)  
+        # /usr/bin/time -f "C++ compilation time: $time_format" \
+        $cpp_c_path -w -O0 -std=c++20 $cpp_file -o $cpp_binary
+        te=$(date +%s%N)
+        elapsed=$((te - ts))
+        elapsed_ms=$((elapsed / 1000000))
+        echo "C++ compilation time:  $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
+
+        csv_collect+="$category,$case_name,cpp,$elapsed_ms\n"
+
+        echo "-----------------------------------"
+    done
 done
 
-
+# print results and exit to avoid running the old loop below (if present)
 echo -e "\nPerformance Test Results (in CSV format):"
 echo -e "$csv_collect"
+exit 0
 
 
 
