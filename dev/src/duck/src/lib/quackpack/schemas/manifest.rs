@@ -6,11 +6,13 @@ use serde::Deserialize;
 use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
+pub type Dependencies = BTreeMap<String, Dependency>;
+
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
     pub metadata: Option<Metadata>,
-    pub dependencies: Option<BTreeMap<String, Dependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, Dependency>>,
+    pub dependencies: Option<Dependencies>,
+    pub dev_dependencies: Option<Dependencies>,
     pub features: Option<BTreeMap<String, Vec<String>>>,
     pub targets: Option<BTreeMap<String, CompilerOptions>>,
     pub profiles: Option<BTreeMap<String, CompilerOptions>>,
@@ -64,6 +66,21 @@ impl<'de> Deserialize<'de> for OredSemver {
                     .map_err(|e| de::Error::custom(e))
             }
 
+            // HACK: parser treats `0.1` as a float.
+            fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(v.to_string())
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(v.to_string())
+            }
+
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: de::SeqAccess<'de>,
@@ -83,6 +100,7 @@ impl<'de> Deserialize<'de> for OredSemver {
 
 #[derive(Debug)]
 pub enum DependencySource {
+    /// `Simple` variant overwrites `registry_url` for a given dependency.
     Simple(String),
     Detailed(DetailedSource),
 }
