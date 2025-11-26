@@ -7,8 +7,7 @@
 mod compiler_options;
 mod dependency;
 mod features;
-// NOTE: This module has a different name, because rust emits lints, when there's file in a module with the same name.
-mod manifest_struct;
+mod parse;
 mod root_description;
 mod source;
 
@@ -17,7 +16,6 @@ pub use parse::*;
 pub use compiler_options::*;
 pub use dependency::*;
 pub use features::*;
-pub use manifest_struct::*;
 pub use root_description::*;
 pub use source::*;
 
