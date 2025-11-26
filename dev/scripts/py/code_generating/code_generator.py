@@ -231,14 +231,14 @@ class LogicGenerator:
     def generate_return(self, scope: ScopeData):
         self.generator.return_statement(scope)
         
-    def generate_code(self):
+    def generate_code(self, global_symbol_count: int):
         scope = self.generator.preambule()
         
         # Generate global symbols
-        for _ in range(random.randint(1, 5)):
+        for _ in range(global_symbol_count):
             action = random.choices(
                 ['variable_declaration', 'function_definition'],
-                weights=[50, 30],
+                weights=[10, 80],
                 k=1
             )[0]
             if action == 'variable_declaration':
