@@ -11,27 +11,31 @@ def summarize_results(file_path):
     with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
+            category = row.get('Category', '').strip()
             test_case = row.get('Test Case', '').strip()
             language = row.get('Language', '').strip().lower()
             time_field = row.get('Compilation Time (ms)', '').strip()
 
-            if not test_case or not language or not time_field:
+            if not category or not test_case or not language or not time_field:
                 assert False
 
             try:
                 time_ms = int(time_field)
             except ValueError:
-                # skip rows with non-integer times
                 assert False
 
-            if test_case not in summary:
-                summary[test_case] = {}
+            if category not in summary:
+                summary[category] = {}
+
+            if test_case not in summary[category]:
+                summary[category][test_case] = {}
                 
-            summary[test_case][language] = time_ms
+            summary[category][test_case][language] = time_ms
+            
     return summary
 
 
-def print_summary(summary):
+def print_summary_for_category(summary):
     print("Performance Summary:")
     print(f"{'Test Case':<30} {'Duck Time (ms)':<15} {'C++ Time (ms)':<15} {'Duck/C++':<10}")
     coeffs = []
@@ -71,6 +75,10 @@ def print_summary(summary):
 
     print(f"Sum Duck / Sum C++: {sum(duck_times) / sum(cpp_times):.2f}")
 
+def print_summary(summary):
+    for category, cat_summary in summary.items():
+        print(f"\nCategory: {category}")
+        print_summary_for_category(cat_summary)
 
 if __name__ == "__main__":
     # read first cli argument to get file:
