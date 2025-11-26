@@ -43,10 +43,8 @@ class CppCodeGenerator(CodeGenerator):
         inner_scope.vars.extend(args)
         
         # Generate code function body
-        with self.indenter:
-            for _ in range(random.randint(1, 10)):
-                self.logic_generator.generate_non_control_flow(inner_scope)
-            self.return_statement(inner_scope)
+        self.logic_generator.generate_function_body(inner_scope)
+
         self.indenter.add_text("}\n")
         
         return FunctionData(func_name, len(args))

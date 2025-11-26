@@ -230,6 +230,13 @@ class LogicGenerator:
     
     def generate_return(self, scope: ScopeData):
         self.generator.return_statement(scope)
+
+    def generate_function_body(self, scope: ScopeData):
+        with self.generator.indenter:
+            for _ in range(random.randint(1, 30)):
+                self.generator.logic_generator.generate_non_control_flow(scope)
+            self.generator.return_statement(scope)
+            
         
     def generate_code(self, global_symbol_count: int):
         scope = self.generator.preambule()
