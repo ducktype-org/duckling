@@ -12,7 +12,8 @@ namespace term_ui {
 	u64 minTabSpace(const dia_app::term_ui_view::CodeLine& line);
 
 	/**
-	 * @brief Print the code line to the output stream.
+	 * @brief Print the code line to the output stream and calculate the highlights.
+	 * Highligh is a span of the code from start column to end column for one pointer message.
 	 *
 	 * Returns a list of highlights to be displayed in the following lines.
 	 *
@@ -22,7 +23,7 @@ namespace term_ui {
 	 * @param out The output stream.
 	 * @return std::vector<Highlight>
 	 */
-	std::vector<Highlight> print(
+	std::vector<Highlight> printAndCalculateHighlights(
 		const dia_app::term_ui_view::CodeLine&            line,
 		u64                                               tab_space,
 		const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& ctx,

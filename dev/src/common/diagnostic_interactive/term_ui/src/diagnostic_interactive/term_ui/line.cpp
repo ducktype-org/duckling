@@ -1,11 +1,15 @@
 #include "line.hpp"
 
+#include "code_section.hpp"
+#include "diagnostic_interactive/term_ui/styles.hpp"
+
 namespace term_ui {
-	LinePiece::LinePiece(std::string text, StyleType type): text(text), type(type) {}
+
+	LinePiece::LinePiece(std::string text, StyleType type): text(std::move(text)), type(type) {}
 
 	const std::string LinePiece::getText() const { return text; }
 
-	void LinePiece::print(std::ostream& out) const { get_style(type).printWith(text, out); }
+	void LinePiece::print(std::ostream& out) const { getStyleFromType(type).printWith(text, out); }
 
 	bool Line::isEmptyOn(u64 beg, u64 len) const {
 		u64 end = beg + len;

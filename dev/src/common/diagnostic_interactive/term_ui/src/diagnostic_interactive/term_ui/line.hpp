@@ -49,7 +49,7 @@ namespace term_ui {
 
 	public:
 		// Check if the line is empty on interval [beg, beg + len - 1].
-		bool isEmptyOn(u64 beg, u64 len) const;
+		[[nodiscard]] bool isEmptyOn(u64 beg, u64 len) const;
 
 		// Try to insert a new line piece into this line starting on column beg.
 		// Return true on success and false on failure.

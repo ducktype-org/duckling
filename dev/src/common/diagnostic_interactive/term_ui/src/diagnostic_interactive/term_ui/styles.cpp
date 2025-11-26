@@ -1,9 +1,11 @@
 #include "styles.hpp"
 
 #include <base/exceptions.hpp>
+#include <utility>
+#include <utility>
 
 namespace term_ui {
-	bool USE_COLOR = true;
+	bool use_color = true;
 
 	const Style ERROR_STYLE(
 		"error", "E", true, rang::fg::red, rang::style::bold, rang::style::bold, '^', '|', 'Y'
@@ -37,43 +39,43 @@ namespace term_ui {
 		char        lowering_char,
 		char        lowering_attach_char
 	):
-		  name(name),
-		  prefix(prefix),
-		  print_id(print_id),
-		  color(color),
-		  style(style),
-		  main_text_style(main_text_style),
-		  underline_char(underline_char),
-		  lowering_char(lowering_char),
-		  lowering_attach_char(lowering_attach_char) {}
+		  NAME(std::move(name)),
+		  PREFIX(std::move(prefix)),
+		  PRINT_ID(print_id),
+		  COLOR(color),
+		  STYLE(style),
+		  MAIN_TEXT_STYLE(main_text_style),
+		  UNDERLINE_CHAR(underline_char),
+		  LOWERING_CHAR(lowering_char),
+		  LOWERING_ATTACH_CHAR(lowering_attach_char) {}
 
 	void Style::prepare(std::ostream& out) const {
-		if (USE_COLOR) out << color;
-		out << style;
+		if (use_color) out << COLOR;
+		out << STYLE;
 	}
 
 	void Style::printWith(const std::string& text, std::ostream& out) const {
 		prepare(out);
 		out << text;
-		reset_styles(out);
+		resetStyles(out);
 	}
 
-	void Style::prepareMainText(std::ostream& out) const { out << main_text_style; }
+	void Style::prepareMainText(std::ostream& out) const { out << MAIN_TEXT_STYLE; }
 
 	void Style::printMainWith(const std::string& text, std::ostream& out) const {
 		prepareMainText(out);
 		out << text;
-		reset_styles(out);
+		resetStyles(out);
 	}
 
 	void Style::printName(u64 id, std::ostream& out) const {
 		prepare(out);
-		out << name;
-		if (print_id) out << '[' << prefix << id << ']';
-		reset_styles(out);
+		out << NAME;
+		if (PRINT_ID) out << '[' << PREFIX << id << ']';
+		resetStyles(out);
 	}
 
-	Style get_style(StyleType type) {
+	Style getStyleFromType(StyleType type) {
 		switch (type) {
 		case StyleType::Error:
 			return ERROR_STYLE;
@@ -90,9 +92,9 @@ namespace term_ui {
 		return ERROR_STYLE;
 	}
 
-	void reset_styles(std::ostream& out) { out << rang::fg::reset << rang::style::reset; }
+	void resetStyles(std::ostream& out) { out << rang::fg::reset << rang::style::reset; }
 
-	void print_line_start(u64 tab_space, u64 line_no, std::ostream& out) {
+	void printLineStart(u64 tab_space, u64 line_no, std::ostream& out) {
 		std::string line_no_str = std::to_string(line_no);
 		std::string line_start =
 			// Print line number.
@@ -105,7 +107,7 @@ namespace term_ui {
 		LINE_START_STYLE.printWith(line_start, out);
 	}
 
-	void print_line_start(u64 tab_space, std::ostream& out) {
+	void printLineStart(u64 tab_space, std::ostream& out) {
 		// Print tab space and line bar.
 		LINE_START_STYLE.printWith(std::string(tab_space, ' ') + "| ", out);
 	}

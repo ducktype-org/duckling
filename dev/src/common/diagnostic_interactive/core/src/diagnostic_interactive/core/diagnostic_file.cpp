@@ -82,7 +82,7 @@ namespace dia_app::dia_file {
 	}
 
 	auto StartLineComponent::fromJson(const json& elem) -> Box<StartLineComponent> {
-		base::Optional<u32> number;
+		base::Optional<u64> number;
 		if (elem.contains("number")) {
 			ASSUME_UINT(elem, "number");
 			number = elem["number"];

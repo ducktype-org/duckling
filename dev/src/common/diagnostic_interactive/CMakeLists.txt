@@ -11,4 +11,4 @@ add_library(DiagnosticInteractive STATIC
         src/diagnostic/interactive_code.cpp
 )
 
-make_module(DiagnosticInteractive USES Printer Filesystem TokenSource JSON HELIOS_SYMBOLS TERM_UI Diagnostic TypeSystemHigher)
+make_module(DiagnosticInteractive USES Printer Filesystem TokenSource JSON HELIOS_SYMBOLS TerminalUI Diagnostic TypeSystemHigher)

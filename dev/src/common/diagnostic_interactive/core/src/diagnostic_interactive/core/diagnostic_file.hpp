@@ -131,11 +131,11 @@ namespace dia_app::dia_file {
 
 	struct StartLineComponent: public Component {
 		// Line number.
-		base::Optional<u32> number;
+		base::Optional<u64> number;
 
 		StartLineComponent() = default;
 
-		StartLineComponent(base::Optional<u32> number): number(number) {}
+		StartLineComponent(base::Optional<u64> number): number(number) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitStartLineComponent(*this);

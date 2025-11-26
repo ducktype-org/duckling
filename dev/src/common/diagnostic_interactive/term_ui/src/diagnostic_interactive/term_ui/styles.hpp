@@ -15,7 +15,7 @@ namespace term_ui {
 	 * a multitude of methods).
 	 *
 	 */
-	extern bool USE_COLOR;
+	extern bool use_color;
 
 	using StyleType = dia_app::term_ui_view::StyleType;
 
@@ -39,7 +39,7 @@ namespace term_ui {
 		 *
 		 * E.g. `error` or `note`.
 		 */
-		const std::string name;
+		const std::string NAME;
 
 		/**
 		 * @brief The style prefix.
@@ -49,7 +49,7 @@ namespace term_ui {
 		 *
 		 * E.g. `E` (for error) or `N` (for note).
 		 */
-		const std::string prefix;
+		const std::string PREFIX;
 		/**
 		 * @brief Whether the info code should be displayed after
 		 * the style name.
@@ -63,17 +63,17 @@ namespace term_ui {
 		 *
 		 * If off, `printName` method only displays the style name.
 		 */
-		const bool print_id;
+		const bool PRINT_ID;
 
 		// The color associated with this style.
-		const rang::fg color;
+		const rang::fg COLOR;
 
 		// The boldness modifier associated with this style for all text
 		// apart from the header message.
-		const rang::style style;
+		const rang::style STYLE;
 		// The boldness modifier associated with this style for the header
 		// message.
-		const rang::style main_text_style;
+		const rang::style MAIN_TEXT_STYLE;
 
 	public:
 		/**
@@ -82,7 +82,7 @@ namespace term_ui {
 		 * A series of chars of this type is displayed in the line below
 		 * the highlighted segment, acting as a colorful underlining.
 		 */
-		const char underline_char;
+		const char UNDERLINE_CHAR;
 		/**
 		 * @brief The character used for lowering the pointer message
 		 * with respect to the code line it refers to.
@@ -91,7 +91,7 @@ namespace term_ui {
 		 * (e.g. if other pointer messages block the view), this character
 		 * is used to connect the lowered message with the code underlining.
 		 */
-		const char lowering_char;
+		const char LOWERING_CHAR;
 		/**
 		 * @brief The character used when a code underlining meets with
 		 * a lowering character.
@@ -102,7 +102,7 @@ namespace term_ui {
 		 * in the same column.
 		 *
 		 * E.g., for `underline_char`=`'^'`, `lowering_char`=`'|'`, and
-		 * `lowering_attach_char`=`'Y'` we may have:
+		 * `LOWERING_ATTACH_CHAR`=`'Y'` we may have:
 		 *
 		 * ```
 		 * underlined code
@@ -111,7 +111,7 @@ namespace term_ui {
 		 * pointer message
 		 * ```
 		 */
-		const char lowering_attach_char;
+		const char LOWERING_ATTACH_CHAR;
 
 		// Create a style object by specifying all of its fields.
 		Style(
@@ -163,14 +163,14 @@ namespace term_ui {
 		void prepareMainText(std::ostream& out) const;
 	};
 
-	Style get_style(StyleType type);
+	Style getStyleFromType(StyleType type);
 
 	/**
 	 * @brief Reset the current style of displayed text.
 	 *
 	 * @param out The output stream that is display onto.
 	 */
-	void reset_styles(std::ostream& out);
+	void resetStyles(std::ostream& out);
 
 	/**
 	 * @brief Print a start of a code line which has a number.
@@ -184,7 +184,7 @@ namespace term_ui {
 	 * @param line_no The number of this line.
 	 * @param out The output stream.
 	 */
-	void print_line_start(u64 tab_space, u64 line_no, std::ostream& out);
+	void printLineStart(u64 tab_space, u64 line_no, std::ostream& out);
 
 	/**
 	 * @brief Print a start of a code line which *does not* have a number.
@@ -195,5 +195,5 @@ namespace term_ui {
 	 * @param tab_space The column in which the vertical bar should appear.
 	 * @param out The output stream.
 	 */
-	void print_line_start(u64 tab_space, std::ostream& out);
+	void printLineStart(u64 tab_space, std::ostream& out);
 }

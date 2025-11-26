@@ -72,7 +72,7 @@ namespace term_ui {
 		 * @param stage The target stage.
 		 * @return Highlight
 		 */
-		Highlight withStage(LoweringStage stage) const;
+		[[nodiscard]] Highlight withStage(LoweringStage stage) const;
 	};
 
 	/**
@@ -92,8 +92,13 @@ namespace term_ui {
 	};
 
 	/**
-	 * @brief Generate a printable line piece from this message, provided
-	 * it is in a given stage.
+	 * @brief Creates a LinePiece representing a part of a highlighted code.
+	 * If the PointerStage is Highlight, it creates an underline of specified length.
+	 * like  `^^^^^`.
+	 * If the PointerStage is HighlightWithLowering, it creates an underline with
+	 * lowering attach character at the start, like `v^^^^`.
+	 * If the PointerStage is Lowering, it creates a lowering character, like `v
+	 * If the PointerStage is Message, it creates the actual message text.
 	 *
 	 * @param msg The pointer message.
 	 * @param stage The stage this message is recorder at.
