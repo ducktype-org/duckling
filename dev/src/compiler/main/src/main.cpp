@@ -339,8 +339,6 @@ clah::Clah getClahForMain() {
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
-					// @TODO #1058: make graph/statistics printing configuration better.
-
 					timer::TimeMeasurement total_compilation_time;
 					total_compilation_time.startMeasurement();
 
