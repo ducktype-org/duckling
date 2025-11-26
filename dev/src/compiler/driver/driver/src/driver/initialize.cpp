@@ -1,11 +1,11 @@
 #include "initialize.hpp"
 
+#include <driver/configuration/configuration.hpp>
 #include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
-#include <driver/configuration/configuration.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -26,7 +26,7 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableCategoryByStringName(category_name);
 
-			
+
 			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
 			driver::llvm_dump_asm = debug_options.dump_llvm_asm;
 		}
