@@ -17,6 +17,7 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/configuration/configuration.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -392,7 +393,8 @@ namespace vm {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
-		CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                                \
+		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
+			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \

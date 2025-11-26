@@ -7,6 +7,7 @@
 
 #include <logger/logger.hpp>  // IWYU pragma: export
 
+#include <vm/configuration/configuration.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
@@ -120,7 +121,8 @@ namespace vm {
 			auto&      called_func      = thread.executing_program->getFunctions()[function_id];
 			const bool called_rets_void = called_func.result_type->getName() == "void";
 
-			CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
+			if constexpr (ENABLE_VM_DETAIL_LOGGING)
+				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size
