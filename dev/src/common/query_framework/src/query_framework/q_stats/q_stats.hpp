@@ -3,13 +3,9 @@
 #include <timer/timer.hpp>  // @TODO #404: relax it, so query does not leak timer
 
 #include <query_framework/internal/query_data/query_id.hpp>
+#include <query_framework/configuration/configuration.hpp> // IWYU pragma: export (for USE_STATS)
 
 namespace query {
-	/**
-	 *  Whether the query statistics collection is enabled or not.
-	 *  @TODO #1058: Change it to proper runtime/comptime config value
-	 */
-	constexpr bool USE_STATS = true;
 
 	/**
 	 * RAII-like object to collect statistics about a single query call.
