@@ -1,3 +1,13 @@
+# get args:
+result_csv=$1
+
+if [ -z "$result_csv" ]; then
+    echo "No result CSV file provided!"
+    exit 1
+fi
+
+
+
 # set g++ binary:
 cpp_c_path=g++-12
 
@@ -68,6 +78,10 @@ done
 # print results and exit to avoid running the old loop below (if present)
 echo -e "\nPerformance Test Results (in CSV format):"
 echo -e "$csv_collect"
+
+echo -e "$csv_collect" > "$result_csv"
+echo -e "Results saved to $result_csv!"
+
 exit 0
 
 
