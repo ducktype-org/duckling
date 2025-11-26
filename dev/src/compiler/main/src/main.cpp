@@ -86,7 +86,6 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	const clah::ParsingResult& parsing_result
 ) {
-	// @TODO PR: change it
 	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                          .copyValueOr(std::vector<std::string>{}),
