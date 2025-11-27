@@ -1,8 +1,8 @@
 /**
  * @brief Global flags of base module.
  * We want base to be stateless, and so
- * all configuration options used here and compile-time constants.
- * Modify this file to change the configuration.
+ * all flags used here are compile-time constants.
+ * Modify this file to change the flags.
  */
 
 #pragma once
