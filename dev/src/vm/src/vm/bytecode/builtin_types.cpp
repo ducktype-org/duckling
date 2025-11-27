@@ -1,11 +1,15 @@
 #include "builtin_types.hpp"
 
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
 	const SpecialTypes& SpecialTypes::get() {
+		static_assert(
+			sizeof(Type*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8"
+		);
 		static const SpecialTypes instance = {
 			.vtable_ptr = TypeOfData(OpaqueType(base::StrID("VTablePtr"), 8)),
 		};
@@ -30,6 +34,7 @@ namespace vm::code {
 			TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))),
 			TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))),
+			TypeOfData(OpaqueType(base::StrID("opaque_ptr"), 8)),
 
 			SpecialTypes::get().vtable_ptr,
 		};

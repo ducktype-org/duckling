@@ -1,0 +1,15 @@
+# Expression tests
+
+Tests:
+  records:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n3\n42\n54\n1\n3\n42\n54\n4\n"
+  record_default_values:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n11\n1\n2\n13\n-1\n21\n1\n2\n23\n11\n1\n32\n13\n"

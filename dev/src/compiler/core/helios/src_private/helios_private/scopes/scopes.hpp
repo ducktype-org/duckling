@@ -19,12 +19,12 @@
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
-#include <helios/scope_symbol_id.hpp>
-#include <helios_private/lookup/lookup_result.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <string_id/string_id.hpp>
 
-#include <base/str/string_id.hpp>
 #include <base/types/bit256.hpp>
 
 #include <diagnostic/logger.hpp>
@@ -62,7 +62,7 @@ namespace compiler::helios {
 	 * @todo: Currently root scopes are somewhat problematic.
 	 * See description of "root_element_file_back_map" for details.
 	 */
-	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID);
+	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID, ({}));
 
 	/**
 	 * @brief Generate HELIOS-scope associated with given PST element.
@@ -78,7 +78,12 @@ namespace compiler::helios {
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
 	 */
-	DECLARE_QUERY(QueryPrimaryCodeScopeFor, pst::GenericPSTQueryKey<>, ScopeID);
+	DECLARE_QUERY(
+		QueryPrimaryCodeScopeFor,
+		pst::GenericPSTQueryKey<>,
+		ScopeID,
+		({ .used_hashes = query::UsedHashes::StableHash })
+	);
 
 	/**
 	 * @brief A helper function, to make scope API consistent.
@@ -100,24 +105,24 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({}));
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>, ({}));
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
 	 * Also: dictates what symbols are contained in what scopes.
 	 */
-	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({}));
 
 	/**
 	 * @brief Query all scopes defined in a given module.
 	 * Note: Not implemented yet.
 	 */
-	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
+	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>, ({}));
 
 	template<typename Element>
 	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
@@ -130,7 +135,12 @@ namespace compiler::helios {
 	 * @note This will have some issues for now. The potential errors from parsed subexpression
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 */
-	DECLARE_QUERY(QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>)
+	DECLARE_QUERY(
+		QueryMacroExpansion,
+		pst::GenericPSTQueryKey<pst::Expand>,
+		ExpansionResult<pst::Stmt>,
+		({ .used_hashes = query::UsedHashes::StableHash })
+	)
 
 	/**
 	 * @brief Root scope of main module file.

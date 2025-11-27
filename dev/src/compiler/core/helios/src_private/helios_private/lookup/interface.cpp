@@ -2,17 +2,57 @@
 
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
+	struct KeyOf_LookupInTypeInstance final {
+		tsh::AbstractType type;
+		base::StrID       name;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return { type.queryUnstablePerfectHash(), static_cast<u64>(name), 0, 0 };
+		}
+	};
+
+
+	/**
+	 * This query is placed here, to keep it close to HInterface::lookup.
+	 * In #1477 and/or #1392 it should be placed in a more appropriate location.
+	 *
+	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
+	 * for more info on type-instance lookups.
+	 */
+	DECLARE_QUERY(QueryLookupInTypeInstance, KeyOf_LookupInTypeInstance, CRef<LookupResult>, ({}))
+
+	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
+		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
+			// @TODO: #1412 #1531 this a mock that works for now, make it better
+
+			auto        interface = key.type.getInterface(ctx);
+			const auto& elements  = interface->getElementsWithName(key.name);
+
+			LookupResult result;
+			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());
+
+			return result;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeInstance);
+
 	CRef<LookupResult> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
-	) {
+	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
 				return ctx.query<QueryLookupInScope>({ scope.scope, name, params.with_wildcards });
@@ -27,7 +67,7 @@ namespace compiler::helios {
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {
-				throw base::NotYetImplemented("HInterface::lookup for type instance");
+				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
 			}
 			variant_case(TypeMetaInterface, type) {
 				throw base::NotYetImplemented("HInterface::lookup for type");
@@ -44,7 +84,7 @@ namespace compiler::helios {
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
-	) {
+	) const {
 		auto lookup_result = lookup(ctx, name, params);
 		auto get_as_single = lookup_result->getAsSingle();
 

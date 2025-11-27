@@ -1,6 +1,8 @@
 #include <base/except/exceptions.hpp>
 
+#include <iostream>
 #include <ostream>
+#include <string_view>
 #include <version>  // IWYU pragma: keep
 
 #ifdef __cpp_lib_stacktrace
@@ -19,9 +21,9 @@ namespace base {
 #endif
 	}
 
-	Panic::Panic(std::string position, std::string reason):
-		  position(std::move(position)),
-		  reason(std::move(reason)) {
+	Panic::Panic(std::string_view position, std::string_view reason):
+		  position(position),
+		  reason(reason) {
 		makeWhatStr();
 	}
 
@@ -43,11 +45,13 @@ namespace base {
 		out << what_str;
 	}
 
-	LogicError::LogicError(std::string message): message(std::move(message)) {}
+	void Panic::printToCerr() const { print(std::cerr); }
+
+	LogicError::LogicError(std::string_view message): message(message) {}
 
 	const char* LogicError::what() const noexcept { return message.data(); }
 
-	NotYetImplemented::NotYetImplemented(const std::string& message):
+	NotYetImplemented::NotYetImplemented(std::string_view message):
 		  message("The feature is not implemented yet: ") {
 		this->message += message;
 	}

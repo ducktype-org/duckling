@@ -220,12 +220,7 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(
-				[[maybe_unused]] const MicroInstruction*& instr,
-				[[maybe_unused]] std::byte*&              local_stack,
-				Frame*&                                   frame,
-				VMThread&                                 thread
-			) {
+			performDeinit(Frame*& frame, VMThread& thread) {
 			auto block = frame->block_stack.back();
 			auto type  = thread.process_memory.getBlockType(block);
 			frame->block_stack.pop_back();

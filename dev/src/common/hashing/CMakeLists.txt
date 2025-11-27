@@ -3,7 +3,7 @@ add_library(Hashing
 	src/hashing/component_hash.cpp
 )
 
-make_module(Hashing USES Base)
+make_module(Hashing USES Base StringID)
 
 add_example(hash_example examples/example.cpp USES Hashing Base)
 

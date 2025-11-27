@@ -38,6 +38,9 @@ public:
 		res = base::strConcat(1, -87, 123'456'789ull);
 		assertTrue(res == "1-87123456789", "strConcat returned answer other than expected");
 
+		res = base::strConcat('A', 'B', 'C');
+		assertTrue(res == "ABC", "strConcat returned answer other than expected");
+
 		assertThrows<std::domain_error>(
 			[]() { base::strConcat("abacabadaba", nullptr); },
 			"strConcat of nullptr did not throw correctly"

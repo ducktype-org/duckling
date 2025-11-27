@@ -54,8 +54,7 @@ def exec_bash_command(
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
     if dry or verbose:
-        command = replace_special(command)
-        log_bash(f'cd "{cwd.absolute()}" && {command}', file=log_to_file)
+        log_bash(f'cd "{cwd.absolute()}" && {replace_special(command)}', file=log_to_file)
         if dry:
             return bytes(), bytes()
 

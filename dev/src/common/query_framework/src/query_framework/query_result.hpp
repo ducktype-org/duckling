@@ -311,22 +311,22 @@ namespace query {
 		 * @brief Access the value, throw on no value with a message.
 		 */
 		constexpr const ResTp& expect(std::string_view message) const& {
-			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			if (!storage.has_value()) CORE_PANIC(std::string(message));
 			return storage.value();
 		}
 
 		constexpr const ResTp&& expect(std::string_view message) const&& {
-			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			if (!storage.has_value()) CORE_PANIC(std::string(message));
 			return std::move(storage.value());
 		}
 
 		constexpr ResTp& expect(std::string_view message) & {
-			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			if (!storage.has_value()) CORE_PANIC(std::string(message));
 			return storage.value();
 		}
 
 		constexpr ResTp&& expect(std::string_view message) && {
-			if (!storage.has_value()) throw std::runtime_error(std::string(message));
+			if (!storage.has_value()) CORE_PANIC(std::string(message));
 			return std::move(storage.value());
 		}
 

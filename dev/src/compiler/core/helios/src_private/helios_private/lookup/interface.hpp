@@ -119,7 +119,7 @@ namespace compiler::helios {
 		 */
 		CRef<LookupResult> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
-		);
+		) const;
 
 		/**
 		 * A lookup function that performs a most common lookup operation,
@@ -139,7 +139,7 @@ namespace compiler::helios {
 			query::Context&     ctx,
 			base::StrID         name,
 			AdditionalLookupParameters = {}
-		);
+		) const;
 
 		static HInterface ofScope(const ScopeID scope) {
 			return HInterface{ ScopeInterface{ scope } };

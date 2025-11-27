@@ -1,6 +1,13 @@
 #include "queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -13,12 +20,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -129,7 +130,7 @@ namespace compiler::helios {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
@@ -158,8 +159,9 @@ namespace compiler::helios {
 
 				if (ret.has_value()) {
 					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType(ctx))
+					    = ctx.query<QueryEvaluatePSTExpression>(ret.value().unlock(ctx)->getExpr()
+					    )) {
+						if (auto maybe_type = ctv.value().getType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -240,10 +242,12 @@ namespace compiler::helios {
 										)
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
-			const SymID                              class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+
+			const SymID class_symbol    = class_type.getSymbol();
+			auto        class_interface = class_type.getInterface(ctx);
+
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
@@ -262,15 +266,47 @@ namespace compiler::helios {
 
 			u64 argument_index = 0;
 			for (const auto& field: fields) {
+				// Get the symbol of the constructor parameter corresponding to this field.
 				const SymID argument_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID(name(field.getSymbol())),
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
+				// Get the initial value for the field from the PST.
+				const auto field_pst_data
+					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
+				auto init_expr_opt = field_pst_data->getInit().map(
+					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
+						return ctx
+					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
+					        .expect(
+								"Not handling errors here yet..."
+								"(getting field init expr for implicit ctor)"
+							);
+					}
+				);
+				auto init_expr_coerced_opt
+					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) {
+						  const auto init_expr_type = expr->expression_type.getSymbolType();
+						  const auto field_type     = field.getType(ctx);
+						  const auto coercion
+							  = canCoerce(ctx, init_expr_type, field_type)
+					                .expect(base::strConcat(
+										"Cannot coerce default field value of type ",
+										init_expr_type.toString(),
+										" to the field's expected type ",
+										field_type.toString()
+									));
+						  return coercion.coerce(ctx, std::move(expr));
+					  });
+
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
 				parameters.emplace_back(
-					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
+					name(argument_symbol),
+					field.getType(ctx),
+					std::move(init_expr_coerced_opt),
+					argument_symbol
 				);
 				argument_index++;
 			}
@@ -362,7 +398,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
@@ -378,7 +414,7 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
-				if (not stmt_maker.empty)
+				if (stmt_maker.out.has_value())
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
 			return block;
@@ -418,7 +454,6 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&                 ctx;
-			bool                            empty = false;
 			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
@@ -447,9 +482,9 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitAlias(pst::Access<pst::Alias>) override { empty = true; }
+			void visitAlias(pst::Access<pst::Alias>) override {}
 
-			void visitUsing(pst::Access<pst::Using>) override { empty = true; }
+			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 				CORE_ASSERT(
@@ -497,9 +532,10 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				auto new_value_coerced = coerceExpression(std::move(new_value_expr), location_type);
+				auto coercion
+					= canCoerce(ctx, new_value_expr->expression_type.getSymbolType(), location_type);
 
-				if (new_value_coerced.hasError()) {
+				if (coercion.hasError()) {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							assignment->getSourcePosition(),
@@ -516,11 +552,9 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
+				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
 
-
-				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_coerced.value())
-				));
+				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -548,6 +582,18 @@ namespace compiler::helios {
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (If)");
+				if (condition->expression_type.getType().getKind() != tsh::Kind::Bool) {
+					auto coercion = canCoerce(
+						ctx,
+						condition->expression_type.getSymbolType(),
+						tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
+					                        tsh::ReferenceKind::Direct,
+					                        tsh::Mutability::Mutable })
+					);
+					if (coercion.hasError())
+						CORE_PANIC("Not handling errors here yet... (If condition coercion)");
+					condition = coercion.value().coerce(ctx, std::move(condition));
+				}
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
 
@@ -596,19 +642,20 @@ namespace compiler::helios {
 						return;  // fail
 					}
 
-					output(code::VariableStmt({}, symbol_type, symbol));
-					return;
+					throw base::NotYetImplemented(
+						"Variable declarations without initial value are not supported in HOUT yet."
+						" We should add default initialization here."
+					);
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 					          .expect("Not handling errors here yet... (variable initial value)");
-
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
-
-					auto initial_value_coerced
-						= coerceExpression(std::move(initial_value), symbol_type);
-					if (initial_value_coerced.hasError()) {
+					auto coercion           = canCoerce(
+                        ctx, initial_value->expression_type.getSymbolType(), symbol_type
+                    );
+					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
@@ -626,12 +673,14 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						std::move(initial_value_coerced.value()), symbol_type, symbol
+						coercion.value().coerce(ctx, std::move(initial_value)), symbol_type, symbol
 					));
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override { empty = true; }
+			void visitConst(pst::Access<pst::Const>) override {
+				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

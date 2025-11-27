@@ -2,13 +2,13 @@
 
 #include "elements.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
-#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -16,13 +16,13 @@
 #include <sstream>
 
 namespace compiler::helios {
-	std::string HOUTUnit::debugPrint() const {
+	std::string HOUTUnit::debugPrint(query::Context& ctx) const {
 		std::string out;
 
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_gd: glob_data) out += const_gd.debugPrint();
+		for (auto& const_gd: glob_data) out += const_gd.debugPrint(ctx);
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -85,20 +85,23 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction::HOUTFunction(
-		CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
+		const CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
 	):
 		  declaration(other),
 		  body(body) {}
 
-	std::string HOUTGlobalData::debugPrint() const {
+	std::string HOUTGlobalData::debugPrint(query::Context& ctx) const {
 		std::stringstream out;
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
-				out << "const " << original_name.strView() << " = " << const_value.value.toString()
-					<< '\n';
+				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
-				out << "var " << original_name.strView() << " : " << type.toString() << " = ";
+				std::string decl
+					= type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ";
+				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}

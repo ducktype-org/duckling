@@ -42,6 +42,14 @@ namespace query::internal {
 			if (visited.contains(visited_node_id)) continue;
 			visited.insert(visited_node_id);
 
+			CORE_ASSERT(
+				node_deps.contains(visited_node_id),
+				"Node not found in dep graph. Node ID: ",
+				visited_node_id.q_id.getData().name,
+				" Key: ",
+				visited_node_id.hash.val.toStringHex()
+			);
+
 			const auto& node = node_deps.at(visited_node_id);
 			for (auto& dep: node)
 				if (!visited.contains(dep)) queue.push(dep);
@@ -222,13 +230,24 @@ namespace query::internal {
 
 			// Add the deserialized entry to the graph
 			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
-			if (!inserted)
-				throw std::runtime_error("Duplicate node detected during deserialization");
+			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
 		// Check here oif offset is equal to data_size
 		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
 
 		return graph;
+	}
+
+	std::vector<NodeID> QueryGraph::getAllNodes() const {
+		std::vector<NodeID> nodes;
+		nodes.reserve(node_deps.size());
+		for (const auto& [node, _]: node_deps) nodes.push_back(node);
+		return nodes;
+	}
+
+	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
+		auto it = node_deps.find(node_id);
+		return it != node_deps.end() && !it->second.empty();
 	}
 }

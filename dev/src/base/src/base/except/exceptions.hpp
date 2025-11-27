@@ -16,6 +16,7 @@
 
 #include <exception>
 #include <string>
+#include <string_view>
 #include <utility>  // IWYU pragma: export
 
 namespace base {
@@ -37,7 +38,7 @@ namespace base {
 		void        makeWhatStr();
 
 	public:
-		Panic(std::string position, std::string reason);
+		Panic(std::string_view position, std::string_view reason);
 
 		[[nodiscard]]
 		const std::string& getPosition() const;
@@ -46,6 +47,7 @@ namespace base {
 
 		// @TODO: use Printer
 		void print(std::ostream& out) const;
+		void printToCerr() const;
 	};
 
 	/**
@@ -60,7 +62,8 @@ namespace base {
 		std::string message;
 
 	public:
-		LogicError(std::string message);
+		LogicError(std::string_view message);
+
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
@@ -72,7 +75,8 @@ namespace base {
 		std::string message;
 
 	public:
-		NotYetImplemented(const std::string& message);
+		NotYetImplemented(std::string_view message);
+
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
@@ -129,3 +133,17 @@ namespace base {
 #else
 	#define CORE_UNREACHABLE() std::unreachable()
 #endif
+
+/**
+ * Non throwing version of CORE_ASSERT.
+ * Should be used only in places where noexcept is required.
+ * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
+ * @note If this assertion fails the program will be terminated.
+ */
+#define CORE_ASSERT_NOEXCEPT(cond, what, ...)               \
+	try {                                                   \
+		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__); \
+	} catch (const base::Panic& e) {                        \
+		e.printToCerr();                                    \
+		std::terminate();                                   \
+	}

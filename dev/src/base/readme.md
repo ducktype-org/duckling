@@ -11,6 +11,7 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - flag.hpp
 - init_guard.hpp
 - ints.hpp
+- floats.hpp
 - maps.hpp
 - perfect_hash.hpp
 - raw_view.hpp

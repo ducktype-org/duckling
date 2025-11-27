@@ -21,7 +21,7 @@ namespace compiler::backend_llvm {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
-	void Module::addGlobalToModule(const lir::LirGlobal& lir_global) {
+	void Module::addGlobalToModule(const lir::LIRGlobal& lir_global) {
 		addGlobalToModuleImpl(impl.refMut(), lir_global);
 	}
 
@@ -42,12 +42,21 @@ namespace compiler::backend_llvm {
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
 
-	void Module::debugDumpToFile(base::StrID output_file) const {
+	void Module::dumpLLVMToFile(base::StrID output_file) const {
 		std::error_code error_code;
 		llvm::raw_fd_ostream ir_output_stream(output_file.str(), error_code, llvm::sys::fs::OF_None);
 		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
 
 		impl->module->print(ir_output_stream, nullptr);
+	}
+
+	std::string Module::dumpLLVMToString() const {
+		std::string              buffer;
+		llvm::raw_string_ostream stream(buffer);
+
+		impl->module->print(stream, nullptr);
+		stream.flush();
+		return buffer;
 	}
 
 	void Module::compile(

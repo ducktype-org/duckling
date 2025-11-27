@@ -1,4 +1,5 @@
-add_library(LIR
+# This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time.
+add_library(LIR STATIC
 	src/lir/lir_structure/lir_structure.cpp
 	src/lir/lir_lowering/lir_lowering.cpp
 )

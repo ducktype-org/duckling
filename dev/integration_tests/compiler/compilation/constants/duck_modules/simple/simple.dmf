@@ -1,0 +1,39 @@
+fun operations(a: i64, b: i64) -> i64 = a + b*2i64;
+
+fun fib(n: i64) -> i64 = {
+   if (n < 2i64) { return n; }
+   return fib(n - 1i64) + fib(n - 2i64);
+}
+
+fun takeUnit(u: ()) -> i64 = 42;
+
+fun unitIDentity(u: ()) -> () = u;
+
+const one = 1;
+const two = one + one;
+
+const five_1 = operations(one, two);
+const five_2 = operations(1, 2);
+const five_3 = operations(1, one+one);
+
+const FIB_10 = fib(10); # 55
+
+const boolean = true and false; # false
+
+const unit: () = ();
+
+fun main() -> i64 = {
+    builtin_output_i64(five_1);
+    builtin_output_i64(five_2);
+    builtin_output_i64(five_3);
+    builtin_output_i64(FIB_10);
+
+    if (not boolean) { builtin_output_i64(123123); }
+
+    builtin_output_i64(takeUnit(unit));
+    builtin_output_i64(takeUnit(unitIDentity(unit)));
+
+    return 0;
+}
+
+

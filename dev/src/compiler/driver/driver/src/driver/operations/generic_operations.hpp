@@ -9,6 +9,7 @@
 #include "../backend_type.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
+#include <global_state/packages.hpp>
 #include <linker/link.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -21,10 +22,10 @@ namespace compiler::driver {
 	 * It compiler every module into the .o/.dbc files (via queries),
 	 * and also for LLVM backend it links them into a single binary.
 	 */
-	void compilerEntirePackage(
-		const fs::File&               package_location,
-		BackendType                   backend,
-		const linker::LinkingOptions& linking_options
+	void compileEntirePackage(
+		const global_state::PackageInfo& package_info,
+		BackendType                      backend,
+		const linker::LinkingOptions&    linking_options
 	);
 
 	struct RunOutput final {
@@ -52,5 +53,13 @@ namespace compiler::driver {
 	/**
 	 * Query that produces .dbc/.o file for given Duckling module.
 	 */
-	DECLARE_QUERY(CompileModule, KeyOf_CompileModule, artifacts::FileArtifact);
+	DECLARE_QUERY(
+		CompileModule,
+		KeyOf_CompileModule,
+		artifacts::FileArtifact,
+		({
+			.used_hashes             = query::UsedHashes::StableHash,
+			.can_be_loaded_from_disk = true,
+		})
+	);
 }

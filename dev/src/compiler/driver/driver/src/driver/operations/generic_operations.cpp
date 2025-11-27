@@ -4,14 +4,18 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/options.hpp>
+#include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
+
+#include <base/collections/optional.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
@@ -22,6 +26,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
+#include <iostream>
 #include <utility>
 
 namespace compiler::driver {
@@ -60,9 +65,13 @@ namespace compiler::driver {
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
-			auto module_name = base::StrID(
-				base::strConcat("module_", key.module_id.queryUnstablePerfectHash()).c_str()
-			);
+			auto module_name
+				= base::StrID(base::strConcat(
+								  "module_",
+								  compiler::frontend::ModuleTree::getComponentHash(key.module_id)
+									  .hash.toStringHex()
+				)
+			                      .c_str());
 
 			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
 
@@ -81,7 +90,7 @@ namespace compiler::driver {
 				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
 					base::StrID llvm_ir_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
-					llvm_module.debugDumpToFile(llvm_ir_path);
+					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
 				if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
 					base::StrID assembly_path
@@ -106,16 +115,43 @@ namespace compiler::driver {
 
 			return output;
 		}
+
+		/**
+		 * Load precompiled artifact from disk without performing any compilation.
+		 * Returns Optional empty if the underlying file does not exist anymore.
+		 */
+		static auto loadFromDisc(const QKey& key) -> base::Optional<artifacts::FileArtifact> {
+			auto output_name
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+
+			auto collection   = getQueryArtifactsCollection();
+			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+
+			if (!output_maybe.has_value()) {
+				std::cerr
+					<< "\n\nCompileModule artifact not found in artifacts collection for module "
+					<< getModuleRef(key.module_id)->getName().strView() << " and backend "
+					<< backendTypeToStr(key.backend_type) << "\n\n";
+				return {};
+			}
+
+			auto output = *output_maybe.value();
+
+			std::cerr << "\n\nLoading CompileModule artifact from disk for module "
+					  << getModuleRef(key.module_id)->getName().strView() << " and backend "
+					  << backendTypeToStr(key.backend_type) << "\n\n";
+			return output;
+		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(
-		const fs::File&               package_location,
-		BackendType                   backend,
-		const linker::LinkingOptions& linking_options
+	void compileEntirePackage(
+		const global_state::PackageInfo& package_info,
+		BackendType                      backend,
+		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = frontend::createModuleTreeWithRandomPackageID(package_location);
+		auto root = package_info.root_module;
 
 		std::vector<artifacts::FileArtifact> objects;
 

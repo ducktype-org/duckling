@@ -89,7 +89,7 @@ namespace vm::code::builders {
 		 * @brief Appends opcode kind as string to a to a stream.
 		 */
 		void pushOpcodeKind(const OpKind& kind, std::stringstream& out) {
-			out << base::enumToStr(kind).strView();
+			out << base::enumToStr(kind);
 		}
 	}
 }

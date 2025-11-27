@@ -82,7 +82,7 @@ namespace base {
 			return ptr == other.ptr;
 		}
 
-		bool operator<(const Ref& other) const { return ptr < other.ptr; }
+		auto operator<=>(const Ref& other) const = default;
 
 		// swap:
 		friend void swap(Ref& first, Ref& second) noexcept { std::swap(first.ptr, second.ptr); }
@@ -91,7 +91,7 @@ namespace base {
 	};
 
 	/**
-	 * @brief A nullable pointer wrapper type, that does not owns the pointer.
+	 * @brief A nullable pointer wrapper type, that does not own the pointer.
 	 * Implements both null-unchecked and null-checked access to the pointer.
 	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In
 	 * the future we might consider removing this check in release build for performance.

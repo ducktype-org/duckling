@@ -23,7 +23,9 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
+
 
 class Bits;
 class Bytes;
@@ -33,26 +35,27 @@ namespace base {
 
 	// This is forward declaration to prevent circular header dependency
 	template<typename EnumType>
-	StrID enumToStr(EnumType v);
+	std::string_view enumToStr(EnumType v);
 
 	namespace internal {
 
 		template<typename T>
 		concept HasEnumToStr = std::is_enum_v<T> && requires(T t) {
-			{ base::enumToStr(t) } -> std::convertible_to<base::StrID>;
+			{ base::enumToStr(t) } -> std::convertible_to<std::string_view>;
 		};
 
 		template<typename T>
 		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer_v<std::decay_t<T>> && !std::is_null_pointer_v<std::decay_t<T>> && !HasEnumToStr<std::remove_cvref_t<T>>)
-		void strConcat(std::string& out, T&& v) {
+		constexpr void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
 
-		inline void strConcat(std::string& out, base::RawView view) {
+		constexpr void strConcat(std::string& out, base::RawView view) {
 			out.append(view.stringView());
 		}
 
-		inline void strConcat(std::string& out, base::IsNumber auto v) {
+		template<base::IsNumber T>
+		constexpr void strConcat(std::string& out, T v) {
 			out.append(std::to_string(v));
 		}
 
@@ -62,16 +65,18 @@ namespace base {
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_utils.hpp
 		void strConcat(std::string& out, base::StrID str_id);
 
-		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
+		constexpr void strConcat(std::string& out, char v) { out.append(1uz, v); }
 
-		inline void strConcat(std::string& out, const char* v) {
+		constexpr void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
+
+		constexpr void strConcat(std::string& out, const char* v) {
 			if (v == nullptr) throw std::domain_error("strConcat called with nullptr");
-			out.append(std::string(v));
+			out.append(v);
 		}
 
 		template<typename U, typename V>
 		requires(std::is_trivially_copyable_v<U> && std::is_trivially_copyable_v<V>)
-		inline void strConcat(std::string& out, std::pair<U, V> pair) {
+		constexpr void strConcat(std::string& out, std::pair<U, V> pair) {
 			out += "<";
 			strConcat(out, pair.first);
 			out += ", ";
@@ -85,8 +90,8 @@ namespace base {
 			strConcat(out, base::enumToStr(std::forward<T>(v)));
 		}
 
-		inline void strConcat(std::string& out, Bits bits);
-		inline void strConcat(std::string& out, Bytes bytes);
+		constexpr void strConcat(std::string& out, Bits bits);
+		constexpr void strConcat(std::string& out, Bytes bytes);
 	}
 
 	/**
@@ -107,7 +112,7 @@ namespace base {
 	 * Throws std::domain_error on nullptr argument.
 	 */
 	template<typename... T>
-	std::string strConcat(T&&... elements) {
+	constexpr std::string strConcat(T&&... elements) {
 		std::string out;
 		(internal::strConcat(out, std::forward<T>(elements)), ...);
 		return out;
@@ -133,7 +138,7 @@ namespace base {
 	 * ```
 	 */
 	template<typename T>
-	std::string toString(T&& value) {
+	constexpr std::string toString(T&& value) {
 		return strConcat("", std::forward<T>(value));
 	}
 
@@ -152,4 +157,12 @@ namespace base {
 	 * @return A vector of separated strings.
 	 */
 	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
+
+	/**
+	 * @brief Generates a random alphanumeric string of the specified length.
+	 * @param length The length of the random string to generate.
+	 * @return A random alphanumeric string.
+	 */
+	std::string generateRandomString(u64 length);
+
 }

@@ -7,6 +7,7 @@
 
 #include <base/pointers/box.hpp>
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -41,6 +42,17 @@ namespace vm::low {
 	};
 
 	/**
+	 * @brief Micro bytecode representation of an extern C function.
+	 */
+	struct LowExternCFunction {
+		base::StrID name;
+		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		usize                 parameter_size_sum;
+		std::vector<TypeCRef> parameters;
+		TypeCRef              result_type;
+	};
+
+	/**
 	 * @brief Representation of the micro bytecode program which the VM runs.
 	 * This is the final form of bytecode produced by the loader module which is executable by
 	 * `VMThread`.
@@ -62,6 +74,10 @@ namespace vm::low {
 
 		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const { return functions; }
 
+		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const {
+			return extern_c_functions;
+		}
+
 		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
 
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const {
@@ -72,6 +88,7 @@ namespace vm::low {
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
+		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.

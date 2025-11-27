@@ -1,7 +1,8 @@
 #pragma once
 
+#include <string_id/string_id.hpp>
+
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
@@ -78,8 +79,6 @@ namespace vm::loader::parser {
 
 		~ByteCode() override = default;
 	};
-
-	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
 
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;

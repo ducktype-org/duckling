@@ -14,10 +14,11 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
 using namespace compiler;
@@ -28,25 +29,22 @@ class LIRConstructionTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO
-		// tests here don't tests much apart from the fact that code compiles
-		// and does not throw.
-		// This is due to the fact that LIR is in a very early stage of development
-		// and will likely change a lot in near future.
-		// Add more tests with future LIR changes.
-
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
-		TESTER_ADD_TEST(testLirGlobal);
+		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(simpleConstant);
 	}
 
 private:
-	struct LirModuleResult {
+	/**
+	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
+	 */
+	struct LIRModuleResult final {
 		frontend::ModuleID module;
 		helios::ScopeID    scope;
 		base::Map<
@@ -83,15 +81,19 @@ private:
 		}
 	};
 
-	LirModuleResult getLirOfModule(std::string_view module_path) {
+	/**
+	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
+	 * functions. Note that it does not include globals/constants in the result (only functions).
+	 */
+	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
-		LirModuleResult result{ .module = module, .scope = scope };
+		LIRModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (const auto& hout_func: unit->functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMirFunction>({ hout_func })->value();
-				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->value();
+				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
@@ -105,19 +107,14 @@ private:
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
 							hout_glob.original_name, std::make_tuple(hout_glob, mir_func, lir_func)
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						//@TODO: create global constant ctors if nessesary
-						CORE_PANIC(
-							"Creating ctors for constant variables is not implemented yet. "
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						);
+						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
 						fail(base::strConcat(
@@ -132,28 +129,28 @@ private:
 	}
 
 	void noTest() {
-		auto module = getLirOfModule(path("modules/simple"));
+		auto module = getLIROfModule(path("modules/simple"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		withContextDo([&](query::Context& ctx) {
 			// this might change in the future:
-			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
 
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
@@ -169,7 +166,7 @@ private:
 	}
 
 	void simpleBools() {
-		auto module = getLirOfModule(path("modules/booleans"));
+		auto module = getLIROfModule(path("modules/booleans"));
 		ASSERT_EQUAL(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
@@ -184,7 +181,7 @@ private:
 	}
 
 	void functionCallTest() {
-		auto module  = getLirOfModule(path("modules/function_calls"));
+		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 		auto foo_mir = module.mirFunc("foo");
 		withContextDo([&](query::Context& ctx) {
@@ -194,7 +191,7 @@ private:
 	}
 
 	void functionParametersTest() {
-		auto module  = getLirOfModule(path("modules/function_with_parameters"));
+		auto module  = getLIROfModule(path("modules/function_with_parameters"));
 		auto foo_lir = module.lirFunc("foo");
 
 		// this is also called by LIR lowering,
@@ -232,9 +229,11 @@ private:
 			// only parameter of index 2 is ever used:
 
 			auto validate_value = [&](const compiler::lir::LIRValue& value) {
-				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
-					if ((*local)->parameter_index.has_value())
-						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+				if (value.isLocal()) {
+					if (auto local = value.get<lir::LIRPlace>().getBase<lir::LIRLocalRef>();
+					    local->parameter_index.has_value()) {
+						ASSERT_EQUAL(local->parameter_index.value(), 2);
+					}
 				}
 			};
 
@@ -245,7 +244,7 @@ private:
 	}
 
 	void testGlobals() {
-		auto module = getLirOfModule(path("modules/globals"));
+		auto module = getLIROfModule(path("modules/globals"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 		auto g_ctor  = module.lirGlobalCtor("g");
@@ -253,7 +252,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
 
-			ASSERT_EQUAL(foo_lir->local_list.size(), 2);
+			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
 			ASSERT_EQUAL(g_ctor->local_list.size(), 0);
 
 			// Check local variable 'a'
@@ -262,34 +261,32 @@ private:
 				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
 			}
 			ASSERT_TRUE(found_a);
 
-			// Check that there is an assignment to a LirGlobal in the instructions in foo_lir
+			// Check that there is an assignment to a LIRGlobal in the instructions in foo_lir
 			bool found_global_assign = false;
 			for (const auto& block: foo_lir->blocks) {
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
-							found_global_assign = true;
+						if (instr.output.value().isGlobal()) found_global_assign = true;
 					}
 				}
 			}
 			ASSERT_TRUE(found_global_assign);
 
-			// Check that there is an assignment to a LirGlobal in the instructions in g_ctor
+			// Check that there is an assignment to a LIRGlobal in the instructions in g_ctor
 			bool found_global_assign_ctor = false;
 			for (const auto& block: g_ctor->blocks) {
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == lir::Operation::Assign && instr.output.has_value()) {
-						if (std::holds_alternative<lir::LirGlobal>(instr.output.value()))
-							found_global_assign_ctor = true;
+						if (instr.output.value().isGlobal()) found_global_assign_ctor = true;
 					}
 				}
 			}
@@ -302,7 +299,7 @@ private:
 	}
 
 	void testFromFunctionLiterals() {
-		auto module           = getLirOfModule(path("modules/globals"));
+		auto module           = getLIROfModule(path("modules/globals"));
 		auto g_ctor           = module.lirGlobalCtor("g");
 		auto some_global_ctor = module.lirGlobalCtor("some_global");
 
@@ -315,16 +312,16 @@ private:
 		});
 	}
 
-	void testLirGlobal() {
-		auto module      = getLirOfModule(path("modules/globals"));
+	void testLIRGlobal() {
+		auto module      = getLIROfModule(path("modules/globals"));
 		auto g           = module.houtGlobal("g");
 		auto some_global = module.houtGlobal("some_global");
 
 		withContextDo([&](query::Context& ctx) {
-			auto g_lir           = lir::LirGlobal::fromHOUT(ctx, g);
-			auto some_global_lir = lir::LirGlobal::fromHOUT(ctx, some_global);
-			ASSERT_EQUAL(lir::LirGlobalType::Variable, some_global_lir.type);
-			ASSERT_EQUAL(lir::LirGlobalType::Variable, g_lir.type);
+			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, g);
+			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, some_global);
+			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
+			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
 			ASSERT_EQUAL(false, g_lir.initial_value.has_value());
 		});
 	}
@@ -332,7 +329,7 @@ private:
 	void testLifetimeFlags() {
 		// @TODO #1262: this test doesn't make much sense yet, add proper tests when classes and
 		// composite types such as variants are fully added.
-		auto module = getLirOfModule(path("modules/lifetime_flags"));
+		auto module = getLIROfModule(path("modules/lifetime_flags"));
 		ASSERT_EQUAL(3, module.ctors.size());
 
 		auto my_int = module.houtGlobal("my_int");
@@ -343,6 +340,34 @@ private:
 
 		auto my_float = module.houtGlobal("my_float");
 		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
+	}
+
+	void simpleConstant() {
+		auto [module, scope] = getModule(fs::File(path("modules/constants")));
+		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+
+		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
+
+		auto fib_const_global_data = hout_unit.glob_data.at(0);
+		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
+
+		withContextDo([&](query::Context& ctx) {
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, fib_const_global_data);
+			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
+
+
+			// the main assertions of FIB_10 checks:
+			assertTrue(
+				lir_global.type == lir::LIRGlobalType::Constant, "Expected FIB_10 to be a constant"
+			);
+			assertTrue(
+				lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
+			);
+			auto const_numeric
+				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
+			auto const_value = const_numeric->get<i64>();
+			ASSERT_EQUAL(const_value, 55);
+		});
 	}
 };
 

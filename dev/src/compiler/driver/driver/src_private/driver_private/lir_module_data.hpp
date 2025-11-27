@@ -2,12 +2,15 @@
 
 
 #include <lir/lir_structure/lir_structure.hpp>
-
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::driver {
+
+	/**
+	 * LIRGlobal with its optional constructor and destructor functions.
+	 */
 	struct LIRModuleGlobal final {
-		lir::LirGlobal lir_global;
+		lir::LIRGlobal lir_global;
 		base::Optional<CRef<lir::Function>>
 			global_ctor;  ///< Optional, if the global has a constructor.
 		base::Optional<CRef<lir::Function>>

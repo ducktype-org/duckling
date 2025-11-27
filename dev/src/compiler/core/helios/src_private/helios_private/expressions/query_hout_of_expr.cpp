@@ -1,13 +1,15 @@
 #include "query_hout_of_expr.hpp"
 
+#include "numeric_literals.hpp"
+
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/collections/optional.hpp>
@@ -76,8 +78,14 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+
+				if (parsed_numeric_value.has_value()) {
+					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
+				} else {
+					// Error was logged in fromExprValue.
+					return;
+				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
@@ -282,19 +290,19 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(80));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 80 }));
 					break;
 				case pst::Keyword::f128:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 128 }));
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(64));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 64 }));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(32));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 32 }));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(16));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 16 }));
 					break;
 
 
@@ -423,10 +431,6 @@ namespace compiler::helios::code {
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			// std::cerr << "\nExpr: \n";
-			// root->debugPrint(std::cerr);
-			// std::cerr << '\n'
-
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 

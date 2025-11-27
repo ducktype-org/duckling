@@ -11,11 +11,14 @@ namespace pst {
 
 		Keyword as_keyword = state[0].asKeyword();
 		CORE_ASSERT(
-			as_keyword == Keyword::Alias || as_keyword == Keyword::Using,
+			as_keyword == Keyword::Alias || as_keyword == Keyword::Using
+				|| as_keyword == Keyword::Class,
 			"Bad starting keyword in NonClassStmt."
 		);
 
 		state.parse(out).one(&out->inner_stmt);
+		out->inner_decl_kind        = out->inner_stmt.internal()->isDeclaration();
+		out->inner_decl_symbol_name = out->inner_stmt.internal()->getDeclSymbolName();
 
 		return out;
 	}
@@ -30,6 +33,10 @@ namespace pst {
 	}
 
 	LangElement::HashAlg& NonClassStmt::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, inner_decl_kind);
+		addToHash(partial_hash, inner_decl_symbol_name.has_value());
+		if (inner_decl_symbol_name.has_value())
+			addToHash(partial_hash, inner_decl_symbol_name.value().str());
 		return partial_hash;
 	}
 

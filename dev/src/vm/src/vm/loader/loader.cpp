@@ -3,9 +3,10 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
@@ -153,13 +154,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCompile(
-	const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty()) {
-		return compiler.getLowProgram();
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
+		return {};
 	}
 
 	LoaderLogger log;
@@ -172,7 +172,7 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
 		compiler.recompile(validated_high_program);
-		return compiler.getLowProgram();
+		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
 			e.label,
@@ -185,20 +185,20 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 			e.what()
 		);
 	} catch (code::DuplicatedFunctionError& e) {
-		log.logMap<DuplicatedFunctionError>(e.NEW_ELEMENT, [&](auto& err) {
-			log.addNote<DuplicatedFunctionNote>(err, e.PREVIOUS_ELEMENT);
+		log.logMap<DuplicatedFunctionError>(e.new_element, [&](auto& err) {
+			log.addNote<DuplicatedFunctionNote>(err, e.previous_element);
 		});
 	} catch (code::DuplicatedGlobalDataError& e) {
 		log.logMap<DuplicatedGlobalDataError>(
-			e.NEW_ELEMENT,
-			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.PREVIOUS_ELEMENT); },
-			e.NEW_ELEMENT.name.str
+			e.new_element,
+			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.previous_element); },
+			e.new_element.name.str
 		);
 	} catch (code::DuplicatedTypeError& e) {
 		log.logMap<DuplicatedTypeError>(
 			**e.maybeElement(),
-			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.PREVIOUS_ELEMENT); },
-			code::typeName(e.NEW_ELEMENT)
+			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.previous_element); },
+			code::typeName(e.new_element)
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {
@@ -209,10 +209,14 @@ std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCo
 	return std::unexpected(std::move(log));
 }
 
-std::expected<base::CRef<vm::low::LowVMProgram>, LoaderLogger> Loader::loadAndCompile(
-	const std::vector<fs::File>& file_paths
-) {
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
 	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
+
+CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
+	return compiler.getLowProgram();
+}
+
+vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }

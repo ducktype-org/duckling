@@ -1,12 +1,12 @@
-fun square(a: i32) -> i32 = {
+fun square(a: i64) -> i64 = {
     return a * a;
 }
 
-fun foo(a: i32, b: i32) -> i32 = {
-    let a_squared: i32 = square(a);
+fun foo(a: i64, b: i64) -> i64 = {
+    let a_squared: i64 = square(a);
  
-    const V1: i64 = 1;
-    let bb: i64 = 1 + V1;
+    var V1: i64 = 1i64;
+    let bb: i64 = 1i64 + V1;
 
     return square(a_squared + b);
 }

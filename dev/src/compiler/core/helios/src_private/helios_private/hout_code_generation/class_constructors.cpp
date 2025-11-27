@@ -6,7 +6,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/internal/queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/stable_container.hpp>
@@ -17,8 +16,8 @@ namespace compiler::helios::houtgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, HOUTFunction) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
-			const SymID               class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface& class_interface = class_type.getInterface(ctx);
+			const SymID class_symbol    = class_type.getSymbol();
+			auto        class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
 			using Variable            = GeneratedSymbolData::Variable;
@@ -28,7 +27,7 @@ namespace compiler::helios::houtgen {
 			// Construct the constructor's type.
 			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the ctor symbol and declaration.
@@ -52,9 +51,9 @@ namespace compiler::helios::houtgen {
 					 .generated_symbol_data
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
-			body.emplace_back(
-				makeBox<code::VariableStmt>(std::nullopt, result_symbol_type, result_symbol)
-			);
+			body.emplace_back(makeBox<code::VariableStmt>(
+				code::VariableStmt(std::nullopt, result_symbol_type, result_symbol)
+			));
 
 			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {
@@ -62,7 +61,7 @@ namespace compiler::helios::houtgen {
 					makeBox<code::AccessExpr>(
 						ctx,
 						makeBox<code::IdentifierExpr>(ctx, result_symbol),
-						name(fields.at(i).getSymbol())
+						fields.at(i).getSymbol()
 					),
 					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
 				));
@@ -81,7 +80,7 @@ namespace compiler::helios::houtgen {
 			};
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitClassConstructor);

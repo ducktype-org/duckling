@@ -108,6 +108,8 @@ DEF_MICRO_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocal
 // sets pointer to null
 DEF_MICRO_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
 
+DEF_MICRO_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
+
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
@@ -380,7 +382,8 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::opargs::Label)
 // ========= FUNCTION OPERATIONS ========
 
 DEF_MICRO_INSTR(call_func, vm::opargs::FunctionName)
-DEF_MICRO_INSTR(call_builtin_func, vm::opargs::BuiltinFunctionName)
+DEF_MICRO_INSTR(call_builtinfunc, vm::opargs::BuiltinFunctionName)
+DEF_MICRO_INSTR(call_cfunc, vm::opargs::ExtCFunctionName)
 
 // return while performing a tail call
 DEF_MICRO_INSTR(ret_tailcall_func, vm::opargs::FunctionName)

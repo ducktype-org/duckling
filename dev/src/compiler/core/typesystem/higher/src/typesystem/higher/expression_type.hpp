@@ -11,7 +11,7 @@
 
 #include <concepts>
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief The ExpressionType class contains information about a type,
 	 * expanded with information about a value of that type.
@@ -125,11 +125,4 @@ namespace tsh {
 		SymbolType<ABSTRACT_TYPE> symbol_type;
 		ValueCategory             value_category;
 	};
-
-	/**
-	 * @brief Deduces the symbol type from an ExpressionType.
-	 * @param expr_type The ExpressionType object describing the value of an expression.
-	 * @return The deduced symbol type.
-	 */
-	SymbolType<> deduceTypeFromExpressionType(const ExpressionType<>& expr_type);
 }

@@ -49,15 +49,13 @@ int main(int argc, const char* argv[]) {
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
-						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-					auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+					auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n";
 				}
 				variant_case(helios::HOUTGlobalConst, cnst) {
-					//@TODO: create global constant ctors if nessesary
-					std::cerr << "skiping generation of ctor for global constant: "
-							  << hout_glob.original_name.strView() << "\n";
+					// @future #1554 -- const ctors will probably be added here
 				}
 			}
 		});
@@ -65,8 +63,8 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
-			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+			auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 			lir_fun->debugPrint(ctx, std::cerr);
 		});
 		std::cerr << "\n";

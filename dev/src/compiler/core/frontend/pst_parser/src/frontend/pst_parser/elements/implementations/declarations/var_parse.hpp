@@ -54,6 +54,11 @@ namespace pst {
 		if (!has_value && !has_type)
 			state.log(makeBox<VariableNoTypeAndValueError>(state.getPosition()));
 
+		if constexpr (key == Keyword::Var)
+			out->is_const = false;
+		else if constexpr (key == Keyword::Let)
+			out->is_const = true;
+
 		return out;
 	}
 

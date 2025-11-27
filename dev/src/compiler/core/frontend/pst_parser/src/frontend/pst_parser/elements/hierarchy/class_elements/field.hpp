@@ -28,6 +28,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		bool isMutable() const {
+			return is_mutable;
+		}
+
+		[[nodiscard]]
 		base::StrID getName() const {
 			return name.value;
 		}
@@ -35,6 +40,12 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ExprHolder> getType() const {
 			return type.give();
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getInit() const {
+			if (init.has_value()) return { init.value().give() };
+			return {};
 		}
 
 		[[nodiscard]]

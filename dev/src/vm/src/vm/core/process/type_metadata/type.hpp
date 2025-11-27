@@ -2,8 +2,9 @@
 
 #include "kinds.hpp"
 
+#include <string_id/string_id.hpp>
+
 #include <base/collections/optional.hpp>
-#include <base/str/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
 
@@ -147,6 +148,8 @@ namespace vm {
 		 */
 		base::Optional<TypeCRef> getNonCompoundTypeAtOffsetRecursive(Offset offset) const;
 
+		bool isTriviallyCopyable() const;
+
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
@@ -156,6 +159,7 @@ namespace vm {
 		// variant
 		base::Optional<usize>                 getTypeTagSizeBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
+
 
 		// inheritance
 		[[nodiscard]]

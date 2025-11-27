@@ -1,16 +1,15 @@
 #include <helios/scope_symbol_id.hpp>
-
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <query_framework/query_int.hpp>
 
 namespace compiler::helios::mangler {
 
 	namespace special_symbol_keys {
-		struct LirModuleID {
+		struct LIRModuleID {
 			base::StrID id;
 
-			constexpr auto operator<=>(const LirModuleID& other) const = default;
+			constexpr auto operator<=>(const LIRModuleID& other) const = default;
 		};
 	}
 
@@ -19,13 +18,13 @@ namespace compiler::helios::mangler {
 	 */
 	enum class ManglingSymbolKind {
 		Standard,                   // helios::SymID
-		ModuleConstructor,          // special_symbol_keys::LirModuleID
-		ModuleDestructor,           // special_symbol_keys::LirModuleID
+		ModuleConstructor,          // special_symbol_keys::LIRModuleID
+		ModuleDestructor,           // special_symbol_keys::LIRModuleID
 		GlobalVariableConstructor,  // helios::SymID
 		GlobalVariableDestructor,   // helios::SymID
 	};
 
-	using ManglingSymbolKey = std::variant<SymID, special_symbol_keys::LirModuleID>;
+	using ManglingSymbolKey = std::variant<SymID, special_symbol_keys::LIRModuleID>;
 
 	struct KeyOf_MangledSymbol final {
 		ManglingSymbolKey           symbol_key;
@@ -42,7 +41,7 @@ namespace compiler::helios::mangler {
 	/**
 	 * @brief Gets the mangled name of a symbol from SymID.
 	 */
-	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID);
+	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({}));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
 
@@ -51,12 +50,12 @@ namespace compiler::helios::mangler {
 
 	template<>
 	base::StrID getSpecialMangledName<ManglingSymbolKind::ModuleConstructor>(
-		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+		query::Context& ctx, special_symbol_keys::LIRModuleID mod_id
 	);
 
 	template<>
 	base::StrID getSpecialMangledName<ManglingSymbolKind::ModuleDestructor>(
-		query::Context& ctx, special_symbol_keys::LirModuleID mod_id
+		query::Context& ctx, special_symbol_keys::LIRModuleID mod_id
 	);
 
 	template<>

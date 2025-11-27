@@ -2,6 +2,7 @@
 
 #include "../../scope_symbol_id.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
@@ -17,6 +18,12 @@ namespace compiler::helios::code {
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
 	friend base::Box<T, Deleter> base::makeBox(Args&&... args);
+
+	/**
+	 * @brief Unique ID for each HOUT Expr element.
+	 * It can be used as session-unstable HOUT Expr element hash.
+	 */
+	STRONG_TYPEDEF_ID(HOUTExprID);
 
 	/**
 	 * @brief Base class for all HOUT expressions.
@@ -43,7 +50,17 @@ namespace compiler::helios::code {
 		 * Use with caution.
 		 * @return Box<Expr> ownership of the copy of the expression.
 		 */
-		[[nodiscard]] virtual Box<Expr> clone() const = 0;
+		[[nodiscard]]
+		virtual Box<Expr> clone() const
+			= 0;
+
+		[[nodiscard]]
+		HOUTExprID getID() const {
+			return id;
+		}
+
+	private:
+		HOUTExprID id = HOUTExprID::next();
 	};
 
 	/***********************\
@@ -71,14 +88,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an integer literal value written in the expression.
+	 * @brief Represents an numeric literal value written in the expression.
+	 * Stores both integer constants and floating point constants.
 	 */
-	struct LiteralIntExpr final: public Expr {
-		// @TODO: ctv + type for consts?
-		// @note: this is a mock
-		i64 value;
+	struct LiteralNumericExpr final: public Expr {
+		numeric_value::NumericValue value;
 
-		LiteralIntExpr(query::Context& ctx, i64 value);
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -88,7 +104,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
+		LiteralNumericExpr(tsh::ExpressionType<> expression_type, numeric_value::NumericValue value);
 	};
 
 	/**
@@ -218,6 +234,13 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatMod,
+		FloatPow,
+
 		// Comparison operators
 		IntegerLt,    // Less then
 		IntegerLteq,  // Less then or equal to
@@ -225,6 +248,13 @@ namespace compiler::helios::code {
 		IntegerGteq,  // Greater then or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
+
+		FloatLt,      // Less then
+		FloatLteq,    // Less then or equal to
+		FloatGt,      // Greater then
+		FloatGteq,    // Greater then or equal to
+		FloatEq,      // Equal
+		FloatNeq,     // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -267,6 +297,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,
@@ -368,13 +399,14 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup, doesn't work.
+	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
+	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
 	 */
 	struct AccessExpr final: public Expr {
-		Box<Expr>   base;
-		base::StrID field;
+		Box<Expr> base;
+		SymID     field;
 
-		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		AccessExpr(query::Context& ctx, Box<Expr> base, SymID field);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -384,7 +416,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		AccessExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> base, base::StrID field);
+		AccessExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, SymID field);
 	};
 
 	/**
@@ -463,6 +495,33 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			std::vector<base::Box<Expr>> expressions,
 			std::vector<BuiltinBinary>   operators
+		);
+	};
+
+	/**
+	 * @brief Represents a type cast expression for builtin types, such as "i64(..)".
+	 *
+	 * CastExpr performs a conversion of the source expression to the specified target type.
+	 * The result is an expression of the target type.
+	 */
+	struct CastExpr final: public Expr {
+		Box<Expr>         source_expr;
+		tsh::SymbolType<> target_type;
+
+		CastExpr(query::Context& ctx, Box<Expr> source_expr, tsh::SymbolType<> target_type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CastExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             source_expr,
+			tsh::SymbolType<>     target_type
 		);
 	};
 }

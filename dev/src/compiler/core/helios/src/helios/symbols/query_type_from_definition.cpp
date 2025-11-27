@@ -1,8 +1,8 @@
 
 #include "query_type_from_definition.hpp"
 
-#include <helios_private/symbols/symbol_data.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -42,7 +42,7 @@ namespace compiler::helios {
 			return visitor.definition_symbol_type.value();
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
