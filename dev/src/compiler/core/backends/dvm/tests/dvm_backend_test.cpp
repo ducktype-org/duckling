@@ -86,6 +86,9 @@ private:
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
 					{ &mir_fun->expect("Couldn\'t compile") }
 				);
+				std::cout << '\n';
+				lir_fun->debugPrint(ctx, std::cout);
+				std::cout << '\n';
 				funcs.emplace_back(lir_fun);
 			}
 			backend_vm::Module m{ ctx, module_name, funcs, globals };

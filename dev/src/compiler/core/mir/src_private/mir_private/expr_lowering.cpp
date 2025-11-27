@@ -388,7 +388,7 @@ namespace compiler::mir {
 			case IntegerMod:
 				return Operation::IntegerMod;
 			case IntegerPow:
-				// @TODO #1610: Implement exponentiation as a function call.
+				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Integer comparisons ///
@@ -415,7 +415,7 @@ namespace compiler::mir {
 			case FloatDiv:
 				return Operation::FloatDiv;
 			case FloatPow:
-				// @TODO #1610: Implement exponentiation as a function call.
+				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Floating point comparisons ///
