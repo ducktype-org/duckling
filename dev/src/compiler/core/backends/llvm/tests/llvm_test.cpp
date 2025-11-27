@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(floatingPointTest);
 		TESTER_ADD_TEST(comparisonTest);
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(castsLoweringTest);
@@ -69,9 +70,11 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob.original_name
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type of: ", hout_glob.original_name
+							)
+						);
 					}
 				}
 			}
@@ -190,6 +193,78 @@ private:
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+
+	void floatingPointTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/floating_point");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fadd\s+double)" }),
+			"Expected 'fadd double' for f64 addition"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fsub\s+double)" }),
+			"Expected 'fsub double' for f64 subtraction"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fmul\s+double)" }),
+			"Expected 'fmul double' for f64 multiplication"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fdiv\s+double)" }),
+			"Expected 'fdiv double' for f64 division"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fneg\s+double)" }),
+			"Expected 'fneg double' for f64 negation"
+		);
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fadd\s+float)" }),
+			"Expected 'fadd float' for f32 addition"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fsub\s+float)" }),
+			"Expected 'fsub float' for f32 subtraction"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fmul\s+float)" }),
+			"Expected 'fmul float' for f32 multiplication"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fdiv\s+float)" }),
+			"Expected 'fdiv float' for f32 division"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fneg\s+float)" }),
+			"Expected 'fneg float' for f32 negation"
+		);
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+olt\s+double)" }),
+			"Expected 'fcmp olt' for f64 <"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+ogt\s+double)" }),
+			"Expected 'fcmp ogt' for f64 >"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+ole\s+double)" }),
+			"Expected 'fcmp ole' for f64 <="
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+oge\s+double)" }),
+			"Expected 'fcmp oge' for f64 >="
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+oeq\s+double)" }),
+			"Expected 'fcmp oeq' for f64 =="
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(fcmp\s+one\s+double)" }),
+			"Expected 'fcmp one' for f64 !="
+		);
+	}
 
 	void castsLoweringTest() {
 		// Load module with cast test functions
