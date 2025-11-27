@@ -1,15 +1,9 @@
 #pragma once
 
-#include <base/box.hpp>
-
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
-#include <vm/core/process/memory/block.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
-
-#include <unordered_set>
 
 namespace vm::code {
 	/**
@@ -22,11 +16,8 @@ namespace vm::code {
 	 * valid bytecode's assumption, but rather VMThread's.
 	 */
 	class ValidProgram {
-		ValidProgram() = default;
-
 	public:
-		bool is_stdlib_included = false;
-
+		ValidProgram()                               = default;
 		ValidProgram(const ValidProgram&)            = default;
 		ValidProgram(ValidProgram&&) noexcept        = default;
 		ValidProgram& operator=(const ValidProgram&) = default;
@@ -43,39 +34,51 @@ namespace vm::code {
 		static ValidProgram withBuiltins();
 
 		/**
-		 * @brief Produces valid CodeCollection.
+		 * @brief Produces valid CodeCollection from the internal state of this object.
 		 */
 		CodeCollection produceValidCodeCollection() const;
-
-		/**
-		 * @brief Produces TypeMetadata, that is isomorphic with its state.
-		 * @TODO: Fix an issue, that TypeMetadata has to be built twice.
-		 */
-		Box<TypeMetadata> produceTypeMetadata() const;
 
 		/**
 		 * @brief Creates a new ValidProgram object with inserted code.
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram newInsertCode(const CodeCollection& collection) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection) const;
 
-		/**
-		 * @brief Inserts code in-place.
-		 * @note If the newly injected code invalidates the state,
-		 * an exception of `ValidationError` base is thrown. This means this object will contain
-		 * invalid code and mustn't be used! If you don't want to lose the state, place use
-		 * `newInsertCode`.
-		 */
-		void insertCode(const CodeCollection& collection);
 
 		const ObjIdNameMap<TypeOfData>& types() const;
+
+		const TypeContext& getTypeContext() const;
 
 		const ObjIdNameMap<GlobalData>& globals() const;
 
 		const ObjIdNameMap<Function>& functions() const;
 
+		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
+
 	private:
+		ObjIdNameMap<Function>          function_map;
+		ObjIdNameMap<ExternalCFunction> ext_c_function_map;
+		ObjIdNameMap<GlobalData>        globals_map;
+		TypeContext                     type_context;
+
+		/**
+		 * @brief Contains a mapping from function name to function signature for all functions
+		 * available in the program (not including builtin and external C functions). Used for type
+		 * verification of class and interface types to check if implementations of declared methods
+		 * match the expected signatures. This map basically stores forward declarations of functions
+		 * available in the program, since `function_map` building is done after type verification.
+		 */
+		base::HashMap<base::StrID, FuncSignature> available_functions;
+
+		/**
+		 * @brief Inserts code in-place.
+		 * @note If the newly injected code invalidates the state, an exception of `ValidationError`
+		 * base is thrown. This means this object will contain invalid code and mustn't be used! If
+		 * you don't want to lose the state, place use `tryInsertCode`.
+		 */
+		void insertCode(const CodeCollection& collection);
+
 		/**
 		 * @brief Inserts types. May invalidate state.
 		 * Can insert the same type multiple times.
@@ -96,13 +99,10 @@ namespace vm::code {
 		 */
 		void insertFunctions(const std::vector<Function>& new_functions);
 
-		ObjIdNameMap<Function>   function_map;
-		ObjIdNameMap<GlobalData> globals_map;
-
-		base::HashMap<base::StrID, FuncSignature> available_functions;
-
-		TypeContext type_context;
-
-		bool valid = true;
+		/**
+		 * @brief Inserts an ExternalCFunction. May invalidate state.
+		 * Cannot insert multiple ExternalCFunctions with the same name.
+		 */
+		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
 	};
 }

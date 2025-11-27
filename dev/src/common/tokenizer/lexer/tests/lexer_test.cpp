@@ -118,7 +118,7 @@ private:
 	}
 
 	void testGroup6() {
-		testTokenGroup<6, lexer::Token::Type::NumLiteral, &lexer::Token::isNumLiteral>();
+		testTokenGroup<6, lexer::Token::Type::NumLiteralGroup, &lexer::Token::isNumLiteralGroup>();
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }

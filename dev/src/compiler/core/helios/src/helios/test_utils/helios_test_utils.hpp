@@ -1,11 +1,16 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
+#include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/module_id.hpp>
-#include <helios/ctv/ctv.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
+#include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+
+#include <type_traits>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -34,7 +39,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The CTV value of the last symbol in the chain.
 	 */
-	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
+	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the value of type T of the last symbol in a symbol chain in a given scope.
@@ -45,20 +50,29 @@ namespace compiler::helios::test_utils {
 	 */
 	template<typename T>
 	T getConstValueAs(const std::string_view chain, ScopeID scope) {
+		static_assert(
+			std::is_constructible_v<ctv::CompileTimeValue, T>
+				|| std::is_constructible_v<numeric_value::NumericValue, T>,
+			"getConstValueAs was called with a type which doesn't exist in CTV and NumericValue"
+		);
+
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_same_v<T, i64>)
-			maybe_value = ctv_result.asI64();
-		else if constexpr (std::is_same_v<T, bool>)
-			maybe_value = ctv_result.asBool();
-		else if constexpr (std::is_same_v<T, tsh::SymbolType<>>)
-			maybe_value = ctv_result.asType();
-		else
-			static_assert(false, "Unsupported type for getConstValueAs");
+		if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
+			auto maybe_numeric_value = ctv_result.get<numeric_value::NumericValue>();
+			maybe_value              = maybe_numeric_value->get<T>();
+		} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
+			query::utils::withContextDo([&](query::Context& ctx) {
+				maybe_value = ctv_result.getType(ctx);
+			});
+		} else {
+			maybe_value = ctv_result.get<T>();
+		}
 
 		CORE_ASSERT(
 			maybe_value.has_value(),
+
 			base::strConcat("Constant '", chain, "' has a different type than expected")
 		);
 		return maybe_value.value();

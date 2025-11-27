@@ -1,21 +1,52 @@
 # Compilation tests
 
 clean_cmd: "rm -rf build"
+
+backend: "nobackend"
+
+compile_dvm_backend_cmd: "@{duckc_path} compile_package -a build --dvm-backend duck_modules/@{Name} -n package_@{Name}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package  -a build duck_modules/@{Name} -n package_@{Name}"
+
+compiled_to_llvm: "./build/package_llvm.exe"
+compiled_to_dvm: "./build/query/query*/*.dbc" # ??
+
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
+
 Clean: "@{clean_cmd}"
-PreTest: "@{clean_cmd} && mkdir build && @{duck_path} compile_package -a build duck_modules/@{Name}"
-Run: "./build/package_llvm.exe"
+PreCase: "@{clean_cmd} && mkdir build;
+  case '@{backend}' in
+    dvm)       @{compile_dvm_backend_cmd}                   ;;
+    llvm)      @{compile_llvm_backend_cmd}                  ;;
+    nobackend) echo 'Backend undefined'; exit 1             ;;
+    *)         echo 'Unknown backend';   exit 1             ;;
+  esac;"
+Run: "
+  case '@{backend}' in
+    dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
+    llvm) @{compiled_to_llvm}                     ;;
+    nobackend) echo \"Backend undefined\"; exit 1 ;;
+    *)         echo \"Unknown backend\";   exit 1 ;;
+  esac;"
 
 Tests:
   base:
     Cases:
-      default:
+      dvm:
+        backend: dvm
         Output:
-          String: "4 \n1 \n23 \n4 \n1 \n4 \n4 \n8 \n4 \n8 \n76 \n"
-          # I don't know there is a whitespace at the end of each line.
-          # @TODO: fix trailing space
+          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
+        ExitCode: 76
+      llvm:
+        backend: llvm
+        Output:
+          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
         ExitCode: 76
 
 SubDirs:
   - expressions
   - samples
   - statements
+  - functions
+  - constants
+  - classes

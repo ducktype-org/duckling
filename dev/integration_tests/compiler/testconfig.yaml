@@ -1,7 +1,10 @@
-compile_duck: "cmake --build @{build_dir} -- duck"
-duck_path: "@{build_dir}/bin/duck"
+compile_duckc: "cmake --build @{build_dir} -j -- duckc"
+compile_dvm: "cmake --build @{build_dir} -j -- VM"
 
-PreTest: "@{compile_duck}"
+duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
+
+PreNode: "@{compile_duckc} && @{compile_dvm}"
 
 SubDirs:
   - cli

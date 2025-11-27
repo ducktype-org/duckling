@@ -7,11 +7,10 @@
 
 #include "symbol_kind.hpp"
 
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements_list.hpp>
-
-#include <base/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios {
 	// Following functions are left as functions (instead of beeing a query):

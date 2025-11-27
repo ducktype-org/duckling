@@ -1,16 +1,13 @@
 #include "../mir_structure/mir_structure.hpp"
 
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <unordered_set>
 #include <variant>
 
 namespace compiler::mir {
-
-
 	bool validateMoves(const Function& fun) {
 		using LocalSet      = std::unordered_set<LocalID>;
 		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
@@ -20,8 +17,8 @@ namespace compiler::mir {
 		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
 
 		for (const auto& block: fun.blocks) {  // Fill with blocks.
-			moved_variables.emplace(block.first, LocalSet());
-			used_variables.emplace(block.first, LocalSet());
+			moved_variables.emplace(block.key, LocalSet());
+			used_variables.emplace(block.key, LocalSet());
 		}
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
@@ -32,26 +29,31 @@ namespace compiler::mir {
 				if (instr.operation == Operation::Destruct
 				    || instr.operation == Operation::DestructIf)
 
-					return true;  // Lir decides whether destruction should be performed.
+					return true;  // LIR decides whether destruction should be performed.
 
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables.at(block.first).insert(arg.get<LocalRef>()->id);
+						used_variables.at(block.key).insert(
+							arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
+						);
 
-						if (moved_variables.at(block.first).contains(arg.get<LocalRef>()->id))
+						if (moved_variables.at(block.key).contains(
+								arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
+							))
 							return false;  // It is already moved.
 					}
 				}
 
 				// Output can't be local, already moved, variable.
-				if (instr.output.has_value()
-				    && std::holds_alternative<LocalRef>(instr.output.value())) {
-					used_variables.at(block.first)
-						.insert(std::get<LocalRef>(instr.output.value())->id);
+				if (instr.output.has_value() && instr.output.value().isLocal()) {
+					used_variables.at(block.key).insert(
+						instr.output.value().getBase<MIRLocalRef>()->id
+					);
 
-					if (moved_variables.at(block.first)
-					        .contains(std::get<LocalRef>(instr.output.value())->id))
+					if (moved_variables.at(block.key).contains(
+							instr.output.value().getBase<MIRLocalRef>()->id
+						))
 						return false;  // It is already moved.
 				}
 
@@ -61,39 +63,41 @@ namespace compiler::mir {
 						// its argument and appear exactly one time there. It can't be
 						// output of instruction. It may change in the future.
 
-						if (moved_variables[block.first].contains(flag.local->id))
+						if (moved_variables[block.key].contains(flag.local->id))
 							return false;  // Already moved.
 
-						moved_variables[block.first].insert(flag.local->id);
+						moved_variables[block.key].insert(flag.local->id);
 
 						if (std::ranges::count_if(
 								instr.arguments,
 								[&](const auto& arg) {
 									return arg.isLocal()
-							            && (arg.template get<LocalRef>()->id == flag.local->id);
+							            && arg.template get<MIRPlace>()
+							                       .template getBase<MIRLocalRef>()
+							                       ->id
+							                   == flag.local->id;
 								}
 							)
 						    != 1)
 							return false;  // Used 0 or 2 or more times as argument.
 
-						if (instr.output.has_value()
-						    && std::holds_alternative<LocalRef>(instr.output.value())
-						    && std::get<LocalRef>(instr.output.value())->id == flag.local->id)
+						if (instr.output.has_value() && instr.output.value().isLocal()
+						    && instr.output.value().getBase<MIRLocalRef>()->id == flag.local->id)
 							return false;  // Moved local used as output.
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
-						construction_block.emplace(flag.local->id, block.first);
+						construction_block.emplace(flag.local->id, block.key);
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
 				return true;
 			};
 
-			for (const auto& instruction: block.second->instructions)
+			for (const auto& instruction: block.value.instructions)
 				if (!process_instruction(instruction)) return false;
 
-			if (!process_instruction(block.second->terminator)) return false;
+			if (!process_instruction(block.value.terminator)) return false;
 		}
 
 		// Now we perform global analysys.
@@ -103,7 +107,7 @@ namespace compiler::mir {
 		// two states: variable can be used and can't.
 
 
-		constexpr int usable = 0, not_usable = 1;
+		constexpr int USABLE = 0, NOT_USABLE = 1;
 
 		struct States final {
 			bool state[2] = { false, false };
@@ -117,24 +121,24 @@ namespace compiler::mir {
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
-				visited[id].state[usable] = false, visited[id].state[not_usable] = false;
+				visited[id].state[USABLE] = false, visited[id].state[NOT_USABLE] = false;
 
 			const auto& starting_block = local.second;
 
 			auto visit
 				= [&](this const auto& self, const BlockID& id, const int& cr_state) -> bool {
 				visited[id].state[cr_state] = true;
-				int next_state              = not_usable;
-				if (cr_state == not_usable) {
+				int next_state              = NOT_USABLE;
+				if (cr_state == NOT_USABLE) {
 					if (moved_variables[id].contains(local.first)
 					    || used_variables[id].contains(local.first))
 						return false;
-					next_state = not_usable;
+					next_state = NOT_USABLE;
 				} else {
 					if (moved_variables[id].contains(local.first))
-						next_state = not_usable;
+						next_state = NOT_USABLE;
 					else
-						next_state = usable;
+						next_state = USABLE;
 				}
 
 				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
@@ -145,7 +149,7 @@ namespace compiler::mir {
 				return true;
 			};
 
-			if (!visit(starting_block, usable)) return false;
+			if (!visit(starting_block, USABLE)) return false;
 		}
 
 		return true;

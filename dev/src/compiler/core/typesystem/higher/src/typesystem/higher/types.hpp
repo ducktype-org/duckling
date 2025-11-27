@@ -2,7 +2,7 @@
  * @file types.hpp
  * @brief Interfaces of the simpler kinds of types.
  *
- * The interfaces are not aware of the internal implementation hierarchy in any way other than its
+ * The interfaces are not aware of the private implementation hierarchy in any way other than its
  * existence and name.
  */
 
@@ -12,32 +12,30 @@
 
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/bits_and_bytes.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
-namespace tsh {
-	namespace internal {
-		class UnitAbstractTypeImpl;
-		class VoidAbstractTypeImpl;
-		class ByteAbstractTypeImpl;
-		class BoolAbstractTypeImpl;
-		class CharAbstractTypeImpl;
-		class IntegralAbstractTypeImpl;
-		class FloatAbstractTypeImpl;
-		class RawPointerAbstractTypeImpl;
-		class PointerAbstractTypeImpl;
-		class ReferenceAbstractTypeImpl;
-		class StringAbstractTypeImpl;
-		class TupleAbstractTypeImpl;
-		class FunctionAbstractTypeImpl;
-		class DynamicArrayAbstractTypeImpl;
-		class VariantAbstractTypeImpl;
-		class ClassAbstractTypeImpl;
-		class NamespaceAbstractTypeImpl;
-		class ModuleAbstractTypeImpl;
-		class MetaAbstractTypeImpl;
-		class ImportAbstractTypeImpl;
-	}
+namespace compiler::tsh {
+	class UnitAbstractTypeImpl;
+	class VoidAbstractTypeImpl;
+	class ByteAbstractTypeImpl;
+	class BoolAbstractTypeImpl;
+	class CharAbstractTypeImpl;
+	class IntegralAbstractTypeImpl;
+	class FloatAbstractTypeImpl;
+	class RawPointerAbstractTypeImpl;
+	class PointerAbstractTypeImpl;
+	class ReferenceAbstractTypeImpl;
+	class StringAbstractTypeImpl;
+	class TupleAbstractTypeImpl;
+	class FunctionAbstractTypeImpl;
+	class DynamicArrayAbstractTypeImpl;
+	class VariantAbstractTypeImpl;
+	class ClassAbstractTypeImpl;
+	class NamespaceAbstractTypeImpl;
+	class ModuleAbstractTypeImpl;
+	class MetaAbstractTypeImpl;
+	class ImportAbstractTypeImpl;
 
 	/******************\
 	|    BASIC TYPES   |

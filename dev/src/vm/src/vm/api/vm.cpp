@@ -4,7 +4,6 @@
 #include <vm/api/data/response.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/vmvalue.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response) {}
@@ -63,7 +62,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code) {
+	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
@@ -151,5 +150,11 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::ExitCodeRequest{}))
 		    .and_then(mapOrWrongResponse<ExitValue>);
+	}
+
+	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
+		    .and_then(mapOrWrongResponse<response::Boolean>);
 	}
 }

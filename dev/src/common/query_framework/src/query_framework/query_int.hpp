@@ -9,61 +9,68 @@
 // https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
 // https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
 
-#include "context_fd.hpp"       // IWYU pragma: export
-#include "internal/query_graph/node_id.hpp" // IWYU pragma: export
+#include "context_fd.hpp"                    // IWYU pragma: export
+#include "internal/query_graph/node_id.hpp"  // IWYU pragma: export
 #include "internal/query_data/query_id.hpp"  // IWYU pragma: export
-#include "empty_key.hpp"        // IWYU pragma: export
+#include "simple_keys.hpp"                     // IWYU pragma: export
 
-#include <string_view>          // IWYU pragma: export
+#include <string_view>  // IWYU pragma: export
+#include <base/preproc/remove_parentheses.hpp>
 
 // clang-format on
 
 namespace query::internal {
-
+	// Forward declaration for friendship
 	struct EntryPointHelper;
-
-	/**
-	 * @brief Base class for defining query interface
-	 *
-	 * @tparam QueryType_tp a type of a query
-	 * @tparam QKey_tp a type of a query key
-	 * @tparam QResult_tp a type of a query result
-	 */
-	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
-	struct QueryInterface {
-		using QueryType = QueryType_tp;
-		using QKey      = QKey_tp;
-		using QResult   = QResult_tp;
-	};
 }
 
 /**
  * @brief Internal macro used do delcare queries.
+ * Should not be used directly.
+ *
+ * @note QUERY_INTERFACE_TAG is just a dummy member to tag query interfaces.
+ *
+ * @param query_type Name of the query
+ * @param key_mp Type of the query key
+ * @param result_mp Type of the query result
+ * @param query_data_mp Query data struct
  */
-#define DECLARE_QUERY_AUX(query_type, key, value, query_data_mp)                         \
-	struct query_type final: ::query::internal::QueryInterface<query_type, key, value> { \
-	private:                                                                             \
-		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult;   \
-		static ::query::internal::QueryID             id;                                \
-		static constexpr ::query::internal::QueryData query_data = query_data_mp;        \
-		friend struct ::query::Context;                                                  \
-		friend struct ::query::internal::EntryPointHelper;                               \
-                                                                                         \
-	public:                                                                              \
-		static auto        getID() { return id; }                                        \
-		static const auto& getData() { return query_data; }                              \
+#define DECLARE_QUERY_AUX(query_type, key_mp, result_mp, query_data_mp)                    \
+	struct query_type final {                                                              \
+		using QueryType = query_type;                                                      \
+		using QKey      = key_mp;                                                          \
+		using QResult   = result_mp;                                                       \
+                                                                                           \
+	private:                                                                               \
+		static auto internal_query(const QKey&, ::query::internal::NodeID) -> QResult;     \
+		static ::query::internal::QueryID id;                                              \
+		friend struct ::query::Context;                                                    \
+		friend struct ::query::internal::EntryPointHelper;                                 \
+                                                                                           \
+	public:                                                                                \
+		static constexpr ::query::internal::QueryData QUERY_DATA          = query_data_mp; \
+		static constexpr bool                         QUERY_INTERFACE_TAG = true;          \
+		static auto                                   getID() { return id; }               \
 	};
 
 /**
  * @brief Macro used do delcare queries.
  *
  * For example:
- * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
+ * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue, ({ / * non-default tags * / }))`
+ *
+ * @note Tags must be passed as parenthesized list, e.g. `({})` or `({Tag1, Tag2})`.
+ * This way there are no issues with commas in macro arguments.
+ * Lack of parentheses should produce compilation errors.
  */
-#define DECLARE_QUERY(query_type, key, value)                                           \
-	DECLARE_QUERY_AUX(                                                                  \
-		query_type,                                                                     \
-		key,                                                                            \
-		value,                                                                          \
-		::query::internal::QueryData(::query::internal::QueryType::Normal, #query_type) \
+#define DECLARE_QUERY(query_type, key, value, tags)               \
+	DECLARE_QUERY_AUX(                                            \
+		query_type,                                               \
+		key,                                                      \
+		value,                                                    \
+		::query::internal::QueryData(                             \
+			::query::internal::QueryKind::Normal,                 \
+			#query_type,                                          \
+			::query::internal::QueryTags REMOVE_PARENTHESES(tags) \
+		)                                                         \
 	)

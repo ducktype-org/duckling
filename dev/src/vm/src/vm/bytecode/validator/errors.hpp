@@ -1,7 +1,8 @@
 #pragma once
-#include <base/exceptions.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
@@ -45,22 +46,22 @@ namespace vm::code {
 	public:
 		constexpr const static std::string_view ERR_MSG
 			= "Not all code paths end with returns in function: ";
-		const base::StrID FUNC_NAME;
+		const base::StrID func_name;
 
 		PathWithoutEndError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  FUNC_NAME(func_name) {}
+			  func_name(func_name) {}
 	};
 
 	class VoidTypeArgumentError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG
 			= "Void type cannot be used as argument in function: ";
-		const base::StrID FUNC_NAME;
+		const base::StrID func_name;
 
 		VoidTypeArgumentError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  FUNC_NAME(func_name) {}
+			  func_name(func_name) {}
 	};
 
 	/**
@@ -70,11 +71,11 @@ namespace vm::code {
 	class MissingFunctionalTypeError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                       FUNC_NAME;
+		const base::StrID                       func_name;
 
 		MissingFunctionalTypeError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  FUNC_NAME(func_name) {}
+			  func_name(func_name) {}
 	};
 
 	/**
@@ -103,37 +104,37 @@ namespace vm::code {
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
-		const base::StrID                       TYPE_NAME;
+		const base::StrID                       type_name;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
 			  ValidationError(base::strConcat(ERR_MSG, type_name)),
-			  TYPE_NAME(type_name) {}
+			  type_name(type_name) {}
 	};
 
 	class CyclicDependencyError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Cyclic dependency detected: ";
-		const base::StrID                       TYPE_NAME;
+		const base::StrID                       type_name;
 
 		CyclicDependencyError(const Type& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())),
-			  TYPE_NAME(type.getName()) {}
+			  type_name(type.getName()) {}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
 	class NAME: public ValidationError {                                                \
 	public:                                                                             \
 		constexpr static const std::string_view ERR_MSG = ERROR;                        \
-		const ELEMENT_TYPE                      NEW_ELEMENT;                            \
-		const ELEMENT_TYPE                      PREVIOUS_ELEMENT;                       \
+		const ELEMENT_TYPE                      new_element;                            \
+		const ELEMENT_TYPE                      previous_element;                       \
                                                                                         \
 		NAME(ELEMENT_TYPE new_element, ELEMENT_TYPE previous_element):                  \
 			  ValidationError(ERR_MSG.data()),                                          \
-			  NEW_ELEMENT(std::move(new_element)),                                      \
-			  PREVIOUS_ELEMENT(std::move(previous_element)) {}                          \
+			  new_element(std::move(new_element)),                                      \
+			  previous_element(std::move(previous_element)) {}                          \
                                                                                         \
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override { \
-			return &NEW_ELEMENT.name;                                                   \
+			return &new_element.name;                                                   \
 		}                                                                               \
 	}
 
@@ -142,74 +143,89 @@ namespace vm::code {
 	);
 
 	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
+	DEFINE_DUPLICATED_ELEMENT_ERROR(
+		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "
+	);
+
+	/**
+	 * @note A type may be trivially copyable if its bits can be just copied and its
+	 * value remains correct.
+	 */
+	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
+
+		ExtCArgumentTypeNotTriviallyCopyable(TypeCRef vm_type):
+			  ValidationError(base::strConcat(ERR_MSG, vm_type->getName())) {}
+	};
 
 	class DuplicatedTypeError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Duplicated type: ";
-		const code::TypeOfData                  NEW_ELEMENT;
-		const code::TypeOfData                  PREVIOUS_ELEMENT;
+		const code::TypeOfData                  new_element;
+		const code::TypeOfData                  previous_element;
 
 		DuplicatedTypeError(code::TypeOfData new_element, code::TypeOfData previous_element):
 			  ValidationError(ERR_MSG.data()),
-			  NEW_ELEMENT(std::move(new_element)),
-			  PREVIOUS_ELEMENT(std::move(previous_element)) {}
+			  new_element(std::move(new_element)),
+			  previous_element(std::move(previous_element)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(NEW_ELEMENT, type, return static_cast<const ElementBase*>(&type));
+			return VISIT(new_element, type, return static_cast<const ElementBase*>(&type));
 		}
 	};
 
 	class TypeErrorBase: public ValidationError {
 	public:
-		const TypeOfData TYPE;
+		const TypeOfData type;
 
 		TypeErrorBase(std::string msg, TypeOfData type):
 			  ValidationError(std::move(msg)),
-			  TYPE(std::move(type)) {}
+			  type(std::move(type)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+			return VISIT(type, tp, return static_cast<CRef<ElementBase>>(&tp));
 		}
 	};
 
 	class InstructionErrorBase: public ValidationError {
 	public:
-		const Instruction INSTRUCTION;
+		const Instruction instruction;
 
 		InstructionErrorBase(std::string_view msg, Instruction instruction):
 			  ValidationError(std::string(msg)),
-			  INSTRUCTION(instruction) {}
+			  instruction(instruction) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(INSTRUCTION, tp, return static_cast<CRef<ElementBase>>(&tp));
+			return VISIT(instruction, tp, return static_cast<CRef<ElementBase>>(&tp));
 		}
 	};
 
 	class ArgumentErrorBase: public ValidationError {
 	public:
-		const opargs::OpCodeArg ARGUMENT;
+		const opargs::OpCodeArg argument;
 
 		ArgumentErrorBase(std::string msg, opargs::OpCodeArg argument):
 			  ValidationError(std::move(msg)),
-			  ARGUMENT(argument) {}
+			  argument(argument) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(ARGUMENT, tp, return static_cast<CRef<ElementBase>>(&tp));
+			return VISIT(argument, tp, return static_cast<CRef<ElementBase>>(&tp));
 		}
 	};
 
 	class TypeAttributeBase: public ValidationError {
 	public:
-		const TypeOfData  TYPE;
-		const base::StrID ATTRIBUTE_NAME;
+		const TypeOfData  type;
+		const base::StrID attribute_name;
 
 		TypeAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
 			  ValidationError(std::move(msg)),
-			  TYPE(std::move(argument)),
-			  ATTRIBUTE_NAME(field_name) {}
+			  type(std::move(argument)),
+			  attribute_name(field_name) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+			return VISIT(type, tp, return static_cast<CRef<ElementBase>>(&tp));
 		}
 	};
 
@@ -356,6 +372,9 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
 	DEFINE_INSTRUCTION_ERROR(
 		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(VoidRetValAssignmentError, "Cannot assign to 'ret_val' of type void.");
 }

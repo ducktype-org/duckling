@@ -1,7 +1,7 @@
 
 #include "backend_type.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace compiler::driver {
 

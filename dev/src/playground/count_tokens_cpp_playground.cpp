@@ -11,8 +11,8 @@
  * @note Outputs and returns -1 on error in code;
  */
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>
@@ -95,9 +95,9 @@ int main(int argc, const char** argv) {
 		input = clah.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clah::exceptions::ClahException& e) {
 		printer::StreamPrinter::print({
-			{ "duckling: ", printer::Color::DEFAULT },
-			{ "error: ", printer::Color::RED },
-			{ e.what(), printer::Color::DEFAULT },
+			{ "duckling: ", printer::Color::Default },
+			{ "error: ", printer::Color::Red },
+			{ e.what(), printer::Color::Default },
 		});
 		return 1;
 	} catch (clah::exceptions::HelpException& e) {

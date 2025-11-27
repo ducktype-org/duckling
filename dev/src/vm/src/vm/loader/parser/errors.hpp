@@ -1,6 +1,7 @@
 #pragma once
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/message.hpp>
 

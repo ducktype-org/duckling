@@ -1,5 +1,5 @@
-const c1: i64 = 2137;
-let v1: i64 = 420;
+const c1: i64 = 1235;
+let v1: i64 = 421;
 namespace n1 {
     namespace n2{
         class TestClass {

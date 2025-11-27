@@ -1,16 +1,19 @@
-class FirstClassEver {
-    a: i32 = 0;
-    b: f32 = 0;
+# Simple classes
 
-    fun getA() -> i32 = {
+class FirstClassEver {
+    a: i64 = 0;
+    b: f32 = 0.0;
+
+    fun getA() -> i64 = {
         return a;
     }
-    fun setA(new_a: i32) = {
+
+    fun setA(new_a: i64) = {
         a = new_a;
     }
 
     private {
-        FirstClassEver.copy(FirstClassEver other) = {
+        FirstClassEver.copy(other: FirstClassEver) = {
             a = other.a;
             b = other.b;
         }
@@ -20,3 +23,24 @@ class FirstClassEver {
 }
 
 class SecondClass extends FirstClassEver {}
+
+let a: FirstClassEver = FirstClassEver(1, f32(2.0));
+let b = a;
+
+class ClassWithMember {
+    member: FirstClassEver = FirstClassEver(3, 4.0);
+
+    fun getMemberA() -> i64 = {
+        return member.getA();
+    }
+}
+
+# Nested classes
+
+# @TODO: #1503 Support nested classes in HELIOS
+# class OuterClass {
+    # class InnerClass {
+        # x: i64 = 0;
+    # }
+# }
+# let inner: OuterClass.InnerClass = OuterClass.InnerClass(3);

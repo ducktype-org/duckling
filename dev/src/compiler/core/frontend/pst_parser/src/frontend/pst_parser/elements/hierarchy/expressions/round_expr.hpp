@@ -1,0 +1,32 @@
+#pragma once
+
+#include "expr_common.hpp"
+
+namespace pst::expr {
+	/**
+	 * @brief Expression in round brackets
+	 */
+	class RoundExpr final: public ExprElement {
+		NAMED_CHILD(expr, ExprElement);
+
+	public:
+		explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
+
+		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+		~RoundExpr() override = default;
+		void     dprint(std::ostream& out) const final;
+		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
+		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Round Group Expression";
+		}
+
+		[[nodiscard]]
+		AccessLocked<ExprElement> getInner() const {
+			return expr.give();
+		}
+	};
+}

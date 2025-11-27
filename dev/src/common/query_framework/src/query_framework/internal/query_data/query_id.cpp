@@ -8,15 +8,7 @@
 
 #include "query_data.hpp"
 
-#include <base/maps.hpp>
-
-template<>
-struct std::hash<query::internal::QueryID> {
-	[[nodiscard]]
-	size_t operator()(const query::internal::QueryID& id) const {
-		return id.asInt();
-	}
-};
+#include <base/collections/maps.hpp>
 
 namespace query::internal {
 
@@ -50,7 +42,12 @@ namespace query::internal {
 		}
 	}
 
-	const QueryData& QueryID::getData() const { return dataMap().at(*this); }
+	const QueryData& QueryID::getData() const {
+		CORE_ASSERT(dataMap().contains(*this), "QueryID not found in dataMap: ", this->asInt());
+		return dataMap().at(*this);
+	}
+
+	bool QueryID::registered() const { return dataMap().contains(*this); }
 
 	QueryID registerQuery(QueryData query_data) {
 		auto ret_id = next;

@@ -7,6 +7,7 @@ from .helpers import (
 )
 from click import command
 
+
 @command()
 @build_dir(
     help="Path to build folder with compile_commands.json",
@@ -22,7 +23,7 @@ from click import command
 )
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
-    Actions include: building everything, running tests, linter, duck-linter, issue-checker.
+    Actions include: building everything, running tests, linter, duck-linter, todo-validate, issue-checker.
     In the future we might add integration tests.
     """
     pr_validate_impl(*args, **kwargs)

@@ -1,18 +1,17 @@
 #include <backends/dvm/backend.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/str_utils.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
@@ -30,10 +29,11 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
+		TESTER_ADD_TEST(unitsTest);
 	}
 
 protected:
-	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
+	void testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 
 private:
 	auto getModuleFromPath(std::string module_path) {
@@ -45,28 +45,30 @@ private:
 		vm::code::CodeCollection                  code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::File(path(module_path)));
+			auto module
+				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& hout_glob: top_level->glob_data) {
-				auto lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
-						auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						globals.emplace_back(
 							lir_glob,
-							// @TODO: add legit dtors when implemented #929
+							// @TODO: #929 add legit dtors when implemented
 							lir_func,
 							std::nullopt
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @TODO: create global constant ctors if necessary
+						// @future #1554 -- const ctors will probably be added here
 						fail(base::strConcat(
-							"Creating ctors for constant variables is not implemented yet. ",
+							"We fail here, because constants don't work on DVM as expected, remove "
+							"the fail after #1553. ",
 							"Global constant: ",
 							hout_glob.original_name.strView()
 						));
@@ -80,8 +82,8 @@ private:
 				}
 			}
 			for (auto& fun: top_level->functions) {
-				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
-				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
+				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
+				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
 					{ &mir_fun->expect("Couldn\'t compile") }
 				);
 				funcs.emplace_back(lir_fun);
@@ -117,6 +119,8 @@ private:
 	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
 
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+
+	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
 };
 
 

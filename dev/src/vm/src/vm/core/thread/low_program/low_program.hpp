@@ -5,22 +5,26 @@
 
 #include "instruction.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-#include <utility>
+namespace vm::loader::compiler {
+	class Compiler;
+}
 
 namespace vm::low {
-	using ByteCode = std::vector<MicroInstruction>;
+	using MicroBytecode = std::vector<MicroInstruction>;
 
 	/**
-	 * @brief Function data.
+	 * @brief Micro bytecode representation of function data.
 	 */
-	struct FuncData {
+	struct LowFuncData {
 		base::StrID           name;
-		ByteCode              bc;
+		MicroBytecode         bc;
 		usize                 local_stack_size;
 		usize                 arg_size;
 		usize                 ret_size;
@@ -29,54 +33,66 @@ namespace vm::low {
 	};
 
 	/**
-	 * @brief Global data.
+	 * @brief Micro bytecode representation of global data.
 	 */
-	struct GlobData {
+	struct LowGlobalData {
 		TypeCRef                    type;
 		base::Optional<base::StrID> ctor_name;
 		base::Optional<base::StrID> dtor_name;
 	};
 
 	/**
-	 * @brief Representation of the program VM runs.
-	 * Parser creates this structure from a list of ParsedFile structures after validation.
-	 * Executor uses it to execute the code.
-	 * @note In the future, this class will use micro bytecode instead.
-	 *
-	 * @note The order of functions in the `std::vector<FuncData>` is important, as the `ID` of
-	 * the function in the function calls is the index in this vector. Similar holds for
-	 * `std::vector<code::GlobalData>` - global data.
+	 * @brief Micro bytecode representation of an extern C function.
 	 */
-	struct LowVMProgram {
-		LowVMProgram(
-			Box<TypeMetadata>                      types,
-			const std::vector<FuncData>&           functions,
-			const std::vector<code::GlobalData>&   global_data,
-			const base::HashMap<u64, base::StrID>& method_name_pool
-		):
-			  types(std::move(types)),
-			  method_name_pool(method_name_pool) {
-			for (const auto& func: functions) this->functions.insert(func, func.name);
+	struct LowExternCFunction {
+		base::StrID name;
+		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		usize                 parameter_size_sum;
+		std::vector<TypeCRef> parameters;
+		TypeCRef              result_type;
+	};
 
-			for (const auto& global: global_data) {
-				base::Optional<base::StrID> ctor_name;
-				base::Optional<base::StrID> dtor_name;
+	/**
+	 * @brief Representation of the micro bytecode program which the VM runs.
+	 * This is the final form of bytecode produced by the loader module which is executable by
+	 * `VMThread`.
+	 *
+	 * @note This structure can only be created by the compiler.
+	 * @note The program represented by this structure is always valid as it was verified in the
+	 * loading stage.
+	 *
+	 * @note The order of functions in the `ObjIdNameMap<LowFuncData, usize>` is important, as the
+	 * `ID` of the function used when performing function calls is the index in the `std::vector`
+	 * (used internally in `ObjIdNameMap`). Similar holds for `ObjIdNameMap<LowGlobalData,
+	 * GlobalDataID>` - global data.
+	 */
+	class LowVMProgram final {
+	public:
+		friend class vm::loader::compiler::Compiler;
 
-				if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
-				if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+		const TypeMetadata& getTypes() const { return *types; }
 
-				GlobData data{ .type      = this->types->at(global.type),
-					           .ctor_name = ctor_name,
-					           .dtor_name = dtor_name };
-				this->global_data.insert(data, global.name);
-			}
+		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const { return functions; }
+
+		const ObjIdNameMap<LowExternCFunction>& getExternCFunctions() const {
+			return extern_c_functions;
 		}
 
-		Box<TypeMetadata>                    types;
-		ObjIdNameMap<FuncData, usize>        functions;
-		ObjIdNameMap<GlobData, GlobalDataID> global_data;
+		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const { return global_data; }
+
+		const base::HashMap<u64, base::StrID>& getMethodNamePool() const {
+			return method_name_pool;
+		}
+
+	private:
+		LowVMProgram()                                  = default;
+		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
+		ObjIdNameMap<LowFuncData, usize>          functions{};
+		ObjIdNameMap<LowExternCFunction>          extern_c_functions{};
+		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
-		base::HashMap<u64, base::StrID> method_name_pool;
+		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
+
 }

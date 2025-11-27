@@ -1,61 +1,59 @@
 # Printer Requirements
 
-## Moduł do wypisywania komunikatów na konsolę.
+## Module for printing messages to the console.
 
-### Moduł implementuje:
+### The module implements:
 
 1. `typedef uint32_t LevelType`
 
 2. `enum MessageType` (Error = 0, Debug = 1, Note = 2, Hint = 3, ...)
-    Powinna mieć określony typ, powinna być możliwa konwersja na odpowiedniego int-a (może być to funkcja).
+    It should have a defined underlying type; conversion to the appropriate int should be possible (this can be a function).
 
-3. `constexpr usize typeCount` określającą ilość typów wiadomości (kod powinien zakładać, że ta wartość może się zmienić)
+3. `constexpr usize typeCount` defining the number of message types (the code should assume that this value may change).
 
-4. `enum Color`, zmienną `Color defaultColor = White`.
+4. `enum Color`, a variable `Color defaultColor = White`.
 
-5. Typ `PrinterContent`, który póki co jest po prostu równy `std::string` (czyli na razie `typedef`).
+5. A `PrinterContent` type, which for now is simply equal to `std::string` (so, a `typedef` for the time being).
 
-6. Typ `ColoredContent`, który utrzymuje wiadomość typu `PrinterContent`, oraz kolor typu `Color`.
+6. A `ColoredContent` type, which holds a message of type `PrinterContent` and a color of type `Color`.
 
-7. funkcję (ewentualnie może to być konstruktor) `ColoredContent paint(Color color, PrinterContent str)`.
-    Dodatkowo udostępnia też funkcje `default, red, blue, ...`, które działają jak paint, ale z danym kolorem.
+7. A function (potentially a constructor) `ColoredContent paint(Color color, PrinterContent str)`.
+    Additionally, it exposes functions like `default, red, blue, ...`, which act like paint, but with a specific color.
 
-8. Typ `Message`, który posiada typ typu `enum MessageType`, poziom typu `LevelType`,
-    Komunikat można konstruować z `std::initializer_list<ColoredContent>` lub `std::initializer_list<PrinterContent>`.
-    (Elementy `PrinterContent` są automatycznie zamieniane na `ColoredContent` z kolorem domyślnym).
-    Wiadomość utrzymuje listę `ColoredContent` (prawdopodobnie `std::vector<ColoredContent>`).
-    W przyszłości: konturowanie z `std::initializer_list<std::variant<ColoredContent, PrinterContent>>`.
+8. A `Message` type, which possesses a type of `enum MessageType` and a level of `LevelType`.
+    The message can be constructed from `std::initializer_list<ColoredContent>` or `std::initializer_list<PrinterContent>`.
+    (`PrinterContent` elements are automatically converted to `ColoredContent` with the default color).
+    The message maintains a list of `ColoredContent` (likely `std::vector<ColoredContent>`).
+    In the future: construction from `std::initializer_list<std::variant<ColoredContent, PrinterContent>>`.
+
+9. A `MessagePack` type, which is effectively a vector of messages (for now, it can be a `typedef`).
+
+10. A `Console` type, to which `MessagePack` can be added.
+    It maintains:
     
-9. Typ `MessagePack`, który efektywnie jest wektorem komunikatów. (póki co może być `typedef`)
+    * (1) a vector of `MessagePack`.
+    * (2) a `LevelType` value for each message type, specifying the minimum level for that message type.
+        (an easy refactor to 'maximum' should be possible)
+        (likely `std::array<LevelType, typeCount>`).
+    * (3) A `generalMax` value of type `usize` defining the total maximum number of messages.
+    * (4) Values of type `usize` defining the maximum number of messages for each type.
+        (likely `std::array<usize, typeCount>`).
 
-10. Typ `Console`, do którego można dodawać `MessagePack`. 
-     Utrzymuje on:
+    It also has a `printErr` method, which prints all messages to `stderr` (with colors), but:
+    - a single MessagePack is treated as multiple separate messages contained within it.
+    - it skips the message if the message type should be ignored due to (2).
+    - it stops if the number of printed messages exceeds `generalMax`.
+    - it skips the message if the number of printed messages of that type exceeds the corresponding value.
+    - the two cases above result in the printing of an additional short message, not counted towards the limits, explaining what happened.
     
-     * (1) wektor `MessagePack`
-     * (2) wartość `LevelType` dla każdego typu komunikatu, który określa minimalny poziom danego typu wiadomości.
-         (powinien być możliwy łatwy refactor na maksymalny)
-         (prawdopodobnie `std::array<LevelType, typeCount>`)
-     * (3) Wartość `generalMax` typu `usize` określającą całkowitą maksymalną liczbę komunikatów.
-     * (4) Wartości typu `usize` określającą maksymalną liczbę komunikatów każdego typu.
-         (prawdopodobnie `std::array<usize, typeCount>`)
+    Additionally, it has a `clear` method, which removes all messages held by the console.
 
-     Posiada on też funkcję `printErr`, która wypisuje wszystkie komunikaty na `stderr` (z kolorami), ale:
-      - pojedynczy MessagePack jest traktowany jako wiele oddzielnych komunikatów w nich zawartych.
-      - pomija on komunikat jeżeli typ komunikatu powinien być ignorowany z powodu (2).
-      - kończy jeżeli liczba wypisanych komunikatów przekroczy `generalMax`.
-      - omija komunikat jeżeli liczba wypisanych komunikatów danego typu przekroczy odpowiadającą wartość.
-      - dwa powyższe przypadki skutkują wypisaniem dodatkowego, nie wliczanego do limitów, krótkiego
-       komunikatu wyjaśniającego co się stało.
-    
-     Dodatkowo ma funkcję `clear`, która usuwa wszystkie komunikaty utrzymywane przez konsolę.
+11. In the future: type `MessageTemplate`.
 
-11. W przyszłości: typ `MessageTemplate`
+12. In the future: move semantics where appropriate.
 
-12. W przyszłości: move semantic tam gdzie powinno być
+13. In the future: optimizations...
 
-13. W przyszłości: optymalizacje.. todo
+### From this, it exposes (in .hpp):
 
-
-### Z tego udostępnia (w .hpp):
-
-todo
+...

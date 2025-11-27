@@ -1,4 +1,4 @@
 
 # my value:
-const my_value: i64 = 123123;
+const my_value: i64 = 123123i64;
 

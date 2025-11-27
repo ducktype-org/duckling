@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/ref.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace compiler::frontend {
 
@@ -15,14 +15,15 @@ namespace compiler::frontend {
 	 * create instances.
 	 */
 	struct ModuleID final {
+		// @TODO: #1389 queryUnstablePerfectHash and `==` are inconsistent with the module tree stable
+		// hash. For now it should work, but might break in the future. Decide what to do about it.
+
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
 			return reinterpret_cast<u64>(ref.get());
 		}
 
 		bool operator==(const ModuleID&) const = default;
-
-		auto operator<=>(const ModuleID& other) const { return ref.get() <=> other.ref.get(); }
 
 	private:
 		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}

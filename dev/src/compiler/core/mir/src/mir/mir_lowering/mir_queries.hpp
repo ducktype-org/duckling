@@ -1,0 +1,55 @@
+#pragma once
+
+#include "../mir_structure/mir_structure.hpp"
+
+#include <helios/helios_errors.hpp>
+#include <helios/hout/hout.hpp>
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
+
+namespace compiler::mir {
+
+	struct KeyOf_LowerToMIRFunction {
+		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
+		helios::HOUTFunction function;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+	};
+
+	using LowerToMIRFunctionResult = query::QResult<Function, helios::errors::Failed>;
+
+	/**
+	 * @brief Lower a HOUTFunction to a MIRFunction
+	 * Performs lifetime analysis.
+	 * @note in the future it will validate move semantics and potentially other things.
+	 */
+	DECLARE_QUERY(LowerToMIRFunction, KeyOf_LowerToMIRFunction, CRef<LowerToMIRFunctionResult>, ({}))
+
+	struct KeyOf_LowerGlobalDataToMIRFunction {
+		helios::HOUTGlobalData global_data;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+	};
+
+	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function, helios::errors::Failed>;
+
+	/**
+	 * @brief Creates a ctor function for a global data.
+	 */
+	DECLARE_QUERY(
+		LowerGlobalDataToMIRCtor,
+		KeyOf_LowerGlobalDataToMIRFunction,
+		CRef<LowerGlobalDataToMIRFunctionResult>,
+		({})
+	)
+
+	/**
+	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
+	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
+	 * @note Exposed in the interface mostly for tests
+	 */
+	Function lowerToPreMIRFunction(query::Context&, const helios::HOUTFunction& function);
+}

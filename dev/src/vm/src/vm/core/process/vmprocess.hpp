@@ -2,21 +2,16 @@
 
 #include "interface_types.hpp"
 
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
 
-#include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
-#include <vm/services/profiler/profiler.hpp>
-#include <vm/services/reference_counter/reference_counter.hpp>
-#include <vm/services/service_manager.hpp>
 
 #include <condition_variable>
 #include <deque>
@@ -26,17 +21,13 @@
 #include <variant>
 #include <vector>
 
-namespace vm::loader {
-	class Loader;
-}
-
 namespace vm {
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
-	 * It manages process'es data and services.
+	 * It manages process's data, loader and threads.
 	 *
-	 * VMProcess is an abstract concepts that represents the program's execution environment.
+	 * VMProcess is an abstract concept that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
@@ -63,11 +54,20 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::low::LowVMProgram> loaded_program = {};
+		/**
+		 * @brief A loader instance for this VMProcess. Stores the high level and low level
+		 * representation of the currently executed program. `loaded_program` references the low
+		 * representation which exists in this class.
+		 */
+		loader::Loader loader{};
+
+		/**
+		 * @brief The program being executed by this process.
+		 * Holds a constant reference to the LowVMProgram stored in the processes compiler module.
+		 */
+		CRef<low::LowVMProgram> loaded_program;
 
 		Memory memory;
-
-		loader::Loader loader{};
 
 		/**
 		 * @brief Storage for all VmValues which belong to this process.
@@ -84,11 +84,11 @@ namespace vm {
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::File>, std::vector<code::CodeCollection>>& source
+			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 		);
 
 		/**
-		 * @brief Creates new thread that runs a function in the Executor service.
+		 * @brief Creates new thread that runs a function.
 		 */
 		std::expected<api::Response, api::ApiError> runFunction(
 			const std::string& func_name, const RunArguments& run_arguments
@@ -119,7 +119,7 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> output();
 
-		base::Optional<api::ApiError> validateMemoryRequest();
+		base::Optional<api::ApiError> assertProcessCanRespond();
 
 		/**
 		 * @brief Gets the status of the process (memory-safe).
@@ -136,9 +136,11 @@ namespace vm {
 		std::expected<api::Response, api::StateError> getExitCode();
 
 		/**
-		 * @brief Holds all services. When it's constructed, it initializes all services.
+		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
+		 * For more information about execution's validation,
+		 * see Memory::validateMemoryState's description.
 		 */
-		ServiceManager service_manager = ServiceManager();
+		std::expected<api::Response, api::ApiError> deinitAndValidate();
 
 		ProcIO                           io;
 		base::Optional<ProcIORedirecter> io_redirecter;
@@ -157,14 +159,9 @@ namespace vm {
 
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept;
+		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		Memory& getMemory();
-
-		/**
-		 * Can be safely called from Execution Thread only
-		 */
-		ServiceManager& getServices();
 
 		ProcIO& getIO();
 
@@ -201,7 +198,5 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
-
-		~VMProcess();
 	};
 }

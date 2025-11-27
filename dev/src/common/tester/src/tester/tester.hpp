@@ -9,8 +9,8 @@
 
 #include "tester_config.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/types/ints.hpp>
 
 #include <init/init.hpp>  // IWYU pragma: export
 #include <printer/stream_printer.hpp>
@@ -96,11 +96,24 @@ namespace tester {
 		TestResult* curr_global_res;
 		void        runTest(TestType test);
 
-		std::string           name;
-		std::vector<TestData> tests;
+		std::string              name;
+		std::vector<TestData>    tests;
+		std::vector<std::string> failed_tests;
 
 	public:
+		/**
+		 * @brief Runs all the tests in the test suite. Prints tests statistics and list of failed
+		 * tests in case of failure.
+		 * @return True if all tests passed, false otherwise
+		 */
 		bool run();
+
+		/**
+		 * @brief Filters the tests in the TestSuite. Removes all tests from the test suite which
+		 * don't appear in `tests_to_run` vector. Prints warning messages when `tests_to_run`
+		 * contains a test name which doesn't exist in the test suite.
+		 */
+		void filterTests(const std::vector<std::string>& tests_to_run);
 
 		virtual ~TestSuite() = default;
 
@@ -154,15 +167,17 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                           \
-	int main(int argc, const char* const*) {                    \
-		init::InitObject _;                                     \
-		if (argc != 1) CORE_PANIC("Test expects no arguments"); \
-                                                                \
-		auto config = tester::getTestConfig(test_path);         \
-                                                                \
-		TESTER_CLASS test(std::move(config));                   \
-		if (!test.run()) return 1;                              \
+#define TESTER_COMMON_MAIN(test_path)                                          \
+	int main(int argc, const char* const* argv) {                              \
+		init::InitObject _;                                                    \
+		auto             config = tester::getTestConfig(test_path);            \
+                                                                               \
+		TESTER_CLASS test(std::move(config));                                  \
+                                                                               \
+		std::vector<std::string> tests_to_run;                                 \
+		for (int i = 1; i < argc; i++) { tests_to_run.emplace_back(argv[i]); } \
+		test.filterTests(tests_to_run);                                        \
+		if (!test.run()) return 1;                                             \
 	}
 
 }

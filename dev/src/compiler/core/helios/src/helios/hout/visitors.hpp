@@ -2,7 +2,7 @@
 
 #include "elements.hpp"
 
-#include <base/visitor.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 namespace compiler::helios::code {
 	MAKE_VISITOR(HoutStmt,
@@ -15,7 +15,8 @@ namespace compiler::helios::code {
 		AssignmentStmt
 	);
 	MAKE_VISITOR(HoutExpr,
-		LiteralIntExpr,
+		LiteralUnitExpr,
+		LiteralNumericExpr,
 		LiteralBoolExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,
@@ -23,11 +24,13 @@ namespace compiler::helios::code {
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,
+		ChainComparisonExpr,
 		ParenthesisExpr,
 		TupleTypeConstructorExpr,
 		VariantTypeConstructorExpr,
 		CallExpr,
 		AccessExpr,
-		SequenceExpr
+		SequenceExpr,
+		CastExpr
 	);
 }

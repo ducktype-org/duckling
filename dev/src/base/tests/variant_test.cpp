@@ -1,4 +1,4 @@
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <tester/tester.hpp>
 
@@ -69,10 +69,18 @@ public:
 
 		assertTrue(std::get<i32>(v_2) == 6, "bad variant access");
 
-		VARIANT_VISIT(v_2, VISIT_CASE(int, i_v, {
-						  i_v = 100;
-						  assertTrue(i_v == 100, "something strange");
-					  }) VISIT_CASE([[maybe_unused]] auto&, any_v, { fail("Bad variant access"); }));
+		VARIANT_VISIT(
+			v_2,
+			VISIT_CASE(
+				int,
+				i_v,
+				{
+					i_v = 100;
+					assertTrue(i_v == 100, "something strange");
+				}
+			),
+			VISIT_CASE([[maybe_unused]] auto&, any_v, { fail("Bad variant access"); })
+		);
 
 		assertTrue(std::get<i32>(v_2) == 6, "bad variant access");
 	}

@@ -1,0 +1,41 @@
+#pragma once
+
+#include "../lists/initializer_list.hpp"
+#include "../lists/parameter_list.hpp"
+#include "class_special.hpp"
+#include "preamble.hpp"
+
+namespace pst {
+	/**
+	 * @brief Class constructor element.
+	 */
+	class CopyConstructor final: public ClassSpecial {
+		NAMED_CHILD(params, ParamList);
+		NAMED_CHILD(inits, InitList);
+		NAMED_CHILD(body, CodeBlockOrStmt);
+
+	public:
+		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
+		CLASS_STMT_PARSE(CopyConstructor);
+
+		~CopyConstructor() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		AccessLocked<ParamList> getParams() const {
+			return params.give();
+		}
+
+		[[nodiscard]]
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
+		}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Copy Constructor";
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+}

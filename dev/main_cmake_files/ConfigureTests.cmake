@@ -23,26 +23,25 @@ if(ENABLE_COVERAGE)
 
 	add_custom_target(build_all_coverage_targets)
 
-    add_custom_target(coverage
+	add_custom_target(coverage
+		COMMAND ${FASTCOV}
+		--gcov ${GCOV_VERSION}
+		--include "${CMAKE_SOURCE_DIR}" # Process only files in this folder
+		--exclude "docs" # Exclude paths containing this name from coverage
+		"integration_tests"
+		"scripts"
+		"/tests/"
+		"/playground/"
+		"${CMAKE_BINARY_DIR}" # Exclude paths containing this name from coverage
+		--process-gcno # Process files not touched by tests (generated during compilation)
+		--lcov # Generate output in lcov format
+		-o coverage.info
 
-        COMMAND ${FASTCOV}
-            --gcov ${GCOV_VERSION}
-            --include "${CMAKE_SOURCE_DIR}" # Process only files in this folder
-            --exclude "docs" # Exclude paths containing this name from coverage
-            "integration_tests"
-            "scripts" 
-            "/tests/" 
-            "/playground/"
-            "${CMAKE_BINARY_DIR}" # Exclude paths containing this name from coverage
-            --process-gcno # Process files not touched by tests (generated during compilation)
-            --lcov # Generate output in lcov format
-            -o coverage.info
-		
-        COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
-        
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        VERBATIM
-    )
+		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info --ignore-errors inconsistent
+
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		VERBATIM
+	)
 	add_dependencies(coverage build_all_coverage_targets)
 endif()
 
@@ -87,7 +86,6 @@ function(duck_add_test_custom test_pack test_name test_source)
 
 	set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	add_to_coverage(${test_name})
-
 endfunction()
 
 function(duck_add_test test_pack test_base_name test_user_source)
@@ -123,7 +121,17 @@ function(add_custom_test_pack NAME)
 	set_target_properties("test_${NAME}" PROPERTIES EXCLUDE_FROM_ALL true)
 endfunction()
 
+# note:
+# We use custom CTEST_PARALLEL_LEVEL environment variable to control parallelism in tests.
+# This works only when this variable is set during the cmake configuration step.
+# To run tests in parallel locally, you can invoke ctest -j <num_jobs> [options] directly.
 add_custom_target(memcheck_test
 	COMMAND ${CMAKE_CTEST_COMMAND}
-	--force-new-ctest-process --test-action memcheck
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)
+
+add_custom_target(test_parallel
+	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL}
+	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+	USES_TERMINAL)

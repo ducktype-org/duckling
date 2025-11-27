@@ -30,7 +30,7 @@ Custom type names can be achieved by implementing `TypeParseTraits`, for example
 ```c++
 template<class T>
 struct TypeParseTraits<T[]> {
-	static constexpr const auto name = CONSTEXPR_CAT("[", TypeParseTraits<T>::name, "]");
+	static constexpr const auto name = CONSTEXPR_CAT("[", TypeParseTraits<T>::NAME, "]");
 };
 ```
 
@@ -75,7 +75,7 @@ std::cout << json_obj << '\n';  // It is very flexible
 ```
 
 ### Variants
-For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is registered with `JSON_REGISTER_TYPE(_WITH_NAME)`. 
+For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is registered with `JSON_REGISTER_TYPE(_WITH_NAME)`.
 
 ### Serialization
 Most standard types have a predefined serialization, but you can have custom serialization by specializing `adl_serializer` struct. For example:

@@ -1,13 +1,11 @@
 #include "stream_printer.hpp"
 
-#include <ostream>
-
 namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorID calculateBackgroundColorID(const ColorID color_id) {
-		constexpr int8_t background_font_color_offset = 10;
+		constexpr int8_t BACKGROUND_FONT_COLOR_OFFSET = 10;
 		return static_cast<ColorID>(
-			color_id > 0 ? color_id + background_font_color_offset : color_id
+			color_id > 0 ? color_id + BACKGROUND_FONT_COLOR_OFFSET : color_id
 		);
 	}
 
@@ -29,7 +27,7 @@ namespace printer {
 		if (foreground_color_id > 0 || background_color_id > 0) out << "\033[0m";
 	}
 
-	void StreamPrinter::newline(int times, std::ostream& out) {
+	void StreamPrinter::newline(usize times, std::ostream& out) {
 		print(std::string(times, '\n'), out);
 	}
 }

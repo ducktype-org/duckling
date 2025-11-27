@@ -1,47 +1,37 @@
 
 #include "vmthread.hpp"
 
+#include "kill_process_exception.hpp"
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <base/ints.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/int_conv.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/kill_process_exception.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 
-#include <cstring>
 #include <iostream>
 #include <mutex>
-#include <stdexcept>
 #include <string>
-#include <utility>
 #include <variant>
 #include <vector>
 
 namespace vm {
-#ifdef USE_TAIL_CALLS
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		MicroInstruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                           \
-		MicroInstruction {                                                                 \
-			.nontc_opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, \
-			.arg1 = ARG_1                                                                  \
-		}
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
@@ -90,11 +80,7 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
 
-#ifdef USE_TAIL_CALLS
-		auto opcode = OpFuns::getOpcodeFromOpFun(instr->tc_opfun);
-#else
-		auto opcode = static_cast<u16>(instr->nontc_opcode);
-#endif
+		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
@@ -110,19 +96,19 @@ namespace vm {
 	 *
 	 * @note For more detailed explanation go to `createProgramStartFunction`.
 	 */
-	low::FuncData VMThread::createStartFunctionFor(
-		const low::FuncData& func, const FunctionRunArguments& func_args
+	low::LowFuncData VMThread::createStartFunctionFor(
+		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
-		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                          .bc               = {},
-			                          .local_stack_size = 0,
-			                          .arg_size         = 0,
-			                          .ret_size         = func.result_type->getSize(),
-			                          .parameters       = {},
-			                          .result_type      = func.result_type };
+		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                             .bc               = {},
+			                             .local_stack_size = 0,
+			                             .arg_size         = 0,
+			                             .ret_size         = func.result_type->getSize(),
+			                             .parameters       = {},
+			                             .result_type      = func.result_type };
 
 		u64         result_type_id     = func.result_type->getID().asInt();
-		const auto& funcs              = executing_program->functions;
+		const auto& funcs              = executing_program->getFunctions();
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
@@ -180,27 +166,28 @@ namespace vm {
 	 * complicated, after we start using VmValue or default value constructors which have to be
 	 * invoked before main.
 	 */
-	low::FuncData VMThread::createProgramStartFunction(
-		const low::FuncData& func, const ProgramRunArguments& args
+	low::LowFuncData VMThread::createProgramStartFunction(
+		const low::LowFuncData& func, const ProgramRunArguments& args
 	) const {
 		// Types
 		// @note All the following are guaranteed to exist or their existence was checked earlier.
 
-		auto main_return_type = func.result_type;
-		auto argv_type        = executing_program->types->at(base::StrID("argv"));
-		auto argv_ptr_type    = executing_program->types->at(base::StrID("ptr_argv"));
-		auto i64_type         = executing_program->types->at(base::StrID("i64"));
-		auto str_type         = executing_program->types->at(base::StrID("string"));
-		auto str_ptr_type     = executing_program->types->at(base::StrID("ptr_string"));
-		auto byte_type        = executing_program->types->at(base::StrID("byte"));
+		auto        main_return_type = func.result_type;
+		const auto& types            = executing_program->getTypes();
+		auto        argv_type        = types.at(base::StrID("argv"));
+		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
+		auto        i64_type         = types.at(base::StrID("i64"));
+		auto        str_type         = types.at(base::StrID("string"));
+		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
+		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::FuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                          .bc               = {},
-			                          .local_stack_size = 72,
-			                          .arg_size    = i64_type->getSize() + argv_ptr_type->getSize(),
-			                          .ret_size    = main_return_type->getSize(),
-			                          .parameters  = { i64_type, argv_ptr_type },
-			                          .result_type = func.result_type };
+		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
+			                             .bc               = {},
+			                             .local_stack_size = 72,
+			                             .arg_size = i64_type->getSize() + argv_ptr_type->getSize(),
+			                             .ret_size = main_return_type->getSize(),
+			                             .parameters  = { i64_type, argv_ptr_type },
+			                             .result_type = func.result_type };
 
 		// TypeIDs to pass to opcodes.
 		u64 func_ret_type_id = main_return_type->getID().asInt();
@@ -211,7 +198,7 @@ namespace vm {
 		u64 str_ptr_type_id  = str_ptr_type->getID().asInt();
 		u64 byte_type_id     = byte_type->getID().asInt();
 
-		const auto& funcs              = executing_program->functions;
+		const auto& funcs              = executing_program->getFunctions();
 		u64         called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = i;
@@ -348,13 +335,13 @@ namespace vm {
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	Ref<VmValue> VMThread::executeFunction(
-		const low::FuncData& start_function, const low::FuncData& func
+		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		frame->called_func_ret_size = func.result_type->getSize();
+		frame->current_function = &start_function;
 
 		const auto* instr = start_function.bc.data();
 
@@ -371,16 +358,16 @@ namespace vm {
 			opcode_label = {
 
 
-	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/bytecode/opcode_definitions.hpp>
+	#define HANDLE_MICRO_INSTR(opcode) (&&LABEL_##opcode),
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_MICRO_INSTR
 			};
 
 		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
 
-	#define HANDLE_OPCODE(opcode_name)                                          \
+	#define HANDLE_MICRO_INSTR(opcode_name)                                     \
 		LABEL_##opcode_name: {                                                  \
 			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
@@ -390,28 +377,29 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];      \
 			}                                                                   \
 		}
-	#include <vm/bytecode/opcode_definitions.hpp>
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 
 
-	#undef HANDLE_OPCODE
+	#undef HANDLE_MICRO_INSTR
 
 	End:
 
 		POP_DIAGNOSTIC
 #elif defined(USE_SWITCH_CASE)
 		while (true) {
-			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                                              \
-	case low::OpcodeFix8::opcode_name: {                                                            \
+			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
+	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
+	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		DEBUG_LOG("Executed opcode: " << #opcode_name);                                             \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
 			break;                                                                                  \
 		}                                                                                           \
 	}
-	#include <vm/bytecode/opcode_definitions.hpp>
-	#undef HANDLE_OPCODE
+	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+	#undef HANDLE_MICRO_INSTR
 
 			default: {
 				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
@@ -423,7 +411,8 @@ namespace vm {
 		// @note: The return value is the only block left on the block stack.
 		auto block         = frame->block_stack.back();
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
-		process_memory.freeBlock(block);
+		process_memory.freeBlockData(block);
+		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
 
 		return exit_value_storage.value();
@@ -517,19 +506,19 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 
 		executing_program = program;
-		for (const auto& [global, id, name]: program->global_data.allData()) {
+		for (const auto& [global, id, name]: program->getGlobals().allData()) {
 			// Insert the global data if it hasn't been initialized; then run constructor if present
 			if (process_memory.tryInsertGlobalData(id, global->type)
 			    && global->ctor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->functions
+					const auto& func = *executing_program->getFunctions()
 					                        .atMaybe(base::StrID(global->ctor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
 												+ global->ctor_name.value().str()
 											);
-					low::FuncData start_function = createStartFunctionFor(func, {});
-					const auto    exit_value     = executeFunction(start_function, func);
+					low::LowFuncData start_function = createStartFunctionFor(func, {});
+					const auto       exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -538,9 +527,10 @@ namespace vm {
 		}
 
 		try {
-			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
+			const auto& func = *executing_program->getFunctions()
+			                        .atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist: " + func_name);
-			std::optional<low::FuncData> start_function;
+			std::optional<low::LowFuncData> start_function;
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {
 					start_function = createProgramStartFunction(func, program_run_arguments);
@@ -559,17 +549,17 @@ namespace vm {
 
 	void VMThread::execGlobalDestructors(CRef<low::LowVMProgram> program) {
 		executing_program = program;
-		for (const auto& [global, id, name]: executing_program->global_data.allData()) {
+		for (const auto& [global, id, name]: executing_program->getGlobals().allData()) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->functions
+					const auto& func = *executing_program->getFunctions()
 					                        .atMaybe(base::StrID(global->dtor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
 												+ global->dtor_name.value().str()
 											);
-					low::FuncData start_function = createStartFunctionFor(func, {});
-					const auto    exit_value     = executeFunction(start_function, func);
+					low::LowFuncData start_function = createStartFunctionFor(func, {});
+					const auto       exit_value     = executeFunction(start_function, func);
 					respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -631,11 +621,11 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
-					const auto& func = executing_program->functions[index];
+				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
+					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.function_id  = index,  // Assuming function_id is int
 							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
@@ -650,7 +640,7 @@ namespace vm {
 
 	void VMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 		status = new_status;
-		process.onEvent(new_status);
+		process.setStatus(new_status);
 	}
 
 	bool VMThread::isPauseRequested() {

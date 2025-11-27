@@ -1,31 +1,33 @@
 #include "symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
-#include <helios/ctv/ctv.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/hout/hout.hpp>
+#include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <pst_parser/pst_visitor.hpp>
+#include <string_id/string_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>
 
 #include <functional>
+#include <unordered_set>
 #include <vector>
 
 namespace compiler::helios {
@@ -47,7 +49,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -56,7 +58,7 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_contex
+		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_context
 			= [&](const pst::Access<pst::LangElement>& el) -> bool {
 			switch (el->getElementKind()) {
 			case pst::ElementKind::TopLevel:
@@ -74,14 +76,14 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
 				// we panic if there is no parent:
-				return global_variable_pst_contex(el->getParent().value().unlock(ctx));
+				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
 			default:
 				CORE_PANIC("Unexpected pst path of variable");
 			}
 		};
 
-		return global_variable_pst_contex(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
+		return global_variable_pst_context(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
@@ -92,6 +94,7 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
+			variant_case_novalue(houtgen::GeneratedSymbolData) { return base::Optional<ScopeID>{}; }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -108,7 +111,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -175,9 +178,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
-		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-	) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -192,6 +193,16 @@ namespace compiler::helios {
 				{
 					.name = function->getName(),
 					.kind = SymbolKind::Function,
+				},
+				pst_data
+			));
+		}
+		case pst::StmtKind::FunDecl: {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = function->getName(),
+					.kind = SymbolKind::FunctionDeclaration,
 				},
 				pst_data
 			));
@@ -241,12 +252,7 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
-					)
-			                          .c_str()),
+					.name        = using_stmt->getDeclSymbolName().value(),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -345,7 +351,7 @@ namespace compiler::helios {
 	 * and should be merged with makeSymbolFromStatement.
 	 */
 	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
-		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
+		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
@@ -365,7 +371,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
-		 * @note This has to be consistant with QuerySymbolsInScope
+		 * @note This has to be consistent with QuerySymbolsInScope
 		 */
 		static ScopeID getPSTElementParentScope(
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
@@ -384,7 +390,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -400,7 +406,7 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
@@ -445,7 +451,7 @@ namespace compiler::helios {
 					return output;
 				}
 
-				QUERY_AUTO_CACHE_REF
+				QUERY_AUTO_CACHE_CREF
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -489,7 +495,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
@@ -599,12 +605,12 @@ namespace compiler::helios {
 			return lookup_chain;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -612,7 +618,7 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			auto ctv = ctx.query<QueryEvaluateExpression>(
+			auto ctv = ctx.query<QueryEvaluatePSTExpression>(
 				const_symbol->getValue().value().unlock(ctx)->getExpr()
 			);
 			if (ctv.hasError()) return query::QError(errors::Failed());
@@ -623,4 +629,258 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	struct IMPLEMENT_QUERY(QuerySpecifiersOfSymbol, QuerySpecifiersOfSymbol_Result) {
+		// @TODO: #1321 do not unlock whole elements, checking the type of the parent would be enough
+
+		/**
+		 * @brief Check if the ancestors of PST element `el` match the provided kinds in order,
+		 * and return the ancestor if they do.
+		 */
+		template<typename... Kinds>
+		static base::Optional<pst::Access<pst::LangElement>> getAncestor(
+			query::Context& ctx, pst::Access<pst::LangElement> el, Kinds... kinds
+		) {
+			return getAncestorImpl(ctx, el, kinds...);
+		}
+
+		// Base case: no more kinds to check → success
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
+			query::Context&, pst::Access<pst::LangElement> el
+		) {
+			return el;
+		}
+
+		// Recursive case: check current kind, then move up
+		template<typename... Rest>
+		static base::Optional<pst::Access<pst::LangElement>> getAncestorImpl(
+			query::Context&               ctx,
+			pst::Access<pst::LangElement> el,
+			pst::ElementKind              expected,
+			Rest... rest
+		) {
+			if (auto parent = el->getParent()) {
+				auto parent_el = parent.value().unlock(ctx);
+				if (parent_el->getElementKind() == expected)
+					return getAncestorImpl(ctx, parent_el, rest...);
+			}
+			return {};
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
+
+			if (kind(key) == SymbolKind::BuiltinFunction) {
+				// Builtin functions have no specifiers
+				return {};
+			}
+
+			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+				// Generated symbols have no specifiers (for now)
+				return {};
+			}
+
+			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
+
+			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
+			// or "Stmt" child.
+			//
+			// So single statement can have a specifier when it is wrapped in
+			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
+			// "StmtSpecifier".
+			while (true) {
+				if (auto result_stmt = getAncestor(
+						ctx,
+						pst_element,
+						pst::ElementKind::CodeBlockOrStmt,
+						pst::ElementKind::StmtSpecifier
+					)) {
+					pst_element = *std::move(result_stmt);
+				} else if (auto result_block = getAncestor(
+							   ctx,
+							   pst_element,
+							   pst::ElementKind::CodeBlock,
+							   pst::ElementKind::CodeBlockOrStmt,
+							   pst::ElementKind::StmtSpecifier
+						   )) {
+					pst_element = *std::move(result_block);
+				} else {
+					break;
+				}
+				specifiers.emplace_back(pst_element.dynamicCast<pst::StmtSpecifier>().value());
+			}
+
+			return specifiers;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
+
+	namespace houtgen {
+		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
+			);
+		}
+
+		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {
+			static auto provide(Context&, QKey key) -> PResult {
+				return GetSymRef_Functor::make(putInSymtable(
+					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data)
+				));
+			}
+
+			QUERY_AUTO_CACHE_COPY
+		};
+
+		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
+	}
+
+	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, std::vector<SymID>) {
+		struct HoutFunctionCallCollector final:
+			  public code::HoutStmtVisitorEmpty,
+			  public code::HoutExprVisitorEmpty {
+		public:
+			std::unordered_set<SymID> called_functions;
+
+			void visitReturnStmt(const code::ReturnStmt& stmt) override {
+				stmt.value->acceptVisitor(*this);
+			}
+
+			void visitExprStmt(const code::ExprStmt& stmt) override {
+				stmt.expr->acceptVisitor(*this);
+			}
+
+			void visitIfStmt(const code::IfStmt& stmt) override {
+				stmt.condition->acceptVisitor(*this);
+
+				for (const auto& sub_stmt: stmt.then_body.statements)
+					sub_stmt->acceptVisitor(*this);
+				for (const auto& sub_stmt: stmt.else_body.statements)
+					sub_stmt->acceptVisitor(*this);
+			}
+
+			void visitWhileStmt(const code::WhileStmt& stmt) override {
+				stmt.condition->acceptVisitor(*this);
+				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
+			}
+
+			void visitVariableStmt(const code::VariableStmt& stmt) override {
+				if (stmt.initial_value) stmt.initial_value.value()->acceptVisitor(*this);
+			}
+
+			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {
+				stmt.location_expr->acceptVisitor(*this);
+				stmt.new_value_expr->acceptVisitor(*this);
+			}
+
+			void visitCallExpr(const code::CallExpr& expr) override {
+				if (const auto* callee_ident
+				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.get())) {
+					if (callee_ident->expression_type.getType().getKind() == tsh::Kind::Function)
+						called_functions.insert(callee_ident->symbol);
+				}
+
+				expr.callee->acceptVisitor(*this);
+				for (const auto& arg: expr.arguments) arg->acceptVisitor(*this);
+			}
+
+			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
+				expr.lhs->acceptVisitor(*this);
+				expr.rhs->acceptVisitor(*this);
+			}
+
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+				expr.expr->acceptVisitor(*this);
+			}
+
+			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
+				expr.condition->acceptVisitor(*this);
+				expr.if_true->acceptVisitor(*this);
+				expr.if_false->acceptVisitor(*this);
+			}
+
+			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+				expr.inner->acceptVisitor(*this);
+			}
+
+			void visitSequenceExpr(const code::SequenceExpr& expr) override {
+				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitAccessExpr(const code::AccessExpr& expr) override {
+				expr.base->acceptVisitor(*this);
+			}
+
+			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
+				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) override {
+				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Query function dependencies called on non-function symbol"
+			);
+
+			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key);
+			const auto& function_body   = fun_hout_result.body;
+
+			HoutFunctionCallCollector visitor;
+			for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
+			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
+
+	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, std::vector<SymID>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Function,
+				"Query transitive function dependencies called on non-function symbol"
+			);
+
+			std::vector<SymID>        worklist;
+			std::unordered_set<SymID> visited_functions;
+			std::vector<SymID>        all_dependencies;
+
+			worklist.push_back(key);  // Insert root function SymID.
+			visited_functions.insert(key);
+
+			while (!worklist.empty()) {
+				SymID current_func = worklist.back();
+				worklist.pop_back();
+
+				all_dependencies.push_back(current_func);
+
+				auto direct_dependencies = ctx.query<QueryDirectFunctionCalls>(current_func);
+
+				for (const SymID& dependency: *direct_dependencies) {
+					if (!visited_functions.contains(dependency)) {
+						visited_functions.insert(dependency);
+						worklist.push_back(dependency);
+					}
+				}
+			}
+			return all_dependencies;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
 }

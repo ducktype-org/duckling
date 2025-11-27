@@ -1,12 +1,6 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
-
-#include <vm/api/api.hpp>
-#include <vm/api/data/api_error.hpp>
-
 #include <string>
-#include <vector>
 
 class VmPointersTest: public VmTestSuite {
 #undef TESTER_CLASS

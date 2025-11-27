@@ -2,6 +2,8 @@
 
 #include "common_elements.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <lang_definitions/key_spec_op.hpp>
 
 namespace tpc {

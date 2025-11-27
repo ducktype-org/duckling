@@ -1,10 +1,9 @@
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/strongly_typed_int.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <tester/tester.hpp>
 
-#include <functional>
 #include <ranges>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeID, usize);
@@ -128,9 +127,9 @@ private:
 		map.put("lol", "test 1");
 		map.put("a", "test 2");
 		map.put("b", "test 3");
-		auto put_res = map.put("lol", "test");
+		auto put_res = map.maybePut("lol", "test");
 
-		assertTrue(put_res.second == false, "Value was wrongly inserted");
+		assertTrue(put_res == nullptr, "Value was wrongly inserted");
 
 		ASSERT_EQUAL(3, map.size());
 		ASSERT_EQUAL(map["a"], "test 2");

@@ -1,24 +1,20 @@
 #include "query_hout_of_expr.hpp"
 
+#include "numeric_literals.hpp"
+
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios/hout/visitors.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
-#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -77,9 +73,19 @@ namespace compiler::helios::code {
 			 */
 			base::Optional<base::Box<Expr>> node;
 
+			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
+				node = makeBox<LiteralUnitExpr>(ctx);
+			}
+
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+
+				if (parsed_numeric_value.has_value()) {
+					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
+				} else {
+					// Error was logged in fromExprValue.
+					return;
+				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
@@ -277,19 +283,19 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(80));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 80 }));
 					break;
 				case pst::Keyword::f128:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 128 }));
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(64));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 64 }));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(32));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 32 }));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(16));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 16 }));
 					break;
 
 
@@ -367,17 +373,21 @@ namespace compiler::helios::code {
 			}
 
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
-				// for now we only compile chains of length 1 (i.e. not chains).
+				using namespace ::std::views;
 
-				CORE_ASSERT(stmt->getOperators().size() == 1, "Not a chain of length 1");
+				const auto& pst_operators  = stmt->getOperators();
+				size_t      operator_count = std::ranges::size(pst_operators);
+				size_t      expr_count     = operator_count + 1;
 
-				auto lhs_res = fromPST(ctx, stmt->getSubExpr(0));
-				auto rhs_res = fromPST(ctx, stmt->getSubExpr(1));
-
-				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
-
-				auto lhs = std::move(lhs_res).value();
-				auto rhs = std::move(rhs_res).value();
+				std::vector<Box<Expr>> result_exprs;
+				result_exprs.reserve(expr_count);
+				for (size_t i = 0; i < expr_count; ++i) {
+					auto result = fromPST(ctx, stmt->getSubExpr(i));
+					if (result.hasError())
+						return;
+					else
+						result_exprs.push_back(std::move(result.value()));
+				}
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -387,29 +397,33 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin
-					= binaryBuiltin(stmt->getOperators().at(0), std::move(lhs), std::move(rhs));
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
-					// failed
+
+				std::vector<BuiltinBinary> operators;
+				operators.reserve(operator_count);
+				for (size_t i = 0; i < operator_count; ++i) {
+					match_optional(findBinaryBuiltin(
+						pst_operators.at(i), result_exprs.at(i).ref(), result_exprs.at(i + 1).ref()
+					)) {
+						opt_some(op) { operators.push_back(op); }
+						opt_none {
+							ctx.log(makeBox<
+									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+								stmt->getSourcePosition(), "No builtin operator found"
+							));
+							return;
+						}
+					}
 				}
+
+				node = makeBox<ChainComparisonExpr>(
+					ctx, std::move(result_exprs), std::move(operators)
+				);
 			}
 		};
 
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			// std::cerr << "\nExpr: \n";
-			// root->debugPrint(std::cerr);
-			// std::cerr << '\n'
-
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 

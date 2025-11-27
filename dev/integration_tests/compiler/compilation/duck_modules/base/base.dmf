@@ -1,24 +1,24 @@
 # Basic function
 fun foo() -> i64 = {
-    return 5 + 7;
+    return 5i64 + 7i64;
 }
  
 fun main() -> i64 = {
     # Instantiating variables
-    let a: i64 = 2;
-    let b: i64 = 1;
+    var a: i64 = 2i64;
+    var b: i64 = 1i64;
     
     # Printing a literal
-    builtin_output_i64(4);                # 4
+    builtin_output_i64(4i64);                # 4
 
     # Printing a local variable
     builtin_output_i64(b);                # 1
 
     # Printing an expression
-    builtin_output_i64(foo() + b + 10);   # 23
+    builtin_output_i64(foo() + b + 10i64);   # 23
 
     # Assigning a literal
-    a = 4;
+    a = 4i64;
 
     builtin_output_i64(a);                # 4
     builtin_output_i64(b);                # 1
@@ -37,7 +37,7 @@ fun main() -> i64 = {
 
 
     # Assigning a more complex expression
-    b = (2 * a) + 5 * (a + b); # b = 2 * 8 + 5 * 12 = 16 + 60 = 76
+    b = (2i64 * a) + 5i64 * (a + b); # b = 2 * 8 + 5 * 12 = 16 + 60 = 76
 
     builtin_output_i64(a);                # 8
     builtin_output_i64(b);                # 76

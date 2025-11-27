@@ -5,14 +5,12 @@ from .helpers import (
 from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
 from .issue_checker import issue_checker_impl
+from .todo_validate import todo_validate_impl
 from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
 
 def pr_validate_impl(
-        clang_tidy_path: str,
-        clang_format_path: str,
-        build_dir: str,
-        thread_count: int
+    clang_tidy_path: str, clang_format_path: str, build_dir: str, thread_count: int
 ):
     # Step 1 - build
     bash_command(
@@ -30,7 +28,8 @@ def pr_validate_impl(
         fail_fast=False,
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
-        build_dir=build_dir)
+        build_dir=build_dir,
+    )
 
     # Step 4 - duck linter
     if not duck_linter_impl():
@@ -44,7 +43,11 @@ def pr_validate_impl(
         thread_count=thread_count,
     )
 
-    # Step 6 - issue checker
+    # Step 6 - validate to-dos and fix-mes
+    if not todo_validate_impl():
+        exit_with_error("T" + "ODO validation has failed")
+
+    # Step 7 - issue checker
     if not issue_checker_impl([]):
         exit_with_error("Issue checker has failed")
 

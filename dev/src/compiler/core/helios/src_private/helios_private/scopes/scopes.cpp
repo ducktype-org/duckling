@@ -1,33 +1,33 @@
 #include "scopes.hpp"
 
-#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <pst_parser/elements/hierarchy/statements/expand.hpp>
-#include <pst_parser/lang_parser_element.hpp>
-#include <pst_parser/lang_parser_state.hpp>
-#include <pst_parser/pst_visitor.hpp>
+#include <string_id/string_id.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
 
-#include <set>
+#include <algorithm>
 
 namespace compiler::helios {
 
@@ -118,9 +118,13 @@ namespace compiler::helios {
 			else
 				return ElementScopeKind::Standard;
 		}
-		case pst::ElementKind::CodeBlockOrStmt:
-			return ElementScopeKind::Standard;
-
+		case pst::ElementKind::CodeBlockOrStmt: {
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
+			if (parent_kind == pst::ElementKind::StmtSpecifier)
+				return ElementScopeKind::Transparent;
+			else
+				return ElementScopeKind::Standard;
+		}
 		case pst::ElementKind::ClassBlock: {
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
@@ -141,6 +145,9 @@ namespace compiler::helios {
 		case pst::ElementKind::Action:
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
+		case pst::ElementKind::CallArgument:
+		case pst::ElementKind::StmtSpecifier:
+		case pst::ElementKind::FunDecl:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -154,6 +161,11 @@ namespace compiler::helios {
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:
@@ -173,7 +185,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Transparent;
 		}
 
-		case pst::ElementKind::FunParam:
+		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
 			return ElementScopeKind::Transparent;
 
@@ -214,7 +226,8 @@ namespace compiler::helios {
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
-					"Scope of element for which scope does not make sense (or was not added.): ",
+					"Scope of element for which scope does not make sense (or was not "
+					"added.): ",
 					typeid(*element_ptr).name()
 				));
 			}
@@ -284,11 +297,13 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets scopes in a module.
 		 */
-		struct ScopeGrabPseudoVisitor {
-			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
+		struct ScopeGrabPseudoVisitor final {
+			ScopeGrabPseudoVisitor(Ref<std::vector<ScopeID>> out, Context& ctx):
+				  out(out),
+				  ctx(ctx) {}
 
-			std::set<ScopeID> out;
-			Context&          ctx;
+			Ref<std::vector<ScopeID>> out;
+			Context&                  ctx;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -303,40 +318,44 @@ namespace compiler::helios {
 				// @todo
 				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
-					out.insert(scopeOf(element));
+					out->emplace_back(scopeOf(element));
 				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
 			}
 		};
 
-		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
-			ScopeGrabPseudoVisitor scope_grab(ctx);
+			ScopeGrabPseudoVisitor scope_grab(out, ctx);
 			scope_grab.visit(root);
-
-			return std::move(scope_grab.out);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
-			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			std::set<ScopeID> output    = getScopes(ctx, main_file);
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+
+			std::vector<ScopeID> output;
+			output.reserve(1'024);  // there will usually be a lot of scopes
+
+			getScopes(ctx, main_file, &output);
 
 			// fetch scopes from other module files
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) {
-				auto scopes = getScopes(ctx, file);
-				output.merge(scopes);
-			}
+			for (auto file: *source_files) getScopes(ctx, file, &output);
+
+			// eliminate duplicates with sort:
+			std::ranges::sort(output);
+			auto [unique_end, unique_last] = std::ranges::unique(output);
+			output.erase(unique_end, output.end());
 
 			// validate output:
 			for (auto scope: output)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return { output.begin(), output.end() };
+			return output;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
@@ -351,9 +370,28 @@ namespace compiler::helios {
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt.unlock(ctx)->isDeclaration() != pst::DeclKind::None) {
+				switch (stmt.unlock(ctx)->isDeclaration()) {
+				case pst::DeclKind::Symbol: {
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
+					break;
+				}
+				case pst::DeclKind::Transparent: {
+					if (auto stmt_specifier_opt
+					    = stmt.unlock(ctx).template dynamicCast<pst::StmtSpecifier>()) {
+						auto stmt_specifier = stmt_specifier_opt.value();
+						auto inner_symbols  = filterSymbolsFromStmtList(
+                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
+                        );
+						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
+					}
+					break;
+				}
+				case pst::DeclKind::None:
+					// do nothing
+					break;
+				default:
+					CORE_PANIC("Not handled PST element in filterSymbolsFromStmtList");
 				}
 			}
 			return symbols;
@@ -387,6 +425,30 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitMethod(pst::Access<pst::Method> meth) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *meth->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor>) override {
+				output(std::vector<SymID>{});
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
+				// Scope of "fun →()← {}"
+
+				std::vector<SymID> out;
+				for (auto params: *cctor->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
+
+				output(std::move(out));
+			}
+
 			void visitIf(pst::Access<pst::If>) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
@@ -402,7 +464,7 @@ namespace compiler::helios {
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
-				output(std::vector<SymID>());
+				output(std::vector<SymID>{});
 			}
 		};
 
@@ -473,7 +535,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
@@ -513,13 +575,13 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<UKHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
+		static inline base::HashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// In the future calculate resulting string in comp time
@@ -544,13 +606,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(UKHash key) -> LoadResult {
+		static auto load(KHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
 			return {};
 		}
 
-		static auto store(UKHash key, PResult res, query::ACD acd) -> QResult {
+		static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
@@ -579,7 +641,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
@@ -601,22 +663,22 @@ namespace compiler::helios {
 		return main_file_root_scope;
 	}
 
-	void ScopeID::debugPrintScopeAndParents() {
+	void ScopeID::debugPrintScopeAndParents(std::ostream& os) const {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
-					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value()
-			                        .illegalAccess()
-			                        .value()
-			                        ->elementType()
-			                  : "ROOT")
-					  << ")" << " -> ";
+			os << iter_scope.queryUnstablePerfectHash() << "("
+			   << (iter_scope.ref->related_pst_element.has_value()
+			           ? iter_scope.ref->related_pst_element.value()
+			                 .illegalAccess()
+			                 .value()
+			                 ->elementType()
+			           : "ROOT")
+			   << ")" << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
 		}
-		std::cerr << "\n";
+		os << "\n";
 	}
 }

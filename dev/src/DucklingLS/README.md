@@ -21,6 +21,19 @@ This Language Server works for ```.duckling``` files. It has the following langu
 
 ## Running the Language Server
 
+### Running the language server for testers
+
+1. Go to the `/dev/src/DucklingLS` directory.
+2. Compile `lsp_daemon` using the `./comp-copy.py <name-of-the-build-dir>` command.
+3. Run `npm install` to install the dependencies.
+4. Run `npm compile` to compile the typescript to the js in the `out` directories.
+5. Run `ln -s $(pwd) ~/.vscode/extensions/duckling-support` to make a link from the vs code extensions
+directory to this directory, which is a root folder of the extension. The extension should be visible to 
+the default vscode profile.
+6. Restart the vscode. 
+
+### Running the language server for developers
+
 - Copy contents of `.vscode.template` to `.vscode` in the root folder (of the whole project).
 - Copy `lsp_daemon` binary file to `/dev/DucklingLS/bin/`.
 - Go to `/dev/DucklingLS` folder and run `npm install`. This installs all necessary npm modules in both the client and server folder.

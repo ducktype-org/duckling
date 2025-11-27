@@ -1,6 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <vm/api/data/api_error.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 

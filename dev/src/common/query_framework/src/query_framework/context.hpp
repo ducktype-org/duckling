@@ -7,10 +7,9 @@
 #include "context_fd.hpp"                        // IWYU pragma: keep
 #include "internal/query_graph/node_id.hpp"
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
-#include "internal/query_graph/query_graph.hpp"
 #include "internal/query_graph/query_state.hpp"
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -59,7 +58,7 @@ namespace query {
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
-			internal::NodeID dep_id = makeNodeID(OthQuery::id, key);
+			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
 
 			this->active = false;

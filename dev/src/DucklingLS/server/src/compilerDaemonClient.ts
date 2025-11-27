@@ -2,6 +2,10 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
+import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
+import { initPromise, initComplete } from './server';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -30,11 +34,29 @@ export class CompilerDaemonClient {
 	private process: ChildProcess;
 
 	constructor() {
+		const logPath = path.join(__dirname, 'daemon.log');
+		const logStream = fs.createWriteStream(logPath);
 		this.process = spawn(
 			BINARY_PATH + "lsp_daemon", 
-			["-p", DAEMON_PORT], 
-			{stdio: 'inherit'} // This is necessary for the server to remain responsive
+			["start", "-p", DAEMON_PORT], 
+			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
+		this.process.stdout?.on("data", (data) => {
+			process.stdout.write(data);
+			logStream.write(data);
+		});
+
+		// Mirror stderr to console and log file
+		this.process.stderr?.on("data", (data) => {
+			process.stderr.write(data);
+			logStream.write(data);
+		});
+
+		this.process.on("close", (code) => {
+			console.log(`Compiler daemon exited with code ${code}`);
+			logStream.end();
+		});
+
 	}
 
 	// This function is called when the server is closed
@@ -60,15 +82,20 @@ export class CompilerDaemonClient {
 	// This function is called to update the file in the daemon
 	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
 
 		const response = fetch(`${DAEMON_ADRESS}/put_file/${base64FilePath}/${base64FileContent}`);
 
-		function handleResponse(res: Response) {
+		async function handleResponse(res: Response) {
 			if (res.status != 200) {
-				throw new Error(`Error: ${res.status}`);
+				const text = await res.text();
+				throw new Error(`Error: ${res.status} ${text}`);
 			}
 		}
 
@@ -79,9 +106,62 @@ export class CompilerDaemonClient {
 		return response.then(handleResponse).catch(handleCatch);
 	}
 
+	// Used for debug in various places
+	public async callDebugPrint(connection: Connection, arg: string): Promise<void> {
+		await this.waitForReady(connection);
+		console.log("Debugging in progress...")
+		try {
+			const base64Arg: string = Buffer.from(arg).toString('base64');
+			const response = await fetch(`${DAEMON_ADRESS}/debug/${base64Arg}`);
+			if (!response.ok) {
+				console.log("Call debug failed");
+				throw new Error(`Error: ${response.status} ${response.statusText}`);
+			}
+			const text = await response.text();
+			console.log("ERROR CONTENTS:");
+			console.log(text);
+		} catch (error) {
+			if (error instanceof Error) {
+				console.error(`cdp error: ${error.message}`);
+			} else {
+				console.error(`cdp error: ${String(error)}`);
+			}
+		}
+		return;
+	}
+
+	// This function is called to update the workspace in the daemon
+	public async putWorkspace(connection: Connection): Promise<void> {
+		await this.waitForReady(connection);
+		
+		const folders = (await connection.workspace.getWorkspaceFolders())?.map(folder => folder.uri) ?? [];
+		for (const folder of folders) {
+			try {
+				var base64FilePath: string = Buffer.from(uriToFilePath(folder)).toString('base64');
+				var response = fetch(`${DAEMON_ADRESS}/init_directory/${base64FilePath}`);
+				var res = await response;
+				if (res.status != 200) {
+					throw new Error(`Error: ${res.status}`);
+				}
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(`Error processing file ${folder}: ${error.message}`);
+				} else {
+					console.error(`Error processing file ${folder}: ${String(error)}`);
+				}
+			}
+		}
+
+		return;
+	}
+
 	// This function is called to get the semantic tokens from the daemon for a file
 	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
 		await this.waitForReady(connection);
+		if (!initComplete) {
+			console.log("Waiting for init to complete...");
+			await initPromise;
+		}
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
@@ -101,11 +181,6 @@ export class CompilerDaemonClient {
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
 
-			// // Read and print the response body as text
-			// const responseBody = await response.text();
-			// console.log(`Response body: ${responseBody}`);
-	
-
 			const jsonResponse = await response.json();
 			console.log(`getSemanticTokens response: ${JSON.stringify(jsonResponse)}\n`);
 
@@ -117,7 +192,7 @@ export class CompilerDaemonClient {
 				tokenType: token.tokenType,
 				tokenModifiers: token.tokenModifiers
 			}));
-
+			
 			return tokens;
 		} catch (error) {
 			if (error instanceof Error) {
@@ -223,12 +298,12 @@ export class CompilerDaemonClient {
 			uri: definition.uri,
 			range: {
 				start: {
-					line: definition.range.start.line,
-					character: definition.range.start.character
+					line: definition.range.start.line-1,
+					character: definition.range.start.character-1
 				},
 				end: {
-					line: definition.range.end.line,
-					character: definition.range.end.character
+					line: definition.range.end.line-1,
+					character: definition.range.end.character-1
 				}
 			}
 		}));
@@ -246,5 +321,12 @@ export interface LSPKeywordData {
 
 // File paths are stored in URIs, this function converts them to file paths
 function uriToFilePath(uri: string): string {
-	return uri.split(":")[1];
+	if (uri.startsWith("file:")) {
+		const filepath = uri.split(":")[1];
+		return filepath.replace("///", "").replace("\\\\\\", "");
+	}
+	if (uri.startsWith("/") || uri.startsWith("\\")) {
+		return uri.slice(1);
+	}
+	return uri;
 }

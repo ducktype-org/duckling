@@ -39,6 +39,9 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
+export let initComplete = false;
+export let initPromise: Promise<void>;
+
 // Storing LSPT for documents
 
 // Semantic tokens legend
@@ -91,15 +94,24 @@ connection.onInitialize((params: InitializeParams) => {
 });
 
 connection.onInitialized(() => {
-	if (hasConfigurationCapability) {
-		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
-	}
-	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log("Workspace folder change event received.");
-		});
-	}
+	initPromise = (async () => {
+		if (hasConfigurationCapability) {
+			// Register for all configuration changes.
+			connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		}
+		if (hasWorkspaceFolderCapability) {
+			await compilerDaemonClient.putWorkspace(connection);
+			
+			connection.workspace.onDidChangeWorkspaceFolders(async _event => {
+				await compilerDaemonClient.putWorkspace(connection);
+				console.log("Workspace folder change event received.");
+			});
+		} else {
+			console.log("NO WORKSPACE CAPABILITY");
+		}
+	})().then(() => {
+		initComplete = true;
+	});
 });
 
 // Register the handler for semantic tokens
@@ -175,7 +187,7 @@ documents.onDidChangeContent(change => {
 });
 
 connection.onDidChangeWatchedFiles(_change => {
-	connection.console.log("We received an file change event");
+	console.log("We received an file change event");
 });
 
 // This handler provides the initial list of the completion items.

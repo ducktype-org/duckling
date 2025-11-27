@@ -3,10 +3,11 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <clah/clah.hpp>
+#include <base/preproc/diagnostics.hpp>  // this is included here, to provide push/pop diagnostics macros
 
 #include <base64.hpp>
 
+#include <iostream>
 
 PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -19,51 +20,16 @@ POP_DIAGNOSTIC;
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 
-#include <pst_parser/pst.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/pst.hpp>
 
-#include <base/int_conv.hpp>
-#include <base/macros/diagnostics.hpp>
-#include <base/variant.hpp>
-
+#include <clah/clah.hpp>
 #include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
+#include <init/init.hpp>
 #include <lexer/lexer.hpp>
-
-#include <vm/cli.hpp>
-#include <vm/server.hpp>
-
-/**
- * @brief Wrapper for converting API error to HTTP response.
- *
- * @param apiError The API error to convert.
- * @return crow::response The HTTP response corresponding to the API error.
- */
-crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
-	return {
-		400,
-		std::visit(
-			[]([[maybe_unused]] const auto& v) {
-				return "JSON is broken\n";  // JS::serializeStruct(v);
-			},
-			apiError
-		),
-	};
-}
-
-/**
- * @brief Converts the result of an operation to an HTTP response.
- *
- * @tparam E The type of the error.
- * @param x The result of the operation.
- * @return crow::response The HTTP response corresponding to the result.
- */
-template<class E>
-crow::response toResponse(const std::expected<void, E>& x) {
-	static auto convert = []() { return crow::response(200, "{}"); };
-
-	if (x.has_value()) return convert();
-	return convertError(x.error());
-}
+#include <query_framework/utils/with_context_do.hpp>
 
 /**
  * @brief Starts the LSP server on the specified port.
@@ -74,6 +40,7 @@ void server(i32 port) {
 	crow::SimpleApp                           app;
 	lsp::ExportKeywords                       lsp;
 	std::unordered_map<std::string, fs::File> files;
+	auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -91,6 +58,28 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/export_keywords")
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
+
+	/** @brief Route to init a directory contents recursively in the virtual file system.
+	 * * URL: /init_directory/[base64 path]
+	 * @param base64_path The base64 encoded absolute path of the root directory of the workspace.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
+	CROW_ROUTE(app, "/init_directory/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		try {
+			const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
+
+			auto virtual_path = lsp::initFiles(path, virtual_root);
+			lsp::initModules(virtual_path);
+			lsp::initPSTs(virtual_path);
+
+			return crow::response(200, "OK");
+		} catch (const std::exception& e) {
+			std::cerr << e.what();
+			return crow::response(400, e.what());
+		}
+	});
+
 	/**
 	 * @brief Route to add or override a file in the virtual file system.
 	 * * URL: /put_file/[base64 relative path]/[base64 file contents]
@@ -99,43 +88,26 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
-	([&files](const std::string& base64_path, const std::string& base64_content) {
+	([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
 		try {
-			const auto  path    = base64::decode_into<std::string>(base64_path);
-			const auto  content = base64::decode_into<std::string>(base64_content);
-			const auto& file    = fs::FileManager::createRandomTempFile(content);
-			files.erase(path);
-			files.emplace(path, file);
+			const auto path    = base64::decode_into<std::string>(base64_path);
+			const auto content = base64::decode_into<std::string>(base64_content);
+
+			lsp::putFile(virtual_root, path, content);
+
 			return crow::response(200, "OK");
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
-	/**
-	 * @brief Route to generate LSP tree for a file under the given path in the virtual file system.
-	 * * URL: /get_lsptree/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the file.
-	 * @return crow::response The HTTP response containing the LSP tree.
-	 */
-	CROW_ROUTE(app, "/get_lsptree/<string>")
-	([&files](const std::string& base64_path) {
+	CROW_ROUTE(app, "/put_file/<string>/")
+	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto&       file   = files.at(path);
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
+			const auto path = base64::decode_into<std::string>(base64_path);
 
-			// @TODO: replace it with some other LSP generation
-			// pst.getLSP(ss);
+			lsp::putFile(virtual_root, path, "");
 
-			return crow::response(200, ss.str());
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
+			return crow::response(200, "OK");
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	/**
@@ -146,19 +118,20 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the diagnostics.
 	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
-	([&files](const std::string& base64_path) {
+	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto&       file   = files.at(path);
+			const auto path = base64::decode_into<std::string>(base64_path);
+
+			if (!virtual_root.getFilePath().join(path).exists())
+				return crow::response(404, "File not found");
+
+			auto              file   = fs::File(virtual_root.getFilePath().join(path));
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
 			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
 			return crow::response(200, ss.str());
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	/**
@@ -169,24 +142,18 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	([&files](const std::string& base64_path) {
+	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto  path   = base64::decode_into<std::string>(base64_path);
-			const auto& file   = files.at(path);
-			auto        tokens = lexer::tokenizeFile(file);
-			pst::PST<>  pst(std::move(tokens));
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			const auto path          = virtual_root.getFilePath().join(relative_path);
 
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
+			if (!path.exists()) return crow::response(404, "File not found");
 
-			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
+			const auto file        = fs::File(path);
+			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+
+			return crow::response(200, lsp::getSemanticTokens(file_vector));
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	/**
@@ -197,33 +164,48 @@ void server(i32 port) {
 	 * @return crow::response The HTTP response containing the definition range in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
-	([&files](const std::string& base64_path, const uint& offset) {
+	([&virtual_root](const std::string& base64_path, const uint& offset) {
 		try {
-			const auto  path   = base64::decode_into<std::string>(base64_path);
-			const auto& file   = files.at(path);
-			auto        tokens = lexer::tokenizeFile(file);
-			pst::PST<>  pst(std::move(tokens));
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			const auto path          = virtual_root.getFilePath().join(relative_path);
 
-			if (pst.getLogger()->bad()) {
-				std::stringstream ss;
-				pst.getLogger()->dumpLog(true, ss);
-				return crow::response(200, ss.str());
-			};
-			auto pst_root = pst.getRootElement();
+			if (!path.exists()) return crow::response(404, "File not found");
 
-			auto element = lsp::findElement(pst_root, offset);
+			const auto               file = fs::File(path);
+			std::vector<std::string> out;
 
-			auto definition = lsp::findDefinition(element);
-
-			if (!definition.has_value()) return crow::response(200, "[]");
-
-			std::vector<std::string> out = { definition.value().toJSON() };
+			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
+				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
+				for (auto& src_file: src_files) {
+					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					auto pst_root   = pst->getRootElement();
+					auto element    = lsp::findElement(pst_root, offset, true);
+					auto definition = lsp::findDefinition(element, ctx);
+					if (definition.has_value())
+						out.push_back("{" + definition.value().toJSON() + "}");
+				}
+			});
 
 			return crow::response(200, lsp::jsonList(out));
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+	});
+
+
+	/**
+	 * @brief Route to print interesting things from the daemon
+	 * * URL: /debug
+	 * @return whatever you want
+	 */
+	CROW_ROUTE(app, "/debug/<string>")
+	([&virtual_root](const std::string& arg) {
+		try {
+			// put here whatever you want for debugging
+			// use virtual_root to access the virtual file system
+			std::cerr << "Debug arg: " << arg << "\n";
+			std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
+
+			return crow::response(200, "OK");
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 
 	app.port(base::safeIntConv<u16>(port)).run();
@@ -270,8 +252,8 @@ clah::Clah getLspDaemonCLI() {
  * This function initializes the command-line argument parser, handles exceptions,
  * and starts the LSP server on the specified port.
  *
- * Example usage 1: ./lsp_daemon -p 8080
- * Example usage 2: ./lsp_daemon --port 8080
+ * Example usage 1: ./lsp_daemon start -p 8080
+ * Example usage 2: ./lsp_daemon start --port 8080
  *
  * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
@@ -281,23 +263,25 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
+	init::InitObject _;
+
 	try {
 		// Parse the command-line arguments
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	}

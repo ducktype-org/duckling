@@ -1,66 +1,24 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <iostream>
+
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/TargetParser/Host.h>
 LLVM_INCLUDE_END()
 
 #include "compile_llvm.hpp"
 #include "module_impl.hpp"
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/box.hpp>
 
 namespace compiler::backend_llvm {
-
-	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {
-		if (target_triple == llvm::sys::getDefaultTargetTriple()) {
-			if (llvm::InitializeNativeTarget())
-				CORE_PANIC("LLVM error: failed to initialize native target");
-			if (llvm::InitializeNativeTargetAsmPrinter())
-				CORE_PANIC("LLVM error: failed to initialize native target asm printer");
-		} else {
-			throw base::NotYetImplemented("target different than native");
-		}
-
-		match_optional(target_machine.toOpt()) {
-			opt_some(target_machine_ref) {
-				if (target_machine_ref->getTargetTriple().getTriple() == target_triple)
-					return target_machine_ref;
-				else
-					CORE_PANIC(
-						"LLVM error: target machine already initialized with different target"
-					);
-			}
-			opt_none {
-				std::string error;
-				auto        target = llvm::TargetRegistry::lookupTarget(target_triple, error);
-
-				// Error if we couldn't find the requested target.
-				if (!target) CORE_PANIC("LLVM error: " + error);
-
-				auto cpu      = "generic";
-				auto features = "";
-
-				llvm::TargetOptions opt;
-				this->target_machine = Box<llvm::TargetMachine>::fromPointer(
-					target->createTargetMachine(target_triple, cpu, features, opt, llvm::Reloc::PIC_)
-				);
-				return this->target_machine.refMut().toOpt().value();
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
 	void emitCode(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
@@ -69,8 +27,6 @@ namespace compiler::backend_llvm {
 	) {
 		// It's the only way to emit a file with a target machine (despite the "legacy" name)
 		llvm::legacy::PassManager pass;
-		m->setDataLayout(target_machine->createDataLayout());
-		m->setTargetTriple(target_machine->getTargetTriple().getTriple());
 
 		if (target_machine->addPassesToEmitFile(pass, *output_stream, nullptr, file_type))
 			CORE_PANIC("TargetMachine can't emit a file of this type");
@@ -99,13 +55,12 @@ namespace compiler::backend_llvm {
 	 * @brief Compiles the module to an object file or assembly file.
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl>              module_impl,
+		const Ref<ModuleImpl>        module_impl,
 		const std::filesystem::path& output_file,
-		CompilationOutputType        output_type
+		const CompilationOutputType  output_type
 	) {
-		auto m              = module_impl->module.refMut();
-		auto target_triple  = llvm::sys::getDefaultTargetTriple();
-		auto target_machine = module_impl->setTargetMachine(target_triple);
+		const auto m              = module_impl->module.refMut();
+		const auto target_machine = module_impl->getTargetMachine().toOpt().value();
 
 		std::error_code error_code;
 

@@ -5,18 +5,22 @@
 
 #include "abstract_type.hpp"
 
-#include "internal/abstract_type_impl.hpp"
-#include "internal/queries.hpp"
+#include <typesystem/higher/abstract_type_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	[[nodiscard]]
 	Kind AbstractType::getKind() const {
 		return pimpl->getKind();
 	}
 
 	[[nodiscard]]
-	const TypeInterface& AbstractType::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> AbstractType::getInterface(query::Context& ctx) const {
 		return pimpl->getInterface(ctx);
+	}
+
+	[[nodiscard]]
+	bool AbstractType::hasNoOpDestructor() const {
+		return pimpl->hasNoOpDestructor();
 	}
 
 	[[nodiscard]]
@@ -24,12 +28,16 @@ namespace tsh {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
 
+	bool AbstractType::carriesInformation(query::Context& ctx) const {
+		return pimpl->carriesInformation(ctx);
+	}
+
 	[[nodiscard]]
 	const std::string& AbstractType::toString() const {
 		return pimpl->toString();
 	}
 
-	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl); }
+	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl.get()); }
 
 	// Specialized template definition and explicit instantiation.
 	template<>

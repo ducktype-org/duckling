@@ -1,6 +1,9 @@
 # CLI tests
 
-Run: "@{duck_path} @{run_args}"
+Run: "@{duckc_path} @{run_args}"
+
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
 
 Tests:
   cli-options:
@@ -9,6 +12,6 @@ Tests:
         # Tests help flag works
         run_args: "-h"
       something-wrong:
-        # Tests whether duck fails upon passing an invalid flag
+        # Tests whether duckc fails upon passing an invalid flag
         run_args: "-,"
         ExitCode: 1

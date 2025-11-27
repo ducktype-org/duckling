@@ -1,10 +1,9 @@
 #include "source.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <diagnostic/location.hpp>
-#include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
 #include <unicode_classification/classifications.hpp>
 

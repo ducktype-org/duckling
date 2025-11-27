@@ -80,9 +80,9 @@ def run(ctx: GlobalContext) -> int | None:
         action(ctx, args)
 
 
-# NOTE: Idealnie zamiast na `list[str]`, operowalibyśmy na `argparse.Namespace` i wywoływali parser, żeby doparsować matche z aliasów.
-# Tylko wtedy trzeba ręcznie handlować `--help` i bawić się z unknown_commands.
-# Chociaż i tak w Pythonie się nie da, bo argparse jest ułomny.
+# NOTE: Ideally, instead of `list[str]`, we would operate on `argparse.Namespace` and call the parser to parse matches from aliases.
+# But then we would have to manually handle `--help` and deal with unknown_commands.
+# Although it's impossible in Python anyway, because argparse is flawed.
 def fix_user_typos(ctx: GlobalContext, qp_args: list[str], cli_commands: list[str]) -> None:
     """
     Try to fix first positional command with Levenshtein distance.
@@ -165,16 +165,16 @@ def expand_user_aliases(ctx: GlobalContext, qp_args: list[str], already_expanded
 
 
 # NOTE: This is ugly hack.
-# Problem: Levenshtein i aliasy patrzą na pierwszy argument bez `-` na początku, a powinny patrzyć na pierwszą komendę (argument traktowany jako komenda).
+# Problem: Levenshtein and aliases look at the first argument without a leading `-`, but they should look at the first command (argument treated as a command).
 #
-# Dlaczego: jeśli odpalimy `qp -C dir build`, to levenshtein i aliasy będą targetować `dir`, a nie `build`.
+# Why: if we run `qp -C dir build`, Levenshtein and aliases will target `dir` instead of `build`.
 #
-# Ładne rozwiązanie: Levenshtein i aliasy powinny operować na jakimś typie od parsera i wywoływać parser rekurencyjnie.
+# Clean solution: Levenshtein and aliases should operate on some parser-derived type and call the parser recursively.
 #
-# Dlaczego ładne rozwiązanie nie działa (w pythonie): bo argparse rzuca wyjątek, gdy mu się coś nie spodoba.
+# Why the clean solution doesn't work (in Python): because argparse raises an exception when it encounters something it doesn't like.
 #
-# (Mogę wysłać prototyp, jak to zrobić w ruście).
+# (I can send a prototype of how to do this in Rust).
 #
-# Ale to i tak nie zawsze działa xD, np `qp -C --color --color=always ...`, bo argparse twierdzi, że `--color` nie idzie do `-C`...
+# But this doesn't always work anyway xD, e.g. `qp -C --color --color=always ...`, because argparse claims that `--color` doesn't belong to `-C`...
 def _ugly_check_should_skip_next_arg(current: str) -> bool:
     return current in {"--directory", "-C", "--color"}

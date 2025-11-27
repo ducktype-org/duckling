@@ -90,9 +90,10 @@ private:
 	}
 
 	void exportsForLSPTest() {
-		ASSERT_EQUAL(lang_def::getKeywords().size(), 79);
-		ASSERT_EQUAL(lang_def::getSpecials().size(), 6);
+		ASSERT_EQUAL(lang_def::getKeywords().size(), 83);
+		ASSERT_EQUAL(lang_def::getSpecials().size(), 7);
 		ASSERT_EQUAL(lang_def::getOperators().size(), 27);
+		ASSERT_EQUAL(lang_def::getNumericTypeSpecifiers().size(), 15);
 	}
 };
 

@@ -5,7 +5,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 namespace compiler::lir {
-	struct KeyOf_LowerToLirFunction {
+	struct KeyOf_LowerToLIRFunction {
 		CRef<mir::Function> function;
 
 		[[nodiscard]]
@@ -16,14 +16,14 @@ namespace compiler::lir {
 	 * @brief Lower a MIRFunction to a LIRFunction
 	 * Generates TSL types
 	 */
-	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>)
+	DECLARE_QUERY(LowerToLIRFunction, KeyOf_LowerToLIRFunction, CRef<Function>, ({}))
 
 	/**
 	 * @brief Creates a LIR function that call each function in the list (in the provided order).
 	 * This was useful to create one module ctor, that calls all ctors of globals
 	 * In the provided order. Same for dtors.
 	 */
-	Function fromLIRFunctions(
+	Function createFunctionInvoker(
 		query::Context&                    ctx,
 		const std::vector<CRef<Function>>& functions,
 		const base::StrID&                 mangled_name

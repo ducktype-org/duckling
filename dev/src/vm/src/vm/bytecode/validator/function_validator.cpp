@@ -2,18 +2,17 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/ref.hpp>
-#include <base/variant.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -27,44 +26,23 @@ namespace {
 	// Helpers for validation, mainly `ext_*` instructions
 	using namespace instructions;
 
-	template<typename T, typename Tup>
-	struct IsIn;
-
-	template<typename T, typename... Ts>
-	struct IsIn<T, std::tuple<Ts...>> {
-		static constexpr bool VALUE = (std::same_as<T, Ts> || ...);
-	};
-
-	template<typename... Tups>
-	using Cat = decltype(std::tuple_cat(std::declval<Tups>()...));
-
-	template<typename Tup>
-	struct HoldsOneOfImpl;
-
-	template<typename... Ts>
-	struct HoldsOneOfImpl<std::tuple<Ts...>> {
-		constexpr bool operator()(const Instruction& instr) {
-			return (std::holds_alternative<Ts>(instr) || ...);
-		}
-	};
-
-	template<typename Tup>
-	constexpr bool holdsOneOf(const Instruction& instr) {
-		return HoldsOneOfImpl<Tup>{}(instr);
-	}
-
-	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
-	using DeinitializingInstructions
-		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
-	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
-	template<typename T>
-	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
-	template<typename T>
-	concept DeinitializingInstruction = IsIn<T, DeinitializingInstructions>::VALUE;
+	using ValidLastInstructions      = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	using ExtensionTypes             = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
+	using DeinitializingInstructions = std::tuple<
+		Op_deinit,
+		Op_call_func,
+		Op_call_builtinfunc,
+		Op_call_cfunc,
+		Op_virtual_call_lptr_method>;
+	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
 
 	template<typename T>
-	concept CallingInstruction = IsIn<T, CallingInstructions>::VALUE;
+	concept Extension = base::IsTupleMember<T, ExtensionTypes>;
+	template<typename T>
+	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
+
+	template<typename T>
+	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
 
 	template<Extension E>
 	struct ExtensionMetadata;
@@ -103,18 +81,18 @@ namespace {
 
 	template<typename... Ts>
 	struct CatRequired<std::tuple<Ts...>> {
-		using Value = Cat<typename ExtensionMetadata<Ts>::RequiredAfter...>;
+		using Value = base::tuple_cat_t<typename ExtensionMetadata<Ts>::RequiredAfter...>;
 	};
 
 	template<Extension E>
 	bool acceptsExtension(CRef<Instruction> instr) {
-		return holdsOneOf<
-			Cat<typename ExtensionMetadata<E>::RequiredAfter,
-		        typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
+		return base::variantHoldsOneOf<base::tuple_cat_t<
+			typename ExtensionMetadata<E>::RequiredAfter,
+			typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
 	}
 
 	bool requiresSomeExtension(CRef<Instruction> instr) {
-		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
+		return base::variantHoldsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
 	}
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
@@ -197,7 +175,7 @@ public:
 	/**
 	 * @brief Pops the top element from the stack state and updates local variable mappings.
 	 * Can be only used with instructions which effectively deinitialize the local stack
-	 * (deinit, call_func, virtual_call and call_builtin_func)
+	 * (deinit, call_func, virtual_call and call_builtinfunc)
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
@@ -237,6 +215,7 @@ class FunctionValidator {
 	const TypeMetadata&                              type_metadata;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
@@ -251,6 +230,8 @@ class FunctionValidator {
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
+                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
             return &signatures.at(instr.arg0.function_name);
 		}();
 
@@ -281,7 +262,7 @@ class FunctionValidator {
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
-		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+		// https://github.com/ducktype-org/duckling/issues/962
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
@@ -428,6 +409,12 @@ class FunctionValidator {
 						}
 					}
 				}
+				variant_case(opargs::StackLocalOpq, local) {
+					if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+					CRef<TypeOfData> type = current_stack.at(local.var_name);
+					if (!std::holds_alternative<OpaqueType>(*type))
+						throw InvalidArgumentTypeError(arg);
+				}
 				variant_case_novalue(opargs::Immediate) {}
 				variant_case(opargs::Type, type_value) {
 					if (!tod_map.contains(type_value.type_name)) throw UnknownTypeError(arg);
@@ -442,6 +429,12 @@ class FunctionValidator {
 					auto generic_arg = opargs::OpCodeArg{ function_value };
 					if (!builtins::isBuiltinFunction(fun_name))
 						throw InvalidBuiltinFunctionError(generic_arg);
+				}
+				variant_case(opargs::ExtCFunctionName, function_value) {
+					auto fun_name    = function_value.function_name;
+					auto generic_arg = opargs::OpCodeArg{ function_value };
+					if (!ext_c_signatures.contains(fun_name))
+						throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
@@ -593,6 +586,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
+			variant_case(Op_mov_lopq_lopq, instr) {
+				const auto& dst_type = std::get<OpaqueType>(*current_stack.at(instr.arg0.var_name));
+				const auto& src_type = std::get<OpaqueType>(*current_stack.at(instr.arg1.var_name));
+				if (dst_type.name != src_type.name) throw OpaqueTypeMismatchError(instr);
+			}
+			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}
 			variant_case_novalue(Op_add_l64_imm) {}
 			variant_case_novalue(Op_add_l32_l32) {}
@@ -744,7 +743,8 @@ class FunctionValidator {
 			variant_case_novalue(Op_jmpIf_label) {}
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
-			variant_case_novalue(Op_call_builtin_func) {}
+			variant_case_novalue(Op_call_builtinfunc) {}
+			variant_case_novalue(Op_call_cfunc) {}
 			variant_case(Op_virtual_call_lptr_method, instr) {
 				// For a method all to be valid, the called method has to be declared as a virtual
 				// method in this inheritable or it's superclasses or interfaces.
@@ -1004,7 +1004,7 @@ class FunctionValidator {
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
-		        && !holdsOneOf<ValidLastInstructions>(function.body.back()))) {
+		        && !base::variantHoldsOneOf<ValidLastInstructions>(function.body.back()))) {
 			throw PathWithoutEndError(function.name);
 		}
 	}
@@ -1100,7 +1100,11 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_call_builtin_func, instr) {
+				variant_case(Op_call_builtinfunc, instr) {
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
+				variant_case(Op_call_cfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
@@ -1141,12 +1145,14 @@ public:
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
 		  globals(globals),
 		  signatures(signatures),
+		  ext_c_signatures(ext_c_signatures),
 		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
@@ -1162,16 +1168,19 @@ public:
 	}
 };
 
-vm::code::Function vm::code::validateAndExtractReachableCode(
+vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const ObjIdNameMap<TypeOfData>&                  tod_map,
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	FunctionValidator validator(tod_map, type_metadata, globals_map, signatures, function);
+	FunctionValidator validator(
+		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function
+	);
 
 	Function new_function;
 	new_function.name         = function.name;

@@ -1,14 +1,15 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -40,7 +41,7 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
@@ -50,18 +51,18 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			lir::LirGlobal lir_glob = lir::LirGlobal::fromHOUT(ctx, hout_glob);
+			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
 
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
-						= &ctx.query<mir::LowerGlobalDataToMirCtor>({ hout_glob })->value();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
 
 					mir_func->debugPrint(std::cerr);
 					std::cerr << "\n\n\n";
 
-					auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+					auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n\n\n";
@@ -71,9 +72,7 @@ int main(int argc, const char* argv[]) {
 					llvm_module.addFunctionToModule(ctx, lir_func);
 				}
 				variant_case(helios::HOUTGlobalConst, cnst) {
-					// @TODO: create global constant ctors if nessesary
-					std::cerr << "skiping generation of ctor for global constant: "
-							  << hout_glob.original_name.strView() << "\n";
+					// @future #1554 -- const ctors will probably be added here
 				}
 			}
 
@@ -89,12 +88,14 @@ int main(int argc, const char* argv[]) {
 	// Add module ctors and dtors to module CTOR and DTOR functions
 	if (!ctors.empty()) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// @TODO: fix this: add proper module global ctor mangling
-			auto module_ctor = lir::fromLIRFunctions(
+			auto module_ctor = lir::createFunctionInvoker(
 				ctx,
 				ctors,
-				base::StrID(
-					base::strConcat("_MODULE_CTOR_", frontend::moduleName(root).str()).c_str()
+				compiler::helios::mangler::getSpecialMangledName<
+					compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LIRModuleID{
+						frontend::moduleName(root) }
 				)
 			);
 
@@ -108,13 +109,15 @@ int main(int argc, const char* argv[]) {
 			else
 				std::cerr << "LLVM verification failed\n\n";
 
-			// @TODO: fix this: add proper module global dtor mangling
 			// @TODO: add legit dtors
-			auto module_dtor = lir::fromLIRFunctions(
+			auto module_dtor = lir::createFunctionInvoker(
 				ctx,
 				{},
-				base::StrID(
-					base::strConcat("_MODULE_DTOR_", frontend::moduleName(root).str()).c_str()
+				compiler::helios::mangler::getSpecialMangledName<
+					compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+					ctx,
+					compiler::helios::mangler::special_symbol_keys::LIRModuleID{
+						frontend::moduleName(root) }
 				)
 			);
 
@@ -131,12 +134,12 @@ int main(int argc, const char* argv[]) {
 	}
 
 	for (auto& fun: top_level->functions) {
-		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMirFunction>({ fun })->value();
+		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->value();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n\n\n";
 
-		auto lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
+		auto lir_fun = query::entryPoint<compiler::lir::LowerToLIRFunction>({ mir_fun });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			lir_fun->debugPrint(ctx, std::cerr);

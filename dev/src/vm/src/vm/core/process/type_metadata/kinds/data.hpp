@@ -3,8 +3,9 @@
 #include "../definitions.hpp"
 #include "../inheritance_metadata.hpp"
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/collections/optional.hpp>
 
 #include <unordered_map>
 #include <vector>

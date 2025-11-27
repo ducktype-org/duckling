@@ -6,16 +6,14 @@
 
 #pragma once
 
-#include "helios/scope_symbol_id.hpp"
-#include "elements/expr.hpp"  // IWYU pragma: export
+#include "../scope_symbol_id.hpp"
+#include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "hout_fd.hpp"        // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
+#include <ctv/ctv.hpp>
+#include <string_id/string_id.hpp>
 
-#include <base/box.hpp>
-#include <base/string_id.hpp>
-
-#include <query_framework/query_int.hpp>
+#include <base/pointers/box.hpp>
 
 #include <memory>
 #include <variant>
@@ -24,7 +22,11 @@
 namespace compiler::helios {
 
 	// for friend:
-	struct ImplementationOf_QueryCodeOFFun;
+	struct ImplementationOf_QueryDeclOfFun;
+
+	namespace houtgen {
+		struct ImplementationOf_QueryImplicitClassConstructor;
+	}
 
 	namespace code {
 		// Forward declaration:
@@ -33,36 +35,20 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Storage for heavy function data,
-	 * in a way that makes it cheap to copy, since
-	 * we want HOUTFunction to be a copyable object.
-	 * @note use of shared_ptr's is intentional, as they
-	 * work well for incomplete types, and fit the use case.
-	 * In the future we might optimize it to single (or zero) shared_ptr, but
-	 * that will require some boilerplate.
+	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
-	struct HOUTFunctionContent {
-		std::shared_ptr<const std::vector<code::Parameter>> parameters;
-		std::shared_ptr<const code::CodeBlock>              body;
-	};
-
-	/**
-	 * @brief placeholder for functions, methods, etc
-	 */
-	struct HOUTFunction {
-		// @TODO:
+	struct HOUTFunctionDeclaration final {
+		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
-		// @TODO: decide if HOUT functions should contain its HELIOS SymID
+		HOUTFunctionDeclaration() = delete;
 
-		HOUTFunction() = delete;
-
-		HOUTFunction(const HOUTFunction&) = default;
-		HOUTFunction(HOUTFunction&&)      = default;
+		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = delete;
+		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
-		 * @note it is used for hashes, and == only
-		 * @note For now it works,
+		 * @note it is used for hashes
+		 * @note For now, it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
 		 */
@@ -70,41 +56,59 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
-		HOUTFunctionContent content;
+		tsh::SymbolType<> return_type;
 
-		tsh::FunctionAbstractType type;
-
-		/**
-		 * @brief Lifetime scope, thats higher
-		 * then any lifetime scope in the function (including parameters)
-		 */
-		helios::ScopeID top_lifetime_scope;
-
-		[[nodiscard]]
-		std::string debugPrint() const;
+		std::vector<code::Parameter> parameters;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		bool operator==(const HOUTFunction& oth) const {
-			return original_symbol == oth.original_symbol;
-		}
+		[[nodiscard]]
+		std::string debugPrint() const;
 
 	private:
-		/**
-		 * Construct a HOUT Function object.
-		 * @param symbol The symbol of the function.
-		 * @param ctx The query context to resolve the function's properties.
-		 */
-		HOUTFunction(SymID symbol, query::Context& ctx);
+		HOUTFunctionDeclaration(
+			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+		);
+		friend ImplementationOf_QueryDeclOfFun;
+	};
 
-		friend ImplementationOf_QueryCodeOFFun;
+	/**
+	 * @brief HOUT representation for function, etc. It is declaration extended by function content.
+	 * @note it should be used for all function-like entities (macros, methods, etc.)
+	 */
+	struct HOUTFunction final {
+	private:
+		HOUTFunction(
+			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
+		);
+		friend struct ImplementationOf_QueryCodeOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
+
+	public:
+		HOUTFunction() = delete;
+
+		CRef<HOUTFunctionDeclaration> declaration;
+
+		/**
+		 * @note use of shared_ptr's is intentional, as they
+		 * work well for incomplete types, and fit the use case.
+		 * In the future we might optimize it to single (or zero) shared_ptr, but
+		 * that will require some boilerplate.
+		 */
+		std::shared_ptr<const code::CodeBlock> body;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const;
+
+		[[nodiscard]]
+		std::string debugPrint() const;
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst final {
-		CompileTimeValue value;
+		ctv::CompileTimeValue value;
 	};
 
 	struct HOUTGlobalVariable final {
@@ -146,13 +150,13 @@ namespace compiler::helios {
 		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 
 	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTUnit {
+	struct HOUTUnit final {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?
@@ -166,6 +170,6 @@ namespace compiler::helios {
 		std::vector<HOUTFunction> functions;
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 }

@@ -1,11 +1,11 @@
 /**
- * @file lexerContext.hpp
+ * @file lexer.cpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
 #include "lexer.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <token_source/source.hpp>

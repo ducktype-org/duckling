@@ -1,4 +1,4 @@
-const x: i32 = 2137;
+const x: i32 = 1235;
 alias a = x;
 namespace N2 {
   alias b = a;
@@ -9,7 +9,7 @@ using n1.*;
 
 struct T {
   var x;
-  using x.*;
+  using x.a.b.c.*;
 }
 
 var t: T;

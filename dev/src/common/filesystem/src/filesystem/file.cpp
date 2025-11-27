@@ -2,10 +2,9 @@
 
 #include <filesystem_private/vfs.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/raw_view.hpp>
-#include <base/ref.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/raw_view.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <algorithm>
 #include <filesystem>
@@ -302,19 +301,6 @@ namespace fs {
 			ofs << new_content;
 			if (ofs.fail()) CORE_PANIC("Failed to write to file: " + path.string());
 		}
-	}
-
-	u64 File::queryUnstablePerfectHash() const {
-		static u64                      next_hash = 0;
-		static base::HashMap<File, u64> hash_map;
-
-		// @Future: use atMaybe
-		if (hash_map.contains(*this)) return hash_map.at(*this);
-
-		auto hash = next_hash++;
-
-		hash_map.put(*this, hash);
-		return hash;
 	}
 
 	File File::createSubFile(std::string_view new_file_content, std::string_view custom_name) const {

@@ -1,10 +1,9 @@
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -43,14 +42,14 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
 	for (auto& glob_data: top_level.glob_data) {
 		if (std::holds_alternative<helios::HOUTGlobalConst>(glob_data.value)) continue;
 		CRef mir_fun
-			= &query::entryPoint<compiler::mir::LowerGlobalDataToMirCtor>({ glob_data })->value();
+			= &query::entryPoint<compiler::mir::LowerGlobalDataToMIRCtor>({ glob_data })->value();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";
@@ -58,7 +57,7 @@ int notMain(int argc, const char* const* argv) {
 
 
 	for (auto& fun: top_level.functions) {
-		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMirFunction>({ fun })->value();
+		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->value();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";

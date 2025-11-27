@@ -8,9 +8,9 @@
  */
 #pragma once
 
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
@@ -18,6 +18,9 @@
 #include <cstddef>
 
 namespace vm {
+	namespace low {
+		struct LowFuncData;
+	}
 
 	struct FlagData {
 		bool flag;
@@ -41,18 +44,6 @@ namespace vm {
 		std::byte* local_stack = nullptr;
 
 		FlagData flags{};
-
-		/**
-		 * @brief Size of arguments that were passed to a function called by this one.
-		 * Needed to restore the local_stack_head when returning from a function.
-		 */
-		u64 called_func_arg_size = 0;
-
-		/**
-		 * @brief Size of the return value of the function called by this one.
-		 * Needed to restore the local_stack_head when returning from a function.
-		 */
-		u64 called_func_ret_size = 0;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type
@@ -82,6 +73,13 @@ namespace vm {
 		 * Used when new block is created on the local stack.
 		 */
 		u64 local_stack_head = 0;
+
+		/**
+		 * @brief Function linked to the frame.
+		 * If frame doesn't change, but a function does (e.g. tailcall), this pointer should be
+		 * updated accordingly, so that it's always valid.
+		 */
+		MCRef<low::LowFuncData> current_function;
 
 		void resetFrameData() { *this = Frame(); }
 	};

@@ -2,27 +2,30 @@
  * @file chain_expr.cpp
  * @author Wojciech Rzepliński
  */
+
 #include "chain_expr.hpp"
 
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios/hout/visitors.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/get_expr_symid.hpp>
-#include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
-#include <typesystem/higher/types.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
@@ -126,7 +129,7 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 
 		/**
-		 * The temporaty buffor for the currently built value from left to current place of
+		 * The temporary buffor for the currently built value from left to current place of
 		 the chain. So for example after processing "a.b.c" it will contain hout expr:
 		 "access(access(a, field=b), field=c))"".
 		 */
@@ -177,6 +180,102 @@ namespace compiler::helios::code {
 			return elem.value().dynamicCast<T>().has_value();
 		}
 
+		class AmbiguousCallableCandidates final: public dia::Error {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "The expression could refer to multiple callable symbols, at least one of "
+					   "which is not a function.";
+			}
+
+			[[nodiscard]]
+			std::string toStringDetailed() const override {
+				return "The expression could refer to multiple callable symbols, at least one of "
+					   "which is not a function. It must either refer to a set of overloaded "
+					   "functions, or a single symbol with a defined (possibly overloaded) call "
+					   "operator.";
+			}
+
+		public:
+			[[nodiscard]] Domain getDomain() const override { return Domain::Lookup; }
+
+			explicit AmbiguousCallableCandidates(const dia::SourcePosition& source_position):
+				  Error(source_position) {}
+
+			class Candidate final: public dia::NoteWithPosition {
+			protected:
+				[[nodiscard]] std::string toStringBrief() const override {
+					return "Candidate defined here.";
+				}
+
+			public:
+				explicit Candidate(const dia::SourcePosition& source_position):
+					  NoteWithPosition(source_position) {}
+			};
+		};
+
+		/**
+		 * @brief Resolves a set of symbols which act as callees into a set of function symbols.
+		 *
+		 * The resolution follows the following steps:
+		 * 1. If the set consists of only function symbols, return them as is.
+		 * 2. If the set consists of multiple symbols, but one of them is not a function symbol,
+		 *    log an error and return an empty set.
+		 * 3. Otherwise, the set consists of a single non-function symbol. Then, look up
+		 *    its call operators (like `operator()`, or constructors of a class).
+		 *
+		 * This implements
+		 * https://docs.duckling.pl/duckling/writing_code/expressions/expression_types/call.html#callee-expression
+		 *
+		 * @param looked_up_callees The result of the lookup for the function being called.
+		 * @return Candidates after resolution of functions vs call operators.
+		 */
+		[[nodiscard]]
+		query::QResult<std::vector<SymID>, errors::Failed> getCallableCandidates(
+			const std::vector<SymID>& looked_up_callees
+		) const {
+			// If all candidates are functions, return them as is.
+			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+					return kind(symbol) == SymbolKind::Function
+				        || kind(symbol) == SymbolKind::FunctionDeclaration
+				        || kind(symbol) == SymbolKind::BuiltinFunction;
+				}))
+				return looked_up_callees;
+
+			// Check error condition and report error.
+			if (looked_up_callees.size() > 1) {
+				auto error = makeBox<AmbiguousCallableCandidates>(
+					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+				);
+				for (const auto& candidate: looked_up_callees) {
+					error->addNote(makeBox<AmbiguousCallableCandidates::Candidate>(
+						stmt(query_ctx, candidate).value()->getSourcePosition()
+					));
+				}
+				query_ctx.log(std::move(error));
+				return query::QError(errors::Failed());
+			}
+
+			// We have a single non-function candidate. Perform lookup for its call operators.
+			// @TODO: #982 #1532 Perform proper lookup in type for different cases.
+			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
+			case SymbolKind::Class: {
+				// Retrieve constructors of the class.
+				// @TODO: #1290 Handle auxiliary constructors.
+				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
+				                      ->expect("Class symbol did not yield a class type")
+				                      .getType()
+				                      .as<tsh::ClassAbstractType>();
+				const auto ctor
+					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
+				return std::vector{ ctor->declaration->original_symbol };
+			}
+			default:
+				CORE_PANIC("Not implemented yet (", name(symbol), ")");
+			}
+			CORE_UNREACHABLE();
+		}
+
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
@@ -193,11 +292,71 @@ namespace compiler::helios::code {
 					"HOUT call with invalid bracket type: ", char(call_expr->getType())
 				));
 			}
-			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			auto lookup_result
+			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			// @TODO: #1412 fix dealias
+			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			if (callees_q_result.hasError())
+				return query::QError(errors::Failed(callees_q_result.error()));
+			const auto& callees = callees_q_result.value();
 
-			return processFunctionCall(lookup_result, ident->getName(), call_expr);
+			auto res = processFunctionCall(query_ctx, callees, call_expr);
+
+			if (res.hasError()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						ident->getSourcePosition(),
+						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+			return ChainState::ofExpr(std::move(res.value()));
+		}
+
+		/**
+		 * This function has no previous state argument so it is called as a first element in the
+		 * chain.
+		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
+		 * Currently used only for type casts.
+		 */
+		auto processPSTExpr(
+			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState, errors::Failed> {
+			//  @TODO: #1530 This is a temporary mock implementation
+			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
+			if (hout_expr.hasError()) return query::QError(errors::Failed());
+
+			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.value().get())) {
+				auto args = call_expr->getArgs().unlock(query_ctx);
+				if (args->size() != 1) {
+					query_ctx.log(
+						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+							call_expr->getSourcePosition(), "Type cast expects a single argument"
+						)
+					);
+					return query::QError(errors::Failed());
+				}
+				// Iterating over a single argument list, because the pst arguments
+				// have only iterator accessor.
+				for (auto&& arg: *args) {
+					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+					);
+					if (arg_expr.hasError()) return query::QError(errors::Failed());
+
+					auto cast_expr = makeBox<CastExpr>(
+						query_ctx, std::move(arg_expr.value()), literal_type_expr->value_type
+					);
+					return ChainState::ofExpr(std::move(cast_expr));
+				}
+			}
+
+			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+				keyword->getSourcePosition(), "Unsupported keyword literal in call expression"
+			));
+			return query::QError(errors::Failed());
 		}
 
 		/**
@@ -249,50 +408,20 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO write tests for this case when parser will support it
-			// @TODO maybe chose one style of error messages in this file
+			// @note this function is not run yet.
 
-			std::vector<Box<Expr>> call_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
-			}
-			auto expr_type = current_expr->expression_type.getSymbolType();
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = expr_type;
+			// @note: previous mock-implementation of this function
+			// was deleted in PR #1239. See it for reference.
 
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						call_expr->getSourcePosition(), "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
-			}
+			// @TODO: #982 improve type lookup and provide correct
+			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
-			std::vector<base::Box<Expr>> coerced_arguments;
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							call_expr->getSourcePosition(), "Invalid argument type"
-						)
-					);
-					return query::QError(errors::Failed());
-				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
-			}
+			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
-			auto node = makeBox<CallExpr>(
-				query_ctx, std::move(current_expr), std::move(coerced_arguments)
-			);
-			return ChainState::ofExpr(std::move(node));
+			if (res.hasError()) return query::QError(errors::Failed());
+			return ChainState::ofExpr(std::move(res.value()));
 		}
 
 		/**
@@ -314,27 +443,36 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO for now it is a mock as we don't have lookup in type instance and proper helios
-			// access expr #520.
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
 			const auto& looked_up_symbols = lookup_result->getAsSingle();
+			// Note that if multiple symbols were found, it results in an error and enters
+			// the following if statement. This is temporary, as symbol ambiguity should be
+			// handled differently than through dynamic field access.
 
 			if (looked_up_symbols.hasError()) {
-				auto node = makeBox<AccessExpr>(
-					query_ctx, std::move(current_expr), expr_access->getName().value
-				);
-				return ChainState::ofExpr(std::move(node));
-			} else {
-				auto sym = looked_up_symbols.value().back();
-				if (kind(sym) == SymbolKind::Namespace) {
-					result_sequence.push_back(std::move(current_expr));
-					return ChainState::ofNamespaceLike(sym);
-				}
+				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
+				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
+				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::QError(errors::Failed());
 			}
+
+			const auto sym = looked_up_symbols.value().back();
+			if (kind(sym) == SymbolKind::Field) {
+				auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
+				return ChainState::ofExpr(std::move(node));
+			} else if (kind(sym) == SymbolKind::Namespace) {
+				result_sequence.push_back(std::move(current_expr));
+				return ChainState::ofNamespaceLike(sym);
+			} else if (kind(sym) == SymbolKind::Method) {
+				throw base::NotYetImplemented(
+					"Handling of access to method without a call is not implemented yet"
+				);
+			}
+			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
+			return query::QError(errors::Failed());
 		}
 
 		/**
@@ -364,7 +502,7 @@ namespace compiler::helios::code {
 
 		/**
 		 * Case when we have an access expression followed by a call expression,
-		 * and current state is an expression, for example "my_expr[20].foo()".
+		 * and current state is an expression, for example "my_expr.foo()".
 		   This may result in a method. Method
 		 * parameter overload is possible.
 		 */
@@ -388,74 +526,28 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState, errors::Failed> {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
-			return processFunctionCall(lookup_result, expr_access->getName(), call_expr);
+
+			// @TODO: #1412 fix dealias
+			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			if (callees_q_result.hasError())
+				return query::QError(errors::Failed(callees_q_result.error()));
+			const auto& callees = callees_q_result.value();
+
+			auto res = processFunctionCall(query_ctx, callees, call_expr);
+			if (res.hasError()) {
+				query_ctx.log(
+					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
+						expr_access->getName().position,
+						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
+					)
+				);
+				return query::QError(errors::Failed());
+			}
+			return ChainState::ofExpr(std::move(res.value()));
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
-		/**
-		 * Helper function of @p processPSTExpr that processes a function call given the
-		 * lookup result of the function name.
-		 */
-		auto processFunctionCall(
-			CRef<LookupResult>           lookup_result,
-			const tpc::Identifier&       name,
-			pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ChainState, errors::Failed> {
-			if (lookup_result->isEmpty()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						name.position, base::strConcat("Function '", name.value, "' not found")
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-			// @TODO: make it better #981:
-			auto callee = lookup_result->getAsSingle().value().back();
-
-			std::vector<Box<Expr>> call_arguments;
-			for (auto&& arg: *call_expr->getArgs().unlock(query_ctx)) {
-				auto arg_expr
-					= query_ctx.query<QueryHoutOfExpr>({ arg.unlock(query_ctx)->getExpr() });
-				if (arg_expr.hasError()) return query::QError(errors::Failed());
-				call_arguments.emplace_back(std::move(arg_expr.value()));
-			}
-
-			auto call_type_result = query_ctx.query<QueryTypeOfSymbol>({ callee });
-			if (call_type_result->hasError()) return query::QError(errors::Failed());
-			tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
-
-			if (call_type.getType().getParameterTypes().size() != call_arguments.size()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						name.position, "Invalid number of arguments"
-					)
-				);
-				return query::QError(errors::Failed());
-			}
-
-			std::vector<base::Box<Expr>> coerced_arguments;
-			for (usize i = 0; i < call_type.getType().getParameterTypes().size(); ++i) {
-				auto coerced = coerceExpression(
-					std::move(call_arguments[i]), call_type.getType().getParameterTypes()[i]
-				);
-				if (coerced.hasError()) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							name.position, "Invalid argument type"
-						)
-					);
-					return query::QError(errors::Failed());
-				}
-				coerced_arguments.emplace_back(std::move(coerced.value()));
-			}
-
-			auto identifier_expr = makeBox<IdentifierExpr>(query_ctx, callee);
-			auto node            = makeBox<CallExpr>(
-                query_ctx, std::move(identifier_expr), std::move(coerced_arguments)
-            );
-			return ChainState::ofExpr(std::move(node));
-		}
 
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the
@@ -483,7 +575,7 @@ namespace compiler::helios::code {
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
-		 * Perform a procesing step on the current element of the chain.
+		 * Perform a processing step on the current element of the chain.
 		 * @warning It assumes that the current element exist.
 		 */
 		template<typename T>
@@ -506,7 +598,7 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Perform a procesing step on current element of the chain and next one.
+		 * Perform a processing step on current element of the chain and next one.
 		 * @warning It assumes that the current element and next one exist.
 		 */
 		template<typename T1, typename T2>
@@ -584,6 +676,10 @@ namespace compiler::helios::code {
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
 			    && isNextElement<pst::expr::Call>()) {
 				error = firstStep<pst::expr::IdentifierLiteral, pst::expr::Call>();
+				this->index += 2;
+			} else if (isCurrentElement<pst::expr::KeywordLiteral>()
+			           && isNextElement<pst::expr::Call>()) {
+				error = firstStep<pst::expr::KeywordLiteral, pst::expr::Call>();
 				this->index += 2;
 			} else {
 				error = firstStep<pst::ExprElement>();

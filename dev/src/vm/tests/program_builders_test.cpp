@@ -1,19 +1,14 @@
 /**
  * @file dvm_backend_unit_tests.cpp
  */
-#include <base/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 #include <tester/tester.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/errors.hpp>
 
-#include <sstream>
 
 using namespace vm::code::builders;
 using namespace vm::code::instructions;

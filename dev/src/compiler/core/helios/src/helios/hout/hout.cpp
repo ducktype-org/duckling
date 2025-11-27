@@ -1,14 +1,14 @@
 #include "hout.hpp"
 
-#include "../symbols/simple.hpp"
 #include "elements.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/scopes/scopes.hpp>  // for parent
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/declarations/variable.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -16,13 +16,13 @@
 #include <sstream>
 
 namespace compiler::helios {
-	std::string HOUTUnit::debugPrint() const {
+	std::string HOUTUnit::debugPrint(query::Context& ctx) const {
 		std::string out;
 
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_: glob_data) out += const_.debugPrint();
+		for (auto& const_gd: glob_data) out += const_gd.debugPrint(ctx);
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -33,14 +33,33 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::string HOUTFunction::debugPrint() const {
+	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
+		const SymID symbol, const tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
+	):
+		  original_symbol(symbol),
+		  original_name(name(original_symbol)),
+		  return_type(ret_type),
+		  parameters(std::move(parameters)) {
+		CORE_ASSERT(
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
+				or kind(symbol) == SymbolKind::BuiltinFunction,
+			"Symbol is not a function or function declaration"
+		);
+	}
+
+	u64 HOUTFunctionDeclaration::queryUnstablePerfectHash() const {
+		return original_symbol.queryUnstablePerfectHash();
+	}
+
+	std::string HOUTFunctionDeclaration::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
-		out << original_name.strView() << " : ";
-		out << this->type.toString() << "\n";
+		out << original_name.strView() << " (" << original_symbol.queryUnstablePerfectHash() << ")";
+		out << " : " << "Return type: ";
+		out << this->return_type.toString() << "\n";
 		out << "Parameters: \n";
-		if (content.parameters->empty()) out << "  none\n";
-		for (auto& param: *content.parameters) {
+		if (parameters.empty()) out << "  none\n";
+		for (auto& param: parameters) {
 			out << "  " << param.name.strView() << " : ";
 			out << param.type.toString();
 			if (param.initial_value.has_value()) {
@@ -49,36 +68,40 @@ namespace compiler::helios {
 			}
 			out << "\n";
 		}
-		out << "{\n";
-		for (auto& stmt: content.body->statements) stmt->debugPrint(out, 1);
-		out << "}\n";
 		return out.str();
 	}
 
 	u64 HOUTFunction::queryUnstablePerfectHash() const {
-		// @note: see
-		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
-		return original_symbol.queryUnstablePerfectHash();
+		// @note for now it doesn't depend on body
+		return declaration->queryUnstablePerfectHash();
 	}
 
-	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
-		  original_symbol(symbol),
-		  original_name(name(original_symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")
-	               .getType()),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {
-		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	std::string HOUTFunction::debugPrint() const {
+		std::stringstream out;
+		out << "{\n";
+		for (auto& stmt: body->statements) stmt->debugPrint(out, 1);
+		out << "}\n";
+		return declaration->debugPrint() + out.str();
 	}
 
-	std::string HOUTGlobalData::debugPrint() const {
+	HOUTFunction::HOUTFunction(
+		const CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
+	):
+		  declaration(other),
+		  body(body) {}
+
+	std::string HOUTGlobalData::debugPrint(query::Context& ctx) const {
 		std::stringstream out;
 		variant_match(value) {
 			variant_case(HOUTGlobalConst, const_value) {
-				out << "const " << original_name.strView() << " = " << const_value.value.toString()
-					<< '\n';
+				out << "const " << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
+				std::string decl
+					= type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ";
+				out << decl << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString()
+					<< " = ";
 				val.initial_value.get()->ref()->debugPrint(out);
 				out << '\n';
 			}
@@ -86,7 +109,9 @@ namespace compiler::helios {
 		return out.str();
 	}
 
-	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type):
+	HOUTGlobalData::HOUTGlobalData(
+		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+	):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
 		  data_type(data_type),
@@ -101,17 +126,20 @@ namespace compiler::helios {
 				                                               .value()
 				                                               .unlock(ctx)
 				                                               ->getExpr())
-				                    .expect("Handling errors in HOUT is not supported yet"))
+				                    .expect(
+										"Handling errors in HOUT is not supported yet 2 — "
+										+ name(symbol).str()
+									))
 				  ) };
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
-					  "Handling errors in HOUT is not supported yet"
+					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-			  "Handling errors in HOUT is not supported yet"
+			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
 		  )) {}
 }

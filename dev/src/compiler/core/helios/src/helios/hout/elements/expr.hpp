@@ -2,23 +2,28 @@
 
 #include <helios/scope_symbol_id.hpp>
 
-#include <helios/utils/symbol_list.hpp>
-#include <helios/symbols/symbol_kind.hpp>
-#include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/simple.hpp>
-
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
-#include <base/box.hpp>
-#include <base/ints.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
 
-#include <query_framework/query_int.hpp>
 #include <token_parser_core/common_elements.hpp>
 
 #include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+
+#define FRIEND_MAKEBOX                              \
+	template<class T, class Deleter, class... Args> \
+	friend base::Box<T, Deleter> base::makeBox(Args&&... args);
+
+	/**
+	 * @brief Unique ID for each HOUT Expr element.
+	 * It can be used as session-unstable HOUT Expr element hash.
+	 */
+	STRONG_TYPEDEF_ID(HOUTExprID);
 
 	/**
 	 * @brief Base class for all HOUT expressions.
@@ -32,10 +37,30 @@ namespace compiler::helios::code {
 
 		Expr(tsh::ExpressionType<> expression_type): expression_type(expression_type) {}
 
-		virtual ~Expr()                                  = default;
+		virtual ~Expr() = default;
+
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
+
+		/**
+		 * @brief Deep copy of the expression tree.
+		 * It was needed for the function default argument functionality,
+		 * to copy the default argument into every call site.
+		 * Use with caution.
+		 * @return Box<Expr> ownership of the copy of the expression.
+		 */
+		[[nodiscard]]
+		virtual Box<Expr> clone() const
+			= 0;
+
+		[[nodiscard]]
+		HOUTExprID getID() const {
+			return id;
+		}
+
+	private:
+		HOUTExprID id = HOUTExprID::next();
 	};
 
 	/***********************\
@@ -43,17 +68,43 @@ namespace compiler::helios::code {
 	\***********************/
 
 	/**
-	 * @brief Represents an integer literal value written in the expression.
+	 * @brief Represents a unit literal value: `()`.
+	 *
+	 * It acts as both a value and a type. By default, it is interpreted
+	 * as a value, but it is lazily lifted to a type if necessary.
 	 */
-	struct LiteralIntExpr final: public Expr {
-		// @TODO: ctv + type for consts?
-		// @note: this is a mock
-		i64 value;
-
-		LiteralIntExpr(query::Context& ctx, i64 value);
+	struct LiteralUnitExpr final: public Expr {
+		LiteralUnitExpr(query::Context& ctx);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const override;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralUnitExpr(tsh::ExpressionType<> expression_type);
+	};
+
+	/**
+	 * @brief Represents an numeric literal value written in the expression.
+	 * Stores both integer constants and floating point constants.
+	 */
+	struct LiteralNumericExpr final: public Expr {
+		numeric_value::NumericValue value;
+
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralNumericExpr(tsh::ExpressionType<> expression_type, numeric_value::NumericValue value);
 	};
 
 	/**
@@ -66,6 +117,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralBoolExpr(tsh::ExpressionType<> expression_type, bool value);
 	};
 
 	/**
@@ -83,6 +141,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralStringExpr(tsh::ExpressionType<> expression_type, tpc::StringValue value);
 	};
 
 	/**
@@ -95,6 +160,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralTypeExpr(tsh::ExpressionType<> expression_type, tsh::SymbolType<> value_type);
 	};
 
 	/**
@@ -111,6 +183,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		IdentifierExpr(tsh::ExpressionType<> expression_type, SymID symbol);
 	};
 
 	/**
@@ -132,6 +211,13 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ParenthesisExpr(tsh::ExpressionType<> expression_type, base::Box<Expr> inner);
 	};
 
 	/**
@@ -148,7 +234,27 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
-		IntegerLt,  //< Less than
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatMod,
+		FloatPow,
+
+		// Comparison operators
+		IntegerLt,    // Less then
+		IntegerLteq,  // Less then or equal to
+		IntegerGt,    // Greater then
+		IntegerGteq,  // Greater then or equal to
+		IntegerEq,    // Equal
+		IntegerNeq,   // Not equal
+
+		FloatLt,      // Less then
+		FloatLteq,    // Less then or equal to
+		FloatGt,      // Greater then
+		FloatGteq,    // Greater then or equal to
+		FloatEq,      // Equal
+		FloatNeq,     // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -169,6 +275,18 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BinaryOperatorExpr(
+			tsh::ExpressionType<> expression_type,
+			BuiltinBinary         operation,
+			base::Box<Expr>       lhs,
+			base::Box<Expr>       rhs
+		);
 	};
 
 	/**
@@ -179,9 +297,11 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,
+		Const,
 	};
 
 	/**
@@ -196,6 +316,15 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		UnaryOperatorExpr(
+			tsh::ExpressionType<> expression_type, BuiltinUnary operation, base::Box<Expr> expr
+		);
 	};
 
 	/**
@@ -212,6 +341,18 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		TernaryOperatorExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             condition,
+			Box<Expr>             if_true,
+			Box<Expr>             if_false
+		);
 	};
 
 	/**
@@ -224,6 +365,15 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		TupleTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
+		);
 	};
 
 	/**
@@ -236,19 +386,37 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		VariantTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> subtypes
+		);
 	};
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup, doesn't work.
+	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
+	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
 	 */
 	struct AccessExpr final: public Expr {
-		base::Box<Expr> base;
-		base::StrID     field;
+		Box<Expr> base;
+		SymID     field;
 
-		AccessExpr(query::Context& ctx, base::Box<Expr> base, base::StrID field);
+		AccessExpr(query::Context& ctx, Box<Expr> base, SymID field);
+
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		AccessExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, SymID field);
 	};
 
 	/**
@@ -262,6 +430,17 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CallExpr(
+			tsh::ExpressionType<>        expression_type,
+			base::Box<Expr>              callee,
+			std::vector<base::Box<Expr>> arguments
+		);
 	};
 
 	/**
@@ -270,8 +449,8 @@ namespace compiler::helios::code {
 	 * The last one is also the result of the whole sequence.
 	 *
 	 * Acts like a comma operator in C/C++:
-	 * > the comma operator is a binary operator that evaluates its first operand and discards the
-	 * result, and then evaluates the second operand and returns this value
+	 * > the comma operator is a binary operator that evaluates its first operand and discards
+	 * the result, and then evaluates the second operand and returns this value
 	 */
 	struct SequenceExpr final: public Expr {
 		std::vector<base::Box<Expr>> expressions;
@@ -280,6 +459,70 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		SequenceExpr(tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> expressions);
+	};
+
+	/**
+	 * @brief Represents a chain comparison, like "a < b == c >= d"
+	 * The result is a logical and of each separate comparison.
+	 * @TODO: User defined comparison operators.
+	 */
+	struct ChainComparisonExpr final: public Expr {
+		std::vector<base::Box<Expr>> expressions;
+		std::vector<BuiltinBinary>   operators;
+
+		ChainComparisonExpr(
+			query::Context&              ctx,
+			std::vector<base::Box<Expr>> expressions,
+			std::vector<BuiltinBinary>   operators
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ChainComparisonExpr(
+			tsh::ExpressionType<>        expression_type,
+			std::vector<base::Box<Expr>> expressions,
+			std::vector<BuiltinBinary>   operators
+		);
+	};
+
+	/**
+	 * @brief Represents a type cast expression for builtin types, such as "i64(..)".
+	 *
+	 * CastExpr performs a conversion of the source expression to the specified target type.
+	 * The result is an expression of the target type.
+	 */
+	struct CastExpr final: public Expr {
+		Box<Expr>         source_expr;
+		tsh::SymbolType<> target_type;
+
+		CastExpr(query::Context& ctx, Box<Expr> source_expr, tsh::SymbolType<> target_type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CastExpr(
+			tsh::ExpressionType<> expression_type,
+			Box<Expr>             source_expr,
+			tsh::SymbolType<>     target_type
+		);
 	};
 }
 

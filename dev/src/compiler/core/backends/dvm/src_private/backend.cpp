@@ -1,26 +1,22 @@
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <string_id/string_id.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <query_framework/context.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/memory/memory.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <algorithm>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -54,13 +50,13 @@ namespace {
 
 namespace compiler::backend_vm {
 	namespace {
-		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
-			variant_match(layout()) {
+		vm::code::TypeOfData getTypeFromLayout(CRef<tsl::TypeLayout> layout) {
+			variant_match(layout->getVariant()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
@@ -69,7 +65,7 @@ namespace compiler::backend_vm {
 					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 				}
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					CORE_ASSERT(
 						bits == 16 || bits == 32 || bits == 64 || bits == 80,
 						"Invalid size of float: ",
@@ -82,7 +78,7 @@ namespace compiler::backend_vm {
 				}
 				variant_default {
 					CORE_PANIC(
-						base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+						base::strConcat("Type not handled yet: ", layout->toStringIdentification())
 					);
 				}
 			}
@@ -90,8 +86,8 @@ namespace compiler::backend_vm {
 		}
 
 		vm::code::FuncSignature getDVMSignatureFromLayouts(
-			const std::vector<tsl::TypeLayout>& parameter_layouts,
-			const tsl::TypeLayout&              return_layout
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			const CRef<tsl::TypeLayout>               return_layout
 		) {
 			vm::code::FuncSignature signature;
 			signature.parameters.reserve(parameter_layouts.size());
@@ -103,23 +99,23 @@ namespace compiler::backend_vm {
 			return signature;
 		}
 
-		struct AddLirFuncContext final {
+		struct AddLIRFuncContext final {
 			query::Context&     ctx;
 			CRef<lir::Function> lir_func;
 			Function            bytecode_func;
 
-			base::HashMap<usize, base::StrID>     block_id_to_label;
-			base::Map<lir::LocalRef, base::StrID> lir_local_to_name;
-			base::Map<lir::LocalRef, TypeOfData>  lir_local_types;
+			base::HashMap<usize, base::StrID>        block_id_to_label;
+			base::Map<lir::LIRLocalRef, base::StrID> lir_local_to_name;
+			base::Map<lir::LIRLocalRef, TypeOfData>  lir_local_types;
 
 			// Used to create unique names for temporary values.
 			usize                                                     next_call_id = 0;
-			base::Map<lir::LocalRef, u64>                             variable_to_id;
+			base::Map<lir::LIRLocalRef, u64>                          variable_to_id;
 			base::Map<lir::BlockRef, u64>                             block_to_id;
 			const base::HashMap<base::StrID, TypeOfData>              TYPE_OF_DATA;
 			const base::HashMap<base::StrID, vm::code::FuncSignature> SIGNATURES;
 
-			AddLirFuncContext(
+			AddLIRFuncContext(
 				query::Context&                                            ctx,
 				CRef<lir::Function>                                        lir_function,
 				const vm::ObjIdNameMap<TypeOfData>&                        type_map,
@@ -151,13 +147,13 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Generate `init_lany_type` instruction.
 		 */
-		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
+		void initType(AddLIRFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
 			pushInstruction(
 				ctx.bytecode_func, instructions::Op_init_lany_type(variable_name, type_name)
 			);
 		}
 
-		void initLocals(AddLirFuncContext& ctx) {
+		void initLocals(AddLIRFuncContext& ctx) {
 			auto func_signature = ctx.bytecode_func.signature;
 
 			// Save locals offset
@@ -217,7 +213,7 @@ namespace compiler::backend_vm {
 						signatures.put(
 							func_literal.mangled_name,
 							getDVMSignatureFromLayouts(
-								*func_literal.parameter_layouts, *func_literal.return_type_layout
+								*func_literal.parameter_layouts, func_literal.return_type_layout
 							)
 						);
 					}
@@ -234,13 +230,13 @@ namespace compiler::backend_vm {
 			insertCalledFunctionSignatures(signatures, lir_function);
 		}
 
-		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
+		void registerBlock(AddLIRFuncContext& ctx, lir::BlockRef block) {
 			auto id         = ctx.block_to_id.at(block);
 			auto label_name = base::strConcat("label_", id);
 			ctx.block_id_to_label.put(id, base::StrID(label_name.data()));
 		}
 
-		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
+		void addBlockLabel(AddLIRFuncContext& ctx, lir::BlockRef block) {
 			auto id = ctx.block_to_id.at(block);
 			pushInstruction(ctx.bytecode_func, instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
@@ -287,16 +283,19 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::opargs::OpCodeArg lirOutputToOpArg(
-			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
+		base::Optional<vm::opargs::OpCodeArg> lirOutputToOpArg(
+			AddLIRFuncContext& ctx, const lir::Instruction& lir_instruction
 		) {
-			variant_match(lir_instruction.output.value()) {
-				variant_case(lir::LocalRef, local) {
+			if (!lir_instruction.output.has_value()) return {};
+
+			// @TODO: #1560 handle access into fields.
+			variant_match(lir_instruction.output.value().base) {
+				variant_case(lir::LIRLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
 					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
 				}
-				variant_case(lir::LirGlobal, global) {
-					auto vm_type = getTypeFromLayout(*global.layout);
+				variant_case(lir::LIRGlobal, global) {
+					auto vm_type = getTypeFromLayout(global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 			}
@@ -304,26 +303,31 @@ namespace compiler::backend_vm {
 		}
 
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
-			AddLirFuncContext& ctx, const lir::LIRValue& lir_value
+			AddLIRFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) {
 					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
-				variant_case(lir::LocalRef, local_ref) {
-					auto&& var_type = ctx.lir_local_types[local_ref];
-					return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+				variant_case(lir::LIRPlace, place) {
+					// @TODO: #1560 handle access into fields.
+					variant_match(place.base) {
+						variant_case(lir::LIRLocalRef, local_ref) {
+							auto&& var_type = ctx.lir_local_types[local_ref];
+							return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
+						}
+						variant_case(lir::LIRGlobal, global) {
+							auto vm_type = getTypeFromLayout(global.layout);
+							return outputToOpArg(vm_type, global.mangled_name, true);
+						}
+					}
 				}
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
 				variant_case(lir::FunctionLiteral, function) {
 					return vm::opargs::FunctionName(function.mangled_name);
-				}
-				variant_case(lir::LirGlobal, global) {
-					auto vm_type = getTypeFromLayout(*global.layout);
-					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
@@ -360,11 +364,11 @@ namespace compiler::backend_vm {
 			case lir::Operation::IntegerMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
@@ -403,25 +407,27 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		void handleAddCall(AddLirFuncContext& ctx, std::deque<vm::opargs::OpCodeArg> args) {
-			auto lir_result_argument = args.front();
-			args.pop_front();
+		void handleAddCall(
+			AddLIRFuncContext&                    ctx,
+			std::deque<vm::opargs::OpCodeArg>     args,
+			base::Optional<vm::opargs::OpCodeArg> output
+		) {
 			auto called_func_arg = args.front();
 			args.pop_front();
-
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-
 			auto called_func_signature = ctx.SIGNATURES.at(called_func_name);
-			// Init result type
 
+			// Init result type
 			usize call_id     = ctx.next_call_id++;
 			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
-			auto  func_result_argument = modifyVarNameOpArg(lir_result_argument, result_name);
-			initType(ctx, result_name, called_func_signature.result_type);
+			base::Optional<vm::opargs::OpCodeArg> func_result_argument
+				= output.map([&](const auto o) {
+					  initType(ctx, result_name, called_func_signature.result_type);
+					  return modifyVarNameOpArg(o, result_name);
+				  });
 
 			// Instantiate function parameters on the stack.
-
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
 				std::cerr << "Initializing: " << type_name.str.str() << '\n';
@@ -440,20 +446,22 @@ namespace compiler::backend_vm {
 
 			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
-			pushInstruction(
-				ctx.bytecode_func,
-				{
-					OpKind::mov,
-					lir_result_argument,
-					func_result_argument,
-				}
-			);
-			pushInstruction(
-				ctx.bytecode_func, { instructions::Op_deinit() }
-			);  // Deinit func result
+			if_opt_some(output, lir_result_argument) {
+				pushInstruction(
+					ctx.bytecode_func,
+					{
+						OpKind::mov,
+						lir_result_argument,
+						func_result_argument.value(),
+					}
+				);
+				pushInstruction(
+					ctx.bytecode_func, { instructions::Op_deinit() }
+				);  // Deinit func result
+			}
 		}
 
-		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
+		void addLIRInstruction(AddLIRFuncContext& ctx, const lir::Instruction& lir_instruction) {
 			// Insert a comment about operation type.
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
@@ -467,7 +475,8 @@ namespace compiler::backend_vm {
 			const auto output = lirOutputToOpArg(ctx, lir_instruction);
 
 			// Add output as an argument.
-			std::deque args = { output };
+			std::deque<vm::opargs::OpCodeArg> args{};
+			if_opt_some(output, output_some) args.push_back(output_some);
 
 			// Add other arguments.
 			for (auto&& lir_location: lir_instruction.arguments)
@@ -491,7 +500,7 @@ namespace compiler::backend_vm {
 
 					args.pop_front();
 					args.pop_front();
-					args.push_front(output);
+					args.push_front(output.value());
 				}
 			} else if (kind == OpKind::cmpL || kind == OpKind::ucmpL || kind == OpKind::cmpG
 			           || kind == OpKind::ucmpG || kind == OpKind::cmpEq) {
@@ -525,7 +534,9 @@ namespace compiler::backend_vm {
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
-				handleAddCall(ctx, args);
+				auto args_copy = args;
+				if_opt_some(output, _) args_copy.pop_front();
+				handleAddCall(ctx, args_copy, output);
 				return;
 			}
 
@@ -537,7 +548,7 @@ namespace compiler::backend_vm {
 		}
 	}
 
-	void addTerminator(AddLirFuncContext& ctx, const lir::BlockRef lir_block) {
+	void addTerminator(AddLIRFuncContext& ctx, const lir::BlockRef lir_block) {
 		const auto& terminator = lir_block->terminator;
 
 		pushInstruction(
@@ -602,49 +613,46 @@ namespace compiler::backend_vm {
 		const std::vector<BackendDVMGlobal>&    globals
 	):
 		  module_id(module_id) {
-		CodeCollection                            compiled_types;
 		CodeCollection                            compiled_collection;
 		base::HashMap<base::StrID, FuncSignature> signatures;
 		std::vector<CRef<lir::Function>>          ctors;
 		std::vector<CRef<lir::Function>>          dtors;
 
 		for (const auto& lir_function: functions)
-			insertFunctionDependencies(compiled_types.types, signatures, lir_function);
+			insertFunctionDependencies(compiled_collection.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
-			auto global_type = getTypeFromLayout(*global.lir_global.layout);
-			compiled_types.types.push_back(global_type);
+			auto global_type = getTypeFromLayout(global.lir_global.layout);
+			compiled_collection.types.push_back(global_type);
 
 			base::Optional<Identifier> ctor_name;
 			base::Optional<Identifier> dtor_name;
 
 			if (global.global_ctor.has_value()) {
 				insertFunctionDependencies(
-					compiled_types.types, signatures, global.global_ctor.value()
+					compiled_collection.types, signatures, global.global_ctor.value()
 				);
 				ctor_name = Identifier(global.global_ctor.value()->mangled_name);
 				ctors.emplace_back(global.global_ctor.value());
 			}
 			if (global.global_dtor.has_value()) {
 				insertFunctionDependencies(
-					compiled_types.types, signatures, global.global_dtor.value()
+					compiled_collection.types, signatures, global.global_dtor.value()
 				);
 				dtor_name = Identifier(global.global_dtor.value()->mangled_name);
 				dtors.emplace_back(global.global_dtor.value());
 			}
 
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
+			// GlobalVariables
 			compiled_collection.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
 
-		// Insert and validate types:
-		valid_program.insertCode(compiled_types);
-
 		auto process_function = [&](CRef<lir::Function> lir_function) {
 			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
 
-			AddLirFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
+			AddLIRFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
 
 			initLocals(ctx);
 
@@ -653,7 +661,7 @@ namespace compiler::backend_vm {
 			for (auto&& lir_block: lir_function->block_order) {
 				addBlockLabel(ctx, lir_block);
 				for (auto& lir_instruction: lir_block->instructions)
-					addLirInstruction(ctx, lir_instruction);
+					addLIRInstruction(ctx, lir_instruction);
 
 				addTerminator(ctx, lir_block);
 			}
@@ -665,8 +673,9 @@ namespace compiler::backend_vm {
 		//@TODO: add dtors when implemented
 
 		for (const auto& lir_function: functions) process_function(lir_function);
+
 		// Insert and validate types, global data and functions:
-		valid_program.insertCode(compiled_collection);
+		valid_program = valid_program.tryInsertCode(compiled_collection);
 	}
 
 	CodeCollection Module::build() const { return valid_program.produceValidCodeCollection(); }

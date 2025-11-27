@@ -1,0 +1,18 @@
+# Test case: Ambiguous call due to multiple coercion matches
+fun foo(x: i64) -> i32 = {
+    return 1;
+}
+
+fun foo(x: f64) -> i32 = {
+    return 2;
+}
+
+fun foo(x: i32) -> i32 = {
+    return 3;
+}
+
+fun get_i16() -> i16 = {
+    return 42;
+}
+
+var AMBIGUOUS_COERCION_CALL: i32 = foo(get_i16());

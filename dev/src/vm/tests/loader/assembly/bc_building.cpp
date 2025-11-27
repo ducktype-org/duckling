@@ -1,12 +1,9 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/str_utils.hpp>
+#include <base/str/str_utils.hpp>
 
-#include <vm/api/data/api_error.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
-#include <vm/loader/parser/errors.hpp>
-#include <vm/loader/parser/parser.hpp>
 
 class BCBuildingTests: public VmTestSuite {
 #undef TESTER_CLASS

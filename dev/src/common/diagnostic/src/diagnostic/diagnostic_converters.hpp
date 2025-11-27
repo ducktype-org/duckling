@@ -5,8 +5,10 @@
 #include <ranges>
 
 namespace dia {
-	class DiagnosticToUserConverter {
+	class DiagnosticToUserConverter final {
 	public:
+		DiagnosticToUserConverter() = delete;
+
 		/**
 		 * @brief Convert a Message to a printer::PrinterContent sequence ready to be printed for
 		 * the user to view.
@@ -51,8 +53,10 @@ namespace dia {
 
 	static_assert(DiagnosticToPrinterConverter<DiagnosticToUserConverter>);
 
-	class DiagnosticToJSONConverter {
+	class DiagnosticToJSONConverter final {
 	public:
+		DiagnosticToJSONConverter() = delete;
+
 		/**
 		 * @brief Convert a Message to a printer::PrinterContent sequence representing an
 		 * LSP Diagnostic in JSON format, according to the specification here:

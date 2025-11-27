@@ -3,7 +3,7 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
 	 */
@@ -159,9 +159,33 @@ namespace tsh {
 			return uniqueness;
 		}
 
+		/**
+		 * @brief Determines weather the symbol has a trivial destructor.
+		 *
+		 * It is needed to determine if createing a lifetime flag is needed during LIR lowering.
+		 *
+		 * @return true if the symbol has a trivial destructor, false otherwise.
+		 */
+		[[nodiscard]]
+		bool hasNoOpDestructor() const {
+			if (reference_kind == ReferenceKind::Ref) {
+				// Ref types have trivial destructors, because it do not own its contents.
+				return true;
+			}
+			if (abstract_type.hasNoOpDestructor()) return true;
+			// @TODO #1271: add more cases where destructor is trivial
+			// NOTE: abstract_type check should probably be the last one as it may be expensive
+			return false;
+		}
+
 		[[nodiscard]]
 		SymbolType withReferenceKind(const ReferenceKind new_reference_kind) const {
 			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
+		}
+
+		[[nodiscard]]
+		SymbolType withMutability(const Mutability new_mutability) const {
+			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
 		}
 
 		/**

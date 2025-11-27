@@ -8,7 +8,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Target/TargetMachine.h>
 LLVM_INCLUDE_END()
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 namespace compiler::backend_llvm {
 
@@ -16,14 +16,20 @@ namespace compiler::backend_llvm {
 	 * @brief Helper class of backend_llvm::Module.
 	 * Implements it is a way similar to pimpl idiom.
 	 */
-	struct ModuleImpl {
+	struct ModuleImpl final {
 		Box<llvm::Module>         module;
 		MBox<llvm::TargetMachine> target_machine;
 
-		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
+		explicit ModuleImpl(Box<llvm::Module> module);
 
 		~ModuleImpl() = default;
 
+		[[nodiscard]]
+		MRef<llvm::TargetMachine> getTargetMachine() const {
+			return target_machine.refMut();
+		}
+
+	private:
 		Ref<llvm::TargetMachine> setTargetMachine(const std::string& target_triple);
 
 		friend struct Module;

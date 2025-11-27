@@ -1,8 +1,9 @@
 #pragma once
 
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 

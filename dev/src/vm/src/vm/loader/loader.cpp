@@ -3,35 +3,26 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <string_id/string_id.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
+// #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
 
 #include <expected>
-#include <unordered_map>
-#include <variant>
 #include <vector>
 
 using namespace vm::loader;
@@ -40,7 +31,7 @@ namespace {
 	template<class Instruction>
 	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                       \
+#define HANDLE_INSTR_0ARGS(opcode)                                        \
 	template<>                                                            \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
 		const parser::OpCode& opcode                                      \
@@ -51,7 +42,7 @@ namespace {
 		return instr;                                                     \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                 \
+#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
 	template<>                                                                                 \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
 		const parser::OpCode& opcode                                                           \
@@ -65,7 +56,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                              \
+#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
 	template<>                                                                                         \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
 		const parser::OpCode& opcode                                                                   \
@@ -81,27 +72,31 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
 	}
 
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_OPCODE_0ARGS
-#undef HANDLE_OPCODE_1ARGS
-#undef HANDLE_OPCODE_2ARGS
+#undef HANDLE_INSTR_0ARGS
+#undef HANDLE_INSTR_1ARGS
+#undef HANDLE_INSTR_2ARGS
 
-#define HANDLE_OPCODE(opcode) \
+#define HANDLE_INSTR(opcode) \
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
-#include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/instruction_definitions.hpp>
 	};
 
-#undef HANDLE_OPCODE
+#undef HANDLE_INSTR
 
+	/**
+	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction
+	 * (`vm::code::Instruction`).
+	 */
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
 	}
 }
 
-std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
+std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	const std::vector<fs::File>& files
 ) {
 	match_optional(parser::parse(files)) {
@@ -159,37 +154,51 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<code::CodeCollection>& code_collections
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
 ) {
+	// Skip if no new code was added.
+	if (code_collection.functions.empty() && code_collection.types.empty()
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
+		return {};
+	}
+
 	LoaderLogger log;
 	try {
-		for (const auto& code: code_collections) program = program.newInsertCode(code);
-		return compiler::compile(program);
+		// @note: This function creates a copy of the current program state and tries inserting new
+		// code into it. If it fails, an exception is thrown and `validated_high_program` in the
+		// loader stays unchanged.
+		validated_high_program = validated_high_program.tryInsertCode(code_collection);
+
+		// @note: After successfully inserting code into `validated_high_program` we compile it to
+		// the low level representation. This step cannot fail since the code was already validated.
+		compiler.recompile(validated_high_program);
+		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
 			e.label,
 			[&](Box<SomeValidationError>& err) {
 				for (const auto& instruction: e.jumps)
-					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
+					log.addNote<SomeValidationNote>(
+						err, instruction, code::StackStructureMismatchError::NOTE_MSG
+					);
 			},
 			e.what()
 		);
 	} catch (code::DuplicatedFunctionError& e) {
-		log.logMap<DuplicatedFunctionError>(e.NEW_ELEMENT, [&](auto& err) {
-			log.addNote<DuplicatedFunctionNote>(err, e.PREVIOUS_ELEMENT);
+		log.logMap<DuplicatedFunctionError>(e.new_element, [&](auto& err) {
+			log.addNote<DuplicatedFunctionNote>(err, e.previous_element);
 		});
 	} catch (code::DuplicatedGlobalDataError& e) {
 		log.logMap<DuplicatedGlobalDataError>(
-			e.NEW_ELEMENT,
-			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.PREVIOUS_ELEMENT); },
-			e.NEW_ELEMENT.name.str
+			e.new_element,
+			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.previous_element); },
+			e.new_element.name.str
 		);
 	} catch (code::DuplicatedTypeError& e) {
 		log.logMap<DuplicatedTypeError>(
 			**e.maybeElement(),
-			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.PREVIOUS_ELEMENT); },
-			code::typeName(e.NEW_ELEMENT)
+			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.previous_element); },
+			code::typeName(e.new_element)
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {
@@ -200,10 +209,14 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	return std::unexpected(std::move(log));
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<fs::File>& file_paths
-) {
-	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+	auto opt_code_collection = parseFiles(file_paths);
+	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
+
+CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
+	return compiler.getLowProgram();
+}
+
+vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
