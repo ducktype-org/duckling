@@ -41,13 +41,6 @@ namespace compiler::helios::test_utils {
 	ctv::CompileTimeValue getConstValue(std::string_view chain, ScopeID scope);
 
 	/**
-	 * Get the CTV representing a constant value of a symbol.
-	 * @param sym_id The symbol to compute.
-	 * @return The CTV value of the symbol.
-	 */
-	ctv::CompileTimeValue getConstValue(SymID sym_id);
-
-	/**
 	 * Get the value of type T of the last symbol in a symbol chain in a given scope.
 	 * @tparam T The expected type of the value.
 	 * @param chain The symbol chain to resolve.

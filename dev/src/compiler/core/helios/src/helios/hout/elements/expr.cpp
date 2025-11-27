@@ -11,7 +11,6 @@
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <filesystem/file.hpp>
 #include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
@@ -362,6 +361,9 @@ namespace compiler::helios::code {
 		);
 	}
 
+	/**
+	 * Map a vector of HOUT expressions to their symbol types.
+	 */
 	std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
 		std::vector<tsh::SymbolType<>> types;
 		types.reserve(exprs.size());
