@@ -303,9 +303,6 @@ namespace compiler::lir {
 
 		LIRValue(FunctionLiteral value): value(value) {}
 
-		// TODOP: Do we need == operator?
-		bool operator==(const LIRValue& other) const = default;
-
 		[[nodiscard]]
 		const ValueType& getVariant() const {
 			return value;

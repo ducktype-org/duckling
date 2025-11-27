@@ -26,7 +26,7 @@ namespace vm::code {
 			TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))),
 			TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))),
 
-			// @TODO #656: void size is a thing to discuss.
+			// @TODO: #656 void size is a thing to discuss.
 			TypeOfData(PrimitiveType(base::StrID("void"), 1)),
 
 			TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))),

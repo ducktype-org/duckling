@@ -567,7 +567,6 @@ namespace compiler::backend_vm {
 
 
 			// Transforms arguments.
-			// TODOP: Concept?
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
 			    || kind == OpKind::div || kind == OpKind::udiv || kind == OpKind::mod
 			    || kind == OpKind::umod || kind == OpKind::fadd || kind == OpKind::fsub
@@ -588,7 +587,6 @@ namespace compiler::backend_vm {
 					args.pop_front();
 					args.push_front(output.value());
 				}
-				// TODOP: Concept?
 			} else if (kind == OpKind::cmpEq || kind == OpKind::cmpNeq || kind == OpKind::cmpL
 			           || kind == OpKind::cmpLe || kind == OpKind::cmpG || kind == OpKind::cmpGe
 			           || kind == OpKind::ucmpL || kind == OpKind::ucmpLe || kind == OpKind::ucmpG

@@ -115,8 +115,6 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
-	// TODOP: Is default constr enough?
-	// TODOP: == operator?
 	struct MIRConstant final {
 		ctv::CompileTimeValue value;
 	};

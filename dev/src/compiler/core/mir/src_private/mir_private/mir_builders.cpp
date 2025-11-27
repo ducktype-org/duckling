@@ -202,7 +202,6 @@ namespace compiler::mir {
 	 */
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
-		// TODOP: Phanilas change may not be needed here.
 		local_list.emplaceBack(MIRLocal{ type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);

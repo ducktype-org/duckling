@@ -64,7 +64,6 @@ namespace compiler::lir {
 		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
-	// TODOP: Remove?
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
 		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
@@ -434,7 +433,7 @@ namespace compiler::lir {
 				variant_match(location.getVariant()) {
 					variant_case(
 						mir::MIRConstant, value
-					) {  // @TODO #899 Remove this visit once CTV is VMValue based and stores it's type.
+					) {  // @TODO: #899 Remove this visit once CTV is VMValue based and stores it's type.
 						match_optional(value.value.get<numeric_value::NumericValue>()) {
 							opt_some(numeric) {
 								return std::visit(
