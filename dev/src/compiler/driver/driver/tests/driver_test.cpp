@@ -1,6 +1,6 @@
-#include <driver/module_flags/module_flags.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
+#include <driver/module_flags/module_flags.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/packages.hpp>

@@ -2,7 +2,7 @@
 
 #include "module_flags/module_flags.hpp"  // IWYU pragma: keep
 
-#include <base/str/str_utils.hpp>           // IWYU pragma: export
+#include <base/str/str_utils.hpp>         // IWYU pragma: export
 
 #include <string_view>
 
