@@ -5,8 +5,6 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include "base/box.hpp"
-
 namespace pst {
 	class ForBracketError final: public dia::Error {
 	protected:

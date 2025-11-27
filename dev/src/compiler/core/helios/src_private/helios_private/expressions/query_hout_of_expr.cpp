@@ -165,11 +165,18 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 
+				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
+				} else {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+							stmt->getSourcePosition(), "No builtin operator found"
+						)
+					);
+					// failed
 				}
 			}
 

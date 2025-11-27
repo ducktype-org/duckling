@@ -233,19 +233,3 @@ namespace compiler::tsh {
 		CRef<AbstractTypeImpl> pimpl;
 	};
 }
-
-namespace nlohmann {
-	template<>
-	struct adl_serializer<tsh::AbstractType> {
-		static void to_json(json& j, const tsh::AbstractType type) {
-			j = { { "name", std::vector<std::string>{ type.toString() } },
-				  { "kind", base::enumToStr(type.getKind()).str() } };
-
-			// Handle kind specific serialisation.
-			switch (type.getKind()) {
-			default:
-				break;
-			};
-		}
-	};
-};
