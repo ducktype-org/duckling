@@ -679,11 +679,15 @@ namespace compiler::backend_vm {
 				CORE_ASSERT(
 					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
 				);
+
+				auto return_vm_type = getTypeFromLayout(ctx.lir_func->return_type_layout);
+				auto ret_val_arg    = outputToOpArg(return_vm_type, base::StrID("ret_val"));
+
 				pushInstruction(
 					ctx.bytecode_func,
 					{
 						OpKind::mov,
-						vm::opargs::StackLocal64(base::StrID("ret_val")),
+						ret_val_arg,
 						lirValueToOpArg(ctx, terminator.arguments.at(0)),
 					}
 				);

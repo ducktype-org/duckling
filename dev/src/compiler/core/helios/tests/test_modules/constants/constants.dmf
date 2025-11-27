@@ -62,12 +62,11 @@ fun fib(n: i64) -> i64 = {
    return fib(n - 1i64) + fib(n - 2i64);
 }
 
-# @TODO: #1499 Uncomment when literals are added to MIR.
-# fun fib_on_i32(n: i32) -> i32 = {
-#    if (n < 2) { return n; }
-#    return fib_on_i32(n - 1) + fib_on_i32(n - 2);
-# }
-# const FIB_ON_I32_10 = fib_on_i32(10); # 55
+fun fib_on_i32(n: i32) -> i32 = {
+   if (n < 2) { return n; }
+   return fib_on_i32(n - 1) + fib_on_i32(n - 2);
+}
+const FIB_ON_I32_10 = fib_on_i32(10); # 55
 
 const FIB_10 = fib(10); # 55
 const COMPLEX_VM_CALL: i64 = add(FIB_10, T2); # 55 + 3 = 58

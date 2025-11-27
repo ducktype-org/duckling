@@ -500,7 +500,9 @@ namespace compiler::helios {
 				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
 				CRef<mir::Function> mir_func = &mir_func_result->value();
 				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-
+				std::cout << '\n';
+				lir_func_result->debugPrint(ctx, std::cout);
+				std::cout << '\n';
 				// When lowering the top level function, we store it's mangled name to know which
 				// function to call in the VM.
 				if (func_id == function_sym_id)
