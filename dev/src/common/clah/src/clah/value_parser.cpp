@@ -11,7 +11,6 @@
 #include <filesystem/file.hpp>
 
 #include <charconv>
-#include <iostream>
 
 namespace clah {
 	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
@@ -137,13 +136,9 @@ namespace clah {
 		return { .value = filepath, .raw_source = result.raw_source, .position = result.position };
 	}
 
-	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
-		std::cerr << "Parsing string list from: `" << std::string_view(raw_input.begin()+start, raw_input.end()) << "`\n";
-		
+	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {		
 		auto string_result
 		= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
-
-		std::cerr << "`" << string_result << "`\n";
 
 		// trim spaces from both ends:
 		auto trim_spaces = [](std::string_view sv) -> std::string {

@@ -8,19 +8,11 @@
 
 namespace logger {
 	/**
-	 * Categories of logs.
+	 * Categories of developer logs.
 	 * Feel free to extend/modify as needed.
 	 * When doing so, also update the enableCategoryByStringName function.
-	 *
-	 * @note General category is enabled by default, all other categories are disabled by default.
 	 */
-	enum class LogCategories {
-		/**
-		 * General logs, without specific category.
-		 * Can be also used for user logs that we expect to be always enabled.
-		 * @note Is enabled by default.
-		 */
-		General,
+	enum class DevLogCategories {
 
 		// Common modules:
 		Lexer,        ///< Logs related to lexical analysis.
@@ -43,20 +35,20 @@ namespace logger {
 	/**
 	 * Enables logging for the specified category.
 	 */
-	void enableCategory(LogCategories category);
+	void enableDevCategory(DevLogCategories category);
 
 	/**
 	 * Enables logging for the specified category by its string name.
 	 *
 	 * @note If the category name is unknown, a warning message is printed to std::cerr.
 	 */
-	void enableCategoryByStringName(std::string_view category_name);
+	void enableDevCategoryByStringName(std::string_view category_name);
 
 	namespace internal {
 		/**
 		 * Checks if logging is enabled for the specified category.
 		 */
-		bool isCategoryEnabled(LogCategories category);
+		bool isCategoryEnabled(DevLogCategories category);
 
 		void logMessage(std::string_view message);
 	}
@@ -64,20 +56,17 @@ namespace logger {
 
 /**
  * Macro to log user messages.
- * Message is evaluated only if user logs and logs of the given category are enabled.
+ * Message is evaluated only if user logs are enabled.
  *
- * Usage: CORE_USER_LOG(category, message)
- * Example: CORE_USER_LOG(General, "This is a user log message.");
+ * Usage: CORE_USER_LOG(message)
+ * Example: CORE_USER_LOG("This is a user log message.");
  *
- * @note Category should be one of the enumerators of logger::LogCategories enum.
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
 #define CORE_USER_LOG(category, ...)                                                  \
 	if (logger::enable_user_logs) {                                                   \
-		if (logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
 			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
-		}                                                                             \
 	}
 
 
@@ -94,7 +83,7 @@ namespace logger {
  */
 #define CORE_DEV_LOG(category, ...)                                                   \
 	if (logger::enable_dev_logs) [[unlikely]] {                                       \
-		if (logger::internal::isCategoryEnabled(::logger::LogCategories::category)) { \
+		if (logger::internal::isCategoryEnabled(::logger::DevLogCategories::category)) { \
 			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
 		}                                                                             \
 	}

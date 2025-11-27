@@ -24,7 +24,7 @@ namespace compiler::driver {
 			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
 
 			for (const auto& category_name: debug_options.dev_log_categories)
-				logger::enableCategoryByStringName(category_name);
+				logger::enableDevCategoryByStringName(category_name);
 
 
 			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;

@@ -69,21 +69,31 @@ namespace query::internal {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
-					CORE_DEV_LOG(
-						Query,
-						"[QUERY \"",
-						QueryIntType::QUERY_DATA.name,
-						"\"]: Loading from disk.\n"
-					);
-
+					
 					auto loaded = QueryImplType::loadFromDisc(key);
 
 					if (loaded) {
+						CORE_DEV_LOG(
+							Query,
+							"[QUERY \"",
+							QueryIntType::QUERY_DATA.name,
+							"\"]: Loading from disk.\n"
+						);
+
+
 						// Merge previous graph nodes into current graph
 						// We merge only node_id and its dependencies
 						ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
 						return QueryImplType::store(perfect_hash, loaded.value(), acd);
 					}  // fall through to provide() if loading from disk failure
+
+					CORE_DEV_LOG(
+						Query,
+						"[QUERY \"",
+						QueryIntType::QUERY_DATA.name,
+						"\"]: Query was marked green, but loading from disk failed.\n"
+					);
+
 				}
 			}
 

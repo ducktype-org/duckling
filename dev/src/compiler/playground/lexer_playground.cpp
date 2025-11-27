@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	logger::enableCategory(logger::LogCategories::Lexer);
+	logger::enableCategory(logger::DevLogCategories::Lexer);
 
 	File path(argv[1]);
 	auto source = tokenizer::makeTokenSource(path);

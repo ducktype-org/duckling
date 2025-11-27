@@ -55,7 +55,7 @@ namespace compiler::driver {
 				out += getModuleFullName(
 					getModuleRef(module_id)->getParentModule().value()->getModuleID()
 				);
-				out += ".";
+				out += "/";
 			}
 			out += getModuleRef(module_id)->getName().strView();
 			return out;
@@ -66,7 +66,6 @@ namespace compiler::driver {
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
 			CORE_USER_LOG(
-				General,
 				"[?/?] Compiling ",
 				getModuleFullName(key.module_id),
 				" (",

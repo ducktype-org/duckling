@@ -69,9 +69,9 @@ namespace dia {
 
 
 		/**
-		 * @brief Log a message.
+		 * @brief Add a diagnostic message to the logger.
 		 *
-		 * @param message_ptr A Box to the Message to be logged.
+		 * @param message_ptr A Box to the Message to be added.
 		 */
 		void log(Box<Message> message_ptr);
 

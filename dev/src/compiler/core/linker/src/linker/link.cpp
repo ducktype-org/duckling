@@ -30,7 +30,7 @@ namespace compiler::linker {
 		command.addArg("-o");
 		command.addArg(output.FILE.getFilePath().native());
 
-		CORE_USER_LOG(General, "[?/?] Linking executable: ", output.FILE.getFilePath().name(), "\n");
+		CORE_USER_LOG("[?/?] Linking executable: ", output.FILE.getFilePath().name(), "\n");
 
 		command.execute();
 	}

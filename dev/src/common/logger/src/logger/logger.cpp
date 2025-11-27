@@ -3,19 +3,22 @@
 #include <base/pointers/ref.hpp>
 
 #include <iostream>
-#include <set>
+#include <vector>
 
 namespace logger {
 	namespace {
-		Ref<std::set<LogCategories>> getEnabledCategories() {
-			static std::set<LogCategories> enabled_categories = { LogCategories::General };
+		Ref<std::vector<DevLogCategories>> getEnabledCategories() {
+			static std::vector<DevLogCategories> enabled_categories = { LogCategories::General };
 			return &enabled_categories;
 		}
 	}
 
 	namespace internal {
-		bool isCategoryEnabled(LogCategories category) {
-			return getEnabledCategories()->find(category) != getEnabledCategories()->end();
+		bool isCategoryEnabled(DevLogCategories category) {
+			for (auto& enabled_category: *getEnabledCategories()) {
+				if (enabled_category == category) return true;
+			}
+			return false;
 		}
 
 		void logMessage(std::string_view message) {
@@ -24,7 +27,12 @@ namespace logger {
 		}
 	}
 
-	void enableCategory(LogCategories category) { getEnabledCategories()->insert(category); }
+	void enableDevCategory(DevLogCategories category) { 
+		for (auto& enabled_category: *getEnabledCategories()) {
+			if (enabled_category == category) return;
+		}
+		getEnabledCategories()->push_back(category);
+	 }
 
 /**
  * This macro is made to ensure a compilation error when
@@ -34,7 +42,7 @@ namespace logger {
 #define HANDLE_CATEGORY_NAME(NAME) \
 	else if (category_name == #NAME) enableCategory(LogCategories::NAME);
 
-	void enableCategoryByStringName(std::string_view category_name) {
+	void enableDevCategoryByStringName(std::string_view category_name) {
 		if (false) {}
 		HANDLE_CATEGORY_NAME(General)
 		HANDLE_CATEGORY_NAME(Lexer)
