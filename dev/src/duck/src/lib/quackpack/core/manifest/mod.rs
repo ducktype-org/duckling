@@ -32,7 +32,6 @@ pub struct Manifest {
     dependencies: Dependencies,
     dev_dependencies: Dependencies,
     profiles: Profiles,
-    targets: Targets,
 }
 
 impl Manifest {
@@ -47,7 +46,6 @@ impl Manifest {
         dependencies: Dependencies,
         dev_dependencies: Dependencies,
         profiles: Profiles,
-        targets: Targets,
     ) -> Self {
         Self {
             root_description,
@@ -58,7 +56,6 @@ impl Manifest {
             dependencies,
             dev_dependencies,
             profiles,
-            targets,
         }
     }
 
@@ -100,10 +97,5 @@ impl Manifest {
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
-    }
-
-    /// Get the compiler specific options for target.
-    pub fn targets(&self) -> &Targets {
-        &self.targets
     }
 }

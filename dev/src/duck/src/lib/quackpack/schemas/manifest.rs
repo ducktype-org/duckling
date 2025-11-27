@@ -14,7 +14,6 @@ pub struct Manifest {
     pub dependencies: Option<Dependencies>,
     pub dev_dependencies: Option<Dependencies>,
     pub features: Option<BTreeMap<String, Vec<String>>>,
-    pub targets: Option<BTreeMap<String, CompilerOptions>>,
     pub profiles: Option<BTreeMap<String, CompilerOptions>>,
 
     #[serde(skip)]
@@ -175,8 +174,6 @@ impl DetailedSource {
 
 #[derive(Debug, Deserialize)]
 pub struct DependencyCondition {
-    pub system: Option<Vec<String>>,
-    pub arch: Option<Vec<String>>,
     pub package_features: Option<Vec<String>>,
 }
 

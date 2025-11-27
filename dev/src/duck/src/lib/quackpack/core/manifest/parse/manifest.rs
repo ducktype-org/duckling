@@ -11,7 +11,7 @@ use super::dependency;
 use crate::{
     QpCtx, QuackResult, StrId,
     quackpack::{
-        core::{CompilerSpecificOptions, Features, Manifest, Profiles, RootDescription, Targets},
+        core::{CompilerSpecificOptions, Features, Manifest, Profiles, RootDescription},
         schemas::manifest::{CompilerOptions, Manifest as ManifestSchema},
     },
     static_str_id,
@@ -45,7 +45,6 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: QpCtx<'_>) -> Qua
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
     scope.pop();
     let profiles = Profiles::new(parse_compiler_flags(schema.profiles.as_ref()));
-    let targets = Targets::new(parse_compiler_flags(schema.targets.as_ref()));
     let authors = metadata
         .authors
         .as_ref()
@@ -60,7 +59,6 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: QpCtx<'_>) -> Qua
         dependencies,
         dev_deps,
         profiles,
-        targets,
     ))
 }
 

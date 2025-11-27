@@ -116,14 +116,6 @@ fn parse_features(
 fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Conditions> {
     Conditions::new(
         schema
-            .system
-            .as_ref()
-            .map(|vec| vec_string_to_vec_str_id(vec)),
-        schema
-            .arch
-            .as_ref()
-            .map(|vec| vec_string_to_vec_str_id(vec)),
-        schema
             .package_features
             .as_ref()
             .map(|vec| vec_string_to_vec_str_id(vec)),

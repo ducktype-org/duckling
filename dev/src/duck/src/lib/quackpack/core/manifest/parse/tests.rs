@@ -674,68 +674,6 @@ dependencies:
 }
 
 #[test]
-fn empty_conditions_arch() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: 0.1
-
-dependencies:
-  a:
-    version: 0.1
-    conditions:
-      arch: []
-"#,
-    );
-    let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, QpCtx::new(&ctx));
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(
-        err.all_errors_to_vec(),
-        make_errors_message(
-            &dir,
-            [
-                "when parsing the field `dependencies.a.conditions`",
-                "the field `arch` is present but empty, if you don't want to specify it, remove it from the manifest"
-            ]
-        )
-    );
-}
-
-#[test]
-fn empty_conditions_system() {
-    let (dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: xd
-  version: 0.1
-
-dependencies:
-  a:
-    version: 0.1
-    conditions:
-      system: []
-"#,
-    );
-    let ctx = DuckCtx::default();
-    let result = parse_manifest(&manifest_path, QpCtx::new(&ctx));
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(
-        err.all_errors_to_vec(),
-        make_errors_message(
-            &dir,
-            [
-                "when parsing the field `dependencies.a.conditions`",
-                "the field `system` is present but empty, if you don't want to specify it, remove it from the manifest"
-            ]
-        )
-    );
-}
-
-#[test]
 fn empty_conditions_features() {
     let (dir, manifest_path) = prepare_manifest(
         r#"

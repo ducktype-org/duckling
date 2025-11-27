@@ -41,17 +41,3 @@ impl Profiles {
         self.0.options_for(key)
     }
 }
-
-#[derive(Debug)]
-/// Map `target name <-> options for compiler`
-pub struct Targets(CompilerFlagsMap);
-
-impl Targets {
-    pub fn new(compiler_flags: HashMap<StrId, CompilerSpecificOptions>) -> Self {
-        Self(CompilerFlagsMap(compiler_flags))
-    }
-
-    pub fn options_for(&self, key: StrId) -> Option<&[StrId]> {
-        self.0.options_for(key)
-    }
-}
