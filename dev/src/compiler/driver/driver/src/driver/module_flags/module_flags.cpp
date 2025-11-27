@@ -1,4 +1,4 @@
-#include "configuration.hpp"
+#include "module_flags.hpp"
 
 namespace compiler::driver {
 	constinit bool llvm_dump_ir  = false;

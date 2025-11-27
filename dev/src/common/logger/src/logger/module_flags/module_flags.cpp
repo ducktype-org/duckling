@@ -1,4 +1,4 @@
-#include "configuration.hpp"
+#include "module_flags.hpp"
 
 namespace logger {
 	// Dev logs are disabled by default.
