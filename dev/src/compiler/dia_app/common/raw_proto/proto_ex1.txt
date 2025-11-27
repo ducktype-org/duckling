@@ -1,0 +1,867 @@
+diagnostics {
+  infos {
+    metadata {
+      code: 1001
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "no matching `"
+              }
+            }
+            components {
+              code_component {
+                content: "+"
+              }
+            }
+            components {
+              text_component {
+                content: "` "
+              }
+            }
+            components {
+              text_component {
+                content: "operator"
+              }
+            }
+            components {
+              text_component {
+                content: " for types `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 5
+                content: "T"
+              }
+            }
+            components {
+              text_component {
+                content: "`"
+              }
+            }
+            components {
+              text_component {
+                content: " and `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 8
+                content: "A"
+              }
+            }
+            components {
+              text_component {
+                content: "`"
+              }
+            }
+          }
+        }
+      }
+    }
+    sections {
+      code_section {
+        metadata {
+          filename: "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf"
+          line: 22
+          column: 1
+        }
+        lines {
+          line_number: 22
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "struct K"
+                }
+              }
+              components {
+                code_component {
+                  content: " {"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 23
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "    "
+                    }
+                  }
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "t: "
+                        }
+                      }
+                      components {
+                        code_component {
+                          component_id: 15
+                          content: "T"
+                        }
+                      }
+                      components {
+                        code_component {
+                          content: ";"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 24
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "    fun add(a: "
+                        }
+                      }
+                      components {
+                        code_component {
+                          component_id: 18
+                          content: "A"
+                        }
+                      }
+                      components {
+                        code_component {
+                          content: ") -> "
+                        }
+                      }
+                      components {
+                        code_component {
+                          component_id: 20
+                          content: "T"
+                        }
+                      }
+                      components {
+                        code_component {
+                          content: " = {"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 25
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "        return "
+                        }
+                      }
+                      components {
+                        concat_component {
+                          components {
+                            concat_component {
+                              components {
+                                code_component {
+                                  component_id: 23
+                                  content: "t"
+                                  hl_tags: 0
+                                }
+                              }
+                              components {
+                                code_component {
+                                  content: " + "
+                                  hl_tags: 0
+                                }
+                              }
+                              components {
+                                code_component {
+                                  component_id: 25
+                                  content: "a"
+                                  hl_tags: 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      components {
+                        code_component {
+                          content: ";"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 26
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "    }"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 27
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "}"
+                }
+              }
+            }
+          }
+        }
+        hl_messages {
+          priority: 1
+          message {
+            concat_component {
+              components {
+                text_component {
+                  content: "used here"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  infos {
+    metadata {
+      type: Docs
+      code: 1001
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "type `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 30
+                content: "i32"
+              }
+            }
+            components {
+              text_component {
+                content: "` is a built-in "
+              }
+            }
+            components {
+              text_component {
+                content: "signed"
+              }
+            }
+            components {
+              text_component {
+                content: " integer type stored in "
+              }
+            }
+            components {
+              text_component {
+                content: "32"
+              }
+            }
+            components {
+              text_component {
+                content: " bits"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  infos {
+    metadata {
+      type: Docs
+      code: 1001
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "type `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 37
+                content: "i64"
+              }
+            }
+            components {
+              text_component {
+                content: "` is a built-in "
+              }
+            }
+            components {
+              text_component {
+                content: "signed"
+              }
+            }
+            components {
+              text_component {
+                content: " integer type stored in "
+              }
+            }
+            components {
+              text_component {
+                content: "64"
+              }
+            }
+            components {
+              text_component {
+                content: " bits"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  infos {
+    metadata {
+      type: Note
+      code: 1003
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "declaration of macro `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 44
+                content: "someMacro"
+              }
+            }
+            components {
+              text_component {
+                content: "`"
+              }
+            }
+          }
+        }
+      }
+    }
+    sections {
+      code_section {
+        metadata {
+          filename: "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf"
+          line: 2
+          column: 1
+        }
+        lines {
+          line_number: 1
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "# Simple macro for struct insides"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 2
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "macro someMacro(type: Symbol, name: Symbol) {"
+                          hl_tags: 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 3
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "    return ${"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 4
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "        name: type;"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 5
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "        fun add(a: A) -> type = {"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 6
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "            return name + a;"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 7
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "        }"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 8
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "    };"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 9
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    code_component {
+                      content: "}"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        hl_messages {
+          tag: 1
+          priority: 1
+          type: Note
+          message {
+            concat_component {
+              components {
+                text_component {
+                  content: "declared here"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  infos {
+    metadata {
+      type: Note
+      code: 1005
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "declaration of type `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 57
+                content: "A"
+              }
+            }
+            components {
+              text_component {
+                content: "`"
+              }
+            }
+          }
+        }
+      }
+    }
+    sections {
+      code_section {
+        metadata {
+          filename: "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf"
+          line: 11
+          column: 1
+        }
+        lines {
+          line_number: 11
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "struct A"
+                          hl_tags: 1
+                        }
+                      }
+                    }
+                  }
+                  components {
+                    code_component {
+                      content: " {"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 12
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "    p: "
+                }
+              }
+              components {
+                code_component {
+                  component_id: 63
+                  content: "i64"
+                }
+              }
+              components {
+                code_component {
+                  content: ";"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 13
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "    q: "
+                }
+              }
+              components {
+                code_component {
+                  component_id: 66
+                  content: "i64"
+                }
+              }
+              components {
+                code_component {
+                  content: ";"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 14
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "}"
+                }
+              }
+            }
+          }
+        }
+        hl_messages {
+          tag: 1
+          priority: 1
+          type: Note
+          message {
+            concat_component {
+              components {
+                text_component {
+                  content: "declared here"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  infos {
+    metadata {
+      type: Note
+      code: 1005
+    }
+    header {
+      concat_component {
+        components {
+          concat_component {
+            components {
+              text_component {
+                content: "declaration of type `"
+              }
+            }
+            components {
+              code_component {
+                component_id: 70
+                content: "T"
+              }
+            }
+            components {
+              text_component {
+                content: "`"
+              }
+            }
+          }
+        }
+      }
+    }
+    sections {
+      code_section {
+        metadata {
+          filename: "dev/compiler/dia_app/view_manager/src/dia_app/view_manager/samples/file2.dmf"
+          line: 16
+          column: 1
+        }
+        lines {
+          line_number: 16
+          content {
+            concat_component {
+              components {
+                concat_component {
+                  components {
+                    concat_component {
+                      components {
+                        code_component {
+                          content: "struct T"
+                          hl_tags: 1
+                        }
+                      }
+                    }
+                  }
+                  components {
+                    code_component {
+                      content: " {"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 17
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "    x: "
+                }
+              }
+              components {
+                code_component {
+                  component_id: 76
+                  content: "i32"
+                }
+              }
+              components {
+                code_component {
+                  content: ";"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 18
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "    y: "
+                }
+              }
+              components {
+                code_component {
+                  component_id: 79
+                  content: "i32"
+                }
+              }
+              components {
+                code_component {
+                  content: ";"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 19
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "    z: "
+                }
+              }
+              components {
+                code_component {
+                  component_id: 82
+                  content: "i32"
+                }
+              }
+              components {
+                code_component {
+                  content: ";"
+                }
+              }
+            }
+          }
+        }
+        lines {
+          line_number: 20
+          content {
+            concat_component {
+              components {
+                code_component {
+                  content: "}"
+                }
+              }
+            }
+          }
+        }
+        hl_messages {
+          tag: 1
+          priority: 1
+          type: Note
+          message {
+            concat_component {
+              components {
+                text_component {
+                  content: "declared here"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

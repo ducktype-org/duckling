@@ -132,7 +132,6 @@ namespace dia {
 
 		void printToJson(std::ostream&) const;
 
-		friend void to_json(json& j, const SourcePosition& pos);
 
 	private:
 		usize          source_start;   ///< Start of the range of characters in the file.

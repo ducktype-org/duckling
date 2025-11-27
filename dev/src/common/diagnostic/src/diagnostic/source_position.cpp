@@ -157,12 +157,7 @@ namespace dia {
 		out << "}";
 	}
 
-	void to_json(json& j, const SourcePosition& pos) {
-		auto [line, column] = pos.getStartLineColumn();
-		j                   = json{ { "file", pos.getSource()->getFile().getFilePath().strView() },
-			                        { "line", line },
-			                        { "column", column } };
-	}
+
 
 	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {
 		auto loc_ord = &*getLocation() <=> &*other.getLocation();

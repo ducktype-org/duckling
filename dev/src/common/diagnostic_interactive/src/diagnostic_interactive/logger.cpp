@@ -1,0 +1,3 @@
+namespace dia_int {
+	
+}
