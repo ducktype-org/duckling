@@ -8,7 +8,7 @@
 namespace logger {
 	namespace {
 		Ref<std::vector<DevLogCategories>> getEnabledCategories() {
-			static std::vector<DevLogCategories> enabled_categories = { LogCategories::General };
+			static std::vector<DevLogCategories> enabled_categories;
 			return &enabled_categories;
 		}
 	}
@@ -38,11 +38,10 @@ namespace logger {
  * the function below is not updated accordingly.
  */
 #define HANDLE_CATEGORY_NAME(NAME) \
-	else if (category_name == #NAME) enableCategory(LogCategories::NAME);
+	else if (category_name == #NAME) enableDevCategory(DevLogCategories::NAME);
 
 	void enableDevCategoryByStringName(std::string_view category_name) {
 		if (false) {}
-		HANDLE_CATEGORY_NAME(General)
 		HANDLE_CATEGORY_NAME(Lexer)
 		HANDLE_CATEGORY_NAME(Printer)
 		HANDLE_CATEGORY_NAME(Artifacts)
