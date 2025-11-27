@@ -136,9 +136,9 @@ namespace clah {
 		return { .value = filepath, .raw_source = result.raw_source, .position = result.position };
 	}
 
-	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {		
+	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
 		auto string_result
-		= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
+			= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
 
 		// trim spaces from both ends:
 		auto trim_spaces = [](std::string_view sv) -> std::string {

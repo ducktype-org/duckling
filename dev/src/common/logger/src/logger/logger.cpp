@@ -15,9 +15,8 @@ namespace logger {
 
 	namespace internal {
 		bool isCategoryEnabled(DevLogCategories category) {
-			for (auto& enabled_category: *getEnabledCategories()) {
+			for (auto& enabled_category: *getEnabledCategories())
 				if (enabled_category == category) return true;
-			}
 			return false;
 		}
 
@@ -27,12 +26,11 @@ namespace logger {
 		}
 	}
 
-	void enableDevCategory(DevLogCategories category) { 
-		for (auto& enabled_category: *getEnabledCategories()) {
+	void enableDevCategory(DevLogCategories category) {
+		for (auto& enabled_category: *getEnabledCategories())
 			if (enabled_category == category) return;
-		}
 		getEnabledCategories()->push_back(category);
-	 }
+	}
 
 /**
  * This macro is made to ensure a compilation error when

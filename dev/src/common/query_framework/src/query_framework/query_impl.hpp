@@ -69,7 +69,6 @@ namespace query::internal {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
-					
 					auto loaded = QueryImplType::loadFromDisc(key);
 
 					if (loaded) {
@@ -93,7 +92,6 @@ namespace query::internal {
 						QueryIntType::QUERY_DATA.name,
 						"\"]: Query was marked green, but loading from disk failed.\n"
 					);
-
 				}
 			}
 

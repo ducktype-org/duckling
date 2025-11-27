@@ -64,10 +64,8 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_USER_LOG(category, ...)                                                  \
-	if (logger::enable_user_logs) {                                                   \
-			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
-	}
+#define CORE_USER_LOG(category, ...) \
+	if (logger::enable_user_logs) { logger::internal::logMessage(base::strConcat(__VA_ARGS__)); }
 
 
 /**
@@ -81,9 +79,9 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_DEV_LOG(category, ...)                                                   \
-	if (logger::enable_dev_logs) [[unlikely]] {                                       \
+#define CORE_DEV_LOG(category, ...)                                                      \
+	if (logger::enable_dev_logs) [[unlikely]] {                                          \
 		if (logger::internal::isCategoryEnabled(::logger::DevLogCategories::category)) { \
-			logger::internal::logMessage(base::strConcat(__VA_ARGS__));               \
-		}                                                                             \
+			logger::internal::logMessage(base::strConcat(__VA_ARGS__));                  \
+		}                                                                                \
 	}
