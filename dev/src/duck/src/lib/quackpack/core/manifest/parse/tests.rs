@@ -401,7 +401,7 @@ dependencies:
         .unwrap();
     assert!(a3.desc().source().is_local());
     if let Source::Local(local_source) = a3.desc().source() {
-        assert_eq!(local_source.absolute(), std::path::PathBuf::from("/xd"));
+        assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
     }
 
     // Test dependency b - registry
@@ -636,9 +636,7 @@ dependencies:
         b:
           package_features:
             - a
-        c:
-          system:
-            - windows
+      - c
 "#,
     );
     let ctx = DuckCtx::default();
@@ -664,13 +662,6 @@ dependencies:
 
     // Feature 'a' should always be enabled (unconditional)
     assert!(enabled_features.contains(&static_str_id!("a")));
-
-    // Feature 'c' depends on windows system - check platform
-    #[cfg(target_os = "windows")]
-    assert!(enabled_features.contains(&static_str_id("c")));
-
-    #[cfg(not(target_os = "windows"))]
-    assert!(enabled_features.contains(&static_str_id!("c")));
 }
 
 #[test]

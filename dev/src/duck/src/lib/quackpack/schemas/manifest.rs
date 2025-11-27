@@ -17,7 +17,7 @@ pub struct Manifest {
     pub profiles: Option<BTreeMap<String, CompilerOptions>>,
 
     #[serde(skip)]
-    pub _unused: BTreeSet<String>,
+    pub _unused_keys: BTreeSet<String>,
 }
 
 #[derive(Debug, Deserialize)]

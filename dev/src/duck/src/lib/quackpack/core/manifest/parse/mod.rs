@@ -78,7 +78,7 @@ fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let mut schema: ManifestSchema = serde_ignored::deserialize(deserializer, |path| {
         unused.insert(concat_unused_path(&path));
     })?;
-    schema._unused = unused;
+    schema._unused_keys = unused;
     Ok(schema)
 }
 
@@ -115,7 +115,7 @@ fn create_warnings(
     _summary: &Manifest,
 ) -> Vec<String> {
     schema
-        ._unused
+        ._unused_keys
         .iter()
         .map(|key| format!("Unused manifest key: `{key}`"))
         .collect()
