@@ -15,14 +15,11 @@
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <helios/errors/operator_not_found.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 
-#include "diagnostic/interactive_logger.hpp"
-#include "diagnostic/interactive_message.hpp"
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -167,21 +164,6 @@ namespace compiler::helios::code {
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
-				} else {
-					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
-					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
-
-					dia::InteractiveLogger::log(
-						base::makeBox<dia::TODOError>(stmt->getSourcePosition(), "just testing")
-					);
-					dia::InteractiveLogger::log(base::makeBox<dia::OperatorNotFound>(
-						stmt->getSourcePosition(),
-						stmt->getOperator(),
-						std::move(lhs),
-						std::move(rhs),
-						stmt.dynamicCast<pst::LangElement>().value(),
-						ctx
-					));  // failed
 				}
 			}
 
