@@ -7,7 +7,7 @@ add_library(Driver
 	src_private/driver_private/collect_input.cpp
 	src_private/driver_private/save_artifacts.cpp
 	
-	src/driver/configuration/configuration.cpp
+	src/driver/module_flags/module_flags.cpp
 	src/driver/statistics/statistics.cpp
 	src/driver/backend_type.cpp
 	src/driver/operations/generic_operations.cpp

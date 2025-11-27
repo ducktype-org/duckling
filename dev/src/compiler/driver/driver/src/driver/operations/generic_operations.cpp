@@ -1,6 +1,6 @@
 #include "generic_operations.hpp"
 
-#include <driver/configuration/configuration.hpp>
+#include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>

@@ -1,6 +1,6 @@
 #include "initialize.hpp"
 
-#include <driver/configuration/configuration.hpp>
+#include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>

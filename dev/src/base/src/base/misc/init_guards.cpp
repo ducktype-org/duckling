@@ -1,6 +1,6 @@
 #include "init_guard.hpp"
 
-#include <base/configuration/configuration.hpp>
+#include <base/module_flags/module_flags.hpp>
 
 #include <iostream>
 

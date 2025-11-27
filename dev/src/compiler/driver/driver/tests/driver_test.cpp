@@ -1,4 +1,4 @@
-#include <driver/configuration/configuration.hpp>
+#include <driver/module_flags/module_flags.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>

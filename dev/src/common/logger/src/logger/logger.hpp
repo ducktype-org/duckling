@@ -1,6 +1,6 @@
 #pragma once
 
-#include "configuration/configuration.hpp"  // IWYU pragma: keep
+#include "module_flags/module_flags.hpp"  // IWYU pragma: keep
 
 #include <base/str/str_utils.hpp>           // IWYU pragma: export
 

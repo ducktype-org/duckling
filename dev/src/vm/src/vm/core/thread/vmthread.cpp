@@ -17,7 +17,7 @@
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/configuration/configuration.hpp>
+#include <vm/module_flags/module_flags.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>

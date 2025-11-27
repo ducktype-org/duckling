@@ -7,7 +7,7 @@
 
 #include <logger/logger.hpp>  // IWYU pragma: export
 
-#include <vm/configuration/configuration.hpp>
+#include <vm/module_flags/module_flags.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
