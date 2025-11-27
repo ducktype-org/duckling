@@ -55,11 +55,17 @@ class TestNode:
     Represents a node inside DIT tree (a testconfig.yaml file).
     It has links to other TestNode objects (its subdirectories) and
     has a list of tests specified in a given config.
+    It also specifies pre_node and post_node scripts that are run
+    before and after all tests in this node and its subnodes.
     """
 
     name: str
     subtests: list[Self]
     tests: list[Test]
+    cwd: Path
+
+    pre_node: str
+    post_node: str
 
     def test_count(self):
         return len(self.tests) + sum(testset.test_count() for testset in self.subtests)

@@ -26,13 +26,13 @@ DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
 def tester_impl(
-    clean: bool,
-    dry: bool,
-    filter: str,
-    fail_fast: bool,
-    verbose: bool,
-    log_file: str,
-    build_dir: str,
+        clean: bool,
+        dry: bool,
+        filter: str,
+        fail_fast: bool,
+        verbose: bool,
+        log_file: str,
+        build_dir: str,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -82,13 +82,13 @@ def tester_impl(
 
 
 def run_test(
-    test: Test,
-    path: str,
-    filter: str,
-    dry: bool,
-    fail_fast: bool,
-    verbose: bool,
-    log_file: Path,
+        test: Test,
+        path: str,
+        filter: str,
+        dry: bool,
+        fail_fast: bool,
+        verbose: bool,
+        log_file: Path,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -103,7 +103,7 @@ def run_test(
             verbose=verbose,
         )
     stats = TestStatistics([], [], [])
-    simplified_filter = filter[len(path) + 1 :]
+    simplified_filter = filter[len(path) + 1:]
     log_info(f"===== {path} =====")
     for i, case in enumerate(test.cases):
         if not case.name.startswith(simplified_filter):
@@ -166,7 +166,7 @@ def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
 
 
 def run_case(
-    test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
+        test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
 ) -> Success | Failure | Disabled:
     """
     Runs a test case from `Case` object.
@@ -287,14 +287,14 @@ def clean_test(test: Test, path: str, dry: bool, verbose: bool):
 
 
 def run_tests(
-    tests: TestNode,
-    filter: str,
-    tree: list[str],
-    clean: bool,
-    dry: bool,
-    fail_fast: bool,
-    verbose: bool,
-    log_file: Path,
+        node: TestNode,
+        filter: str,
+        tree: list[str],
+        clean: bool,
+        dry: bool,
+        fail_fast: bool,
+        verbose: bool,
+        log_file: Path,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.
@@ -305,10 +305,21 @@ def run_tests(
     path to the current node in the tree.
 
     """
-    tree.append(tests.name)
+    tree.append(node.name)
     all_stats = TestStatistics([], [], [])
 
-    for test in tests.tests:
+    # Pre-node command
+    if node.pre_node:
+        log_info_if_needed("Executing pre-node command...", dry, verbose)
+        dit_exec_command(
+            node.pre_node,
+            cwd=node.cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
+        )
+
+    for test in node.tests:
         path = "/".join(tree + [test.name])
 
         # This is tricky, as normally it would be enough to check for the prefix
@@ -325,9 +336,20 @@ def run_tests(
             if fail_fast and len(stats.failed) > 0:
                 return all_stats
 
-    for subtest in tests.subtests:
+    for subtest in node.subtests:
         all_stats += run_tests(
             subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file
+        )
+
+    # Post-node command
+    if node.post_node:
+        log_info_if_needed("Executing post-node command...", dry, verbose)
+        dit_exec_command(
+            node.post_node,
+            cwd=node.cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
         )
 
     return all_stats

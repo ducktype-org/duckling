@@ -2,6 +2,9 @@
 
 Run: "@{duckc_path} @{run_args}"
 
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
+
 Tests:
   cli-options:
     Cases:

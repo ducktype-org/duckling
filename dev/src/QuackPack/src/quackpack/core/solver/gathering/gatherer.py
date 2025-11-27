@@ -187,10 +187,9 @@ async def _fetch_git(
     else:
         storage_path = git_access.git_path(url=cached.url, commit=cached.commit)
         schema = create_schema(storage_path / PackageLoader.MANIFEST_NAME)
-        # TODO bardzo nie podoba mi się przekazywanie tutaj ctx,
-        # być może trzeba w storagu przechowywać jeszcze dodatkowo `RegistryManifest`
-        # w paczkach? (obecnie ctx może np zmienić jaki jest default registry,
-        # co nie brzmi dobrze)
+        # @TODO: #1598 I really don't like passing ctx here; maybe we need to additionally 
+        # store RegistryManifest in storage within packages? (currently ctx can 
+        # e.g. change the default registry, which doesn't sound right)
         summary = summary_from_schema(schema, storage_path, ctx)
         resolved_id = ResolvedIdGit(repository_url=cached.url, commit=cached.commit)
 
