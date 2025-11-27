@@ -17,6 +17,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include "typesystem/lower/queries.hpp"
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -117,10 +118,12 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 				}
 			}
@@ -370,6 +373,62 @@ private:
 				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
 			auto const_value = const_numeric->get<i64>();
 			ASSERT_EQUAL(const_value, 55);
+		});
+	}
+
+	void numericLiteralsTest() {
+		auto module        = getLIROfModule(path("modules/literals"));
+		auto proc_data_lir = module.lirFunc("foo");
+
+		withContextDo([&](query::Context& ctx) {
+			bool found_is_large   = false;
+			bool found_result_f32 = false;
+			bool found_some_i16   = false;
+
+			auto bool_layout
+				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryBoolType>({}));
+			auto f32_layout
+				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFloatType>({ 32 }));
+			auto i16_layout
+				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryIntegralType>({ 16 }));
+
+			for (const auto& local: proc_data_lir->local_list) {
+				if (!local.helios_id.has_value()) continue;
+
+				auto name = helios::name(local.helios_id.value());
+				if (name == "is_large") {
+					ASSERT_EQUAL(local.layout, bool_layout);
+					found_is_large = true;
+				} else if (name == "result_f32") {
+					ASSERT_EQUAL(local.layout, f32_layout);
+					found_result_f32 = true;
+				} else if (name == "some_i16") {
+					ASSERT_EQUAL(local.layout, i16_layout);
+					found_some_i16 = true;
+				}
+			}
+			assertTrue(found_is_large, "LIR local 'is_large' was not found");
+			assertTrue(found_result_f32, "LIR local 'result_f32' was not found");
+			assertTrue(found_some_i16, "LIR local 'some_i16' was not found");
+
+			// Verify that operations were lowered to the correct LIR instructions
+			bool found_ugt  = false;
+			bool found_fadd = false;
+			bool found_sub  = false;
+
+			for (const auto& block: proc_data_lir->blocks) {
+				for (const auto& instr: block.instructions)
+					if (instr.operation == lir::Operation::IntegerUGt)
+						found_ugt = true;
+					else if (instr.operation == lir::Operation::FloatAdd)
+						found_fadd = true;
+					else if (instr.operation == lir::Operation::IntegerSub)
+						found_sub = true;
+			}
+
+			assertTrue(found_ugt, "LIR instruction 'IntegerUGt' was not found");
+			assertTrue(found_fadd, "LIR instruction 'FloatAdd' was not found");
+			assertTrue(found_sub, "LIR instruction 'IntegerSub' was not found");
 		});
 	}
 };
