@@ -1867,9 +1867,9 @@ private:
 		const auto tuple_lift_error = getChain("TupleLiftError", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto checkTypes = [&](const compiler::helios::SymID     sym_id,
-			                            const compiler::tsh::SymbolType<> expected_type,
-			                            const std::string&                message) -> void {
+			const auto check_types = [&](const compiler::helios::SymID     sym_id,
+			                             const compiler::tsh::SymbolType<> expected_type,
+			                             const std::string&                message) -> void {
 				const auto symbol_value
 					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
 				const auto actual_type
@@ -1894,25 +1894,25 @@ private:
 					 )
 			    ).withMutability(Immutable);
 
-			checkTypes(unit1, unit_st, "Unit1 should be of unit type.");
-			checkTypes(unit2, unit_st, "Unit2 should be of unit type.");
-			checkTypes(unit_type, meta_st, "UnitType should be of meta type.");
+			check_types(unit1, unit_st, "Unit1 should be of unit type.");
+			check_types(unit2, unit_st, "Unit2 should be of unit type.");
+			check_types(unit_type, meta_st, "UnitType should be of meta type.");
 
-			checkTypes(int1, int_st, "Int1 should be of integer type.");
-			checkTypes(int2, int_st, "Int2 should be of integer type.");
-			checkTypes(int_type, meta_st, "IntType should be of meta type.");
+			check_types(int1, int_st, "Int1 should be of integer type.");
+			check_types(int2, int_st, "Int2 should be of integer type.");
+			check_types(int_type, meta_st, "IntType should be of meta type.");
 
-			checkTypes(int_type1, meta_st, "IntType1 should be of integer type.");
-			checkTypes(int_type2, meta_st, "IntType2 should be of integer type.");
-			checkTypes(int_type_type, meta_st, "IntTypeType should be of integer type.");
+			check_types(int_type1, meta_st, "IntType1 should be of integer type.");
+			check_types(int_type2, meta_st, "IntType2 should be of integer type.");
+			check_types(int_type_type, meta_st, "IntTypeType should be of integer type.");
 
-			checkTypes(tuple_ii1, tuple_ii_st, "TupleII1 should be of tuple type.");
-			checkTypes(tuple_ii2, tuple_ii_st, "TupleII2 should be of tuple type.");
-			checkTypes(tuple_ii_type, meta_st, "TupleIIType should be of meta type.");
+			check_types(tuple_ii1, tuple_ii_st, "TupleII1 should be of tuple type.");
+			check_types(tuple_ii2, tuple_ii_st, "TupleII2 should be of tuple type.");
+			check_types(tuple_ii_type, meta_st, "TupleIIType should be of meta type.");
 
-			checkTypes(tuple_tt1, tuple_tt_st, "TupleTT1 should be of tuple type.");
-			checkTypes(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
-			checkTypes(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
+			check_types(tuple_tt1, tuple_tt_st, "TupleTT1 should be of tuple type.");
+			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
+			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
 
 			assertThrows<compiler::helios::InvalidCoercion>(
 				[&] {

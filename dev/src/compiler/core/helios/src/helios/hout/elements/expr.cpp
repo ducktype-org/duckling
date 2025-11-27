@@ -376,7 +376,7 @@ namespace compiler::helios::code {
 	TupleExpr::TupleExpr(query::Context& ctx, std::vector<Box<Expr>> elements):
 		  Expr(tsh::ExpressionType{
 			  tsh::SymbolType<>{
-				  ctx.query<tsh::QueryTupleType>({ std::move(extractTypesFromExprs(elements)) }),
+				  ctx.query<tsh::QueryTupleType>({ extractTypesFromExprs(elements) }),
 				  tsh::ReferenceKind::Direct,
 				  tsh::Mutability::Mutable,
 			  },
