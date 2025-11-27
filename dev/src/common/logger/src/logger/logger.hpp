@@ -64,7 +64,7 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_USER_LOG(category, ...) \
+#define CORE_USER_LOG(...) \
 	if (logger::enable_user_logs) { logger::internal::logMessage(base::strConcat(__VA_ARGS__)); }
 
 
