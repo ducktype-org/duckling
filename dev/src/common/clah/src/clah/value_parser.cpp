@@ -138,10 +138,12 @@ namespace clah {
 	}
 
 	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
-		std::cerr << "Parsing string list from: '" << std::string_view(raw_input.begin()+start, raw_input.end()) << "'\n";
-
+		std::cerr << "Parsing string list from: `" << std::string_view(raw_input.begin()+start, raw_input.end()) << "`\n";
+		
 		auto string_result
-			= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
+		= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
+
+		std::cerr << "`" << string_result << "`\n";
 
 		// trim spaces from both ends:
 		auto trim_spaces = [](std::string_view sv) -> std::string {
