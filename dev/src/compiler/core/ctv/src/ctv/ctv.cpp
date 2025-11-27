@@ -75,6 +75,7 @@ namespace compiler::ctv {
 		CORE_UNREACHABLE();
 	}
 
+	// @TODO: #1618 Remove
 	bool CompileTimeValue::canBeType() const {
 		variant_match(value) {
 			variant_case_novalue(tsh::SymbolType<>) { return true; }
@@ -85,6 +86,7 @@ namespace compiler::ctv {
 		CORE_UNREACHABLE();
 	}
 
+	// @TODO: #1618 Remove
 	base::Optional<tsh::SymbolType<>> CompileTimeValue::getType(query::Context& ctx) const {
 		variant_match(value) {
 			variant_case(tsh::SymbolType<>, val) { return val; }

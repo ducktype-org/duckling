@@ -630,6 +630,7 @@ namespace compiler::helios {
 
 			// Introduce coercion to match expected type (there will be no coercion if the type
 			// is deduced from the expression, because the expected and actual types will match).
+			// @TODO: #1618 Introduce abstraction, deduplicate
 			const auto coercion
 				= canCoerce(ctx, const_value_hout->expression_type.getSymbolType(), const_type)
 			          .valueOrThrow();

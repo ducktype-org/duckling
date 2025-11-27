@@ -71,6 +71,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.base_class, base) {
 				if (auto ctv = ctx.query<QueryEvaluatePSTExpression>({ base })) {
+					// @TODO: #1618 Use coercion logic
 					if (auto maybe_type = ctv.value().getType(ctx)) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the base class has any specifiers other than the abstract type.
