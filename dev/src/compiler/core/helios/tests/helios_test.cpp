@@ -1466,11 +1466,14 @@ private:
 		const auto f64_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
 		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
+			{ { st(int32_type), st(int32_type) } }
+		);
+		const auto tuple_si_type
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
-
-		// @TODO: #925 fix how tuples are deduced
 
 		// Vars
 		ASSERT_EQUAL(int32_type, getTypeOf("EasyIntI32", foo_body_scope));
@@ -1486,6 +1489,9 @@ private:
 		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
+		ASSERT_EQUAL(tuple_ii_type, getTypeOf("TupleVII", foo_body_scope));
+		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleVSI", foo_body_scope));
+
 		// Consts
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleIntI32", root_scope));
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleIntI64", root_scope));
@@ -1493,12 +1499,15 @@ private:
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleOctIntI32", root_scope));
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleHexIntI32", root_scope));
 
-		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32", foo_body_scope));
-		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32_2", foo_body_scope));
-		ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloatF64", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32", root_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32_2", root_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloatF64", root_scope));
 
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		ASSERT_EQUAL(tuple_ii_type, getTypeOf("TupleCII", root_scope));
+		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleCSI", root_scope));
 
 		// Differences between const, let, and var
 		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
