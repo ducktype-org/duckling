@@ -21,9 +21,8 @@ namespace compiler::ctv {
 			variant_case(TupleCTV, tuple) {
 				std::stringstream ss;
 				ss << "(" << tuple.getElements().at(0).toString();
-				for (usize i = 1; i < tuple.getElements().size(); i++) {
+				for (usize i = 1; i < tuple.getElements().size(); i++)
 					ss << ", " << tuple.getElements().at(i).toString();
-				}
 				ss << ")";
 				return ss.str();
 			}
@@ -65,7 +64,13 @@ namespace compiler::ctv {
 				};
 			}
 
-			variant_case(tsh::SymbolType<>, val) { return val; }
+			variant_case(tsh::SymbolType<>, val) {
+				return tsh::SymbolType<>{
+					ctx.query<tsh::QueryMetaType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
 		}
 		CORE_UNREACHABLE();
 	}
@@ -99,9 +104,8 @@ namespace compiler::ctv {
 				// Assume direct, mutable. Other options require modifiers which
 				// would force conversion to symbol type and invoke the previous branch.
 				std::vector<tsh::SymbolType<>> subtypes;
-				for (const auto& element: tuple.getElements()) {
+				for (const auto& element: tuple.getElements())
 					subtypes.push_back(element.getType(ctx).value());
-				}
 				return tsh::SymbolType<>{
 					ctx.query<tsh::QueryTupleType>({ std::move(subtypes) }),
 					tsh::ReferenceKind::Direct,

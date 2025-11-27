@@ -113,7 +113,7 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
-		Type, // ...
+		Type,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,

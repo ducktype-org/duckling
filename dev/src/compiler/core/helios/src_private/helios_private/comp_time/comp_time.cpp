@@ -423,7 +423,7 @@ namespace compiler::helios {
 						return;
 					}
 
-					match_optional(sub_type_result.value().get<tsh::SymbolType<>>()) {
+					match_optional(sub_type_result.value().getType(ctx)) {
 						opt_some(sub_type) { subtypes.emplace_back(sub_type); }
 						opt_none { CORE_PANIC("Type evaluation returned not a type\n"); }
 					}
@@ -458,7 +458,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
-				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Meta) {
+				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Unit) {
 					// Lift unit to type by simply returning the unit type.
 					result = CompileTimeValue{ tsh::SymbolType<>{
 						ctx.query<tsh::QueryUnitType>({}),
@@ -478,6 +478,7 @@ namespace compiler::helios {
 					}
 					const auto& ctv = expr_to_lift.value();
 					result          = CompileTimeValue{ ctv.getType(ctx).value() };
+					return;
 				}
 
 				CORE_UNREACHABLE();

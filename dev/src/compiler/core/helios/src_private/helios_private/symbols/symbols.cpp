@@ -10,7 +10,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -614,13 +617,25 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol
+			// Get the const's data
+			const auto const_pst
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
+			auto const_value_hout
+				= ctx.query<QueryHoutOfExpr>(
+						 const_pst->getValue().value().unlock(ctx)->getExpr().unlock(ctx)
+				)
+			          .valueOrThrow();
+			const auto const_type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
-			auto ctv = ctx.query<QueryEvaluatePSTExpression>(
-				const_symbol->getValue().value().unlock(ctx)->getExpr()
-			);
+			// Introduce coercion to match expected type (there will be no coercion if the type
+			// is deduced from the expression, because the expected and actual types will match).
+			const auto coercion
+				= canCoerce(ctx, const_value_hout->expression_type.getSymbolType(), const_type)
+			          .valueOrThrow();
+			const auto const_value_hout_coerced = coercion.coerce(ctx, std::move(const_value_hout));
+
+			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ const_value_hout_coerced.ref() });
 			if (ctv.hasError()) return query::QError(errors::Failed());
 			return ctv.value();
 		}

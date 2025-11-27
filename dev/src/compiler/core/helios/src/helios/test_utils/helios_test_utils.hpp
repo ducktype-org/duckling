@@ -30,7 +30,6 @@ namespace compiler::helios::test_utils {
 	SymbolList getChain(const std::string_view chain, ScopeID scope);
 
 	/**
-	 *
 	 * Get the CTV representing a constant value of the last symbol in a symbol chain in a given
 	 * scope.
 	 * @note Used as a helper for `getConstValueAs` since we can't use QueryConstValueOf in this
@@ -39,7 +38,14 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The CTV value of the last symbol in the chain.
 	 */
-	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope);
+	ctv::CompileTimeValue getConstValue(std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the CTV representing a constant value of a symbol.
+	 * @param sym_id The symbol to compute.
+	 * @return The CTV value of the symbol.
+	 */
+	ctv::CompileTimeValue getConstValue(SymID sym_id);
 
 	/**
 	 * Get the value of type T of the last symbol in a symbol chain in a given scope.

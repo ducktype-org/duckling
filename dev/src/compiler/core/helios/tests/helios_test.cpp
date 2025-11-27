@@ -18,6 +18,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -1863,10 +1864,17 @@ private:
 		const auto tuple_tt2     = getChain("TupleTT2", root_scope).back();
 		const auto tuple_tt_type = getChain("TupleTTType", root_scope).back();
 
+		const auto tuple_lift_error = getChain("TupleLiftError", root_scope).back();
+
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto symTypeOf
-				= [&](const compiler::helios::SymID sym_id) -> compiler::tsh::SymbolType<> {
-				return ctx.query<compiler::helios::QueryTypeOfSymbol>(sym_id)->value();
+			const auto checkTypes = [&](const compiler::helios::SymID     sym_id,
+			                            const compiler::tsh::SymbolType<> expected_type,
+			                            const std::string&                message) -> void {
+				const auto symbol_value
+					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
+				const auto actual_type
+					= symbol_value.getTypeOfStoredValue(ctx).withMutability(Immutable);
+				assertEqual(actual_type, expected_type, message);
 			};
 
 			const auto meta_st
@@ -1886,27 +1894,32 @@ private:
 					 )
 			    ).withMutability(Immutable);
 
-			assertEqual(symTypeOf(unit1), unit_st, "Unit1 should be of unit type.");
-			assertEqual(symTypeOf(unit2), unit_st, "Unit2 should be of unit type.");
-			assertEqual(symTypeOf(unit_type), meta_st, "UnitType should be of meta type.");
+			checkTypes(unit1, unit_st, "Unit1 should be of unit type.");
+			checkTypes(unit2, unit_st, "Unit2 should be of unit type.");
+			checkTypes(unit_type, meta_st, "UnitType should be of meta type.");
 
-			assertEqual(symTypeOf(int1), int_st, "Int1 should be of integer type.");
-			assertEqual(symTypeOf(int2), int_st, "Int2 should be of integer type.");
-			assertEqual(symTypeOf(int_type), meta_st, "IntType should be of meta type.");
+			checkTypes(int1, int_st, "Int1 should be of integer type.");
+			checkTypes(int2, int_st, "Int2 should be of integer type.");
+			checkTypes(int_type, meta_st, "IntType should be of meta type.");
 
-			assertEqual(symTypeOf(int_type1), meta_st, "IntType1 should be of integer type.");
-			assertEqual(symTypeOf(int_type2), meta_st, "IntType2 should be of integer type.");
-			assertEqual(symTypeOf(int_type_type), meta_st, "IntTypeType should be of integer type.");
+			checkTypes(int_type1, meta_st, "IntType1 should be of integer type.");
+			checkTypes(int_type2, meta_st, "IntType2 should be of integer type.");
+			checkTypes(int_type_type, meta_st, "IntTypeType should be of integer type.");
 
-			std::cerr << symTypeOf(tuple_ii1).toString() << std::endl;
-			std::cerr << symTypeOf(tuple_ii2).toString() << std::endl;
-			assertEqual(symTypeOf(tuple_ii1), tuple_ii_st, "TupleII1 should be of tuple type.");
-			assertEqual(symTypeOf(tuple_ii2), tuple_ii_st, "TupleII2 should be of tuple type.");
-			assertEqual(symTypeOf(tuple_ii_type), meta_st, "TupleIIType should be of meta type.");
+			checkTypes(tuple_ii1, tuple_ii_st, "TupleII1 should be of tuple type.");
+			checkTypes(tuple_ii2, tuple_ii_st, "TupleII2 should be of tuple type.");
+			checkTypes(tuple_ii_type, meta_st, "TupleIIType should be of meta type.");
 
-			assertEqual(symTypeOf(tuple_tt1), tuple_tt_st, "TupleTT1 should be of tuple type.");
-			assertEqual(symTypeOf(tuple_tt2), tuple_tt_st, "TupleTT2 should be of tuple type.");
-			assertEqual(symTypeOf(tuple_tt_type), meta_st, "TupleTTType should be of meta type.");
+			checkTypes(tuple_tt1, tuple_tt_st, "TupleTT1 should be of tuple type.");
+			checkTypes(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
+			checkTypes(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
+
+			assertThrows<compiler::helios::InvalidCoercion>(
+				[&] {
+					ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).valueOrThrow();
+				},
+				"Trying to lift an unliftable tuple to a type should result in a coercion error."
+			);
 		});
 	}
 

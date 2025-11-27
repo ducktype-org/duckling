@@ -7,7 +7,7 @@ namespace N {
 }
 
 alias H = NN.NNN.A;
-const H2: i32 = H;
+const H2: i64 = H;
 
 const A: i32 = 1;
 
