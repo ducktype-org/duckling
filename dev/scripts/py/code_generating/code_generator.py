@@ -31,7 +31,7 @@ class ScopeData:
 
 @dataclass
 class ModuleData:
-    name: str
+    path: str
     symbols: ScopeData
 
 class Indenter:
@@ -297,7 +297,7 @@ class LogicGenerator:
         
         for i in range(imports_count):
             path_fragments = self.generator.file_path.split('.')
-            path_fragments[-2] += f"import_{i}"
+            path_fragments[-2] += f"_import_{i}"
             
             tmp_generator = LogicGenerator(
                 generator=self.generator_type,
@@ -337,3 +337,4 @@ class LogicGenerator:
 # 1. Only assign to modifiable value
 # 2. Declare vars without starting value as well
 # 3. Multifile
+# 4. Klasy

@@ -102,7 +102,7 @@ class CppCodeGenerator(CodeGenerator):
     
     # Special elements
     def import_statement(self, module: ModuleData) -> ScopeData:
-        self.indenter.add_text(f'#include "{module.name}"\n')
+        self.indenter.add_text(f'#include "{module.path}"\n')
         return module.symbols.copy()
     
     def preambule(self) -> ScopeData:
