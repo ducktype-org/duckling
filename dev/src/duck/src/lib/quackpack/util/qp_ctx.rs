@@ -111,7 +111,7 @@ impl<'duck> QpCtx<'duck> {
             .toml_config()
             .get_str("registry.url")?
             .map(StrId::from)
-            // @TODO: #1572 Move this somewhere else.
+            // @TODO: #1548 Move this to the fetcher module
             .unwrap_or_else(|| static_str_id!("http://localhost:9001")))
     }
 

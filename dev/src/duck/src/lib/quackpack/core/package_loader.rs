@@ -8,7 +8,7 @@ use tracing::{debug, trace};
 mod tests;
 
 use crate::{
-    QpCtx, QuackResult,
+    InternalError, QpCtx, QuackResult,
     quackpack::{core::PackageCtx, util::paths::MANIFEST_FILENAME},
 };
 
@@ -43,7 +43,7 @@ impl PackageLoader {
     pub const LOCAL_STORAGE_NAME: &str = ".storage";
 
     pub fn global_package<'duck>(_ctx: QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
-        bail!("@TODO: #1572 it uses EditableManifest")
+        Err(InternalError::from("@TODO: #1394 it needs the EditableManifest").into())
     }
 
     pub fn find_from_directory<'duck>(
