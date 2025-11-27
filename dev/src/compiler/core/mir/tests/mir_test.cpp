@@ -2,8 +2,7 @@
  * @file mir_tests.cpp
  */
 
-#include "ctv/ctv.hpp"
-
+#include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -335,37 +334,38 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/numeric_literals")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto  unit     = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& main_fun = unit->functions.at(0);
 			ASSERT_EQUAL(main_fun.declaration->original_name, base::StrID("main"));
 			auto& main_mir = ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->value();
 
-			auto entry_block_id = main_mir.block_order.front();
-			const auto& entry_block = main_mir.blocks[entry_block_id];
+			auto        entry_block_id = main_mir.block_order.front();
+			const auto& entry_block    = main_mir.blocks[entry_block_id];
 
 			bool found_a = false, found_b = false, found_c = false, found_d = false;
 
-			for (const auto& instr : entry_block.instructions) {
+			for (const auto& instr: entry_block.instructions) {
 				if (instr.operation != compiler::mir::Operation::Assign) continue;
 				const auto& output_place = instr.output.value();
-				const auto& local_ref = output_place.getBase<compiler::mir::MIRLocalRef>();
-				auto var_name = local_ref->getName();
+				const auto& local_ref    = output_place.getBase<compiler::mir::MIRLocalRef>();
+				auto        var_name     = local_ref->getName();
 
 				const auto& value_arg = instr.arguments.at(0);
-				const auto& constant = value_arg.get<compiler::mir::MIRConstant>();
-				const auto& numeric_val = constant.value.get<compiler::numeric_value::NumericValue>();
+				const auto& constant  = value_arg.get<compiler::mir::MIRConstant>();
+				const auto& numeric_val
+					= constant.value.get<compiler::numeric_value::NumericValue>();
 
 				if (var_name == "a") {
 					ASSERT_EQUAL(numeric_val->get<i16>(), 123);
 					found_a = true;
 				} else if (var_name == "b") {
-					ASSERT_EQUAL(numeric_val->get<u32>(), 4000000000);
+					ASSERT_EQUAL(numeric_val->get<u32>(), 4'000'000'000);
 					found_b = true;
 				} else if (var_name == "c") {
 					ASSERT_EQUAL(numeric_val->get<f32>(), 1.25f);
 					found_c = true;
 				} else if (var_name == "d") {
-					ASSERT_EQUAL(numeric_val->get<f64>(),987.654);
+					ASSERT_EQUAL(numeric_val->get<f64>(), 987.654);
 					found_d = true;
 				}
 			}

@@ -1,7 +1,6 @@
-#include "ctv/ctv.hpp"
-#include "ctv/numeric_value.hpp"
-
 #include <backends/dvm/backend.hpp>
+#include <ctv/ctv.hpp>
+#include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <string_id/string_id.hpp>
 #include <typesystem/lower/type_layout.hpp>

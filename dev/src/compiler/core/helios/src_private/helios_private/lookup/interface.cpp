@@ -4,7 +4,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>

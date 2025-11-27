@@ -10,6 +10,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/lower/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -17,7 +18,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include "typesystem/lower/queries.hpp"
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -118,12 +118,10 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(
-							base::strConcat(
-								"Unexpected global data type in module: ",
-								hout_glob.original_name.strView()
-							)
-						);
+						fail(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_glob.original_name.strView()
+						));
 					}
 				}
 			}

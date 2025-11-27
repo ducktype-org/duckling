@@ -70,11 +70,9 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(
-							base::strConcat(
-								"Unexpected global data type of: ", hout_glob.original_name
-							)
-						);
+						fail(base::strConcat(
+							"Unexpected global data type of: ", hout_glob.original_name
+						));
 					}
 				}
 			}
