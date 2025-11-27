@@ -445,9 +445,14 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   throw base::LogicError("Command `throw` thrown successfully!");
+	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+							   return 0;
 						   }));
 }
 
