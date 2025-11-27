@@ -3,7 +3,7 @@ import random
 
 from contextlib import contextmanager
 
-from code_generator import CodeGenerator, ScopeData, FunctionData
+from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData
 from utils import PROB, random_identifier
 
 class DucklingCodeGenerator(CodeGenerator):
@@ -102,6 +102,10 @@ class DucklingCodeGenerator(CodeGenerator):
         self.indenter.add_text("}\n")
 
     # Special elements
+    def import_statement(self, module: ModuleData) -> ScopeData:
+        self.indenter.add_text(f'import "{module.name}.*";\n')
+        return module.symbols.copy()
+    
     def preambule(self) -> ScopeData:
         return ScopeData()
     

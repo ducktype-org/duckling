@@ -21,8 +21,18 @@ class ScopeData:
     vars: List[str] = field(default_factory=list)
     funcs: List[FunctionData] = field(default_factory=list)
 
+    def __iadd__(self, other: 'ScopeData'):
+        self.vars += other.vars
+        self.funcs += other.funcs
+        return self
+    
     def copy(self):
         return deepcopy(self)
+
+@dataclass
+class ModuleData:
+    name: str
+    symbols: ScopeData
 
 class Indenter:
     def __init__(self, generator: 'CodeGenerator'):
@@ -134,6 +144,10 @@ class CodeGenerator(ABC):
     
     # Special elements
     @abstractmethod
+    def import_statement(self, module: ModuleData) -> ScopeData:
+        pass
+    
+    @abstractmethod
     def preambule(self) -> ScopeData:
         pass
             
@@ -149,7 +163,8 @@ class CodeGenerator(ABC):
 
 class LogicGenerator:
     def __init__(self, generator: Type[CodeGenerator], file_path: str, length:int, seed: int):
-        self.generator = generator(file_path, self)
+        self.generator_type = generator
+        self.generator = self.generator_type(file_path, self)
         self.seed = seed
         self.length = length
         random.seed(seed)        
@@ -246,12 +261,16 @@ class LogicGenerator:
                 else:
                     self.generate_non_control_flow(scope)
             self.generator.return_statement(scope)
-            
-        
-    def generate_code(self, global_symbol_count: int):
-        scope = self.generator.preambule()
-        
-        # Generate global symbols
+    
+    def generate_imports(self, imports: List[ModuleData]) -> ScopeData:
+        combined_scope = ScopeData()
+        for module in imports:
+            module_scope = self.generator.import_statement(module)
+            combined_scope += module_scope
+        self.generator.line_break()
+        return combined_scope
+    
+    def generate_global_symbols(self, scope: ScopeData, global_symbol_count: int):
         for _ in range(global_symbol_count):
             action = random.choices(
                 ['variable_declaration', 'function_definition'],
@@ -263,6 +282,41 @@ class LogicGenerator:
             elif action == 'function_definition':
                 self.generate_function_definition(scope)
                 self.generator.line_break()
+        
+        return scope
+    
+    def generate_file(self, global_symbol_count: int, imports: List[ModuleData]):
+        scope = self.generator.preambule()
+        scope += self.generate_imports(imports)
+        scope += self.generate_global_symbols(scope, global_symbol_count)
+        
+        return ModuleData(self.generator.file_path, scope)
+    
+    def generate_dependencies(self, imports_count: int) -> List[ModuleData]:
+        dependencies = []
+        
+        for i in range(imports_count):
+            path_fragments = self.generator.file_path.split('.')
+            path_fragments[-2] += f"import_{i}"
+            
+            tmp_generator = LogicGenerator(
+                generator=self.generator_type,
+                file_path='.'.join(path_fragments),
+                length=self.length//2,
+                seed=self.seed + i)
+            
+            module = tmp_generator.generate_file(global_symbol_count=5, imports=[])
+            dependencies.append(module)
+        
+        return dependencies
+    
+    def generate_main_file(self, global_symbol_count: int, imports_count: int):
+        scope = self.generator.preambule()
+        imports = self.generate_dependencies(imports_count)
+        scope += self.generate_imports(imports)
+        
+        # Generate global symbols
+        scope += self.generate_global_symbols(scope, global_symbol_count)
         
         # Generate main function
         with self.generator.main_function():

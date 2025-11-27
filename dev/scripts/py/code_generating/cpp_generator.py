@@ -2,7 +2,7 @@ import random
 
 from contextlib import contextmanager
 
-from code_generator import CodeGenerator, ScopeData, FunctionData
+from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData
 from utils import PROB, random_identifier
 
 class CppCodeGenerator(CodeGenerator):
@@ -101,6 +101,10 @@ class CppCodeGenerator(CodeGenerator):
         self.indenter.add_text("}\n")
     
     # Special elements
+    def import_statement(self, module: ModuleData) -> ScopeData:
+        self.indenter.add_text(f'#include "{module.name}"\n')
+        return module.symbols.copy()
+    
     def preambule(self) -> ScopeData:
         # self.indenter.add_text("#include <iostream>\n\n")
         self.indenter.add_text("void print(long n);\n")
