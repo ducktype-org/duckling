@@ -61,7 +61,7 @@ namespace compiler::driver {
 			// options mapping to logger categories:
 			std::vector<std::string> dev_log_categories;
 
-			// options mapping to driver::configuration options:
+			// options mapping to driver module flags:
 			bool dump_llvm_ir  = false;
 			bool dump_llvm_asm = false;
 		};
