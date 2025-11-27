@@ -4,8 +4,8 @@
 #include "diagnostic_state.hpp"
 #include "template_registry.hpp"
 
-#include "base/maps.hpp"
-#include <base/box.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/box.hpp>
 
 namespace dia_app {
 

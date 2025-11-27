@@ -13,6 +13,8 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
+#include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/diagnostic.hpp>
 
 namespace query {
 
@@ -51,6 +53,7 @@ namespace query {
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
 		static dia::Logger logger;
+		static dia_int::Logger int_logger;
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
@@ -72,6 +75,8 @@ namespace query {
 		 * @param message The dia::Message to be logged.
 		 */
 		void log(Box<dia::Message> message);
+
+		void logInt(Box<dia_int::DiagnosticBase> diagnostic);
 
 		/**
 		 * @brief Returns a const reference to the main query state.

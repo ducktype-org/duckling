@@ -4,7 +4,7 @@
 #include "diagnostic_interactive/term_ui/highlight.hpp"
 #include "diagnostic_interactive/term_ui/line.hpp"
 
-#include "base/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <algorithm>
 
@@ -87,6 +87,10 @@ namespace term_ui {
 		// Preprocessing
 		base::HashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
 		u64                                     tab_space = 0;
+
+		// for (auto x : section.pointers) {
+		// 	std::cout << "Pointer " << x.first << ": " << x.second.text << "\n";
+		// }
 
 		for (u64 l = 0; l < section.lines.size(); l++) {
 			const auto& line = section.lines[l];

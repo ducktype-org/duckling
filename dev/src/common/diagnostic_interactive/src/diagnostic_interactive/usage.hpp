@@ -4,7 +4,7 @@ namespace dia_int {
 	class DiagnosticWithCodeFragment: public DiagnosticBase {
 	protected:
 		DiagnosticWithCodeFragment(dia::SourcePosition source_position) {
-			addArgument<CodeArgument>(source_position);
+			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
 		}
 	};
@@ -12,7 +12,7 @@ namespace dia_int {
 	class DiagnosticWithCodeFragmentAndCause: public DiagnosticBase {
 	protected:
 		DiagnosticWithCodeFragmentAndCause(dia::SourcePosition source_position) {
-			addArgument<CodeArgument>(source_position);
+			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
 			addPointerMessage({ "cause", source_position });
 		}
@@ -52,6 +52,8 @@ namespace dia_int {
 
 			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
+			addPointerMessage("cause", source_position);
+			addArgument<TextArgument>("pointer_message", "");
 
 			if_opt_some(pointer_message_content, val) {
 				addArgument<TextArgument>("pointer_message_content", std::move(val));

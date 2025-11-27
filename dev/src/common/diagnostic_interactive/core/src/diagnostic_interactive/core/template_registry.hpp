@@ -2,8 +2,8 @@
 #include "diagnostic_file.hpp"
 #include "template_file.hpp"
 
-#include "base/maps.hpp"
-#include <base/box.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/box.hpp>
 
 namespace dia_app {
 

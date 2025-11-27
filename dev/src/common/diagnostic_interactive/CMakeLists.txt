@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -g3") # TODO: This should be more iso
 # Optional HELIOS/UI-dependent interactive diagnostics in a separate library
 add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/diagnostic.cpp
+        src/diagnostic_interactive/logger.cpp
 )
 
 make_module(DiagnosticInteractive USES TypeSystemHigher Printer Filesystem TokenSource HELIOS_SYMBOLS TerminalUI DiagnosticInteractiveCore Diagnostic )

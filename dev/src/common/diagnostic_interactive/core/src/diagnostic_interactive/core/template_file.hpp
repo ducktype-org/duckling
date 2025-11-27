@@ -4,8 +4,8 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <base/box.hpp>
-#include <base/visitor.hpp>
+#include <base/pointers/box.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 #include <cctype>
 #include <limits>

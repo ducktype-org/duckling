@@ -8,8 +8,8 @@
 #include <diagnostic_interactive/core/diagnostic_state.hpp>
 #include <diagnostic_interactive/core/yaml_buffer.hpp>
 
-#include "base/box.hpp"
-#include <base/str_utils.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -666,7 +666,7 @@ namespace dia_app {
 			.thread          = thread,
 			.message_mapping = { { "<<main_message_not_used_id>>", main_message_id } },
 		};
-
+		// Step 1. assigning IDs to additional messages, so the mapping is ready
 		state::MessageID message_id_generator = 1;
 		for (const auto& [message_id, message]: thread.additional_messages)
 			if (message.metadata.template_type == "message")
@@ -674,6 +674,7 @@ namespace dia_app {
 
 		std::vector<state::Message> messages;
 
+		// Step 2. Evaluate main message and additional messages
 		auto& main_template = registry.loadTemplate(thread.main_message.metadata);
 		messages.push_back(evaluateTemplateIfMessage(
 			thread_ctx, main_template, "main_message", thread.main_message

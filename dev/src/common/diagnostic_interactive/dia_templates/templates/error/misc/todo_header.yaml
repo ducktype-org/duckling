@@ -1,0 +1,25 @@
+metadata:
+  type: "error"
+  family: "misc"
+  name: "todo_header"
+  code: "0001"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  header_message:
+    description: "The header message of the TODO error."
+  
+  description:
+    description: "The detailed description of the TODO error."
+
+header_message:
+  param: "header_message"
+
+
+description:
+  - param: "description"
+
+
+

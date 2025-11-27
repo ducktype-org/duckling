@@ -1,11 +1,11 @@
 #pragma once
 #include "utils.hpp"
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/visitor.hpp>
+#include <base/pointers/box.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/types/ints.hpp>
+#include <base/collections/maps.hpp>
+#include <base/extend_cpp/visitor.hpp>
 
 #include <json/json.hpp>
 
@@ -172,7 +172,7 @@ namespace dia_app::dia_file {
 		base::Optional<MessageID> message_id;
 		PointerMessageID          pointer_message_id;
 
-		PointerMessage(PointerMessageID pointer_message_id, base::Optional<MessageID> message_id):
+		PointerMessage(PointerMessageID pointer_message_id, base::Optional<MessageID> message_id = {}):
 			  message_id(std::move(message_id)),
 			  pointer_message_id(std::move(pointer_message_id)) {}
 

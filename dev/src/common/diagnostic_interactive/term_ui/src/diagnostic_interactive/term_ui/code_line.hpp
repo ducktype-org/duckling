@@ -4,8 +4,8 @@
 
 #include <diagnostic_interactive/core/term_ui_view.hpp>
 
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 
 namespace term_ui {
 	/* Minimal amount of whitespace needed before the line bar `|`. */

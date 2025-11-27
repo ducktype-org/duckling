@@ -2,8 +2,9 @@
 
 #include "template_file.hpp"
 
-#include <base/box.hpp>
-#include <base/visitor.hpp>
+#include <base/pointers/box.hpp>
+#include <base/extend_cpp/visitor.hpp>
+#include <iostream>
 
 namespace dia_app::state {
 	/**
@@ -70,6 +71,8 @@ namespace dia_app::state {
 		 * Used to revert interactions and return to the initial display.
 		 */
 		virtual void reset() = 0;
+
+		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 	};
 
 	/**
@@ -95,6 +98,18 @@ namespace dia_app::state {
 		}
 
 		void reset() final {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "TextComponent(" << content << ")";
+			if (!attached_messages.empty()) {
+				out << " [attached: ";
+				for (size_t i = 0; i < attached_messages.size(); ++i) {
+					out << attached_messages[i] << (i + 1 < attached_messages.size() ? ", " : "");
+				}
+				out << "]";
+			}
+			out << "\n";
+		}
 	};
 
 	/**
@@ -125,6 +140,25 @@ namespace dia_app::state {
 		}
 
 		void reset() final {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "CodeComponent(" << content << ")";
+			if (!pointer_messages.empty()) {
+				out << " [pointers: ";
+				for (size_t i = 0; i < pointer_messages.size(); ++i) {
+					out << pointer_messages[i] << (i + 1 < pointer_messages.size() ? ", " : "");
+				}
+				out << "]";
+			}
+			if (!attached_messages.empty()) {
+				out << " [attached: ";
+				for (size_t i = 0; i < attached_messages.size(); ++i) {
+					out << attached_messages[i] << (i + 1 < attached_messages.size() ? ", " : "");
+				}
+				out << "]";
+			}
+			out << "\n";
+		}
 	};
 
 	/**
@@ -148,6 +182,11 @@ namespace dia_app::state {
 
 		void reset() final {
 			for (auto& comp: components) comp->reset();
+		}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "ConcatComponent:\n";
+			for (const auto& comp: components) comp->debugPrint(out, indent + 1);
 		}
 	};
 
@@ -184,6 +223,14 @@ namespace dia_app::state {
 			this->primary->reset();
 			this->alternative->reset();
 		}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "InteractiveComponent:\n";
+			out << std::string((indent + 1) * 2, ' ') << "Primary:\n";
+			primary->debugPrint(out, indent + 2);
+			out << std::string((indent + 1) * 2, ' ') << "Alternative:\n";
+			alternative->debugPrint(out, indent + 2);
+		}
 	};
 
 	/**
@@ -202,6 +249,11 @@ namespace dia_app::state {
 		}
 
 		void reset() final {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "StartLineComponent("
+			    << (number ? std::to_string(*number) : "none") << ")\n";
+		}
 	};
 
 	struct CodeLocation {
@@ -229,6 +281,11 @@ namespace dia_app::state {
 		}
 
 		void reset() override { content->reset(); }
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "CodeBlockComponent:\n";
+			content->debugPrint(out, indent + 1);
+		}
 	};
 
 	class CodeLocationComponent: public Component {
@@ -242,6 +299,11 @@ namespace dia_app::state {
 		}
 
 		void reset() final {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const override {
+			out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file << ":"
+			    << location.line << ":" << location.column << ")\n";
+		}
 	};
 
 	class PointerMessage {
@@ -276,6 +338,24 @@ namespace dia_app::state {
 			  description(std::move(description)),
 			  pointer_messages(std::move(pointer_messages)),
 			  explore_edges(std::move(explore_edges)) {}
+
+		void debugPrint(std::ostream& out) const {
+			out << "Message: " << metadata.name << "\n";
+			out << "Header: ";
+			header->debugPrint(out);
+			out << "\n";
+			if (description) {
+				out << "Description: ";
+				description->debugPrint(out);
+				out << "\n";
+			}
+			if (!pointer_messages.empty()) {
+				out << "Pointer Messages:\n";
+				for (const auto& [id, pm] : pointer_messages) {
+					out << "  ID " << id << ": [" << pm.type << "] " << pm.content << " (prio: " << pm.priority << ")\n";
+				}
+			}
+		}
 	};
 
 	class Diagnostic {
@@ -286,5 +366,12 @@ namespace dia_app::state {
 		Diagnostic(std::vector<state::MessageID> displayed_messages, std::vector<Message> messages):
 			  displayed_messages(std::move(displayed_messages)),
 			  messages(std::move(messages)) {}
+
+		void debugPrint(std::ostream& out) const {
+			out << "Diagnostic with " << messages.size() << " messages.\n";
+			for (const auto& msg: messages) {
+				msg.debugPrint(out);
+			}
+		}
 	};
 }

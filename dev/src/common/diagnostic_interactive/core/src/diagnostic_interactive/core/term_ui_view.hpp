@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
+#include <base/types/ints.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 
 #include <set>
 #include <string>

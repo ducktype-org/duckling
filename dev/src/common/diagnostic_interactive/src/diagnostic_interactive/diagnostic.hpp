@@ -44,6 +44,10 @@ namespace dia_int {
 		TextArgument(std::string name, std::string content):
 			  Argument(std::move(name)),
 			  content(std::move(content)) {}
+
+		Box<dia_file::Component> getValue(DiagnosticBase&) override {
+			return base::makeBox<dia_file::TextComponent>(content);
+		}
 	};
 
 	class CodeArgument: public Argument {
@@ -57,34 +61,9 @@ namespace dia_int {
 			Ref<tokenizer::TokenSource>            source,
 			usize                                  start,
 			usize                                  end
-		) {
-			auto lines = source->viewSplitRange(start, end);
-			for (auto& l: lines) {
-				code_list.emplace_back(makeBox<dia_file::StartLineComponent>(l.first));
-				code_list.emplace_back(makeBox<dia_file::TextComponent>(l.second.stdString()));
-			}
-		}
+		);
 
-		Box<dia_file::Component> getValue(DiagnosticBase&) override {
-			// Here would be a lot of code to extract the code fragment from the source file.
-			// And potentially add interactive contents.
-			auto source = position.getSource();
-
-			usize start_line = position.getStartLineColumn().first;
-			usize end_line   = position.getEndLineColumn().first;
-
-			usize first_line = std::max(1 + lines_before, start_line - lines_before) - lines_before;
-			usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
-
-			usize begin_char = source->getLine(first_line).first;
-			usize end_char   = source->getLine(last_line).second;
-
-			auto code_list = std::vector<Box<dia_file::Component>>();
-
-			addCodeLines(code_list, source, begin_char, end_char);
-
-			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
-		}
+		Box<dia_file::Component> getValue(DiagnosticBase&) override;
 
 		CodeArgument(std::string name, dia::SourcePosition position):
 			  Argument(std::move(name)),
@@ -166,7 +145,6 @@ namespace dia_int {
 		 * but may be the link destination or explore link target.
 		 */
 		base::HashMap<std::string, Box<DiagnosticBase>> related_diagnostics;
-
 	protected:
 		void addArgument(Box<Argument> param) { arguments.push_back(std::move(param)); }
 
@@ -178,6 +156,13 @@ namespace dia_int {
 		void addEntity(Box<Entity> entity) { entities.push_back(std::move(entity)); }
 
 		void addPointerMessage(PointerMessage msg) { pointer_messages.push_back(std::move(msg)); }
+
+		template<typename... Args>
+		void addPointerMessage(Args&&... args) {
+			pointer_messages.push_back(
+				PointerMessage(std::forward<Args>(args)...)
+			);
+		}
 
 		virtual dia_file::Metadata getMetadata() const = 0;
 
@@ -192,13 +177,18 @@ namespace dia_int {
 		DiagnosticBase() = default;
 
 	public:
-		dia_file::Thread serialize() {
+		dia_file::Thread buildDiagnosticFile() {
 			return constructThread();
 		}
 
 		void addNote(Box<DiagnosticBase> note) { attached_messages.push_back(std::move(note)); }
 
 		void addExploreLink(ExploreLink link) { explore_links.push_back(std::move(link)); }
+
+		const std::vector<PointerMessage>& getPointerMessages() const {
+			return pointer_messages;
+		}
+
 
 		virtual ~DiagnosticBase() = default;
 	};

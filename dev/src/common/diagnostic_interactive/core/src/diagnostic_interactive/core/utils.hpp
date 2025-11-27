@@ -2,11 +2,10 @@
 #include "exceptions.hpp"
 #include <yaml-cpp/yaml.h>
 
-#include <base/box.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/str_utils.hpp>
-#include <base/variant.hpp>
+#include <base/pointers/box.hpp>
+#include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <json/json.hpp>
 

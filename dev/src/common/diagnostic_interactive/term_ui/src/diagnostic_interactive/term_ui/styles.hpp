@@ -2,7 +2,7 @@
 #include <diagnostic_interactive/core/term_ui_view.hpp>
 #include <rang.hpp>
 
-#include <base/ints.hpp>
+#include <base/types/ints.hpp>
 
 namespace term_ui {
 
