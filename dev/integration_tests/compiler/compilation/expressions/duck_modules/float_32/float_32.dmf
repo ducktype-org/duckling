@@ -20,7 +20,7 @@ fun main() -> i64 = {
     }
 
     let c: f32 = 0.1f32 + 0.2f32;
-    if (c < 0.29f32 || c > 0.31f32) {
+    if (c < 0.29f32 and c > 0.31f32) {
         builtin_output_i64(5);
     }
 

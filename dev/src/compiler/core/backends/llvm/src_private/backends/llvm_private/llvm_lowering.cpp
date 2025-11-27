@@ -74,7 +74,7 @@ namespace {
 					}
 					return llvm::ConstantFP::get(llvm_type, static_cast<f64>(val));
 				} else if constexpr (std::is_same_v<T, f64>) {
-					if (!llvm_type->isFloatTy()) {
+					if (!llvm_type->isDoubleTy()) {
 						CORE_PANIC(
 							"LLVM lowering: Type mismatch. NumericValue is f64, but LLVM type "
 							"is not float"
