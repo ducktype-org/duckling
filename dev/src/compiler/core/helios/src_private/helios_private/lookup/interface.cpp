@@ -4,6 +4,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -97,7 +98,7 @@ namespace compiler::helios {
 				}
 				variant_case(errors::SymbolNotFound, _) {
 					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, "Symbol not found in lookup"
+						error_position, base::strConcat("Symbol '", name, "' not found in lookup")
 					));
 				}
 				variant_default { CORE_PANIC("Invalid state"); }

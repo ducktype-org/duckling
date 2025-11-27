@@ -22,6 +22,15 @@ const boolean = true and false; # false
 
 const unit: () = ();
 
+const PI_F32 = 3.14f32;
+const RAD_F32 = 10.0f32;
+const AREA_F32 = PI_F32 * RAD_F32 * RAD_F32;
+
+const U16_MAX = 65535u16;
+const U16_OVERFLOW = U16_MAX + 1u16;
+const I16_SOME_VALUE = -1000i16;
+const I16_CALC = I16_SOME_VALUE / 10i16;
+
 fun main() -> i64 = {
     builtin_output_i64(five_1);
     builtin_output_i64(five_2);
@@ -32,6 +41,10 @@ fun main() -> i64 = {
 
     builtin_output_i64(takeUnit(unit));
     builtin_output_i64(takeUnit(unitIDentity(unit)));
+
+    builtin_output_i64(i64(AREA_F32)); # 314
+    builtin_output_i64(i64(U16_OVERFLOW)); # 0
+    builtin_output_i64(i64(I16_CALC)); # -100
 
     return 0i64;
 }

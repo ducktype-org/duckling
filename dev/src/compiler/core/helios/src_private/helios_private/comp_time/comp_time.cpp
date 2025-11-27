@@ -223,12 +223,17 @@ namespace compiler::helios {
 							case IntegerNegation:
 							case FloatNegation:
 								return std::visit(
-									[&](auto&& num_val) {
-										using NumT = std::decay<decltype(num_val)>;
+									[&](auto&& num_val) -> TreeEvalResult {
+										using NumT = std::decay_t<decltype(num_val)>;
 										if constexpr (std::is_unsigned_v<NumT>)
 											return query::QError(errors::Failed());
-										else
-											return CompileTimeValue{ NumericValue{ -num_val } };
+										else {
+											// @note: static cast is needed here. Since cpp
+									        // automatically promotes small int types to i32 if any
+									        // operation if performed on them.
+											return CompileTimeValue{ NumericValue{
+												static_cast<NumT>(-num_val) } };
+										}
 									},
 									val.getStorage()
 								);

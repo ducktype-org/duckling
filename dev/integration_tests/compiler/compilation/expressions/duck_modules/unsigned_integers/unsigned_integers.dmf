@@ -1,4 +1,5 @@
 fun main() -> i64 = {
+    ### U16 ###
     let u16_large: u16 = 60000u16;
     let u16_small: u16 = 100u16;
 
@@ -10,7 +11,18 @@ fun main() -> i64 = {
     if (u16_large + 1000u16 != 61000u16) {
         builtin_output_i64(2);
     }
+
+    let u16_max: u16 = 65535u16;
+    let u16_min: u16 = 0u16;
+    if (u16_max + 1u16 != 0u16) {
+        builtin_output_i64(3);
+    }
+
+    if (u16_min - 1u16 != 65535u16) {
+        builtin_output_i64(4);
+    }
     
+    ### U32 ###
     let u32_large: u32 = 3000000000u32;
     let u32_small: u32 = 1u32;
 
@@ -22,7 +34,16 @@ fun main() -> i64 = {
         builtin_output_i64(4);
     }
 
+    let u32_max: u32 = 4294967295u32;
+    let u32_min: u32 = 0u32;
+    if (u32_max + 1u32 != 0u32) {
+        builtin_output_i64(5);
+    }
+    if (u32_min - 1u32 != 4294967295u32) {
+        builtin_output_i64(6);
+    }
     
+    ### U64 ###
     let u64_large: u64 = 17293822569102704640u64; # hex: F000000000000000
     let u64_small: u64 = 1u64;
 
@@ -33,6 +54,16 @@ fun main() -> i64 = {
     if (10u64 - 5u64 != 5u64) {
         builtin_output_i64(6);
     }
+    
+    let u64_max: u64 = 18446744073709551615u64;
+    let u64_min: u64 = 0u64;
+    if (u64_max + 1u64 != 0u64) {
+        builtin_output_i64(7);
+    }
+    if (u64_min - 1u64 != u64_max) {
+        builtin_output_i64(7);
+    }
+
 
     return 0i64;
 }

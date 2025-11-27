@@ -75,7 +75,7 @@ Tests:
       #     String: ""
       #   ExitCode: 0
 
-  unsigned_literals:
+  unsigned_integers:
     Cases:
       llvm:
         backend: llvm
