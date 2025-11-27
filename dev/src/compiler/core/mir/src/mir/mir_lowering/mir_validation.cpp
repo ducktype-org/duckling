@@ -23,7 +23,7 @@ namespace compiler::mir {
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
 
-		// Analize each block independently.
+		// Analyze each block independently.
 		for (const auto& block: fun.blocks) {
 			auto process_instruction = [&](Instruction instr) {
 				if (instr.operation == Operation::Destruct

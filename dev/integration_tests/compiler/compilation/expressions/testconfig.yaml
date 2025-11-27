@@ -56,11 +56,6 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: ""
-      #   ExitCode: 0
 
   floating_point_comparisons:
     Cases:
@@ -69,11 +64,6 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: ""
-      #   ExitCode: 0
 
   unsigned_integers:
     Cases:
@@ -82,11 +72,6 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: ""
-      #   ExitCode: 0
 
   signed_integers:
     Cases:
@@ -95,11 +80,6 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: ""
-      #   ExitCode: 0
 
   float_32:
     Cases:
@@ -108,8 +88,3 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: ""
-      #   ExitCode: 0

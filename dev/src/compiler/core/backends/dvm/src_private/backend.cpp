@@ -669,9 +669,7 @@ namespace compiler::backend_vm {
 					pushInstruction(ctx.bytecode_func, { OpKind::jmpIfNot, false_block });
 				}
 			}
-		}
-
-		else {
+		} else {
 			InstructionBuilder terminator_instr;
 			terminator_instr.setKind(lirTerminatorToOpKind(terminator.operation));
 
