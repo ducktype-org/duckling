@@ -2,6 +2,7 @@
 
 
 #include <lir/lir_structure/lir_structure.hpp>
+
 #include <string_id/string_id.hpp>
 
 namespace compiler::driver {

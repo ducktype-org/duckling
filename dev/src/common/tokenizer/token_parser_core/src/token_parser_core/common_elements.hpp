@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/optional.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <lexer/token.hpp>
+#include <string_id/string_id.hpp>
 
 namespace tpc {
 	/**

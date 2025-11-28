@@ -2,7 +2,6 @@
  * @file dvm_backend_unit_tests.cpp
  */
 #include <string_id/string_id.hpp>
-
 #include <tester/tester.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>

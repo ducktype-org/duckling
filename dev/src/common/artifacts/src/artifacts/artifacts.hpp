@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
+#include <string_id/string_id.hpp>
 
 #include <cstring>
 #include <type_traits>
