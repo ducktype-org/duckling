@@ -158,8 +158,6 @@ namespace dia {
 		out << "}";
 	}
 
-
-
 	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {
 		auto loc_ord = &*getLocation() <=> &*other.getLocation();
 		if (loc_ord != std::strong_ordering::equal) return loc_ord;

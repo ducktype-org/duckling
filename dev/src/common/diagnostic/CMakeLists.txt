@@ -6,5 +6,4 @@ add_library(Diagnostic STATIC
         src/diagnostic/highlight_positions.cpp
 )
 
-# Core Diagnostic library without HELIOS/UI dependencies
-make_module(Diagnostic USES Printer Filesystem TokenSource JSON)
+make_module(Diagnostic USES Printer Filesystem TokenSource)

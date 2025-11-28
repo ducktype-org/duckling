@@ -25,12 +25,9 @@ int main() {
 #include <printer/printer_ostream.hpp>
 #include <token_source/forward.hpp>
 
-#include <json/json.hpp>
-
 #include <string>
 
 namespace dia {
-	using nlohmann::json;
 	class Location;
 	class SourcePosition;
 
@@ -129,7 +126,6 @@ namespace dia {
 		bool isFileEnd() const;
 
 		void printToJson(std::ostream&) const;
-
 
 	private:
 		usize          source_start;   ///< Start of the range of characters in the file.
