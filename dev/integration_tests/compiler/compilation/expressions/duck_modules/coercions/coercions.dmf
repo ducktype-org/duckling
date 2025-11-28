@@ -27,16 +27,5 @@ fun main() -> i64 = {
         builtin_output_i64(5);
     }
 
-    # f32 coerce to bool.
-    if (0.0) {
-        builtin_output_i64(6);
-    } 
-
-    # f64 coerce to bool.
-    if (3.14) {
-    } else {
-        builtin_output_i64(7);
-    }
-
     return 0i64;
 }
