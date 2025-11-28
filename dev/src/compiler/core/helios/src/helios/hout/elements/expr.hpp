@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/scope_symbol_id.hpp>
+#include "../../scope_symbol_id.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
@@ -524,21 +524,4 @@ namespace compiler::helios::code {
 			tsh::SymbolType<>     target_type
 		);
 	};
-}
-
-namespace nlohmann {
-	template<>
-	struct adl_serializer<compiler::helios::SymID> {
-		static void to_json(json& j, const compiler::helios::SymID symbol) {
-			j = { { "kind", compiler::helios::kind(symbol) } };
-
-			// Handle kind specific serialisation.
-			switch (compiler::helios::kind(symbol)) {
-			default:
-				break;
-			};
-		}
-	};
-
-
 }
