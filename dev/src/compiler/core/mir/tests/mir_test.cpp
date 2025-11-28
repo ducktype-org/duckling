@@ -280,8 +280,8 @@ private:
 			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
 			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
 
-			auto true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
-			auto false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
+			const auto& true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
+			const auto& false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
 
 			ASSERT_EQUAL(true_mir_const.value.get<bool>().value(), true);
 			ASSERT_EQUAL(false_mir_const.value.get<bool>().value(), false);
