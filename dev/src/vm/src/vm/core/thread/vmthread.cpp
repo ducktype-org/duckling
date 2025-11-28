@@ -5,8 +5,6 @@
 #include "opcode_functions/opcodes_functions.hpp"
 #include "opcode_functions/opcodes_functions_utils.hpp"
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -14,6 +12,7 @@
 #include <base/types/ints.hpp>
 
 #include <logger/logger.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>

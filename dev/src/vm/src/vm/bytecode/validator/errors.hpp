@@ -1,8 +1,8 @@
 #pragma once
-#include <string_id/string_id.hpp>
-
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
