@@ -18,6 +18,8 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include <utility>
+
 namespace compiler::helios::code {
 	namespace {
 
@@ -99,10 +101,15 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
-				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
-				if (operation) {
+				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+				if (result) {
+					auto [operation, lhs_coercion, rhs_coercion] = std::move(result).value();
+
+					auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+					auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
 					return makeBox<BinaryOperatorExpr>(
-						ctx, operation.value(), std::move(lhs), std::move(rhs)
+						ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
 					);
 				}
 				return {};
@@ -406,21 +413,29 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					match_optional(findBinaryBuiltin(
-						pst_operators.at(i), result_exprs.at(i).ref(), result_exprs.at(i + 1).ref()
-					)) {
-						opt_some(op) { operators.push_back(op); }
-						opt_none {
-							ctx.log(makeBox<
-									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+					auto result = findBinaryBuiltin(
+						ctx,
+						pst_operators.at(i),
+						result_exprs.at(i).ref(),
+						result_exprs.at(i + 1).ref()
+					);
+
+					if (result) {
+						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
+						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
+						result_exprs[i + 1]
+							= lhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
+						operators.push_back(op);
+					} else {
+						ctx.log(
+							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
 								stmt->getSourcePosition(), "No builtin operator found"
-							));
-							return;
-						}
+							)
+						);
+						return;
 					}
 				}
 

@@ -1,51 +1,79 @@
-
 #include "builtin_operations.hpp"
+
+#include "helios/hout/elements/expr.hpp"
+#include "helios_private/expressions/coercions.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <typesystem/higher/types.hpp>
 
+#include "base/collections/optional.hpp"
+
+#include "lexer/token_common.hpp"
+#include "query_framework/context.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
+#include <utility>
+
 namespace compiler::helios::code {
-
-	base::Optional<BuiltinBinary> findBinaryBuiltin(
-		lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	/**
+	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
+	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
+	 */
+	base::Optional<std::pair<tsh::SymbolType<>, std::pair<Coercion, Coercion>>> findCommonTypewithCoercion(
+		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
 	) {
-		// note: this is mock that works only for very simple int op int and bool op bool.
-		// @todo: make it smarter?
-		// when refactoring it remember about unaryBuiltin
+		auto lhs_type = lhs->expression_type.getSymbolType();
+		auto rhs_type = rhs->expression_type.getSymbolType();
 
-		// Get argument types.
-		auto lhs_type = lhs->expression_type;
-		auto rhs_type = rhs->expression_type;
+		// Types the same -> no coercion.
+		if (lhs_type.getType() == rhs_type.getType()) {
+			return std::make_pair(
+				lhs_type,
+				std::make_pair(Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type))
+			);
+		}
 
-		// Confirm appropriate types.
-		auto argument_kind                   = lhs_type.getType().getKind();
-		bool are_arguments_same_kind         = argument_kind == rhs_type.getType().getKind();
-		bool are_arguments_int_float_or_bool = argument_kind == tsh::Kind::Integral
-		                                    or argument_kind == tsh::Kind::Bool
-		                                    or argument_kind == tsh::Kind::Float;
+		// Try coercing left to right.
+		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
+		if (lhs_to_rhs.hasValue()) {
+			return std::make_pair(
+				rhs_type,
+				std::make_pair(std::move(lhs_to_rhs.value()), Coercion::emptyCoercion(rhs_type))
+			);
+		}
 
-		if (not are_arguments_same_kind or not are_arguments_int_float_or_bool) {
+		// Try coercing right to left.
+		auto rhs_to_lhs = canCoerce(ctx, lhs_type, rhs_type);
+		if (rhs_to_lhs.hasValue()) {
+			return std::make_pair(
+				lhs_type,
+				std::make_pair(Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.value()))
+			);
+		}
+
+		// Invalid coercion.
+		return {};
+	}
+
+	/**
+	 * @brief Finds a binary builtin operation with implicit coercion support.
+	 * Returns the operation along with coercions to apply to operands.
+	 * @return Optional tuple of (builtin_operation, left_coercion, right_coercion)
+	 */
+	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	) {
+		auto common_type_res = findCommonTypewithCoercion(ctx, lhs, rhs);
+		if (!common_type_res.has_value()) {
 			// @TODO: report an error?
-			// No builtins for types other than ints, floats and bools for now.
 			return {};
 		}
 
-		// Confirm matching sizes and signedness in the case of integers.
-		if (argument_kind == tsh::Kind::Integral) {
-			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
-			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
+		auto [common_type, coercions]     = std::move(common_type_res).value();
+		auto [lhs_coercion, rhs_coercion] = coercions;
 
-			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
-			    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
-				return {};
-			}
-		} else if (argument_kind == tsh::Kind::Float) {
-			auto lhs_as_integer = tsh::FloatAbstractType(lhs_type.getType());
-			auto rhs_as_integer = tsh::FloatAbstractType(rhs_type.getType());
+		auto operation_kind = common_type.getType().getKind();
 
-			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()) return {};
-		}
 
 		// @TODO: change to base::map when possible
 		const static std::map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinary> operators = {
@@ -84,7 +112,13 @@ namespace compiler::helios::code {
 			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
 		};
 
-		if (operators.contains({ op, argument_kind })) return operators.at({ op, argument_kind });
+		if (operators.contains({ op, operation_kind }))
+			return std::make_tuple(
+				operators.at({ op, operation_kind }),
+				std::move(lhs_coercion),
+				std::move(rhs_coercion)
+			);
+
 		return {};
 	}
 
