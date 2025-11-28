@@ -59,6 +59,12 @@ namespace compiler::numeric_value {
 		}
 
 		/**
+		 * @brief Factory method for creating a NumericValue of a given tsh::SymbolType
+		 * @return The NumericValue storing specified type with a value of 0.
+		 */
+		[[nodiscard]] static NumericValue createOfType(const tsh::SymbolType<>& type);
+
+		/**
 		 * @brief Returns a constant reference to the NumericValues internal value storage.
 		 * @return A constant reference to the NumericValues value storage.
 		 */

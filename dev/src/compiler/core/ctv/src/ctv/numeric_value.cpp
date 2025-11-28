@@ -11,6 +11,56 @@
 namespace compiler::numeric_value {
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
+	NumericValue NumericValue::createOfType(const tsh::SymbolType<>& type) {
+		using namespace tsh;
+		const auto abs_type = type.getType();
+
+		switch (abs_type.getKind()) {
+		case Kind::Integral: {
+			IntegralAbstractType int_type(abs_type);
+			usize                width = usize(int_type.getSize());
+
+			if (int_type.getSignedness() == IntegralAbstractType::Signedness::Signed) {
+				switch (width) {
+				case 16:
+					return NumericValue{ i16(0) };
+				case 32:
+					return NumericValue{ i32(0) };
+				case 64:
+					return NumericValue{ i64(0) };
+				default:
+					CORE_PANIC("Unsupported signed integer size in NumericValue::createOfType()");
+				}
+			} else {
+				switch (width) {
+				case 16:
+					return NumericValue{ u16(0) };
+				case 32:
+					return NumericValue{ u32(0) };
+				case 64:
+					return NumericValue{ u64(0) };
+				default:
+					CORE_PANIC("Unsupported unsigned integer size in NumericValue::createOfType()");
+				}
+			}
+		}
+		case tsh::Kind::Float: {
+			tsh::FloatAbstractType float_type(abs_type);
+			usize                  width = usize(float_type.getSize());
+			switch (width) {
+			case 32:
+				return NumericValue{ f32(0) };
+			case 64:
+				return NumericValue{ f64(0) };
+			default:
+				CORE_PANIC("Unsupported float size in NumericValue::createOfType()");
+			}
+		}
+		default:
+			CORE_PANIC("Invalid type in a NumericValue::createOfType()");
+		}
+	}
+
 	[[nodiscard]] std::string NumericValue::toString() const {
 		return std::visit([&](auto&& value) { return base::toString(value); }, value);
 	}

@@ -350,8 +350,11 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Implicit coercions allow promoting to greater sizes
-			return target.getKind() == Kind::Float && FloatAbstractType(target).getSize() > size;
+			// Implicit coercions allow checking against zero,
+			// as well as promoting to greater sizes
+			return target.getKind() == Kind::Bool
+			    || ((target.getKind() == Kind::Float)
+			        && (FloatAbstractType(target).getSize() > size));
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
