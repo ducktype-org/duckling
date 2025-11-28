@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../scope_symbol_id.hpp"
+#include <helios/scope_symbol_id.hpp>
 #include "expr.hpp"
 
 #include <typesystem/higher/symbol_type.hpp>

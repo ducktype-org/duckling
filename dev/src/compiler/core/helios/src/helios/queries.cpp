@@ -1,6 +1,5 @@
 #include "queries.hpp"
 
-#include <diagnostic_interactive/usage.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -415,8 +414,8 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
-				if (stmt_maker.out.hasValue() && stmt_maker.out.value().has_value())
-					block.statements.emplace_back(std::move(stmt_maker.out.value().value()));
+				if (stmt_maker.out.has_value())
+					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
 			return block;
 		}
@@ -454,8 +453,8 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-			query::Context&                                                 ctx;
-			query::QResult<base::Optional<Box<code::Stmt>>, errors::Failed> out;
+			query::Context&                 ctx;
+			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
@@ -468,13 +467,7 @@ namespace compiler::helios {
 
 			template<class T>
 			void output(T&& value) {
-				this->out = base::Optional<Box<code::Stmt>>(
-					makeBox<std::remove_reference_t<T>>(std::forward<T>(value))
-				);
-			}
-
-			void outputError() {
-				this->out = query::QError(errors::Failed());
+				this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
 			}
 
 			void visitReturn(pst::Access<pst::Return> stmt) override {
@@ -518,12 +511,6 @@ namespace compiler::helios {
 							"Left side of assignment can't be a literal."
 						)
 					);
-					ctx.logInt(makeBox<dia_int::TodoCodeError>(
-						"Left side of assignment can't be a literal.",
-						"",
-						assignment->getSourcePosition()
-					));
-					outputError();
 					return;  // fail
 				}
 
@@ -542,7 +529,6 @@ namespace compiler::helios {
 							"Left side of assignment can't be immutable."
 						)
 					);
-					outputError();
 					return;  // fail
 				}
 
@@ -564,7 +550,6 @@ namespace compiler::helios {
 							)
 						)
 					);
-					outputError();
 					return;  // fail
 				}
 				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
@@ -654,7 +639,6 @@ namespace compiler::helios {
 							stmt->getSourcePosition(),
 							base::strConcat("Immutable variables must have an initial value")
 						));
-						outputError();
 						return;  // fail
 					}
 
@@ -685,7 +669,6 @@ namespace compiler::helios {
 								"\n"
 							)
 						));
-						outputError();
 						return;  // fail
 					}
 
