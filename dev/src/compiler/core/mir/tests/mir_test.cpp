@@ -131,25 +131,25 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generation:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 3);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
 			// Check that the first instruction assigns to a global
 			{
 				const auto& instr = foo_mir.blocks[BlockID(7)].instructions.at(0);
 				ASSERT_TRUE(instr.output.value().isGlobal());
 			}
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(1).operation, Cast);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 1);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 2);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.at(0).operation, Cast);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].terminator.operation, Jump);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(5)].terminator.operation, Branch);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 2);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Cast);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
 
 			// Test debug print:
@@ -168,18 +168,17 @@ private:
 
 			auto first_block_id = goo_mir.block_order[0];
 			/**
-	Local(5) :=  Cast             23               Flags[], Params{from:const i64, to:i32}, scope:40
-			     Nop                               Flags[], Params{}, scope:40
-	Local(5) :=  Cast             24               Flags[], Params{from:const i64, to:i32}, scope:39
-			     Nop                               Flags[], Params{}, scope:39
-	Local(6) :=  Call             Function(hoo)    Flags[Construct Local(6)], Params{}, scope:38
-	Local(6) :=  Assign           15               Flags[], Params{}, scope:38
-			     FunctionEnd                       Flags[], Params{}, scope:36
+		Local(8) := Cast             23               Flags[], Params{from:i32, to:i32}, scope:40
+			        Nop                               Flags[], Params{}, scope:40
+		Local(8) := Cast             24               Flags[], Params{from:i32, to:i32}, scope:39
+			        Nop                               Flags[], Params{}, scope:39
+		Local(9) := Call             Function(hoo)    Flags[Construct Local(9)], Params{}, scope:38
+		Local(9) := Cast             15               Flags[], Params{from:i32, to:i64}, scope:38
+			        Nop                               Flags[], Params{}, scope:38
+			        FunctionEnd                       Flags[], Params{}, scope:36
 			 */
 
-			goo_mir.debugPrint(std::cout);
-
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 6);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 7);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
 				compiler::mir::Operation::Cast
@@ -194,7 +193,7 @@ private:
 			);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(5).operation,
-				compiler::mir::Operation::Assign
+				compiler::mir::Operation::Cast
 			);
 		});
 	}
@@ -405,7 +404,8 @@ private:
 			ASSERT_EQUAL(functions.at(2).declaration->original_name, base::StrID("unreachable_end"));
 			ASSERT_EQUAL(functions.at(3).declaration->original_name, base::StrID("empty"));
 
-			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
+			ASSERT_TRUE(
+				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
 			);
 
 			auto& should_add_retvoid_fun
