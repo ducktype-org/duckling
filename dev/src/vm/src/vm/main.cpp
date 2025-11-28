@@ -41,8 +41,8 @@ clah::Clah getVmClah() {
 			if (options.isFlag("debug-logs")) {
 				std::cerr << "Debug logs enabled.\n";
 				logger::enable_dev_logs = true;
-				logger::enableCategory(logger::DevLogCategories::DVM);
-				logger::enableCategory(logger::DevLogCategories::DVMDetails);
+				logger::enableDevCategory(logger::DevLogCategories::DVM);
+				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
 			}
 		})
 #endif
