@@ -1,8 +1,8 @@
 var g: i64 = 100;
-var some_global: i64 = 42i64;
+var some_global: i64 = 42;
 
 fun foo() = {
-	var a: i64 = 23i64;
+	var a: i64 = 23;
 	g = a;
 	# @TODO: #1543 Change '9i64' to '9' once `NumericValue::createOfType()` gets implemented. 
 	if (9i64) {

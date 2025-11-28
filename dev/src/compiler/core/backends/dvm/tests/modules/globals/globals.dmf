@@ -1,3 +1,4 @@
+# @TODO: #1571 Remove type specifiers form this file once casts exist in DVM.
 var g: i64 = 48i64;
 
 fun main() = {
