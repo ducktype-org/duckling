@@ -11,6 +11,7 @@
 #include <filesystem/file.hpp>
 
 #include <charconv>
+#include <iostream>
 
 namespace clah {
 	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
@@ -137,10 +138,23 @@ namespace clah {
 	}
 
 	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
-		auto string_result
-			= base::anyCast<std::string>(StringParser::make()->parse(start, raw_input).value);
+		if (raw_input.at(start) != '[') {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(), start, start + 1, raw_input, "String list must start with '['"
+			);
+		}
 
-		// trim spaces from both ends:
+		// find: ]:
+		usize ending_pos = raw_input.find(']', start);
+		if (ending_pos == std::string_view::npos) {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(), start, start + 1, raw_input, "String list must end with ']'"
+			);
+		}
+
+		std::string string_list{ raw_input.substr(start, ending_pos - start + 1) };
+
+		// lambda to trim spaces from both ends:
 		auto trim_spaces = [](std::string_view sv) -> std::string {
 			std::string string_result_trimmed{ sv };
 			string_result_trimmed.erase(0, string_result_trimmed.find_first_not_of(" \t\n\r\f\v"));
@@ -148,31 +162,15 @@ namespace clah {
 			return string_result_trimmed;
 		};
 
-		auto string_result_trimmed = trim_spaces(string_result);
-
-		if (string_result_trimmed.size() < 2 or string_result_trimmed.front() != '['
-		    or string_result_trimmed.back() != ']') {
-			throw exceptions::ValueParsingException(
-				getTypeName().c_str(),
-				start,
-				start + string_result.size(),
-				raw_input,
-				"String list must be encapsulated in [ ]."
-			);
-		}
-
-		auto string_list_content
-			= string_result_trimmed.substr(1, string_result_trimmed.size() - 2);
-
 		// split by commas:
 		std::vector<std::string> values;
 		usize                    pos = 0;
 
-		while (pos < string_list_content.size()) {
-			auto comma_pos = string_list_content.find(',', pos);
-			if (comma_pos == std::string::npos) comma_pos = string_list_content.size();
+		while (pos < string_list.size()) {
+			auto comma_pos = string_list.find(',', pos);
+			if (comma_pos == std::string::npos) comma_pos = string_list.size();
 
-			auto value = trim_spaces(string_list_content.substr(pos, comma_pos - pos));
+			auto value = trim_spaces(string_list.substr(pos, comma_pos - pos));
 			if (!value.empty()) values.emplace_back(value);
 
 			pos = comma_pos + 1;
@@ -180,8 +178,8 @@ namespace clah {
 
 		return {
 			.value      = values,
-			.raw_source = string_result,
-			.position   = start + string_result.size(),
+			.raw_source = string_list,
+			.position   = ending_pos + 1,
 		};
 	}
 }

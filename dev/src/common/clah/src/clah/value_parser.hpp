@@ -23,10 +23,12 @@ namespace clah {
 		 * The value. It has to be cast back with base::anyCast.
 		 */
 		std::any value;
+
 		/**
 		 * Source chars from which the value was created.
 		 */
 		std::string raw_source;
+
 		/**
 		 * Position is an index ONE AFTER the last character of the parsed value.
 		 */
