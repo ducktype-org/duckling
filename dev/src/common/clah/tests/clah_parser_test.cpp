@@ -154,36 +154,42 @@ private:
 
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "str1", "str2", "str3" }),
-			parseStringList("\"[str1, str2, str3]\"")
+			parseStringList("[str1, str2, str3]")
 		);
 
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "str1", "str2", "str3" }),
-			parseStringList("\"  [ str1 ,   str2 ,   str3  ]  \"")
+			parseStringList("[ str1 ,   str2 ,   str3  ]  ")
 		);
 
-		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("\"  [ str1   ]  \""));
+		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("[ str1   ]  "));
 
-		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("\"  [   ]  \""));
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("\"[\""); }, "Should throw on invalid value"
-		);
+		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[   ]  "));
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("\"]\""); }, "Should throw on invalid value"
+			[&]() { parseRange("["); }, "Should throw on invalid value"
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("\"[]a\""); }, "Should throw on invalid value"
+			[&]() { parseRange("]"); }, "Should throw on invalid value"
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("\"  \""); }, "Should throw on invalid value"
+			[&]() { parseRange("[]a"); }, "Should throw on invalid value"
 		);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("\" b \""); }, "Should throw on invalid value"
+			[&]() { parseRange("  "); }, "Should throw on invalid value"
+		);
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange(" b "); }, "Should throw on invalid value"
+		);
+
+		// note: clah should ensure, that value parser input 
+		// always starts with a non-whitespace character, so this throws:
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("  []"); }, "Should throw on invalid value"
 		);
 	}
 };
