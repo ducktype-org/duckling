@@ -4,13 +4,13 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/options.hpp>
 #include <global_state/packages.hpp>
-#include <string_id/string_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
 #include <filesystem>

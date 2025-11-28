@@ -8,10 +8,10 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <string_id/string_id.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/context.hpp>  // @TODO: #404 relax to fd
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios {
 	/**

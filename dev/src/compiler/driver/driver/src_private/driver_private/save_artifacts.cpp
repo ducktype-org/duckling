@@ -1,10 +1,10 @@
 #include <driver_private/save_artifacts.hpp>
 #include <global_state/artifacts_location.hpp>
-#include <string_id/string_id.hpp>
 
 #include <base/types/ints.hpp>
 
 #include <query_framework/internal/context_access.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vector>
 

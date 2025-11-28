@@ -1,6 +1,5 @@
 #include <backends/dvm/backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <string_id/string_id.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -8,6 +7,7 @@
 #include <base/preproc/for_each.hpp>
 
 #include <query_framework/context.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>

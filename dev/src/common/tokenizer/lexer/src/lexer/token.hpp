@@ -7,11 +7,10 @@
 
 #include "token_common.hpp"
 
-#include <string_id/string_id.hpp>
-
 #include <base/misc/raw_view.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vector>
 

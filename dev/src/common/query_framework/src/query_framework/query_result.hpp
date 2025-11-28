@@ -240,7 +240,7 @@ namespace query {
 		requires std::is_constructible_v<ResTp, T> constexpr QResult(const QResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
-			if (oth.hasValue()) storage.emplace(oth.value());
+			if (oth.hasValue()) storage = oth.value();
 
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)

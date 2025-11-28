@@ -11,11 +11,10 @@
  */
 #pragma once
 
-#include <string_id/string_id.hpp>
-
 #include <base/extend_cpp/flag.hpp>
 
 #include <init/init.hpp>
+#include <string_id/string_id.hpp>
 
 namespace lang_def {
 
@@ -112,7 +111,8 @@ namespace lang_def {
 
 		Char,
 		Bool,
-		Str,  // ...
+		Str,
+		Type,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,
