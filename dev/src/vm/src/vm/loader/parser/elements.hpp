@@ -1,11 +1,10 @@
 #pragma once
 
-#include <string_id/string_id.hpp>
-
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
+#include <string_id/string_id.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>

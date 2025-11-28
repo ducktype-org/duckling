@@ -2,7 +2,6 @@
 
 #include "size_constants.hpp"
 
-#include <string_id/string_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -12,6 +11,7 @@
 #include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <string_id/string_id.hpp>
 
 #include <variant>
 
