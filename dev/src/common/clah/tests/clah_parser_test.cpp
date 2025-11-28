@@ -186,7 +186,7 @@ private:
 			[&]() { parseRange(" b "); }, "Should throw on invalid value"
 		);
 
-		// note: clah should ensure, that value parser input 
+		// note: clah should ensure, that value parser input
 		// always starts with a non-whitespace character, so this throws:
 		assertThrows<clah::exceptions::ValueParsingException>(
 			[&]() { parseRange("  []"); }, "Should throw on invalid value"
