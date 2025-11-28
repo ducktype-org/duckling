@@ -152,7 +152,7 @@ namespace clah {
 			);
 		}
 
-		CORE_ASSERT(start + 1 <= ending_pos - 1, "Calculated string list range is invalid");
+		CORE_ASSERT(start + 1 <= ending_pos, "Calculated string list range is invalid");
 		std::string string_list{ raw_input.substr(start + 1, ending_pos - start - 1) };
 
 		// lambda to trim spaces from both ends:

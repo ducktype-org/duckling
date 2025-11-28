@@ -162,6 +162,8 @@ private:
 			parseStringList("[ str1 ,   str2 ,   str3  ]  ")
 		);
 
+		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[]"));
+
 		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("[ str1   ]  "));
 
 		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[   ]  "));
