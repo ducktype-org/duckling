@@ -55,14 +55,12 @@ namespace {
 namespace compiler::backend_vm {
 	namespace {
 		vm::code::TypeOfData getTypeFromLayout(CRef<tsl::TypeLayout> layout) {
-			std::cout << "LAYOUT: " << layout->toStringIdentification() << '\n';
 			variant_match(layout->getVariant()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout->getSize());
-					std::cout << "Bits: " << bits << '\n';
 					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
@@ -270,10 +268,7 @@ namespace compiler::backend_vm {
 						if (primitive.size == 8) return vm::opargs::StackLocal64{ name };
 						if (primitive.size == 4) return vm::opargs::StackLocal32{ name };
 						if (primitive.size == 2) return vm::opargs::StackLocal16{ name };
-						if (primitive.size == 1) {
-							std::cout << "Error\n";
-							return vm::opargs::StackLocal8{ name };
-						}
+						if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 					}
 				}
 				variant_case(vm::code::PointerType, pointer) {
@@ -550,7 +545,6 @@ namespace compiler::backend_vm {
 		}
 
 		void addLIRInstruction(AddLIRFuncContext& ctx, const lir::Instruction& lir_instruction) {
-			std::cout << base::enumToStr(lir_instruction.operation) << '\n';
 			// Insert a comment about operation type.
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
@@ -562,7 +556,6 @@ namespace compiler::backend_vm {
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
 			const auto output = lirOutputToOpArg(ctx, lir_instruction);
-
 
 			// Add output as an argument.
 			std::deque<vm::opargs::OpCodeArg> args{};

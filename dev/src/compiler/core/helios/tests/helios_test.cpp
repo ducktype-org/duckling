@@ -18,6 +18,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -76,6 +77,7 @@ public:
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testTypeLifting);
 
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -493,9 +495,9 @@ private:
 
 			// Build sequence expressions
 			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::TupleTypeConstructorExpr>(
-				ctx, std::move(tuple_elements)
-			));
+			sequence_exprs.emplace_back(
+				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+			);
 			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
 				ctx,
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
@@ -1465,11 +1467,14 @@ private:
 		const auto f64_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
 		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
 		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
+			{ { st(int32_type), st(int32_type) } }
+		);
+		const auto tuple_si_type
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
-
-		// @TODO: #925 fix how tuples are deduced
 
 		// Vars
 		ASSERT_EQUAL(int32_type, getTypeOf("EasyIntI32", foo_body_scope));
@@ -1485,6 +1490,9 @@ private:
 		ASSERT_EQUAL(bool_type, getTypeOf("EasyBool", foo_body_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("EasyString", foo_body_scope));
 
+		ASSERT_EQUAL(tuple_ii_type, getTypeOf("TupleVII", foo_body_scope));
+		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleVSI", foo_body_scope));
+
 		// Consts
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleIntI32", root_scope));
 		ASSERT_EQUAL(int64_type, getTypeOf("SimpleIntI64", root_scope));
@@ -1492,12 +1500,15 @@ private:
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleOctIntI32", root_scope));
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleHexIntI32", root_scope));
 
-		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32", foo_body_scope));
-		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32_2", foo_body_scope));
-		ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloatF64", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32", root_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloatF32_2", root_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("SimpleFloatF64", root_scope));
 
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
+
+		ASSERT_EQUAL(tuple_ii_type, getTypeOf("TupleCII", root_scope));
+		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleCSI", root_scope));
 
 		// Differences between const, let, and var
 		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
@@ -1837,6 +1848,89 @@ private:
 				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 		}
+	}
+
+	void testTypeLifting() {
+		// Load the small test module we added under test_modules/units_and_tuples
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/units_and_tuples")));
+
+		const auto unit1     = getChain("Unit1", root_scope).back();
+		const auto unit2     = getChain("Unit2", root_scope).back();
+		const auto unit_type = getChain("UnitType", root_scope).back();
+
+		const auto int1     = getChain("Int1", root_scope).back();
+		const auto int2     = getChain("Int2", root_scope).back();
+		const auto int_type = getChain("IntType", root_scope).back();
+
+		const auto int_type1     = getChain("IntType1", root_scope).back();
+		const auto int_type2     = getChain("IntType2", root_scope).back();
+		const auto int_type_type = getChain("IntTypeType", root_scope).back();
+
+		const auto tuple_ii1     = getChain("TupleII1", root_scope).back();
+		const auto tuple_ii2     = getChain("TupleII2", root_scope).back();
+		const auto tuple_ii_type = getChain("TupleIIType", root_scope).back();
+
+		const auto tuple_tt1     = getChain("TupleTT1", root_scope).back();
+		const auto tuple_tt2     = getChain("TupleTT2", root_scope).back();
+		const auto tuple_tt_type = getChain("TupleTTType", root_scope).back();
+
+		const auto tuple_lift_error = getChain("TupleLiftError", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto check_types = [&](const compiler::helios::SymID     sym_id,
+			                             const compiler::tsh::SymbolType<> expected_type,
+			                             const std::string&                message) -> void {
+				const auto symbol_value
+					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
+				const auto actual_type
+					= symbol_value.getTypeOfStoredValue(ctx).withMutability(Immutable);
+				assertEqual(actual_type, expected_type, message);
+			};
+
+			const auto meta_st
+				= st(ctx.query<compiler::tsh::QueryMetaType>({})).withMutability(Immutable);
+			const auto unit_st
+				= st(ctx.query<compiler::tsh::QueryUnitType>({})).withMutability(Immutable);
+			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
+			                        .withMutability(Immutable);
+			const auto tuple_ii_st
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+					 )
+			    ).withMutability(Immutable);
+			const auto tuple_tt_st
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+					 )
+			    ).withMutability(Immutable);
+
+			check_types(unit1, unit_st, "Unit1 should be of unit type.");
+			check_types(unit2, unit_st, "Unit2 should be of unit type.");
+			check_types(unit_type, meta_st, "UnitType should be of meta type.");
+
+			check_types(int1, int_st, "Int1 should be of integer type.");
+			check_types(int2, int_st, "Int2 should be of integer type.");
+			check_types(int_type, meta_st, "IntType should be of meta type.");
+
+			check_types(int_type1, meta_st, "IntType1 should be of integer type.");
+			check_types(int_type2, meta_st, "IntType2 should be of integer type.");
+			check_types(int_type_type, meta_st, "IntTypeType should be of integer type.");
+
+			check_types(tuple_ii1, tuple_ii_st, "TupleII1 should be of tuple type.");
+			check_types(tuple_ii2, tuple_ii_st, "TupleII2 should be of tuple type.");
+			check_types(tuple_ii_type, meta_st, "TupleIIType should be of meta type.");
+
+			check_types(tuple_tt1, tuple_tt_st, "TupleTT1 should be of tuple type.");
+			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
+			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
+
+			assertThrows<compiler::helios::InvalidCoercion>(
+				[&] {
+					ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).valueOrThrow();
+				},
+				"Trying to lift an unliftable tuple to a type should result in a coercion error."
+			);
+		});
 	}
 
 	void testErrorBadExpr() {

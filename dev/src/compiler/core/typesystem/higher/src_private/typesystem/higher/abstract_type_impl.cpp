@@ -23,6 +23,19 @@ namespace compiler::tsh {
 		return res.str();
 	}
 
+	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
+		const {
+		// The unit type can be coerced to the meta type
+		// because unit values can be interpreted as unit types.
+		return target.getKind() == Kind::Meta;
+	}
+
+	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
 	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
 		const AbstractType target, query::Context& ctx
 	) const {
@@ -43,24 +56,44 @@ namespace compiler::tsh {
 	) const {
 		// Implicit coercions are allowed to other tuples of the same size,
 		// where each component can be coerced independently.
+		//
+		// Additionally, tuples can be coerced to Meta type if
+		// all their components can be coerced to Meta type.
 
-		if (target.getKind() != Kind::Tuple) return false;
-		TupleAbstractType target_tuple = target;
+		if (target.getKind() == Kind::Tuple) {
+			const TupleAbstractType target_tuple = target;
 
-		const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
-		if (target_components.size() != components.size()) return false;
+			const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
+			if (target_components.size() != components.size()) return false;
 
-		for (usize i = 0; i < components.size(); i++) {
-			SymbolType component = components[i];
-			if (const SymbolType target_component = target_components[i];
-			    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
-					component,
-					target_component,
-				}))
-				return false;
+			for (usize i = 0; i < components.size(); i++) {
+				SymbolType component = components[i];
+				if (const SymbolType target_component = target_components[i];
+				    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
+						component,
+						target_component,
+					}))
+					return false;
+			}
+
+			return true;
 		}
 
-		return true;
+		if (target.getKind() == Kind::Meta) {
+			// Tuples can be coerced to the Meta type if and only if their components
+			// can all be coerced to Meta type. Note that the components can have additional
+			// indirection and mutability specifiers (the component types are symbol
+			// types), but that's OK, we need only to check the abstract types underneath.
+			for (const auto& component: components)
+				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
+						component.getType(),
+						target,  //< target is the Meta type.
+					}))
+					return false;
+			return true;
+		}
+
+		return false;
 	}
 
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
@@ -133,12 +166,6 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
 		return ctx.query<QueryInterfaceOfClass>(this);
-	}
-
-	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context&) const {
-		// note: we can extend interface later if needed
-		static TypeInterface empty{};
-		return &empty;
 	}
 
 	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {

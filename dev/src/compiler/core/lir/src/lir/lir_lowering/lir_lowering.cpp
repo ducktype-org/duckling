@@ -35,9 +35,6 @@
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
-	using std::move;
-
-
 	/**
 	 * @brief Mutable reference block in LIR.
 	 */
@@ -458,7 +455,6 @@ namespace compiler::lir {
 					}
 					variant_default { return false; }
 				}
-
 				CORE_UNREACHABLE();
 			}
 
