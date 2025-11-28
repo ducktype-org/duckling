@@ -102,7 +102,7 @@ namespace dia_app {
 			void visitCodeLocationComponent(const state::CodeLocationComponent& c) override {}
 		};
 
-		CodeSection build_code_section(
+		CodeSection buildCodeSection(
 			const state::CodeBlockComponent&                                     block,
 			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
 			StyleType                                                            style_type
@@ -169,7 +169,7 @@ namespace dia_app {
 
 			void visitCodeBlockComponent(const state::CodeBlockComponent& c) override {
 				flushText();
-				sections.emplace_back(build_code_section(c, pointer_msgs, style_type));
+				sections.emplace_back(buildCodeSection(c, pointer_msgs, style_type));
 			}
 
 			void visitConcatComponent(const state::ConcatComponent& c) override {

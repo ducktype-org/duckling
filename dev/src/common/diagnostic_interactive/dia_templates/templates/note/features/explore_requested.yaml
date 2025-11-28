@@ -1,9 +1,0 @@
-metadata:
-  type: "note"
-  family: "features"
-  name: "explore_requested"
-  code: "9902"
-  active_from: "0.0.1"
-  active_until: "now"
-
-header_message: "exploration of the following code fragment was requested"
