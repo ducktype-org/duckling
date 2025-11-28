@@ -6,5 +6,3 @@ add_subdirectory(driver)
 add_subdirectory(main)
 
 add_subdirectory(playground)
-
-add_subdirectory(dia_app)

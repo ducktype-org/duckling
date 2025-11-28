@@ -15,7 +15,6 @@
 
 #include <query_framework/context_fd.hpp>
 
-#include <json/json.hpp>
 #include <string>
 
 /**

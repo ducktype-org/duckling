@@ -6,9 +6,9 @@ namespace dia_int {
 		for (auto& msg: diagnostics) {
 			try {
 				auto diagnostic_file = msg->buildDiagnosticFile();
-				std::cout << diagnostic_file.toJson().dump(4) << "\n\n";
+				// std::cout << diagnostic_file.toJson().dump(4) << "\n\n";
 				auto state = dia_app::evaluateDiagnostic(diagnostic_file);
-				state.debugPrint(std::cout);
+				// state.debugPrint(std::cout);
 				auto view  = dia_app::term_ui_view::constructTreeView(state);
 				term_ui::print(view, out);
 			} catch (const std::exception& e) {

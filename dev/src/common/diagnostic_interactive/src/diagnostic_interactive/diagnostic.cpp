@@ -33,12 +33,9 @@ namespace dia_int {
 
 		usize start_line = position.getStartLineColumn().first;
 		usize end_line   = position.getEndLineColumn().first;
-		std::cout << "start_line: " << start_line << ", end_line: " << end_line << "\n";
 
 		usize first_line = std::max(1 + lines_before, start_line) - lines_before;
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
-
-		std::cout << "first_line: " << first_line << ", last_line: " << last_line << "\n";
 
 		usize begin_char = source->getLine(first_line).first;
 		usize end_char   = source->getLine(last_line).second;

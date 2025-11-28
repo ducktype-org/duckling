@@ -10,4 +10,4 @@ add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/logger.cpp
 )
 
-make_module(DiagnosticInteractive USES TypeSystemHigher Printer Filesystem TokenSource HELIOS_SYMBOLS TerminalUI DiagnosticInteractiveCore Diagnostic )
+make_module(DiagnosticInteractive USES TypeSystemHigher Printer Filesystem TokenSource TerminalUI DiagnosticInteractiveCore Diagnostic )
