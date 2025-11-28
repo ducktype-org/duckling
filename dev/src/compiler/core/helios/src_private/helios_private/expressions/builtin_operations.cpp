@@ -43,7 +43,7 @@ namespace compiler::helios::code {
 		}
 
 		// Try coercing right to left.
-		auto rhs_to_lhs = canCoerce(ctx, lhs_type, rhs_type);
+		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
 		if (rhs_to_lhs.hasValue()) {
 			return std::make_pair(
 				lhs_type,

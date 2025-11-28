@@ -427,7 +427,7 @@ namespace compiler::helios::code {
 						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
 						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
 						result_exprs[i + 1]
-							= lhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
+							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
 						ctx.log(
