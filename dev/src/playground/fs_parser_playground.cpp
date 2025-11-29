@@ -1,3 +1,4 @@
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <base/misc/int_conv.hpp>
@@ -14,7 +15,7 @@ void countFiles(const compiler::frontend::ModuleTree& tree) {
 	file_counter += (int) tree.getSourceFiles().size();
 	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
 	for (const auto& [_, submodule]: tree.getSubmodules()) {
-		countFiles(*submodule);
+		countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
 		dir_counter++;
 	}
 }
