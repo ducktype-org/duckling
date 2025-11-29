@@ -1,8 +1,9 @@
 #include "access.hpp"
-#include "queries.hpp"
-#include "module_tree.hpp"
-#include "source_file.hpp"
+
 #include "functors.hpp"
+#include "module_tree.hpp"
+#include "queries.hpp"
+#include "source_file.hpp"
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input_impl.hpp>

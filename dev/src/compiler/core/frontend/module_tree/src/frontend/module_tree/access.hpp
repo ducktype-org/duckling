@@ -1,9 +1,10 @@
 #pragma once
 
-#include "module_id.hpp"
 #include "file_id.hpp"
+#include "module_id.hpp"
 
 #include <base/collections/optional.hpp>
+
 #include <query_framework/query_hash.hpp>
 
 namespace compiler::frontend {
@@ -13,7 +14,7 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const;
-		bool operator==(const KeyOf_ModuleSideInput&) const = default;
+		bool                   operator==(const KeyOf_ModuleSideInput&) const = default;
 	};
 
 	struct KeyOf_FileSideInput {
@@ -21,7 +22,7 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		query::QueryStableHash queryStablePerfectHash() const;
-		bool operator==(const KeyOf_FileSideInput&) const = default;
+		bool                   operator==(const KeyOf_FileSideInput&) const = default;
 	};
 
 	/**
@@ -40,7 +41,7 @@ namespace compiler::frontend {
 		IDType id;
 		friend class AccessLocked<IDType>;
 
-		explicit Access(IDType id) : id(id) {}
+		explicit Access(IDType id): id(id) {}
 
 	public:
 		[[nodiscard]] IDType getID() const { return id; }
@@ -55,7 +56,7 @@ namespace compiler::frontend {
 		IDType id;
 
 	public:
-		explicit AccessLocked(IDType id) : id(id) {}
+		explicit AccessLocked(IDType id): id(id) {}
 
 		Access<IDType> unlock(query::Context& ctx) const;
 
@@ -66,9 +67,9 @@ namespace compiler::frontend {
 		[[nodiscard]] Access<IDType> illegalAccess() const { return Access<IDType>(id); }
 
 		// Allow moving
-		AccessLocked(AccessLocked&&) = default;
-		AccessLocked& operator=(AccessLocked&&) = default;
-		AccessLocked(const AccessLocked&) = default;
+		AccessLocked(AccessLocked&&)                 = default;
+		AccessLocked& operator=(AccessLocked&&)      = default;
+		AccessLocked(const AccessLocked&)            = default;
 		AccessLocked& operator=(const AccessLocked&) = default;
 	};
 

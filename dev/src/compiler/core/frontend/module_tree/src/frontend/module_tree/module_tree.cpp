@@ -149,16 +149,14 @@ namespace compiler::frontend {
 
 		if (hasMainSourceFile())
 			output << indent << "├> "
-				   << getFileRef(getMainSourceFile().illegalAccess().getID())
-						  ->getFile()
-						  .name()
+				   << getFileRef(getMainSourceFile().illegalAccess().getID())->getFile().name()
 				   << '\n';
 		else
 			output << indent << "├> Missing main module file!\n";
 
 		for (const auto& file_ref: getSourceFiles())
-			output << indent << "├= "
-				   << getFileRef(file_ref.illegalAccess().getID())->getFile().name()
+			output << indent
+				   << "├= " << getFileRef(file_ref.illegalAccess().getID())->getFile().name()
 				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
