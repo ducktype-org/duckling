@@ -18,7 +18,6 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <iostream>
 #include <ranges>
 #include <string>
 #include <variant>
