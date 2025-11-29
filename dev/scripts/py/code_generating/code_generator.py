@@ -35,12 +35,14 @@ class ModuleData:
     symbols: ScopeData
 
 class Indenter:
-    def __init__(self, generator: 'CodeGenerator'):
+    def __init__(self, file_path: str):
         self.level = 0
         self.content = ""
         self.fragment = ""
+        
+        self.file_path = file_path
+        self.n_lines = 0
 
-        self.generator = generator
         atexit.register(self.flush)
 
     def indent(self, text: str):
@@ -62,9 +64,9 @@ class Indenter:
     def flush(self):
         assert len(self.fragment) == 0, "Trying to flush text while writing a text fragment."
         if len(self.content) > 0:
-            with open(self.generator.file_path, 'a') as f:
+            with open(self.file_path, 'a') as f:
                 f.write(self.content)
-            self.generator.n_lines += len(self.content.splitlines())
+            self.n_lines += len(self.content.splitlines())
             self.content = ""
     
     def __enter__(self):
@@ -77,39 +79,44 @@ class Indenter:
         self.level -= 1
 
 class CodeGenerator(ABC):
-    def __init__(self, file_path: str, logic_generator: 'LogicGenerator'):
+    def __init__(self, file_path: str, logic_generator: 'LogicGenerator', **kwargs):
         self.file_path = file_path
         self.logic_generator = logic_generator
-        self.indenter = Indenter(self)
-        self.n_lines = 0
+        self.indenter = Indenter(self.file_path)
 
         # Clear the file.
         open(self.file_path, 'w').close()
 
     def line_break(self):
         self.indenter.add_text("\n")
-
+    
+    def get_n_lines(self) -> int:
+        return self.indenter.n_lines
+    
+    def get_module_name(self) -> str:
+        return self.file_path
+    
     # Variables
     @abstractmethod
     def variable_declaration(self, var_name: str, scope: ScopeData):
-        pass
+        assert False
 
     @abstractmethod
     def constant_declaration(self, var_name: str, scope: ScopeData):
-        pass
+        assert False
 
     @abstractmethod
     def assignment(self, var_name: str, scope: ScopeData):
-        pass
+        assert False
     
     # Functions
     @abstractmethod
     def function_definition(self, func_name: str, scope: ScopeData) -> FunctionData:
-        pass
+        assert False
     
     @abstractmethod
     def argument_list(self, length: int) -> str:
-        pass
+        assert False
     
     def return_statement(self, scope: ScopeData):
         with self.indenter:
@@ -120,12 +127,12 @@ class CodeGenerator(ABC):
     
     @abstractmethod
     def function_call(self, func: FunctionData, scope: ScopeData):
-        pass
+        assert False
 
     # Control flow
     @abstractmethod
     def if_statement(self, scope: ScopeData):
-        pass
+        assert False
     
     @abstractmethod
     def while_loop(self, scope: ScopeData):
@@ -145,29 +152,32 @@ class CodeGenerator(ABC):
     # Special elements
     @abstractmethod
     def import_statement(self, module: ModuleData) -> ScopeData:
-        pass
+        assert False
     
     @abstractmethod
     def preambule(self) -> ScopeData:
-        pass
+        assert False
             
     @abstractmethod
     def print(self, scope: ScopeData):
-        pass
+        assert False
 
     @abstractmethod
     @contextmanager
     def main_function(self):
-        pass
+        assert False
 
 
 class LogicGenerator:
-    def __init__(self, generator: Type[CodeGenerator], file_path: str, length:int, seed: int):
+    def __init__(self, generator: Type[CodeGenerator], file_path: str, length:int, seed: int, **kwargs):
         self.generator_type = generator
-        self.generator = self.generator_type(file_path, self)
+        self.generator = self.generator_type(file_path, self, **kwargs)
         self.seed = seed
         self.length = length
         random.seed(seed)        
+
+    def get_module_name(self) -> str:
+        return self.generator.get_module_name()
 
     def generate_non_control_flow(self, scope: ScopeData):
         action = random.choices(
@@ -290,7 +300,7 @@ class LogicGenerator:
         scope += self.generate_imports(imports)
         scope += self.generate_global_symbols(scope, global_symbol_count)
         
-        return ModuleData(self.generator.file_path, scope)
+        return ModuleData(self.generator.get_module_name(), scope)
     
     def generate_dependencies(self, imports_count: int) -> List[ModuleData]:
         dependencies = []
@@ -303,7 +313,8 @@ class LogicGenerator:
                 generator=self.generator_type,
                 file_path='.'.join(path_fragments),
                 length=self.length//2,
-                seed=self.seed + i)
+                seed=self.seed + i,
+                import_mode=True)
             
             module = tmp_generator.generate_file(global_symbol_count=5, imports=[])
             dependencies.append(module)
@@ -314,13 +325,11 @@ class LogicGenerator:
         scope = self.generator.preambule()
         imports = self.generate_dependencies(imports_count)
         scope += self.generate_imports(imports)
-        
-        # Generate global symbols
         scope += self.generate_global_symbols(scope, global_symbol_count)
         
         # Generate main function
         with self.generator.main_function():
-            while self.generator.n_lines < self.length:
+            while self.generator.get_n_lines() < self.length:
                 action = random.choices(
                     ['if_statement', 'while_loop', 'non_control_flow'],
                     weights=[15, 15, 70],
