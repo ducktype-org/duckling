@@ -53,7 +53,7 @@ namespace compiler::driver {
 			std::string out;
 			if (getModuleRef(module_id)->getParentModule().has_value()) {
 				out += getModuleFullName(
-					getModuleRef(module_id)->getParentModule().value()->getModuleID()
+					getModuleRef(module_id)->getParentModule().value().illegalAccess().getID()
 				);
 				out += "/";
 			}
