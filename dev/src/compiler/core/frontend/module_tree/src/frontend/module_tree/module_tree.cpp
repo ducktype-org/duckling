@@ -4,13 +4,12 @@
 #include "functors.hpp"
 #include "queries.hpp"
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 #include <ranges>

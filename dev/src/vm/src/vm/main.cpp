@@ -4,10 +4,10 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
@@ -34,13 +34,15 @@ clah::Clah getVmClah() {
 #ifdef BUILD_TYPE_DEV_DEBUG
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('d')
-	             .addLongName("debug-mode")
-	             .addShortDesc("Enables debug mode.")
+	             .addLongName("debug-logs")
+	             .addShortDesc("Enables DVM debug logs.")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
-			if (options.isFlag("debug-mode")) {
-				std::cerr << "Debug mode enabled.\n";
-				config::debug_mode = true;
+			if (options.isFlag("debug-logs")) {
+				std::cerr << "Debug logs enabled.\n";
+				logger::enable_dev_logs = true;
+				logger::enableDevCategory(logger::DevLogCategories::DVM);
+				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
 			}
 		})
 #endif

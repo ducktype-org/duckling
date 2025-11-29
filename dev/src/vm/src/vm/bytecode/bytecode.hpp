@@ -3,7 +3,6 @@
 #include "instructions.hpp"
 
 #include <string_id/string_id.hpp>
-
 #include <token_parser_core/common_elements.hpp>
 
 #include <vm/bytecode/element_base.hpp>
