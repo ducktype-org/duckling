@@ -27,7 +27,7 @@ namespace logger {
 	}
 
 	void enableDevCategory(DevLogCategories category) {
-		for (auto& enabled_category: *getEnabledCategories())
+		for (const auto& enabled_category: *getEnabledCategories())
 			if (enabled_category == category) return;
 		getEnabledCategories()->push_back(category);
 	}
