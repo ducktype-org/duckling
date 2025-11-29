@@ -1,6 +1,7 @@
 
 #include "link.hpp"
 
+#include <logger/logger.hpp>
 #include <system_command/system_command.hpp>
 
 namespace compiler::linker {
@@ -28,6 +29,9 @@ namespace compiler::linker {
 
 		command.addArg("-o");
 		command.addArg(output.FILE.getFilePath().native());
+
+		CORE_USER_LOG("[?/?] Linking executable: ", output.FILE.getFilePath().name(), "\n");
+
 		command.execute();
 	}
 }

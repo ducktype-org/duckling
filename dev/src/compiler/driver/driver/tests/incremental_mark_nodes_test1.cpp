@@ -2,7 +2,6 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <global_state/options.hpp>
 #include <global_state/packages.hpp>
 
 #include <artifacts/artifacts.hpp>

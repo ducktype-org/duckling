@@ -11,6 +11,7 @@
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>
 
+#include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
 #include <vm/api/data/response.hpp>
@@ -20,8 +21,8 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/debug.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/module_flags/module_flags.hpp>
 
 #include <iostream>
 #include <mutex>
@@ -391,7 +392,8 @@ namespace vm {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
-		DEBUG_LOG("Executed opcode: " << #opcode_name);                                             \
+		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
+			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
