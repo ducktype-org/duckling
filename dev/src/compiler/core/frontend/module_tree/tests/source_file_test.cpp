@@ -39,7 +39,7 @@ private:
 		ASSERT_EQUAL(
 			temp_file.getFilePath().native(), source_file->getFile().getFilePath().native()
 		);
-		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule());
+		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID());
 		// Cleanup
 		fs::FileManager::deleteFile(temp_file);
 	}
@@ -182,7 +182,9 @@ private:
 
 		// Test that all files belong to the same module
 		for (const auto& source_file: source_files)
-			ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule());
+			ASSERT_EQUAL(
+				dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID()
+			);
 
 		// Test PST generation for all files
 		for (auto& source_file: source_files) source_file->getPST();
@@ -215,10 +217,15 @@ private:
 		);
 
 		// Should belong to different modules
-		ASSERT_EQUAL(dummy_module1->getModuleID(), source_file1->getModule());
-		ASSERT_EQUAL(dummy_module2->getModuleID(), source_file2->getModule());
+		ASSERT_EQUAL(
+			dummy_module1->getModuleID(), source_file1->getModule().illegalAccess().getID()
+		);
+		ASSERT_EQUAL(
+			dummy_module2->getModuleID(), source_file2->getModule().illegalAccess().getID()
+		);
 		assertTrue(
-			source_file1->getModule() != source_file2->getModule(),
+			source_file1->getModule().illegalAccess().getID()
+				!= source_file2->getModule().illegalAccess().getID(),
 			"Should belong to different modules"
 		);
 

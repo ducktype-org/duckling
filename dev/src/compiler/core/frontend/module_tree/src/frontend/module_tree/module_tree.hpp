@@ -1,5 +1,6 @@
 #pragma once
 
+#include "access.hpp"
 #include "source_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -63,7 +64,7 @@ namespace compiler::frontend {
 		 * inside the base::Optional.
 		 */
 		[[nodiscard]]
-		base::Optional<base::CRef<ModuleTree>> getParentModule() const;
+		base::Optional<ModuleAccessLocked> getParentModule() const;
 
 		/**
 		 * Checks if a module contains main source file.
@@ -78,7 +79,7 @@ namespace compiler::frontend {
 		 * @return A reference to the main source file.
 		 */
 		[[nodiscard]]
-		base::CRef<SourceFile> getMainSourceFile() const;
+		FileAccessLocked getMainSourceFile() const;
 
 		/**
 		 * Accesses the source files of the module.
@@ -86,14 +87,14 @@ namespace compiler::frontend {
 		 * @return A const reference to a vector of SourceFile references
 		 */
 		[[nodiscard]]
-		const std::vector<base::Ref<SourceFile>>& getSourceFiles() const;
+		std::vector<FileAccessLocked> getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this module. Submodules are indexed by their name.
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrID, base::Ref<ModuleTree>>& getSubmodules() const;
+		base::HashMap<base::StrID, ModuleAccessLocked> getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.

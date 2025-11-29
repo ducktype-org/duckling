@@ -1,3 +1,4 @@
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <init/init.hpp>
@@ -7,6 +8,7 @@
 int main() {
 	init::InitObject _;
 
+	using compiler::frontend::getFileRef;
 	using compiler::frontend::ModuleTree;
 
 	// First argument is some kind of a path to a module we want to parse.
@@ -17,19 +19,30 @@ int main() {
 
 	// Print main source file's content.
 	if (module_tree->hasMainSourceFile())
-		std::cout << module_tree->getMainSourceFile()->getFile().getContent().view().stringView()
+		std::cout << getFileRef(module_tree->getMainSourceFile().illegalAccess().getID())
+						 ->getFile()
+						 .getContent()
+						 .view()
+						 .stringView()
 				  << '\n';
 
 	// Print content of source files.
-	for (auto&& file: module_tree->getSourceFiles())
+	for (auto&& file_locked: module_tree->getSourceFiles()) {
+		auto file = getFileRef(file_locked.illegalAccess().getID());
 		std::cout << file->getFile().getContent().view().stringView() << '\n';
+	}
 
 	// Print names of other modules.
 	//
 	// getSubmodules is an iterator:
 	// first  - name
-	// second - std::shared_ptr<ModuleTree>
-	for (const auto& submodule: module_tree->getSubmodules())
-		std::cout << submodule.first.strView() << " == " << submodule.second->getName().strView()
+	// second - module
+	for (auto&& submodule: module_tree->getSubmodules())
+		std::cout << submodule.first.strView() << " == "
+				  << compiler::frontend::GetModuleID_Functor::get(
+						 submodule.second.illegalAccess().getID()
+					 )
+						 ->getName()
+						 .strView()
 				  << '\n';
 }

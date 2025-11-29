@@ -8,6 +8,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 
+#include <query_framework/query_input.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {
@@ -44,6 +45,18 @@ namespace compiler::frontend {
 	 * @brief Query PST of given file.
 	 */
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({}))
+
+	/**
+	 * @brief Side input query for module dependency.
+	 * Key is ModuleID.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryModuleSideInput, KeyOf_ModuleSideInput)
+
+	/**
+	 * @brief Side input query for file dependency.
+	 * Key is FileID.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryFileSideInput, KeyOf_FileSideInput)
 
 	/**
 	 * @brief Returns ModuleID

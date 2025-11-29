@@ -1,5 +1,6 @@
 #include "module_tree.hpp"
 
+#include "access.hpp"
 #include "functors.hpp"
 #include "queries.hpp"
 
@@ -12,7 +13,6 @@
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
-#include <random>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -103,23 +103,29 @@ namespace compiler::frontend {
 
 	ModuleID ModuleTree::getModuleID() const { return m_id.value(); }
 
-	base::Optional<base::CRef<ModuleTree>> ModuleTree::getParentModule() const {
-		if (m_parent.has_value()) return m_parent.value();
+	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
+		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());
 		return {};
 	}
 
 	bool ModuleTree::hasMainSourceFile() const { return m_main_source_file.has_value(); }
 
-	base::CRef<SourceFile> ModuleTree::getMainSourceFile() const {
-		return m_main_source_file.value();
+	FileAccessLocked ModuleTree::getMainSourceFile() const {
+		return FileAccessLocked(m_main_source_file.value()->getFileID());
 	}
 
-	const std::vector<base::Ref<SourceFile>>& ModuleTree::getSourceFiles() const {
-		return m_source_files;
+	std::vector<FileAccessLocked> ModuleTree::getSourceFiles() const {
+		std::vector<FileAccessLocked> out;
+		out.reserve(m_source_files.size());
+		for (const auto& file: m_source_files) out.emplace_back(file->getFileID());
+		return out;
 	}
 
-	const base::HashMap<base::StrID, base::Ref<ModuleTree>>& ModuleTree::getSubmodules() const {
-		return m_submodules;
+	base::HashMap<base::StrID, ModuleAccessLocked> ModuleTree::getSubmodules() const {
+		base::HashMap<base::StrID, ModuleAccessLocked> out;
+		for (const auto& [name, module]: m_submodules)
+			out.put(name, ModuleAccessLocked(module->getModuleID()));
+		return out;
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
@@ -142,18 +148,25 @@ namespace compiler::frontend {
 			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
 		if (hasMainSourceFile())
-			output << indent << "├> " << getMainSourceFile()->getFile().name() << '\n';
+			output << indent << "├> "
+				   << getFileRef(getMainSourceFile().illegalAccess().getID())
+						  ->getFile()
+						  .name()
+				   << '\n';
 		else
 			output << indent << "├> Missing main module file!\n";
 
 		for (const auto& file_ref: getSourceFiles())
-			output << indent << "├= " << file_ref->getFile().name() << '\n';
+			output << indent << "├= "
+				   << getFileRef(file_ref.illegalAccess().getID())->getFile().name()
+				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
 			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
 		for (const auto& [name, submodule_ref]: getSubmodules())
-			output << submodule_ref->prettyPrint(indentation + 3);
+			output << getModuleRef(submodule_ref.illegalAccess().getID())
+						  ->prettyPrint(indentation + 3);
 
 		return output.str();
 	}
@@ -397,7 +410,7 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
 		Ref<ModuleTree> module
 			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-				file->getModule()
+				file->getModule().illegalAccess().getID()
 			);
 
 		auto& source_files = module->m_source_files;
@@ -661,14 +674,14 @@ namespace compiler::frontend {
 	 * QueryParentModule *
 	 *********************/
 	struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto module_tree = GetModuleID_Functor::get(key);
-			return module_tree->getParentModule().map([](auto parent) {
-				return parent->getModuleID();
-			});
+			auto parent      = module_tree->getParentModule();
+			if (parent) return parent->unlock(ctx).getID();
+			return {};
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
@@ -677,12 +690,13 @@ namespace compiler::frontend {
 	 * QueryMainSourceFile *
 	 ***********************/
 	struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto module_tree = GetModuleID_Functor::get(key);
-			return { module_tree->getMainSourceFile()->getFileID() };
+			auto file        = module_tree->getMainSourceFile();
+			return file.unlock(ctx).getID();
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
@@ -691,12 +705,11 @@ namespace compiler::frontend {
 	 * QuerySourceFiles *
 	 ********************/
 	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
-		static auto provide(Context&, QKey key) -> PResult {
-			const auto& module_tree = GetModuleID_Functor::get(key);
-
-			std::vector<FileID> out{};
-			for (CRef<SourceFile> file: module_tree->getSourceFiles())
-				out.emplace_back(file->getFileID());
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			const auto&         module_tree = GetModuleID_Functor::get(key);
+			std::vector<FileID> out;
+			for (const auto& file: module_tree->getSourceFiles())
+				out.emplace_back(file.unlock(ctx).getID());
 			return out;
 		}
 
@@ -709,12 +722,12 @@ namespace compiler::frontend {
 	 * QuerySubmodules *
 	 *******************/
 	struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
 			for (const auto& [name, module]: module_tree->getSubmodules())
-				out.put(name, module->getModuleID());
+				out.put(name, module.unlock(ctx).getID());
 			return out;
 		}
 
@@ -765,6 +778,6 @@ namespace compiler::frontend {
 
 		// this access depends of global state that might become a problem in incremental compilation:
 		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
-		return GetFileID_Functor::get(file_id)->getModule();
+		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }
