@@ -17,8 +17,8 @@ namespace compiler::mir {
 		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
 
 		for (const auto& block: fun.blocks) {  // Fill with blocks.
-			moved_variables.emplace(block.key, LocalSet());
-			used_variables.emplace(block.key, LocalSet());
+			moved_variables.putOrAssign(block.key, LocalSet());
+			used_variables.putOrAssign(block.key, LocalSet());
 		}
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
@@ -34,11 +34,11 @@ namespace compiler::mir {
 				// Firstly list all arguments - They must be valid.
 				for (const auto& arg: instr.arguments) {
 					if (arg.isLocal()) {
-						used_variables.at(block.key).insert(
+						used_variables[block.key].insert(
 							arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
 						);
 
-						if (moved_variables.at(block.key).contains(
+						if (moved_variables[block.key].contains(
 								arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
 							))
 							return false;  // It is already moved.
@@ -47,11 +47,11 @@ namespace compiler::mir {
 
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value() && instr.output.value().isLocal()) {
-					used_variables.at(block.key).insert(
+					used_variables[block.key].insert(
 						instr.output.value().getBase<MIRLocalRef>()->id
 					);
 
-					if (moved_variables.at(block.key).contains(
+					if (moved_variables[block.key].contains(
 							instr.output.value().getBase<MIRLocalRef>()->id
 						))
 						return false;  // It is already moved.
@@ -87,7 +87,7 @@ namespace compiler::mir {
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
-						construction_block.emplace(flag.local->id, block.key);
+						construction_block.putOrAssign(flag.local->id, block.key);
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
@@ -117,25 +117,25 @@ namespace compiler::mir {
 		base::HashMap<BlockID, States> visited;  // with usable and not usable.
 
 		// Insert all blocks.
-		for (const auto& id: fun.block_order) visited.emplace(id, States());
+		for (const auto& id: fun.block_order) visited.putOrAssign(id, States());
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)
 				visited[id].state[USABLE] = false, visited[id].state[NOT_USABLE] = false;
 
-			const auto& starting_block = local.second;
+			const auto& starting_block = local.value;
 
 			auto visit
 				= [&](this const auto& self, const BlockID& id, const int& cr_state) -> bool {
 				visited[id].state[cr_state] = true;
 				int next_state              = NOT_USABLE;
 				if (cr_state == NOT_USABLE) {
-					if (moved_variables[id].contains(local.first)
-					    || used_variables[id].contains(local.first))
+					if (moved_variables[id].contains(local.key)
+					    || used_variables[id].contains(local.key))
 						return false;
 					next_state = NOT_USABLE;
 				} else {
-					if (moved_variables[id].contains(local.first))
+					if (moved_variables[id].contains(local.key))
 						next_state = NOT_USABLE;
 					else
 						next_state = USABLE;

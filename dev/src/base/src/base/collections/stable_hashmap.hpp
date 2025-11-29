@@ -349,8 +349,9 @@ namespace base {
 		 * Inserts empty value at a given key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
+		requires std::is_default_constructible_v<D>
 		void putEmpty(K&& key) RELEASE_NOEXCEPT {
-			put(std::forward(key), D());
+			put(std::forward<K>(key), D());
 		}
 
 		/**
@@ -358,8 +359,9 @@ namespace base {
 		 * If the value exists, does nothing.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
+		requires std::is_default_constructible_v<D>
 		void maybePutEmpty(K&& key) RELEASE_NOEXCEPT {
-			maybePut(std::forward(key), D());
+			maybePut(std::forward<K>(key), D());
 		}
 
 		[[nodiscard]]

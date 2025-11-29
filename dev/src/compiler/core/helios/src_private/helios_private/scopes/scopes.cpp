@@ -245,7 +245,7 @@ namespace compiler::helios {
 			// layer of bug detection.
 			if (parent_map.contains(element->getID())) {
 				CORE_ASSERT(
-					parent_map.at(element->getID()) == parent,
+					parent_map[element->getID()] == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
@@ -614,7 +614,7 @@ namespace compiler::helios {
 
 		static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
-			return extractResult(cache.at(key).data);
+			return extractResult(cache[key].data);
 		}
 	};
 

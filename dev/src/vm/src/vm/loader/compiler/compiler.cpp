@@ -37,7 +37,7 @@ namespace vm::loader::compiler {
 			// Every used local variable is guaranteed to exist by static verification.
 #define HANDLE_LOCAL(TYPE)                                                     \
 	variant_case(vm::opargs::TYPE, local_type) {                               \
-		return static_cast<u64>(ctx.local_offset_map.at(local_type.var_name)); \
+		return static_cast<u64>(ctx.local_offset_map[local_type.var_name]); \
 	}
 			FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -81,7 +81,7 @@ namespace vm::loader::compiler {
 				// lands after lowering.
 				if (!ctx.label_id_map.contains(label.label_name))
 					ctx.label_id_map.put(label.label_name, ctx.label_id_map.size());
-				return ctx.label_id_map.at(label.label_name);
+				return ctx.label_id_map[label.label_name];
 			}
 			variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 		}
@@ -97,7 +97,7 @@ namespace vm::loader::compiler {
 			auto       are_args_labels = low::instruction_tags::IS_ARGUMENT_LABEL.at(opcode_num);
 
 			for (auto [arg, is_label]: std::views::zip(args, are_args_labels))
-				if (is_label) *arg = label_map.at(*arg) - static_cast<usize>(instr_idx) - 1;
+				if (is_label) *arg = label_map[*arg] - static_cast<usize>(instr_idx) - 1;
 		}
 	}
 

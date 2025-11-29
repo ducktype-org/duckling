@@ -127,10 +127,10 @@ namespace vm {
 			// and if we were to free them and decrease the refcount in the wrong order we might
 			// throw a false-positive exception. This solution avoids this problem.
 
-			for (const auto& block: global_blocks | std::views::values) freeBlockData(block);
+			for (const auto& block: global_blocks) freeBlockData(block.value);
 
-			for (const auto& block: global_blocks | std::views::values)
-				decreaseBlockRefcount(block);
+			for (const auto& block: global_blocks)
+				decreaseBlockRefcount(block.value);
 		} catch (exceptions::VMFoundMemoryLeakException&) {
 			std::cerr
 				<< "Leak during global data deinitialization - e.g. there was a global pointer to "
