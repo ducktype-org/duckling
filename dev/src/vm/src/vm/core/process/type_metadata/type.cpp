@@ -117,7 +117,7 @@ namespace vm {
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
-		kind                      = data;
+		kind                      = std::move(data);
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {

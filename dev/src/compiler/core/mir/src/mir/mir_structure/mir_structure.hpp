@@ -636,15 +636,15 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                         name,
-			tsh::SymbolType<>                   return_type,
-			std::vector<tsh::SymbolType<>>      parameter_types,
-			base::HashMap<BlockID, Block> blocks,
-			std::vector<BlockID>                block_order,
-			base::StableVector<const MIRLocal>  local_list,
-			LifetimeScopeTree                   lifetime_scope_tree,
-			ScopeRef                            no_lifetime_scope,
-			HSymID                              helios_id
+			base::StrID                        name,
+			tsh::SymbolType<>                  return_type,
+			std::vector<tsh::SymbolType<>>     parameter_types,
+			base::HashMap<BlockID, Block>      blocks,
+			std::vector<BlockID>               block_order,
+			base::StableVector<const MIRLocal> local_list,
+			LifetimeScopeTree                  lifetime_scope_tree,
+			ScopeRef                           no_lifetime_scope,
+			HSymID                             helios_id
 		);
 
 		[[nodiscard]]

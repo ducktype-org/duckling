@@ -22,18 +22,18 @@ namespace vm {
 		requires(std::constructible_from<ObjID, usize> && std::constructible_from<usize, ObjID>)
 		class BaseObjIdNameMap {
 		public:
-			BaseObjIdNameMap()                                     = default;
-			BaseObjIdNameMap(BaseObjIdNameMap&&)                   = default;
+			BaseObjIdNameMap()                   = default;
+			BaseObjIdNameMap(BaseObjIdNameMap&&) = default;
 
 			BaseObjIdNameMap(const BaseObjIdNameMap& oth):
 				  values(oth.values),
 				  id_to_name(oth.id_to_name),
 				  name_to_id(std::move(oth.name_to_id.copy())) {}
 
-			BaseObjIdNameMap& operator=(BaseObjIdNameMap&&) &      = default;
+			BaseObjIdNameMap& operator=(BaseObjIdNameMap&&) & = default;
 
 			BaseObjIdNameMap& operator=(const BaseObjIdNameMap& oth) {
-				values = oth.values;
+				values     = oth.values;
 				id_to_name = oth.id_to_name;
 				name_to_id = std::move(oth.name_to_id.copy());
 				return *this;

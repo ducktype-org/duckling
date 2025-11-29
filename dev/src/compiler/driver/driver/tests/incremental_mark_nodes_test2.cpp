@@ -58,7 +58,7 @@ private:
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
 				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
-				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
+				ASSERT_TRUE((*prev_colors)[node] == query::internal::QueryState::PrevColor::Green);
 			} else {
 				ASSERT_TRUE(
 					!node.q_id.getData().usesStableHashing() || prev->getNodeDeps(node).size() > 1
@@ -92,7 +92,7 @@ private:
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));
-			ASSERT_TRUE(prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Green);
+			ASSERT_TRUE((*prev_colors)[dep_node] == query::internal::QueryState::PrevColor::Green);
 		}
 
 		// Verify that CompileModule artifact exists and is non-empty on disk

@@ -115,8 +115,7 @@ namespace query::internal {
 		for (const auto& [node, deps]: node_deps) {
 			match_optional(other.node_deps.atMaybe(node)) {
 				opt_some(val) {
-					if (deps != *val)
-						return false;
+					if (deps != *val) return false;
 				}
 				opt_none return false;
 			}
@@ -125,8 +124,7 @@ namespace query::internal {
 		for (const auto& [node, deps]: other.node_deps) {
 			match_optional(other.node_deps.atMaybe(node)) {
 				opt_some(val) {
-					if (deps != *val)
-						return false;
+					if (deps != *val) return false;
 				}
 				opt_none return false;
 			}
@@ -260,9 +258,7 @@ namespace query::internal {
 
 	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
 		match_optional(node_deps.atMaybe(node_id)) {
-			opt_some(val) {
-				return !val->empty();
-			}
+			opt_some(val) { return !val->empty(); }
 			opt_none return false;
 		}
 		CORE_UNREACHABLE();

@@ -165,8 +165,7 @@ private:
 		auto pth  = fs::File(path("test_module"));
 		auto root = compiler::frontend::createModuleTreeWithRandomPackageID(pth);
 
-		[[maybe_unused]] auto awe
-			= query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
+		[[maybe_unused]] auto awe = (*query::entryPoint<QuerySubmodules>(root))[base::StrID("awe")];
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
 		assertTrue(sources->size() == 1, "Bad source count!");
@@ -223,7 +222,7 @@ private:
 		ASSERT_TRUE(checked_content);
 
 		// Check submodule's files
-		auto another_dir = mt->getSubmodules().at(base::StrID("another_directory"));
+		auto another_dir = mt->getSubmodules()[base::StrID("another_directory")];
 		ASSERT_EQUAL(0, another_dir->getSourceFiles().size());
 		ASSERT_EQUAL(0, another_dir->getOtherFiles().size());
 	}
@@ -270,7 +269,7 @@ private:
 		ASSERT_TRUE(found_file1);
 
 		// Test files in subDir1
-		auto sub1        = mt->getSubmodules().at(base::StrID("subDir1"));
+		auto sub1        = mt->getSubmodules()[base::StrID("subDir1")];
 		bool found_file2 = false;
 		for (const auto& [ext, files]: sub1->getOtherFiles()) {
 			for (const auto& file: files) {
@@ -478,8 +477,8 @@ private:
 		ASSERT_EQUAL(2, mt->getSourceFiles().size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSubmodules().size());
-		ASSERT_EQUAL("subdir", mt->getSubmodules().begin()->first.strView());
-		ASSERT_TRUE(mt->getSubmodules().begin()->second->hasMainSourceFile());
+		ASSERT_EQUAL("subdir", mt->getSubmodules().begin()->key.strView());
+		ASSERT_TRUE(mt->getSubmodules().begin()->value->hasMainSourceFile());
 		// Check parent
 		ASSERT_TRUE(mt->getParentModule().has_value());
 		ASSERT_EQUAL("parent_mod", mt->getParentModule().value()->getName().strView());
@@ -536,9 +535,9 @@ private:
 		);
 
 		// Ensure submodule hashes differ from parent and from each other
-		auto sub1   = mt1->getSubmodules().at(base::StrID("sub1"));
-		auto sub2   = mt1->getSubmodules().at(base::StrID("sub2"));
-		auto subsub = sub1->getSubmodules().at(base::StrID("subsub"));
+		auto sub1   = mt1->getSubmodules()[base::StrID("sub1")];
+		auto sub2   = mt1->getSubmodules()[base::StrID("sub2")];
+		auto subsub = sub1->getSubmodules()[base::StrID("subsub")];
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(

@@ -47,8 +47,7 @@ namespace compiler::mir {
 
 				// Output can't be local, already moved, variable.
 				if (instr.output.has_value() && instr.output.value().isLocal()) {
-					used_variables[block.key].insert(
-						instr.output.value().getBase<MIRLocalRef>()->id
+					used_variables[block.key].insert(instr.output.value().getBase<MIRLocalRef>()->id
 					);
 
 					if (moved_variables[block.key].contains(

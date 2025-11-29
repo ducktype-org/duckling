@@ -95,10 +95,8 @@ namespace clah {
 		positional_values = other.positional_values;
 		extra_values      = other.extra_values;
 		flags             = other.flags;
-		for (const auto& elem: other.short_names_to_id)
-			short_names_to_id.put(elem.key, elem.value);
-		for (const auto& elem: other.long_names_to_id)
-			long_names_to_id.put(elem.key, elem.value);
+		for (const auto& elem: other.short_names_to_id) short_names_to_id.put(elem.key, elem.value);
+		for (const auto& elem: other.long_names_to_id) long_names_to_id.put(elem.key, elem.value);
 		for (const auto& elem: other.id_to_value) id_to_value.put(elem.key, elem.value);
 		return *this;
 	}

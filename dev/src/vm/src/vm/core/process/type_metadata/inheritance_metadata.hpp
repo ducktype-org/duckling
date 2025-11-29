@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 

@@ -144,10 +144,23 @@ class LocalStack {
 	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
 public:
-	LocalStack(const LocalStack&)            = default;
-	LocalStack(LocalStack&&)                 = default;
-	LocalStack& operator=(const LocalStack&) = default;
-	LocalStack& operator=(LocalStack&&)      = default;
+	LocalStack(const LocalStack& oth):
+		  stack_state(oth.stack_state),
+		  tod_map(oth.tod_map),
+		  type_metadata(oth.type_metadata),
+		  local_name_to_type(oth.local_name_to_type.copy()) {}
+
+	LocalStack(LocalStack&&) = default;
+
+	LocalStack& operator=(const LocalStack& other) {
+		stack_state        = other.stack_state;
+		tod_map            = other.tod_map;
+		type_metadata      = other.type_metadata;
+		local_name_to_type = other.local_name_to_type.copy();
+		return *this;
+	}
+
+	LocalStack& operator=(LocalStack&&) = default;
 
 	LocalStack(
 		const FuncSignature&            signature,

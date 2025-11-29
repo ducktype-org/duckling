@@ -8,8 +8,8 @@
  */
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/core/process/memory/block.hpp>
@@ -82,14 +82,14 @@ namespace vm {
 		MCRef<low::LowFuncData> current_function;
 
 		Frame& operator=(const Frame& oth) {
-			instr = oth.instr;
-			local_stack = oth.local_stack;
-			flags = oth.flags;
-			block_stack = oth.block_stack;
+			instr                     = oth.instr;
+			local_stack               = oth.local_stack;
+			flags                     = oth.flags;
+			block_stack               = oth.block_stack;
 			local_offset_to_block_idx = oth.local_offset_to_block_idx.copy();
 			block_idx_to_local_offset = oth.block_idx_to_local_offset.copy();
-			local_stack_head = oth.local_stack_head;
-			current_function = oth.current_function;
+			local_stack_head          = oth.local_stack_head;
+			current_function          = oth.current_function;
 			return *this;
 		}
 

@@ -17,7 +17,7 @@ namespace vm::code {
 	 */
 	class ValidProgram {
 	public:
-		ValidProgram()                               = default;
+		ValidProgram() = default;
 
 		ValidProgram(const ValidProgram& oth):
 			  function_map(oth.function_map),
@@ -26,18 +26,18 @@ namespace vm::code {
 			  type_context(oth.type_context),
 			  available_functions(oth.available_functions.copy()) {}
 
-		ValidProgram(ValidProgram&&) noexcept        = default;
+		ValidProgram(ValidProgram&&) noexcept = default;
 
 		ValidProgram& operator=(const ValidProgram& oth) {
-			function_map = oth.function_map;
-			ext_c_function_map = oth.ext_c_function_map;
-			globals_map = oth.globals_map;
-			type_context = oth.type_context;
+			function_map        = oth.function_map;
+			ext_c_function_map  = oth.ext_c_function_map;
+			globals_map         = oth.globals_map;
+			type_context        = oth.type_context;
 			available_functions = oth.available_functions.copy();
 			return *this;
 		}
 
-		ValidProgram& operator=(ValidProgram&&)      = default;
+		ValidProgram& operator=(ValidProgram&&) = default;
 
 		/**
 		 * @brief Creates a new ValidProgram with nothing inside.

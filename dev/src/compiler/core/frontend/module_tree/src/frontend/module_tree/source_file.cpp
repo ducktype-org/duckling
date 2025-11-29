@@ -98,8 +98,7 @@ namespace compiler::frontend {
 		} else {
 			to_content.put(abs_path, file.getContent());
 		}
-		if_opt_some(to_content.atMaybe(abs_path), content)
-			return *content;
+		if_opt_some(to_content.atMaybe(abs_path), content) return *content;
 		// This should not happen since content is cached in constructor
 		CORE_PANIC("SourceFile content not found in cache for: " + abs_path.string());
 	}

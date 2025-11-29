@@ -35,8 +35,8 @@ namespace vm::loader::compiler {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 			// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(TYPE)                                                     \
-	variant_case(vm::opargs::TYPE, local_type) {                               \
+#define HANDLE_LOCAL(TYPE)                                                  \
+	variant_case(vm::opargs::TYPE, local_type) {                            \
 		return static_cast<u64>(ctx.local_offset_map[local_type.var_name]); \
 	}
 			FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);

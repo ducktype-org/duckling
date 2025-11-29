@@ -14,7 +14,7 @@
 	}                                                                           \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult { \
 		cache.put(key_hash, { std::move(res), acd });                           \
-		return cache[key_hash].data;                                         \
+		return cache[key_hash].data;                                            \
 	}                                                                           \
 	static_assert(                                                              \
 		std::is_same_v<PResult, QResult>,                                       \
@@ -40,7 +40,7 @@
 	}                                                                                   \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {         \
 		cache.put(key_hash, { std::move(res), acd });                                   \
-		return QResult(cache[key_hash].data);                                        \
+		return QResult(cache[key_hash].data);                                           \
 	}                                                                                   \
 	static_assert(                                                                      \
 		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
@@ -56,7 +56,7 @@
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF                                                        \
-	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;                     \
+	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;                           \
 	static auto load(KHash key_hash) -> LoadResult {                                                \
 		if (auto value = cache.atMaybe(key_hash)) {                                                 \
 			return QResWithACD{ QResult(CRef<PResult>(&(*value)->data)), (*value)->acd };           \
@@ -80,7 +80,7 @@
  * on cache hit.
  */
 #define QUERY_AUTO_CACHE_CREF                                                              \
-	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;            \
+	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;                  \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
 			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };           \

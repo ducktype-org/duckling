@@ -7,8 +7,8 @@
 #pragma once
 #include "parameter.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
@@ -52,7 +52,7 @@ namespace clah {
 			  extra_values(other.extra_values),
 			  flags(other.flags) {}
 
-		ParsingResult(ParsingResult&& other) noexcept      = default;
+		ParsingResult(ParsingResult&& other) noexcept = default;
 
 		/**
 		 *

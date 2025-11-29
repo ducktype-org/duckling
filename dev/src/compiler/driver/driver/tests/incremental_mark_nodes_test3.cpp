@@ -56,9 +56,9 @@ private:
 		u64 red_count   = 0;
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
-				if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Green)
+				if ((*prev_colors)[node] == query::internal::QueryState::PrevColor::Green)
 					green_count++;
-				else if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Red)
+				else if ((*prev_colors)[node] == query::internal::QueryState::PrevColor::Red)
 					red_count++;
 				else
 					ASSERT_TRUE(false);
@@ -100,7 +100,7 @@ private:
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));
-			if (prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Red)
+			if ((*prev_colors)[dep_node] == query::internal::QueryState::PrevColor::Red)
 				red_dep_count++;
 			else
 				green_dep_count++;

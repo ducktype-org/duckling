@@ -15,7 +15,7 @@ namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
 
-		if_opt_some (node_data.atMaybe(node), node_val) {
+		if_opt_some(node_data.atMaybe(node), node_val) {
 			if (node_val->color == Color::Visiting) {
 				// Detect and print the cycle
 				std::cerr << "Cycle detected in dependency graph: \n";
@@ -152,7 +152,7 @@ namespace query::internal {
 					}
 					opt_none {
 						all_green = false;
-							break;
+						break;
 					}
 				}
 			}

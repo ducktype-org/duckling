@@ -134,9 +134,8 @@ namespace base {
 
 		HashMap& operator=(HashMap&& other) noexcept {
 			clearAndFree();
-			for(auto it = other.begin(); it != other.end(); it++) {
+			for (auto it = other.begin(); it != other.end(); it++)
 				put(it->key, std::move(it)->value);
-			}
 			return *this;
 		}
 
@@ -259,9 +258,7 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		HashMap<K, D> copy() const {
 			auto result = HashMap<K, D>();
-			for (auto it = begin(); it != end(); it++) {
-				result.put(it->key, it->value);
-			}
+			for (auto it = begin(); it != end(); it++) result.put(it->key, it->value);
 			return result;
 		}
 
@@ -349,8 +346,7 @@ namespace base {
 		 * Inserts empty value at a given key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		requires std::is_default_constructible_v<D>
-		void putEmpty(K&& key) RELEASE_NOEXCEPT {
+		requires std::is_default_constructible_v<D> void putEmpty(K&& key) RELEASE_NOEXCEPT {
 			put(std::forward<K>(key), D());
 		}
 
@@ -359,8 +355,7 @@ namespace base {
 		 * If the value exists, does nothing.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		requires std::is_default_constructible_v<D>
-		void maybePutEmpty(K&& key) RELEASE_NOEXCEPT {
+		requires std::is_default_constructible_v<D> void maybePutEmpty(K&& key) RELEASE_NOEXCEPT {
 			maybePut(std::forward<K>(key), D());
 		}
 
@@ -477,6 +472,15 @@ namespace base {
 		[[nodiscard]]
 		usize size() const {
 			return element_count;
+		}
+
+		/**
+		 * Query whether there are any pairs stored in the container.
+		 * @return Whether container is empty
+		 */
+		[[nodiscard]]
+		bool empty() const {
+			return (element_count == 0);
 		}
 
 		IteratorT begin() RELEASE_NOEXCEPT {
