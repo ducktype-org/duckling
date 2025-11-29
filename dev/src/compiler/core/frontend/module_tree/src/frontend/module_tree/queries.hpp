@@ -1,5 +1,6 @@
 #pragma once
 
+#include "access.hpp"
 #include "file_id.hpp"
 #include "module_id.hpp"
 

@@ -7,6 +7,20 @@
 
 using namespace compiler::frontend;
 
+namespace {
+	auto getRef(AccessLocked<ModuleID> access) {
+		return GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+			access.illegalAccess().getID()
+		);
+	}
+
+	auto getRef(AccessLocked<FileID> access) {
+		return GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+			access.illegalAccess().getID()
+		);
+	}
+}
+
 class ModuleTreeTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ModuleTreeTest
@@ -73,39 +87,51 @@ private:
 		ASSERT_EQUAL(1, mt->getSourceFiles().size());
 
 		auto another_module = mt->getSubmodules()[base::StrID("another")];
-		ASSERT_EQUAL(1, another_module->getSourceFiles().size());
-		ASSERT_TRUE(another_module->hasMainSourceFile());
+		ASSERT_EQUAL(1, getRef(another_module)->getSourceFiles().size());
+		ASSERT_TRUE(getRef(another_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
-			2, another_module->getOtherFiles().size()
+			2, getRef(another_module)->getOtherFiles().size()
 		);  // 2, because there are 2 different file extensions
-		ASSERT_EQUAL(2, another_module->getOtherFiles()[base::StrID(".txt")].size());
-		ASSERT_EQUAL(1, another_module->getOtherFiles()[base::StrID("")].size());
-		ASSERT_EQUAL(1, another_module->getSubmodules().size());
-		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front()->getFile().name());
+		ASSERT_EQUAL(2, getRef(another_module)->getOtherFiles()[base::StrID(".txt")].size());
+		ASSERT_EQUAL(1, getRef(another_module)->getOtherFiles()[base::StrID("")].size());
+		ASSERT_EQUAL(1, getRef(another_module)->getSubmodules().size());
+		ASSERT_EQUAL(
+			"whoa.duck", getRef(getRef(another_module)->getSourceFiles().front())->getFile().name()
+		);
 
 		ASSERT_TRUE(mt->getSubmodules().contains(base::StrID("awe")));
 		auto awe_module = mt->getSubmodules()[base::StrID("awe")];
-		ASSERT_EQUAL(0, awe_module->getSubmodules().size());
-		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
-		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
-		ASSERT_TRUE(awe_module->hasMainSourceFile());
-		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile()->getFile().name());
+		ASSERT_EQUAL(0, getRef(awe_module)->getSubmodules().size());
+		ASSERT_EQUAL(0, getRef(awe_module)->getSourceFiles().size());
+		ASSERT_EQUAL(0, getRef(awe_module)->getOtherFiles().size());
+		ASSERT_TRUE(getRef(awe_module)->hasMainSourceFile());
+		ASSERT_EQUAL("awe.dmf", getRef(getRef(awe_module)->getMainSourceFile())->getFile().name());
 	}
 
-	void testModuleIDInSourceFile(base::Ref<ModuleTree> module) {
+	void testModuleIDInSourceFile(base::CRef<ModuleTree> module) {
 		std::cerr << "Testing module ID in source files for module: " << module->getName().strView()
 				  << '\n';
 		auto id = module->getModuleID();
 		std::cerr << "Module id: " << id.queryUnstablePerfectHash() << '\n';
 		std::cerr << "Main source file Module ID: "
-				  << module->getMainSourceFile()->getModule().queryUnstablePerfectHash() << '\n';
+				  << getRef(module->getMainSourceFile())
+						 ->getModule()
+						 .illegalAccess()
+						 .getID()
+						 .queryUnstablePerfectHash()
+				  << '\n';
 		ASSERT_EQUAL(
 			id.queryUnstablePerfectHash(),
-			module->getMainSourceFile()->getModule().queryUnstablePerfectHash()
+			getRef(module->getMainSourceFile())
+				->getModule()
+				.illegalAccess()
+				.getID()
+				.queryUnstablePerfectHash()
 		);
 		for (auto& file: module->getSourceFiles())
 			ASSERT_EQUAL(
-				id.queryUnstablePerfectHash(), file->getModule().queryUnstablePerfectHash()
+				id.queryUnstablePerfectHash(),
+				getRef(file)->getModule().illegalAccess().getID().queryUnstablePerfectHash()
 			);
 	}
 
@@ -115,49 +141,60 @@ private:
 
 		ASSERT_EQUAL("test_module", mt->getName());
 		ASSERT_TRUE(mt->hasMainSourceFile());
-		ASSERT_EQUAL("content123\n", mt->getMainSourceFile()->getFile().getContent().view());
+		ASSERT_EQUAL("content123\n", getRef(mt->getMainSourceFile())->getFile().getContent().view());
 		ASSERT_TRUE(mt->getParentModule().empty());
 		ASSERT_EQUAL(
 			mt->getName(),
-			mt->getSubmodules()[base::StrID("awe")]->getParentModule().value()->getName()
+			getRef(getRef(mt->getSubmodules()[base::StrID("awe")])->getParentModule().value())
+				->getName()
 		);
 
 		auto awe_module     = mt->getSubmodules()[base::StrID("awe")];
 		auto another_module = mt->getSubmodules()[base::StrID("another")];
-		auto awesome_module = another_module->getSubmodules()[base::StrID("awesome_module")];
-		auto mod_module     = awesome_module->getSubmodules()[base::StrID("mod")];
+		auto awesome_module
+			= getRef(another_module)->getSubmodules()[base::StrID("awesome_module")];
+		auto mod_module = getRef(awesome_module)->getSubmodules()[base::StrID("mod")];
 
 
-		testModuleIDInSourceFile(awe_module);
+		testModuleIDInSourceFile(getRef(awe_module));
 		std::cerr << mt->prettyPrint() << '\n';
-		testModuleIDInSourceFile(another_module);
-		testModuleIDInSourceFile(awesome_module);
-		testModuleIDInSourceFile(mod_module);
+		testModuleIDInSourceFile(getRef(another_module));
+		testModuleIDInSourceFile(getRef(awesome_module));
+		testModuleIDInSourceFile(getRef(mod_module));
 		testModuleIDInSourceFile(mt);
 
 		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
 		assertTrue(
-			awe_module->getParentModule().has_value(), "Non-root module does not have a parent (1)"
+			getRef(awe_module)->getParentModule().has_value(),
+			"Non-root module does not have a parent (1)"
 		);
 		assertTrue(
-			another_module->getParentModule().has_value(),
+			getRef(another_module)->getParentModule().has_value(),
 			"Non-root module does not have a parent (2)"
 		);
 		assertTrue(
-			awesome_module->getParentModule().has_value(),
+			getRef(awesome_module)->getParentModule().has_value(),
 			"Non-root module does not have a parent (3)"
 		);
 		assertTrue(
-			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
+			getRef(mod_module)->getParentModule().has_value(),
+			"Non-root module does not have a parent (4)"
 		);
 
-		ASSERT_EQUAL(mt->getModuleID(), awe_module->getParentModule().value()->getModuleID());
-		ASSERT_EQUAL(mt->getModuleID(), another_module->getParentModule().value()->getModuleID());
 		ASSERT_EQUAL(
-			another_module->getModuleID(), awesome_module->getParentModule().value()->getModuleID()
+			mt->getModuleID(), getRef(getRef(awe_module)->getParentModule().value())->getModuleID()
 		);
 		ASSERT_EQUAL(
-			awesome_module->getModuleID(), mod_module->getParentModule().value()->getModuleID()
+			mt->getModuleID(),
+			getRef(getRef(another_module)->getParentModule().value())->getModuleID()
+		);
+		ASSERT_EQUAL(
+			getRef(another_module)->getModuleID(),
+			getRef(getRef(awesome_module)->getParentModule().value())->getModuleID()
+		);
+		ASSERT_EQUAL(
+			getRef(awesome_module)->getModuleID(),
+			getRef(getRef(mod_module)->getParentModule().value())->getModuleID()
 		);
 	}
 
@@ -201,9 +238,9 @@ private:
 		}
 		// Also check in source files (if any)
 		for (const auto& src: mt->getSourceFiles()) {
-			if (src->getFile().name() == "file") found_file = true;
-			if (src->getFile().name() == "file.txt") found_file_txt = true;
-			if (src->getFile().name() == ".skipped_file") found_skipped = true;
+			if (getRef(src)->getFile().name() == "file") found_file = true;
+			if (getRef(src)->getFile().name() == "file.txt") found_file_txt = true;
+			if (getRef(src)->getFile().name() == ".skipped_file") found_skipped = true;
 		}
 
 		ASSERT_TRUE(found_file);
@@ -224,8 +261,8 @@ private:
 
 		// Check submodule's files
 		auto another_dir = mt->getSubmodules().at(base::StrID("another_directory"));
-		ASSERT_EQUAL(0, another_dir->getSourceFiles().size());
-		ASSERT_EQUAL(0, another_dir->getOtherFiles().size());
+		ASSERT_EQUAL(0, getRef(another_dir)->getSourceFiles().size());
+		ASSERT_EQUAL(0, getRef(another_dir)->getOtherFiles().size());
 	}
 
 	void testVirtualFilesLikeModuleTree() {
@@ -262,8 +299,8 @@ private:
 			}
 		}
 		for (const auto& src: mt->getSourceFiles()) {
-			if (src->getFile().name() == "file1.txt") {
-				ASSERT_EQUAL("File1 content", src->getFile().getContent().view());
+			if (getRef(src)->getFile().name() == "file1.txt") {
+				ASSERT_EQUAL("File1 content", getRef(src)->getFile().getContent().view());
 				found_file1 = true;
 			}
 		}
@@ -272,7 +309,7 @@ private:
 		// Test files in subDir1
 		auto sub1        = mt->getSubmodules().at(base::StrID("subDir1"));
 		bool found_file2 = false;
-		for (const auto& [ext, files]: sub1->getOtherFiles()) {
+		for (const auto& [ext, files]: getRef(sub1)->getOtherFiles()) {
 			for (const auto& file: files) {
 				if (file.name() == "file2.txt") {
 					ASSERT_EQUAL("File2 content", file.getContent().view());
@@ -280,9 +317,9 @@ private:
 				}
 			}
 		}
-		for (const auto& src: sub1->getSourceFiles()) {
-			if (src->getFile().name() == "file2.txt") {
-				ASSERT_EQUAL("File2 content", src->getFile().getContent().view());
+		for (const auto& src: getRef(sub1)->getSourceFiles()) {
+			if (getRef(src)->getFile().name() == "file2.txt") {
+				ASSERT_EQUAL("File2 content", getRef(src)->getFile().getContent().view());
 				found_file2 = true;
 			}
 		}
@@ -309,15 +346,16 @@ private:
 		ModuleTreeModifier::addSourceFile(mt, new_src);
 		bool found_newsrc = false;
 		for (auto& sf: mt->getSourceFiles())
-			if (sf->getFile().name() == "newsrc.duck") found_newsrc = true;
+			if (getRef(sf)->getFile().name() == "newsrc.duck") found_newsrc = true;
 		ASSERT_TRUE(found_newsrc);
 
 		// Test removeSourceFile
 		auto src_to_remove = mt->getSourceFiles().front();
-		ModuleTreeModifier::removeSourceFile(src_to_remove);
+		ModuleTreeModifier::removeSourceFile(getRef(src_to_remove));
 		bool still_present = false;
 		for (auto& sf: mt->getSourceFiles())
-			if (sf == src_to_remove) still_present = true;
+			if (sf.illegalAccess().getID() == src_to_remove.illegalAccess().getID())
+				still_present = true;
 		ASSERT_EQUAL(false, still_present);
 
 		// Test setMainSourceFile (remove first if exists)
@@ -327,7 +365,7 @@ private:
 		}
 		auto new_main = root_dir.createSubFile("main2", "main2.dmf");
 		ModuleTreeModifier::setMainSourceFile(mt, new_main);
-		ASSERT_EQUAL("main2.dmf", mt->getMainSourceFile()->getFile().name());
+		ASSERT_EQUAL("main2.dmf", getRef(mt->getMainSourceFile())->getFile().name());
 
 		// Test removeMainSourceFile explicitly
 		ModuleTreeModifier::removeMainSourceFile(mt);
@@ -358,7 +396,7 @@ private:
 		ASSERT_EQUAL(false, sub_mod->getParentModule().has_value());
 		// Set parent again
 		ModuleTreeModifier::setParent(sub_mod, mt);
-		ASSERT_EQUAL(mt, sub_mod->getParentModule().value());
+		ASSERT_EQUAL(mt, getRef(sub_mod->getParentModule().value()));
 
 		// Test removeModule
 		ModuleTreeModifier::removeModule(sub_mod);
@@ -386,9 +424,15 @@ private:
 			// Check that main and source files exist in SourceFile::file_map
 			ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
 			auto removable_main_id = removable_sub_mod->getMainSourceFile();
-			ASSERT_TRUE(removable_main_id->getModule() == removable_sub_mod->getModuleID());
+			ASSERT_TRUE(
+				getRef(removable_main_id)->getModule().illegalAccess().getID()
+				== removable_sub_mod->getModuleID()
+			);
 			for (auto& sf: removable_sub_mod->getSourceFiles())
-				ASSERT_TRUE(sf->getModule() == removable_sub_mod->getModuleID());
+				ASSERT_TRUE(
+					getRef(sf)->getModule().illegalAccess().getID()
+					== removable_sub_mod->getModuleID()
+				);
 
 			// Remove the submodule
 			ModuleTreeModifier::removeModule(removable_sub_mod);
@@ -479,10 +523,10 @@ private:
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSubmodules().size());
 		ASSERT_EQUAL("subdir", mt->getSubmodules().begin()->first.strView());
-		ASSERT_TRUE(mt->getSubmodules().begin()->second->hasMainSourceFile());
+		ASSERT_TRUE(getRef(mt->getSubmodules().begin()->second)->hasMainSourceFile());
 		// Check parent
 		ASSERT_TRUE(mt->getParentModule().has_value());
-		ASSERT_EQUAL("parent_mod", mt->getParentModule().value()->getName().strView());
+		ASSERT_EQUAL("parent_mod", getRef(mt->getParentModule().value())->getName().strView());
 	}
 
 	void testModuleLoop() {
@@ -538,46 +582,46 @@ private:
 		// Ensure submodule hashes differ from parent and from each other
 		auto sub1   = mt1->getSubmodules().at(base::StrID("sub1"));
 		auto sub2   = mt1->getSubmodules().at(base::StrID("sub2"));
-		auto subsub = sub1->getSubmodules().at(base::StrID("subsub"));
+		auto subsub = getRef(sub1)->getSubmodules().at(base::StrID("subsub"));
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(sub1->getModuleID()).elements
+			(ModuleTree::getComponentHash(getRef(sub1)->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(sub2->getModuleID()).elements
+			(ModuleTree::getComponentHash(getRef(sub2)->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub2" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(subsub->getModuleID()).elements
+			(ModuleTree::getComponentHash(getRef(subsub)->getModuleID()).elements
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1", "subsub" })
 		);
 #endif
 
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(sub1->getModuleID()).hash
+			(ModuleTree::getComponentHash(getRef(sub1)->getModuleID()).hash
 		     != ModuleTree::getComponentHash(mt1->getModuleID()).hash)
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(sub1->getModuleID()).hash
-		     != ModuleTree::getComponentHash(sub2->getModuleID()).hash)
+			(ModuleTree::getComponentHash(getRef(sub1)->getModuleID()).hash
+		     != ModuleTree::getComponentHash(getRef(sub2)->getModuleID()).hash)
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getComponentHash(subsub->getModuleID()).hash
-		     != ModuleTree::getComponentHash(sub1->getModuleID()).hash)
+			(ModuleTree::getComponentHash(getRef(subsub)->getModuleID()).hash
+		     != ModuleTree::getComponentHash(getRef(sub1)->getModuleID()).hash)
 		);
 
-		ModuleTreeModifier::removeParent(sub1);
+		ModuleTreeModifier::removeParent(getRef(sub1));
 
 		IF_BUILD_TYPE_DEV({
 			ASSERT_TRUE(
-				(ModuleTree::getComponentHash(subsub->getModuleID()).elements
+				(ModuleTree::getComponentHash(getRef(subsub)->getModuleID()).elements
 			     == std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
 			);
-			ModuleTreeModifier::setParent(mt1, subsub);
+			ModuleTreeModifier::setParent(mt1, getRef(subsub));
 			ASSERT_TRUE(
-				(ModuleTree::getComponentHash(sub2->getModuleID()).elements
+				(ModuleTree::getComponentHash(getRef(sub2)->getModuleID()).elements
 			     == std::vector<std::string>{ "root_package_id11e3",
 			                                  "sub1",
 			                                  "subsub",
