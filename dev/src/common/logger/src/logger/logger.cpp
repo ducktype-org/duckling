@@ -15,7 +15,7 @@ namespace logger {
 
 	namespace internal {
 		bool isCategoryEnabled(DevLogCategories category) {
-			for (auto& enabled_category: *getEnabledCategories())
+			for (const auto& enabled_category: *getEnabledCategories())
 				if (enabled_category == category) return true;
 			return false;
 		}
