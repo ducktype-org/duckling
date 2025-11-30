@@ -31,7 +31,7 @@ pub fn fix_typos(
 
     let targets = possible_targets(ctx, external_cmds)?;
     debug!(
-        "Testing levenshtein of `{name}` against `{}`",
+        "Testing levenshtein of the `{name}` against `{}`",
         targets.join(", ")
     );
     let closest_targets = find_closest_targets(name, &targets, ctx.duck_cfg().max_fix_dist()?);
@@ -127,7 +127,7 @@ fn make_levenshtein_nofix_msg(bad_cmd: &str, closest_targets: &[&str]) -> String
 }
 
 fn fix(bad_cmd: &str, new_subcmd: &str, subcmd_args: &ArgMatches) -> QuackResult<ArgMatches> {
-    debug!("changing `{bad_cmd}` to `{new_subcmd}`");
+    debug!("changing `{bad_cmd}` to the `{new_subcmd}`");
     let new_cli_args = make_cli_args(new_subcmd, subcmd_args);
     parse_fixed_args(new_cli_args)
 }

@@ -6,7 +6,7 @@ use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("list")
-        .about("List all virtual environments")
+        .about("List all the virtual environments")
         .arg(
             optional("sort-by", "Properties to sort the output by")
                 .value_parser([
@@ -18,7 +18,7 @@ pub fn get_parser() -> Command {
                 ])
                 .default_value("name"),
         )
-        .arg(flag("sort-reverse", "Display output in reverse order"))
+        .arg(flag("sort-reverse", "Display output in the reverse order"))
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {

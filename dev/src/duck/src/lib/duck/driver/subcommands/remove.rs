@@ -6,8 +6,8 @@ use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("remove")
-        .about("Remove packages from the current venv")
-        .arg(flag("global", "Remove packages from the global venv instead").short('g'))
+        .about("Remove the packages from the current venv")
+        .arg(flag("global", "Remove the packages from the global venv instead").short('g'))
         .add_dev("Remove dev dependencies")
         .add_packages("Packages to remove")
 }

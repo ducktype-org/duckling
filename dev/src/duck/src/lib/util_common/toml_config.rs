@@ -9,7 +9,7 @@ use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
-use crate::QuackResult;
+use crate::{QuackResult, internal_bail};
 use paste::item;
 use toml::value::{Array, Datetime};
 
@@ -37,7 +37,7 @@ macro_rules! delegate_getter {
                         // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
                         None => Err(anyhow!(self.make_location_error()))
                                     .context(
-                                        format!("when getting key `{key}` expected {}, not a {}", stringify!($toml_value_fn), value.type_str())
+                                        format!("when getting the key `{key}` expected {}, not a {}", stringify!($toml_value_fn), value.type_str())
                                     )
                     }
                 }
@@ -76,14 +76,14 @@ impl TomlConfig {
             }
             Err(e) => {
                 return Err(e).context(format!(
-                    "when trying to read user config at `{}`",
+                    "when trying to read a user config at `{}`",
                     path.display()
                 ));
             }
         };
         let content = from_str::<Table>(&content).with_context(|| {
             format!(
-                "when trying to parse user config at `{}` into a TOML table",
+                "when trying to parse a user config at `{}` into the TOML table",
                 path.display()
             )
         })?;
@@ -95,9 +95,10 @@ impl TomlConfig {
 
     pub fn make_location_error(&self) -> String {
         match self.source {
-            Some(ref path) => format!("when parsing configuration at `{}`", path.display()),
+            Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
             None => {
-                "You've encountered internal error: when parsing default user configuration".into()
+                "You've encountered internal error: when parsing the default user configuration"
+                    .into()
             }
         }
     }
@@ -105,19 +106,19 @@ impl TomlConfig {
     #[track_caller]
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
         debug!(
-            "getting key `{key}` from config at `{}`",
+            "getting the key `{key}` from config at `{}`",
             self.source
                 .as_ref()
                 .map(|buf| buf.display())
                 .unwrap_or_else(|| Path::new("<default-config>").display()) // It's dyn-hack.
         );
         if key.is_empty() {
-            bail!("empty key")
+            internal_bail!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
-                "we asserted that key is not empty, so split should return at least one element"
+                "we've just asserted that key is not empty, so split should return at least one element"
             )
         };
         let mut current: &Table = &self.content;
@@ -127,14 +128,14 @@ impl TomlConfig {
             }
             let Some(next) = current.get(part) else {
                 debug!(
-                    "there is no table `[{part}]` in chain `{}`",
+                    "there is no table `[{part}]` in the chain `{}`",
                     parts[0..=i].join(".")
                 );
                 return Ok(None);
             };
             let Value::Table(next) = next else {
                 bail!(
-                    "in chain `{}` expected table, not a {}",
+                    "in the chain `{}` expected a table, not a {}",
                     parts[0..=i].join("."),
                     next.type_str()
                 )
@@ -151,12 +152,12 @@ impl TomlConfig {
     #[track_caller]
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
-            bail!("empty key")
+            internal_bail!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
-                "we asserted that key is not empty, so split should return at least one element"
+                "we've just asserted that key is not empty, so split should return at least one element"
             )
         };
         let mut current = &mut self.content;
@@ -168,12 +169,12 @@ impl TomlConfig {
                 current.insert(part.to_string(), Value::Table(Table::new()));
             }
             let Some(next) = current.get_mut(part) else {
-                unreachable!("we've just inserted part into current");
+                unreachable!("we've just inserted a new part into the current");
             };
             let next_type = next.type_str();
             let Some(next) = next.as_table_mut() else {
                 bail!(
-                    "in chain `{}` expected table, not a {}",
+                    "in the chain `{}` expected a table, not a {}",
                     parts[0..=i].join("."),
                     next_type
                 )
@@ -200,7 +201,7 @@ impl TomlConfig {
             3 if decimal != 10 => "rd",
             _ => "th",
         };
-        anyhow!("{i}{suffix} part of key `{key}` is empty")
+        anyhow!("{i}{suffix} part of the key `{key}` is empty")
     }
 
     delegate_getter! {

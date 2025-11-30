@@ -29,11 +29,15 @@ pub trait CommandExt: Sized {
     }
 
     fn add_profile(self) -> Self {
-        self._arg_impl(optional("profile", "Select compilation profile").conflicts_with("release"))
+        self._arg_impl(
+            optional("profile", "Select the compilation profile").conflicts_with("release"),
+        )
     }
 
     fn add_release(self) -> Self {
-        self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
+        self._arg_impl(
+            flag("release", "Alias for the `--profile=release`").conflicts_with("profile"),
+        )
     }
 
     fn add_verbose(self) -> Self {
@@ -46,7 +50,7 @@ pub trait CommandExt: Sized {
 
     fn add_quiet(self) -> Self {
         self._arg_impl(
-            flag("quiet", "Suppress all output")
+            flag("quiet", "Suppress all the output")
                 .short('q')
                 .conflicts_with("verbose"),
         )
@@ -56,7 +60,7 @@ pub trait CommandExt: Sized {
         self._arg_impl(
             optional(
                 "directory",
-                "Change to <DIRECTORY> before performing any actions",
+                "Change to the <DIRECTORY> before performing any actions",
             )
             .value_name("DIRECTORY")
             .value_parser(ValueParser::path_buf())
@@ -67,7 +71,7 @@ pub trait CommandExt: Sized {
 
     fn add_color(self) -> Self {
         self._arg_impl(
-            optional("color", "Control colored output")
+            optional("color", "Control the colored output")
                 .value_parser(["always", "never", "auto"])
                 .default_value("auto"),
         )
@@ -75,10 +79,13 @@ pub trait CommandExt: Sized {
 
     fn add_jobs(self) -> Self {
         self._arg_impl(
-            optional("jobs", "Specify number of threads to use by a compiler")
-                .short('j')
-                .value_name("N")
-                .value_parser(1..),
+            optional(
+                "jobs",
+                "Specify the number of threads to use by the compiler",
+            )
+            .short('j')
+            .value_name("N")
+            .value_parser(1..),
         )
     }
 

@@ -24,7 +24,7 @@ fn setup_logger() {
         prelude::*,
         registry,
     };
-    // @TODO: #1353 Something like `DUCK_DEBUG`? On the other hand it also affects loggers in quackpack (the library),
+    // @TODO: #1353 Something like `DUCK_DEBUG`? On the other hand it also affects loggers in the quackpack (the library),
     //        but the cli tool is called duck...
     let subscriber = EnvFilter::from_env("QP_DEBUG");
     let layer = layer()
@@ -73,8 +73,8 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
     // `.with_context(|| InternalError::from(...))` won't show them here.
     // I see two solutions:
     //  1. (current): get the highest `InternalError` (remember that the original error is at the bottom of the stack,
-    //     and at the top is the last context). This works even with `InternalError` in contexts.
-    //  2. use `.downcast_ref::<InternalError>()` with `.flat_map()` to get all `InternalError`s.
+    //     and at the top is the last context). This works even with `InternalError` in the context.
+    //  2. use `.downcast_ref::<InternalError>()` with `.flat_map()` to get all the `InternalError`s.
     //     This is tricky, because contexts get some weird type and can't be downcasted, therefore this doesn't
     //     catch the contexts.
     //
@@ -83,16 +83,16 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
     // let x: QuackResult<()> = Err(InternalError::from(anyhow!("error")).into());
     // x.context("b").context("a")?;
     // ```
-    // With some playing with error and context types to see what gets printed.
+    // With some playing with an error and context types to see what gets printed.
     //
     // Note that both options show at most one `InternalError`, but first shows one always,
-    // whereas second only if `InternalError` is at the bottom of the stack.
+    // whereas second only if the `InternalError` is at the bottom of the stack.
     //
     // Docs: https://docs.rs/anyhow/latest/anyhow/trait.Context.html#effect-on-downcasting
     if let Some(e) = error.downcast_ref::<InternalError>() {
-        // Add a newline between backtrace and a critical errors.
+        // Add a newline between backtrace and a critical error.
         term.print("");
-        term.critical(format!("got internal error: {e}"));
+        term.critical(format!("got the internal error: {e}"));
         term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
     }
 
@@ -110,7 +110,7 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
             if i == 0 {
                 term.print("");
             }
-            term.critical(format!("got internal error: {e}"));
+            term.critical(format!("got the internal error: {e}"));
         }
         if has_internal_errors {
             term.note(
