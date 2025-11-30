@@ -18,8 +18,6 @@
 
 #include <query_framework/query_impl.hpp>
 
-#include <utility>
-
 namespace compiler::helios::code {
 	namespace {
 

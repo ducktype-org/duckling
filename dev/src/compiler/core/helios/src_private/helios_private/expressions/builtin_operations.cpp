@@ -6,7 +6,11 @@
 
 #include <utility>
 
-namespace compiler::helios::code {
+namespace {
+	using namespace compiler;
+	using namespace compiler::helios;
+	using namespace compiler::helios::code;
+
 	/**
 	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
@@ -46,12 +50,9 @@ namespace compiler::helios::code {
 		// Invalid coercion.
 		return {};
 	}
+}
 
-	/**
-	 * @brief Finds a binary builtin operation with implicit coercion support.
-	 * Returns the operation along with coercions to apply to operands.
-	 * @return Optional tuple of (builtin_operation, left_coercion, right_coercion)
-	 */
+namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
