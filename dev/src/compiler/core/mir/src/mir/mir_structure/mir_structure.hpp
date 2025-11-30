@@ -4,7 +4,6 @@
 #include "mir_local_ref.hpp"
 
 #include <ctv/ctv.hpp>
-#include <string_id/string_id.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -16,6 +15,7 @@
 #include <base/types/ints.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <string_id/string_id.hpp>
 
 #include <utility>
 #include <variant>

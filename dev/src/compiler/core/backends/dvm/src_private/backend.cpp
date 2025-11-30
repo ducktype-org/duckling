@@ -2,14 +2,15 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <string_id/string_id.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/context.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -19,8 +20,6 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <bit>
-#include <iostream>
 #include <ranges>
 #include <string>
 #include <type_traits>
@@ -513,14 +512,18 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
-				std::cerr << "Initializing: " << type_name.str.str() << '\n';
+				CORE_DEV_LOG(Backend, "Initializing: ", type_name.str.str(), '\n');
+
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
+
 				initType(ctx, arg_name, type_name);
 
 				InstructionBuilder mov_arg(OpKind::mov);
+
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
+
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
@@ -746,7 +749,7 @@ namespace compiler::backend_vm {
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
-			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
+			CORE_DEV_LOG(Backend, "Adding function: ", lir_function->mangled_name.strView(), "\n");
 
 			AddLIRFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
 

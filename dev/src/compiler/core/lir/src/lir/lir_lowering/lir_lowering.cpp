@@ -27,6 +27,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <type_traits>
@@ -544,7 +545,8 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
+					CORE_DEV_LOG(Compiler, "DestructIf not implemented in LIR, skipping", "\n");
+
 					return curr_block;
 				case mir::Operation::Call: {
 					auto output = getOutput(mir_instruction.output);
