@@ -26,9 +26,9 @@ namespace vm::code {
 			  type_context(oth.type_context),
 			  available_functions(oth.available_functions.copy()) {}
 
-		ValidProgram(ValidProgram&&) noexcept = default;
+		ValidProgram(ValidProgram&&) noexcept            = default;
 		ValidProgram& operator=(const ValidProgram& oth) = default;
-		ValidProgram& operator=(ValidProgram&&) = default;
+		ValidProgram& operator=(ValidProgram&&)          = default;
 
 		/**
 		 * @brief Creates a new ValidProgram with nothing inside.

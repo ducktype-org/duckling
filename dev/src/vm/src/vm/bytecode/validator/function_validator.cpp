@@ -149,9 +149,10 @@ public:
 		  tod_map(oth.tod_map),
 		  type_metadata(oth.type_metadata),
 		  local_name_to_type(oth.local_name_to_type.copy()) {}
-	LocalStack(LocalStack&&) = default;
+
+	LocalStack(LocalStack&&)                       = default;
 	LocalStack& operator=(const LocalStack& other) = default;
-	LocalStack& operator=(LocalStack&&) = default;
+	LocalStack& operator=(LocalStack&&)            = default;
 
 	LocalStack(
 		const FuncSignature&            signature,
@@ -207,7 +208,9 @@ public:
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
 	[[nodiscard]]
-	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type[local_name]; }
+	CRef<TypeOfData> at(base::StrID local_name) const {
+		return local_name_to_type[local_name];
+	}
 };
 
 /**

@@ -17,8 +17,8 @@ namespace compiler::mir {
 		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
 
 		for (const auto& block: fun.blocks) {  // Fill with blocks.
-			moved_variables.putOrAssign(block.key, LocalSet());
-			used_variables.putOrAssign(block.key, LocalSet());
+			moved_variables.maybePut(block.key, LocalSet());
+			used_variables.maybePut(block.key, LocalSet());
 		}
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
@@ -86,7 +86,7 @@ namespace compiler::mir {
 					}
 					if (flag.flag == OperationFlag::Flag::Construct) {
 						// Assume constructors are valid (every use is after construct).
-						construction_block.putOrAssign(flag.local->id, block.key);
+						construction_block.maybePut(flag.local->id, block.key);
 					}
 					// Ommit destruct flag - LIR will handle it.
 				}
@@ -116,7 +116,7 @@ namespace compiler::mir {
 		base::HashMap<BlockID, States> visited;  // with usable and not usable.
 
 		// Insert all blocks.
-		for (const auto& id: fun.block_order) visited.putOrAssign(id, States());
+		for (const auto& id: fun.block_order) visited.maybePut(id, States());
 
 		for (const auto& local: construction_block) {
 			for (const auto& id: fun.block_order)

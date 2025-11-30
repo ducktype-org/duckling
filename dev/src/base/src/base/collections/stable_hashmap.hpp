@@ -134,15 +134,13 @@ namespace base {
 
 		HashMap& operator=(const HashMap& other) noexcept {
 			clearAndFree();
-			for (auto& kv_pair: other)
-				put(kv_pair.key, kv_pair.value);
+			for (auto& kv_pair: other) put(kv_pair.key, kv_pair.value);
 			return *this;
 		}
 
 		HashMap& operator=(HashMap&& other) noexcept {
 			clearAndFree();
-			for (auto& kv_pair: other)
-				put(kv_pair.key, kv_pair.value);
+			for (auto& kv_pair: other) put(kv_pair.key, kv_pair.value);
 			other.clear();
 			return *this;
 		}
