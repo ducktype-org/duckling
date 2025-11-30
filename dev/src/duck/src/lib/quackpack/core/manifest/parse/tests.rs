@@ -78,6 +78,60 @@ dependencies:
 }
 
 #[test]
+fn parse_with_integer_dep_version() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 1
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let manifest = parse_manifest(&manifest_path, QpCtx::new(&ctx)).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.dependencies().all_dependencies().len(), 1);
+    assert!(summary.dependencies().has_dependency(static_str_id!("a")));
+    let a = summary
+        .dependencies()
+        .get_dependency(static_str_id!("a"))
+        .unwrap();
+    assert_eq!(a.desc().versions().len(), 1);
+    assert_eq!(a.desc().versions()[0].to_string(), "1.0.0");
+    assert!(a.desc().source().is_registry());
+    assert!(a.features().is_empty());
+    assert!(summary.dev_dependencies().all_dependencies().is_empty());
+    assert!(summary.features().all_features().is_empty());
+}
+
+#[test]
+fn parse_with_negative_dep_version() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: -1
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let err = parse_manifest(&manifest_path, QpCtx::new(&ctx)).unwrap_err();
+    assert_eq!(
+        err.all_errors_to_vec(),
+        make_errors_message(
+            &dir,
+            ["dependencies.a.version: invalid digit found in string at line 8 column 14"]
+        )
+    );
+}
+
+#[test]
 fn parse_with_dep_or_versions() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
