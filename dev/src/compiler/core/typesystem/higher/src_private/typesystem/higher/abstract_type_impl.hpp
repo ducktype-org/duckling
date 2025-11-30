@@ -164,6 +164,9 @@ namespace compiler::tsh {
 
 		UnitAbstractTypeImpl() { representation = "()"; }
 
+		[[nodiscard]] bool isImplicitlyCoercible(AbstractType target, query::Context& context)
+			const override;
+
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }

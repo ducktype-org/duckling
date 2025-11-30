@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <deque>
 #include <ranges>

@@ -235,7 +235,9 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryStringType>({}));
 					break;
 
-					// @todo: add meta keyword and type
+				case pst::Keyword::Type:
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryMetaType>({}));
+					break;
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
@@ -324,7 +326,7 @@ namespace compiler::helios::code {
 					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleTypeConstructorExpr>(ctx, std::move(expressions));
+				node = makeBox<TupleExpr>(ctx, std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {

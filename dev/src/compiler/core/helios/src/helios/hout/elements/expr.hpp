@@ -356,12 +356,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Tuple constructor inside an expression.
+	 * @brief Tuple constructor expression. This does not create a tuple type, but a tuple value
+	 * (e.g.  `(1, 2)`), that *might* be coerced/lifted to a type in some contexts.
 	 */
-	struct TupleTypeConstructorExpr: public Expr {
+	struct TupleExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
+		TupleExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -371,9 +372,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		TupleTypeConstructorExpr(
-			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
-		);
+		TupleExpr(tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements);
 	};
 
 	/**
@@ -523,5 +522,27 @@ namespace compiler::helios::code {
 			Box<Expr>             source_expr,
 			tsh::SymbolType<>     target_type
 		);
+	};
+
+	/**
+	 * @brief Represents a compile-time cast of a value to a type.
+	 *
+	 * This is meant to be added by coercions when a value of type `type` is expected,
+	 * but the actual type is unit or tuple.
+	 */
+	struct LiftToTypeExpr final: public Expr {
+		Box<Expr> value_expr;
+
+		LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr);
 	};
 }

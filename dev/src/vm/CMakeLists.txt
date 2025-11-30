@@ -32,7 +32,7 @@ set(exec_sources
 # as they depend on each other.
 
 set(vm_dependencies
-  Base Clah Crow::Crow Filesystem TPC JSON Init
+  Base Clah Crow::Crow Filesystem TPC JSON Init Logger
 )
 
 add_library(LibCommonVM OBJECT ${vm_common_sources})

@@ -3,13 +3,12 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <string_id/string_id.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
