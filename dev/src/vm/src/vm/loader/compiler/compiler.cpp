@@ -254,7 +254,7 @@ namespace vm::loader::compiler {
 			}
 		}
 
-		ctx.local_offset_map = std::move(offsets);
+		ctx.local_offset_map = offsets;
 		ctx.local_stack_size = max_stack_size;
 	}
 

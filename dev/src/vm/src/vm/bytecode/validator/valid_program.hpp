@@ -33,7 +33,7 @@ namespace vm::code {
 			ext_c_function_map  = oth.ext_c_function_map;
 			globals_map         = oth.globals_map;
 			type_context        = oth.type_context;
-			available_functions = oth.available_functions.copy();
+			available_functions = oth.available_functions;
 			return *this;
 		}
 

@@ -132,12 +132,14 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		HashMap& operator=(HashMap&& other) noexcept {
-			clearAndFree();
-			for (auto it = other.begin(); it != other.end(); it++)
-				put(it->key, std::move(it)->value);
+		HashMap& operator=(const HashMap& other) noexcept {
+			clear();
+			for (auto& kv_pair: other)
+				put(kv_pair.key, kv_pair.value);
 			return *this;
 		}
+
+		HashMap& operator=(HashMap&& other) = delete;
 
 		~HashMap() {
 			for (auto& bucket: buckets) {

@@ -32,12 +32,7 @@ namespace vm {
 
 			BaseObjIdNameMap& operator=(BaseObjIdNameMap&&) & = default;
 
-			BaseObjIdNameMap& operator=(const BaseObjIdNameMap& oth) {
-				values     = oth.values;
-				id_to_name = oth.id_to_name;
-				name_to_id = std::move(oth.name_to_id.copy());
-				return *this;
-			}
+			BaseObjIdNameMap& operator=(const BaseObjIdNameMap& oth) = default;
 
 			constexpr ObjID insert(T&& new_value, base::StrID name) {
 				auto id = ObjID(values.size());

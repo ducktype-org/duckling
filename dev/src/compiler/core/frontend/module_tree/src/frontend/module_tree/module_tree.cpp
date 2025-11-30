@@ -361,7 +361,7 @@ namespace compiler::frontend {
 
 		// Set ID and name
 		module_ref->m_name        = m_name;
-		module_ref->m_other_files = std::move(m_other_files);
+		module_ref->m_other_files = m_other_files;
 
 		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
 		module_ref->m_package_id = m_package_id;

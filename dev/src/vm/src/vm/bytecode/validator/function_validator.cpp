@@ -156,7 +156,7 @@ public:
 		stack_state        = other.stack_state;
 		tod_map            = other.tod_map;
 		type_metadata      = other.type_metadata;
-		local_name_to_type = other.local_name_to_type.copy();
+		local_name_to_type = other.local_name_to_type;
 		return *this;
 	}
 
