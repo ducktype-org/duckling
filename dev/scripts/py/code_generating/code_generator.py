@@ -316,7 +316,7 @@ class LogicGenerator:
                 seed=self.seed + i,
                 import_mode=True)
             
-            module = tmp_generator.generate_file(global_symbol_count=5, imports=[])
+            module = tmp_generator.generate_file(global_symbol_count=100, imports=[])
             dependencies.append(module)
         
         return dependencies
