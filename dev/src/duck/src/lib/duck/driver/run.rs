@@ -34,7 +34,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
         std::env::set_current_dir(chdir).with_context(|| {
             format!(
-                "couldn't change current working directory to the `{}`",
+                "couldn't change the current working directory to `{}`",
                 chdir.display()
             )
         })?;

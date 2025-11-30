@@ -30,7 +30,7 @@ impl DuckCtx {
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
         let config = DuckCfg::new(&env, &error_console)?;
-        let cwd = current_dir().context("while trying to get current working directory")?;
+        let cwd = current_dir().context("while trying to get the current working directory")?;
         let user_home = home().context("while trying to get user home directory")?;
         let duck_home = duck_home(&env, &user_home);
         Ok(Self {
@@ -86,7 +86,7 @@ impl DuckCtx {
         &self.cwd
     }
 
-    /// Reload a current working directory.
+    /// Reload the current working directory.
     pub fn reload_cwd(&mut self) -> QuackResult<()> {
         self.cwd = current_dir().context("while trying to get current working directory")?;
         Ok(())
