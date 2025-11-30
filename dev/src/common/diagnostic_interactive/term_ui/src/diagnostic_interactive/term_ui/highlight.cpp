@@ -34,7 +34,7 @@ namespace term_ui {
 		return *this;
 	}
 
-	LinePiece intoLinePiece(const dia_app::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count) {
+	LinePiece intoLinePiece(const dia_int::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count) {
 		std::string str;
 		Style       style = getStyleFromType(msg.type);
 		switch (stage) {

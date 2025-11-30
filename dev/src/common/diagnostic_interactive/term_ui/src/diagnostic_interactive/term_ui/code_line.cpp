@@ -2,7 +2,7 @@
 
 namespace term_ui {
 
-	u64 minTabSpace(const dia_app::term_ui_view::CodeLine& line) {
+	u64 minTabSpace(const dia_int::term_ui_view::CodeLine& line) {
 		u64 res = 1;
 		if (line.line_no.has_value()) {
 			u64 number = line.line_no.value();
@@ -12,9 +12,9 @@ namespace term_ui {
 	}
 
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia_app::term_ui_view::CodeLine&            line,
+		const dia_int::term_ui_view::CodeLine&            line,
 		u64                                               tab_space,
-		const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& ctx,
+		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
 		std::ostream&                                     out
 	) {
 		if_opt_some(line.line_no, number) { printLineStart(tab_space, number, out); }

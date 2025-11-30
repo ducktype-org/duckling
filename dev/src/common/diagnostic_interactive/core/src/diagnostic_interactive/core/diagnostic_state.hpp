@@ -2,11 +2,12 @@
 
 #include "template_file.hpp"
 
-#include <base/pointers/box.hpp>
 #include <base/extend_cpp/visitor.hpp>
+#include <base/pointers/box.hpp>
+
 #include <iostream>
 
-namespace dia_app::state {
+namespace dia_int::state {
 	/**
 	 * @brief Unique identifier of a UI component inside a diagnostic.
 	 */
@@ -111,7 +112,7 @@ namespace dia_app::state {
 
 		CodeComponent(
 			ComponentID /* id */,
-			std::string                   content,
+			const std::string&            content,
 			std::vector<PointerMessageID> pointer_messages,
 			std::vector<MessageID>        attached_messages
 		);

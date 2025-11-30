@@ -2,7 +2,7 @@
 
 #include "diagnostic_interactive/core/utils.hpp"
 
-namespace dia_app::template_file {
+namespace dia_int::template_file {
 	Box<Component> Component::fromYaml(const YAML::Node& elem) {
 		if (elem.IsScalar()) return TextComponent::fromYaml(elem);
 		if (elem.IsSequence()) return ConcatComponent::fromYaml(elem);

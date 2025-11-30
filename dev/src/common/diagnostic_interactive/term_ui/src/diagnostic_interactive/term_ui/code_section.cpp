@@ -13,7 +13,7 @@ namespace term_ui {
 	enum class HighlightResult { LowerHighlight, LowerMessageMedium, LowerMessageLast, Success };
 
 	HighlightResult fitLoweredMessage(
-		Line& str, u64 beg, const dia_app::term_ui_view::PointerMessage& msg
+		Line& str, u64 beg, const dia_int::term_ui_view::PointerMessage& msg
 	) {
 		if (!str.tryInsert(beg, intoLinePiece(msg, PointerStage::Message))) {
 			str.tryInsert(beg, intoLinePiece(msg, PointerStage::Lowering));
@@ -37,7 +37,7 @@ namespace term_ui {
 		Line&                                                            str,
 		Highlight                                                        highlight,
 		u64                                                              line_no,
-		const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& pointers,
+		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& pointers,
 		const base::HashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
 	) {
 		auto [priority, beg, end, group, idx, lowering] = highlight;
@@ -83,7 +83,7 @@ namespace term_ui {
 		CORE_UNREACHABLE();
 	}
 
-	void print(const dia_app::term_ui_view::CodeSection& section, std::ostream& out) {
+	void print(const dia_int::term_ui_view::CodeSection& section, std::ostream& out) {
 		// Preprocessing
 		base::HashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
 		u64                                     tab_space = 0;

@@ -10,6 +10,6 @@ namespace term_ui {
 	 * @param section The code section to print.
 	 * @param out The output stream.
 	 */
-	void print(const dia_app::term_ui_view::CodeSection& section, std::ostream& out);
+	void print(const dia_int::term_ui_view::CodeSection& section, std::ostream& out);
 
 }

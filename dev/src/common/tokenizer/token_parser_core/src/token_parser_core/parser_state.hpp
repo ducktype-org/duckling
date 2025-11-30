@@ -6,6 +6,10 @@
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
+namespace dia_int {
+	class Logger;
+}
+
 namespace tpc {
 
 	/**
@@ -33,9 +37,12 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia::Logger> err;  ///< Stores parsing errors
+		Ref<dia::Logger>     err;      ///< Stores parsing errors
+		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err): err(err) {
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
+			  err(err),
+			  int_err(int_err) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 

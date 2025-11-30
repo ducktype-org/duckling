@@ -7,7 +7,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
-namespace dia_app {
+namespace dia_int {
 
 	// Forward declarations
 	class ConstructTextViewVisitor;

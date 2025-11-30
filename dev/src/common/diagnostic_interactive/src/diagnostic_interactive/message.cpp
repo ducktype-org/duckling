@@ -1,8 +1,26 @@
-#include "diagnostic.hpp"
+#include "message.hpp"
+#include <string>
+#include "base/collections/maps.hpp"
 
 #include "diagnostic_interactive/core/diagnostic_file.hpp"
 
 namespace dia_int {
+
+	Metadata::operator dia_file::Metadata() const {
+		return dia_file::Metadata{
+			.template_type = template_type, .type = type, .family = family, .name = name
+		};
+	}
+
+	Box<dia_file::Component> TextArgument::getValue(MessageBase&) {
+		return base::makeBox<dia_file::TextComponent>(content);
+	}
+
+	Box<dia_file::Component> CodeLocationArgument::getValue(MessageBase&) {
+		return base::makeBox<dia_file::CodeLocationComponent>(
+			location.file, location.line, location.column
+		);
+	}
 
 	void CodeArgument::addCodeLines(
 		std::vector<Box<dia_file::Component>>& code_list,
@@ -26,7 +44,7 @@ namespace dia_int {
 		}
 	}
 
-	Box<dia_file::Component> CodeArgument::getValue(DiagnosticBase& diag) {
+	Box<dia_file::Component> CodeArgument::getValue(MessageBase& diag) {
 		// Here would be a lot of code to extract the code fragment from the source file.
 		// And potentially add interactive contents.
 		auto source = position.getSource();
@@ -79,4 +97,43 @@ namespace dia_int {
 			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
 		}
 	}
+	dia_file::Message MessageBase::buildMessages(base::HashMap<std::string, dia_file::Message>& additional_messages) {
+		dia_file::Message msg;
+		msg.metadata = getMetadata();
+		for (const auto& arg: arguments)
+			msg.arguments.put(arg->getName(), arg->getValue(*this));
+
+		
+		msg.attached_messages.reserve(this->attached_messages.size());
+
+		for (const auto& attached_msg: attached_messages) {
+			auto id = MessageBase::getUniqueID();
+			msg.attached_messages.push_back(id);
+			additional_messages.put(id, attached_msg->buildMessages(additional_messages));
+		}
+
+		for (const auto& [id, value] : this->linked_messages) {
+			additional_messages.put(id, value->buildMessages(additional_messages));
+		}
+
+		return msg;
+	}
+
+	Box<dia_int::dia_file::Thread> MessageBase::buildDiagnosticFile() {
+		Box<dia_file::Thread> thread  = makeBox<dia_file::Thread>();
+		base::HashMap<std::string, dia_file::Message> additional_messages;
+
+		thread->main_message = buildMessages(additional_messages);
+		thread->additional_messages = std::move(additional_messages);
+		
+		return thread;
+	}
+
+	std::string MessageBase::getUniqueID() {
+		static usize counter = 0;
+		return base::strConcat("msg_", counter++);
+	}
+
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::MessageBase);

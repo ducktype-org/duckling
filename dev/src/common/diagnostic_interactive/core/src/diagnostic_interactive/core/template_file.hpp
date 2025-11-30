@@ -10,7 +10,7 @@
 #include <cctype>
 #include <limits>
 
-namespace dia_app::template_file {
+namespace dia_int::template_file {
 
 	// Forward declarations of template elements and a template visitor.
 

@@ -1,6 +1,10 @@
+#include "diagnostic_file_forward.hpp"
 #include "diagnostic_file.hpp"
+#include <base/pointers/box.hpp>
 
-namespace dia_app::dia_file {
+DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_file::Component);
+
+namespace dia_int::dia_file {
 	auto Component::fromJson(const json& elem) -> Box<Component> {
 		ASSUME_HAS(elem, "type");
 		std::string type = elem["type"];
@@ -18,14 +22,15 @@ namespace dia_app::dia_file {
 			return PointedComponent::fromJson(elem);
 		else if (type == VariantComponent::typeName())
 			return VariantComponent::fromJson(elem);
-		else if (type == EntityComponent::typeName())
-			return EntityComponent::fromJson(elem);
+		else if (type == LinkComponent::typeName())
+			return LinkComponent::fromJson(elem);
 		else if (type == EvaluatedTemplateComponent::typeName())
 			return EvaluatedTemplateComponent::fromJson(elem);
 		else if (type == MessageIDComponent::typeName())
 			return MessageIDComponent::fromJson(elem);
 		else
-			throw ParsingDiagnosticFileError(base::strConcat("Unknown component type '", type, "'."));
+			throw ParsingDiagnosticFileError(base::strConcat("Unknown component type '", type, "'.")
+			);
 	}
 
 	json TextComponent::toJson() const {
@@ -142,20 +147,21 @@ namespace dia_app::dia_file {
 		return base::makeBox<VariantComponent>(std::move(content), std::move(alt_content));
 	}
 
-	json EntityComponent::toJson() const {
+	json LinkComponent::toJson() const {
 		json result;
-		result["type"]      = typeName();
-		result["refers_to"] = entity_id;
-		result["content"]   = content->toJson();
+		result["type"]            = typeName();
+		result["target_messages"] = target_messages;
+		result["content"]         = content->toJson();
 		return result;
 	}
 
-	auto EntityComponent::fromJson(const json& elem) -> Box<EntityComponent> {
-		ASSUME_HAS_STR(elem, "refers_to");
+	auto LinkComponent::fromJson(const json& elem) -> Box<LinkComponent> {
+		ASSUME_HAS_STR(elem, "target_messages");
 		ASSUME_HAS(elem, "content");
-		MessageID entity_id = elem["refers_to"];
-		auto      content   = Component::fromJson(elem["content"]);
-		return base::makeBox<EntityComponent>(std::move(content), std::move(entity_id));
+		std::vector<MessageID> target_messages
+			= elem["target_messages"].get<std::vector<MessageID>>();
+		auto content = Component::fromJson(elem["content"]);
+		return base::makeBox<LinkComponent>(std::move(target_messages), std::move(content));
 	}
 
 	json EvaluatedTemplateComponent::toJson() const {
@@ -249,10 +255,10 @@ namespace dia_app::dia_file {
 		ASSUME_HAS(msg_json, "params");
 
 		Message result;
-		result.metadata = Metadata::fromJson(msg_json["metadata"]);
-		result.arguments   = jsonToMap<Box<Component>>(msg_json["params"], [](const json& el) {
-            return Component::fromJson(el);
-        });
+		result.metadata  = Metadata::fromJson(msg_json["metadata"]);
+		result.arguments = jsonToMap<Box<Component>>(msg_json["params"], [](const json& el) {
+			return Component::fromJson(el);
+		});
 
 		if (msg_json.contains("explore_edges")) {
 			ASSUME_ARR(msg_json, "explore_edges");
@@ -268,26 +274,6 @@ namespace dia_app::dia_file {
 		return result;
 	}
 
-	json Entity::toJson() const {
-		json result;
-		result["assoc_infos"] = json::array();
-		for (const auto& info_id: attached_messages) result["assoc_infos"].push_back(info_id);
-		return result;
-	}
-
-	Entity Entity::fromJson(const json& entity_json) {
-		ASSUME_HAS(entity_json, "assoc_infos");
-		ASSUME_ARR(entity_json, "assoc_infos");
-
-		Entity result;
-		for (const auto& info_id_json: entity_json["assoc_infos"]) {
-			if (!info_id_json.is_string())
-				throw ParsingDiagnosticFileError("Info ID in assoc_infos must be a string.");
-			result.attached_messages.push_back(info_id_json);
-		}
-		return result;
-	}
-
 	json Thread::toJson() const {
 		json result;
 		result["main_message"]      = main_message.toJson();
@@ -296,18 +282,12 @@ namespace dia_app::dia_file {
 		for (const auto& [info_id, msg]: additional_messages)
 			result["attached_messages"][info_id] = msg.toJson();
 
-		result["entities"] = json::object();
-
-		for (const auto& [entity_id, entity]: entities)
-			result["entities"][entity_id] = entity.toJson();
-
 		return result;
 	}
 
 	Thread Thread::fromJson(const json& thread_json) {
 		ASSUME_HAS(thread_json, "main_message");
 		ASSUME_HAS(thread_json, "attached_messages");
-		ASSUME_HAS(thread_json, "entities");
 
 		Thread result;
 		result.main_message = Message::fromJson(thread_json["main_message"]);
@@ -315,10 +295,6 @@ namespace dia_app::dia_file {
 		ASSUME_HAS(thread_json, "attached_messages");
 		for (const auto& [info_id, msg_json]: thread_json["attached_messages"].items())
 			result.additional_messages.put(info_id, Message::fromJson(msg_json));
-
-		ASSUME_HAS(thread_json, "entities");
-		for (const auto& [entity_id, entity_json]: thread_json["entities"].items())
-			result.entities.put(entity_id, Entity::fromJson(entity_json));
 
 		return result;
 	}

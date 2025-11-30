@@ -56,6 +56,8 @@ namespace compiler::helios {
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
+	bool isAlias(SymID id) { return getSymRef(id)->common.is_alias; }
+
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {

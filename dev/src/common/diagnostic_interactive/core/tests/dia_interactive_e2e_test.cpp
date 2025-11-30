@@ -9,7 +9,7 @@
 
 #include <json/json.hpp>
 
-using namespace dia_app;
+using namespace dia_int;
 
 class DiagnosticInteractiveE2ETester: public tester::TestSuite {
 #undef TESTER_CLASS

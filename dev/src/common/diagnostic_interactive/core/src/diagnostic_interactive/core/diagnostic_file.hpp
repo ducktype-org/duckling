@@ -1,15 +1,16 @@
 #pragma once
 #include "utils.hpp"
 
-#include <base/pointers/box.hpp>
-#include <base/except/exceptions.hpp>
-#include <base/types/ints.hpp>
 #include <base/collections/maps.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/visitor.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ints.hpp>
+#include "diagnostic_file_forward.hpp"
 
 #include <json/json.hpp>
 
-namespace dia_app::dia_file {
+namespace dia_int::dia_file {
 
 	struct Component;
 
@@ -20,7 +21,7 @@ namespace dia_app::dia_file {
 	struct ConcatComponent;
 	struct PointedComponent;
 	struct VariantComponent;
-	struct EntityComponent;
+	struct LinkComponent;
 	struct EvaluatedTemplateComponent;
 	struct MessageIDComponent;
 
@@ -33,7 +34,7 @@ namespace dia_app::dia_file {
             ConcatComponent,
             PointedComponent,
             VariantComponent,
-            EntityComponent,
+            LinkComponent,
             EvaluatedTemplateComponent,
 			MessageIDComponent
 		);
@@ -42,7 +43,6 @@ namespace dia_app::dia_file {
 
 	using MessageID        = std::string;
 	using PointerMessageID = std::string;
-	using EntityID         = std::string;
 
 	/**
 	 * @brief A base class display element.
@@ -83,6 +83,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const final;
 
 		[[nodiscard]] static std::string_view typeName() { return "text"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<TextComponent> fromJson(const json& elem);
@@ -102,6 +103,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "code"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<CodeComponent> fromJson(const json& elem);
@@ -124,6 +126,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "code_location"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<CodeLocationComponent> fromJson(const json& elem);
@@ -144,6 +147,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "start_line"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<StartLineComponent> fromJson(const json& elem);
@@ -163,6 +167,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "concat"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<ConcatComponent> fromJson(const json& elem);
@@ -172,7 +177,9 @@ namespace dia_app::dia_file {
 		base::Optional<MessageID> message_id;
 		PointerMessageID          pointer_message_id;
 
-		PointerMessage(PointerMessageID pointer_message_id, base::Optional<MessageID> message_id = {}):
+		PointerMessage(
+			PointerMessageID pointer_message_id, base::Optional<MessageID> message_id = {}
+		):
 			  message_id(std::move(message_id)),
 			  pointer_message_id(std::move(pointer_message_id)) {}
 
@@ -200,6 +207,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "pointed"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<PointedComponent> fromJson(const json& elem);
@@ -220,29 +228,31 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "variant"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<VariantComponent> fromJson(const json& elem);
 	};
 
-	struct EntityComponent: public Component {
-		Box<Component> content;
-		EntityID       entity_id;
+	struct LinkComponent: public Component {
+		std::vector<MessageID> target_messages;
+		Box<Component>         content;
 
-		EntityComponent(Box<Component> content, EntityID entity_id):
-			  content(std::move(content)),
-			  entity_id(std::move(entity_id)) {}
+		LinkComponent(std::vector<MessageID> target_messages, Box<Component> content):
+			  target_messages(std::move(target_messages)),
+			  content(std::move(content)) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
-			visitor.visitEntityComponent(*this);
+			visitor.visitLinkComponent(*this);
 		}
 
 		[[nodiscard]] json toJson() const override;
 
-		[[nodiscard]] static std::string_view typeName() { return "entity"; }
+		[[nodiscard]] static std::string_view typeName() { return "link"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
-		static Box<EntityComponent> fromJson(const json& elem);
+		static Box<LinkComponent> fromJson(const json& elem);
 	};
 
 	/**
@@ -261,6 +271,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "evaluated_template"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<EvaluatedTemplateComponent> fromJson(const json& elem);
@@ -278,6 +289,7 @@ namespace dia_app::dia_file {
 		[[nodiscard]] json toJson() const override;
 
 		[[nodiscard]] static std::string_view typeName() { return "message_id"; }
+
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
 
 		static Box<MessageIDComponent> fromJson(const json& elem);
@@ -314,29 +326,20 @@ namespace dia_app::dia_file {
 		static Message fromJson(const json& msg_json);
 	};
 
-	struct Entity {
-		std::vector<MessageID> attached_messages;
-
-		[[nodiscard]] json toJson() const;
-
-		static Entity fromJson(const json& entity_json);
-	};
-
 	struct Thread {
 		Message                           main_message;
 		base::HashMap<MessageID, Message> additional_messages;
-		base::HashMap<EntityID, Entity>   entities;
 
 		[[nodiscard]] json toJson() const;
 
 		static Thread fromJson(const json& thread_json);
 	};
-}  // namespace dia_app::dia_file
+}  // namespace dia_int::dia_file
 
 namespace std {
 	template<>
-	struct hash<dia_app::dia_file::PointerMessage> {
-		std::size_t operator()(const dia_app::dia_file::PointerMessage& k) const {
+	struct hash<dia_int::dia_file::PointerMessage> {
+		std::size_t operator()(const dia_int::dia_file::PointerMessage& k) const {
 			std::size_t h1 = std::hash<std::string>{}(k.pointer_message_id);
 			std::size_t h2 = 0;
 			if (k.message_id) h2 = std::hash<std::string>{}(*k.message_id);

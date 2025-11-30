@@ -1,16 +1,17 @@
 #include "template_registry.hpp"
+
 #include "exceptions.hpp"
 
-#include <diagnostic_interactive/dia_templates/templates.hpp>
 #include <diagnostic_interactive/core/yaml_buffer.hpp>
-
-#include <filesystem/file.hpp>
-#include <base/str/str_utils.hpp>
-#include <base/extend_cpp/variant_match.hpp>
-
+#include <diagnostic_interactive/dia_templates/templates.hpp>
 #include <yaml-cpp/yaml.h>
 
-namespace dia_app {
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <filesystem/file.hpp>
+
+namespace dia_int {
 
 	// --------------------------------------------------------------------------------
 	// Helper Functions
@@ -43,11 +44,11 @@ namespace dia_app {
 	// Template Registry Providers
 	// --------------------------------------------------------------------------------
 
-	base::Optional<std::string_view> TemplateResistryEmbeddedProvider::loadTemplate(
+	base::Optional<std::string_view> TemplateResistryMainProvider::loadTemplate(
 		std::string_view path
 	) {
-		auto result = dia_embedded::loadTemplateFromPath(path);
-		if (result.has_value()) return dia_embedded::loadTemplateFromPath(path).value();
+		auto result = dia::templates::loadTemplateFromPath(path);
+		if (result.has_value()) return result.value();
 		return {};
 	}
 
@@ -81,9 +82,8 @@ namespace dia_app {
 	MBox<TemplateRegistry> TemplateRegistry::instance;
 
 	TemplateRegistry& TemplateRegistry::getInstance() {
-		if (!instance.toOpt().has_value()) {
+		if (!instance.toOpt().has_value())
 			throw TemplateEvaluationException("TemplateRegistry instance not initialized.");
-		}
 		return *instance.toOpt().value();
 	}
 

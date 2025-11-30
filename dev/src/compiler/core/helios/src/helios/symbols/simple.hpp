@@ -24,6 +24,8 @@ namespace compiler::helios {
 	 */
 	bool isWildcard(SymID);
 
+	bool isAlias(SymID);
+
 	/**
 	 * @return name of the symbol
 	 */

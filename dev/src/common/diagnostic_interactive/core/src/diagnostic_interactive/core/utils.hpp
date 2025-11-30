@@ -18,7 +18,7 @@
 		std::abort();   \
 	} while (0)
 
-namespace dia_app {
+namespace dia_int {
 	using json = nlohmann::json;
 
 #define ASSUME_OBJ(jf) \

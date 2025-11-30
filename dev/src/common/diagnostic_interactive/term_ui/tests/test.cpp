@@ -2,7 +2,7 @@
 #include <diagnostic_interactive/term_ui/printers.hpp>
 
 using namespace term_ui;
-using namespace dia_app::term_ui_view;
+using namespace dia_int::term_ui_view;
 
 #define CP(...) CodePiece(__VA_ARGS__)
 

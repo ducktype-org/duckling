@@ -2,7 +2,7 @@
 
 #include "diagnostic_state.hpp"
 
-namespace dia_app {
+namespace dia_int {
 
 	/**
 	 * @brief Convert state components to plain text.

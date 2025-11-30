@@ -9,7 +9,7 @@
 
 namespace term_ui {
 	/* Minimal amount of whitespace needed before the line bar `|`. */
-	u64 minTabSpace(const dia_app::term_ui_view::CodeLine& line);
+	u64 minTabSpace(const dia_int::term_ui_view::CodeLine& line);
 
 	/**
 	 * @brief Print the code line to the output stream and calculate the highlights.
@@ -24,9 +24,9 @@ namespace term_ui {
 	 * @return std::vector<Highlight>
 	 */
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia_app::term_ui_view::CodeLine&            line,
+		const dia_int::term_ui_view::CodeLine&            line,
 		u64                                               tab_space,
-		const base::HashMap<u64, dia_app::term_ui_view::PointerMessage>& ctx,
+		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
 		std::ostream&                                     out
 	);
 }

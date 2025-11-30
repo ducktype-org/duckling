@@ -1,8 +1,15 @@
+class MY_CLS {
+	a: i32;
+}
+
+alias ALIASED_CLS = MY_CLS;
+
+
 fun foo() -> i64 = {
 	var a: i64 = 23i64;
 	if (9i64) {
 		var b: i32 = i32(7);
 	}
-    5 = 30;
+	var x: ALIASED_CLS = 0;
 	return 0;
 }

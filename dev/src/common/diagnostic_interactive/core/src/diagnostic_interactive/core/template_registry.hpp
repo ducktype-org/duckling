@@ -5,7 +5,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
-namespace dia_app {
+namespace dia_int {
 
 	class TemplateRegistryProvider {
 	public:
@@ -13,7 +13,7 @@ namespace dia_app {
 		virtual base::Optional<std::string_view> loadTemplate(std::string_view path) = 0;
 	};
 
-	class TemplateResistryEmbeddedProvider: public TemplateRegistryProvider {
+	class TemplateResistryMainProvider: public TemplateRegistryProvider {
 	public:
 		base::Optional<std::string_view> loadTemplate(std::string_view path) override;
 	};

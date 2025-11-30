@@ -1,25 +1,28 @@
-#include "diagnostic.hpp"
+#pragma once
+
+#include "message.hpp"
+// #include <diagnostic_interactive/core/diagnostic_file.hpp>
 
 namespace dia_int {
-	class DiagnosticWithCodeFragment: public DiagnosticBase {
+	class MessageWithCodeFragment: public MessageBase {
 	protected:
-		DiagnosticWithCodeFragment(dia::SourcePosition source_position) {
+		MessageWithCodeFragment(dia::SourcePosition source_position) {
 			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
 		}
 	};
 
-	class DiagnosticWithCodeFragmentAndCause: public DiagnosticBase {
+	class MessageWithCodeFragmentAndCause: public MessageBase {
 	protected:
-		DiagnosticWithCodeFragmentAndCause(dia::SourcePosition source_position) {
+		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position) {
 			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
 			addPointerMessage({ "cause", source_position });
 		}
 	};
 
-	class TodoHeaderError: public DiagnosticBase {
-		dia_file::Metadata getMetadata() const final {
+	class TodoHeaderError: public MessageBase {
+		Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "misc",
@@ -27,13 +30,13 @@ namespace dia_int {
 		}
 
 	public:
-		TodoHeaderError(std::string header_message): DiagnosticBase() {
+		TodoHeaderError(std::string header_message): MessageBase() {
 			addArgument<TextArgument>("header_message", std::move(header_message));
 		}
 	};
 
-	class TodoCodeError final: public DiagnosticBase {
-		dia_file::Metadata getMetadata() const final {
+	class TodoCodeError final: public MessageBase {
+		Metadata getMetadata() const final {
 			return {
 				.template_type = "message", .type = "error", .family = "misc", .name = "todo_code"
 			};
@@ -42,23 +45,23 @@ namespace dia_int {
 	public:
 		TodoCodeError(
 			std::string                 header_message,
-			std::string                 description,
 			dia::SourcePosition         source_position,
+			std::string                 description             = "",
 			base::Optional<std::string> pointer_message_content = {}
 		):
-			  DiagnosticBase() {
+			  MessageBase() {
 			addArgument<TextArgument>("header_message", std::move(header_message));
 			addArgument<TextArgument>("description", std::move(description));
 
 			addArgument<CodeArgument>("code", source_position);
 			addArgument<CodeLocationArgument>("code_location", source_position);
-			addPointerMessage("cause", source_position);
-			addArgument<TextArgument>("pointer_message", "");
 
 			if_opt_some(pointer_message_content, val) {
 				addArgument<TextArgument>("pointer_message_content", std::move(val));
 			}
-			else { addArgument<TextArgument>("pointer_message_content", ""); }
+			{ addArgument<TextArgument>("pointer_message_content", ""); }
+
+			addPointerMessage("cause", source_position);
 		}
 	};
 

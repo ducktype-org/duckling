@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 	file.close();
 
 	// Parse diagnostic thread
-	dia_app::dia_file::Thread diagnostic_thread = dia_app::dia_file::Thread::fromJson(input);
+	dia_int::dia_file::Thread diagnostic_thread = dia_int::dia_file::Thread::fromJson(input);
 
 	// For now, just print success
 	std::cout << "Successfully parsed diagnostic file\n";

@@ -18,8 +18,8 @@ int main(int argc, char* argv[]) {
     std::string file_path = argv[1];
 
     // Set template registry to embedded templates
-    dia_app::TemplateRegistry::setInstance(
-        makeBox<dia_app::TemplateResistryEmbeddedProvider>()
+    dia_int::TemplateRegistry::setInstance(
+        makeBox<dia_int::TemplateResistryMainProvider>()
     );
 
     // Read the diagnostic file
@@ -34,11 +34,11 @@ int main(int argc, char* argv[]) {
 
     try {
         auto j = nlohmann::json::parse(content);
-        auto thread = dia_app::dia_file::Thread::fromJson(j);
+        auto thread = dia_int::dia_file::Thread::fromJson(j);
 
         // Create a tree view constructor and display it in the term ui
-        auto state = dia_app::evaluateDiagnostic(thread);
-        auto view = dia_app::term_ui_view::constructTreeView(state);
+        auto state = dia_int::evaluateDiagnostic(thread);
+        auto view = dia_int::term_ui_view::constructTreeView(state);
 
         term_ui::print(view, std::cout);
     } catch (const std::exception& e) {

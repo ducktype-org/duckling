@@ -1,14 +1,15 @@
+#include "diagnostic_interactive/core/diagnostic_state.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_file.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <diagnostic_interactive/core/template_file.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <tester/tester.hpp>
-#include "diagnostic_interactive/core/diagnostic_state.hpp"
 
 #include <json/json.hpp>
 
-using namespace dia_app;
+using namespace dia_int;
 
 class DiagnosticInteractiveTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -63,12 +64,14 @@ private:
 			test_round_trip(base::makeBox<dia_file::ConcatComponent>(std::move(elements)), "concat");
 		}
 
-		// Test EntityComponent
+		// Test LinkComponent
 		{
 			auto content = base::makeBox<dia_file::CodeComponent>("MyType");
 			test_round_trip(
-				base::makeBox<dia_file::EntityComponent>(std::move(content), "type_MyType_123"),
-				"entity"
+				base::makeBox<dia_file::LinkComponent>(
+					std::vector<std::string>{ "abc" }, std::move(content)
+				),
+				"link"
 			);
 		}
 
@@ -96,10 +99,10 @@ private:
 		std::vector<Box<dia_file::Component>> inner_elements;
 		inner_elements.push_back(base::makeBox<dia_file::TextComponent>("Type "));
 
-		auto entity_content = base::makeBox<dia_file::CodeComponent>("i32");
-		inner_elements.push_back(
-			base::makeBox<dia_file::EntityComponent>(std::move(entity_content), "builtin_type_i32")
-		);
+		auto link_content = base::makeBox<dia_file::CodeComponent>("i32");
+		inner_elements.emplace_back(base::makeBox<dia_file::LinkComponent>(
+			std::vector<std::string>{ "abc" }, std::move(link_content)
+		));
 
 		auto inner_concat = base::makeBox<dia_file::ConcatComponent>(std::move(inner_elements));
 
@@ -222,14 +225,14 @@ private:
 			"variant"
 		);
 
-		// Test EntityComponent
+		// Test LinkComponent
 		test_component_round_trip(
 			R"({
-			"type": "entity",
+			"type": "link",
 			"content": {"type": "code", "content": "MyType"},
-			"refers_to": "type_MyType_123"
+			"target_messages": ["msg_abc", "msg_def"]
 		})",
-			"entity"
+			"link"
 		);
 
 		// Test EvaluatedTemplateComponent
@@ -308,14 +311,6 @@ private:
 			dia_file::Message::fromJson
 		);
 
-		// Test Entity
-		test_from_json_to_json_equality(
-			R"({
-			"assoc_infos": ["msg_1", "msg_2", "msg_3"]
-		})",
-			dia_file::Entity::fromJson
-		);
-
 		// Test Thread
 		test_from_json_to_json_equality(
 			R"({
@@ -346,11 +341,6 @@ private:
 						"name": "suggestion"
 					},
 					"params": {}
-				}
-			},
-			"entities": {
-				"entity_1": {
-					"assoc_infos": ["msg_x"]
 				}
 			}
 		})",

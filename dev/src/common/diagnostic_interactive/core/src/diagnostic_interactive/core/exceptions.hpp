@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-namespace dia_app {
+namespace dia_int {
 
     /**
      * @brief Exception intended to be the basis of all non-panic duckling-specific exceptions.

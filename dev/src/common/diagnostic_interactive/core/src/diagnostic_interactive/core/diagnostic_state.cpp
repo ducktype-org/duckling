@@ -1,6 +1,21 @@
 #include "diagnostic_state.hpp"
 
-namespace dia_app::state {
+#include <algorithm>
+
+namespace dia_int::state {
+	static std::string expandTabs(const std::string& s, usize tab_width = 4) {
+		std::string out;
+		out.reserve(s.size());  // small optimization
+
+		for (char c: s)
+			if (c == '\t')
+				out.append(tab_width, ' ');  // append N spaces
+			else
+				out.push_back(c);
+
+		return out;
+	}
+
 	void TextComponent::debugPrint(std::ostream& out, usize indent) const {
 		out << std::string(indent * 2, ' ') << "TextComponent(" << content << ")";
 		if (!attached_messages.empty()) {
@@ -78,42 +93,28 @@ namespace dia_app::state {
 			<< location.line << ":" << location.column << ")\n";
 	}
 
-	void Message::debugPrint(std::ostream& out) const {
-		out << "Message: " << metadata.name << "\n";
-		out << "Header: ";
-		header->debugPrint(out);
-		out << "\n";
-		if (description) {
-			out << "Description: ";
-			description->debugPrint(out);
-			out << "\n";
-		}
-		if (!pointer_messages.empty()) {
-			out << "Pointer Messages:\n";
-			for (const auto& [id, pm]: pointer_messages) {
-				out << "  ID " << id << ": [" << pm.type << "] " << pm.content
-					<< " (prio: " << pm.priority << ")\n";
-			}
-		}
-	}
-
 	void Diagnostic::debugPrint(std::ostream& out) const {
 		out << "Diagnostic with " << messages.size() << " messages.\n";
 		for (const auto& msg: messages) msg.debugPrint(out);
 	}
 
-	Message::Message(
-		template_file::Metadata                         metadata,
-		Box<Component>                                  header,
-		MBox<Component>                                 description,
-		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-		base::HashMap<std::string, ExploreEdge>         explore_edges
+	TextComponent::TextComponent(std::string content): Component(), content(std::move(content)) {}
+
+	TextComponent::TextComponent(std::string content, std::vector<MessageID> attached_messages):
+		  TextComponent(std::move(content)) {
+		this->attached_messages = std::move(attached_messages);
+	}
+
+	CodeComponent::CodeComponent(
+		ComponentID /* id */,
+		const std::string&                   content,
+		std::vector<PointerMessageID> pointer_messages,
+		std::vector<MessageID>        attached_messages
 	):
-		  metadata(std::move(metadata)),
-		  header(std::move(header)),
-		  description(std::move(description)),
+		  Component(),
+		  content(expandTabs(content)),
 		  pointer_messages(std::move(pointer_messages)),
-		  explore_edges(std::move(explore_edges)) {}
+		  attached_messages(std::move(attached_messages)) {}
 
 	CodeLocationComponent::CodeLocationComponent(CodeLocation location):
 		  Component(),
@@ -137,24 +138,6 @@ namespace dia_app::state {
 		  components(std::move(components)) {
 		for (auto& comp: this->components) comp->setParent(this);
 	}
-
-	CodeComponent::CodeComponent(
-		ComponentID /* id */,
-		std::string                   content,
-		std::vector<PointerMessageID> pointer_messages,
-		std::vector<MessageID>        attached_messages
-	):
-		  Component(),
-		  content(std::move(content)),
-		  pointer_messages(std::move(pointer_messages)),
-		  attached_messages(std::move(attached_messages)) {}
-
-	TextComponent::TextComponent(std::string content, std::vector<MessageID> attached_messages):
-		  Component(),
-		  content(std::move(content)),
-		  attached_messages(std::move(attached_messages)) {}
-
-	TextComponent::TextComponent(std::string content): Component(), content(std::move(content)) {}
 
 	Component::Component(CRef<Component> parent): parent(parent) {}
 
@@ -184,5 +167,37 @@ namespace dia_app::state {
 
 	void TextComponent::acceptVisitor(ComponentVisitor& visitor) const {
 		visitor.visitTextComponent(*this);
+	}
+
+	Message::Message(
+		template_file::Metadata                         metadata,
+		Box<Component>                                  header,
+		MBox<Component>                                 description,
+		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
+		base::HashMap<std::string, ExploreEdge>         explore_edges
+	):
+		  metadata(std::move(metadata)),
+		  header(std::move(header)),
+		  description(std::move(description)),
+		  pointer_messages(std::move(pointer_messages)),
+		  explore_edges(std::move(explore_edges)) {}
+
+	void Message::debugPrint(std::ostream& out) const {
+		out << "Message: " << metadata.name << "\n";
+		out << "Header: ";
+		header->debugPrint(out);
+		out << "\n";
+		if (description) {
+			out << "Description: ";
+			description->debugPrint(out);
+			out << "\n";
+		}
+		if (!pointer_messages.empty()) {
+			out << "Pointer Messages:\n";
+			for (const auto& [id, pm]: pointer_messages) {
+				out << "  ID " << id << ": [" << pm.type << "] " << pm.content
+					<< " (prio: " << pm.priority << ")\n";
+			}
+		}
 	}
 }

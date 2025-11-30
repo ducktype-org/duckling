@@ -14,7 +14,7 @@ namespace query {
 		logger.log(std::move(message));
 	}
 
-	void  Context::logInt(Box<dia_int::DiagnosticBase> diagnostic) {
+	void  Context::logInt(Box<dia_int::MessageBase> diagnostic) {
 		assertActive();
 		int_logger.log(std::move(diagnostic));
 	}

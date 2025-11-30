@@ -1,5 +1,6 @@
 #include "queries.hpp"
 
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -27,6 +28,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 
 namespace compiler::helios {
 
@@ -511,6 +513,10 @@ namespace compiler::helios {
 							"Left side of assignment can't be a literal."
 						)
 					);
+					ctx.logInt(makeBox<dia_int::TodoCodeError>(
+						"Left side of assignment is a literal", var.unlock(ctx)->getSourcePosition(),
+						"", "here"
+					));
 					return;  // fail
 				}
 
@@ -653,7 +659,7 @@ namespace compiler::helios {
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 					auto coercion           = canCoerce(
-                        ctx, initial_value->expression_type.getSymbolType(), symbol_type
+                        ctx, initial_value_type, symbol_type
                     );
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
@@ -668,6 +674,11 @@ namespace compiler::helios {
 								initial_value_type.toString(),
 								"\n"
 							)
+						));
+						ctx.logInt(makeBox<errors::IncompatibleTypesError>(
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+							errors::InteractiveType(symbol_type, {stmt->getType()->unlock(ctx)->getExpr().unlock(ctx)}),
+							errors::InteractiveType(initial_value_type, {})
 						));
 						return;  // fail
 					}

@@ -18,7 +18,7 @@ namespace term_ui {
 	 * @param out The output stream.
 	 * @param use_color Whether to use coloring in the displayed view.
 	 */
-	void print(const std::vector<dia_app::term_ui_view::Diagnostic>& diags, std::ostream& out, bool use_color);
+	void print(const std::vector<dia_int::term_ui_view::Diagnostic>& diags, std::ostream& out, bool use_color);
 
 	/**
 	 * @brief Print this diagnostic to output stream.
@@ -26,10 +26,10 @@ namespace term_ui {
 	 * @param diag The diagnostic to print.
 	 * @param out The output stream.
 	 */
-	void print(const dia_app::term_ui_view::Diagnostic& diag, std::ostream& out);
+	void print(const dia_int::term_ui_view::Diagnostic& diag, std::ostream& out);
 
     /**
      * @brief Print hte message to output stream.
      */
-    void print(const dia_app::term_ui_view::Message& msg, std::ostream& out);
+    void print(const dia_int::term_ui_view::Message& msg, std::ostream& out);
 }

@@ -13,7 +13,7 @@
 
 #include <filesystem/file.hpp>
 
-namespace dia_app {
+namespace dia_int {
 
 	template<typename T>
 	T getNewID() {
@@ -146,7 +146,7 @@ namespace dia_app {
 		void visitConcatComponent(const dia_file::ConcatComponent& el) override;
 		void visitPointedComponent(const dia_file::PointedComponent& el) override;
 		void visitVariantComponent(const dia_file::VariantComponent& el) override;
-		void visitEntityComponent(const dia_file::EntityComponent& el) override;
+		void visitLinkComponent(const dia_file::LinkComponent& el) override;
 		void visitEvaluatedTemplateComponent(const dia_file::EvaluatedTemplateComponent& el
 		) override;
 		void visitMessageIDComponent(const dia_file::MessageIDComponent& el) override;
@@ -426,17 +426,11 @@ namespace dia_app {
 		);
 	}
 
-	void EvaluateDiagnosticFileVisitor::visitEntityComponent(const dia_file::EntityComponent& el) {
-		auto entity_opt = ctx.thread_ctx.thread.entities.atMaybe(el.entity_id);
-		if (!entity_opt.has_value()) {
-			throw TemplateEvaluationException(
-				base::strConcat("Entity ", el.entity_id, " not found in context.")
-			);
-		}
-		auto entity   = entity_opt.value();
-		auto no_links = entity->attached_messages.size();
+	void EvaluateDiagnosticFileVisitor::visitLinkComponent(const dia_file::LinkComponent& el) {
+		
+		auto no_links = el.target_messages.size();
 
-		for (const auto& attached_message: entity->attached_messages)
+		for (const auto& attached_message: el.target_messages)
 			current_message_ids.push_back(ctx.thread_ctx.message_mapping.at(attached_message));
 
 		el.content->acceptVisitor(*this);

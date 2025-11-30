@@ -1,7 +1,7 @@
 #include "diagnostic_state.hpp"
 #include "term_ui_view.hpp"
 
-namespace dia_app {
+namespace dia_int {
 
 	std::string constructTextView(CRef<state::Component> component);
 

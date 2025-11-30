@@ -14,7 +14,6 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/diagnostic.hpp>
 
 namespace query {
 
@@ -76,7 +75,7 @@ namespace query {
 		 */
 		void log(Box<dia::Message> message);
 
-		void logInt(Box<dia_int::DiagnosticBase> diagnostic);
+		void logInt(Box<dia_int::MessageBase> diagnostic);
 
 		/**
 		 * @brief Returns a const reference to the main query state.

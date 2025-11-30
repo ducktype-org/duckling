@@ -7,7 +7,7 @@
 #include <set>
 #include <string>
 
-namespace dia_app::term_ui_view {
+namespace dia_int::term_ui_view {
 	enum class StyleType { Error, Warning, Note, Hint, Docs };
 
 	struct PointerMessage {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "diagnostic_interactive/logger.hpp"
 #include "forward.hpp"  // IWYU pragma: keep
 
 #include <base/misc/raw_view.hpp>
@@ -23,6 +24,7 @@ namespace tokenizer {
 	class TokenSource final {
 	private:
 		dia::Logger                            log;
+		dia_int::Logger                        int_log;
 		base::Box<dia::Location>               location;
 		base::Optional<const base::SharedView> content;
 		base::Optional<const lexer::CharArray> decoded;
@@ -90,6 +92,9 @@ namespace tokenizer {
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
+
+		Ref<dia_int::Logger> getIntLogger() { return &int_log; }
+
 		[[nodiscard]]
 		fs::File getFile() const;
 

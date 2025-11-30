@@ -565,10 +565,21 @@ namespace compiler::helios {
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
+				} else if (isAlias(sym) && name(sym) == key.name) {
+					// @TODO: #1412 fix dealias
+					auto aliased_result = ctx.query<QueryDealias>(sym);
+					if (aliased_result->hasError()) {
+						// nothing
+					} else {
+						LookupResult inner{ .leaves = {}, .children = {} };
+						for (const auto& underlying_sym: aliased_result->value())
+							inner.leaves.push_back(underlying_sym);
+						result.children.emplace_back(sym, inner);
+					}
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
-					// nothing?
+					// nothing
 				}
 			}
 

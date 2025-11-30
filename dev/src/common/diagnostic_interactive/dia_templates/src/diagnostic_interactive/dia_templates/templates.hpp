@@ -3,6 +3,6 @@
 #include <optional>
 #include <string_view>
 
-namespace dia_embedded {
+namespace dia::templates {
 	std::optional<std::string_view> loadTemplateFromPath(std::string_view path);
 }

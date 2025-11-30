@@ -1,5 +1,13 @@
+# @author Wojciech Rzepliński
+
+# This is a CMake flag and not a macro in the C++ files to allow not to run the
+# embedding from the CMake side at all. 
+option(EMBED_ASSETS "Embed files into the binary for self-contained builds" OFF)
+
+if(EMBED_ASSETS)
 # Embeds YAML template files as binary data into the executable
 # Generates a zero-copy std::string_view-based registry for runtime access
+# There is another more portable way to do this with converting files into C++ arrays
 
 # Detect platform and set appropriate objcopy tool and format
 if(WIN32)
@@ -103,5 +111,15 @@ add_custom_target(embedded_templates_generate
 # Create an object library for the registry
 add_library(DiaTemplates STATIC ${REGISTRY_CPP} ${EMBEDDED_OBJECTS})
 add_dependencies(DiaTemplates embedded_templates_generate)
+target_compile_definitions(DiaTemplates PUBLIC DIA_TEMPLATES_USE_EMBEDDED=1)
 make_module(DiaTemplates USES)
 
+else()
+
+add_library(DiaTemplates STATIC
+    src/diagnostic_interactive/dia_templates/filesystem_implementation.cpp
+)
+target_compile_definitions(DiaTemplates PRIVATE CMAKE_CURRENT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+make_module(DiaTemplates USES Base)
+
+endif()

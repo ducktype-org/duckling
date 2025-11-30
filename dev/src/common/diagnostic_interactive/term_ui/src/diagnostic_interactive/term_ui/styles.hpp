@@ -17,7 +17,7 @@ namespace term_ui {
 	 */
 	extern bool use_color;
 
-	using StyleType = dia_app::term_ui_view::StyleType;
+	using StyleType = dia_int::term_ui_view::StyleType;
 
 	/**
 	 * @brief A class containing information about a specific style.
