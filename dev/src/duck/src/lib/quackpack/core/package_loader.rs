@@ -103,4 +103,12 @@ impl PackageLoader {
         }
         PackageCtx::new(path.to_path_buf(), ctx)
     }
+
+    pub fn find_from_cwd<'duck>(
+        ctx: QpCtx<'duck>,
+        allow_global_package: AllowGlobalPackage,
+    ) -> QuackResult<PackageCtx<'duck>> {
+        let cwd = ctx.cwd();
+        Self::find_from_directory(cwd, ctx, allow_global_package)
+    }
 }
