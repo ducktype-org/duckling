@@ -43,7 +43,7 @@ header_message:
   - "Error occurred"
 
 description: []
-explore_edges: {}
+explore_links: {}
 pointer_messages: {}
 )" } }
 		));
@@ -117,7 +117,7 @@ description:
     location:
       param: "location"
 
-explore_edges: {}
+explore_links: {}
 pointer_messages:
   cause:
     priority: 1
@@ -320,7 +320,7 @@ description:
     location:
       param: "location"
 
-explore_edges:
+explore_links:
   see_candidate:
     content:
       url:
@@ -367,7 +367,7 @@ description:
     location:
       param: "location"
 
-explore_edges: {}
+explore_links: {}
 
 pointer_messages:
   mismatch:
@@ -431,7 +431,7 @@ pointer_messages:
                 "column": 1
             }
         },
-        "explore_edges": [
+        "explore_links": [
             {
                 "name": "see_candidate",
                 "params": {
@@ -553,8 +553,8 @@ pointer_messages:
 		ASSERT_EQUAL("no conversion found from string to i32", pm.content);
 
 		// Verify explore edges
-		ASSERT_EQUAL(true, diagnostic.messages[0].explore_edges.contains("see_candidate"));
-		auto& edge = diagnostic.messages[0].explore_edges.at("see_candidate");
+		ASSERT_EQUAL(true, diagnostic.messages[0].explore_links.contains("see_candidate"));
+		auto& edge = diagnostic.messages[0].explore_links.at("see_candidate");
 		// Verify content of the edge
 		auto result_edge = constructTextView(edge.content.ref());
 		ASSERT_EQUAL("See candidate my_func(i32, i32, i32)", result_edge);

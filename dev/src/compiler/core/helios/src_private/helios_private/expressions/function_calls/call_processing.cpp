@@ -45,11 +45,13 @@ namespace compiler::helios::code {
 		// We can't keep a direct reference to the argument because we would like to move
 		// from the positional arguments vector later, so we just keep the index.
 		usize index_in_positional_args;
+		bool  requires_coercion;
 	};
 
 	struct NamedArgumentOrigin final {
 		// Same as above.
 		usize index_in_named_args;
+		bool  requires_coercion;
 	};
 
 	struct DefaultArgumentOrigin final {
@@ -112,7 +114,7 @@ namespace compiler::helios::code {
 		std::vector<base::Optional<Coercion>>       coercions(decl->parameters.size());
 		bool                                        coercion_present = false;
 
-		if (positional_arguments.size() + named_arguments.size() > decl->parameters.size())
+		if (positional_arguments.size() > decl->parameters.size())
 			return NoMatch{ TooManyCallArguments{} };
 
 		// Go over positional arguments.
@@ -122,11 +124,13 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{} };
+			if (coercion.hasError()) return NoMatch{ TypeMismatch{ i } };
 			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
-			argument_origin[i].emplace(PositionalArgumentOrigin{ .index_in_positional_args = i });
+			argument_origin[i].emplace(PositionalArgumentOrigin{
+				.index_in_positional_args = i,
+				.requires_coercion        = not coercion.value().isEmptyCoercion() });
 			coercions[i].emplace(std::move(coercion).value());
 		}
 
@@ -134,10 +138,11 @@ namespace compiler::helios::code {
 		// Go over named arguments.
 		for (usize i{ 0 }; i < named_arguments.size(); i++) {
 			base::Optional<usize> param_idx_with_matching_name{};
+			auto&                 name = std::get<0>(named_arguments[i]);
 			for (usize param_idx{ 0 }; param_idx < decl->parameters.size(); param_idx++) {
-				if (decl->parameters[param_idx].name == std::get<0>(named_arguments[i])) {
+				if (decl->parameters[param_idx].name == name) {
 					if (argument_origin[param_idx].has_value())
-						return NoMatch{ DuplicateNamedArgument{} };
+						return NoMatch{ DuplicateNamedArgument{ i } };
 
 					param_idx_with_matching_name = param_idx;
 					break;
@@ -145,7 +150,8 @@ namespace compiler::helios::code {
 			}
 
 			// Name mismatch case.
-			if (param_idx_with_matching_name.empty()) return NoMatch{ UnknownNamedArgument{} };
+			if (param_idx_with_matching_name.empty())
+				return NoMatch{ UnknownNamedArgument{ name } };
 
 			usize           param_idx = param_idx_with_matching_name.value();
 			tsh::SymbolType provided_type
@@ -153,10 +159,12 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{} };
+			if (coercion.hasError()) return NoMatch{ TypeMismatch{ param_idx } };
 			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
 
-			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i };
+			argument_origin[param_idx]
+				= NamedArgumentOrigin{ .index_in_named_args = i,
+				                       .requires_coercion = not coercion.value().isEmptyCoercion() };
 			coercions[param_idx].emplace(std::move(coercion).value());
 		}
 
@@ -170,7 +178,7 @@ namespace compiler::helios::code {
 						decl->parameters[i].initial_value.value()->expression_type.getSymbolType()
 					));
 				} else
-					return NoMatch{ MissingCallArgument{} };
+					return NoMatch{ MissingCallArgument{ i } };
 			}
 		}
 
@@ -254,12 +262,13 @@ namespace compiler::helios::code {
 	 * @return QError if validation fails (duplicate names, positional after named, or expression
 	 * error)
 	 */
-	query::QResult<std::monostate, PositionalAfterNamedArgument, RepeatedNamedArgument, errors::Failed> fillCallArgs(
+	query::QResult<std::monostate, PositionalAfterNamedArgument, errors::Failed> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
+		usize arg_index = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
@@ -270,11 +279,12 @@ namespace compiler::helios::code {
 				named_arguments.emplace_back(arg_name, std::move(arg_expr.value()));
 			} else {
 				if (!named_arguments.empty())
-					return query::QError(PositionalAfterNamedArgument{}
+					return query::QError(PositionalAfterNamedArgument{ arg_index }
 					);  // Normal argument after named one.
 
 				positional_arguments.emplace_back(std::move(arg_expr.value()));
 			}
+			arg_index++;
 		}
 		return std::monostate{};
 	}

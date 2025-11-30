@@ -174,13 +174,13 @@ namespace dia_int::state {
 		Box<Component>                                  header,
 		MBox<Component>                                 description,
 		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-		base::HashMap<std::string, ExploreEdge>         explore_edges
+		base::HashMap<std::string, ExploreEdge>         explore_links
 	):
 		  metadata(std::move(metadata)),
 		  header(std::move(header)),
 		  description(std::move(description)),
 		  pointer_messages(std::move(pointer_messages)),
-		  explore_edges(std::move(explore_edges)) {}
+		  explore_links(std::move(explore_links)) {}
 
 	void Message::debugPrint(std::ostream& out) const {
 		out << "Message: " << metadata.name << "\n";

@@ -8,3 +8,8 @@ FetchContent_Declare(
   GIT_TAG 	     ${yaml_cpp_TAG}
 )
 FetchContent_MakeAvailable(yaml-cpp)
+
+target_compile_options(yaml-cpp PRIVATE
+    -Wno-error=conversion
+    -Wno-conversion
+)

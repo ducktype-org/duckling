@@ -237,14 +237,14 @@ namespace dia_int::state {
 		Box<Component>                                  header;
 		MBox<Component>                                 description;
 		base::HashMap<PointerMessageID, PointerMessage> pointer_messages;
-		base::HashMap<std::string, ExploreEdge>         explore_edges;
+		base::HashMap<std::string, ExploreEdge>         explore_links;
 
 		Message(
 			template_file::Metadata                         metadata,
 			Box<Component>                                  header,
 			MBox<Component>                                 description,
 			base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-			base::HashMap<std::string, ExploreEdge>         explore_edges
+			base::HashMap<std::string, ExploreEdge>         explore_links
 		);
 
 		void debugPrint(std::ostream& out) const;

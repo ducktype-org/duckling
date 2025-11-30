@@ -318,7 +318,7 @@ namespace dia_int::dia_file {
 	struct Message {
 		Metadata                                   metadata;
 		base::HashMap<std::string, Box<Component>> arguments;
-		std::vector<ExploreEdge>                   explore_edges;
+		std::vector<ExploreEdge>                   explore_links;
 		std::vector<MessageID>                     attached_messages;
 
 		[[nodiscard]] json toJson() const;

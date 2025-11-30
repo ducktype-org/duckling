@@ -1,10 +1,11 @@
 metadata:
   type: "note"
   family: "lookup"
-  name: "name_is_alias"
-  code: "1201"
+  name: "is_alias"
+  code: "5000"
   active_from: "0.0.1"
   active_until: "now"
+  template_type: "message"
 
 header_message:
   - "name `"
@@ -13,11 +14,7 @@ header_message:
   - param: "underlying_name"
   - "`"
 
-pointer_messages:
-  declaration:
-    priority: 1
-    type: "note"
-    content: "declared here"
+
 
 params:
   alias_name:

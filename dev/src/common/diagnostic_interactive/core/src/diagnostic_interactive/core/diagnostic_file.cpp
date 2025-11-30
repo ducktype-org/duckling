@@ -238,9 +238,9 @@ namespace dia_int::dia_file {
 		result["params"]   = json::object();
 		for (const auto& [key, val]: arguments) result["params"][key] = val->toJson();
 
-		if (!explore_edges.empty()) {
-			result["explore_edges"] = json::array();
-			for (const auto& edge: explore_edges) result["explore_edges"].push_back(edge.toJson());
+		if (!explore_links.empty()) {
+			result["explore_links"] = json::array();
+			for (const auto& edge: explore_links) result["explore_links"].push_back(edge.toJson());
 		}
 		if (!attached_messages.empty()) {
 			result["attached_messages"] = json::array();
@@ -260,10 +260,10 @@ namespace dia_int::dia_file {
 			return Component::fromJson(el);
 		});
 
-		if (msg_json.contains("explore_edges")) {
-			ASSUME_ARR(msg_json, "explore_edges");
-			for (const auto& edge_json: msg_json["explore_edges"])
-				result.explore_edges.push_back(ExploreEdge::fromJson(edge_json));
+		if (msg_json.contains("explore_links")) {
+			ASSUME_ARR(msg_json, "explore_links");
+			for (const auto& edge_json: msg_json["explore_links"])
+				result.explore_links.push_back(ExploreEdge::fromJson(edge_json));
 		}
 
 		if (msg_json.contains("attached_messages")) {

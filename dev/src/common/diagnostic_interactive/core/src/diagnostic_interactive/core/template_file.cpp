@@ -181,7 +181,7 @@ namespace dia_int::template_file {
 		if (node["description"])
 			description = base::MBox<Component>(Component::fromYaml(node["description"]));
 
-		auto edges_map   = yamlToMap<ExploreLink>(node, "explore_edges");
+		auto edges_map   = yamlToMap<ExploreLink>(node, "explore_links");
 		auto pointer_map = yamlToMap<PointerMessage>(node, "pointer_messages");
 
 		return { std::move(common),

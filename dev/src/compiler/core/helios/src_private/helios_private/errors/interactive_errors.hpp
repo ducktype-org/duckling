@@ -26,61 +26,21 @@
 namespace compiler::helios::errors {
 	using namespace dia_int;
 
-	class IsAliasNote: public MessageBase {
-		Metadata getMetadata() const final {
-			return {
-				.template_type = "message", .type = "note", .family = "lookup", .name = "is_alias"
-			};
-		}
-
-	public:
-		IsAliasNote(std::string alias_name, std::string underlying_name): MessageBase() {
-			addArgument<TextArgument>("alias_name", std::move(alias_name));
-			addArgument<TextArgument>("underlying_name", std::move(underlying_name));
-		}
-	};
 
 	inline std::string getStr(dia::SourcePosition pos) {
-		return pos.getSource()->getCharRange(pos.getStart(), pos.getEnd()).stdString();
+		return pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString();
 	}
-
-	void checkForAliases(
-		query::Context&               ctx,
-		MessageBase&                  msg,
-		pst::Access<pst::ExprElement> elem,
-		std::vector<std::string>&     linked_messages
-	);
 
 	class InteractiveType: public InteractiveElement {
 		tsh::SymbolType<>                             symbol_type;
 		base::Optional<pst::Access<pst::ExprElement>> pst_expr;
 
-		Box<dia_file::Component> build(MessageBase& msg) final {
-			std::string              displayed_name;
-			std::vector<std::string> linked_messages;
-
-			if (pst_expr.has_value()) {
-				displayed_name = getStr(pst_expr.value()->getSourcePosition());
-				query::utils::withContextDo([&](query::Context& ctx) {
-					checkForAliases(ctx, msg, pst_expr.value(), linked_messages);
-				});
-			} else
-				displayed_name = symbol_type.toString();
-
-			msg.addEntity<TextBasedEntity>(linked_messages, displayed_name);
-
-			auto content = makeBox<dia_file::TextComponent>(displayed_name);
-			auto link
-				= makeBox<dia_file::LinkComponent>(std::move(linked_messages), std::move(content));
-			return link;
-		}
+		Box<dia_file::Component> build(MessageBase& msg) final;
 
 	public:
 		InteractiveType(
 			tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::ExprElement>> pst_expr
-		):
-			  symbol_type(symbol_type),
-			  pst_expr(std::move(pst_expr)) {}
+		);
 	};
 
 	class VariableElement {};
@@ -98,12 +58,6 @@ namespace compiler::helios::errors {
 			dia::SourcePosition source_position,
 			InteractiveType     expected_type,
 			InteractiveType     actual_type
-		):
-			  MessageWithCodeFragmentAndCause(source_position) {
-			addArgument<InteractiveArgument>(
-				"expected_type", makeBox<InteractiveType>(expected_type)
-			);
-			addArgument<InteractiveArgument>("given_type", makeBox<InteractiveType>(actual_type));
-		}
+		);
 	};
 }

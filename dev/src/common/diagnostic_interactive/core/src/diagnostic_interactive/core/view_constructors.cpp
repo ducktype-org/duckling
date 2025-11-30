@@ -99,7 +99,7 @@ namespace dia_int {
 				c.content->acceptVisitor(*this);
 			}
 
-			void visitCodeLocationComponent(const state::CodeLocationComponent& c) override {}
+			void visitCodeLocationComponent(const state::CodeLocationComponent&) override {}
 		};
 
 		CodeSection buildCodeSection(
@@ -193,21 +193,18 @@ namespace dia_int {
 
 		Diagnostic constructTreeView(const state::Diagnostic& state) {
 			Diagnostic diag;
-			for (auto id: state.displayed_messages) {
-				if (id < state.messages.size()) {
-					const auto& msg = state.messages[id];
-					Message     view_msg;
-					view_msg.type   = styleTypeFromString(msg.metadata.type);
-					view_msg.code   = msg.metadata.code;
-					view_msg.header = constructTextView(msg.header.ref());
+			for (auto& msg: state.messages) {
+				Message     view_msg;
+				view_msg.type   = styleTypeFromString(msg.metadata.type);
+				view_msg.code   = msg.metadata.code;
+				view_msg.header = constructTextView(msg.header.ref());
 
-					if (msg.description) {
-						MessageBuilder builder(view_msg.sections, msg.pointer_messages, view_msg.type);
-						msg.description->acceptVisitor(builder);
-						builder.flushText();
-					}
-					diag.messages.push_back(std::move(view_msg));
+				if (msg.description) {
+					MessageBuilder builder(view_msg.sections, msg.pointer_messages, view_msg.type);
+					msg.description->acceptVisitor(builder);
+					builder.flushText();
 				}
+				diag.messages.push_back(std::move(view_msg));
 			}
 			return diag;
 		}

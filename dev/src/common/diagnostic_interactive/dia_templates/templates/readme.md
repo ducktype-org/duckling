@@ -216,13 +216,13 @@ contents is dropped. That means, in particular, that
 explore edge's text.
 
 ~~~~~yaml
-explore_edges:
+explore_links:
   <edge_class>:
     content: <message_components>
     params: <params>
 ~~~~~
 > A scheme for defining an explore edge in the template file.
-All explore edges should be defined under the `explore_edges`
+All explore edges should be defined under the `explore_links`
 node at the root of the file.
 
 ### Macros

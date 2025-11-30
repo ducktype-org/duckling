@@ -74,7 +74,7 @@ namespace tokenizer {
 		usize begin_char, usize end_char
 	) {
 		usize                                        begin_line = getLineColumn(begin_char).first;
-		usize                                        end_line   = getLineColumn(end_char).first;
+		usize                                        end_line   = getLineColumn(end_char - 1).first;
 		std::vector<std::pair<usize, base::RawView>> res;
 
 		for (usize line = begin_line; line <= end_line; line++) {

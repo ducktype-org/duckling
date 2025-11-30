@@ -101,7 +101,7 @@ Key           | Value                       | Optional
 metadata      | `<secondary_info_metadata>` | no
 params        | `<params>`                  | no
 code          | `<code>`                    | yes
-explore_edges | `[<explore_edge>...]`       | yes
+explore_links | `[<explore_edge>...]`       | yes
 
 ## Info metadata
 

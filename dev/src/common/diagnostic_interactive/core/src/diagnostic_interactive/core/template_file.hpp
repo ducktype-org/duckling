@@ -298,20 +298,20 @@ namespace dia_int::template_file {
 	struct MessageTemplate: public CommonTemplate {
 		Box<Component>                             header_message;
 		base::MBox<Component>                      description;
-		base::HashMap<std::string, ExploreLink>    explore_edges;
+		base::HashMap<std::string, ExploreLink>    explore_links;
 		base::HashMap<std::string, PointerMessage> pointer_messages;
 
 		MessageTemplate(
 			CommonTemplate                             common,
 			Box<Component>                             header_message,
 			base::MBox<Component>                      description,
-			base::HashMap<std::string, ExploreLink>    explore_edges,
+			base::HashMap<std::string, ExploreLink>    explore_links,
 			base::HashMap<std::string, PointerMessage> pointer_messages
 		):
 			  CommonTemplate(std::move(common)),
 			  header_message(std::move(header_message)),
 			  description(std::move(description)),
-			  explore_edges(std::move(explore_edges)),
+			  explore_links(std::move(explore_links)),
 			  pointer_messages(std::move(pointer_messages)) {}
 
 		static MessageTemplate fromYaml(const YAML::Node& node);

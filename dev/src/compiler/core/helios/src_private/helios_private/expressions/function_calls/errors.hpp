@@ -5,23 +5,39 @@
  */
 
 
+#include "string_id/string_id.hpp"
 #include <diagnostic/message.hpp>
 
 namespace compiler::helios::code {
+	/**
+	 * @brief These are structs representing specific reasons why a function call matching
+	 * could have failed. The contents of these structs will be used to create detailed error messages.
+	 */
 
-	struct TooManyCallArguments final {};
+	struct PositionalAfterNamedArgument final {
+		usize argument_index;
+	};
+	
+	struct TooManyCallArguments final {
+		usize last_valid_argument;
+	};
 
-	struct DuplicateNamedArgument final {};
+	struct DuplicateNamedArgument final {
+		usize index_in_named_list;
+	};
 
-	struct UnknownNamedArgument final {};
+	struct UnknownNamedArgument final {
+		base::StrID argument;
+	};
 
-	struct TypeMismatch final {};
+	struct TypeMismatch final {
+		usize parameter_index;
+	};
 
-	struct MissingCallArgument final {};
-
-	struct PositionalAfterNamedArgument final {};
-
-	struct RepeatedNamedArgument final {};
+	struct MissingCallArgument final {
+		/** Index of the parameter of the declaration that was not filled */
+		usize parameter_index;
+	};
 
 	using MatchFailure = std::variant<
 		TooManyCallArguments,
@@ -72,4 +88,22 @@ namespace compiler::helios::code {
 			  Error(source_position) {}
 	};
 
+	/**
+	 * If there was more than one exact matches we always attach the both to the displayed error,
+	 * but we add a coercion matches and failed matches as explore links.
+
+	 * If there was more than one coercion matches we always attach the both to the displayed error,
+	 * but we add failed matches as explore links.
+
+	 * If there was no matches we always attach the failed matches.
+	 * The error is like:
+	 * Failed to call candidate function:
+
+	   Failed to call function/method <name>.
+	   <reason for failure>
+
+	   note: Candidate function/method <name>
+	   <snippet of declaration>
+	   error: <reason for failure>
+	 */
 }

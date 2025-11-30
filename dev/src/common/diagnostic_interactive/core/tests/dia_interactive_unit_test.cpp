@@ -299,7 +299,7 @@ private:
 				"expected": {"type": "code", "content": "i32"},
 				"found": {"type": "code", "content": "f64"}
 			},
-			"explore_edges": [
+			"explore_links": [
             {
                 "name": "find_definition_edge",
                 "params": {
@@ -322,7 +322,7 @@ private:
 					"name": "syntax_error"
 				},
 				"params": {},
-				"explore_edges": [
+				"explore_links": [
                 {
                     "name": "find_definition_edge",
                     "params": {
@@ -447,7 +447,7 @@ header_message:
 description:
   - "The types do not match."
 
-explore_edges:
+explore_links:
   see_definition:
     content: "See definition"
     params:
@@ -484,7 +484,7 @@ pointer_messages:
 			ASSERT_EQUAL(true, message_template->macros.contains("format_type"));
 
 			// Verify explore edges
-			ASSERT_EQUAL(true, message_template->explore_edges.contains("see_definition"));
+			ASSERT_EQUAL(true, message_template->explore_links.contains("see_definition"));
 
 			// Verify pointer messages
 			ASSERT_EQUAL(true, message_template->pointer_messages.contains("error_here"));
