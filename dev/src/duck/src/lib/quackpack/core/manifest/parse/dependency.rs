@@ -3,8 +3,8 @@ use std::{collections::HashMap, path::Path};
 use super::source;
 use anyhow::Context;
 use tracing::Level;
-use tracing::debug;
 use tracing::span;
+use tracing::trace;
 
 use super::Scope;
 
@@ -53,7 +53,7 @@ fn parse_single_dependency(
     ctx: QpCtx<'_>,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
-    debug!("parsing a dependency");
+    trace!("parsing a dependency");
     scope.push(static_str_id!("source"));
     let source = source::parse(schema, package_root, ctx, scope)?;
     scope.pop();
