@@ -139,7 +139,13 @@ namespace base {
 			return *this;
 		}
 
-		HashMap& operator=(HashMap&& other) = delete;
+		HashMap& operator=(HashMap&& other) {
+			clear();
+			for (auto& kv_pair: other)
+				put(kv_pair.key, kv_pair.value);
+			other.clear();
+			return *this;
+		}
 
 		~HashMap() {
 			for (auto& bucket: buckets) {
