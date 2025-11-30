@@ -1,15 +1,7 @@
 #include "builtin_operations.hpp"
 
-#include "helios/hout/elements/expr.hpp"
-#include "helios_private/expressions/coercions.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <typesystem/higher/types.hpp>
 
-#include "base/collections/optional.hpp"
-
-#include "lexer/token_common.hpp"
-#include "query_framework/context.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
 #include <utility>

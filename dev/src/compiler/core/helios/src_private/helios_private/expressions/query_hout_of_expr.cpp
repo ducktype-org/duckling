@@ -430,11 +430,10 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.log(
-							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-								stmt->getSourcePosition(), "No builtin operator found"
-							)
-						);
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+							stmt->getSourcePosition(), "No builtin operator found"
+						));
 						return;
 					}
 				}
