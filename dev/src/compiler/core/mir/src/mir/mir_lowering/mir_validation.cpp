@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <unordered_set>
-#include <variant>
 
 namespace compiler::mir {
 	bool validateMoves(const Function& fun) {
@@ -23,7 +22,7 @@ namespace compiler::mir {
 		base::HashMap<LocalID, BlockID>
 			construction_block;  // For each Local store where it is constructed.
 
-		// Anlyse each block independently.
+		// Analize each block independently.
 		for (const auto& block: fun.blocks) {
 			auto process_instruction = [&](Instruction instr) {
 				if (instr.operation == Operation::Destruct
@@ -100,7 +99,7 @@ namespace compiler::mir {
 			if (!process_instruction(block.value.terminator)) return false;
 		}
 
-		// Now we perform global analysys.
+		// Now we perform global analysis.
 
 		// For each variable start DFS starting in block of its construction. Look for any use after
 		// move, visit all achievable blocks, except for starting one. Each block can be visited in
