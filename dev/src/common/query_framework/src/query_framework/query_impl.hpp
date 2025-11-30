@@ -8,7 +8,6 @@
 #include "internal/acd.hpp"
 #include "internal/context_access.hpp"
 #include "internal/query_graph/node_making.hpp"
-#include "internal/utils/logs.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_hash.hpp"
@@ -22,6 +21,8 @@
 #include <base/misc/lazy_implies.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>
+
+#include <logger/logger.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>
@@ -41,7 +42,7 @@ namespace query::internal {
 		typename QueryImplType::QResult {
 		using QueryIntType = QueryImplType::QueryType;
 
-		QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Enter.\n");
+		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
 
 		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
 
@@ -51,7 +52,7 @@ namespace query::internal {
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			// @FUTURE: Add ACD check here...
-			QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Cached. Done.\n");
+			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
 
 			return std::move(v.value().data);
 		} else {
@@ -68,18 +69,29 @@ namespace query::internal {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
 				if (ContextAccess::getState()->redGreenSweep(node_id)
 				    == QueryState::PrevColor::Green) {
-					QUERY_DEBUG_LOG(
-						"[QUERY \"", QueryIntType::getName(), "\"]: Loading from disk.\n"
-					);
-
 					auto loaded = QueryImplType::loadFromDisc(key);
 
 					if (loaded) {
+						CORE_DEV_LOG(
+							Query,
+							"[QUERY \"",
+							QueryIntType::QUERY_DATA.name,
+							"\"]: Loading from disk.\n"
+						);
+
+
 						// Merge previous graph nodes into current graph
 						// We merge only node_id and its dependencies
 						ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
 						return QueryImplType::store(perfect_hash, loaded.value(), acd);
 					}  // fall through to provide() if loading from disk failure
+
+					CORE_DEV_LOG(
+						Query,
+						"[QUERY \"",
+						QueryIntType::QUERY_DATA.name,
+						"\"]: Query was marked green, but loading from disk failed.\n"
+					);
 				}
 			}
 
@@ -94,10 +106,10 @@ namespace query::internal {
 			// prolog:
 			ContextAccess::getState()->setEntry(node_id, from);
 
-			QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Calculating.\n");
+			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryIntType::getName(), "\"]: Done.\n"));
+			defer(CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 

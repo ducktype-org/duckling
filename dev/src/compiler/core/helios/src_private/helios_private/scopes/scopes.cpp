@@ -17,7 +17,6 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
-#include <string_id/string_id.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -26,6 +25,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 

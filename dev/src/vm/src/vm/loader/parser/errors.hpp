@@ -1,9 +1,8 @@
 #pragma once
-#include <string_id/string_id.hpp>
-
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/message.hpp>
+#include <string_id/string_id.hpp>
 
 namespace vm::loader::parser {
 	class ExpectedSemicolonAfterError final: public dia::Error {

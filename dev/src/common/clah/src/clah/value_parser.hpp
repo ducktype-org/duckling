@@ -23,10 +23,12 @@ namespace clah {
 		 * The value. It has to be cast back with base::anyCast.
 		 */
 		std::any value;
+
 		/**
 		 * Source chars from which the value was created.
 		 */
 		std::string raw_source;
+
 		/**
 		 * Position is an index ONE AFTER the last character of the parsed value.
 		 */
@@ -144,7 +146,7 @@ namespace clah {
 
 	/**
 	 * A value parser used for a file parsing.
-	 * Creates values of type base::FilePath, which are links to valid files.
+	 * Creates values of type fs::File, which are links to valid files.
 	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
 	 */
 	class FileParser final: public ValueParser {
@@ -173,6 +175,11 @@ namespace clah {
 		}
 	};
 
+	/**
+	 * A value parser used for a file path parsing.
+	 * Creates values of type fs::FilePath.
+	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
+	 */
 	class FilePathParser final: public ValueParser {
 		using ValueParser::ValueParser;
 
@@ -196,6 +203,28 @@ namespace clah {
 		[[nodiscard]]
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("filepath");
+		}
+	};
+
+	/**
+	 * A value parser used for a comma separated list of strings parsing. I.e. "[str1, str2, str3]".
+	 * Creates values of type std::vector<std::string>.
+	 */
+	class StringListParser final: public ValueParser {
+		using ValueParser::ValueParser;
+
+	public:
+		template<class... Args>
+		static Box<StringListParser> make(Args&&... args) {
+			return makeBox<StringListParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().copyValueOr("string-list");
 		}
 	};
 
