@@ -3,7 +3,7 @@
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
-#include "base/collections/stable_hashmap.hpp"
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 

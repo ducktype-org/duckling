@@ -1,6 +1,6 @@
 #include "string_id.hpp"
 
-#include "base/collections/stable_hashmap.hpp"
+#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>

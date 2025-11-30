@@ -3,7 +3,7 @@
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 

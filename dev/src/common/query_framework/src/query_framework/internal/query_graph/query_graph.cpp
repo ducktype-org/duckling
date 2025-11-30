@@ -2,8 +2,8 @@
 
 #include "node_id.hpp"
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 

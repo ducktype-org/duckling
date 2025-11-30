@@ -1,6 +1,6 @@
 #include "query_state.hpp"
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 #include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
