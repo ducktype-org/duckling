@@ -25,7 +25,7 @@ for i in $(seq 1 10); do
     mkdir -p $base_path/$i
 
     echo "Generating test case $i"
-    python3 ../scripts/py/code_generating/main.py --duck_path $base_path/$i/duck.dmf --cpp_path $base_path/$i/cpp.cpp --length 8000 --seed $i --global_symbol_count 350
+    python3 ../scripts/py/code_generating/main.py --duck_path $base_path/$i/duck.dmf --cpp_path $base_path/$i/cpp.cpp --length 8000 --seed $i --global_symbol_count 400
 done
 
 
