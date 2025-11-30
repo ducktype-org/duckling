@@ -1,20 +1,20 @@
 use crate::quackpack::core::Version;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
 use serde::Deserialize;
 use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
-pub type Dependencies = BTreeMap<String, Dependency>;
+pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
     pub metadata: Option<Metadata>,
     pub dependencies: Option<Dependencies>,
     pub dev_dependencies: Option<Dependencies>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
-    pub profiles: Option<BTreeMap<String, CompilerOptions>>,
+    pub features: Option<HashMap<String, Vec<String>>>,
+    pub profiles: Option<HashMap<String, CompilerOptions>>,
 
     #[serde(skip)]
     pub _unused_keys: BTreeSet<String>,
@@ -179,7 +179,7 @@ pub struct DependencyCondition {
 
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
-pub struct DetailedFeature(pub BTreeMap<String, DependencyCondition>);
+pub struct DetailedFeature(pub HashMap<String, DependencyCondition>);
 
 #[derive(Debug)]
 pub enum DependencyFeature {

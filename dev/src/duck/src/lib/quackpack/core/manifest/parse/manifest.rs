@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    path::Path,
-};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::{Context, bail};
 use tracing::debug;
@@ -62,7 +59,7 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: QpCtx<'_>) -> Qua
     ))
 }
 
-fn parse_features(features: Option<&BTreeMap<String, Vec<String>>>) -> QuackResult<Features> {
+fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResult<Features> {
     let Some(features) = features else {
         return Features::new(HashMap::new());
     };
@@ -74,7 +71,7 @@ fn parse_features(features: Option<&BTreeMap<String, Vec<String>>>) -> QuackResu
 }
 
 fn parse_compiler_flags(
-    input: Option<&BTreeMap<String, CompilerOptions>>,
+    input: Option<&HashMap<String, CompilerOptions>>,
 ) -> HashMap<StrId, CompilerSpecificOptions> {
     let Some(input) = input else {
         return HashMap::new();
