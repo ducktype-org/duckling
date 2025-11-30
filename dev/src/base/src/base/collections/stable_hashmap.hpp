@@ -133,14 +133,14 @@ namespace base {
 		}
 
 		HashMap& operator=(const HashMap& other) noexcept {
-			clear();
+			clearAndFree();
 			for (auto& kv_pair: other)
 				put(kv_pair.key, kv_pair.value);
 			return *this;
 		}
 
-		HashMap& operator=(HashMap&& other) {
-			clear();
+		HashMap& operator=(HashMap&& other) noexcept {
+			clearAndFree();
 			for (auto& kv_pair: other)
 				put(kv_pair.key, kv_pair.value);
 			other.clear();
@@ -266,7 +266,7 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		HashMap<K, D> copy() const {
 			auto result = HashMap<K, D>();
-			for (auto it = begin(); it != end(); it++) result.put(it->key, it->value);
+			for (auto& kv_pair: (*this)) result.put(kv_pair.key, kv_pair.value);
 			return result;
 		}
 

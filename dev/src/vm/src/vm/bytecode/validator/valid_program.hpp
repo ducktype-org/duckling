@@ -27,16 +27,7 @@ namespace vm::code {
 			  available_functions(oth.available_functions.copy()) {}
 
 		ValidProgram(ValidProgram&&) noexcept = default;
-
-		ValidProgram& operator=(const ValidProgram& oth) {
-			function_map        = oth.function_map;
-			ext_c_function_map  = oth.ext_c_function_map;
-			globals_map         = oth.globals_map;
-			type_context        = oth.type_context;
-			available_functions = oth.available_functions;
-			return *this;
-		}
-
+		ValidProgram& operator=(const ValidProgram& oth) = default;
 		ValidProgram& operator=(ValidProgram&&) = default;
 
 		/**
