@@ -132,14 +132,19 @@ class CppCodeGenerator(CodeGenerator):
     
     # Special elements
     def import_statement(self, module: ModuleData) -> ScopeData:
-        self.indenter.add_text(f'#include "{module.path}"\n')
-        if hasattr(self, 'hpp_indenter'):
-            self.hpp_indenter.add_text(f'#include "{module.path}"\n')
+        relative_path = module.path
+        file_name = relative_path.split("/")[-1]
+    
+        self.indenter.add_text(f'#include "{file_name}"\n')
+        if hasattr(self, 'hpp_indenter'):        
+            self.hpp_indenter.add_text(f'#include "{file_name}"\n')
         return module.symbols.copy()
     
     def preambule(self) -> ScopeData:
         if hasattr(self, 'hpp_indenter'):
-            self.indenter.add_text(f'#include "{self.hpp_indenter.file_path}"\n')
+            relative_path = self.hpp_indenter.file_path
+            file_name = relative_path.split("/")[-1]
+            self.indenter.add_text(f'#include "{file_name}"\n')
             
         # self.indenter.add_text("#include <iostream>\n\n")
         self.indenter.add_text("void print(long n);\n")

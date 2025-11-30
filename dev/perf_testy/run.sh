@@ -42,8 +42,8 @@ for category_dir in ./cases/*/; do
         echo "Running performance test for category: $category, case: $case_name"!
 
 
-        duck_module="$case_dir/duck.dmf"
-        cpp_file="$case_dir/cpp.cpp"
+        duck_module="$case_dir/duck/"
+        cpp_files="$case_dir/cpp/"
 
         binary_output_dir="./binary_outputs/$category/$case_name"
         mkdir -p $binary_output_dir
@@ -68,7 +68,7 @@ for category_dir in ./cases/*/; do
         # measure time taken to compile C++ code:
         ts=$(date +%s%N)  
         # /usr/bin/time -f "C++ compilation time: $time_format" \
-        $cpp_c_path $cpp_flags $cpp_file $cpp_print_lib -o $cpp_binary
+        $cpp_c_path $cpp_flags $cpp_files/*.cpp $cpp_print_lib -o $cpp_binary
         te=$(date +%s%N)
         elapsed=$((te - ts))
         elapsed_ms=$((elapsed / 1000000))
