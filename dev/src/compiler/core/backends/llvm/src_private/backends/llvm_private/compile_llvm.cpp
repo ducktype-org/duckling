@@ -18,6 +18,8 @@ LLVM_INCLUDE_END()
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <logger/logger.hpp>
+
 namespace compiler::backend_llvm {
 	void emitCode(
 		Ref<llvm::Module>            m,
@@ -74,6 +76,6 @@ namespace compiler::backend_llvm {
 		else
 			emitObject(m, target_machine, &output_stream);
 
-		llvm::errs() << "Compiled LLVM module to the file: " << output_file.string() << "\n";
+		CORE_DEV_LOG(Backend, "Compiled LLVM module to the file: ", output_file.string(), "\n");
 	}
 }

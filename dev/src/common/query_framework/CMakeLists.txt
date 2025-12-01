@@ -1,5 +1,4 @@
 add_library(QueryFramework
-	src/query_framework/internal/utils/logs.cpp
 	src/query_framework/internal/query_graph/query_graph.cpp
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
@@ -12,7 +11,7 @@ add_library(QueryFramework
 	src/query_framework/query_result.hpp
 )
 
-make_module(QueryFramework USES Base Diagnostic Timer)
+make_module(QueryFramework USES Base Diagnostic Timer Logger)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 

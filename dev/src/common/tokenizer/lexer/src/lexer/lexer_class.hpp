@@ -31,12 +31,6 @@ namespace lexer {
 			return logger;
 		}
 
-		/**
-		 * @brief Sets value of token_messages flag
-		 * that determines if lexer print debug token messages to cerr.
-		 */
-		static void setTokenMessages(bool value);
-
 	private:
 		/**
 		 * @name CharArray operations
@@ -124,12 +118,6 @@ namespace lexer {
 		Ref<dia::Logger>            logger;
 		const CharArray&            char_array;
 		Tokens                      tokens;
-
-		/**
-		 * @brief Informs whether to print messages about what tokens are created to the debug
-		 * stream based on the PRINT_LOG define
-		 */
-		static bool token_messages;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
 	};
