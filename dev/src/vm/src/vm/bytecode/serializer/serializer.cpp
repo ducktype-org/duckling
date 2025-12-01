@@ -98,7 +98,9 @@ namespace vm::code {
 
 		void displayCode() {
 			for (const auto& instruction: function.body)
-				withIdentDisplayLine([&](std::ostream& out) { displayInstruction(instruction, out); });
+				withIdentDisplayLine([&](std::ostream& out) {
+					displayInstruction(instruction, out);
+				});
 		}
 
 	public:
