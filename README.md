@@ -37,7 +37,7 @@ Our focus and development status as of December 2025, divided by the main sub-pa
 
 * **Documentation** – We have stabilized initial documentation of the language, covering most important features and setting a vision for a 1.0 version of the language. A lot of work still has to be done, but we are not focusing on the docs right now. Instead we are prioritizing the implementation of the compiler and other tools.
 
-* **Compiler** – Duckling compiler is currently our main priority. We have done most of the architectural groundwork and now focusing on language features. There are still few features missing to be able to truly program in Duckling, but there are also a lot of already implemented features that make Duckling stand out such as fine-grained incremental compilation or compile time evaluation.
+* **Compiler** – Duckling compiler is currently our main priority. We have done most of the architectural groundwork and now focusing on language features. There are still few features missing to be able to truly program in Duckling, but at the same time we have already implemented some of the features that make Duckling stand out such as fine-grained incremental compilation or compile time evaluation.
 
 * **Virtual Machine** – Duckling Virtual Machine (DVM) is being developed alongside compiler and is central to a large part of Duckling goals. As of today, Ducklings compiler can emit its bytecode and it already serves as a compile-time execution engine, but there are a lot of core functionalities to be developed. Right now we are focusing on developing large part of them including for example JIT compilation or fully safe execution. 
 
