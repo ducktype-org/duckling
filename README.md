@@ -33,7 +33,7 @@ and breaking changes to be introduced frequently.
 # Project Status
 
 Duckling is an in-development programming language. The first ideas for the language appeared in 2021, and proper development started in 2023.
-Our focus and development status as of December 2025, divided by the main sub-parts of the project:
+Our focus and development status as of December 2025, divided by the main sub-parts of the project is as follows.
 
 * **Documentation** – We have stabilized initial documentation of the language, covering most important features and setting a vision for a 1.0 version of the language. A lot of work still has to be done, but we are not focusing on the docs right now. Instead we are prioritizing the implementation of the compiler and other tools.
 
