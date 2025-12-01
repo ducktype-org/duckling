@@ -35,9 +35,7 @@ pub trait CommandExt: Sized {
     }
 
     fn add_release(self) -> Self {
-        self._arg_impl(
-            flag("release", "Alias for `--profile=release`").conflicts_with("profile"),
-        )
+        self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
     }
 
     fn add_verbose(self) -> Self {

@@ -164,11 +164,11 @@ mod tests {
 
         assert_eq!(
             "1.12.24.".parse::<Version>().unwrap_err().to_string(),
-            "expected a version of the format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12.24.1".parse::<Version>().unwrap_err().to_string(),
-            "expected a version of the format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "a".parse::<Version>().unwrap_err().to_string(),
@@ -176,15 +176,15 @@ mod tests {
         );
         assert_eq!(
             "1.a.24.".parse::<Version>().unwrap_err().to_string(),
-            "expected a version of the format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12.b.".parse::<Version>().unwrap_err().to_string(),
-            "expected a version of the format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12..".parse::<Version>().unwrap_err().to_string(),
-            "expected a version of the format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "-1".parse::<Version>().unwrap_err().to_string(),
