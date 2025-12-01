@@ -21,10 +21,28 @@ pub struct TomlConfig {
     source: Option<PathBuf>,
 }
 
+trait TypeWithAnArticle {
+    fn type_str_with_article(&self) -> &'static str;
+}
+
+impl TypeWithAnArticle for Value {
+    fn type_str_with_article(&self) -> &'static str {
+        match self {
+            Value::String(_) => "a string",
+            Value::Integer(_) => "an integer",
+            Value::Float(_) => "a float",
+            Value::Boolean(_) => "a boolean",
+            Value::Datetime(_) => "a datetime",
+            Value::Array(_) => "an array",
+            Value::Table(_) => "a table",
+        }
+    }
+}
+
 macro_rules! delegate_getter {
     (
         $(
-            $name:ident => $toml_value_fn:ident -> $ret:ty $(,)?
+            $name:ident => $toml_value_fn:ident -> $ret:ty: $human_type:literal $(,)?
         ),*
     ) => {
         item! {
@@ -37,7 +55,7 @@ macro_rules! delegate_getter {
                         // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
                         None => Err(anyhow!(self.make_location_error()))
                                     .context(
-                                        format!("when getting the key `{key}` expected {}, not a {}", stringify!($toml_value_fn), value.type_str())
+                                        format!("the key `{key}` expects {}, not {}", $human_type, value.type_str_with_article())
                                     )
                     }
                 }
@@ -135,9 +153,9 @@ impl TomlConfig {
             };
             let Value::Table(next) = next else {
                 bail!(
-                    "in the chain `{}` expected a table, not a {}",
+                    "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next.type_str()
+                    next.type_str_with_article()
                 )
             };
             current = next;
@@ -171,10 +189,10 @@ impl TomlConfig {
             let Some(next) = current.get_mut(part) else {
                 unreachable!("we've just inserted a new part into the current");
             };
-            let next_type = next.type_str();
+            let next_type = next.type_str_with_article();
             let Some(next) = next.as_table_mut() else {
                 bail!(
-                    "in the chain `{}` expected a table, not a {}",
+                    "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
                     next_type
                 )
@@ -205,13 +223,13 @@ impl TomlConfig {
     }
 
     delegate_getter! {
-        str => str -> &str,
-        array => array -> &Array,
-        table => table -> &Table,
-        date => datetime -> &Datetime,
-        int => integer -> i64,
-        float => float -> f64,
-        bool => bool -> bool,
+        str => str -> &str: "a string",
+        array => array -> &Array: "an array",
+        table => table -> &Table: "a table",
+        date => datetime -> &Datetime: "a datetime",
+        int => integer -> i64: "an integer",
+        float => float -> f64: "a float",
+        bool => bool -> bool: "a boolean",
     }
 
     delegate_setter! {
