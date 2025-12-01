@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="images/readme_logo.png" alt="Duckling logo">
+  <img src="images/readme_logo.svg" alt="Duckling logo">
 </div>
 
 
