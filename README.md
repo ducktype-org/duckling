@@ -35,7 +35,15 @@ and breaking changes to be introduced regularly.
 Duckling is an in-development programming language. The first ideas for the language appeared in 2021, and proper development started in 2023.
 Our focus and development status as of December 2025, divided by the main sub-parts of the project:
 
-* **Documentation** – we have stabilized initial documentation of the language, covering most important features, that sets a vision for a 1.0 version of the language.
+* **Documentation** – We have stabilized initial documentation of the language, covering most important features, that sets a vision for a 1.0 version of the language. A lot of work will still have to be done, but we are not focusing on the docs right now, prioritizing the implementation of the compiler and other tools.
+
+* **Compiler** – Duckling compiler is currently our main priority. We have done most of the architectural groundwork and focusing now on language features. There are still few features missing to be able to truly program in Duckling, but there are also a lot of features finalized that make Duckling stand out such as fine-grained incremental compilation or compile time evaluation.
+
+* **Duckling Virtual Machine** – ...
+
+* **Language Server** – Ducklings language server...
+
+* **QuackPack** – ...
 
 
 # Documentation website
