@@ -7,7 +7,6 @@
     <!-- <p>Duckling is the in-development programming language</p> -->
 </div>
 
------
 
 <p align="center">
   <a href="https://docs.duckling.pl/">Documentation</a>
@@ -16,6 +15,9 @@
   ·
   <a href="https://duckling.pl/get_involved/">Community</a>
 </p>
+
+-----
+
 
 This is the main Duckling development repository of the Duckling programming language – a modern, in-development programming language focusing on bridging scripting and compiled world together, providing fast prototyping and low friction while maintaining scalability and performance.
 
