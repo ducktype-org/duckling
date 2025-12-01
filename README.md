@@ -28,7 +28,7 @@
 Duckling is an in-development programming language.
 We encourage you to try it out, provide feedback and get involved,
 but at this point you should still expect the compiler and toolchain to not be stable,
-and breaking changes to be introduced regularly.
+and breaking changes to be introduced frequently.
 
 # Project Status
 
