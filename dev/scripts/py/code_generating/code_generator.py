@@ -28,6 +28,12 @@ class ScopeData:
     
     def copy(self):
         return deepcopy(self)
+    
+    def put_in_dot(self, module_name: str):
+        for i in range(len(self.vars)):
+            self.vars[i] = f"{module_name}.{self.vars[i]}"
+        for i in range(len(self.funcs)):
+            self.funcs[i].name = f"{module_name}.{self.funcs[i].name}"
 
 @dataclass
 class ModuleData:
@@ -119,11 +125,10 @@ class CodeGenerator(ABC):
         assert False
     
     def return_statement(self, scope: ScopeData):
-        with self.indenter:
-            self.indenter.add_fragment("return ")
-            self.logic_generator.generate_expression(scope, PROB)
-            self.indenter.add_fragment(";\n")
-            self.indenter.flush_fragment()
+        self.indenter.add_fragment("return ")
+        self.logic_generator.generate_expression(scope, PROB)
+        self.indenter.add_fragment(";\n")
+        self.indenter.flush_fragment()
     
     @abstractmethod
     def function_call(self, func: FunctionData, scope: ScopeData):

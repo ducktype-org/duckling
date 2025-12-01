@@ -103,8 +103,11 @@ class DucklingCodeGenerator(CodeGenerator):
 
     # Special elements
     def import_statement(self, module: ModuleData) -> ScopeData:
-        self.indenter.add_text(f'import {module.path.split(".")[-2].replace("/", ".")}.*;\n')
-        return module.symbols.copy()
+        module_name = module.path.split(".")[-2].split("/")[-1]
+        self.indenter.add_text(f'import {module_name} as {module_name};\n')
+        result_scope = module.symbols.copy()
+        result_scope.put_in_dot(module_name)
+        return result_scope
     
     def preambule(self) -> ScopeData:
         return ScopeData()
