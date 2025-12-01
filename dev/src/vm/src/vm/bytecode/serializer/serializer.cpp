@@ -42,25 +42,25 @@ namespace vm::code {
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
-	void writeComment(const std::string_view comment_content, std::ostream& out) {
+	void displayComment(const std::string_view comment_content, std::ostream& out) {
 		out << '#' << ' ' << comment_content;
 	}
 
 	namespace {
-		void writeOpcodeArgs(std::ostream& out, const auto& head, const auto&... tail) {
+		void displayOpcodeArgs(std::ostream& out, const auto& head, const auto&... tail) {
 			out << std::setw(8) << std::right << toString(head);
 			((out << ", " << std::setw(8) << std::right << toString(tail)), ...);
 		}
 	}
 
 	template<IsInstruction I>
-	void writeOpcode(const I& instruction, std::ostream& out) {
+	void displayOpcode(const I& instruction, std::ostream& out) {
 		out << std::setw(22) << std::left << I::NAME;
 		std::apply(
 			[&](const auto&... args) {
 				if constexpr (sizeof...(args) > 0) {
 					out << " ";
-					writeOpcodeArgs(out, args...);
+					displayOpcodeArgs(out, args...);
 				}
 			},
 			instruction.argsAsTuple()
@@ -69,12 +69,12 @@ namespace vm::code {
 	}
 
 	template<>
-	void writeOpcode(const instructions::Comment& comment, std::ostream& out) {
-		writeComment(comment.comment.strView(), out);
+	void displayOpcode(const instructions::Comment& comment, std::ostream& out) {
+		displayComment(comment.comment.strView(), out);
 	}
 
-	void writeInstruction(Instruction instruction, std::ostream& out) {
-		VISIT(instruction, i, writeOpcode(i, out));
+	void displayInstruction(Instruction instruction, std::ostream& out) {
+		VISIT(instruction, i, displayOpcode(i, out));
 	}
 
 	class FunctionSerializer final {
@@ -82,23 +82,23 @@ namespace vm::code {
 		const Function& function;
 		i64             current_indentation = 0;
 
-		void withIdentWriteLine(const std::function<void(std::ostream&)>& write) const {
+		void withIdentDisplayLine(const std::function<void(std::ostream&)>& display) const {
 			out << std::string(base::safeIntConv<size_t>(current_indentation), ' ');
-			write(out);
+			display(out);
 			out << "\n";
 		}
 
-		void withIdentWriteLine(std::string_view str) {
-			withIdentWriteLine([&](std::ostream& out) { out << str; });
+		void withIdentDisplayLine(std::string_view str) {
+			withIdentDisplayLine([&](std::ostream& out) { out << str; });
 		}
 
 		void indentUp() { current_indentation += 4; }
 
 		void indentDown() { current_indentation -= 4; }
 
-		void writeCode() {
+		void displayCode() {
 			for (const auto& instruction: function.body)
-				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
+				withIdentDisplayLine([&](std::ostream& out) { displayInstruction(instruction, out); });
 		}
 
 	public:
@@ -106,7 +106,7 @@ namespace vm::code {
 			  out(out),
 			  function(function) {}
 
-		void write() {
+		void display() {
 			out << "function " << function.name.str.strView() << " { ";
 			bool first = true;
 			for (const auto& param: function.signature.parameters) {
@@ -117,7 +117,7 @@ namespace vm::code {
 			out << " } -> " << function.signature.result_type.str.strView() << " {\n";
 
 			indentUp();
-			writeCode();
+			displayCode();
 			indentDown();
 			out << "}\n";
 		}
@@ -220,7 +220,7 @@ namespace vm::code {
 	public:
 		TypeSerializer(std::ostream& out, const TypeOfData& type): out(out), type(type) {}
 
-		void write() const { std::visit(TypeSerializerVisitor{ out }, type); }
+		void display() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
 	class GlobalDataSerializer final {
@@ -232,7 +232,7 @@ namespace vm::code {
 			  out(out),
 			  global_data(global_data) {}
 
-		void write() {
+		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
 			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
 			if (global_data.ctor_name.has_value()) {
@@ -251,19 +251,19 @@ namespace vm::code {
 
 	void serialize(const Function& function, std::ostream& out) {
 		FunctionSerializer serializer(out, function);
-		serializer.write();
+		serializer.display();
 		out << '\n';
 	}
 
 	void serialize(const TypeOfData& type, std::ostream& out) {
 		TypeSerializer serializer(out, type);
-		serializer.write();
+		serializer.display();
 		out << '\n';
 	}
 
 	void serialize(const GlobalData& global_data, std::ostream& out) {
 		GlobalDataSerializer serializer(out, global_data);
-		serializer.write();
+		serializer.display();
 		out << '\n';
 	}
 
@@ -282,14 +282,14 @@ namespace vm::code {
 
 	std::string instructionToString(const Instruction& instruction) {
 		std::stringstream ss;
-		writeInstruction(instruction, ss);
+		displayInstruction(instruction, ss);
 		return ss.str();
 	}
 
 	std::string typeToString(const TypeOfData& type) {
 		std::stringstream ss;
 		TypeSerializer    serializer(ss, type);
-		serializer.write();
+		serializer.display();
 		return ss.str();
 	}
 }
