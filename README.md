@@ -43,7 +43,7 @@ Our focus and development status as of December 2025, divided by the main sub-pa
 
 * **Language Server** – Ducklings language server underwent a lot of fundamental changes in the past, but now we have landed on the final architecture. The architecture is based almost entirely on the stateful-ness of the Ducklings compiler and as a result has potential to streamline future development and make the server extremely performant on large codebases. Right now we are focusing on finalizing the said architecture and after that we will shift focus to developing and stabilizing most important features. In terms of editor support, we have working VSCode extension that uses the language server and we will likely not focus on other editors until the core aspects of the language server are set in stone.
 
-* **QuackPack** – QuackPack is a Ducklings package manager. Its still in its very early stage, and we are currently in the process of rewriting and reshaping it. Our current priority is to create minimal working solution that seamlessly integrates with other tooling. Together with QuackPack we also develop a relatively small tool called `duck`, which serves as a main CLI interface of the entire ecosystem.
+* **QuackPack** – QuackPack is a Ducklings package manager. Its still in its very early stage, and we are currently in the process of rewriting and reshaping it. Our current priority is to create minimal working solution that seamlessly integrates with other tooling. Together with QuackPack we are also developing a relatively small tool called `duck`, which serves as a main CLI interface of the entire ecosystem.
 
 # Why Duckling?
 
