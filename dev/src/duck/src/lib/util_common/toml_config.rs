@@ -97,7 +97,7 @@ impl TomlConfig {
         match self.source {
             Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
             None => {
-                "You've encountered internal error: when parsing the default user configuration"
+                "You've encountered an internal error: when parsing the default user configuration"
                     .into()
             }
         }
@@ -118,7 +118,7 @@ impl TomlConfig {
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
-                "we've just asserted that key is not empty, so split should return at least one element"
+                "we've just asserted that the key is not empty, so split should return at least one element"
             )
         };
         let mut current: &Table = &self.content;
@@ -157,7 +157,7 @@ impl TomlConfig {
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
             unreachable!(
-                "we've just asserted that key is not empty, so split should return at least one element"
+                "we've just asserted that the key is not empty, so split should return at least one element"
             )
         };
         let mut current = &mut self.content;

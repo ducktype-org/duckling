@@ -18,7 +18,7 @@ pub fn get_parser() -> Command {
                 ])
                 .default_value("name"),
         )
-        .arg(flag("sort-reverse", "Display output in the reverse order"))
+        .arg(flag("sort-reverse", "Display output in reverse order"))
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {

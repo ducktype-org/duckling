@@ -133,7 +133,7 @@ impl FromStr for Version {
             (Some(major), Some(minor), Some(patch), None) => {
                 Ok(Self::new(major.parse()?, minor.parse()?, patch.parse()?))
             }
-            _ => bail!("expected a version of the format `X`, `X.Y`, or `X.Y.Z`"),
+            _ => bail!("expected a version in the format `X`, `X.Y`, or `X.Y.Z`"),
         }
     }
 }

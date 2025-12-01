@@ -38,7 +38,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
     debug!(
-        "after expanding everything we have a subcommand: `{:#?}`",
+        "after expanding everything we have the subcommand: `{:#?}`",
         args.subcommand_name()
     );
     run_subcmd(ctx, args, &external)

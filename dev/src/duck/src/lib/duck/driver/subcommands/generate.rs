@@ -16,7 +16,7 @@ pub fn get_parser() -> Command {
         .about("Generate shell completions")
         .arg(
             Arg::new("generator")
-                .help("Choose a target shell")
+                .help("Choose the target shell")
                 .action(ArgAction::Set)
                 .required(true)
                 .value_parser(value_parser!(Shell)),

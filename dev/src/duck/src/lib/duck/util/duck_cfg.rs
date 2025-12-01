@@ -16,7 +16,7 @@ impl DuckCfg {
     pub fn new(env: &Env, term: &Terminal) -> QuackResult<DuckCfg> {
         let inner = match config_file(env) {
             Some(path) => {
-                debug!("reading a user config from `{}`", path.display());
+                debug!("reading the user config from `{}`", path.display());
                 TomlConfig::new(path)?
             }
             None => {
@@ -24,7 +24,7 @@ impl DuckCfg {
                 TomlConfig::default()
             }
         };
-        debug!("parsed a user config `{inner:?}`");
+        debug!("parsed the user config `{inner:?}`");
         Ok(Self { inner })
     }
 
@@ -43,7 +43,7 @@ impl DuckCfg {
             .unwrap_or(3)
             .try_into()
             .with_context(|| self.inner.make_location_error())
-            .context("maximum typos fixing distance does not fit in the `u32`")
+            .context("maximum typos fixing distance does not fit in `u32`")
             .context("when getting the key `security.typos.max_distance`")
             .context("when trying to check the maximum typos fixing distance")
     }
@@ -62,7 +62,7 @@ impl DuckCfg {
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<&str>> {
         self.inner
             .get_str(&format!("aliases.{key}"))
-            .with_context(|| format!("when trying to get an alias expansions of the `{key}`"))
+            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
     }
 
     pub fn toml_config(&self) -> &TomlConfig {

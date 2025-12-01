@@ -86,7 +86,7 @@ fn expand_single_alias(
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced the alias `{alias}` with the `{alias_expansion}`");
+    debug!("replaced the alias `{alias}` with `{alias_expansion}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         bail!("user-defined alias `{alias}` does not have a subcommand")

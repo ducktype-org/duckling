@@ -43,7 +43,7 @@ impl GlobalCliOptions {
         let verbose = matches.get_flag("verbose");
         let color = matches
             .get_one::<String>("color")
-            .ok_or_else(|| internal!("this should be guarded by a default color in parser"))
+            .ok_or_else(|| internal!("this should be guarded by a default color in the parser"))
             .and_then(|color| Color::from_str(color))?;
         Ok(Self {
             verbose,

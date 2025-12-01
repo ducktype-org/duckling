@@ -7,7 +7,7 @@ use crate::duck::driver::cli_ext::{flag, subcommand};
 pub fn get_parser() -> Command {
     subcommand("sync")
         .about("Synchronize the current venv")
-        .arg(flag("frozen", "Don't update a freezefile"))
+        .arg(flag("frozen", "Don't update the freezefile"))
         .arg(flag("offline", "Don't perform any network requests"))
         .arg(
             flag(

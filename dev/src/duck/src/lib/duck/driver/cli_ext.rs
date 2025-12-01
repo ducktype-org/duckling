@@ -36,7 +36,7 @@ pub trait CommandExt: Sized {
 
     fn add_release(self) -> Self {
         self._arg_impl(
-            flag("release", "Alias for the `--profile=release`").conflicts_with("profile"),
+            flag("release", "Alias for `--profile=release`").conflicts_with("profile"),
         )
     }
 
@@ -50,7 +50,7 @@ pub trait CommandExt: Sized {
 
     fn add_quiet(self) -> Self {
         self._arg_impl(
-            flag("quiet", "Suppress all the output")
+            flag("quiet", "Suppress all output")
                 .short('q')
                 .conflicts_with("verbose"),
         )
@@ -60,7 +60,7 @@ pub trait CommandExt: Sized {
         self._arg_impl(
             optional(
                 "directory",
-                "Change to the <DIRECTORY> before performing any actions",
+                "Change to <DIRECTORY> before performing any actions",
             )
             .value_name("DIRECTORY")
             .value_parser(ValueParser::path_buf())
