@@ -3,7 +3,7 @@ import random
 
 from contextlib import contextmanager
 
-from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData
+from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData, ClassData
 from utils import PROB, random_identifier
 
 class DucklingCodeGenerator(CodeGenerator):
@@ -69,6 +69,20 @@ class DucklingCodeGenerator(CodeGenerator):
             if i < func.args - 1:
                 self.indenter.add_fragment(", ")
         self.indenter.add_fragment(")")
+    
+    # Classes
+    def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
+        self.indenter.add_text(f"class {class_name}" + " {\n")
+        class_data = ClassData(name=class_name)
+        
+        with self.indenter:
+            class_data = self.logic_generator.generate_class_fields(class_data)
+        
+        self.indenter.add_text("}\n")
+        return class_data
+    
+    def class_field(self, field_name: str, field_modifier: str) -> str:
+        self.indenter.add_text(f"{field_modifier} var {field_name}: i64;\n")
     
     # Control flow
     def if_statement(self, scope: ScopeData):

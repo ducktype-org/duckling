@@ -17,13 +17,24 @@ class FunctionData:
     args: int = 0
 
 @dataclass
+class ClassData:
+    name: str
+    private_fields: List[str] = field(default_factory=list)
+    private_methods: List[FunctionData] = field(default_factory=list)
+    public_fields: List[str] = field(default_factory=list)
+    public_methods: List[FunctionData] = field(default_factory=list)
+    constructors: List[FunctionData] = field(default_factory=list)
+
+@dataclass
 class ScopeData:
     vars: List[str] = field(default_factory=list)
     funcs: List[FunctionData] = field(default_factory=list)
+    classes: List[ClassData] = field(default_factory=list)
 
     def __iadd__(self, other: 'ScopeData'):
         self.vars += other.vars
         self.funcs += other.funcs
+        self.classes += other.classes
         return self
     
     def copy(self):
@@ -43,6 +54,8 @@ class ScopeData:
            
             # print(f"> {i} Renaming function {self.funcs[i].name} to {module_name}.{self.funcs[i].name}")
             self.funcs[i].name = f"{module_name}.{self.funcs[i].name}"
+        for i in range(len(self.classes)):
+            self.classes[i].name = f"{module_name}.{self.classes[i].name}"
 
 @dataclass
 class ModuleData:
@@ -141,8 +154,29 @@ class CodeGenerator(ABC):
     
     @abstractmethod
     def function_call(self, func: FunctionData, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
 
+    # Classes
+    @abstractmethod
+    def class_definition(self, class_name: str, scope: ScopeData) -> ClassData:
+        assert False, "Trying to call abstract method."
+    
+    @abstractmethod
+    def class_field(self, field_name: str, field_modifier: str) -> str:
+        assert False, "Trying to call abstract method."
+    
+    # @abstractmethod
+    # def class_contructor(self, scope: ScopeData) -> FunctionData:
+    #     assert False, "Trying to call abstract method."
+    
+    # @abstractmethod
+    # def class_method(self, method_name: str, scope: ScopeData) -> FunctionData:
+    #     assert False, "Trying to call abstract method."
+    
+    # @abstractmethod
+    # def object_instantiation(self, class_name: str, scope: ScopeData):
+    #     assert False, "Trying to call abstract method."
+    
     # Control flow
     @abstractmethod
     def if_statement(self, scope: ScopeData):
@@ -209,6 +243,24 @@ class LogicGenerator:
     def generate_function_definition(self, scope: ScopeData):
         func_name = random_identifier(8)
         scope.funcs.append(self.generator.function_definition(func_name, scope))
+        
+    def generate_class_definition(self, scope: ScopeData):
+        class_name = random_identifier(8)
+        class_data = self.generator.class_definition(class_name, scope)
+        
+    def generate_class_fields(self, class_data: ClassData) -> ClassData:
+        for _ in range(random.randint(1, 5)):
+            field_name = random_identifier(8)
+            field_modifier = random.choice(['private', 'public'])
+            self.generator.class_field(field_name, field_modifier)
+            if field_modifier == 'private':
+                class_data.private_fields.append(field_name)
+            else:
+                class_data.public_fields.append(field_name)
+            
+        return class_data
+            
+    
     
     # Control flow
     def generate_if_statement(self, scope: ScopeData):
@@ -303,14 +355,17 @@ class LogicGenerator:
     def generate_global_symbols(self, scope: ScopeData, global_symbol_count: int):
         for _ in range(global_symbol_count):
             action = random.choices(
-                ['variable_declaration', 'function_definition'],
-                weights=[10, 80],
+                ['variable_declaration', 'function_definition', 'class_definition'],
+                weights=[10, 70, 20],
                 k=1
             )[0]
             if action == 'variable_declaration':
                 self.generate_variable_declaration(scope)
             elif action == 'function_definition':
                 self.generate_function_definition(scope)
+                self.generator.line_break()
+            elif action == 'class_definition':
+                self.generate_class_definition(scope)
                 self.generator.line_break()
         
         return scope

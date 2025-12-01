@@ -2,7 +2,7 @@ import random
 
 from contextlib import contextmanager
 
-from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData, Indenter, LogicGenerator
+from code_generator import CodeGenerator, ScopeData, FunctionData, ModuleData, Indenter, LogicGenerator, ClassData
 from utils import PROB, random_identifier
 
 class CppCodeGenerator(CodeGenerator):
@@ -95,6 +95,22 @@ class CppCodeGenerator(CodeGenerator):
                 self.indenter.add_fragment(", ")
         self.indenter.add_fragment(")")
     
+    # Classes
+    def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
+        self.indenter.add_text(f"class {class_name}" + " {\n")
+        class_data = ClassData(name=class_name)
+        
+        with self.indenter:
+            class_data = self.logic_generator.generate_class_fields(class_data)
+        
+        self.indenter.add_text("};\n")
+        return class_data
+    
+    def class_field(self, field_name: str, field_modifier: str) -> str:
+        self.indenter.add_text(f"{field_modifier}:\n")
+        with self.indenter:
+            self.indenter.add_text(f"long {field_name};\n")
+
     # Control flow
     def if_statement(self, scope: ScopeData):
         # Generate if signature
