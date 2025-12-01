@@ -20,7 +20,7 @@ namespace query::utils {
 	 *
 	 * @return The result of the function. Possibly empty.
 	 */
-	std::any withContextCompute(std::function<std::any(query::Context&)> action);
+	std::any withContextCompute(std::function<std::any(Context&)> action);
 
 	/**
 	 * @brief Execute a procedure as if it were in the middle of a query, i.e. supplied with a
@@ -33,5 +33,5 @@ namespace query::utils {
 	 *
 	 * @param action The procedure object to execute, applied to a query::Context.
 	 */
-	void withContextDo(std::function<void(query::Context&)> action);
+	void withContextDo(std::function<void(Context&)> action);
 }

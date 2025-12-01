@@ -11,6 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+        message(WARNING 
+				"We know the project won't compile on versions lower than 14. "
+				"If it is a mistake feel free to ignore this.")
+    endif()
+
+
 	string(CONCAT ADDITIONAL_GNU_FLAGS
 		"-Werror=return-type "
 		"-Werror=terminate "
@@ -27,8 +34,18 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 	# Debug version uses O0.
 
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	message("-- Clang compiler")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
+
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
+		message(WARNING 
+				"We know the project won't compile on versions lower than 19. "
+				"If it is a mistake feel free to ignore this.")
+	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)
+		message(WARNING
+				"We know this project won't compile on apple clang lower than 16.3. "
+				"If it is a mistake feel free to ignore this.")
+	endif()
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".

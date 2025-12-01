@@ -33,7 +33,7 @@ fun main() -> i64 = {
     builtin_output_i64(satpos64);    # 2147483647
 
     # 6) large negative -> f64 -> i32 (saturate to INT32_MIN)
-    var bigneg: i64 = -3000000000;   # < INT32_MIN
+    var bigneg: i64 = -3000000000i64;   # < INT32_MIN
     var bignegf: f64 = f64(bigneg);
     var satneg32: i32 = i32(bignegf);     # saturating
     var satneg64: i64 = i64(satneg32);

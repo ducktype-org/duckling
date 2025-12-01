@@ -4,10 +4,10 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 
 #include <variant>
 
@@ -34,5 +34,5 @@ namespace compiler::helios {
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.
 	 */
-	DECLARE_QUERY(QuerySymbolABI, SymID, CRef<QuerySymbolABI_Result>);
+	DECLARE_QUERY(QuerySymbolABI, SymID, CRef<QuerySymbolABI_Result>, ({}));
 }

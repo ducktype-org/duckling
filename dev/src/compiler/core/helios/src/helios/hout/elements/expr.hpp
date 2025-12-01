@@ -2,6 +2,7 @@
 
 #include "../../scope_symbol_id.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
@@ -17,6 +18,12 @@ namespace compiler::helios::code {
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
 	friend base::Box<T, Deleter> base::makeBox(Args&&... args);
+
+	/**
+	 * @brief Unique ID for each HOUT Expr element.
+	 * It can be used as session-unstable HOUT Expr element hash.
+	 */
+	STRONG_TYPEDEF_ID(HOUTExprID);
 
 	/**
 	 * @brief Base class for all HOUT expressions.
@@ -43,7 +50,17 @@ namespace compiler::helios::code {
 		 * Use with caution.
 		 * @return Box<Expr> ownership of the copy of the expression.
 		 */
-		[[nodiscard]] virtual Box<Expr> clone() const = 0;
+		[[nodiscard]]
+		virtual Box<Expr> clone() const
+			= 0;
+
+		[[nodiscard]]
+		HOUTExprID getID() const {
+			return id;
+		}
+
+	private:
+		HOUTExprID id = HOUTExprID::next();
 	};
 
 	/***********************\
@@ -71,14 +88,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an integer literal value written in the expression.
+	 * @brief Represents an numeric literal value written in the expression.
+	 * Stores both integer constants and floating point constants.
 	 */
-	struct LiteralIntExpr final: public Expr {
-		// @TODO: ctv + type for consts?
-		// @note: this is a mock
-		i64 value;
+	struct LiteralNumericExpr final: public Expr {
+		numeric_value::NumericValue value;
 
-		LiteralIntExpr(query::Context& ctx, i64 value);
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -88,7 +104,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value);
+		LiteralNumericExpr(tsh::ExpressionType<> expression_type, numeric_value::NumericValue value);
 	};
 
 	/**
@@ -218,6 +234,13 @@ namespace compiler::helios::code {
 		IntegerMod,
 		IntegerPow,
 
+		FloatAdd,
+		FloatSub,
+		FloatMul,
+		FloatDiv,
+		FloatMod,
+		FloatPow,
+
 		// Comparison operators
 		IntegerLt,    // Less then
 		IntegerLteq,  // Less then or equal to
@@ -225,6 +248,13 @@ namespace compiler::helios::code {
 		IntegerGteq,  // Greater then or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
+
+		FloatLt,      // Less then
+		FloatLteq,    // Less then or equal to
+		FloatGt,      // Greater then
+		FloatGteq,    // Greater then or equal to
+		FloatEq,      // Equal
+		FloatNeq,     // Not equal
 
 		BooleanAnd,
 		BooleanOr,
@@ -267,6 +297,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		FloatNegation,
 		BooleanNot,
 		Ref,
 		Box,
@@ -325,12 +356,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Tuple constructor inside an expression.
+	 * @brief Tuple constructor expression. This does not create a tuple type, but a tuple value
+	 * (e.g.  `(1, 2)`), that *might* be coerced/lifted to a type in some contexts.
 	 */
-	struct TupleTypeConstructorExpr: public Expr {
+	struct TupleExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
+		TupleExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -340,9 +372,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		TupleTypeConstructorExpr(
-			tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
-		);
+		TupleExpr(tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements);
 	};
 
 	/**
@@ -368,7 +398,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
-	 * For now it is a mockup, doesn't work.
+	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
+	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.
 	 */
 	struct AccessExpr final: public Expr {
 		Box<Expr> base;
@@ -491,5 +522,27 @@ namespace compiler::helios::code {
 			Box<Expr>             source_expr,
 			tsh::SymbolType<>     target_type
 		);
+	};
+
+	/**
+	 * @brief Represents a compile-time cast of a value to a type.
+	 *
+	 * This is meant to be added by coercions when a value of type `type` is expected,
+	 * but the actual type is unit or tuple.
+	 */
+	struct LiftToTypeExpr final: public Expr {
+		Box<Expr> value_expr;
+
+		LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr);
 	};
 }

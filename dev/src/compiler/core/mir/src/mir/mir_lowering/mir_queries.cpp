@@ -232,7 +232,7 @@ namespace compiler::mir {
 				{ Operation::ReturnVoid, {}, {}, {}, function_builder.getTopLevelScope() }
 			);
 
-			auto assing_instr = last_block->addHole();
+			auto assign_instr = last_block->addHole();
 
 			auto lowerexpr_res = lowerExpr(
 				*global_init_expr.get(),
@@ -241,7 +241,7 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			assing_instr.fill(Instruction{
+			assign_instr.fill(Instruction{
 				Operation::Assign,
 				{ MIRGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
 				{ lowerexpr_res.getResult(function_builder) },
@@ -265,7 +265,7 @@ namespace compiler::mir {
 			return function_reachable;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
@@ -289,7 +289,7 @@ namespace compiler::mir {
 			return function_no_func_end;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);

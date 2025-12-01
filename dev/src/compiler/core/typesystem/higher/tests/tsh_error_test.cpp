@@ -1,10 +1,13 @@
-#include <typesystem/higher/all.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+#include <sstream>
+
+using namespace compiler::tsh;
 
 class HigherTypeSystemErrorTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -37,7 +40,7 @@ private:
 	void floatSizeErrorTest() {
 		query::Context::logger.clear();
 		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
-		query::entryPoint<QueryFloatType>(42);
+		query::entryPoint<QueryFloatType>({ 42 });
 
 		std::stringstream dumped_logs;
 		assertTrue(

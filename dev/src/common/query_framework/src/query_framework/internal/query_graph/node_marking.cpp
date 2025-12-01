@@ -29,14 +29,16 @@ namespace query::internal {
 		std::vector<NodeID> prev_inputs;
 		prev_inputs.reserve(all_nodes.size());
 		for (const auto& node: all_nodes) {
-			if (node.q_id.getData().type != query::internal::QueryType::SideInput
-			    && node.q_id.getData().type != query::internal::QueryType::Input) {
+			// Skip unregistered nodes - these are dummy nodes with unstable hashes
+			if (!node.q_id.registered()) continue;
+
+			if (node.q_id.getData().kind != QueryKind::SideInput
+			    && node.q_id.getData().kind != QueryKind::Input) {
 				continue;
 			}
 
-			// @TODO: #1433 use tags
 			CORE_ASSERT(
-				node.q_id.hasStableHash(),
+				node.q_id.getData().usesStableHashing(),
 				"Side/Input nodes must have stable hashes: ",
 				node.q_id.getData().name
 			);

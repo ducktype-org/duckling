@@ -5,10 +5,10 @@
 
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 #include <random>
@@ -699,7 +699,7 @@ namespace compiler::frontend {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -717,7 +717,7 @@ namespace compiler::frontend {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);

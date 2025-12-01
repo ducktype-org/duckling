@@ -14,10 +14,11 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
 using namespace compiler;
@@ -28,13 +29,6 @@ class LIRConstructionTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO
-		// tests here don't tests much apart from the fact that code compiles
-		// and does not throw.
-		// This is due to the fact that LIR is in a very early stage of development
-		// and will likely change a lot in near future.
-		// Add more tests with future LIR changes.
-
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
@@ -43,10 +37,14 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(simpleConstant);
 	}
 
 private:
-	struct LIRModuleResult {
+	/**
+	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
+	 */
+	struct LIRModuleResult final {
 		frontend::ModuleID module;
 		helios::ScopeID    scope;
 		base::Map<
@@ -83,6 +81,10 @@ private:
 		}
 	};
 
+	/**
+	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
+	 * functions. Note that it does not include globals/constants in the result (only functions).
+	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
 		LIRModuleResult result{ .module = module, .scope = scope };
@@ -112,12 +114,7 @@ private:
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						//@TODO: create global constant ctors if nessesary
-						CORE_PANIC(
-							"Creating ctors for constant variables is not implemented yet. "
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						);
+						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
 						fail(base::strConcat(
@@ -143,17 +140,17 @@ private:
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
@@ -264,9 +261,9 @@ private:
 				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local.layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						local.layout->getSourceType(),
+						ctx.query<compiler::tsh::QueryIntegralType>(
+							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
@@ -343,6 +340,34 @@ private:
 
 		auto my_float = module.houtGlobal("my_float");
 		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
+	}
+
+	void simpleConstant() {
+		auto [module, scope] = getModule(fs::File(path("modules/constants")));
+		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+
+		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
+
+		auto fib_const_global_data = hout_unit.glob_data.at(0);
+		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
+
+		withContextDo([&](query::Context& ctx) {
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, fib_const_global_data);
+			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
+
+
+			// the main assertions of FIB_10 checks:
+			assertTrue(
+				lir_global.type == lir::LIRGlobalType::Constant, "Expected FIB_10 to be a constant"
+			);
+			assertTrue(
+				lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
+			);
+			auto const_numeric
+				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
+			auto const_value = const_numeric->get<i64>();
+			ASSERT_EQUAL(const_value, 55);
+		});
 	}
 };
 

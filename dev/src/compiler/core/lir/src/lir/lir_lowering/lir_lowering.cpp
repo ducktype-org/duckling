@@ -26,6 +26,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <utility>
@@ -104,9 +105,9 @@ namespace compiler::lir {
 	}
 
 	LIRPlace::LIRPlace(
-		query::Context& ctx, BaseVariant base, std::vector<helios::SymID> access_chain
+		query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
 	):
-		  base(std::move(base)),
+		  base(base),
 		  access_chain(std::move(access_chain)),
 		  layout(
 			  this->access_chain.size() == 0
@@ -126,8 +127,11 @@ namespace compiler::lir {
 	 */
 	Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
 		switch (mir_operation) {
+		// Variable Assignment
 		case mir::Operation::Assign:
 			return Operation::Assign;
+
+		// Control Flow
 		case mir::Operation::ReturnValue:
 			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
@@ -136,6 +140,8 @@ namespace compiler::lir {
 			return Operation::Jump;
 		case mir::Operation::Branch:
 			return Operation::Branch;
+
+		// Integer Arithmetic
 		case mir::Operation::IntegerAdd:
 			return Operation::IntegerAdd;
 		case mir::Operation::IntegerSub:
@@ -146,7 +152,10 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
 		case mir::Operation::IntegerMod:
 			return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
+		case mir::Operation::IntegerNeg:
+			return Operation::IntegerNeg;
 
+		// Integer Comparison
 		case mir::Operation::IntegerLt:
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerGt:
@@ -160,8 +169,7 @@ namespace compiler::lir {
 		case mir::Operation::IntegerNeq:
 			return Operation::IntegerNeq;
 
-		case mir::Operation::IntegerNeg:
-			return Operation::IntegerNeg;
+		// Logic
 		case mir::Operation::BooleanAnd:
 			return Operation::BooleanAnd;
 		case mir::Operation::BooleanOr:
@@ -242,7 +250,7 @@ namespace compiler::lir {
 			[[nodiscard]]
 			base::Optional<LIRPlace> getOutput(const base::Optional<mir::MIRPlace>& output) const {
 				if (!output.has_value()) return {};
-				if (!output->carriesInformation()) return {};
+				if (!output->carriesInformation(ctx)) return {};
 				return getPlace(*output);
 			}
 
@@ -254,7 +262,7 @@ namespace compiler::lir {
 			 */
 			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
 				// Discard information-less location.
-				if (!loc.carriesInformation()) return {};
+				if (!loc.carriesInformation(ctx)) return {};
 
 				variant_match(loc.getVariant()) {
 					variant_case_novalue(mir::MIRUnitConst) {
@@ -286,7 +294,7 @@ namespace compiler::lir {
 			void makeLocals() {
 				for (const auto& mir_local: key.function->local_list) {
 					// Discard data-less variables.
-					if (!mir_local.carriesInformation()) continue;
+					if (!mir_local.carriesInformation(ctx)) continue;
 
 					auto lir_local = LIRLocal::fromMIR(ctx, &mir_local);
 					locals.pushBack(std::move(lir_local));
@@ -364,7 +372,7 @@ namespace compiler::lir {
 			) {
 				for (const auto& [flag, local]: mir_instruction.flags) {
 					// Discard flags for information-less locals.
-					if (!local->carriesInformation()) continue;
+					if (!local->carriesInformation(ctx)) continue;
 
 					[[maybe_unused]]
 					//< temporary for linter
@@ -388,7 +396,7 @@ namespace compiler::lir {
 				}
 			}
 
-			static bool isArgSigned(const mir::MIRValue location) {
+			static bool isArgSigned(const mir::MIRValue& location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MIRIntegerConst) { return true; }
 					variant_case(mir::MIRPlace, place) {
@@ -474,7 +482,8 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
+					CORE_DEV_LOG(Compiler, "DestructIf not implemented in LIR, skipping", "\n");
+
 					return curr_block;
 				case mir::Operation::Call: {
 					auto output = getOutput(mir_instruction.output);
@@ -494,14 +503,12 @@ namespace compiler::lir {
 						output,
 						std::move(args),
 						CastParameters{
-							.source_type   = cast_parameters->source_type,
-							.target_type   = cast_parameters->target_type,
-							.source_layout = std::make_shared<tsl::TypeLayout>(
-								ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type)
-							),
-							.target_layout = std::make_shared<tsl::TypeLayout>(
-								ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type)
-							) }
+							.source_type = cast_parameters->source_type,
+							.target_type = cast_parameters->target_type,
+							.source_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type),
+							.target_layout
+							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
 					);
 					return curr_block;
 				}
@@ -566,11 +573,11 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
-				std::vector<tsl::TypeLayout> parameter_types;
+				std::vector<CRef<tsl::TypeLayout>> parameter_types;
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)
 					// Discard information-less parameters from LIR function parameter lists.
-					if (param.getType().carriesInformation())
+					if (param.getType().carriesInformation(ctx))
 						parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 
@@ -609,8 +616,8 @@ namespace compiler::lir {
 				return Function{
 					.mangled_name       = mangled_name,
 					.abi                = abi,
-					.return_type_layout = return_type,
 					.parameter_layouts  = std::move(parameter_types),
+					.return_type_layout = return_type,
 					.blocks             = std::move(blocks),
 					.local_list         = std::move(locals),
 					.block_order        = std::move(block_order),
@@ -648,7 +655,7 @@ namespace compiler::lir {
 			return fun;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLIRFunction);
@@ -690,8 +697,8 @@ namespace compiler::lir {
 		return Function{
 			.mangled_name       = mangled_name,
 			.abi                = helios::DefaultAbi{},
-			.return_type_layout = return_type,
 			.parameter_layouts  = {},
+			.return_type_layout = return_type,
 			.blocks             = std::move(blocks),
 			.local_list         = {},
 			.block_order        = { entry_block_ref },
@@ -717,19 +724,19 @@ namespace compiler::lir {
 		}();
 
 		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
-		std::vector<tsl::TypeLayout> parameter_types;
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
 			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation())
+			if (param.getType().carriesInformation(ctx))
 				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
 			.abi          = symbol_abi,
 			.parameter_layouts
-			= std::make_shared<std::vector<tsl::TypeLayout>>(std::move(parameter_types)),
-			.return_type_layout = std::make_shared<tsl::TypeLayout>(std::move(return_type)),
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
+			.return_type_layout = return_type,
 		};
 	}
 }

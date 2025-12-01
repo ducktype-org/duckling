@@ -5,7 +5,8 @@
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
 #include <base/misc/ignore.hpp>
-#include <base/str/string_id.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <type_traits>
 

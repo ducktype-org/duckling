@@ -1,9 +1,13 @@
-#include <typesystem/higher/all.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 
 /**
  * This test class contains tests checking the most basic and boring functionality of the
@@ -181,8 +185,8 @@ private:
 	void simpleFloats() {
 		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
 		     const usize                float_size: float_sizes) {
-			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
-			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
+			auto float_1 = query::entryPoint<QueryFloatType>({ float_size });
+			auto float_2 = query::entryPoint<QueryFloatType>({ float_size });
 
 			assertTrue(
 				float_1.getSize() == Bits(float_size), "Size of Float should be as constructed."
@@ -198,7 +202,7 @@ private:
 		}
 
 		assertTrue(
-			query::entryPoint<QueryFloatType>(32) != query::entryPoint<QueryFloatType>(64),
+			query::entryPoint<QueryFloatType>({ 32 }) != query::entryPoint<QueryFloatType>({ 64 }),
 			"Floats of different sizes should be different."
 		);
 	}
@@ -214,16 +218,16 @@ private:
 	 * between each other and retain AbstractTypermation as expected.
 	 */
 	void simplePointer() {
-		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
+		const auto raw_1 = query::entryPoint<QueryRawPointerType>({ false });
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
-		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
+		const auto raw_2 = query::entryPoint<QueryRawPointerType>({ true });
 		assertTrue(
 			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
 		);
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
-		const auto raw_3 = query::entryPoint<QueryRawPointerType>(false);
+		const auto raw_3 = query::entryPoint<QueryRawPointerType>({ false });
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
-		const auto raw_4 = query::entryPoint<QueryRawPointerType>(true);
+		const auto raw_4 = query::entryPoint<QueryRawPointerType>({ true });
 		assertTrue(raw_2 == raw_4, "There should be only one mutable Raw Pointer.");
 
 		const AbstractType           type_raw = raw_1;

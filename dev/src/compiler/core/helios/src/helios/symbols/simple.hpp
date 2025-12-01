@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/str/string_id.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios {
 	// Following functions are left as functions (instead of beeing a query):

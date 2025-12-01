@@ -14,7 +14,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-using namespace tsh;
+using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using compiler::mir::BlockID;
 using query::utils::withContextDo;
@@ -130,7 +130,7 @@ private:
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
-			// those assertions might change when we improve mir generaration:
+			// those assertions might change when we improve mir generation:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
 			// Check that the first instruction assigns to a global
@@ -155,7 +155,6 @@ private:
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_mir.debugPrint(foo_str);
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// Simple assignment tests
@@ -177,6 +176,9 @@ private:
 	Local(6) :=  Assign           15               Flags[], Params{}, scope:38
 			     FunctionEnd                       Flags[], Params{}, scope:36
 			 */
+
+			goo_mir.debugPrint(std::cout);
+
 			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 6);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,

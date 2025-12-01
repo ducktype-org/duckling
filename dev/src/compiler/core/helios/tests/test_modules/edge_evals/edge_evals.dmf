@@ -1,5 +1,5 @@
-const M1: i64 = 10 / 2 / 5;
-const M2: i64 = 120 / 5 / 4;
+const M1: i32 = 10 / 2 / 5;
+const M2: i32 = 120 / 5 / 4;
 
 # This does not parse well.
 # const M3: i64 = 1 * -1;
@@ -7,13 +7,13 @@ const M2: i64 = 120 / 5 / 4;
 
 namespace NS1 {
     namespace NS2 {
-        const A: i64 = 7;
+        const A: i64 = 7i64;
     }
 }
 
 const O1: i64 = (NS1).NS2.A;
 const O2: i64 = ((NS1).NS2).A;
 
-# These do not work anymore
+# These do not work anymore (which is intended):
 # const O3: i64 = NS1.(NS2).A;
 # const O4: i64 = (NS1).(NS2).A;

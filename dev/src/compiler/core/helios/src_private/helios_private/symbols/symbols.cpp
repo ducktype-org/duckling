@@ -10,7 +10,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -22,9 +25,9 @@
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 #include <functional>
 #include <unordered_set>
@@ -49,7 +52,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -111,7 +114,7 @@ namespace compiler::helios {
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
-		// 2. If the element is a statement get it's name
+		// 2. If the element is a statement get its name
 		// 3. Get the parent of the pst element
 		// 4. Repeat until we reach the root element
 		// 5. Concatenate all names with " -> "
@@ -178,9 +181,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
-		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-	) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -254,12 +255,7 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
-					)
-			                          .c_str()),
+					.name        = using_stmt->getDeclSymbolName().value(),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -397,7 +393,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -413,7 +409,7 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
@@ -458,7 +454,7 @@ namespace compiler::helios {
 					return output;
 				}
 
-				QUERY_AUTO_CACHE_REF
+				QUERY_AUTO_CACHE_CREF
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -502,7 +498,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
@@ -612,22 +608,35 @@ namespace compiler::helios {
 			return lookup_chain;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol
+			// Get the const's data
+			const auto const_pst
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
+			auto const_value_hout
+				= ctx.query<QueryHoutOfExpr>(
+						 const_pst->getValue().value().unlock(ctx)->getExpr().unlock(ctx)
+				)
+			          .valueOrThrow();
+			const auto const_type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
-			auto ctv = ctx.query<QueryEvaluateExpression>(
-				const_symbol->getValue().value().unlock(ctx)->getExpr()
-			);
+			// Introduce coercion to match expected type (there will be no coercion if the type
+			// is deduced from the expression, because the expected and actual types will match).
+			// @TODO: #1618 Introduce abstraction, deduplicate
+			const auto coercion
+				= canCoerce(ctx, const_value_hout->expression_type.getSymbolType(), const_type)
+			          .valueOrThrow();
+			const auto const_value_hout_coerced = coercion.coerce(ctx, std::move(const_value_hout));
+
+			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ const_value_hout_coerced.ref() });
 			if (ctv.hasError()) return query::QError(errors::Failed());
 			return ctv.value();
 		}
@@ -682,6 +691,11 @@ namespace compiler::helios {
 				return {};
 			}
 
+			if (std::holds_alternative<houtgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+				// Generated symbols have no specifiers (for now)
+				return {};
+			}
+
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
 			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
@@ -715,7 +729,7 @@ namespace compiler::helios {
 			return specifiers;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySpecifiersOfSymbol);
@@ -820,7 +834,7 @@ namespace compiler::helios {
 				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
 			}
 
-			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			void visitTupleExpr(const code::TupleExpr& expr) override {
 				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
 			}
 
@@ -844,7 +858,7 @@ namespace compiler::helios {
 			return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
@@ -881,7 +895,7 @@ namespace compiler::helios {
 			return all_dependencies;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);

@@ -16,7 +16,7 @@ namespace compiler::helios::code {
 	);
 	MAKE_VISITOR(HoutExpr,
 		LiteralUnitExpr,
-		LiteralIntExpr,
+		LiteralNumericExpr,
 		LiteralBoolExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,
@@ -26,11 +26,12 @@ namespace compiler::helios::code {
 		TernaryOperatorExpr,
 		ChainComparisonExpr,
 		ParenthesisExpr,
-		TupleTypeConstructorExpr,
+		TupleExpr,
 		VariantTypeConstructorExpr,
 		CallExpr,
 		AccessExpr,
 		SequenceExpr,
-		CastExpr
+		CastExpr,
+		LiftToTypeExpr
 	);
 }

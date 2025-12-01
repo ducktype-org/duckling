@@ -1,3 +1,4 @@
+# This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
@@ -10,6 +11,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/expressions/chain_expr.cpp
 	src_private/helios_private/expressions/query_hout_of_expr.cpp
 	src_private/helios_private/expressions/builtin_operations.cpp
+	src_private/helios_private/expressions/numeric_literals.cpp
 	src_private/helios_private/expressions/coercions.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
@@ -29,10 +31,9 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/helios_errors.hpp
-	src/helios/ctv/ctv.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher LibVM MIR LIR DVMBackend)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base TypeSystemHigher PstParser HELIOS

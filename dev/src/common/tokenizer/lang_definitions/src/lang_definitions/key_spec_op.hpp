@@ -12,9 +12,9 @@
 #pragma once
 
 #include <base/extend_cpp/flag.hpp>
-#include <base/str/string_id.hpp>
 
 #include <init/init.hpp>
+#include <string_id/string_id.hpp>
 
 namespace lang_def {
 
@@ -111,7 +111,8 @@ namespace lang_def {
 
 		Char,
 		Bool,
-		Str,  // ...
+		Str,
+		Type,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,
@@ -238,13 +239,11 @@ namespace lang_def {
 		i32,
 		i64,
 		i128,
-		isize,
 		u8,
 		u16,
 		u32,
 		u64,
 		u128,
-		usize,
 		f16,
 		f32,
 		f64,

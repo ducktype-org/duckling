@@ -3,7 +3,8 @@
 #include "kinds.hpp"
 
 #include <base/collections/optional.hpp>
-#include <base/str/string_id.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vm/core/process/memory/pointer.hpp>
 

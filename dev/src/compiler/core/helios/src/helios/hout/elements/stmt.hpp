@@ -10,6 +10,10 @@
 
 #include <vector>
 
+namespace compiler::helios::houtgen {
+	struct ImplementationOf_QueryImplicitClassConstructor;
+}
+
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
 
@@ -60,6 +64,19 @@ namespace compiler::helios::code {
 		SymID helios_symbol;
 
 		VariableStmt(
+			Box<Expr> initial_value, const tsh::SymbolType<> type, const SymID helios_symbol
+		):
+			  initial_value(std::move(initial_value)),
+			  type(type),
+			  helios_symbol(helios_symbol) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+
+	private:
+		// This constructor is used when one cannot possibly set an initial
+		// value, for example for the result variable of a class's constructor.
+		VariableStmt(
 			base::Optional<Box<Expr>> initial_value,
 			tsh::SymbolType<>         type,
 			const SymID               helios_symbol
@@ -68,8 +85,8 @@ namespace compiler::helios::code {
 			  type(type),
 			  helios_symbol(helios_symbol) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
-		void acceptVisitor(HoutStmtVisitor&) const override;
+		// Friend for constructing VariableStmt without initial value.
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 	};
 
 	/**

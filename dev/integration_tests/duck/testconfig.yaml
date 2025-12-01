@@ -1,4 +1,4 @@
-load_cargo: . $HOME/.cargo/env
+load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
 cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
 build_duck: cargo build
 duck_exe_path: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/duck'
@@ -6,12 +6,15 @@ color: never
 prepare: ""
 before_cmd: "true"
 
-PreTest: |
+PreNode: |
   @{load_cargo}
   @{cwd_duck_root}
   @{build_duck}
   cd -
+
+PreTest: |
   @{prepare}
+
 Run: bash -c "@{before_cmd} && @{duck_exe_path} --color=@{color} @{test_cmd}"
 
 SubDirs:

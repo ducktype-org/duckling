@@ -1,8 +1,7 @@
 #include "queries.hpp"
 
-#include <base/str/string_id.hpp>
-
 #include <query_framework/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::frontend {
 

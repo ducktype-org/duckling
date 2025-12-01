@@ -2,6 +2,7 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -129,7 +130,7 @@ namespace compiler::helios {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
@@ -158,8 +159,9 @@ namespace compiler::helios {
 
 				if (ret.has_value()) {
 					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(ret.value().unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType(ctx))
+					    = ctx.query<QueryEvaluatePSTExpression>(ret.value().unlock(ctx)->getExpr()
+					    )) {
+						if (auto maybe_type = ctv.value().getType(ctx))
 							ret_type = maybe_type.value();
 						else
 							return;
@@ -240,10 +242,12 @@ namespace compiler::helios {
 										)
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
-			const SymID                              class_symbol    = class_type.getSymbol();
-			const tsh::TypeInterface&                class_interface = class_type.getInterface(ctx);
+
+			const SymID class_symbol    = class_type.getSymbol();
+			auto        class_interface = class_type.getInterface(ctx);
+
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface.getFieldsView() | to<std::vector>();
+				= class_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
@@ -262,15 +266,47 @@ namespace compiler::helios {
 
 			u64 argument_index = 0;
 			for (const auto& field: fields) {
+				// Get the symbol of the constructor parameter corresponding to this field.
 				const SymID argument_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
 					.name = base::StrID(name(field.getSymbol())),
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
+				// Get the initial value for the field from the PST.
+				const auto field_pst_data
+					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
+				auto init_expr_opt = field_pst_data->getInit().map(
+					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
+						return ctx
+					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
+					        .expect(
+								"Not handling errors here yet..."
+								"(getting field init expr for implicit ctor)"
+							);
+					}
+				);
+				auto init_expr_coerced_opt
+					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) {
+						  const auto init_expr_type = expr->expression_type.getSymbolType();
+						  const auto field_type     = field.getType(ctx);
+						  const auto coercion
+							  = canCoerce(ctx, init_expr_type, field_type)
+					                .expect(base::strConcat(
+										"Cannot coerce default field value of type ",
+										init_expr_type.toString(),
+										" to the field's expected type ",
+										field_type.toString()
+									));
+						  return coercion.coerce(ctx, std::move(expr));
+					  });
+
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
 				parameters.emplace_back(
-					name(argument_symbol), field.getType(ctx), std::nullopt, argument_symbol
+					name(argument_symbol),
+					field.getType(ctx),
+					std::move(init_expr_coerced_opt),
+					argument_symbol
 				);
 				argument_index++;
 			}
@@ -362,7 +398,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDeclOfFun);
@@ -606,7 +642,10 @@ namespace compiler::helios {
 						return;  // fail
 					}
 
-					output(code::VariableStmt({}, symbol_type, symbol));
+					throw base::NotYetImplemented(
+						"Variable declarations without initial value are not supported in HOUT yet."
+						" We should add default initialization here."
+					);
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())

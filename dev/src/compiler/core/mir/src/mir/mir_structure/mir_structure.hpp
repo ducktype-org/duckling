@@ -11,10 +11,10 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <string_id/string_id.hpp>
 
 #include <utility>
 #include <variant>
@@ -214,8 +214,8 @@ namespace compiler::mir {
 		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const {
-			return type.getType().carriesInformation();
+		bool carriesInformation(query::Context& ctx) const {
+			return type.getType().carriesInformation(ctx);
 		}
 	};
 
@@ -255,8 +255,8 @@ namespace compiler::mir {
 		 * @brief Returns true if this local is not of a unit type or a similar data-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const {
-			return type.getType().carriesInformation();
+		bool carriesInformation(query::Context& ctx) const {
+			return type.getType().carriesInformation(ctx);
 		}
 	};
 
@@ -340,8 +340,8 @@ namespace compiler::mir {
 		 * @brief Returns true if the accessed field is not of a unit type or other data-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const {
-			return type.getType().carriesInformation();
+		bool carriesInformation(query::Context& ctx) const {
+			return type.getType().carriesInformation(ctx);
 		}
 
 		void debugPrint(std::ostream& os, bool detailed = false) const;
@@ -412,10 +412,10 @@ namespace compiler::mir {
 		 * unit or void type, or any other information-less type.
 		 */
 		[[nodiscard]]
-		bool carriesInformation() const {
+		bool carriesInformation(query::Context& ctx) const {
 			variant_match(value) {
 				variant_case_novalue(MIRUnitConst) { return false; }
-				variant_case(MIRPlace, access) { return access.carriesInformation(); }
+				variant_case(MIRPlace, access) { return access.carriesInformation(ctx); }
 				variant_default { return true; }
 			}
 			CORE_UNREACHABLE();
@@ -619,7 +619,7 @@ namespace compiler::mir {
 		ScopeRef no_lifetime_scope;
 
 		/**
-		 * HELIOS SymID releted to the function.
+		 * HELIOS SymID related to the function.
 		 * Functions without a helios_id are functions created for eg. from expressions
 		 */
 		using HSymID = std::variant<FunctionSymID, GlobalVariableCTOR>;

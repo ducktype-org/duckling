@@ -83,7 +83,7 @@ namespace base::internal {
 	template<typename VariantT, typename T>
 	constexpr usize alternativeIndex() {
 		// removing wrappers and using a template helper
-		using ClearedVariantT = std::remove_const_t<std::remove_reference_t<VariantT>>;
+		using ClearedVariantT = std::remove_cvref_t<VariantT>;
 		return AlternativeIndexAux<ClearedVariantT, T>::findIndex();
 	}
 
@@ -154,10 +154,10 @@ namespace base {
 /**
  * @brief Use instead of `std::visit` with multiple choices.
  */
-#define VARIANT_VISIT(value, code) \
-	{ std::visit(::base::internal::VisitOverloaded{ code }, (value)); }
+#define VARIANT_VISIT(value, /*cases*/...) \
+	{ std::visit(::base::internal::VisitOverloaded{ __VA_ARGS__ }, (value)); }
 
-#define VISIT_CASE(type, name, code) [&](type name) { code; },
+#define VISIT_CASE(type, name, code) [&](type name) { code; }
 
 
 /**

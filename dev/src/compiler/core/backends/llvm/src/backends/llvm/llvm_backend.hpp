@@ -5,10 +5,10 @@
 #include <lir/lir_structure/function_forward.hpp>
 
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <string_id/string_id.hpp>
 
 #include <filesystem>
 

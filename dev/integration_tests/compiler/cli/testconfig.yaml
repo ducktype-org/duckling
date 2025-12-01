@@ -2,8 +2,11 @@
 
 Run: "@{duckc_path} @{run_args}"
 
+# Deliberately empty, so as not to recompile duckc and dvm for each test.
+PreNode: ""
+
 Tests:
-  cli-options:
+  cli-options-base:
     Cases:
       help-message:
         # Tests help flag works
@@ -11,4 +14,22 @@ Tests:
       something-wrong:
         # Tests whether duckc fails upon passing an invalid flag
         run_args: "-,"
+        ExitCode: 1
+
+  cli-options-dev-logs:
+    Cases:
+      empty-dev-logs:
+        run_args: "--dev-logs \\[\\] dummy"
+      
+      empty-dev-logs-spaces:
+        run_args: "--dev-logs   \\[   \\]  dummy"
+        
+      single-dev-logs:
+        run_args: "--dev-logs \\[Query\\]  dummy"
+      
+      double-dev-logs:
+        run_args: "--dev-logs \\[Query, Lexer\\]  dummy"
+      
+      bad-dev-logs:
+        run_args: "--dev-logs \\[Query, Lexer  dummy "
         ExitCode: 1

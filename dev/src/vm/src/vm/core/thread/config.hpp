@@ -1,6 +1,6 @@
 /**
  * @file config.hpp
- * @brief Configuration macors for the VM.
+ * @brief Configuration macros for the VM.
  *
  * There are 3 different `Executor` implementations:
  * - Tail calls
@@ -8,7 +8,7 @@
  * - Computed goto
  *
  * They differ in the way they handle the main loop of the `Executor`
- * and they use different type for the "instrucion struct" `MicroInstruction`.
+ * and they use different type for the "instruction struct" `MicroInstruction`.
  * More information in the paper
  * ["Nowoczesne metody
  * optymalizacji..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/pondvm-opt-pl.pdf)
@@ -33,7 +33,7 @@ constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 
 // #define USE_COMPUTED_GOTO
 
-// note: undefinig default macro when using non-defult mode
+// note: undefining default macro when using non-default mode
 #if defined(USE_TAIL_CALLS) || defined(USE_COMPUTED_GOTO)
 	#undef USE_SWITCH_CASE
 #endif

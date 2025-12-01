@@ -19,7 +19,7 @@ namespace compiler::driver {
 
 		for (const auto& hout_global: hout_unit->glob_data) {
 			// Discard information-less globals.
-			if (not hout_global.type.getType().carriesInformation()) continue;
+			if (not hout_global.type.getType().carriesInformation(ctx)) continue;
 
 			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
 
@@ -30,18 +30,21 @@ namespace compiler::driver {
 					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
-						// @TODO: add legit dtors when implemented #929
+						// @TODO: #929 add legit dtors when implemented
 						.global_ctor = lir_function,
 						.global_dtor = std::nullopt,
 					});
 				}
-				// @TODO: add ctors and dtors for Global Consts when implemented
 				variant_case(helios::HOUTGlobalConst, global_const) {
-					CORE_PANIC(base::strConcat(
-						"Creating ctors for constant variables is not implemented yet. "
-						"Global constant: ",
-						hout_global.original_name.strView()
-					));
+					// @future #1554 -- const ctors will probably be added here
+					// Note: The CTV initial value for constants is already set in lir_global (by
+					// the fromHOUT function used above). Backends should handle constant
+					// initialization appropriately.
+					globals.emplace_back(LIRModuleGlobal{
+						.lir_global  = lir_global,
+						.global_ctor = std::nullopt,
+						.global_dtor = std::nullopt,
+					});
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

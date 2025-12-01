@@ -9,33 +9,33 @@
 
 fun localVariableAsCondition() -> i64 = {
     var a: bool = true;
-    let sub1: i64 = if a then 1   else 2; # sub1 = 1
+    let sub1: i64 = if a then 1i64   else 2i64; # sub1 = 1
 
     a = false;
-    let sub2: i64 = if a then 4   else 8; # sub2 = 8
+    let sub2: i64 = if a then 4i64   else 8i64; # sub2 = 8
 
     return sub1 + sub2; # 9    (1001)
 }
 
 fun literalAsCondition() -> i64 = {
-    let sub1 = if true  then 1  else 2;  # sub1 = 1
-    let sub2 = if false then 4  else 8;  # sub2 = 8
+    let sub1 = if true  then 1i64  else 2i64;  # sub1 = 1
+    let sub2 = if false then 4i64  else 8i64;  # sub2 = 8
 
     return sub1 + sub2; # 9    (1001)
 }
 
 fun localVariableAsValue() -> i64 = {
-    var b: i64 = 1;
-    let sub1: i64 = if true  then b   else 2; # sub1 = 1
-    b = 4;
-    let sub2: i64 = if false then b   else 8; # sub2 = 8
+    var b: i64 = 1i64;
+    let sub1: i64 = if true  then b   else 2i64; # sub1 = 1
+    b = 4i64;
+    let sub2: i64 = if false then b   else 8i64; # sub2 = 8
 
     return sub1 + sub2; # 9   (1001)
 }
 
 fun expressionAsValue() -> i64 = {
-    let sub1: i64 = if true  then 1 + 1 else 4;  # sub1 = 2
-    let sub2: i64 = if false then 4 + 4 else 16; # sub2 = 16
+    let sub1: i64 = if true  then 1i64 + 1i64 else 4i64;  # sub1 = 2
+    let sub2: i64 = if false then 4i64 + 4i64 else 16i64; # sub2 = 16
 
     return sub1 + sub2; # 18  (10010)
 }
@@ -44,16 +44,16 @@ fun nestedTernaryValue() -> i64 = {
     let sub1: i64 = 
     if true then (
         if false then
-            1
+            1i64
         else (
             if false then (
-                2
+                2i64
             ) else (
-                4          # sub1 = 4           
+                4i64          # sub1 = 4           
             )
         )
     ) else (
-        8
+        8i64
     );
 
     return sub1;       # 4 (10)

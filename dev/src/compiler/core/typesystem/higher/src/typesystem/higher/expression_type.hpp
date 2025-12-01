@@ -11,7 +11,7 @@
 
 #include <concepts>
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief The ExpressionType class contains information about a type,
 	 * expanded with information about a value of that type.

@@ -5,10 +5,10 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/str/string_id.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/source_position.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>

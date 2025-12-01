@@ -1,10 +1,10 @@
 #pragma once
 
 #include <base/pointers/box.hpp>
-#include <base/str/string_id.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
+#include <string_id/string_id.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -78,8 +78,6 @@ namespace vm::loader::parser {
 
 		~ByteCode() override = default;
 	};
-
-	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
 
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;

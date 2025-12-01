@@ -7,8 +7,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
-#include <base/str/string_id.hpp>
 #include <base/types/ints.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>

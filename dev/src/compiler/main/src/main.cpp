@@ -49,24 +49,16 @@ void printContextErrors() {
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("logger-cerr")
-	             .addShortDesc("If set, Logger class will immediately print its messages to cerr.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("lexer-cerr")
-	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addLongName("let-it-throw")
-	             .addShortDesc("Disables exception handling in main (debug option)")
-	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                          "It should be used for debugging only in order to preserve "
-	                          "stack-trace. It can prevent stack-unwinding from happening.")
-	             .build())
-	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Print version and exit")
+	             .build())
+	    // Note that dev-logs options are not handled in pre-handler below,
+	    // they should be handled in each command by getDebugOptionsFromClap and passed to
+	    // initializeTheCompiler.
+	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
+	             .addLongName("dev-logs")
+	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
@@ -95,8 +87,9 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	const clah::ParsingResult& parsing_result
 ) {
 	return compiler::driver::options_types::DebugOptions{
-		.lexer_cerr    = parsing_result.isFlag("lexer-cerr"),
-		.logger_cerr   = parsing_result.isFlag("logger-cerr"),
+		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
+		                          .copyValueOr(std::vector<std::string>{}),
+
 		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
 		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
 	};
@@ -130,13 +123,22 @@ clah::Clah getClahForMain() {
 						std::cout << "\n";
 						return 1;
 					} else {
+						std::cout << "This prints only top-level tokens (will not print tokens "
+									 "within parentheses).\n";
 						auto& tokens = token_file->getTokenData();
 						for (auto& token: tokens.tokens) {
-							// @TODO: more detailed printing. This should change in #1111.
+							std::string token_str{ token.getStrValue() };
 							printer::StreamPrinter::printNL(
 								{
 									"Token: ",
-									std::string(token.getStrValue()),
+									token_str,
+									std::string(20 - token_str.length(), ' '),  // alignment
+									" at ",
+									std::to_string(token.getPosition().getStartLineColumn().first),
+									":",
+									std::to_string(token.getPosition().getStartLineColumn().second),
+									",\t type=",
+									std::to_string(static_cast<int>(token.getType())),
 								},
 								std::cout
 							);
@@ -194,8 +196,10 @@ clah::Clah getClahForMain() {
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
 								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-							   for (const auto& hout_unit: hout_units)
-								   std::cout << hout_unit.debugPrint();
+							   query::utils::withContextDo([&](query::Context& ctx) {
+								   for (const auto& hout_unit: hout_units)
+									   std::cout << hout_unit.debugPrint(ctx);
+							   });
 
 							   return exit_code;
 						   }))
@@ -334,8 +338,6 @@ clah::Clah getClahForMain() {
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
-					// @TODO #1058: make graph/statistics printing configuration better.
-
 					timer::TimeMeasurement total_compilation_time;
 					total_compilation_time.startMeasurement();
 
@@ -346,7 +348,7 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compilerEntirePackage(
+					compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 
@@ -443,9 +445,14 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   throw base::LogicError("Command `throw` thrown successfully!");
+	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+							   return 0;
 						   }));
 }
 

@@ -22,10 +22,10 @@
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
-#include <base/str/string_id.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 
@@ -226,7 +226,8 @@ namespace compiler::helios {
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
-					"Scope of element for which scope does not make sense (or was not added.): ",
+					"Scope of element for which scope does not make sense (or was not "
+					"added.): ",
 					typeid(*element_ptr).name()
 				));
 			}
@@ -354,7 +355,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
@@ -383,11 +384,6 @@ namespace compiler::helios {
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
-					} else {
-						// Currently only "using stmt" has transparent decl kind, but>>F declares a
-						// symbol #1319
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
-						symbols.emplace_back(sym_id);
 					}
 					break;
 				}
@@ -539,7 +535,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
@@ -579,7 +575,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
@@ -645,7 +641,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);

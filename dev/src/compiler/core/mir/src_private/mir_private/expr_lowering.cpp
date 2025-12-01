@@ -69,8 +69,11 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRUnitConst{} });
 		}
 
-		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MIRIntegerConst{ expr.value } });
+		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
+			// @TODO: #1499 All numeric literals are interpreted as i64 in MIR and LIR for now.
+			valueOutput(
+				continuation, MIRValue{ MIRIntegerConst{ value.value.coerceTo<i64>().value() } }
+			);
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
@@ -115,7 +118,13 @@ namespace compiler::mir {
 			const auto other_argument_type = typeOfMIRValue(res_left, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
-				"Binary operator with different argument types"
+				base::strConcat(
+					"Binary operator with different argument types. Left side is: '",
+					argument_type.toString(),
+					"' Right side is: '",
+					other_argument_type.toString(),
+					"'"
+				)
 			);
 			const auto      result_type = expr.expression_type.getSymbolType();
 			const Operation operation   = builtinBinaryToOperation(expr.operation);
@@ -196,7 +205,7 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
+		void visitTupleExpr(const hc::TupleExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
@@ -254,7 +263,7 @@ namespace compiler::mir {
 			auto boolean_output
 				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
 
-			// The left-over value. We mantain that this has to partake in only one comparison,
+			// The left-over value. We maintain that this has to partake in only one comparison,
 			// which will be placed in prev_cmp_hole.boolean
 			auto [prev_block, prev_value] = lower_subexpr_with_result(
 				chain_expr.expressions.back().ref(), last_comparison_block
@@ -275,7 +284,7 @@ namespace compiler::mir {
 					{},
 					{ boolean_output, prev_block->getID(), continuation->getID() },
 					{},
-					expr_scope });  // We exaluate prev_value only after this comparison is true, as
+					expr_scope });  // We evaluate prev_value only after this comparison is true, as
 				                    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
@@ -289,7 +298,7 @@ namespace compiler::mir {
 				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
 
-				// expr_result participated in the previous comparion fulfilling the invariant.
+				// expr_result participated in the previous comparison fulfilling the invariant.
 				prev_value = new_value;
 			}
 
@@ -363,6 +372,10 @@ namespace compiler::mir {
 			                                 .target_type = expr.target_type } },
 				expr.expression_type.getSymbolType()
 			);
+		}
+
+		void visitLiftToTypeExpr(const helios::code::LiftToTypeExpr&) override {
+			throw base::NotYetImplemented("lift to type expr lowering");
 		}
 
 

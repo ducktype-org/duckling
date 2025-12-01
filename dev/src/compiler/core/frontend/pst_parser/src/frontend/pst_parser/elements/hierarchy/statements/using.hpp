@@ -2,6 +2,8 @@
 
 #include "../meta.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/not_statements/dotted_name.hpp>
+
 namespace pst {
 	/**
 	 * @brief Using statement
@@ -31,7 +33,9 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return DeclKind::Transparent;
+			return DeclKind::Symbol;
 		}
+
+		[[nodiscard]] base::Optional<base::StrID> getDeclSymbolName() const final;
 	};
 }

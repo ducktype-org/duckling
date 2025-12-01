@@ -7,16 +7,7 @@
 
 #include <utility>
 
-namespace tsh {
-	/**
-	 * @brief Gets the global AbstractTypeImpl storage structure.
-	 * @return The global AbstractTypeImpl storage structure.
-	 */
-	std::vector<Box<const AbstractTypeImpl>>& getTypes() {
-		static std::vector<Box<const AbstractTypeImpl>> abstract_type_impl_storage{};
-		return abstract_type_impl_storage;
-	}
-
+namespace compiler::tsh {
 	/**
 	 * @brief Creates a human-readable string representation of a vector of symbol types.
 	 * @param types Vector of symbol types to stringify.
@@ -30,6 +21,19 @@ namespace tsh {
 		res << ")";
 
 		return res.str();
+	}
+
+	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
+		const {
+		// The unit type can be coerced to the meta type
+		// because unit values can be interpreted as unit types.
+		return target.getKind() == Kind::Meta;
+	}
+
+	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
@@ -52,24 +56,44 @@ namespace tsh {
 	) const {
 		// Implicit coercions are allowed to other tuples of the same size,
 		// where each component can be coerced independently.
+		//
+		// Additionally, tuples can be coerced to Meta type if
+		// all their components can be coerced to Meta type.
 
-		if (target.getKind() != Kind::Tuple) return false;
-		TupleAbstractType target_tuple = target;
+		if (target.getKind() == Kind::Tuple) {
+			const TupleAbstractType target_tuple = target;
 
-		const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
-		if (target_components.size() != components.size()) return false;
+			const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
+			if (target_components.size() != components.size()) return false;
 
-		for (usize i = 0; i < components.size(); i++) {
-			SymbolType component = components[i];
-			if (const SymbolType target_component = target_components[i];
-			    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
-					component,
-					target_component,
-				}))
-				return false;
+			for (usize i = 0; i < components.size(); i++) {
+				SymbolType component = components[i];
+				if (const SymbolType target_component = target_components[i];
+				    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
+						component,
+						target_component,
+					}))
+					return false;
+			}
+
+			return true;
 		}
 
-		return true;
+		if (target.getKind() == Kind::Meta) {
+			// Tuples can be coerced to the Meta type if and only if their components
+			// can all be coerced to Meta type. Note that the components can have additional
+			// indirection and mutability specifiers (the component types are symbol
+			// types), but that's OK, we need only to check the abstract types underneath.
+			for (const auto& component: components)
+				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
+						component.getType(),
+						target,  //< target is the Meta type.
+					}))
+					return false;
+			return true;
+		}
+
+		return false;
 	}
 
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
@@ -140,8 +164,92 @@ namespace tsh {
 		representation = "Class " + name(symbol).str();
 	}
 
-	const TypeInterface& ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
-		return *ctx.query<QueryInterfaceOfClass>(this);
+	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
+		return ctx.query<QueryInterfaceOfClass>(this);
+	}
+
+	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> ByteAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> BoolAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> CharAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> IntegralAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> FloatAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> RawPointerAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> PointerAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("String type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Tuple type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Function type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> VariantAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Variant type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> NamespaceAbstractTypeImpl::getInterface(query::Context&) const {
+		CORE_PANIC("Namespace type interface does not exist (we can add it if we find a use case).");
+	}
+
+	CRef<TypeInterface> ModuleAbstractTypeImpl::getInterface(query::Context&) const {
+		CORE_PANIC("Module type interface does not exist (we can add it if we find a use case).");
+	}
+
+	CRef<TypeInterface> MetaAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Meta type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> ImportAbstractTypeImpl::getInterface(query::Context&) const {
+		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx

@@ -19,7 +19,7 @@ namespace compiler::helios::code {
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
 	EXPR_VISITOR(LiteralUnitExpr)
-	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralNumericExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
@@ -28,24 +28,21 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TernaryOperatorExpr)
 	EXPR_VISITOR(ChainComparisonExpr)
-	EXPR_VISITOR(TupleTypeConstructorExpr)
+	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(CastExpr)
+	EXPR_VISITOR(LiftToTypeExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx):
 		  Expr(tsh::ExpressionType<>(
 			  tsh::SymbolType{
-				  // The unit expression *may* represent the type instead of the unit value,
-				  // but by default we assume it is the value, and lazily convert it to a type,
-				  // when it turns out that we expected a type instead of a value.
-				  // @TODO: #1373 reconsider this approach.
 				  ctx.query<tsh::QueryUnitType>({}),
 				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Immutable,
+				  tsh::Mutability::Mutable,
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 		  )) {}
@@ -57,29 +54,22 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type); }
 
-	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
-		  Expr(
-
-			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on type of literal.
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
+	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value):
+		  Expr(tsh::ExpressionType<>(
+			  value.getTypeOfStoredValue(ctx), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )),
 		  value(value) {}
 
-	LiteralIntExpr::LiteralIntExpr(tsh::ExpressionType<> expression_type, i64 value):
+	LiteralNumericExpr::LiteralNumericExpr(
+		tsh::ExpressionType<> expression_type, numeric_value::NumericValue value
+	):
 		  Expr(expression_type),
 		  value(value) {}
 
-	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	void LiteralNumericExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
 
-	Box<Expr> LiteralIntExpr::clone() const {
-		return makeBox<LiteralIntExpr>(expression_type, value);
+	Box<Expr> LiteralNumericExpr::clone() const {
+		return makeBox<LiteralNumericExpr>(expression_type, value);
 	}
 
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
@@ -89,7 +79,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryBoolType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -113,7 +103,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryStringType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -139,7 +129,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -197,6 +187,12 @@ namespace compiler::helios::code {
 		case IntegerDiv:
 		case IntegerMod:
 		case IntegerPow:
+		case FloatAdd:
+		case FloatSub:
+		case FloatMul:
+		case FloatDiv:
+		case FloatMod:
+		case FloatPow:
 			return argument_type;
 		case IntegerLt:
 		case IntegerGt:
@@ -204,6 +200,12 @@ namespace compiler::helios::code {
 		case IntegerGteq:
 		case IntegerEq:
 		case IntegerNeq:
+		case FloatLt:
+		case FloatGt:
+		case FloatLteq:
+		case FloatGteq:
+		case FloatEq:
+		case FloatNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -251,21 +253,26 @@ namespace compiler::helios::code {
 		using enum BuiltinBinary;
 		switch (operation) {
 		case IntegerAdd:
+		case FloatAdd:
 			out << "+";
 			break;
 		case IntegerSub:
+		case FloatSub:
 			out << "-";
 			break;
 		case IntegerMul:
+		case FloatMul:
 			out << "*";
 			break;
 		case IntegerDiv:
+		case FloatDiv:
 			out << "/";
 			break;
 		case IntegerMod:
 			out << "%";
 			break;
 		case IntegerPow:
+		case FloatPow:
 			out << "**";
 			break;
 		case IntegerLt:
@@ -354,29 +361,34 @@ namespace compiler::helios::code {
 		);
 	}
 
-	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
-		query::Context& ctx, std::vector<Box<Expr>> elements
-	):
-		  Expr(
+	/**
+	 * Map a vector of HOUT expressions to their symbol types.
+	 */
+	std::vector<tsh::SymbolType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
+		std::vector<tsh::SymbolType<>> types;
+		types.reserve(exprs.size());
+		for (const auto& expr: exprs) types.push_back(expr->expression_type.getSymbolType());
+		return types;
+	}
 
-			  tsh::ExpressionType{
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
-			  }
-		  ),
+	TupleExpr::TupleExpr(query::Context& ctx, std::vector<Box<Expr>> elements):
+		  Expr(tsh::ExpressionType{
+			  tsh::SymbolType<>{
+				  ctx.query<tsh::QueryTupleType>({ extractTypesFromExprs(elements) }),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+		  }),
 		  elements(std::move(elements)) {}
 
-	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
+	TupleExpr::TupleExpr(
 		tsh::ExpressionType<> expression_type, std::vector<base::Box<Expr>> elements
 	):
 		  Expr(expression_type),
 		  elements(std::move(elements)) {}
 
-	void TupleTypeConstructorExpr::debugPrint(std::ostream& out) const {
+	void TupleExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_comma = false; auto&& e: elements) {
 			if (add_comma) out << ", ";
@@ -386,11 +398,11 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	Box<Expr> TupleTypeConstructorExpr::clone() const {
+	Box<Expr> TupleExpr::clone() const {
 		std::vector<base::Box<Expr>> elements;
 		elements.reserve(this->elements.size());
 		for (const auto& elem: this->elements) elements.push_back(elem->clone());
-		return makeBox<TupleTypeConstructorExpr>(expression_type, std::move(elements));
+		return makeBox<TupleExpr>(expression_type, std::move(elements));
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
@@ -402,7 +414,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
@@ -447,6 +459,7 @@ namespace compiler::helios::code {
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
 			out << "-";
 			expr->debugPrint(out);
 			break;
@@ -525,8 +538,15 @@ namespace compiler::helios::code {
 		return makeBox<CallExpr>(expression_type, callee->clone(), std::move(arguments_cloned));
 	}
 
-	AccessExpr::AccessExpr(query::Context&, Box<Expr> base, const SymID field):
-		  Expr(base->expression_type),
+	AccessExpr::AccessExpr(query::Context& ctx, Box<Expr> base, const SymID field):
+		  // @TODO: #1549 Value category usage is not correct here.
+		  Expr(tsh::ExpressionType(
+			  ctx.query<QueryTypeOfSymbol>(field)->expect(
+				  "Handling errors here is not supported yet -- this will probably have to be "
+				  "refactored to some kind of static method.."
+			  ),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+		  )),
 		  base(std::move(base)),
 		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
@@ -582,7 +602,7 @@ namespace compiler::helios::code {
 			  tsh::SymbolType{
 				  ctx.query<tsh::QueryBoolType>({}),
 				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Immutable,
+				  tsh::Mutability::Mutable,
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
@@ -604,16 +624,22 @@ namespace compiler::helios::code {
 			using enum BuiltinBinary;
 			switch (comp) {
 			case IntegerLt:
+			case FloatLt:
 				return "<";
 			case IntegerLteq:
+			case FloatLteq:
 				return "<=";
 			case IntegerGt:
+			case FloatGt:
 				return ">";
 			case IntegerGteq:
+			case FloatGteq:
 				return ">=";
 			case IntegerEq:
+			case FloatEq:
 				return "==";
 			case IntegerNeq:
+			case FloatNeq:
 				return "!=";
 			default:
 				CORE_UNREACHABLE();
@@ -658,4 +684,28 @@ namespace compiler::helios::code {
 		return makeBox<CastExpr>(expression_type, source_expr->clone(), target_type);
 	}
 
+	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr):
+		  Expr(tsh::ExpressionType(
+			  tsh::SymbolType<>(
+				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable
+			  ),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  value_expr(std::move(value_expr)) {}
+
+	LiftToTypeExpr::LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr):
+		  Expr(expression_type),
+		  value_expr(std::move(value_expr)) {}
+
+	void LiftToTypeExpr::debugPrint(std::ostream& out) const {
+		out << "lift[to=type](";
+		value_expr->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> LiftToTypeExpr::clone() const {
+		return makeBox<LiftToTypeExpr>(expression_type, value_expr->clone());
+	}
 }

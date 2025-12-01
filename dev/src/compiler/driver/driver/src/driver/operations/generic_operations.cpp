@@ -1,20 +1,24 @@
 #include "generic_operations.hpp"
 
+#include <driver/module_flags/module_flags.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <driver_private/statistics_private/statistics.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
-#include <global_state/options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <hashing/component_hash.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/query_artifacts_macros.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
@@ -23,6 +27,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <fstream>
+#include <iostream>
 #include <utility>
 
 namespace compiler::driver {
@@ -41,6 +46,37 @@ namespace compiler::driver {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
+		/**
+		 * Helper function to get full module name for logging purposes.
+		 */
+		static std::string getModuleFullName(frontend::ModuleID module_id) {
+			std::string out;
+			if (getModuleRef(module_id)->getParentModule().has_value()) {
+				out += getModuleFullName(
+					getModuleRef(module_id)->getParentModule().value()->getModuleID()
+				);
+				out += "/";
+			}
+			out += getModuleRef(module_id)->getName().strView();
+			return out;
+		}
+
+		/**
+		 * Helper function to log module compilation info.
+		 */
+		static void moduleLog(const QKey& key, std::string_view info) {
+			CORE_USER_LOG(
+				"[?/?] Compiling ",
+				getModuleFullName(key.module_id),
+				" (",
+				backendTypeToStr(key.backend_type),
+				")",
+				": ",
+				info,
+				"!\n"
+			);
+		}
+
 		static auto typeExtension(BackendType backend) {
 			switch (backend) {
 			case BackendType::LLVM:
@@ -53,6 +89,8 @@ namespace compiler::driver {
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
+			moduleLog(key, "Recompiling");
+
 			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
 
 			auto output_name
@@ -83,12 +121,12 @@ namespace compiler::driver {
 					);
 				}
 
-				if (global_state::getDynamicDebugOptions()->llvm_dump_ir) {
+				if (driver::llvm_dump_ir) {
 					base::StrID llvm_ir_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
 					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
-				if (global_state::getDynamicDebugOptions()->llvm_dump_asm) {
+				if (driver::llvm_dump_asm) {
 					base::StrID assembly_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
 					llvm_module.compile(
@@ -111,18 +149,38 @@ namespace compiler::driver {
 
 			return output;
 		}
+
+		/**
+		 * Load precompiled artifact from disk without performing any compilation.
+		 * Returns Optional empty if the underlying file does not exist anymore.
+		 */
+		static auto loadFromDisc(const QKey& key) -> base::Optional<artifacts::FileArtifact> {
+			auto output_name
+				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
+
+			auto collection   = getQueryArtifactsCollection();
+			auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
+
+			if (!output_maybe.has_value()) {
+				moduleLog(key, "artifact not found in artifacts collection");
+				return {};
+			}
+
+			auto output = *output_maybe.value();
+
+			moduleLog(key, "Cached, loading artifact from disk");
+			return output;
+		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compilerEntirePackage(
+	void compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = frontend::createModuleTree(
-			package_info.package_path, package_info.package_name.strView()
-		);
+		auto root = package_info.root_module;
 
 		std::vector<artifacts::FileArtifact> objects;
 

@@ -129,7 +129,7 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
 
 		/**
-		 * The temporaty buffor for the currently built value from left to current place of
+		 * The temporary buffor for the currently built value from left to current place of
 		 the chain. So for example after processing "a.b.c" it will contain hout expr:
 		 "access(access(a, field=b), field=c))"".
 		 */
@@ -257,7 +257,7 @@ namespace compiler::helios::code {
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
-			// @TODO: #520 Perform proper lookup in type for different cases.
+			// @TODO: #982 #1532 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
@@ -295,6 +295,7 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
+			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
@@ -414,9 +415,8 @@ namespace compiler::helios::code {
 			// @note: previous mock-implementation of this function
 			// was deleted in PR #1239. See it for reference.
 
-			// @TODO #520 improve type lookup and provide correct
-			// candidates for processFunctionCall
-			// @TODO write tests for this case, when it will be implemented
+			// @TODO: #982 improve type lookup and provide correct
+			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
@@ -443,8 +443,6 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState, errors::Failed> {
-			// @TODO: #520 for now it is a mock as we don't have lookup in type instance and proper
-			// helios access expr.
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
@@ -468,8 +466,12 @@ namespace compiler::helios::code {
 			} else if (kind(sym) == SymbolKind::Namespace) {
 				result_sequence.push_back(std::move(current_expr));
 				return ChainState::ofNamespaceLike(sym);
+			} else if (kind(sym) == SymbolKind::Method) {
+				throw base::NotYetImplemented(
+					"Handling of access to method without a call is not implemented yet"
+				);
 			}
-			// @TODO: #1412 #1485 Support lookup of other kinds of symbols in classes.
+			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 			return query::QError(errors::Failed());
 		}
 
@@ -525,7 +527,7 @@ namespace compiler::helios::code {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			// @TODO #981: make it better:
+			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			if (callees_q_result.hasError())
 				return query::QError(errors::Failed(callees_q_result.error()));
@@ -573,7 +575,7 @@ namespace compiler::helios::code {
 		// =============================== MAIN PROCESSING LOOP ===============================
 
 		/**
-		 * Perform a procesing step on the current element of the chain.
+		 * Perform a processing step on the current element of the chain.
 		 * @warning It assumes that the current element exist.
 		 */
 		template<typename T>
@@ -596,7 +598,7 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Perform a procesing step on current element of the chain and next one.
+		 * Perform a processing step on current element of the chain and next one.
 		 * @warning It assumes that the current element and next one exist.
 		 */
 		template<typename T1, typename T2>

@@ -5,9 +5,10 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
-#include <base/str/string_id.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/context.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -17,7 +18,6 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <iostream>
 #include <ranges>
 #include <string>
 #include <variant>
@@ -50,13 +50,13 @@ namespace {
 
 namespace compiler::backend_vm {
 	namespace {
-		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
-			variant_match(layout.getVariant()) {
+		vm::code::TypeOfData getTypeFromLayout(CRef<tsl::TypeLayout> layout) {
+			variant_match(layout->getVariant()) {
 				variant_case_novalue(tsl::EmptyTypeLayout) {
 					return vm::code::PrimitiveType(base::StrID("void"), 1);
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
@@ -65,7 +65,7 @@ namespace compiler::backend_vm {
 					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 				}
 				variant_case_novalue(tsl::FloatTypeLayout) {
-					auto bits = usize(layout.getSize());
+					auto bits = usize(layout->getSize());
 					CORE_ASSERT(
 						bits == 16 || bits == 32 || bits == 64 || bits == 80,
 						"Invalid size of float: ",
@@ -78,7 +78,7 @@ namespace compiler::backend_vm {
 				}
 				variant_default {
 					CORE_PANIC(
-						base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+						base::strConcat("Type not handled yet: ", layout->toStringIdentification())
 					);
 				}
 			}
@@ -86,8 +86,8 @@ namespace compiler::backend_vm {
 		}
 
 		vm::code::FuncSignature getDVMSignatureFromLayouts(
-			const std::vector<tsl::TypeLayout>& parameter_layouts,
-			const tsl::TypeLayout&              return_layout
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			const CRef<tsl::TypeLayout>               return_layout
 		) {
 			vm::code::FuncSignature signature;
 			signature.parameters.reserve(parameter_layouts.size());
@@ -213,7 +213,7 @@ namespace compiler::backend_vm {
 						signatures.put(
 							func_literal.mangled_name,
 							getDVMSignatureFromLayouts(
-								*func_literal.parameter_layouts, *func_literal.return_type_layout
+								*func_literal.parameter_layouts, func_literal.return_type_layout
 							)
 						);
 					}
@@ -288,14 +288,14 @@ namespace compiler::backend_vm {
 		) {
 			if (!lir_instruction.output.has_value()) return {};
 
-			// @TODO: #500 handle access into fields.
+			// @TODO: #1560 handle access into fields.
 			variant_match(lir_instruction.output.value().base) {
 				variant_case(lir::LIRLocalRef, local) {
 					auto&& var_type = ctx.lir_local_types[local];
 					return outputToOpArg(var_type, ctx.lir_local_to_name[local]);
 				}
 				variant_case(lir::LIRGlobal, global) {
-					auto vm_type = getTypeFromLayout(*global.layout);
+					auto vm_type = getTypeFromLayout(global.layout);
 					return outputToOpArg(vm_type, global.mangled_name, true);
 				}
 			}
@@ -311,14 +311,14 @@ namespace compiler::backend_vm {
 				}
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LIRPlace, place) {
-					// @TODO: #500 handle access into fields.
+					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
 						variant_case(lir::LIRLocalRef, local_ref) {
 							auto&& var_type = ctx.lir_local_types[local_ref];
 							return outputToOpArg(var_type, ctx.lir_local_to_name[local_ref]);
 						}
 						variant_case(lir::LIRGlobal, global) {
-							auto vm_type = getTypeFromLayout(*global.layout);
+							auto vm_type = getTypeFromLayout(global.layout);
 							return outputToOpArg(vm_type, global.mangled_name, true);
 						}
 					}
@@ -364,11 +364,11 @@ namespace compiler::backend_vm {
 			case lir::Operation::IntegerMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation).str());
+				throw base::NotYetImplemented(base::enumToStr(operation));
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
@@ -430,14 +430,18 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
-				std::cerr << "Initializing: " << type_name.str.str() << '\n';
+				CORE_DEV_LOG(Backend, "Initializing: ", type_name.str.str(), '\n');
+
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
+
 				initType(ctx, arg_name, type_name);
 
 				InstructionBuilder mov_arg(OpKind::mov);
+
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
+
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
@@ -622,7 +626,7 @@ namespace compiler::backend_vm {
 			insertFunctionDependencies(compiled_collection.types, signatures, lir_function);
 
 		for (const auto& global: globals) {
-			auto global_type = getTypeFromLayout(*global.lir_global.layout);
+			auto global_type = getTypeFromLayout(global.lir_global.layout);
 			compiled_collection.types.push_back(global_type);
 
 			base::Optional<Identifier> ctor_name;
@@ -643,13 +647,14 @@ namespace compiler::backend_vm {
 				dtors.emplace_back(global.global_dtor.value());
 			}
 
-			// @TODO: add a isConst to DVM and initial values, add source position to GlobalVariables
+			// @TODO: #1553 add a isConst to DVM and initial values, add source position to
+			// GlobalVariables
 			compiled_collection.global_data.push_back(GlobalData{
 				{}, global.lir_global.mangled_name, typeName(global_type), ctor_name, dtor_name });
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
-			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
+			CORE_DEV_LOG(Backend, "Adding function: ", lir_function->mangled_name.strView(), "\n");
 
 			AddLIRFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
 

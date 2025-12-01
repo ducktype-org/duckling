@@ -70,8 +70,9 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				if (auto ctv = ctx.query<QueryEvaluateExpression>({ base })) {
-					if (auto maybe_type = ctv.value().asType(ctx)) {
+				if (auto ctv = ctx.query<QueryEvaluatePSTExpression>({ base })) {
+					// @TODO: #1618 Use coercion logic
+					if (auto maybe_type = ctv.value().getType(ctx)) {
 						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
 						// the base class has any specifiers other than the abstract type.
 						class_info.base = maybe_type.value().getType();
@@ -79,7 +80,7 @@ namespace compiler::helios {
 						return query::QError(errors::Failed());
 					}
 				} else {
-					// We just fail here, error should be reported by QueryEvaluateExpression.
+					// We just fail here, error should be reported by QueryEvaluatePSTExpression.
 					return query::QError(errors::Failed());
 				}
 			}
@@ -87,8 +88,8 @@ namespace compiler::helios {
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
 					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(interface.unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType(ctx)) {
+					    = ctx.query<QueryEvaluatePSTExpression>(interface.unlock(ctx)->getExpr())) {
+						if (auto maybe_type = ctv.value().getType(ctx)) {
 							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
 							// of the base class has any specifiers other than the abstract type.
 							class_info.implements.push_back(maybe_type.value().getType());
@@ -96,7 +97,7 @@ namespace compiler::helios {
 							return query::QError(errors::Failed());
 						}
 					} else {
-						// We just fail here, error should be reported by QueryEvaluateExpression.
+						// We just fail here, error should be reported by QueryEvaluatePSTExpression.
 						return query::QError(errors::Failed());
 					}
 				}
@@ -105,7 +106,7 @@ namespace compiler::helios {
 			return class_info;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
