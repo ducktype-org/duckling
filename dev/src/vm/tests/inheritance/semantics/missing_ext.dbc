@@ -15,9 +15,7 @@ function main { i64, ptr_argv } -> i64 {
 	init_lany_type button, ButtonPtr;
 
 	init_lany_type helper_button, ButtonPtr;
-	alloc_lptr_type helper_button, Button;
-	setVTable_lptr_type helper_button, Button;
-	upcast_lptr_lptr widget, helper_button;
+	alloc_lptr_type helper_button, Button;	upcast_lptr_lptr widget, helper_button;
 
 	downcast_lptr_lptr button, widget;
 	# Whoops, I forgot about:

@@ -2,7 +2,7 @@ type pointer: pointer_Child Child
 type fun: method_child_void {pointer_Child} void
 
 type class: Child {
-    virtual_methods: { 
+    virtual_methods: {
         cry: method_child_void,
     };
     implementations: {
@@ -18,8 +18,6 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type fake_child, ptr_i64;
     init_lany_type actual_child, pointer_Child;
     alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, Child;
-
     init_lany_type temp_child, pointer_Child;
     mov_lptr_lptr temp_child, actual_child;
     virtual_call_lptr_method fake_child, cry; # fake_child is fakeing to be a child.

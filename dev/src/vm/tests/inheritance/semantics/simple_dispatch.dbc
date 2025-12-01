@@ -24,9 +24,7 @@ type class: A {
 
 function main { i64, ptr_argv } -> i64 {
     init_lany_type a_obj, pointer_A;
-    alloc_lptr_type a_obj, A;
-    setVTable_lptr_type a_obj, A;
-    init_lany_type a_ptr, pointer_A;
+    alloc_lptr_type a_obj, A;    init_lany_type a_ptr, pointer_A;
     mov_lptr_lptr a_ptr, a_obj;
     virtual_call_lptr_method a_obj, foo;
 

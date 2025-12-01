@@ -7,21 +7,21 @@ type fun: method_parent_void {pointer_Parent} void
 type fun: method_child_void {pointer_Child} void
 
 type interface: I1 {
-    virtual_methods: { 
-        foo: method_I1_void, 
+    virtual_methods: {
+        foo: method_I1_void,
         bar: method_I1_void,
     };
-    implementations: { 
+    implementations: {
         foo: I1_foo_default_impl_type,
     };
 }
 
 type class: Parent {
-    virtual_methods: { 
+    virtual_methods: {
         getAge: method_parent_void,
     };
     implementations: {
-        getAge: Parent_getAge_impl_type, 
+        getAge: Parent_getAge_impl_type,
     };
 }
 
@@ -29,17 +29,17 @@ type class: Child {
     extends: Parent;
     abstract: false;
     implements: {I1};
-    virtual_methods: { 
+    virtual_methods: {
         cry: method_child_void,
     };
     implementations: {
         getAge: Child_getAge_impl_type,
-        bar: Child_I1_bar_impl_type, 
+        bar: Child_I1_bar_impl_type,
         cry: Child_cry_impl_type,
     };
 }
 
-# ============ METHODS IMPLEMENTATION ============ 
+# ============ METHODS IMPLEMENTATION ============
 function I1_foo_default_impl_type {pointer_I1} -> void {
     init_lany_type res, i64; mov_l64_imm res, 11; output_l64 res; deinit; deinit; ret;
 }
@@ -64,9 +64,7 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type actual_child, pointer_Child;
 
     # --- Object Child, pointer I1* ---
-    alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, Child;
-    upcast_lptr_lptr ptr_i1, actual_child;
+    alloc_lptr_type actual_child, Child;    upcast_lptr_lptr ptr_i1, actual_child;
 
     init_lany_type temp_this_i1_foo, pointer_I1;
     mov_lptr_lptr temp_this_i1_foo, ptr_i1;

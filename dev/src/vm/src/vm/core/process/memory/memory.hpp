@@ -101,6 +101,10 @@ namespace vm {
 		 */
 		void runDataCopyConstructors(base::ModRawView data, TypeCRef type);
 
+		void runDataConstructor(Ref<Block> block);
+		void runDataConstructor(base::ModRawView data, TypeCRef type);
+
+
 		/**
 		 * @brief Iterates over each object in the block and calls the callback on it.
 		 * @note The callback should not change the layout of the objects in the block.
@@ -140,6 +144,15 @@ namespace vm {
 		 * somewhere else.
 		 */
 		void runObjectCopyConstructor(base::ModRawView data, TypeCRef type);
+
+		/**
+		 * @brief Based on data's type, performs constructor of the data.
+		 * This is mainly used for setting a vtable.
+		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
+		 * range of objects from a table, but it can be a single object from a table, or from
+		 * somewhere else.
+		 */
+		void runObjectConstructor(base::ModRawView data, TypeCRef type);
 
 	public:
 		Memory() = default;

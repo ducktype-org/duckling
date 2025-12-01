@@ -2,7 +2,7 @@ type pointer: pointer_Child Child
 type fun: method_child_void {pointer_Child} void
 
 type class: Child {
-    virtual_methods: { 
+    virtual_methods: {
         cry: method_child_void,
     };
     implementations: {
@@ -17,8 +17,6 @@ function Child_cry_impl_type {pointer_Child} -> void {
 function main { i64, ptr_argv } -> i64 {
     init_lany_type actual_child, pointer_Child;
     alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, i64;
-
     deinit;
     ret;
 }

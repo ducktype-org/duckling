@@ -467,14 +467,9 @@ namespace vm {
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
-			const auto  inh_metadata     = (*inh_meta_pointer)
-			                              ->getInheritanceMetadata()
-			                              .expect(
-											  "setVTable_lptr_type not called on the object, hence "
-											  "no inheritance metadata."
-										  );
-			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
-			const auto implementation_name = inh_metadata->vtable[method_name];
+			const auto  inh_metadata     = (*inh_meta_pointer)->getInheritanceMetadata().value();
+			const auto  method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto  implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
 				= *thread.executing_program->getFunctions().idOf(implementation_name);
@@ -668,20 +663,6 @@ namespace vm {
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
-		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto type    = thread.executing_program->getTypes().at(
-                TypeID(base::safeIntConv<usize>(instr->arg1))
-            );
-
-			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
-			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
-			writeToView<const Type*>(view, type.get());
 		}
 		FUNCTION_CONT(1);
 	}

@@ -6,6 +6,7 @@
 #include <base/misc/raw_view.hpp>
 
 #include <vm/core/process/exceptions.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions_utils.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <iostream>
@@ -16,16 +17,22 @@ namespace vm {
 	Ref<Block> Memory::createBlock(BlockData data) {
 		std::memset(data.view.getBegin(), 0, data.view.size());
 
-		if (free_ids.empty()) {
-			auto id = BlockID(blocks.size());
-			blocks.emplace_back(id, data, &mutex);
-			return &blocks.back();
-		} else {
-			BlockID id = free_ids.back();
-			free_ids.pop_back();
-			blocks[usize(id)] = Block(id, data, &mutex);
-			return &blocks[static_cast<u64>(id)];
-		}
+		Ref<Block> block = [&] {
+			if (free_ids.empty()) {
+				auto id = BlockID(blocks.size());
+				blocks.emplace_back(id, data, &mutex);
+				return &blocks.back();
+			} else {
+				BlockID id = free_ids.back();
+				free_ids.pop_back();
+				blocks[usize(id)] = Block(id, data, &mutex);
+				return &blocks[static_cast<u64>(id)];
+			}
+		}();
+
+		runDataConstructor(block);
+
+		return block;
 	}
 
 	void Memory::deleteBlock(Ref<Block> block) {
@@ -304,6 +311,14 @@ namespace vm {
 		iterateOverDataAndExecute(block, &Memory::runObjectCopyConstructor);
 	}
 
+	void Memory::runDataConstructor(Ref<Block> block) {
+		iterateOverDataAndExecute(block, &Memory::runObjectConstructor);
+	}
+
+	void Memory::runDataConstructor(base::ModRawView data, TypeCRef type) {
+		iterateOverDataAndExecute(data, type, &Memory::runObjectConstructor);
+	}
+
 	void Memory::runDataCopyConstructors(base::ModRawView data, TypeCRef type) {
 		iterateOverDataAndExecute(data, type, &Memory::runObjectCopyConstructor);
 	}
@@ -382,6 +397,25 @@ namespace vm {
 			// There is nothing to do with variant, data and tables, because the data should be
 			// already deleted thanks to the nested blocks structure, that deletes the nested
 			// block's data first.
+			break;
+		default:
+			CORE_PANIC("Handling default");
+		}
+	}
+
+	void Memory::runObjectConstructor(base::ModRawView data, TypeCRef type) {
+		switch (type->getKind()) {
+		case Type::Kind::Data: {
+			writeToView<const Type*>(data, type.get());
+			break;
+		}
+		case Type::Kind::Pointer:
+		case Type::Kind::Primitive:
+		case Type::Kind::Function:
+		case Type::Kind::Opaque:
+		case Type::Kind::DynamicTable:
+		case Type::Kind::FixedSizeTable:
+		case Type::Kind::Variant:
 			break;
 		default:
 			CORE_PANIC("Handling default");

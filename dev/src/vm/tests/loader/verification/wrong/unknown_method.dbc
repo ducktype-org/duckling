@@ -13,9 +13,7 @@ type class: A {
 
 function main { i64, ptr_argv } -> i64 {
     init_lany_type a_obj, pointer_A;
-    alloc_lptr_type a_obj, A;
-    setVTable_lptr_type a_obj, A;
-    virtual_call_lptr_method a_obj, method_foo_void_impl_A;
+    alloc_lptr_type a_obj, A;    virtual_call_lptr_method a_obj, method_foo_void_impl_A;
 
     deinit; # a_obj
     deinit; # argv*
