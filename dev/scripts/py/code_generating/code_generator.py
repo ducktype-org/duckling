@@ -114,24 +114,24 @@ class CodeGenerator(ABC):
     # Variables
     @abstractmethod
     def variable_declaration(self, var_name: str, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
 
     @abstractmethod
     def constant_declaration(self, var_name: str, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
 
     @abstractmethod
     def assignment(self, var_name: str, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
     
     # Functions
     @abstractmethod
     def function_definition(self, func_name: str, scope: ScopeData) -> FunctionData:
-        assert False
+        assert False, "Trying to call abstract method."
     
     @abstractmethod
     def argument_list(self, length: int) -> str:
-        assert False
+        assert False, "Trying to call abstract method."
     
     def return_statement(self, scope: ScopeData):
         self.indenter.add_fragment("return ")
@@ -146,15 +146,16 @@ class CodeGenerator(ABC):
     # Control flow
     @abstractmethod
     def if_statement(self, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
     
     @abstractmethod
     def while_loop(self, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
     
     # Literals
+    @abstractmethod
     def int_literal(self, value: int):
-        assert False
+        assert False, "Trying to call abstract method."
 
     # Simple elements
     def operator(self, operator: str):
@@ -166,20 +167,20 @@ class CodeGenerator(ABC):
     # Special elements
     @abstractmethod
     def import_statement(self, module: ModuleData) -> ScopeData:
-        assert False
+        assert False, "Trying to call abstract method."
     
     @abstractmethod
     def preambule(self) -> ScopeData:
-        assert False
+        assert False, "Trying to call abstract method."
             
     @abstractmethod
     def print(self, scope: ScopeData):
-        assert False
+        assert False, "Trying to call abstract method."
 
     @abstractmethod
     @contextmanager
     def main_function(self):
-        assert False
+        assert False, "Trying to call abstract method."
 
 
 class LogicGenerator:
@@ -364,4 +365,4 @@ class LogicGenerator:
 # TODOs:
 # 1. Only assign to modifiable value
 # 2. Declare vars without starting value as well
-# 3. Klasy
+# 3. Classes
