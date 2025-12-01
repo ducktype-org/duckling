@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="images/readme_logo.svg" alt="Duckling programming language" width="50%">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="images/readme_logo_yellow.svg">
+        <img alt="Duckling programming language" src="images/readme_logo_yellow.svg">
+    </picture>
 </div>
 
 
