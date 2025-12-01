@@ -98,10 +98,11 @@ fn parse_features(
             }
             FeatureSchema::Detailed(detailed_feature) => {
                 for (name, conditions) in detailed_feature.0.iter() {
-                    scope.push(name.into());
+                    let name = name.into();
+                    scope.push(name);
                     scope.push(static_str_id!("conditions"));
                     result.push(DependencyFeature::new(
-                        name.into(),
+                        name,
                         Some(parse_conditions(conditions, scope)?),
                     ));
                     scope.pop();
@@ -127,14 +128,12 @@ fn vec_string_to_vec_str_id<T>(input: &[T]) -> Vec<StrId>
 where
     for<'a> &'a T: Into<StrId>,
 {
-    input.iter().map(|string| string.into()).collect()
+    input.iter().map(<&T>::into).collect()
 }
 
 fn parse_real_name(schema: &DependencySchema) -> Option<StrId> {
     match schema.source.as_ref() {
-        Some(DependencySource::Detailed(detailed)) => {
-            detailed.name.as_ref().map(|name| name.into())
-        }
+        Some(DependencySource::Detailed(detailed)) => detailed.name.as_ref().map(<&String>::into),
         _ => None,
     }
 }

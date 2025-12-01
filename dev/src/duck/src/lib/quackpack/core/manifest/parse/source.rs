@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use tracing::debug;
@@ -81,82 +81,76 @@ pub(crate) fn parse(
             check_no_git(source, scope)?;
             check_no_registry(source, scope)?;
             debug!("manifest path is `{root}`");
-            let home = ctx.user_home();
-            let Some(home) = home.to_str() else {
-                bail!(
-                    "the user home directory `{}` is not a utf-8 path, which is unsupported",
-                    home.display()
-                )
-            };
-            let expanded = Path::new(root)
-                .expand_user_with(home)
-                .with_context(|| format!("failed to expand the tildes from the path `{root}`"))?;
-            if expanded.is_absolute() {
-                Local::new(expanded.to_path_buf(), root.into()).into()
-            } else {
-                let dir_root = package_root.join(expanded);
-                Local::new(dir_root.expand_user_with(home)?.resolve()?, root.into()).into()
-            }
+            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
+            Local::new(dir_root, root.into()).into()
         }
         (None, None, Some(git_url)) => {
             debug!("found a git source");
             check_no_local(source, scope)?;
             check_no_registry(source, scope)?;
-            debug!(?scope);
-            let rev = match (source.branch.as_ref(), source.tag.as_ref()) {
-                (None, None) => GitRevision::Main,
-                (None, Some(tag)) => GitRevision::Tag(tag.into()),
-                (Some(branch), None) => GitRevision::Branch(branch.into()),
-                (Some(_), Some(_)) => {
-                    let formatted = scope.format();
-                    bail!(
-                        "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: \
-                        `{formatted}.branch`, `{formatted}.commit`"
-                    );
-                }
-            };
+            let rev = resolve_git_rev(source, scope)?;
             Git::new(
                 git_url.into(),
                 rev,
-                source.commit.as_ref().map(|commit| commit.into()),
+                source.commit.as_ref().map(<&String>::into),
             )
             .into()
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
-            bail!(
-                "couldn't determine the source of the dependency `{}`\n\
-                hint: remove one of the fields `source.path` or `source.git_url`",
-                scope.format()
-            )
+            bail!(make_could_not_determine_error(scope, ["path", "git_url"]))
         }
         (Some(_), None, Some(_)) => {
             scope.pop();
-            bail!(
-                "couldn't determine the source of the dependency `{}`\n\
-                hint: remove one of the fields `source.registry_url` or `source.git_url`",
-                scope.format()
-            )
+            bail!(make_could_not_determine_error(
+                scope,
+                ["registry_url", "git_url"]
+            ))
         }
         (Some(_), Some(_), None) => {
             scope.pop();
-            bail!(
-                "couldn't determine the source of the dependency `{}`\n\
-                hint: remove one of the fields `source.registry_url` or `source.path`",
-                scope.format()
-            )
+            bail!(make_could_not_determine_error(
+                scope,
+                ["registry_url", "path"]
+            ))
         }
         (Some(_), Some(_), Some(_)) => {
             scope.pop();
-            bail!(
-                "couldn't determine the source of the dependency `{}`\n\
-                hint: leave only one of the fields: \
-                `source.registry_url`, `source.path`, or `source.git_url`",
-                scope.format()
-            )
+            bail!(make_could_not_determine_error(
+                scope,
+                ["registry_url", "path", "git_url"]
+            ))
         }
     };
     Ok(source)
+}
+
+#[track_caller]
+fn make_could_not_determine_error<const N: usize>(
+    scope: &Scope,
+    fields: [&'static str; N],
+) -> String {
+    assert!(N == 2 || N == 3, "implementation relies on it");
+    let source = fields
+        .iter()
+        .map(|field| format!("`source.{}`", field))
+        .collect::<Vec<_>>();
+    let hint_text = if N == 2 {
+        format!(
+            "hint: remove one of the fields {} or {}",
+            source[0], source[1]
+        )
+    } else {
+        format!(
+            "hint: leave only one of the fields: {}, {}, or {}",
+            source[0], source[1], source[2]
+        )
+    };
+    format!(
+        "couldn't determine the source of the dependency `{}`\n{}",
+        scope.format(),
+        hint_text
+    )
 }
 
 fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
@@ -213,4 +207,43 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
         }
     }
     Ok(())
+}
+
+fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRevision> {
+    match (source.branch.as_ref(), source.tag.as_ref()) {
+        (None, None) => Ok(GitRevision::Main),
+        (None, Some(tag)) => Ok(GitRevision::Tag(tag.into())),
+        (Some(branch), None) => Ok(GitRevision::Branch(branch.into())),
+        (Some(_), Some(_)) => {
+            let formatted = scope.format();
+            bail!(
+                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.commit`"
+            );
+        }
+    }
+}
+
+fn resolve_local_dep_root(
+    manifest_root: &str,
+    package_root: &Path,
+    ctx: QpCtx<'_>,
+) -> QuackResult<PathBuf> {
+    let home = ctx.user_home();
+    let Some(home) = home.to_str() else {
+        bail!(
+            "the user home directory `{}` is not a utf-8 path, which is unsupported",
+            home.display()
+        )
+    };
+    let expanded = Path::new(manifest_root)
+        .expand_user_with(home)
+        .with_context(|| format!("failed to expand the tildes from the path `{manifest_root}`"))?;
+    if expanded.is_absolute() {
+        Ok(expanded.to_path_buf())
+    } else {
+        Ok(package_root
+            .join(expanded)
+            .expand_user_with(home)?
+            .resolve()?)
+    }
 }

@@ -8,7 +8,9 @@ use super::dependency;
 use crate::{
     QpCtx, QuackResult, StrId,
     quackpack::{
-        core::{CompilerSpecificOptions, Features, Manifest, Profiles, RootDescription},
+        core::{
+            CompilerSpecificOptions, Features, Manifest, PackageMetadata, Profiles, RootDescription,
+        },
         schemas::manifest::{CompilerOptions, Manifest as ManifestSchema},
     },
     static_str_id,
@@ -41,18 +43,24 @@ pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: QpCtx<'_>) -> Qua
     let features = parse_features(schema.features.as_ref())
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
     scope.pop();
+
     let profiles = Profiles::new(parse_compiler_flags(schema.profiles.as_ref()));
+
     let authors = metadata
         .authors
         .as_ref()
-        .map(|vec| vec.iter().map(|x| x.into()).collect())
+        .map(|vec| vec.iter().map(<&String>::into).collect())
         .unwrap_or_default();
+    let package_metadata = PackageMetadata::new(
+        authors,
+        metadata.license.as_ref().map(<&String>::into),
+        metadata.description.as_ref().map(<&String>::into),
+    );
+
     Ok(Manifest::new(
         root_description,
         features,
-        authors,
-        metadata.license.as_ref().map(|x| x.into()),
-        metadata.description.as_ref().map(|x| x.into()),
+        package_metadata,
         dependencies,
         dev_deps,
         profiles,
@@ -65,7 +73,7 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
     };
     let as_hash_map = features
         .iter()
-        .map(|(k, v)| (k.into(), v.iter().map(|x| x.into()).collect()))
+        .map(|(k, v)| (k.into(), v.iter().map(<&String>::into).collect()))
         .collect();
     Features::new(as_hash_map)
 }
@@ -82,7 +90,7 @@ fn parse_compiler_flags(
             let opts = CompilerSpecificOptions::new(
                 v.compiler_flags
                     .as_ref()
-                    .map(|vec| vec.iter().map(|x| x.into()).collect())
+                    .map(|vec| vec.iter().map(<&String>::into).collect())
                     .unwrap_or_default(),
             );
             (k.into(), opts)

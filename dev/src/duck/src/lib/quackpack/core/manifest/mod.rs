@@ -7,6 +7,7 @@
 mod compiler_options;
 mod dependency;
 mod features;
+mod metadata;
 mod parse;
 mod root_description;
 mod source;
@@ -16,19 +17,16 @@ pub use parse::*;
 pub use compiler_options::*;
 pub use dependency::*;
 pub use features::*;
+pub use metadata::*;
 pub use root_description::*;
 pub use source::*;
-
-use crate::StrId;
 
 #[derive(Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
     root_description: RootDescription,
     features: Features,
-    authors: Vec<StrId>,
-    license: Option<StrId>,
-    description: Option<StrId>,
+    metadata: PackageMetadata,
     dependencies: Dependencies,
     dev_dependencies: Dependencies,
     profiles: Profiles,
@@ -36,13 +34,10 @@ pub struct Manifest {
 
 impl Manifest {
     /// Create a new manifest.
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         root_description: RootDescription,
         features: Features,
-        authors: Vec<StrId>,
-        license: Option<StrId>,
-        description: Option<StrId>,
+        metadata: PackageMetadata,
         dependencies: Dependencies,
         dev_dependencies: Dependencies,
         profiles: Profiles,
@@ -50,9 +45,7 @@ impl Manifest {
         Self {
             root_description,
             features,
-            authors,
-            license,
-            description,
+            metadata,
             dependencies,
             dev_dependencies,
             profiles,
@@ -69,19 +62,9 @@ impl Manifest {
         &self.features
     }
 
-    /// Get the list of authors.
-    pub fn authors(&self) -> &[StrId] {
-        &self.authors
-    }
-
-    /// Get the license identifier, if any.
-    pub fn license(&self) -> Option<StrId> {
-        self.license
-    }
-
-    /// Get the package description, if any.
-    pub fn description(&self) -> Option<StrId> {
-        self.description
+    /// Get the package metadata
+    pub fn metadata(&self) -> &PackageMetadata {
+        &self.metadata
     }
 
     /// Get the dependencies.

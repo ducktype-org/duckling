@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::Path};
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 use rustvil::fs::PathExt;
 use tracing::{debug, trace};
 
@@ -51,21 +51,7 @@ impl PackageLoader {
         ctx: QpCtx<'duck>,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageCtx<'duck>> {
-        let start = start
-            .expand_user()
-            .with_context(|| {
-                format!(
-                    "failed to expand the tildes of the path `{}`",
-                    start.display()
-                )
-            })?
-            .resolve()
-            .with_context(|| {
-                format!(
-                    "failed to resolve the symlinks of the path `{}`",
-                    start.display()
-                )
-            })?;
+        let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
             bail!("the path `{}` is not a directory", start.display())
         }
