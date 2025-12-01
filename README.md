@@ -21,7 +21,7 @@
 -----
 
 
-**This is the main Duckling development repository of the Duckling programming language** – a modern, in-development programming language focusing on bridging scripting and compiled world together, providing fast prototyping and low friction while maintaining scalability and performance.
+**This is the main Duckling development repository of the Duckling programming language** – a modern, in-development programming language focusing on bridging scripting and compiled worlds together, providing fast prototyping and low friction while maintaining scalability and performance.
 
 # Important Notice
 
@@ -30,16 +30,15 @@ We encourage you to try it out, provide feedback and get involved,
 but at this point you should still expect the compiler and toolchain to not be stable,
 and breaking changes to be introduced regularly.
 
+# Project Status
+
+Duckling is an in-development programming language. The first ideas for the language appeared in 2021, and proper development started in 2023.
+Our focus and development status as of December 2025, divided by the main sub-parts of the project:
+
+* **Documentation** – we have stabilized initial documentation of the language, covering most important features, that sets a vision for a 1.0 version of the language.
 
 
-## Documentation website
+# Documentation website
 
-The documentation for the project can be found at [https://internal.ducktype.org/docs/](https://internal.ducktype.org/docs/).
-
-- **Login**: `dev`
-- **Password**: `7ocwXWOAwg=`
-
-## Repo setup and build instructions
-
-Instructions for building the project are in the [Developer Guide - Building the project](https://internal.ducktype.org/docs/doxygen/html/md__2home_2runner_2work_2duckling_2duckling_2dev_2docs_2developer-guides_2building-the-repo.html) section of the documentation.
+User documentation of the language and related tools can be found at [https://docs.duckling.pl/](https://docs.duckling.pl/).
 
