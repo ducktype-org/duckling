@@ -134,6 +134,13 @@ namespace dia_int {
 		return base::strConcat("msg_", counter++);
 	}
 
+	dia_file::ExploreEdge ExploreLink::getValue(MessageBase& message) const {
+		dia_file::ExploreEdge edge;
+		for (const auto& arg: arguments)
+			edge.params.put(arg->getName(), arg->getValue(message));
+		edge.name = message_id;
+		return edge;
+	}
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::MessageBase);

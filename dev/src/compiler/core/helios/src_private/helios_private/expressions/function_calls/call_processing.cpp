@@ -94,6 +94,7 @@ namespace compiler::helios::code {
 	};
 
 	struct NoMatch final {
+		SymID        function;
 		MatchFailure reason;
 	};
 
@@ -115,7 +116,8 @@ namespace compiler::helios::code {
 		bool                                        coercion_present = false;
 
 		if (positional_arguments.size() > decl->parameters.size())
-			return NoMatch{ TooManyCallArguments{} };
+			return NoMatch{ .function = fun,
+				            .reason   = TooManyCallArguments{ decl->parameters.size() } };
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
@@ -124,7 +126,11 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{ i } };
+			if (coercion.hasError())
+				return NoMatch{ .function = fun,
+					            .reason   = TypeMismatch{ .given_type     = provided_type,
+					                                      .expected_type  = expected_type,
+					                                      .argument_index = i } };
 			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
@@ -142,7 +148,9 @@ namespace compiler::helios::code {
 			for (usize param_idx{ 0 }; param_idx < decl->parameters.size(); param_idx++) {
 				if (decl->parameters[param_idx].name == name) {
 					if (argument_origin[param_idx].has_value())
-						return NoMatch{ DuplicateNamedArgument{ i } };
+						return NoMatch{ .function = fun,
+							            .reason   = DuplicateNamedArgument{
+                                            positional_arguments.size() + i } };
 
 					param_idx_with_matching_name = param_idx;
 					break;
@@ -151,7 +159,10 @@ namespace compiler::helios::code {
 
 			// Name mismatch case.
 			if (param_idx_with_matching_name.empty())
-				return NoMatch{ UnknownNamedArgument{ name } };
+				return NoMatch{ .function = fun,
+					            .reason   = UnknownNamedArgument{
+									  .name           = name,
+									  .argument_index = positional_arguments.size() + i } };
 
 			usize           param_idx = param_idx_with_matching_name.value();
 			tsh::SymbolType provided_type
@@ -159,7 +170,12 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{ param_idx } };
+			if (coercion.hasError())
+				return NoMatch{ .function = fun,
+					            .reason   = TypeMismatch{ .given_type    = provided_type,
+					                                      .expected_type = expected_type,
+					                                      .argument_index
+                                                        = positional_arguments.size() + i } };
 			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
 
 			argument_origin[param_idx]
@@ -178,7 +194,7 @@ namespace compiler::helios::code {
 						decl->parameters[i].initial_value.value()->expression_type.getSymbolType()
 					));
 				} else
-					return NoMatch{ MissingCallArgument{ i } };
+					return NoMatch{ .function = fun, .reason = MissingCallArgument{ i } };
 			}
 		}
 
@@ -302,6 +318,7 @@ namespace compiler::helios::code {
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;
+		std::vector<NoMatch>       no_match;
 
 
 		for (auto candidate: candidates) {
@@ -317,10 +334,7 @@ namespace compiler::helios::code {
 			}
 		}
 
-		if (exact_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousExactMatches>(call_expr->getSourcePosition()));
-			return query::QError(errors::Failed());
-		}
+		if (exact_match.size() > 1) {}
 		if (exact_match.size() == 1) {
 			return constructCallExpr(
 				ctx,
@@ -331,6 +345,7 @@ namespace compiler::helios::code {
 				{}
 			);
 		}
+
 
 		if (coercion_match.size() > 1) {
 			ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));

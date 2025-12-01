@@ -1,0 +1,28 @@
+metadata:
+  type: "note"
+  family: "type_check"
+  name: "exact_candidate"
+  code: "6010"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  code:
+    description: "Declaration snippet of the candidate."
+  code_location:
+    description: "Location of the declaration snippet."
+
+
+header_message:
+  - "Found exact candidate."
+
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+

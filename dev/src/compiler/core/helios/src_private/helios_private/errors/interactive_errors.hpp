@@ -35,7 +35,7 @@ namespace compiler::helios::errors {
 		tsh::SymbolType<>                             symbol_type;
 		base::Optional<pst::Access<pst::ExprElement>> pst_expr;
 
-		Box<dia_file::Component> build(MessageBase& msg) final;
+		Box<dia_file::Component> getValue(MessageBase& msg) final;
 
 	public:
 		InteractiveType(

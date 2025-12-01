@@ -109,7 +109,7 @@ namespace dia_int {
 
 	class InteractiveElement {
 	public:
-		virtual Box<dia_file::Component> build(MessageBase&)    = 0;
+		virtual Box<dia_file::Component> getValue(MessageBase&)    = 0;
 
 		virtual ~InteractiveElement() = default;
 	};
@@ -124,7 +124,7 @@ namespace dia_int {
 			  element(std::move(element)) {}
 
 		Box<dia_file::Component> getValue(MessageBase& message) override {
-			return element->build(message);
+			return element->getValue(message);
 		}
 	};
 
@@ -163,8 +163,17 @@ namespace dia_int {
 			  position(position) {}
 	};
 
+	
 	class ExploreLink {
 		std::string message_id;
+		std::vector<Box<Argument>> arguments;
+
+	public:
+		ExploreLink(std::string message_id, std::vector<Box<Argument>> arguments):
+			  message_id(std::move(message_id)),
+			  arguments(std::move(arguments)) {}	
+		
+		dia_file::ExploreEdge getValue(MessageBase& message) const;
 	};
 
 	class MessageBase {
@@ -219,6 +228,11 @@ namespace dia_int {
 		}
 
 		void addExploreLink(ExploreLink link) { explore_links.push_back(std::move(link)); }
+
+		template<typename... Args>
+		void addExploreLink(Args&&... args) {
+			explore_links.push_back(ExploreLink(std::forward<Args>(args)...));
+		}
 
 		void addLinkedMessage(std::string id, Box<MessageBase> message) {
 			linked_messages.insertOrAssign(std::move(id), std::move(message));

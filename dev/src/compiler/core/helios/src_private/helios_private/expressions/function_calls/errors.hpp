@@ -3,35 +3,47 @@
  * @author Wojciech Rzepliński
  * @brief Errors and error messages related to function call processing.
  */
+#pragma once
 
+#include "frontend/pst_parser/elements/hierarchy/expressions/call.hpp"
+#include "helios/scope_symbol_id.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
-#include "string_id/string_id.hpp"
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/usage.hpp>
+
+#include "diagnostic/source_position.hpp"
 #include <diagnostic/message.hpp>
 
 namespace compiler::helios::code {
 	/**
 	 * @brief These are structs representing specific reasons why a function call matching
-	 * could have failed. The contents of these structs will be used to create detailed error messages.
+	 * could have failed. The contents of these structs will be used to create detailed error
+	 * messages.
 	 */
 
 	struct PositionalAfterNamedArgument final {
 		usize argument_index;
 	};
-	
+
 	struct TooManyCallArguments final {
-		usize last_valid_argument;
+		usize valid_arguments;
+		usize total_arguments;
 	};
 
 	struct DuplicateNamedArgument final {
-		usize index_in_named_list;
+		usize argument_index;
 	};
 
 	struct UnknownNamedArgument final {
-		base::StrID argument;
+		base::StrID name;
+		usize       argument_index;
 	};
 
 	struct TypeMismatch final {
-		usize parameter_index;
+		tsh::SymbolType<> given_type;
+		tsh::SymbolType<> expected_type;
+		usize             argument_index;
 	};
 
 	struct MissingCallArgument final {
@@ -44,66 +56,32 @@ namespace compiler::helios::code {
 		DuplicateNamedArgument,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument>;
+		MissingCallArgument,
+		PositionalAfterNamedArgument>;
 
-	class AmbiguousExactMatches final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Ambiguous exact matches found during function overloading.";
+
+	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+						.type          = "error",
+						.family        = "type_check",
+						.name          = "ambiguous_function_matches" };
 		}
 
 	public:
-		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
+		AmbiguousMatchesError(dia::SourcePosition source_position):
+				MessageWithCodeFragmentAndCause(source_position) {}
 
-		explicit AmbiguousExactMatches(const dia::SourcePosition& source_position):
-			  Error(source_position) {}
+		void addExploreCoercibleCandidates(usize no_candidates, Box<dia::Message> candidate_list);
+
+		void addExploreFailedCandidates(usize no_candidates, Box<dia::Message> candidate_list);
 	};
 
-	class AmbiguousCoercionMatches final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Ambiguous matches requiring argument coercions during function overloading.";
-		}
-
-	public:
-		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
-
-		explicit AmbiguousCoercionMatches(const dia::SourcePosition& source_position):
-			  Error(source_position) {}
-	};
-
-	class InvalidCallExpression final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Call expression doesn't match the signature of any function.";
-		}
-
-	public:
-		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
-
-		explicit InvalidCallExpression(const dia::SourcePosition& source_position):
-			  Error(source_position) {}
-	};
-
-	/**
-	 * If there was more than one exact matches we always attach the both to the displayed error,
-	 * but we add a coercion matches and failed matches as explore links.
-
-	 * If there was more than one coercion matches we always attach the both to the displayed error,
-	 * but we add failed matches as explore links.
-
-	 * If there was no matches we always attach the failed matches.
-	 * The error is like:
-	 * Failed to call candidate function:
-
-	   Failed to call function/method <name>.
-	   <reason for failure>
-
-	   note: Candidate function/method <name>
-	   <snippet of declaration>
-	   error: <reason for failure>
-	 */
+	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
+		query::Context&              ctx,
+		SymID                        function_symbol,
+		pst::Access<pst::expr::Call> call_expr,
+		const MatchFailure&          failure_reason,
+		bool                         is_for_candidate_function_msg
+	);
 }

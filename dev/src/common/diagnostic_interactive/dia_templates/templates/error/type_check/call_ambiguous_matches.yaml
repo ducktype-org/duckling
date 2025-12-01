@@ -1,18 +1,14 @@
 metadata:
   type: "error"
   family: "type_check"
-  name: "incompatible_types"
-  code: "100"
+  name: "call_ambiguous_matches"
+  code: "6001"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"
 
 
 params:
-  given_type:
-    description: "The given type."
-  expected_type:
-    description: "The expected type."
   code:
     description: "The code snippet where the error occurred."
   code_location:
@@ -35,44 +31,3 @@ pointer_messages:
     type: "error"
     content: 
       - "value used here"
-
-explore_links:
-  exact_matches:
-    content:
-      content:
-        - "Found "
-        - param: "no_matches"
-        - " exact matches."
-      url:
-        param: "linked_diagnostic"
-    params:
-      no_matches:
-        description: "Number of exact matches found."
-      linked_diagnostic:
-        description: "A link to a diagnostic message showing the exact matches."
-  ambiguous_matches:
-    content:
-      content:
-        - "Found "
-        - param: "no_matches"
-        - " coercible matches."
-      url:
-        param: "linked_diagnostic"
-    params:
-      no_matches:
-        description: "Number of coercible matches found."
-      linked_diagnostic:
-        description: "A link to a diagnostic message showing the coercible matches."
-  failed_matches:
-    content:
-      content:
-        - "Found "
-        - param: "no_matches"
-        - " failed matches."
-      url:
-        param: "linked_diagnostic"
-    params:
-      no_matches:
-        description: "Number of failed matches found."
-      linked_diagnostic:
-        description: "A link to a diagnostic message showing the failed matches."
