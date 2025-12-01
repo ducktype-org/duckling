@@ -85,8 +85,8 @@ fn print_error(error: anyhow::Error, term: &Terminal) {
     // ```
     // With some playing with an error and context types to see what gets printed.
     //
-    // Note that both options show at most one `InternalError`, but first shows one always,
-    // whereas second only if the `InternalError` is at the bottom of the stack.
+    // Note that both options show at most one `InternalError`, but the first one always shows one,
+    // whereas the second option shows it only if it is at the bottom of the stack.
     //
     // Docs: https://docs.rs/anyhow/latest/anyhow/trait.Context.html#effect-on-downcasting
     if let Some(e) = error.downcast_ref::<InternalError>() {
