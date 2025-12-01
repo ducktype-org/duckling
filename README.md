@@ -1,3 +1,8 @@
+<div align="center">
+  <img src="images/readme_logo.png" alt="Duckling logo">
+</div>
+
+
 # Main Duckling development repository
 
 This is the main repository for the Duckling project. 
