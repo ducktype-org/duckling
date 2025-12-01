@@ -190,32 +190,37 @@ class LogicGenerator:
         self.length = length
         random.seed(seed)        
 
+    # Utils
     def get_module_name(self) -> str:
         return self.generator.get_module_name()
 
-    def generate_non_control_flow(self, scope: ScopeData):
-        action = random.choices(
-            ['declaration', 'assignment', 'print'],
-            weights=[40, 40, 20],
-            k=1
-        )[0]
-        if action == 'declaration':
-            self.generate_variable_declaration(scope)
-        elif action == 'assignment':
-            self.generate_assignment(scope)
-        elif action == 'print':
-            self.generate_print(scope)
-            
+    # Definitons and declaratioins
+    def generate_variable_declaration(self, scope: ScopeData):
+        name = random_identifier(8)
+        self.generator.variable_declaration(name, scope)
+        scope.vars.append(name)
+        
+    def generate_constant_declaration(self, scope: ScopeData):
+        name = random_identifier(8)
+        self.generator.constant_declaration(name, scope)
+        scope.vars.append(name)
+        
+    def generate_function_definition(self, scope: ScopeData):
+        func_name = random_identifier(8)
+        scope.funcs.append(self.generator.function_definition(func_name, scope))
+    
+    # Control flow
     def generate_if_statement(self, scope: ScopeData):
         self.generator.if_statement(scope)
         
     def generate_while_loop(self, scope: ScopeData):
         self.generator.while_loop(scope)
-
+    
+    # Operations and expressions
     def generate_function_call(self, scope: ScopeData):
         if len(scope.funcs) == 0:
             return
-        self.generator.function_call(random.choice(scope.funcs), scope)
+        self.generator.function_call(random.choice(scope.funcs), scope)   
     
     def generate_expression(self, scope: ScopeData, prob: int, allow_function_calls: bool = True):
         op = False
@@ -243,20 +248,6 @@ class LogicGenerator:
         self.generate_expression(scope, prob)
         self.generator.operator(random.choice(['==', '!=', '<', '>', '<=', '>=']))
         self.generate_expression(scope, prob)
-    
-    def generate_variable_declaration(self, scope: ScopeData):
-        name = random_identifier(8)
-        self.generator.variable_declaration(name, scope)
-        scope.vars.append(name)
-    
-    def generate_constant_declaration(self, scope: ScopeData):
-        name = random_identifier(8)
-        self.generator.constant_declaration(name, scope)
-        scope.vars.append(name)
-        
-    def generate_function_definition(self, scope: ScopeData):
-        func_name = random_identifier(8)
-        scope.funcs.append(self.generator.function_definition(func_name, scope))
         
     def generate_assignment(self, scope: ScopeData):
         if len(scope.vars) == 0:
@@ -269,7 +260,21 @@ class LogicGenerator:
     
     def generate_return(self, scope: ScopeData):
         self.generator.return_statement(scope)
-
+    
+    # Generation logic
+    def generate_non_control_flow(self, scope: ScopeData):
+        action = random.choices(
+            ['declaration', 'assignment', 'print'],
+            weights=[40, 40, 20],
+            k=1
+        )[0]
+        if action == 'declaration':
+            self.generate_variable_declaration(scope)
+        elif action == 'assignment':
+            self.generate_assignment(scope)
+        elif action == 'print':
+            self.generate_print(scope)
+            
     def generate_function_body(self, scope: ScopeData):
         with self.generator.indenter:
             for _ in range(random.randint(1, 15)):
@@ -285,7 +290,7 @@ class LogicGenerator:
                 else:
                     self.generate_non_control_flow(scope)
             self.generator.return_statement(scope)
-    
+            
     def generate_imports(self, imports: List[ModuleData]) -> ScopeData:
         combined_scope = ScopeData()
         for module in imports:
@@ -308,7 +313,7 @@ class LogicGenerator:
                 self.generator.line_break()
         
         return scope
-    
+
     def generate_file(self, global_symbol_count: int, imports: List[ModuleData]):
         scope = self.generator.preambule()
         scope += self.generate_imports(imports)
@@ -354,10 +359,9 @@ class LogicGenerator:
                 elif action == 'while_loop':
                     self.generate_while_loop(scope)
                 else:
-                    self.generate_non_control_flow(scope)
+                    self.generate_non_control_flow(scope)    
 
 # TODOs:
 # 1. Only assign to modifiable value
 # 2. Declare vars without starting value as well
-# 3. Multifile
-# 4. Klasy
+# 3. Klasy
