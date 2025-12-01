@@ -1,5 +1,6 @@
 #include "call_processing.hpp"
 
+#include "diagnostic_interactive/message.hpp"
 #include "errors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -117,7 +118,9 @@ namespace compiler::helios::code {
 
 		if (positional_arguments.size() > decl->parameters.size())
 			return NoMatch{ .function = fun,
-				            .reason   = TooManyCallArguments{ decl->parameters.size() } };
+				            .reason   = TooManyCallArguments{
+								  .valid_arguments = decl->parameters.size(),
+								  .total_arguments = positional_arguments.size() } };
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
@@ -305,6 +308,22 @@ namespace compiler::helios::code {
 		return std::monostate{};
 	}
 
+	// template<typename CandidateNote>
+	// Box<dia_int::MessageBase> 
+
+	// Box<dia_int::MessageBase> ambiguousExactMatchesError(
+	// 	pst::Access<pst::expr::Call> call_expr,
+	// 	const std::vector<ExactMatch>&    exact_match,
+	// 	const std::vector<CoercionMatch>& coercion_match,
+	// 	const std::vector<NoMatch>&       no_match
+	// ) {
+	// 	auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+	// 	auto first_candidate_msg = makeBox<ExactCandidateNote>()
+	// 	for (const auto& match: exact_match) {
+			
+	// 	}
+	// }
+
 	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
@@ -329,6 +348,7 @@ namespace compiler::helios::code {
 				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
+					no_match.push_back(data);
 					// For now ignore it, it is handled by the logic bellow.
 				}
 			}
@@ -346,9 +366,8 @@ namespace compiler::helios::code {
 			);
 		}
 
-
 		if (coercion_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
+			// ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
 			return query::QError(errors::Failed());
 		}
 		if (coercion_match.size() == 1) {
@@ -362,7 +381,13 @@ namespace compiler::helios::code {
 			);
 		}
 
-		ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
+		if (candidates.size() == 1) {
+			ctx.logInt(createDetailedCallErrorMessage(
+				ctx, candidates[0], call_expr, no_match[0].reason, true
+			));
+		}
+
+		// ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
 		return query::QError(errors::Failed());
 	}
 }

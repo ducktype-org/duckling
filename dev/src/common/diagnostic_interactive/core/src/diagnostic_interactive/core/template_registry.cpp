@@ -44,8 +44,7 @@ namespace dia_int {
 	// Template Registry Providers
 	// --------------------------------------------------------------------------------
 
-	base::Optional<std::string_view> TemplateResistryMainProvider::loadTemplate(
-		std::string_view path
+	base::Optional<std::string_view> TemplateResistryMainProvider::loadTemplate(std::string_view path
 	) {
 		auto result = dia::templates::loadTemplateFromPath(path);
 		if (result.has_value()) return result.value();
@@ -113,17 +112,23 @@ namespace dia_int {
 		string_view_streambuf buf(str_content_opt.value());
 		std::istream          is(&buf);
 		YAML::Node            yaml_node = YAML::Load(is);
+		try {
+			auto diagnostic_template = template_file::DiagnosticTemplate::fromYaml(yaml_node);
 
-		auto diagnostic_template = template_file::DiagnosticTemplate::fromYaml(yaml_node);
+			if (!checkMetadataMatch(diagnostic_template, metadata)) {
+				throw TemplateEvaluationException(
+					"Loaded template metadata does not match requested metadata."
+				);
+			}
 
-		if (!checkMetadataMatch(diagnostic_template, metadata)) {
+			cache.put(key, std::move(diagnostic_template));
+			return cache[key];
+		}
+		catch (const ParsingTemplateFileError& e) {
 			throw TemplateEvaluationException(
-				"Loaded template metadata does not match requested metadata."
+				base::strConcat("Error parsing template '", key, "': ", e.what())
 			);
 		}
-
-		cache.put(key, std::move(diagnostic_template));
-		return cache[key];
 	}
 
 }

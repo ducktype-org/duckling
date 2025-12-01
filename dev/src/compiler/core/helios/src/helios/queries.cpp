@@ -15,6 +15,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
@@ -28,7 +29,6 @@
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
 
 namespace compiler::helios {
 
@@ -514,8 +514,10 @@ namespace compiler::helios {
 						)
 					);
 					ctx.logInt(makeBox<dia_int::TodoCodeError>(
-						"Left side of assignment is a literal", var.unlock(ctx)->getSourcePosition(),
-						"", "here"
+						"Left side of assignment is a literal",
+						var.unlock(ctx)->getSourcePosition(),
+						"",
+						"here"
 					));
 					return;  // fail
 				}
@@ -576,10 +578,8 @@ namespace compiler::helios {
 
 				// else just create an expression statement:
 
-				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })
-				                .expect("Not handling errors here yet... (ExprStmt)");
-
-				output(code::ExprStmt(std::move(expr)));
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr });
+				if (expr.hasValue()) output(code::ExprStmt(std::move(expr).value()));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
@@ -658,9 +658,7 @@ namespace compiler::helios {
 					          .expect("Not handling errors here yet... (variable initial value)");
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
-					auto coercion           = canCoerce(
-                        ctx, initial_value_type, symbol_type
-                    );
+					auto coercion           = canCoerce(ctx, initial_value_type, symbol_type);
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -677,7 +675,9 @@ namespace compiler::helios {
 						));
 						ctx.logInt(makeBox<errors::IncompatibleTypesError>(
 							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
-							errors::InteractiveType(symbol_type, {stmt->getType()->unlock(ctx)->getExpr().unlock(ctx)}),
+							errors::InteractiveType(
+								symbol_type, { stmt->getType()->unlock(ctx)->getExpr().unlock(ctx) }
+							),
 							errors::InteractiveType(initial_value_type, {})
 						));
 						return;  // fail

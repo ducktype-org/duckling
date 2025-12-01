@@ -27,14 +27,15 @@ header_message:
       is_param_provided: "function_name"
     of:
       true:
-        - "Failed to call"
-        - -param: "function_name"
-        - "."
+        - "Failed to call `"
+        - param: "function_name"
+        - "``."
       false: []
   - "The given argument type `"
   - param: "given_type"
   - "` is incompatible with the expected type `"
   - param: "expected_type"
+  - "`."
 
 
 description:

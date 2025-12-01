@@ -4,12 +4,17 @@ class MY_CLS {
 
 alias ALIASED_CLS = MY_CLS;
 
+fun add_something(a: i64, b: i64) -> i64 = {
+	return a + b;
+}
+
 
 fun foo() -> i64 = {
 	var a: i64 = 23i64;
 	if (9i64) {
 		var b: i32 = i32(7);
-	}
-	var x: ALIASED_CLS = 0;
+	};
+
+	add_something(32f64);
 	return 0;
 }

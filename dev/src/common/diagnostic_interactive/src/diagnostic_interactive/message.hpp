@@ -59,8 +59,8 @@ namespace dia_int {
 
 	class CodeArgument: public Argument {
 		dia::SourcePosition position;
-		usize               lines_before = 2;
-		usize               lines_after  = 2;
+		usize               lines_before = 1;
+		usize               lines_after  = 1;
 
 	public:
 		static void addCodeLines(
@@ -109,7 +109,7 @@ namespace dia_int {
 
 	class InteractiveElement {
 	public:
-		virtual Box<dia_file::Component> getValue(MessageBase&)    = 0;
+		virtual Box<dia_file::Component> getValue(MessageBase&) = 0;
 
 		virtual ~InteractiveElement() = default;
 	};
@@ -163,16 +163,15 @@ namespace dia_int {
 			  position(position) {}
 	};
 
-	
 	class ExploreLink {
-		std::string message_id;
+		std::string                message_id;
 		std::vector<Box<Argument>> arguments;
 
 	public:
 		ExploreLink(std::string message_id, std::vector<Box<Argument>> arguments):
 			  message_id(std::move(message_id)),
-			  arguments(std::move(arguments)) {}	
-		
+			  arguments(std::move(arguments)) {}
+
 		dia_file::ExploreEdge getValue(MessageBase& message) const;
 	};
 
@@ -195,7 +194,9 @@ namespace dia_int {
 		virtual Metadata getMetadata() const = 0;
 
 
-		dia_file::Message buildMessages(base::HashMap<std::string, dia_file::Message>& additional_messages);
+		dia_file::Message buildMessages(
+			base::HashMap<std::string, dia_file::Message>& additional_messages
+		);
 
 	protected:
 		MessageBase() = default;

@@ -13,6 +13,10 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  call_code:
+    description: "The code snippet of the function call."
+  call_code_location:
+    description: "The location of the function call code snippet."
   function_name:
     description: "The name of the function being called."
     optional: true
@@ -23,14 +27,19 @@ header_message:
       is_param_provided: "function_name"
     of:
       true:
-        - "Failed to call "
+        - "Failed to call `"
         - param: "function_name"
-        - ". "
+        - "`. "
       false: []
   - "The call is missing a required argument with no default value."
 
 
 description:
+  - codeblock:
+      param: "call_code"
+    location:
+      param: "call_code_location"
+  - "For the function declared here: "
   - codeblock:
       param: "code"
     location:
@@ -42,4 +51,8 @@ pointer_messages:
     priority: 1
     type: "error"
     content:
-      - "call site is missing this argument"
+      - "missing argument is required here"
+  call_cause:
+    priority: 1
+    type: "error"
+    content: []

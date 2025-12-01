@@ -31,3 +31,15 @@ pointer_messages:
     type: "error"
     content: 
       - "value used here"
+
+explore_links:
+  coercible_candidates:
+    priority: 1
+    type: "note"
+    header:
+      - "The following overloads were considered viable via coercion:"
+  failed_candidates:
+    priority: 1
+    type: "note"
+    header:
+      - "The following overloads were considered but rejected:"

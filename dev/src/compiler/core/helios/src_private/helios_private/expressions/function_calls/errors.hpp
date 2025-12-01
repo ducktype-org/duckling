@@ -59,22 +59,29 @@ namespace compiler::helios::code {
 		MissingCallArgument,
 		PositionalAfterNamedArgument>;
 
-
 	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-						.type          = "error",
-						.family        = "type_check",
-						.name          = "ambiguous_function_matches" };
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "ambiguous_function_matches" };
 		}
 
 	public:
 		AmbiguousMatchesError(dia::SourcePosition source_position):
-				MessageWithCodeFragmentAndCause(source_position) {}
+			  MessageWithCodeFragmentAndCause(source_position) {}
 
-		void addExploreCoercibleCandidates(usize no_candidates, Box<dia::Message> candidate_list);
+		// void addExplore
 
-		void addExploreFailedCandidates(usize no_candidates, Box<dia::Message> candidate_list);
+		void addExploreCoercibleCandidates(
+			usize no_candidates, Box<dia_int::MessageBase> candidate_list
+		);
+
+		void addExploreFailedCandidates(
+			usize no_candidates, Box<dia_int::MessageBase> candidate_list
+		);
+
+		void addExploreExactCandidates(usize no_candidates, Box<dia_int::MessageBase> candidate_list);
 	};
 
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
@@ -84,4 +91,43 @@ namespace compiler::helios::code {
 		const MatchFailure&          failure_reason,
 		bool                         is_for_candidate_function_msg
 	);
+
+	class CandidateCoercibleNote final: public dia_int::MessageWithCodeFragment {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "coercible_candidate" };
+		}
+
+	public:
+		CandidateCoercibleNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragment(source_position) {}
+	};
+
+	class ExactCandidateNote final: public dia_int::MessageWithCodeFragment {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "exact_candidate" };
+		}
+
+	public:
+		ExactCandidateNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragment(source_position) {}
+	};
+
+	class FailedCandidateNote final: public dia_int::MessageWithCodeFragment {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "failed_candidate" };
+		}
+
+	public:
+		FailedCandidateNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragment(source_position) {}
+	};
 }

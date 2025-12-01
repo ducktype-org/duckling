@@ -1,8 +1,12 @@
 #include "message.hpp"
-#include <string>
-#include "base/collections/maps.hpp"
 
 #include "diagnostic_interactive/core/diagnostic_file.hpp"
+
+#include "base/collections/maps.hpp"
+
+#include "diagnostic/source_position.hpp"
+
+#include <string>
 
 namespace dia_int {
 
@@ -44,6 +48,21 @@ namespace dia_int {
 		}
 	}
 
+	std::vector<PointerMessage> filterMessages(
+		const std::vector<PointerMessage>& messages, dia::SourcePosition snippet_position
+	) {
+		std::vector<PointerMessage> result;
+		for (const auto& msg: messages) {
+			if (msg.position.getStart() >= snippet_position.getStart()
+			    && msg.position.getEnd() <= snippet_position.getEnd()
+			    && msg.position.getLocation()->getSourceFile()
+			           == snippet_position.getLocation()->getSourceFile()) {
+				result.push_back(msg);
+			}
+		}
+		return result;
+	}
+
 	Box<dia_file::Component> CodeArgument::getValue(MessageBase& diag) {
 		// Here would be a lot of code to extract the code fragment from the source file.
 		// And potentially add interactive contents.
@@ -56,12 +75,15 @@ namespace dia_int {
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
 
 		usize begin_char = source->getLine(first_line).first;
-		usize end_char   = source->getLine(last_line).second + 1;
+		usize end_char   = source->getLine(last_line).second + 1;  // excluding last line
 
 
 		auto code_list = std::vector<Box<dia_file::Component>>();
 
-		const auto& pointer_messages = diag.getPointerMessages();
+		const auto& pointer_messages = filterMessages(
+			diag.getPointerMessages(),
+			dia::SourcePosition(position.getLocation(), begin_char, end_char - 1)
+		);
 		if (pointer_messages.empty()) {
 			addCodeLines(code_list, source, begin_char, end_char);
 
@@ -97,13 +119,15 @@ namespace dia_int {
 			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
 		}
 	}
-	dia_file::Message MessageBase::buildMessages(base::HashMap<std::string, dia_file::Message>& additional_messages) {
+
+	dia_file::Message MessageBase::buildMessages(
+		base::HashMap<std::string, dia_file::Message>& additional_messages
+	) {
 		dia_file::Message msg;
 		msg.metadata = getMetadata();
-		for (const auto& arg: arguments)
-			msg.arguments.put(arg->getName(), arg->getValue(*this));
+		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
 
-		
+
 		msg.attached_messages.reserve(this->attached_messages.size());
 
 		for (const auto& attached_msg: attached_messages) {
@@ -112,20 +136,19 @@ namespace dia_int {
 			additional_messages.put(id, attached_msg->buildMessages(additional_messages));
 		}
 
-		for (const auto& [id, value] : this->linked_messages) {
+		for (const auto& [id, value]: this->linked_messages)
 			additional_messages.put(id, value->buildMessages(additional_messages));
-		}
 
 		return msg;
 	}
 
 	Box<dia_int::dia_file::Thread> MessageBase::buildDiagnosticFile() {
-		Box<dia_file::Thread> thread  = makeBox<dia_file::Thread>();
+		Box<dia_file::Thread>                         thread = makeBox<dia_file::Thread>();
 		base::HashMap<std::string, dia_file::Message> additional_messages;
 
-		thread->main_message = buildMessages(additional_messages);
+		thread->main_message        = buildMessages(additional_messages);
 		thread->additional_messages = std::move(additional_messages);
-		
+
 		return thread;
 	}
 
@@ -136,8 +159,7 @@ namespace dia_int {
 
 	dia_file::ExploreEdge ExploreLink::getValue(MessageBase& message) const {
 		dia_file::ExploreEdge edge;
-		for (const auto& arg: arguments)
-			edge.params.put(arg->getName(), arg->getValue(message));
+		for (const auto& arg: arguments) edge.params.put(arg->getName(), arg->getValue(message));
 		edge.name = message_id;
 		return edge;
 	}

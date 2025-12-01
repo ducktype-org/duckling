@@ -39,7 +39,7 @@ namespace compiler::helios::errors {
 
 	public:
 		InteractiveType(
-			tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::ExprElement>> pst_expr
+			tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::ExprElement>> pst_expr = {}
 		);
 	};
 
