@@ -7,6 +7,14 @@
     <h1 style="margin: 10px 0;">Duckling programming language</h1>
 </div>
 
+<p align="center">
+  <a href="https://docs.duckling.pl/">Documentation</a>
+  ·
+  <a href="https://duckling.pl/">Website</a>
+  ·
+  <a href="https://duckling.pl/get_involved/">Community</a>
+</p>
+
 
 # Main Duckling development repository
 
