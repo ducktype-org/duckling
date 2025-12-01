@@ -4,6 +4,7 @@
         <source media="(prefers-color-scheme: light)" srcset="images/readme_logo_dark.svg">
         <img alt="Duckling programming language" src="images/readme_logo_dark.svg" width="50%">
     </picture>
+    <h1 style="margin: 10px 0;">Duckling programming language</h1>
 </div>
 
 
