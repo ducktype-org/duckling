@@ -4,7 +4,7 @@
         <source media="(prefers-color-scheme: light)" srcset="images/readme_logo_dark.svg">
         <img alt="Duckling programming language" src="images/readme_logo_dark.svg" width="50%">
     </picture>
-    <p>Duckling is the in-development programming language</p>
+    <!-- <p>Duckling is the in-development programming language</p> -->
 </div>
 
 ------
@@ -16,6 +16,14 @@
   ·
   <a href="https://duckling.pl/get_involved/">Community</a>
 </p>
+
+# Important Note
+
+Duckling is an in-development programming language.
+We encourage you to try it out, provide feedback and get involved,
+but at this point you should still expect the compiler and toolchain to not be stable,
+and breaking changes to be introduced regularly.
+
 
 
 # Main Duckling development repository
