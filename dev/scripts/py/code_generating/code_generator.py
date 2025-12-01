@@ -41,7 +41,7 @@ class ModuleData:
     symbols: ScopeData
 
 class Indenter:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, clear: bool = True):
         self.level = 0
         self.content = ""
         self.fragment = ""
@@ -50,6 +50,9 @@ class Indenter:
         self.n_lines = 0
 
         atexit.register(self.flush)
+        
+        if clear:
+            open(self.file_path, 'w').close()
 
     def indent(self, text: str):
         for _ in range(self.level):
@@ -89,9 +92,6 @@ class CodeGenerator(ABC):
         self.file_path = file_path
         self.logic_generator = logic_generator
         self.indenter = Indenter(self.file_path)
-
-        # Clear the file.
-        open(self.file_path, 'w').close()
 
     def line_break(self):
         self.indenter.add_text("\n")
@@ -321,7 +321,7 @@ class LogicGenerator:
                 seed=self.seed + i,
                 import_mode=True)
             
-            module = tmp_generator.generate_file(global_symbol_count=100, imports=[])
+            module = tmp_generator.generate_file(global_symbol_count=5, imports=[])
             dependencies.append(module)
         
         return dependencies
