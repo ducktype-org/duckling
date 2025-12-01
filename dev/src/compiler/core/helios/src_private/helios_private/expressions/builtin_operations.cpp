@@ -4,6 +4,7 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 
+#include <tuple>
 #include <utility>
 
 namespace {
@@ -15,7 +16,7 @@ namespace {
 	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
 	 */
-	base::Optional<std::pair<tsh::SymbolType<>, std::pair<Coercion, Coercion>>> findCommonTypewithCoercion(
+	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypewithCoercion(
 		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
 	) {
 		auto lhs_type = lhs->expression_type.getSymbolType();
@@ -23,27 +24,24 @@ namespace {
 
 		// Types the same -> no coercion.
 		if (lhs_type.getType() == rhs_type.getType()) {
-			return std::make_pair(
-				lhs_type,
-				std::make_pair(Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type))
+			return std::make_tuple(
+				lhs_type, Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type)
 			);
 		}
 
 		// Try coercing left to right.
 		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
 		if (lhs_to_rhs.hasValue()) {
-			return std::make_pair(
-				rhs_type,
-				std::make_pair(std::move(lhs_to_rhs.value()), Coercion::emptyCoercion(rhs_type))
+			return std::make_tuple(
+				rhs_type, std::move(lhs_to_rhs.value()), Coercion::emptyCoercion(rhs_type)
 			);
 		}
 
 		// Try coercing right to left.
 		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
 		if (rhs_to_lhs.hasValue()) {
-			return std::make_pair(
-				lhs_type,
-				std::make_pair(Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.value()))
+			return std::make_tuple(
+				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.value())
 			);
 		}
 
@@ -62,8 +60,7 @@ namespace compiler::helios::code {
 			return {};
 		}
 
-		auto [common_type, coercions]     = std::move(common_type_res).value();
-		auto [lhs_coercion, rhs_coercion] = coercions;
+		auto& [common_type, lhs_coercion, rhs_coercion] = common_type_res.value();
 
 		auto operation_kind = common_type.getType().getKind();
 
