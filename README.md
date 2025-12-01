@@ -19,7 +19,7 @@
 
 This is the main Duckling development repository of the Duckling programming language – a modern, in-development programming language.
 
-# Important Note
+# Important Notice
 
 Duckling is an in-development programming language.
 We encourage you to try it out, provide feedback and get involved,
