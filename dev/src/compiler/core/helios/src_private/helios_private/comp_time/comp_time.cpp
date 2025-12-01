@@ -422,7 +422,7 @@ namespace compiler::helios {
 					auto coercion_qresult
 						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
 					if (coercion_qresult.hasError()) {
-						// @TODO: 1620 report error properly when HOUT exposes source positions.
+						// @TODO: #1620 report error properly when HOUT exposes source positions.
 						result = query::QError(errors::Failed());
 						return;
 					}
@@ -475,9 +475,7 @@ namespace compiler::helios {
 				query::Context& ctx, const CompileTimeValue& ctv
 			) {
 				variant_match(ctv.getStorage()) {
-					variant_case(tsh::SymbolType<>, symbol_type) {
-						return symbol_type;
-					}
+					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
 						return tsh::SymbolType<>{
 							ctx.query<tsh::QueryUnitType>({}),

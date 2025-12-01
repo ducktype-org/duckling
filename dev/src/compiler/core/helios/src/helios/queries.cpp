@@ -286,6 +286,7 @@ namespace compiler::helios {
 						  const auto field_type     = field.getType(ctx);
 						  const auto coercion
 							  = canCoerce(ctx, init_expr_type, field_type)
+					                // @TODO: #1620 report error here when HOUT exposes position.
 					                .expect(base::strConcat(
 										"Cannot coerce default field value of type ",
 										init_expr_type.toString(),
