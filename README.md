@@ -45,6 +45,9 @@ Our focus and development status as of December 2025, divided by the main sub-pa
 
 * **QuackPack** – ...
 
+# Why Duckling?
+
+...
 
 # Documentation website
 
