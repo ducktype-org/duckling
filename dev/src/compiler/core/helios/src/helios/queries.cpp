@@ -150,25 +150,20 @@ namespace compiler::helios {
 				pst::AccessLocked<pst::ParamList>                  param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
 			) {
-				// Default return type is a direct unit.
-				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+				auto ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 
 				if (ret.has_value()) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluatePSTExpression>(ret.value().unlock(ctx)->getExpr()
-					    )) {
-						if (auto maybe_type = ctv.value().getType(ctx))
-							ret_type = maybe_type.value();
-						else
-							return;
-					} else {
-						// We just fail here, because we can't continue without type.
+					const auto ret_type_ctv
+						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
+					if (ret_type_ctv.hasError()) {
+						// we just fail here, because we can't continue without type
 						return;
 					}
+					ret_type = ret_type_ctv.value().get<tsh::SymbolType<>>().value();
 				}
 
 				// Parameters:

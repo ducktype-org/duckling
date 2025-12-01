@@ -2,6 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
 
@@ -60,10 +61,24 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Coercion, InvalidCoercion> canCoerce(
-		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
 		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
 		return query::QError{ InvalidCoercion{} };
+	}
+
+	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(
+		query::Context& ctx, const tsh::SymbolType<> from
+	) {
+		return canCoerce(
+			ctx,
+			from,
+			tsh::SymbolType<>{
+				ctx.query<tsh::QueryMetaType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			}
+		);
 	}
 }

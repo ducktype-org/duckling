@@ -4,6 +4,7 @@
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -42,6 +43,15 @@ namespace compiler::helios {
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		CompTimeEvalResult,
 		({ .used_hashes = query::UsedHashes::StableHash })
-
 	)
+
+	/**
+	 * Get a CTV representing a type evaluated from a PST expression.
+	 * @param ctx The query context.
+	 * @param pst_expr The PST expression to evaluate to a type.
+	 * @return The CTV with the type, or errors::Failed if evaluation failed.
+	 */
+	CompTimeEvalResult getTypeCTVFromPST(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	);
 }

@@ -8,6 +8,7 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -417,16 +418,25 @@ namespace compiler::helios {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
-					auto sub_type_result = evalHoutExpr(ctx, sub_type.ref());
-					if (sub_type_result.hasError()) {
+
+					auto coercion_qresult
+						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
+					if (coercion_qresult.hasError()) {
+						// @TODO: 1620 report error properly when HOUT exposes source positions.
+						result = query::QError(errors::Failed());
+						return;
+					}
+					const auto sub_type_coerced
+						= coercion_qresult.value().coerce(ctx, sub_type->clone());
+
+					const auto sub_type_ctv
+						= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
+					if (sub_type_ctv.hasError()) {
 						result = query::QError(errors::Failed());
 						return;
 					}
 
-					match_optional(sub_type_result.value().getType(ctx)) {
-						opt_some(sub_type) { subtypes.emplace_back(sub_type); }
-						opt_none { CORE_PANIC("Type evaluation returned not a type\n"); }
-					}
+					subtypes.emplace_back(sub_type_ctv.value().get<tsh::SymbolType<>>().value());
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
@@ -457,31 +467,46 @@ namespace compiler::helios {
 				                           : query::QError(errors::Failed());
 			}
 
-			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
-				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Unit) {
-					// Lift unit to type by simply returning the unit type.
-					result = CompileTimeValue{ tsh::SymbolType<>{
-						ctx.query<tsh::QueryUnitType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					} };
-					return;
-				}
-
-				if (lift.value_expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
-					// Lift tuple to type by evaluating the CTV to a tuple,
-					// then recursively constructing the type from the elements.
-					auto expr_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
-					if (expr_to_lift.hasError()) {
-						result = query::QError(errors::Failed());
-						return;
+			/**
+			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
+			 * or a unit to a type. Throws if the CTV cannot be lifted to a type.
+			 */
+			static tsh::SymbolType<> liftCTVToTypeRecursively(
+				query::Context& ctx, const CompileTimeValue& ctv
+			) {
+				variant_match(ctv.getStorage()) {
+					variant_case(tsh::SymbolType<>, symbol_type) {
+						return symbol_type;
 					}
-					const auto& ctv = expr_to_lift.value();
-					result          = CompileTimeValue{ ctv.getType(ctx).value() };
+					variant_case_novalue(CompileTimeValue::UnitCTV) {
+						return tsh::SymbolType<>{
+							ctx.query<tsh::QueryUnitType>({}),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable,
+						};
+					}
+					variant_case(CompileTimeValue::TupleCTV, tuple) {
+						std::vector<tsh::SymbolType<>> element_types;
+						element_types.reserve(tuple.getElements().size());
+						for (const auto& sub_ctv: tuple.getElements())
+							element_types.emplace_back(liftCTVToTypeRecursively(ctx, sub_ctv));
+						return tsh::SymbolType<>{
+							ctx.query<tsh::QueryTupleType>({ std::move(element_types) }),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable,
+						};
+					}
+				}
+				CORE_UNREACHABLE();
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
+				auto ctv_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
+				if (ctv_to_lift.hasError()) {
+					result = query::QError(errors::Failed());
 					return;
 				}
-
-				CORE_UNREACHABLE();
+				result = CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.value()));
 			}
 		};
 
@@ -603,4 +628,20 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluatePSTExpression);
+
+	CompTimeEvalResult getTypeCTVFromPST(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	) {
+		const auto hout_qresult = getHoutOfExprWithExpectedType(
+			ctx,
+			pst_expr,
+			tsh::SymbolType<>{
+				ctx.query<tsh::QueryMetaType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			}
+		);
+		if (hout_qresult.hasError()) return query::QError(errors::Failed());
+		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.value().ref() });
+	}
 }

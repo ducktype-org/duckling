@@ -1923,10 +1923,15 @@ private:
 			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
 			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
 
-			assertThrows<compiler::helios::InvalidCoercion>(
-				[&] {
-					ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).valueOrThrow();
-				},
+			ctx.logger.clear();
+			assertTrue(
+				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasError(),
+				"Trying to lift an unliftable tuple to a type should fail."
+			);
+			std::stringstream ss;
+			ctx.logger.dumpLog(false, ss);
+			assertTrue(
+				ss.str().contains("Cannot coerce"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});

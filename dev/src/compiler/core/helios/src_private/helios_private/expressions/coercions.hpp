@@ -7,6 +7,28 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
+	class CannotCoerceError final: public dia::Error {
+		tsh::SymbolType<> from, to;
+
+	protected:
+		[[nodiscard]] std::string toStringBrief() const override {
+			return "Cannot coerce from type '" + from.toString() + "' to type '" + to.toString()
+			     + "'.";
+		}
+
+	public:
+		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
+
+		CannotCoerceError(
+			const dia::SourcePosition& source_position,
+			const tsh::SymbolType<>&   from,
+			const tsh::SymbolType<>&   to
+		):
+			  Error(source_position),
+			  from(from),
+			  to(to) {}
+	};
+
 	struct InvalidCoercion final {};
 	class Coercion;
 
@@ -16,6 +38,14 @@ namespace compiler::helios {
 	 */
 	query::QResult<Coercion, InvalidCoercion> canCoerce(
 		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+	);
+
+	/**
+	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
+	 * a function performing the coercion if it is.
+	 */
+	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(
+		query::Context& ctx, tsh::SymbolType<> from
 	);
 
 	/**
@@ -30,6 +60,7 @@ namespace compiler::helios {
 		 * Main function that creates a coerced expression from the old one.
 		 */
 		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const;
+
 		/**
 		 * The symbol type that was validated to be coercible.
 		 */
@@ -64,5 +95,4 @@ namespace compiler::helios {
 			  validated_from(validated_from),
 			  to(to) {}
 	};
-
 }
