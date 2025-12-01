@@ -7,6 +7,8 @@
     <!-- <p>Duckling is the in-development programming language</p> -->
 </div>
 
+-----
+
 
 <p align="center">
   <a href="https://docs.duckling.pl/">Documentation</a>
