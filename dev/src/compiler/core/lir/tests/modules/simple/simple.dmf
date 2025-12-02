@@ -8,6 +8,14 @@ fun add_something(a: i64, b: i64) -> i64 = {
 	return a + b;
 }
 
+fun add_something(c: i64, d: i64) -> i64 = {
+	return c + d;
+}
+
+fun add_something(c: i64, d: i64, e: i64) -> i64 = {
+	return c + d + e;
+}
+
 
 fun foo() -> i64 = {
 	var a: i64 = 23i64;
@@ -15,6 +23,6 @@ fun foo() -> i64 = {
 		var b: i32 = i32(7);
 	};
 
-	add_something(32f64);
+	add_something(2, 3);
 	return 0;
 }

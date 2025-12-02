@@ -247,6 +247,14 @@ namespace dia_int::state {
 			base::HashMap<std::string, ExploreEdge>         explore_links
 		);
 
+		/**
+		 * @brief Returns message IDs in the order they appear in the message.
+		 *
+		 * Traverses header first, then description, then explore_links.
+		 * Duplicate IDs are included only once (first occurrence).
+		 */
+		std::vector<MessageID> getOrderedMessageLinks() const;
+
 		void debugPrint(std::ostream& out) const;
 	};
 

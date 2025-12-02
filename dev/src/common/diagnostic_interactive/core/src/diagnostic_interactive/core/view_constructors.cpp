@@ -1,5 +1,6 @@
 #include "view_constructors.hpp"
 
+#include "diagnostic_interactive/core/term_ui_view.hpp"
 #include "diagnostic_state.hpp"
 
 namespace dia_int {
@@ -184,17 +185,18 @@ namespace dia_int {
 				current_text += c.content;
 			}
 
-			void visitStartLineComponent(const state::StartLineComponent& c) override {
+			void visitStartLineComponent(const state::StartLineComponent&) override {
 				current_text += "\n";
 			}
 
-			void visitCodeLocationComponent(const state::CodeLocationComponent& c) override {}
+			void visitCodeLocationComponent(const state::CodeLocationComponent&) override {}
 		};
 
 		Diagnostic constructTreeView(const state::Diagnostic& state) {
 			Diagnostic diag;
-			for (auto& msg: state.messages) {
-				Message     view_msg;
+			for (auto& msg_id: state.displayed_messages) {
+				auto& msg = state.messages.at(msg_id);
+				Message view_msg;
 				view_msg.type   = styleTypeFromString(msg.metadata.type);
 				view_msg.code   = msg.metadata.code;
 				view_msg.header = constructTextView(msg.header.ref());
@@ -203,6 +205,14 @@ namespace dia_int {
 					MessageBuilder builder(view_msg.sections, msg.pointer_messages, view_msg.type);
 					msg.description->acceptVisitor(builder);
 					builder.flushText();
+				}
+				if (not msg.explore_links.empty()) {
+					std::string explore_links = "Explore more:\n";
+					for (auto& [id, pm]: msg.explore_links) {
+						auto test = constructTextView(pm.content.ref());
+						explore_links += "* " + test + "\n";
+					}
+					view_msg.sections.emplace_back(TextSection{ explore_links });
 				}
 				diag.messages.push_back(std::move(view_msg));
 			}

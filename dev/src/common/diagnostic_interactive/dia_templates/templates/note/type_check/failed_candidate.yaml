@@ -26,3 +26,8 @@ description:
       param: "code_location"
 
 
+pointer_messages:
+  cause:
+    priority: 1
+    type: "note"
+    content: []

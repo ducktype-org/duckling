@@ -342,7 +342,7 @@ namespace compiler::helios::code {
 			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
 		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
-		this->addExploreLink("exact_matches", std::move(args));
+		this->addExploreLink("exact_candidates", std::move(args));
 	}
 
 
@@ -356,7 +356,7 @@ namespace compiler::helios::code {
 			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
 		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
-		this->addExploreLink("coercible_matches", std::move(args));
+		this->addExploreLink("coercible_candidates", std::move(args));
 	}
 
 	void AmbiguousMatchesError::addExploreFailedCandidates(
@@ -369,6 +369,6 @@ namespace compiler::helios::code {
 			makeBox<dia_int::TextArgument>("no_candidates", std::to_string(no_candidates))
 		);
 		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
-		this->addExploreLink("failed_matches", std::move(args));
+		this->addExploreLink("failed_candidates", std::move(args));
 	}
 }

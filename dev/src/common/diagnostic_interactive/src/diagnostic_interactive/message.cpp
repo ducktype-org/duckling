@@ -6,6 +6,8 @@
 
 #include "diagnostic/source_position.hpp"
 
+#include <algorithm>
+#include <map>
 #include <string>
 
 namespace dia_int {
@@ -64,8 +66,6 @@ namespace dia_int {
 	}
 
 	Box<dia_file::Component> CodeArgument::getValue(MessageBase& diag) {
-		// Here would be a lot of code to extract the code fragment from the source file.
-		// And potentially add interactive contents.
 		auto source = position.getSource();
 
 		usize start_line = position.getStartLineColumn().first;
@@ -75,49 +75,99 @@ namespace dia_int {
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
 
 		usize begin_char = source->getLine(first_line).first;
-		usize end_char   = source->getLine(last_line).second + 1;  // excluding last line
-
+		usize end_char   = source->getLine(last_line).second + 1;
 
 		auto code_list = std::vector<Box<dia_file::Component>>();
 
-		const auto& pointer_messages = filterMessages(
+		const auto pointer_messages = filterMessages(
 			diag.getPointerMessages(),
 			dia::SourcePosition(position.getLocation(), begin_char, end_char - 1)
 		);
+
 		if (pointer_messages.empty()) {
-			addCodeLines(code_list, source, begin_char, end_char);
-
-			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
-		} else if (pointer_messages.size() == 1) {
-			// Single pointer message - highlight the code fragment.
-			auto& pointer_msg = pointer_messages[0];
-
-			usize pointer_start = pointer_msg.position.getStart();
-			usize pointer_end   = pointer_msg.position.getEnd() + 1;
-
-			// Add code before the pointer.
-			addCodeLines(code_list, source, begin_char, pointer_start);
-
-			// Add highlighted code.
-			auto highlighted_code_list = std::vector<Box<dia_file::Component>>();
-
-			addCodeLines(highlighted_code_list, source, pointer_start, pointer_end);
-
-			code_list.emplace_back(base::makeBox<dia_file::PointedComponent>(
-				makeBox<dia_file::ConcatComponent>(std::move(highlighted_code_list)),
-				std::vector<dia_file::PointerMessage>{ dia_file::PointerMessage{ pointer_msg.name } }
-			));
-
-			// Add code after the pointer.
-			addCodeLines(code_list, source, pointer_end, end_char);
-
-			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
-		} else {
-			CORE_PANIC("Not implemented: multiple pointer messages in CodeArgument");
-			// Multiple pointer messages - for simplicity, just return the code without highlights.
 			addCodeLines(code_list, source, begin_char, end_char);
 			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
 		}
+
+		struct PointerMessageID {
+			std::string                 name;
+			base::Optional<std::string> message_id;
+
+			bool operator==(const PointerMessageID&) const = default;
+		};
+
+		// Build sorted list of unique edge positions.
+		// Each edge tracks which pointer messages start/end there.
+		struct Edge {
+			usize                         pos;
+			std::vector<PointerMessageID> starting;  // messages starting at this edge
+			std::vector<PointerMessageID> ending;    // messages ending at this edge
+		};
+
+		std::map<usize, Edge> edge_map;
+		for (const auto& pm: pointer_messages) {
+			usize pm_start = pm.position.getStart();
+			usize pm_end   = pm.position.getEnd() + 1;
+
+			edge_map[pm_start].pos = pm_start;
+			edge_map[pm_start].starting.push_back(PointerMessageID{ .name       = pm.name,
+			                                                        .message_id = pm.message_id });
+
+			edge_map[pm_end].pos = pm_end;
+			edge_map[pm_end].ending.push_back(PointerMessageID{ .name       = pm.name,
+			                                                    .message_id = pm.message_id });
+		}
+
+		// Convert to sorted vector for iteration.
+		std::vector<Edge> edges;
+		edges.reserve(edge_map.size());
+		for (auto& [pos, edge]: edge_map) edges.push_back(std::move(edge));
+		std::ranges::sort(edges, [](const Edge& a, const Edge& b) { return a.pos < b.pos; });
+
+		// Track currently active pointer messages.
+		std::vector<PointerMessageID> active_messages;
+
+		usize current_pos = begin_char;
+
+		for (const auto& edge: edges) {
+			// Add plain code segment before this edge.
+			if (current_pos < edge.pos) {
+				if (active_messages.empty()) {
+					addCodeLines(code_list, source, current_pos, edge.pos);
+				} else {
+					// This segment is highlighted by active messages.
+					auto highlighted = std::vector<Box<dia_file::Component>>();
+					addCodeLines(highlighted, source, current_pos, edge.pos);
+
+					std::vector<dia_file::PointerMessage> ptr_msgs;
+
+					ptr_msgs.reserve(active_messages.size());
+					for (const auto& name: active_messages)
+						ptr_msgs.emplace_back(name.name, name.message_id);
+
+					code_list.emplace_back(base::makeBox<dia_file::PointedComponent>(
+						makeBox<dia_file::ConcatComponent>(std::move(highlighted)),
+						std::move(ptr_msgs)
+					));
+				}
+			}
+
+			// Process endings before starts (close spans first).
+			for (const auto& name: edge.ending) {
+				auto it = std::ranges::find(active_messages, name);
+				if (it != active_messages.end()) active_messages.erase(it);
+			}
+
+			// Add new starting messages.
+			for (const auto& name: edge.starting) active_messages.push_back(name);
+
+			current_pos = edge.pos;
+		}
+
+		// Add remaining code after last edge.
+		if (current_pos < end_char) addCodeLines(code_list, source, current_pos, end_char);
+
+		return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
 	}
 
 	dia_file::Message MessageBase::buildMessages(
@@ -126,7 +176,8 @@ namespace dia_int {
 		dia_file::Message msg;
 		msg.metadata = getMetadata();
 		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
-
+		for (const auto& link: explore_links)
+			msg.explore_links.push_back(link.getValue(*this));
 
 		msg.attached_messages.reserve(this->attached_messages.size());
 

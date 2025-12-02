@@ -1,6 +1,7 @@
 #include "diagnostic_state.hpp"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace dia_int::state {
 	static std::string expandTabs(const std::string& s, usize tab_width = 4) {
@@ -199,5 +200,77 @@ namespace dia_int::state {
 					<< " (prio: " << pm.priority << ")\n";
 			}
 		}
+		if (!explore_links.empty()) {
+			out << "Explore Links:\n";
+			for (const auto& [name, edge]: explore_links) {
+				out << "  Link '" << name << "': ";
+				edge.content->debugPrint(out, 2);
+			}
+		}
+	}
+
+	namespace {
+		/**
+		 * @brief Visitor that collects MessageIDs from attached_messages in traversal order.
+		 */
+		class MessageLinkCollector: public ComponentVisitor {
+			std::vector<MessageID>& result;
+			std::unordered_set<MessageID> seen;
+
+			void addIfNew(MessageID id) {
+				if (seen.insert(id).second) result.push_back(id);
+			}
+
+			void collectFromAttached(const std::vector<MessageID>& attached) {
+				for (auto id: attached) addIfNew(id);
+			}
+
+		public:
+			explicit MessageLinkCollector(std::vector<MessageID>& out): result(out) {}
+
+			void visitTextComponent(const TextComponent& c) override {
+				collectFromAttached(c.attached_messages);
+			}
+
+			void visitCodeComponent(const CodeComponent& c) override {
+				collectFromAttached(c.attached_messages);
+			}
+
+			void visitConcatComponent(const ConcatComponent& c) override {
+				for (const auto& child: c.components) child->acceptVisitor(*this);
+			}
+
+			void visitInteractiveComponent(const InteractiveComponent& c) override {
+				c.primary->acceptVisitor(*this);
+				c.alternative->acceptVisitor(*this);
+			}
+
+			void visitStartLineComponent(const StartLineComponent&) override {}
+
+			void visitCodeBlockComponent(const CodeBlockComponent& c) override {
+				c.content->acceptVisitor(*this);
+			}
+
+			void visitCodeLocationComponent(const CodeLocationComponent&) override {}
+		};
+	}  // namespace
+
+	std::vector<MessageID> Message::getOrderedMessageLinks() const {
+		std::vector<MessageID> result;
+		MessageLinkCollector   collector(result);
+
+		// 1. Header
+		header->acceptVisitor(collector);
+
+		// 2. Description
+		if (description) description->acceptVisitor(collector);
+
+		// 3. Explore links (iterate in insertion order if HashMap preserves it,
+		//    otherwise order is unspecified but we still collect them)
+		for (const auto& [name, edge]: explore_links) {
+			edge.content->acceptVisitor(collector);
+		}
+
+		return result;
 	}
 }

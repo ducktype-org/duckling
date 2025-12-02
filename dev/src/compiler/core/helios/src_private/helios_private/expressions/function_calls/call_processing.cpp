@@ -2,6 +2,8 @@
 
 #include "diagnostic_interactive/message.hpp"
 #include "errors.hpp"
+#include "frontend/pst_parser/elements/hierarchy/declarations/function.hpp"
+#include "helios_private/symbols/symbol_data.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -27,6 +29,7 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace compiler::helios::code {
@@ -308,21 +311,110 @@ namespace compiler::helios::code {
 		return std::monostate{};
 	}
 
-	// template<typename CandidateNote>
-	// Box<dia_int::MessageBase> 
+	void appendExactMatchesErrors(
+		query::Context&                ctx,
+		Box<AmbiguousMatchesError>&    main_msg,
+		const std::vector<ExactMatch>& exact_matches,
+		bool                           as_a_link = false
+	) {
+		if (exact_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
+		for (const auto& match: exact_matches) {
+			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note
+				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
-	// Box<dia_int::MessageBase> ambiguousExactMatchesError(
-	// 	pst::Access<pst::expr::Call> call_expr,
-	// 	const std::vector<ExactMatch>&    exact_match,
-	// 	const std::vector<CoercionMatch>& coercion_match,
-	// 	const std::vector<NoMatch>&       no_match
-	// ) {
-	// 	auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
-	// 	auto first_candidate_msg = makeBox<ExactCandidateNote>()
-	// 	for (const auto& match: exact_match) {
-			
-	// 	}
-	// }
+			if (not first_candidate_msg.has_value())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreExactCandidates(
+				exact_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->appendMessage(std::move(first_candidate_msg).value());
+	}
+
+	void appendCoercibleMatchesErrors(
+		query::Context&                   ctx,
+		Box<AmbiguousMatchesError>&       main_msg,
+		const std::vector<CoercionMatch>& coercible_matches,
+		bool                              as_a_link
+	) {
+		if (coercible_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
+		for (const auto& match: coercible_matches) {
+			auto decl           = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note = makeBox<CoercibleCandidateNote>(
+				getFunctionParamList(ctx, decl)->getSourcePosition()
+			);
+			for (usize i{ 0 }; i < match.coercions.size(); i++) {
+				auto& coercion = match.coercions[i];
+				if (not coercion.isEmptyCoercion()) {
+					auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
+						 coercion.to.toString(), coercion.validated_from.toString()
+					);
+					auto pm_message_id = dia_int::MessageBase::getUniqueID();
+					candidate_note->addLinkedMessage(pm_message_id, std::move(pm));
+					auto param_decl = getNthDeclarationParameter(ctx, decl, i);
+					candidate_note->addPointerMessage("coercion",  param_decl->getSourcePosition(), pm_message_id);
+				}
+			}
+
+			if (not first_candidate_msg.has_value())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreCoercibleCandidates(
+				coercible_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->appendMessage(std::move(first_candidate_msg).value());
+	}
+
+	void appendFailedMatchesErrors(
+		query::Context&              ctx,
+		Box<AmbiguousMatchesError>&  main_msg,
+		pst::Access<pst::expr::Call> call_expr,
+		const std::vector<NoMatch>&  failed_matches,
+		bool                         as_a_link
+	) {
+		if (failed_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
+		for (const auto& match: failed_matches) {
+			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note
+				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
+
+			candidate_note->appendMessage(
+				createDetailedCallErrorMessage(ctx, match.function, call_expr, match.reason, false)
+			);
+
+			if (first_candidate_msg.empty())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreFailedCandidates(
+				failed_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->appendMessage(std::move(first_candidate_msg).value());
+	}
 
 	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
 		query::Context&              ctx,
@@ -354,7 +446,14 @@ namespace compiler::helios::code {
 			}
 		}
 
-		if (exact_match.size() > 1) {}
+		if (exact_match.size() > 1) {
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
+			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
+			ctx.logInt(std::move(main_msg));
+			return query::QError(errors::Failed());
+		}
 		if (exact_match.size() == 1) {
 			return constructCallExpr(
 				ctx,
@@ -367,7 +466,10 @@ namespace compiler::helios::code {
 		}
 
 		if (coercion_match.size() > 1) {
-			// ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
+			ctx.logInt(std::move(main_msg));
 			return query::QError(errors::Failed());
 		}
 		if (coercion_match.size() == 1) {
@@ -385,6 +487,10 @@ namespace compiler::helios::code {
 			ctx.logInt(createDetailedCallErrorMessage(
 				ctx, candidates[0], call_expr, no_match[0].reason, true
 			));
+		} else {
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, false);
+			ctx.logInt(std::move(main_msg));
 		}
 
 		// ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));

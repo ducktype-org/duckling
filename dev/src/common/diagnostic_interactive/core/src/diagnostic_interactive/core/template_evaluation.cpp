@@ -13,6 +13,8 @@
 
 #include <filesystem/file.hpp>
 
+#include <algorithm>
+
 namespace dia_int {
 
 	template<typename T>
@@ -321,6 +323,8 @@ namespace dia_int {
 			));
 
 		current_message_ids.push_back(ctx.thread_ctx.message_mapping.at(message_id_str));
+		std::cout << "Visiting MessageLinkComponent, pushing message ID: " 
+		          << ctx.thread_ctx.message_mapping.at(message_id_str) << "\n";
 		el.content->acceptVisitor(*this);
 		current_message_ids.pop_back();
 	}
@@ -427,7 +431,6 @@ namespace dia_int {
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitLinkComponent(const dia_file::LinkComponent& el) {
-		
 		auto no_links = el.target_messages.size();
 
 		for (const auto& attached_message: el.target_messages)
@@ -651,6 +654,51 @@ namespace dia_int {
 		}
 	}
 
+	/**
+	 * @brief Get the Message Order object
+	 *
+	 * @TODO its stinky, revisit this code in the future, for potential invalid map accesses
+	 */
+	void getMessageOrder(
+		const ThreadEvaluationContext&     ctx,
+		const std::vector<state::Message>& evaluated_messages,
+		std::vector<state::MessageID>&     output,
+		const dia_file::Message&           msg,
+		const state::Message&              evaluated_msg
+	) {
+		for (auto& msg_id: msg.attached_messages) {
+			auto evaluated_id = ctx.message_mapping.at(msg_id);
+			if (std::ranges::find(output, evaluated_id) != output.end()) continue;
+
+			output.push_back(evaluated_id);
+			getMessageOrder(
+				ctx,
+				evaluated_messages,
+				output,
+				ctx.thread.additional_messages.at(msg_id),
+				evaluated_messages[evaluated_id]
+			);
+		}
+
+		for (auto& msg_id: evaluated_msg.getOrderedMessageLinks()) {
+			if (std::ranges::find(output, msg_id) != output.end()) continue;
+
+			output.push_back(msg_id);
+			getMessageOrder(
+				ctx,
+				evaluated_messages,
+				output,
+				ctx.thread.additional_messages.at(
+					std::ranges::find_if(
+						ctx.message_mapping, [&](const auto& pair) { return pair.second == msg_id; }
+					)->first
+				),
+				evaluated_messages[msg_id]
+			);
+		}
+
+	}
+
 	state::Diagnostic evaluateDiagnostic(const dia_file::Thread& thread) {
 		const state::MessageID main_message_id = 0;
 		TemplateRegistry&      registry        = TemplateRegistry::getInstance();
@@ -684,8 +732,9 @@ namespace dia_int {
 
 		// Load the main message template
 		std::vector<state::MessageID> displayed_messages = { 0 };
-		for (auto&& msg_id: thread.main_message.attached_messages)
-			displayed_messages.push_back(thread_ctx.message_mapping.at(msg_id));
+		getMessageOrder(
+			thread_ctx, messages, displayed_messages, thread.main_message, messages[0]
+		);
 
 		return { std::move(displayed_messages), std::move(messages) };
 	}

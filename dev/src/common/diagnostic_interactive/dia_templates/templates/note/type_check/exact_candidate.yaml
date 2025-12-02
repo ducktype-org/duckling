@@ -18,11 +18,14 @@ params:
 header_message:
   - "Found exact candidate."
 
-
 description:
   - codeblock:
       param: "code"
     location:
       param: "code_location"
 
-
+pointer_messages:
+  cause:
+    priority: 1
+    type: "note"
+    content: []

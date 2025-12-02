@@ -155,12 +155,15 @@ namespace dia_int {
 
 	class PointerMessage {
 	public:
-		std::string         name;
-		dia::SourcePosition position;
+		std::string                 name;
+		dia::SourcePosition         position;
+		base::Optional<std::string> message_id;
 
-		PointerMessage(std::string name, dia::SourcePosition position):
+		PointerMessage(std::string name, dia::SourcePosition position, 
+		               base::Optional<std::string> message_id = {}):
 			  name(std::move(name)),
-			  position(position) {}
+			  position(position),
+			  message_id(std::move(message_id)) {}
 	};
 
 	class ExploreLink {
@@ -239,7 +242,7 @@ namespace dia_int {
 			linked_messages.insertOrAssign(std::move(id), std::move(message));
 		}
 
-		void addNote(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
+		void appendMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
 
 		/* =============================  ACCESSORS ============================= */
 

@@ -30,16 +30,35 @@ pointer_messages:
     priority: 1
     type: "error"
     content: 
-      - "value used here"
+      - "here"
 
 explore_links:
+  exact_candidates:
+    content:
+      - "Found "
+      - param: "no_candidates"
+      - " exact matches for the call."
+    params:
+      no_candidates:
+        description: "The number of exact matches found."
   coercible_candidates:
-    priority: 1
-    type: "note"
-    header:
-      - "The following overloads were considered viable via coercion:"
+    content:
+      - "Found "
+      - param: "no_candidates"
+      - " coercible matches for the call."
+    params:
+      no_candidates:
+        description: "The number of coercible matches found."
   failed_candidates:
-    priority: 1
-    type: "note"
-    header:
-      - "The following overloads were considered but rejected:"
+    content:
+      url: 
+        param: "message_id" 
+      content:
+      - "Found "
+      - param: "no_candidates"
+      - " candidates where the call failed."
+    params:
+      no_candidates:
+        description: "The number of failed matches found."
+      message_id:
+        description: "The message ID containing details about the failed candidates."
