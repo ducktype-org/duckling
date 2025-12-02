@@ -1,6 +1,7 @@
 cases/
 binary_outputs/
 cpp_setup/*.o
-.venv
+plot_outputs/
 
+.venv
 
