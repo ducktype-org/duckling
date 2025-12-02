@@ -13,7 +13,7 @@ use crate::{
     static_str_id,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 /// An extension of DuckCtx with quackpack-specific functionalities.
 pub struct QpCtx<'duck> {
     inner: &'duck DuckCtx,
