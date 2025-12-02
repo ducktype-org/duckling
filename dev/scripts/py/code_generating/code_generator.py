@@ -20,10 +20,12 @@ class FunctionData:
 class ClassData:
     name: str
     private_fields: List[str] = field(default_factory=list)
-    private_methods: List[FunctionData] = field(default_factory=list)
     public_fields: List[str] = field(default_factory=list)
-    public_methods: List[FunctionData] = field(default_factory=list)
-    constructors: List[FunctionData] = field(default_factory=list)
+    
+    def get_interface(self) -> 'ScopeData':
+        scope = ScopeData()
+        scope.vars = self.public_fields.copy()
+        return scope
 
 @dataclass
 class ScopeData:
@@ -164,18 +166,10 @@ class CodeGenerator(ABC):
     @abstractmethod
     def class_field(self, field_name: str, field_modifier: str) -> str:
         assert False, "Trying to call abstract method."
-    
-    # @abstractmethod
-    # def class_contructor(self, scope: ScopeData) -> FunctionData:
-    #     assert False, "Trying to call abstract method."
-    
-    # @abstractmethod
-    # def class_method(self, method_name: str, scope: ScopeData) -> FunctionData:
-    #     assert False, "Trying to call abstract method."
-    
-    # @abstractmethod
-    # def object_instantiation(self, class_name: str, scope: ScopeData):
-    #     assert False, "Trying to call abstract method."
+
+    @abstractmethod
+    def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
+        assert False, "Trying to call abstract method."
     
     # Control flow
     @abstractmethod
@@ -242,11 +236,13 @@ class LogicGenerator:
         
     def generate_function_definition(self, scope: ScopeData):
         func_name = random_identifier(8)
-        scope.funcs.append(self.generator.function_definition(func_name, scope))
+        func_data = self.generator.function_definition(func_name, scope)
+        scope.funcs.append(func_data)
         
     def generate_class_definition(self, scope: ScopeData):
         class_name = random_identifier(8)
         class_data = self.generator.class_definition(class_name, scope)
+        scope.classes.append(class_data)
         
     def generate_class_fields(self, class_data: ClassData) -> ClassData:
         for _ in range(random.randint(1, 5)):
@@ -260,7 +256,13 @@ class LogicGenerator:
             
         return class_data
             
-    
+    def generate_object_instantiation(self, scope: ScopeData):
+        object_name = random_identifier(8)
+        class_ = random.choice(scope.classes)
+        self.generator.object_instantiation(object_name, scope, class_)
+        new_objects = class_.get_interface()
+        new_objects.put_in_dot(object_name)
+        scope += new_objects
     
     # Control flow
     def generate_if_statement(self, scope: ScopeData):
@@ -317,16 +319,20 @@ class LogicGenerator:
     # Generation logic
     def generate_non_control_flow(self, scope: ScopeData):
         action = random.choices(
-            ['declaration', 'assignment', 'print'],
-            weights=[40, 40, 20],
+            ['declaration', 'assignment', 'new_object', 'print'],
+            weights=[30, 40, 10, 20],
             k=1
         )[0]
         if action == 'declaration':
             self.generate_variable_declaration(scope)
         elif action == 'assignment':
             self.generate_assignment(scope)
+        elif action == 'new_object' and len(scope.classes) > 0:
+            self.generate_object_instantiation(scope)
         elif action == 'print':
             self.generate_print(scope)
+        else:
+            self.generate_non_control_flow(scope)
             
     def generate_function_body(self, scope: ScopeData):
         with self.generator.indenter:

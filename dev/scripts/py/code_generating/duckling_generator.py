@@ -83,6 +83,13 @@ class DucklingCodeGenerator(CodeGenerator):
     
     def class_field(self, field_name: str, field_modifier: str) -> str:
         self.indenter.add_text(f"{field_modifier} var {field_name}: i64;\n")
+        
+    def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
+        self.indenter.add_fragment(f"var {object_name}: {class_.name} = ")
+        constructor = FunctionData(name=class_.name, args=0)
+        self.function_call(constructor, scope)
+        self.indenter.add_fragment(";\n")
+        self.indenter.flush_fragment()
     
     # Control flow
     def if_statement(self, scope: ScopeData):
