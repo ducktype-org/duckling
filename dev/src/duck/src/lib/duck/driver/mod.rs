@@ -48,7 +48,7 @@ mod tests {
     fn assert_no_aliases_recursive(parser: &Command) {
         if parser.get_all_aliases().next().is_some() {
             panic!(
-                "parser for `{}` has set aliases via clap
+                "parser for the `{}` subcommand has set aliases via clap \
                 all aliases should be set in `driver/cli_args_preprocessing/builtin.rs`",
                 parser.get_name()
             );
