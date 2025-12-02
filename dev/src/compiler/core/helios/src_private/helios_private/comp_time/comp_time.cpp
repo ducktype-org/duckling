@@ -469,7 +469,9 @@ namespace compiler::helios {
 
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
-			 * or a unit to a type. Throws if the CTV cannot be lifted to a type.
+			 * or a unit to a type.
+			 * @note Assumes that the CTV can be lifted to a type, because it assumes that
+			 * this has been checked beforehand (e.g. by coercions). Panics if this is not the case.
 			 */
 			static tsh::SymbolType<> liftCTVToTypeRecursively(
 				query::Context& ctx, const CompileTimeValue& ctv
@@ -504,6 +506,8 @@ namespace compiler::helios {
 					result = query::QError(errors::Failed());
 					return;
 				}
+				// Panics if the CTV cannot be lifted to a type.
+				// This is fine, because we assume that this has been checked beforehand by HOUT.
 				result = CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.value()));
 			}
 		};

@@ -150,12 +150,14 @@ namespace compiler::helios {
 				pst::AccessLocked<pst::ParamList>                  param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
 			) {
+				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 
+				// Set return type if provided.
 				if (ret.has_value()) {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
