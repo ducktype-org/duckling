@@ -1939,8 +1939,7 @@ private:
 
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison
-		// chain.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
 		try {
 			getConstValueAs<i64>("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
