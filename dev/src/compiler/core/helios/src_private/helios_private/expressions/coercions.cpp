@@ -34,7 +34,9 @@ namespace compiler::helios {
 				std::move(from),
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
-					numeric_value::NumericValue::createOfType(from->expression_type.getSymbolType())
+					numeric_value::NumericValue::createZeroOfType(
+						from->expression_type.getSymbolType()
+					)
 				)
 			);
 			return comparison;

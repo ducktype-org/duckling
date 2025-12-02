@@ -38,7 +38,7 @@ namespace compiler::ctv {
 
 			/**
 			 * @brief Checks whether the tuple can be interpreted as a type.
-			 * This is true if all elements of the tuple can be interpreted as types.
+			 * This is true iff all elements of the tuple can be interpreted as types.
 			 * @return True if the tuple can be interpreted as a type, false otherwise.
 			 * @TODO: #1618 Remove
 			 */

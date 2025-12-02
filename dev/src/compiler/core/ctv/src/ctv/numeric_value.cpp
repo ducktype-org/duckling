@@ -11,7 +11,7 @@
 namespace compiler::numeric_value {
 	const NumericValue::Storage& NumericValue::getStorage() const { return value; }
 
-	NumericValue NumericValue::createOfType(const tsh::SymbolType<>& type) {
+	NumericValue NumericValue::createZeroOfType(const tsh::SymbolType<>& type) {
 		using namespace tsh;
 		const auto abs_type = type.getType();
 
