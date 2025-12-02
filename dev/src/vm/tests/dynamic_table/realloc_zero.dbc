@@ -8,13 +8,11 @@ function main { i64, ptr_argv } -> i64 {
     mov_l64_imm iter, 5;
     
     # Allocate table with 5 elements
-    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
-    ext_l64 iter;
+    dynTableReAlloc_lptr_type_l64 tbl_ptr, tablei64, iter;
     
     # Reallocate to 0 elements - this should free the data and set pointer to null
     mov_l64_imm iter, 0;
-    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
-    ext_l64 iter;
+    dynTableReAlloc_lptr_type_l64 tbl_ptr, tablei64, iter;
     
     # Check that pointer is null after 0-element reallocation
     cmpNull_lptr tbl_ptr;
@@ -33,8 +31,7 @@ label pointer_is_null_as_expected;
     
     # Try to allocate again with 3 elements after the zero reallocation
     mov_l64_imm iter, 3;
-    dynTableReAlloc_lptr_type tbl_ptr, tablei64;
-    ext_l64 iter;
+    dynTableReAlloc_lptr_type_l64 tbl_ptr, tablei64, iter;
     
     # If we get here without crashing, output 42 to indicate success
     mov_l64_imm iter, 42;
