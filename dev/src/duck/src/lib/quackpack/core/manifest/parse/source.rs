@@ -80,8 +80,8 @@ pub(crate) fn parse(
             check_no_git(source, scope)?;
             check_no_registry(source, scope)?;
             debug!("manifest path is `{root}`");
-            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
-            Local::new(dir_root, root.into()).into()
+            let (dir_root, was_relative) = resolve_local_dep_root(root, package_root, ctx)?;
+            Local::new(dir_root, root.into(), was_relative).into()
         }
         (None, None, Some(git_url)) => {
             debug!("found a git source");
@@ -226,7 +226,7 @@ fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,
     ctx: &QpCtx<'_>,
-) -> QuackResult<PathBuf> {
+) -> QuackResult<(PathBuf, bool)> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
         bail!(
@@ -238,11 +238,14 @@ fn resolve_local_dep_root(
         .expand_user_with(home)
         .with_context(|| format!("failed to expand the tildes from the path `{manifest_root}`"))?;
     if expanded.is_absolute() {
-        Ok(expanded.to_path_buf())
+        Ok((expanded.to_path_buf(), false))
     } else {
-        Ok(package_root
-            .join(expanded)
-            .expand_user_with(home)?
-            .resolve()?)
+        Ok((
+            package_root
+                .join(expanded)
+                .expand_user_with(home)?
+                .resolve()?,
+            true,
+        ))
     }
 }

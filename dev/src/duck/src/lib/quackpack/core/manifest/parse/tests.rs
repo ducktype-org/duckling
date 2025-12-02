@@ -419,6 +419,8 @@ dependencies:
                 .unwrap()
                 .join("xd")
         );
+        assert!(local_source.was_original_entry_relative());
+        assert_eq!(local_source.entry_in_manifest(), "xd");
     }
     assert!(a.desc().versions().is_empty());
     assert_eq!(a.real_name(), a.desc().manifest_name());
@@ -441,6 +443,8 @@ dependencies:
                 .unwrap()
                 .join("xd")
         );
+        assert!(local_source.was_original_entry_relative());
+        assert_eq!(local_source.entry_in_manifest(), "../xd");
     }
 
     // Test dependency a2 - home path
@@ -452,6 +456,8 @@ dependencies:
     if let Source::Local(local_source) = a2.desc().source() {
         let home_dir = home().unwrap();
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
+        assert!(!local_source.was_original_entry_relative());
+        assert_eq!(local_source.entry_in_manifest(), "~/xd");
     }
 
     // Test dependency a3 - absolute path
@@ -462,6 +468,8 @@ dependencies:
     assert!(a3.desc().source().is_local());
     if let Source::Local(local_source) = a3.desc().source() {
         assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
+        assert!(!local_source.was_original_entry_relative());
+        assert_eq!(local_source.entry_in_manifest(), "/xd");
     }
 
     // Test dependency b - registry

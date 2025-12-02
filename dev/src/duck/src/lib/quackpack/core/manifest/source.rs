@@ -70,21 +70,35 @@ impl Registry {
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
-    _entry_in_manifest: StrId,
+    entry_in_manifest: StrId,
+    was_original_entry_relative: bool,
 }
 
 impl Local {
     /// Create a new local source.
-    pub fn new(absolute: PathBuf, entry_in_manifest: StrId) -> Self {
+    pub fn new(
+        absolute: PathBuf,
+        entry_in_manifest: StrId,
+        was_original_entry_relative: bool,
+    ) -> Self {
         Self {
             absolute,
-            _entry_in_manifest: entry_in_manifest,
+            entry_in_manifest,
+            was_original_entry_relative,
         }
     }
 
     /// Get the absolute path to the local package.
     pub fn absolute(&self) -> &Path {
         &self.absolute
+    }
+
+    pub fn entry_in_manifest(&self) -> StrId {
+        self.entry_in_manifest
+    }
+
+    pub fn was_original_entry_relative(&self) -> bool {
+        self.was_original_entry_relative
     }
 }
 
