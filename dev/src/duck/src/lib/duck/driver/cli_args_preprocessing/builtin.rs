@@ -9,7 +9,7 @@ use crate::duck::driver::subcommands::exec_for;
 const BUILTIN_ALIASES: [(&str, &str); 2] = [("b", "build"), ("r", "run")];
 
 pub fn get_builtin_alias_expansion(name: &str) -> Option<&'static str> {
-    debug!("getting builtin alias for `{name}`");
+    debug!("getting the builtin alias for `{name}`");
     BUILTIN_ALIASES.iter().find_map(|(alias, expansion)| {
         if *alias == name {
             Some(*expansion)

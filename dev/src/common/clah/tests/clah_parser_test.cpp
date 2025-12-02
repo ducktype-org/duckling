@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(rangeParserTest);
 		TESTER_ADD_TEST(fileParserTest);
 		TESTER_ADD_TEST(filePathParserTest);
+		TESTER_ADD_TEST(stringListParserTest);
 	}
 
 private:
@@ -32,6 +33,12 @@ private:
 			= std::any_cast<clah::RangeParser::Range>(clah::RangeParser::make()->parse(0, str).value
 		    );
 		return { val.begin, val.end };
+	}
+
+	static std::vector<std::string> parseStringList(const std::string& str) {
+		return std::any_cast<std::vector<std::string>>(
+			clah::StringListParser::make()->parse(0, str).value
+		);
 	}
 
 	static fs::File parseFile(const std::string& str, const std::regex& regex = std::regex(".*")) {
@@ -137,6 +144,54 @@ private:
 		assertThrows<clah::exceptions::ValueParsingException>(
 			[&]() { parseFilePath(path_str + "test_file.txt", std::regex(".*\\.cpp")); },
 			"Regex should make it invalid"
+		);
+	}
+
+	void stringListParserTest() {
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "str1", "str2", "str3" }), parseStringList("[str1,str2,str3]")
+		);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "str1", "str2", "str3" }),
+			parseStringList("[str1, str2, str3]")
+		);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "str1", "str2", "str3" }),
+			parseStringList("[ str1 ,   str2 ,   str3  ]  ")
+		);
+
+		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[]"));
+
+		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("[ str1   ]  "));
+
+		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[   ]  "));
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("["); }, "Should throw on invalid value"
+		);
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("]"); }, "Should throw on invalid value"
+		);
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("[]a"); }, "Should throw on invalid value"
+		);
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("  "); }, "Should throw on invalid value"
+		);
+
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange(" b "); }, "Should throw on invalid value"
+		);
+
+		// note: clah should ensure, that value parser input
+		// always starts with a non-whitespace character, so this throws:
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseRange("  []"); }, "Should throw on invalid value"
 		);
 	}
 };

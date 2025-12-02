@@ -2,9 +2,12 @@ use clap::{Arg, ArgAction, Command, crate_name, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
 use crate::{
-    DuckCtx, InternalError, QuackResult,
-    duck::driver::{cli, cli_ext::subcommand},
-    duck::util::terminal::Terminal,
+    DuckCtx, QuackResult,
+    duck::{
+        driver::{cli, cli_ext::subcommand},
+        util::terminal::Terminal,
+    },
+    internal_bail,
 };
 use clap::ArgMatches;
 
@@ -13,7 +16,7 @@ pub fn get_parser() -> Command {
         .about("Generate shell completions")
         .arg(
             Arg::new("generator")
-                .help("Choose target shell")
+                .help("Choose the target shell")
                 .action(ArgAction::Set)
                 .required(true)
                 .value_parser(value_parser!(Shell)),
@@ -22,10 +25,7 @@ pub fn get_parser() -> Command {
 
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let Some(generator) = matches.get_one::<Shell>("generator").cloned() else {
-        return Err(InternalError::from(
-            "this should be guarded by a `.required(true)` in a parser",
-        )
-        .into());
+        internal_bail!("this should be guarded by a `.required(true)` in a parser")
     };
     print_completions(generator, cli(), ctx);
     Ok(())
