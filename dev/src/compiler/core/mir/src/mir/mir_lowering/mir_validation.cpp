@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <unordered_set>
-#include <variant>
 
 namespace compiler::mir {
 	bool validateMoves(const Function& fun) {

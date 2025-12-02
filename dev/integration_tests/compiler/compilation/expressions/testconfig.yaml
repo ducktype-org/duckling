@@ -88,3 +88,11 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  
+  coercions:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
