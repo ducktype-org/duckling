@@ -28,8 +28,7 @@ representing links to other infos specified by the compiler.
 For that reason, the template itself is divided into sections (some optional)
 corresponding to each of the aforementioned info components.
 
-@TODO: maybe a screenshot from the web UI could be added here with outlined
-sections.
+![alt text](example.png)
 
 ### Metadata
 > Note: this section is **mandatory**.
@@ -195,10 +194,6 @@ as a directed graph. Sometimes it might be useful
 The text component is just plain text. It does not introduce any metadata.
 a path from the starting vertex and choosing where
 to go next or where to go back.
-
-@TODO: we could put some image of this concept
-of exploration here in case it's not clear from
-the description
 
 For these scenarios you can use explore links
 in your message templates.

@@ -47,11 +47,11 @@ namespace dia_int {
 	};
 
 	/**
-	 * @brief A TODO message with a header only and no code snippet.
+	 * @brief A Placeholder message with a header only and no code snippet.
 	 *
 	 * Used when the developer is lazy and want's to have a fast error message.
 	 */
-	class TodoHeaderError: public MessageBase {
+	class PlaceholderHeaderError: public MessageBase {
 		Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -60,13 +60,13 @@ namespace dia_int {
 		}
 
 	public:
-		TodoHeaderError(std::string header_message): MessageBase() {
+		PlaceholderHeaderError(std::string header_message): MessageBase() {
 			addArgument<TextArgument>("header_message", std::move(header_message));
 		}
 	};
 
 	/**
-	 * @brief A TODO message with a code snippet and optional description and pointer message.
+	 * @brief A Placeholder message with a code snippet and optional description and pointer message.
 	 *
 	 * Used when the developer is lazy and want's to have a fast error message.
 	 *
@@ -76,7 +76,7 @@ namespace dia_int {
 	 * This is not a recommended way of reporting errors to the user,
 	 * the text content of the error message should be inside the template files as much as possible.
 	 */
-	class TodoCodeError final: public MessageBase {
+	class PlaceholderCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
 			return {
 				.template_type = "message", .type = "error", .family = "misc", .name = "todo_code"
@@ -84,7 +84,7 @@ namespace dia_int {
 		}
 
 	public:
-		TodoCodeError(
+		PlaceholderCodeError(
 			std::string                 header_message,
 			dia::SourcePosition         source_position,
 			std::string                 description             = "",

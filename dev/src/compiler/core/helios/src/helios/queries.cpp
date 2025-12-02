@@ -513,7 +513,7 @@ namespace compiler::helios {
 							"Left side of assignment can't be a literal."
 						)
 					);
-					ctx.logInt(makeBox<dia_int::TodoCodeError>(
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						"Left side of assignment is a literal",
 						var.unlock(ctx)->getSourcePosition(),
 						"",

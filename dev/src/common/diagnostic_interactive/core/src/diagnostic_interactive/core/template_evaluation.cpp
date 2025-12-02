@@ -409,7 +409,7 @@ namespace dia_int {
 
 	void EvaluateDiagnosticFileVisitor::visitCodeComponent(const dia_args::CodeComponent& el) {
 		res = base::makeBox<state::CodeComponent>(
-			0,  // TODO: Generate proper component IDs
+			0,
 			el.content,
 			current_pointer_message_ids,
 			current_message_ids

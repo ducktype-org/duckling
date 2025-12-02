@@ -5,15 +5,14 @@
  */
 #pragma once
 
-#include "frontend/pst_parser/elements/hierarchy/expressions/call.hpp"
-#include "helios/scope_symbol_id.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/usage.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
-#include "diagnostic/source_position.hpp"
 #include <diagnostic/message.hpp>
+#include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
 	/**

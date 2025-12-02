@@ -1,7 +1,7 @@
 #pragma once
-#include "diagnostic_interactive/core/term_ui_view.hpp"
-#include "line.hpp"
-#include "styles.hpp"
+#include <diagnostic_interactive/core/term_ui_view.hpp>
+#include <diagnostic_interactive/term_ui/line.hpp>
+#include <diagnostic_interactive/term_ui/styles.hpp>
 
 namespace term_ui {
 	/**

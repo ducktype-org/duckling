@@ -1,8 +1,8 @@
 #include "code_section.hpp"
 
-#include "diagnostic_interactive/term_ui/code_line.hpp"
-#include "diagnostic_interactive/term_ui/highlight.hpp"
-#include "diagnostic_interactive/term_ui/line.hpp"
+#include <diagnostic_interactive/term_ui/code_line.hpp>
+#include <diagnostic_interactive/term_ui/highlight.hpp>
+#include <diagnostic_interactive/term_ui/line.hpp>
 
 #include <base/except/exceptions.hpp>
 

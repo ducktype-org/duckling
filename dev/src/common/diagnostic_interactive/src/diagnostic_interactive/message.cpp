@@ -1,10 +1,10 @@
-#include "message.hpp"
+#include <diagnostic_interactive/message.hpp>
 
-#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 
-#include "base/collections/maps.hpp"
+#include <base/collections/maps.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 
 #include <algorithm>
 #include <map>
@@ -110,7 +110,7 @@ namespace dia_int {
 			usize pm_end   = pm.position.getEnd() + 1;
 
 			edge_map[pm_start].pos = pm_start;
-			edge_map[pm_start].starting.push_back(PointerMessageID{ .name = pm.pointer_message_id,
+			edge_map[pm_start].starting.push_back(PointerMessageID{ .name       = pm.pointer_message_id,
 			                                                        .message_id = pm.message_id });
 
 			edge_map[pm_end].pos = pm_end;
@@ -176,7 +176,8 @@ namespace dia_int {
 		dia_args::Message msg;
 		msg.metadata = getMetadata();
 		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
-		for (const auto& link: explore_links) msg.explore_links.push_back(link.getValue(*this));
+		for (const auto& link: explore_links)
+			msg.explore_links.push_back(link.getValue(*this));
 
 		msg.linked_messages.reserve(this->attached_messages.size());
 
@@ -193,10 +194,10 @@ namespace dia_int {
 	}
 
 	Box<dia_int::dia_args::Diagnostic> MessageBase::buildDiagnosticFile() {
-		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
+		Box<dia_args::Diagnostic>                         thread = makeBox<dia_args::Diagnostic>();
 		base::HashMap<std::string, dia_args::Message> additional_messages;
 
-		thread->main_message    = buildMessages(additional_messages);
+		thread->main_message        = buildMessages(additional_messages);
 		thread->linked_messages = std::move(additional_messages);
 
 		return thread;

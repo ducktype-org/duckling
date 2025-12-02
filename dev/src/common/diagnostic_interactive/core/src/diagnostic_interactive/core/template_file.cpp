@@ -1,6 +1,6 @@
-#include "template_file.hpp"
+#include <diagnostic_interactive/core/template_file.hpp>
 
-#include "diagnostic_interactive/core/utils.hpp"
+#include <diagnostic_interactive/core/utils.hpp>
 
 namespace dia_int::template_file {
 	Box<Component> Component::fromYaml(const YAML::Node& elem) {

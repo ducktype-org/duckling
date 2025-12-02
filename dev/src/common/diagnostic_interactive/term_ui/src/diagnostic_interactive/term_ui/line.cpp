@@ -1,7 +1,7 @@
 #include "line.hpp"
 
-#include "code_section.hpp"
-#include "diagnostic_interactive/term_ui/styles.hpp"
+#include <diagnostic_interactive/term_ui/code_section.hpp>
+#include <diagnostic_interactive/term_ui/styles.hpp>
 
 namespace term_ui {
 

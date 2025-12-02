@@ -1,4 +1,4 @@
-#include "diagnostic_interactive/core/diagnostic_state.hpp"
+#include <diagnostic_interactive/core/diagnostic_state.hpp>
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
