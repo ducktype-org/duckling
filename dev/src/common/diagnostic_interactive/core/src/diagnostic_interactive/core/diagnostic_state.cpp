@@ -1,6 +1,5 @@
 #include "diagnostic_state.hpp"
 
-#include <algorithm>
 #include <unordered_set>
 
 namespace dia_int::state {
@@ -19,10 +18,10 @@ namespace dia_int::state {
 
 	void TextComponent::debugPrint(std::ostream& out, usize indent) const {
 		out << std::string(indent * 2, ' ') << "TextComponent(" << content << ")";
-		if (!attached_messages.empty()) {
+		if (!linked_messages.empty()) {
 			out << " [attached: ";
-			for (size_t i = 0; i < attached_messages.size(); ++i)
-				out << attached_messages[i] << (i + 1 < attached_messages.size() ? ", " : "");
+			for (size_t i = 0; i < linked_messages.size(); ++i)
+				out << linked_messages[i] << (i + 1 < linked_messages.size() ? ", " : "");
 			out << "]";
 		}
 		out << "\n";
@@ -103,7 +102,7 @@ namespace dia_int::state {
 
 	TextComponent::TextComponent(std::string content, std::vector<MessageID> attached_messages):
 		  TextComponent(std::move(content)) {
-		this->attached_messages = std::move(attached_messages);
+		this->linked_messages = std::move(attached_messages);
 	}
 
 	CodeComponent::CodeComponent(
@@ -229,7 +228,7 @@ namespace dia_int::state {
 			explicit MessageLinkCollector(std::vector<MessageID>& out): result(out) {}
 
 			void visitTextComponent(const TextComponent& c) override {
-				collectFromAttached(c.attached_messages);
+				collectFromAttached(c.linked_messages);
 			}
 
 			void visitCodeComponent(const CodeComponent& c) override {

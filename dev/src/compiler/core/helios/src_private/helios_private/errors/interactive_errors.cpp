@@ -79,7 +79,7 @@ namespace compiler::helios::errors {
 		emit_alias_note(*lookup_result, ident->getName().value.str());
 	}
 
-	Box<dia_file::Component> InteractiveType::getValue(MessageBase& msg) {
+	Box<dia_args::Component> InteractiveType::getValue(MessageBase& msg) {
 		std::string              displayed_name;
 		std::vector<std::string> linked_messages;
 
@@ -93,9 +93,9 @@ namespace compiler::helios::errors {
 
 		msg.addEntity<TextBasedEntity>(linked_messages, displayed_name);
 
-		auto content = makeBox<dia_file::TextComponent>(displayed_name);
+		auto content = makeBox<dia_args::TextComponent>(displayed_name);
 		auto link
-			= makeBox<dia_file::LinkComponent>(std::move(linked_messages), std::move(content));
+			= makeBox<dia_args::LinkComponent>(std::move(linked_messages), std::move(content));
 		return link;
 	}
 

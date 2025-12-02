@@ -1,4 +1,4 @@
-#include "diagnostic_file.hpp"
+#include "diagnostic_arguments.hpp"
 
 #include <json/json.hpp>
 
@@ -17,12 +17,12 @@ int main(int argc, char* argv[]) {
 	file.close();
 
 	// Parse diagnostic thread
-	dia_int::dia_file::Thread diagnostic_thread = dia_int::dia_file::Thread::fromJson(input);
+	dia_int::dia_args::Diagnostic diagnostic_thread = dia_int::dia_args::Diagnostic::fromJson(input);
 
 	// For now, just print success
 	std::cout << "Successfully parsed diagnostic file\n";
 	std::cout << "Main message type: " << diagnostic_thread.main_message.metadata.type << "\n";
-	std::cout << "Attached messages: " << diagnostic_thread.attached_messages.size() << "\n";
+	std::cout << "Attached messages: " << diagnostic_thread.linked_messages.size() << "\n";
 
 	return 0;
 }

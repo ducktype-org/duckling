@@ -1,6 +1,6 @@
 #include "message.hpp"
 
-#include "diagnostic_interactive/core/diagnostic_file.hpp"
+#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
 
 #include "base/collections/maps.hpp"
 
@@ -12,24 +12,24 @@
 
 namespace dia_int {
 
-	Metadata::operator dia_file::Metadata() const {
-		return dia_file::Metadata{
+	Metadata::operator dia_args::Metadata() const {
+		return dia_args::Metadata{
 			.template_type = template_type, .type = type, .family = family, .name = name
 		};
 	}
 
-	Box<dia_file::Component> TextArgument::getValue(MessageBase&) {
-		return base::makeBox<dia_file::TextComponent>(content);
+	Box<dia_args::Component> TextArgument::getValue(MessageBase&) {
+		return base::makeBox<dia_args::TextComponent>(content);
 	}
 
-	Box<dia_file::Component> CodeLocationArgument::getValue(MessageBase&) {
-		return base::makeBox<dia_file::CodeLocationComponent>(
+	Box<dia_args::Component> CodeLocationArgument::getValue(MessageBase&) {
+		return base::makeBox<dia_args::CodeLocationComponent>(
 			location.file, location.line, location.column
 		);
 	}
 
 	void CodeArgument::addCodeLines(
-		std::vector<Box<dia_file::Component>>& code_list,
+		std::vector<Box<dia_args::Component>>& code_list,
 		Ref<tokenizer::TokenSource>            source,
 		usize                                  start,
 		usize                                  end
@@ -40,13 +40,13 @@ namespace dia_int {
 		if (source->getLineColumn(start).second
 		    == 1)  // First  character in line, we need a start line.
 			code_list.emplace_back(
-				makeBox<dia_file::StartLineComponent>(source->getLineColumn(start).first)
+				makeBox<dia_args::StartLineComponent>(source->getLineColumn(start).first)
 			);
-		code_list.emplace_back(makeBox<dia_file::CodeComponent>(lines[0].second.stdString()));
+		code_list.emplace_back(makeBox<dia_args::CodeComponent>(lines[0].second.stdString()));
 
 		for (usize i = 1; i < lines.size(); i++) {
-			code_list.emplace_back(makeBox<dia_file::StartLineComponent>(lines[i].first));
-			code_list.emplace_back(makeBox<dia_file::CodeComponent>(lines[i].second.stdString()));
+			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[i].first));
+			code_list.emplace_back(makeBox<dia_args::CodeComponent>(lines[i].second.stdString()));
 		}
 	}
 
@@ -65,7 +65,7 @@ namespace dia_int {
 		return result;
 	}
 
-	Box<dia_file::Component> CodeArgument::getValue(MessageBase& diag) {
+	Box<dia_args::Component> CodeArgument::getValue(MessageBase& diag) {
 		auto source = position.getSource();
 
 		usize start_line = position.getStartLineColumn().first;
@@ -77,7 +77,7 @@ namespace dia_int {
 		usize begin_char = source->getLine(first_line).first;
 		usize end_char   = source->getLine(last_line).second + 1;
 
-		auto code_list = std::vector<Box<dia_file::Component>>();
+		auto code_list = std::vector<Box<dia_args::Component>>();
 
 		const auto pointer_messages = filterMessages(
 			diag.getPointerMessages(),
@@ -86,7 +86,7 @@ namespace dia_int {
 
 		if (pointer_messages.empty()) {
 			addCodeLines(code_list, source, begin_char, end_char);
-			return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
+			return base::makeBox<dia_args::ConcatComponent>(std::move(code_list));
 		}
 
 		struct PointerMessageID {
@@ -110,11 +110,11 @@ namespace dia_int {
 			usize pm_end   = pm.position.getEnd() + 1;
 
 			edge_map[pm_start].pos = pm_start;
-			edge_map[pm_start].starting.push_back(PointerMessageID{ .name       = pm.name,
+			edge_map[pm_start].starting.push_back(PointerMessageID{ .name       = pm.pointer_message_id,
 			                                                        .message_id = pm.message_id });
 
 			edge_map[pm_end].pos = pm_end;
-			edge_map[pm_end].ending.push_back(PointerMessageID{ .name       = pm.name,
+			edge_map[pm_end].ending.push_back(PointerMessageID{ .name       = pm.pointer_message_id,
 			                                                    .message_id = pm.message_id });
 		}
 
@@ -136,17 +136,17 @@ namespace dia_int {
 					addCodeLines(code_list, source, current_pos, edge.pos);
 				} else {
 					// This segment is highlighted by active messages.
-					auto highlighted = std::vector<Box<dia_file::Component>>();
+					auto highlighted = std::vector<Box<dia_args::Component>>();
 					addCodeLines(highlighted, source, current_pos, edge.pos);
 
-					std::vector<dia_file::PointerMessage> ptr_msgs;
+					std::vector<dia_args::PointerMessage> ptr_msgs;
 
 					ptr_msgs.reserve(active_messages.size());
 					for (const auto& name: active_messages)
 						ptr_msgs.emplace_back(name.name, name.message_id);
 
-					code_list.emplace_back(base::makeBox<dia_file::PointedComponent>(
-						makeBox<dia_file::ConcatComponent>(std::move(highlighted)),
+					code_list.emplace_back(base::makeBox<dia_args::PointedComponent>(
+						makeBox<dia_args::ConcatComponent>(std::move(highlighted)),
 						std::move(ptr_msgs)
 					));
 				}
@@ -167,23 +167,23 @@ namespace dia_int {
 		// Add remaining code after last edge.
 		if (current_pos < end_char) addCodeLines(code_list, source, current_pos, end_char);
 
-		return base::makeBox<dia_file::ConcatComponent>(std::move(code_list));
+		return base::makeBox<dia_args::ConcatComponent>(std::move(code_list));
 	}
 
-	dia_file::Message MessageBase::buildMessages(
-		base::HashMap<std::string, dia_file::Message>& additional_messages
+	dia_args::Message MessageBase::buildMessages(
+		base::HashMap<std::string, dia_args::Message>& additional_messages
 	) {
-		dia_file::Message msg;
+		dia_args::Message msg;
 		msg.metadata = getMetadata();
 		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
 		for (const auto& link: explore_links)
 			msg.explore_links.push_back(link.getValue(*this));
 
-		msg.attached_messages.reserve(this->attached_messages.size());
+		msg.linked_messages.reserve(this->attached_messages.size());
 
 		for (const auto& attached_msg: attached_messages) {
 			auto id = MessageBase::getUniqueID();
-			msg.attached_messages.push_back(id);
+			msg.linked_messages.push_back(id);
 			additional_messages.put(id, attached_msg->buildMessages(additional_messages));
 		}
 
@@ -193,12 +193,12 @@ namespace dia_int {
 		return msg;
 	}
 
-	Box<dia_int::dia_file::Thread> MessageBase::buildDiagnosticFile() {
-		Box<dia_file::Thread>                         thread = makeBox<dia_file::Thread>();
-		base::HashMap<std::string, dia_file::Message> additional_messages;
+	Box<dia_int::dia_args::Diagnostic> MessageBase::buildDiagnosticFile() {
+		Box<dia_args::Diagnostic>                         thread = makeBox<dia_args::Diagnostic>();
+		base::HashMap<std::string, dia_args::Message> additional_messages;
 
 		thread->main_message        = buildMessages(additional_messages);
-		thread->additional_messages = std::move(additional_messages);
+		thread->linked_messages = std::move(additional_messages);
 
 		return thread;
 	}
@@ -208,8 +208,8 @@ namespace dia_int {
 		return base::strConcat("msg_", counter++);
 	}
 
-	dia_file::ExploreEdge ExploreLink::getValue(MessageBase& message) const {
-		dia_file::ExploreEdge edge;
+	dia_args::ExploreEdge ExploreLink::getValue(MessageBase& message) const {
+		dia_args::ExploreEdge edge;
 		for (const auto& arg: arguments) edge.params.put(arg->getName(), arg->getValue(message));
 		edge.name = message_id;
 		return edge;

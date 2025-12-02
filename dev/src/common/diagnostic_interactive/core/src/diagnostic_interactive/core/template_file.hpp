@@ -1,14 +1,17 @@
+/**
+ * @file template_file.hpp
+ * @author Wojciech Rzeplinski
+ * @brief Implementation of diagnostic template file elements.
+ * The logic for deserializing template files into element trees is here. 
+ * 
+ */
 #pragma once
-
-#include "utils.hpp"
 
 #include <yaml-cpp/yaml.h>
 
 #include <base/pointers/box.hpp>
 #include <base/extend_cpp/visitor.hpp>
-
-#include <cctype>
-#include <limits>
+#include <base/collections/maps.hpp>
 
 namespace dia_int::template_file {
 
@@ -46,7 +49,6 @@ namespace dia_int::template_file {
 	 * or act as a logical branching.
 	 *
 	 * The only required method of each template element is `accept`.
-	 *
 	 */
 	struct Component {
 		virtual ~Component() {}
@@ -60,7 +62,7 @@ namespace dia_int::template_file {
 	 * @brief A template element representing simple text.
 	 *
 	 */
-	struct TextComponent: public Component {
+	struct TextComponent final: public Component {
 		std::string text;
 
 		TextComponent(std::string text): text(std::move(text)) {}
@@ -77,7 +79,7 @@ namespace dia_int::template_file {
 	 * of other template elements.
 	 *
 	 */
-	struct ConcatComponent: public Component {
+	struct ConcatComponent final: public Component {
 		std::vector<Box<Component>> elements;
 
 		ConcatComponent() = default;
@@ -96,7 +98,7 @@ namespace dia_int::template_file {
 	 * by the compiler.
 	 *
 	 */
-	struct ParamComponent: public Component {
+	struct ParamComponent final: public Component {
 		std::string param;
 
 		ParamComponent(std::string param): param(std::move(param)) {}
@@ -112,7 +114,7 @@ namespace dia_int::template_file {
 	 * @brief A template element for conditional logic based on parameter existence.
 	 *
 	 */
-	struct IsParamProvidedComponent: public Component {
+	struct IsParamProvidedComponent final: public Component {
 		std::string param;
 
 		IsParamProvidedComponent(std::string param): param(std::move(param)) {}
@@ -129,7 +131,7 @@ namespace dia_int::template_file {
 	 * a template macro.
 	 *
 	 */
-	struct MacroComponent: public Component {
+	struct MacroComponent final: public Component {
 		std::string macro;
 
 		MacroComponent(std::string macro): macro(std::move(macro)) {}
@@ -146,7 +148,7 @@ namespace dia_int::template_file {
 	 * of template evaluation based on the provided pattern.
 	 *
 	 */
-	struct CaseOfComponent: public Component {
+	struct CaseOfComponent final: public Component {
 		Box<Component>                         pattern;
 		base::Map<std::string, Box<Component>> cases;
 
@@ -161,7 +163,7 @@ namespace dia_int::template_file {
 		static Box<CaseOfComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
-	struct CodeBlockComponent: public Component {
+	struct CodeBlockComponent final: public Component {
 		Box<Component>        code_elements;
 		base::MBox<Component> location;
 
@@ -176,7 +178,7 @@ namespace dia_int::template_file {
 		static Box<CodeBlockComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
-	struct MessageLinkComponent: public Component {
+	struct MessageLinkComponent final: public Component {
 		Box<Component> content;
 		Box<Component> target_message;
 
@@ -191,7 +193,7 @@ namespace dia_int::template_file {
 		static Box<MessageLinkComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
-	struct VariantComponent: public Component {
+	struct VariantComponent final: public Component {
 		Box<Component> content;
 		Box<Component> alt_content;
 
@@ -206,7 +208,7 @@ namespace dia_int::template_file {
 		static Box<VariantComponent> fromYaml(const YAML::Node& elem_node);
 	};
 
-	struct Metadata {
+	struct Metadata final {
 		enum class TemplateType { Message, Component, PointerMessage };
 
 		TemplateType template_type;
@@ -238,7 +240,7 @@ namespace dia_int::template_file {
 		static Metadata fromYaml(const YAML::Node& node);
 	};
 
-	struct Parameter {
+	struct Parameter final {
 		std::string description;
 		/**
 		 * Expected component type
@@ -254,7 +256,7 @@ namespace dia_int::template_file {
 		static Parameter fromYaml(const YAML::Node& node);
 	};
 
-	struct ExploreLink {
+	struct ExploreLink final {
 		Box<Component>                        content;
 		base::HashMap<std::string, Parameter> params;
 
@@ -265,7 +267,7 @@ namespace dia_int::template_file {
 		static ExploreLink fromYaml(const YAML::Node& node);
 	};
 
-	struct PointerMessage {
+	struct PointerMessage final {
 		std::string    type;
 		int            priority;
 		Box<Component> content;
@@ -339,7 +341,7 @@ namespace dia_int::template_file {
 		static PointerMessageTemplate fromYaml(const YAML::Node& node);
 	};
 
-	struct DiagnosticTemplate {
+	struct DiagnosticTemplate  final{
 		std::variant<MessageTemplate, ComponentTemplate, PointerMessageTemplate> content;
 
 		static DiagnosticTemplate fromYaml(const YAML::Node& node);

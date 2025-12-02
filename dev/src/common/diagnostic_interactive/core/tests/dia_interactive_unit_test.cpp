@@ -1,6 +1,4 @@
-#include "diagnostic_interactive/core/diagnostic_state.hpp"
-
-#include <diagnostic_interactive/core/diagnostic_file.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <diagnostic_interactive/core/template_file.hpp>
 #include <yaml-cpp/yaml.h>
@@ -36,7 +34,7 @@ private:
 	void jsonComponentsRoundTrip() {
 		// Helper lambda to test component round-trip
 		auto test_round_trip
-			= [this](Box<dia_file::Component> component, const std::string& expected_type) {
+			= [this](Box<dia_args::Component> component, const std::string& expected_type) {
 				  // Serialize to JSON
 				  json j = component->toJson();
 
@@ -44,31 +42,31 @@ private:
 				  ASSERT_EQUAL(expected_type, j["type"].get<std::string>());
 
 				  // Deserialize back
-				  auto deserialized = dia_file::Component::fromJson(j);
+				  auto deserialized = dia_args::Component::fromJson(j);
 
 				  // Verify deserialized type matches
 				  ASSERT_EQUAL(expected_type, deserialized->toJson()["type"].get<std::string>());
 			  };
 
 		// Test TextComponent
-		test_round_trip(base::makeBox<dia_file::TextComponent>("Hello, World!"), "text");
+		test_round_trip(base::makeBox<dia_args::TextComponent>("Hello, World!"), "text");
 
 		// Test CodeComponent
-		test_round_trip(base::makeBox<dia_file::CodeComponent>("int x = 42;"), "code");
+		test_round_trip(base::makeBox<dia_args::CodeComponent>("int x = 42;"), "code");
 
 		// Test ConcatComponent
 		{
-			std::vector<Box<dia_file::Component>> elements;
-			elements.push_back(base::makeBox<dia_file::TextComponent>("Error: "));
-			elements.push_back(base::makeBox<dia_file::CodeComponent>("variable"));
-			test_round_trip(base::makeBox<dia_file::ConcatComponent>(std::move(elements)), "concat");
+			std::vector<Box<dia_args::Component>> elements;
+			elements.push_back(base::makeBox<dia_args::TextComponent>("Error: "));
+			elements.push_back(base::makeBox<dia_args::CodeComponent>("variable"));
+			test_round_trip(base::makeBox<dia_args::ConcatComponent>(std::move(elements)), "concat");
 		}
 
 		// Test LinkComponent
 		{
-			auto content = base::makeBox<dia_file::CodeComponent>("MyType");
+			auto content = base::makeBox<dia_args::CodeComponent>("MyType");
 			test_round_trip(
-				base::makeBox<dia_file::LinkComponent>(
+				base::makeBox<dia_args::LinkComponent>(
 					std::vector<std::string>{ "abc" }, std::move(content)
 				),
 				"link"
@@ -77,16 +75,16 @@ private:
 
 		// Test PointedComponent
 		{
-			auto content = base::makeBox<dia_file::CodeComponent>("x + y");
-			std::vector<dia_file::PointerMessage> pointer_messages;
-			pointer_messages.push_back(dia_file::PointerMessage(
-				"error_location", base::Optional<dia_file::MessageID>("msg_1")
+			auto content = base::makeBox<dia_args::CodeComponent>("x + y");
+			std::vector<dia_args::PointerMessage> pointer_messages;
+			pointer_messages.push_back(dia_args::PointerMessage(
+				"error_location", base::Optional<dia_args::MessageID>("msg_1")
 			));
 			pointer_messages.push_back(
-				dia_file::PointerMessage("hint_location", base::Optional<dia_file::MessageID>())
+				dia_args::PointerMessage("hint_location", base::Optional<dia_args::MessageID>())
 			);
 			test_round_trip(
-				base::makeBox<dia_file::PointedComponent>(
+				base::makeBox<dia_args::PointedComponent>(
 					std::move(content), std::move(pointer_messages)
 				),
 				"pointed"
@@ -96,37 +94,37 @@ private:
 
 	void complexComponentJsonRoundTrip() {
 		// Create a complex nested structure
-		std::vector<Box<dia_file::Component>> inner_elements;
-		inner_elements.push_back(base::makeBox<dia_file::TextComponent>("Type "));
+		std::vector<Box<dia_args::Component>> inner_elements;
+		inner_elements.push_back(base::makeBox<dia_args::TextComponent>("Type "));
 
-		auto link_content = base::makeBox<dia_file::CodeComponent>("i32");
-		inner_elements.emplace_back(base::makeBox<dia_file::LinkComponent>(
+		auto link_content = base::makeBox<dia_args::CodeComponent>("i32");
+		inner_elements.emplace_back(base::makeBox<dia_args::LinkComponent>(
 			std::vector<std::string>{ "abc" }, std::move(link_content)
 		));
 
-		auto inner_concat = base::makeBox<dia_file::ConcatComponent>(std::move(inner_elements));
+		auto inner_concat = base::makeBox<dia_args::ConcatComponent>(std::move(inner_elements));
 
-		std::vector<Box<dia_file::Component>> outer_elements;
+		std::vector<Box<dia_args::Component>> outer_elements;
 		outer_elements.push_back(std::move(inner_concat));
 		outer_elements.push_back(
-			base::makeBox<dia_file::TextComponent>(" is a signed 32-bit integer")
+			base::makeBox<dia_args::TextComponent>(" is a signed 32-bit integer")
 		);
 
-		auto original = base::makeBox<dia_file::ConcatComponent>(std::move(outer_elements));
+		auto original = base::makeBox<dia_args::ConcatComponent>(std::move(outer_elements));
 
 		// Serialize to JSON
 		json j = original->toJson();
 
 		// Deserialize back
-		auto deserialized = dia_file::Component::fromJson(j);
+		auto deserialized = dia_args::Component::fromJson(j);
 
 		// Verify structure
-		auto* outer_concat = dynamic_cast<dia_file::ConcatComponent*>(deserialized.get());
+		auto* outer_concat = dynamic_cast<dia_args::ConcatComponent*>(deserialized.get());
 		ASSERT_EQUAL(false, outer_concat == nullptr);
 		ASSERT_EQUAL(2, outer_concat->elements.size());
 
 		auto* inner_concat_deser
-			= dynamic_cast<dia_file::ConcatComponent*>(outer_concat->elements[0].get());
+			= dynamic_cast<dia_args::ConcatComponent*>(outer_concat->elements[0].get());
 		ASSERT_EQUAL(false, inner_concat_deser == nullptr);
 		ASSERT_EQUAL(2, inner_concat_deser->elements.size());
 	}
@@ -141,7 +139,7 @@ private:
 			= [this](const std::string& json_str, const std::string& expected_type) {
 				  // Parse and deserialize
 				  json j         = json::parse(json_str);
-				  auto component = dia_file::Component::fromJson(j);
+				  auto component = dia_args::Component::fromJson(j);
 
 				  // Serialize back to JSON
 				  json j2 = component->toJson();
@@ -159,8 +157,8 @@ private:
 
 				  // Serialize back to JSON
 				  json j2 = structure.toJson();
-				  std::cout << j.dump(2) << std::endl;
-				  std::cout << j2.dump(2) << std::endl;
+				  std::cout << j.dump(2) << '\n';
+				  std::cout << j2.dump(2) << '\n';
 				  ASSERT_EQUAL(j.dump(2), j2.dump(2));
 			  };
 
@@ -261,7 +259,7 @@ private:
 			"pointer_message_id": "error_location",
 			"message_id": "msg_123"
 		})",
-			dia_file::PointerMessage::fromJson
+			dia_args::PointerMessage::fromJson
 		);
 
 		// Test Metadata
@@ -272,7 +270,7 @@ private:
 			"family": "type_error",
 			"name": "undefined_type"
 		})",
-			dia_file::Metadata::fromJson
+			dia_args::Metadata::fromJson
 		);
 
 		// Test ExploreEdge
@@ -283,7 +281,7 @@ private:
 				"location": {"type": "text", "content": "line 42"}
 			}
 		})",
-			dia_file::ExploreEdge::fromJson
+			dia_args::ExploreEdge::fromJson
 		);
 
 		// Test Message
@@ -308,10 +306,10 @@ private:
                 }
             }]
 		})",
-			dia_file::Message::fromJson
+			dia_args::Message::fromJson
 		);
 
-		// Test Thread
+		// Test Diagnostic
 		test_from_json_to_json_equality(
 			R"({
 			"main_message": {
@@ -332,7 +330,7 @@ private:
                 }],
 				"attached_messages": ["attach_1"]
 			},
-			"attached_messages": {
+			"linked_messages": {
 				"attach_1": {
 					"metadata": {
                         "template_type": "message",
@@ -344,7 +342,7 @@ private:
 				}
 			}
 		})",
-			dia_file::Thread::fromJson
+			dia_args::Diagnostic::fromJson
 		);
 	}
 

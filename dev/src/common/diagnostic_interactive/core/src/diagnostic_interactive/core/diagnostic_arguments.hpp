@@ -1,4 +1,5 @@
 #pragma once
+#include "diagnostic_arguments_forward.hpp"
 #include "utils.hpp"
 
 #include <base/collections/maps.hpp>
@@ -6,11 +7,10 @@
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
-#include "diagnostic_file_forward.hpp"
 
 #include <json/json.hpp>
 
-namespace dia_int::dia_file {
+namespace dia_int::dia_args {
 
 	struct Component;
 
@@ -69,7 +69,7 @@ namespace dia_int::dia_file {
 	/**
 	 * @brief A display element representing simple text.
 	 */
-	struct TextComponent: public Component {
+	struct TextComponent final: public Component {
 		std::string content;
 
 		TextComponent() = default;
@@ -89,7 +89,7 @@ namespace dia_int::dia_file {
 		static Box<TextComponent> fromJson(const json& elem);
 	};
 
-	struct CodeComponent: public Component {
+	struct CodeComponent final: public Component {
 		std::string content;
 
 		CodeComponent() = default;
@@ -109,7 +109,7 @@ namespace dia_int::dia_file {
 		static Box<CodeComponent> fromJson(const json& elem);
 	};
 
-	struct CodeLocationComponent: public Component {
+	struct CodeLocationComponent final: public Component {
 		std::string file;
 		u64         line;
 		u64         column;
@@ -132,7 +132,7 @@ namespace dia_int::dia_file {
 		static Box<CodeLocationComponent> fromJson(const json& elem);
 	};
 
-	struct StartLineComponent: public Component {
+	struct StartLineComponent final: public Component {
 		// Line number.
 		base::Optional<u64> number;
 
@@ -153,7 +153,7 @@ namespace dia_int::dia_file {
 		static Box<StartLineComponent> fromJson(const json& elem);
 	};
 
-	struct ConcatComponent: public Component {
+	struct ConcatComponent final: public Component {
 		std::vector<Box<Component>> elements;
 
 		ConcatComponent() = default;
@@ -173,7 +173,7 @@ namespace dia_int::dia_file {
 		static Box<ConcatComponent> fromJson(const json& elem);
 	};
 
-	struct PointerMessage {
+	struct PointerMessage final {
 		base::Optional<MessageID> message_id;
 		PointerMessageID          pointer_message_id;
 
@@ -192,7 +192,7 @@ namespace dia_int::dia_file {
 		static PointerMessage fromJson(const json& elem);
 	};
 
-	struct PointedComponent: public Component {
+	struct PointedComponent final: public Component {
 		Box<Component>              content;
 		std::vector<PointerMessage> pointer_messages;
 
@@ -213,7 +213,7 @@ namespace dia_int::dia_file {
 		static Box<PointedComponent> fromJson(const json& elem);
 	};
 
-	struct VariantComponent: public Component {
+	struct VariantComponent final: public Component {
 		Box<Component> content;
 		Box<Component> alt_content;
 
@@ -234,7 +234,7 @@ namespace dia_int::dia_file {
 		static Box<VariantComponent> fromJson(const json& elem);
 	};
 
-	struct LinkComponent: public Component {
+	struct LinkComponent final: public Component {
 		std::vector<MessageID> target_messages;
 		Box<Component>         content;
 
@@ -259,7 +259,7 @@ namespace dia_int::dia_file {
 	 * @brief
 	 *
 	 */
-	struct EvaluatedTemplateComponent: public Component {
+	struct EvaluatedTemplateComponent final: public Component {
 		std::string message_id;
 
 		EvaluatedTemplateComponent(std::string message_id): message_id(std::move(message_id)) {}
@@ -277,7 +277,7 @@ namespace dia_int::dia_file {
 		static Box<EvaluatedTemplateComponent> fromJson(const json& elem);
 	};
 
-	struct MessageIDComponent: public Component {
+	struct MessageIDComponent final: public Component {
 		MessageID message_id;
 
 		MessageIDComponent(MessageID message_id): message_id(std::move(message_id)) {}
@@ -295,7 +295,7 @@ namespace dia_int::dia_file {
 		static Box<MessageIDComponent> fromJson(const json& elem);
 	};
 
-	struct Metadata {
+	struct Metadata final {
 		std::string template_type;
 		std::string type;
 		std::string family;
@@ -306,7 +306,7 @@ namespace dia_int::dia_file {
 		static Metadata fromJson(const json& meta_json);
 	};
 
-	struct ExploreEdge {
+	struct ExploreEdge final {
 		std::string                                name;
 		base::HashMap<std::string, Box<Component>> params;
 
@@ -315,31 +315,31 @@ namespace dia_int::dia_file {
 		static ExploreEdge fromJson(const json& edge_json);
 	};
 
-	struct Message {
+	struct Message final {
 		Metadata                                   metadata;
 		base::HashMap<std::string, Box<Component>> arguments;
 		std::vector<ExploreEdge>                   explore_links;
-		std::vector<MessageID>                     attached_messages;
+		std::vector<MessageID>                     linked_messages;
 
 		[[nodiscard]] json toJson() const;
 
 		static Message fromJson(const json& msg_json);
 	};
 
-	struct Thread {
+	struct Diagnostic final {
 		Message                           main_message;
-		base::HashMap<MessageID, Message> additional_messages;
+		base::HashMap<MessageID, Message> linked_messages;
 
 		[[nodiscard]] json toJson() const;
 
-		static Thread fromJson(const json& thread_json);
+		static Diagnostic fromJson(const json& thread_json);
 	};
-}  // namespace dia_int::dia_file
+}  // namespace dia_int::dia_args
 
 namespace std {
 	template<>
-	struct hash<dia_int::dia_file::PointerMessage> {
-		std::size_t operator()(const dia_int::dia_file::PointerMessage& k) const {
+	struct hash<dia_int::dia_args::PointerMessage> {
+		std::size_t operator()(const dia_int::dia_args::PointerMessage& k) const {
 			std::size_t h1 = std::hash<std::string>{}(k.pointer_message_id);
 			std::size_t h2 = 0;
 			if (k.message_id) h2 = std::hash<std::string>{}(*k.message_id);

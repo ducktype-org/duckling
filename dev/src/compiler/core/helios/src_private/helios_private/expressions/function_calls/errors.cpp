@@ -1,21 +1,17 @@
 #include "errors.hpp"
 
-#include "diagnostic_interactive/message.hpp"
-#include "diagnostic_interactive/usage.hpp"
 #include "frontend/pst_parser/element_kind.hpp"
 #include "frontend/pst_parser/elements/hierarchy/declarations/function.hpp"
 #include "frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp"
-#include "frontend/pst_parser/elements/hierarchy/meta.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp"
-#include "frontend/pst_parser/lang_parser_element.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios_private/errors/interactive_errors.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -31,17 +27,16 @@ namespace compiler::helios::code {
 				     .family        = "type_check",
 				     .name          = "function_declared_here" };
 		}
+
 	public:
-		FunctionDeclaredHereNote(
-			dia::SourcePosition source_position
-		):
+		FunctionDeclaredHereNote(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
 	class InteractiveFunctionName final: public dia_int::InteractiveElement {
 		SymID function_symbol;
 
-		Box<dia_int::dia_file::Component> getValue(dia_int::MessageBase& msg) final;
+		Box<dia_int::dia_args::Component> getValue(dia_int::MessageBase& msg) final;
 
 	public:
 		InteractiveFunctionName(SymID function_symbol): function_symbol(function_symbol) {}
@@ -49,7 +44,7 @@ namespace compiler::helios::code {
 		// get function definition and attach function defined here
 	};
 
-	Box<dia_file::Component> InteractiveFunctionName::getValue(MessageBase& msg) {
+	Box<dia_args::Component> InteractiveFunctionName::getValue(MessageBase& msg) {
 		std::string              message_id;
 		std::vector<std::string> linked_messages;
 		std::string              displayed_name = name(function_symbol).str();
@@ -59,12 +54,9 @@ namespace compiler::helios::code {
 			if (maybe_function->getElementKind() == pst::ElementKind::Fun) {
 				auto function = maybe_function.dynamicCast<pst::Fun>().value();
 				auto fun_decl = function->getParams().unlock(ctx);
-				auto id = MessageBase::getUniqueID();
+				auto id       = MessageBase::getUniqueID();
 				msg.addLinkedMessage(
-					id,
-					makeBox<FunctionDeclaredHereNote>(
-						fun_decl->getSourcePosition()
-					)
+					id, makeBox<FunctionDeclaredHereNote>(fun_decl->getSourcePosition())
 				);
 				linked_messages.push_back(std::move(id));
 			}
@@ -72,9 +64,9 @@ namespace compiler::helios::code {
 
 		msg.addEntity<TextBasedEntity>(linked_messages, displayed_name);
 
-		auto content = makeBox<dia_file::TextComponent>(displayed_name);
+		auto content = makeBox<dia_args::TextComponent>(displayed_name);
 		auto link
-			= makeBox<dia_file::LinkComponent>(std::move(linked_messages), std::move(content));
+			= makeBox<dia_args::LinkComponent>(std::move(linked_messages), std::move(content));
 		return link;
 	}
 
@@ -138,8 +130,8 @@ namespace compiler::helios::code {
 
 	public:
 		CallMissingArgumentError(
-			dia::SourcePosition                          call_source_position,
-			dia::SourcePosition                          declaration_source_position,
+			dia::SourcePosition         call_source_position,
+			dia::SourcePosition         declaration_source_position,
 			base::Optional<std::string> function_name
 		):
 			  MessageWithCodeFragmentAndCause(declaration_source_position) {
@@ -311,7 +303,7 @@ namespace compiler::helios::code {
 			}
 			variant_case(MissingCallArgument, data) {
 				auto param_decl = getNthDeclarationParameter(ctx, decl, data.parameter_index);
-				
+
 				base::Optional<std::string> function_name_str{};
 				if (is_for_candidate_function_msg)
 					function_name_str.emplace(name(function_symbol).str());
@@ -344,7 +336,6 @@ namespace compiler::helios::code {
 		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
 		this->addExploreLink("exact_candidates", std::move(args));
 	}
-
 
 	void AmbiguousMatchesError::addExploreCoercibleCandidates(
 		usize no_candidates, Box<dia_int::MessageBase> candidate_list

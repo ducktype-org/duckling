@@ -1,6 +1,6 @@
 #pragma once
 
-#include <diagnostic_interactive/core/diagnostic_file_forward.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>
@@ -20,7 +20,7 @@ namespace dia_int {
 		std::string family;
 		std::string name;
 
-		operator dia_file::Metadata() const;
+		operator dia_args::Metadata() const;
 	};
 
 	/**
@@ -39,14 +39,14 @@ namespace dia_int {
 		 * @warning This operation can change the DiagnosticBase - for example add new additional
 		 * message
 		 */
-		virtual Box<dia_file::Component> getValue(MessageBase&) = 0;
+		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
 
 		[[nodiscard]] const std::string& getName() const { return name; }
 
 		virtual ~Argument() = default;
 	};
 
-	class TextArgument: public Argument {
+	class TextArgument final: public Argument {
 		std::string content;
 
 	public:
@@ -54,30 +54,30 @@ namespace dia_int {
 			  Argument(std::move(name)),
 			  content(std::move(content)) {}
 
-		Box<dia_file::Component> getValue(MessageBase&) override;
+		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
 
-	class CodeArgument: public Argument {
+	class CodeArgument final: public Argument {
 		dia::SourcePosition position;
 		usize               lines_before = 1;
 		usize               lines_after  = 1;
 
 	public:
 		static void addCodeLines(
-			std::vector<Box<dia_file::Component>>& code_list,
+			std::vector<Box<dia_args::Component>>& code_list,
 			Ref<tokenizer::TokenSource>            source,
 			usize                                  start,
 			usize                                  end
 		);
 
-		Box<dia_file::Component> getValue(MessageBase&) override;
+		Box<dia_args::Component> getValue(MessageBase&) override;
 
 		CodeArgument(std::string name, dia::SourcePosition position):
 			  Argument(std::move(name)),
 			  position(position) {}
 	};
 
-	class CodeLocationArgument: public Argument {
+	class CodeLocationArgument final: public Argument {
 		struct FileLocation {
 			std::string file;
 			u64         line;
@@ -102,19 +102,18 @@ namespace dia_int {
 			  Argument(std::move(name)),
 			  location(FileLocation::fromSourcePosition(position)) {}
 
-		Box<dia_file::Component> getValue(MessageBase&) override;
+		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
 
-	class TemplateComponentArgument {};
 
 	class InteractiveElement {
 	public:
-		virtual Box<dia_file::Component> getValue(MessageBase&) = 0;
+		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
 
 		virtual ~InteractiveElement() = default;
 	};
 
-	class InteractiveArgument: public Argument {
+	class InteractiveArgument final: public Argument {
 	private:
 		Box<InteractiveElement> element;
 
@@ -123,11 +122,19 @@ namespace dia_int {
 			  Argument(std::move(name)),
 			  element(std::move(element)) {}
 
-		Box<dia_file::Component> getValue(MessageBase& message) override {
+		Box<dia_args::Component> getValue(MessageBase& message) override {
 			return element->getValue(message);
 		}
 	};
 
+	/**
+	 * @brief Entities are used to represent symbols in the error code messages.
+	 * Each entity has its own links.
+	 *
+	 * For example a variable can be represented as an entity
+	 * and in every code snippet every time the variable appears in the text
+	 * it will be linked to the same entity.
+	 */
 	class Entity {
 		std::vector<std::string> linked_messages;
 
@@ -142,7 +149,14 @@ namespace dia_int {
 		virtual ~Entity() = default;
 	};
 
-	class TextBasedEntity: public Entity {
+	/**
+	 * @brief Text based entity is an entity that is represented by a simple text
+	 * For example a variable with variable name,
+	 * every time the variable name appears in the code snippet
+	 * it will be linked to the same entity.
+	 * @warning This is not implemented yet
+	 */
+	class TextBasedEntity final: public Entity {
 		std::string displayed_name;
 
 	public:
@@ -153,20 +167,27 @@ namespace dia_int {
 		[[nodiscard]] const std::string& getDisplayedName() const { return displayed_name; }
 	};
 
-	class PointerMessage {
+	/**
+	 * @brief Pointer message is a information for where the pointer should point
+	 * in the code snippet. The pointer message should be
+	 */
+	class PointerMessage final {
 	public:
-		std::string                 name;
 		dia::SourcePosition         position;
+		std::string                 pointer_message_id;
 		base::Optional<std::string> message_id;
 
-		PointerMessage(std::string name, dia::SourcePosition position, 
-		               base::Optional<std::string> message_id = {}):
-			  name(std::move(name)),
+		PointerMessage(
+			std::string                 name,
+			dia::SourcePosition         position,
+			base::Optional<std::string> message_id = {}
+		):
 			  position(position),
+			  pointer_message_id(std::move(name)),
 			  message_id(std::move(message_id)) {}
 	};
 
-	class ExploreLink {
+	class ExploreLink final {
 		std::string                message_id;
 		std::vector<Box<Argument>> arguments;
 
@@ -175,17 +196,24 @@ namespace dia_int {
 			  message_id(std::move(message_id)),
 			  arguments(std::move(arguments)) {}
 
-		dia_file::ExploreEdge getValue(MessageBase& message) const;
+		dia_args::ExploreEdge getValue(MessageBase& message) const;
 	};
 
 	class MessageBase {
 	private:
 		std::vector<Box<Argument>> arguments;
-		std::vector<Box<Entity>>   entities;
 
+		std::vector<Box<Entity>> entities;
+
+		/**
+		 */
 		std::vector<PointerMessage> pointer_messages;
 		std::vector<ExploreLink>    explore_links;
 
+		/**
+		 * @brief Messages that are directly attached to the this message and will be displayed
+		 * below it.
+		 */
 		std::vector<Box<MessageBase>> attached_messages;
 
 		/**
@@ -197,8 +225,8 @@ namespace dia_int {
 		virtual Metadata getMetadata() const = 0;
 
 
-		dia_file::Message buildMessages(
-			base::HashMap<std::string, dia_file::Message>& additional_messages
+		dia_args::Message buildMessages(
+			base::HashMap<std::string, dia_args::Message>& additional_messages
 		);
 
 	protected:
@@ -238,23 +266,37 @@ namespace dia_int {
 			explore_links.push_back(ExploreLink(std::forward<Args>(args)...));
 		}
 
+		// ============================== ADDING MESSAGES ==============================
+
+		/**
+		 * @note The methods below can be used directly by the compiler code
+		 */
+
+		/**
+		 * @brief Adds a linked message that can be referenced by its ID.
+		 * It is not displayed, but can be linked from the other messages.
+		 * The pointer messages can also be linked here.
+		 */
 		void addLinkedMessage(std::string id, Box<MessageBase> message) {
 			linked_messages.insertOrAssign(std::move(id), std::move(message));
 		}
 
-		void appendMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
+		/**
+		 * @brief Attachs a message that will be displayed below this message. 
+		 */
+		void attachMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
 
 		/* =============================  ACCESSORS ============================= */
 
 		/**
-		 * @note These method is used by the Parameter to get the pointer messages on the code.
+		 * @note These method is used by the CodeParameter to get the pointer messages on the code.
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
 		 */
-		Box<dia_file::Thread> buildDiagnosticFile();
+		Box<dia_args::Diagnostic> buildDiagnosticFile();
 
 		virtual ~MessageBase() = default;
 

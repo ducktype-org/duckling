@@ -1,6 +1,6 @@
 #pragma once
 
-#include "diagnostic_interactive/core/diagnostic_file.hpp"
+#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
 #include "frontend/pst_parser/access.hpp"
 #include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
 #include "frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp"
@@ -35,7 +35,7 @@ namespace compiler::helios::errors {
 		tsh::SymbolType<>                             symbol_type;
 		base::Optional<pst::Access<pst::ExprElement>> pst_expr;
 
-		Box<dia_file::Component> getValue(MessageBase& msg) final;
+		Box<dia_args::Component> getValue(MessageBase& msg) final;
 
 	public:
 		InteractiveType(

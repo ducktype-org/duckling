@@ -1,6 +1,6 @@
 add_library(
     DiagnosticInteractiveCore
-    src/diagnostic_interactive/core/diagnostic_file.cpp
+    src/diagnostic_interactive/core/diagnostic_arguments.cpp
     src/diagnostic_interactive/core/template_evaluation.cpp
     src/diagnostic_interactive/core/template_registry.cpp
     src/diagnostic_interactive/core/template_file.cpp

@@ -3,9 +3,14 @@
 
 namespace dia_int {
 
+	/**
+	 * @brief Construct a plain-text view from diagnostic state. 
+	 */
 	std::string constructTextView(CRef<state::Component> component);
 
-	namespace term_ui_view {
-		Diagnostic constructTreeView(const state::Diagnostic& state);
-	}
+	/**
+	 * @brief Construct a tree term_ui_view from diagnostic state.
+	 */
+	term_ui_view::Diagnostic constructTreeView(const state::Diagnostic& state);
+	
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "diagnostic_file.hpp"
+#include "diagnostic_arguments_forward.hpp"
 #include "template_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -7,18 +7,27 @@
 
 namespace dia_int {
 
+	/**
+	 * @brief The provider interface for loading diagnostic templates.
+	 * There are different providers for test purposes.
+	 */
 	class TemplateRegistryProvider {
 	public:
 		virtual ~TemplateRegistryProvider()                                          = default;
 		virtual base::Optional<std::string_view> loadTemplate(std::string_view path) = 0;
 	};
 
-	class TemplateResistryMainProvider: public TemplateRegistryProvider {
+	/**
+	 * @brief This is the main provider that loads templates from filesystem.
+	 * Optionally this can be loaded from the embedded resources.
+	 * This mechanism is configured at the CMake level.
+	 */
+	class TemplateResistryMainProvider final: public TemplateRegistryProvider {
 	public:
 		base::Optional<std::string_view> loadTemplate(std::string_view path) override;
 	};
 
-	class TemplateRegistryFilesystemProvider: public TemplateRegistryProvider {
+	class TemplateRegistryFilesystemProvider final: public TemplateRegistryProvider {
 		base::HashMap<std::string, std::string> templates;
 		std::string                             templates_root;
 
@@ -29,7 +38,7 @@ namespace dia_int {
 		base::Optional<std::string_view> loadTemplate(std::string_view path) override;
 	};
 
-	class TemplateRegistryTestProvider: public TemplateRegistryProvider {
+	class TemplateRegistryTestProvider final: public TemplateRegistryProvider {
 		base::HashMap<std::string, std::string> templates;
 
 	public:
@@ -41,23 +50,28 @@ namespace dia_int {
 
 	/**
 	 * @brief Registry for loading and caching diagnostic templates.
+	 * It's implemented as a singleton.
 	 */
-	class TemplateRegistry {
+	class TemplateRegistrySingleton final {
 	private:
 		base::HashMap<std::string, template_file::DiagnosticTemplate> cache;
 		Box<TemplateRegistryProvider>                                 provider;
 
-		static MBox<TemplateRegistry> instance;
+		static MBox<TemplateRegistrySingleton> instance;
+
+		TemplateRegistrySingleton(Box<TemplateRegistryProvider> provider):
+			  provider(std::move(provider)) {}
+
+		template<class T, class Deleter, class... Args>
+		friend base::Box<T, Deleter> base::makeBox(Args&&... args); // @TODO: #1364 deal with friend makeBox
 
 	public:
-		TemplateRegistry(Box<TemplateRegistryProvider> provider): provider(std::move(provider)) {}
-
 		/**
-		 * @brief Load a template by metadata.
+		 * @brief Main function, loads a template by metadata.
 		 */
-		template_file::DiagnosticTemplate& loadTemplate(const dia_file::Metadata& metadata);
+		template_file::DiagnosticTemplate& loadTemplate(const dia_args::Metadata& metadata);
 
-		static TemplateRegistry& getInstance();
+		static TemplateRegistrySingleton& getInstance();
 
 		static void setInstance(Box<TemplateRegistryProvider> provider);
 	};

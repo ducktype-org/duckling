@@ -2,6 +2,7 @@
 
 #include "template_file.hpp"
 
+#include <base/collections/maps.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
 
@@ -82,10 +83,10 @@ namespace dia_int::state {
 	 * Can have associated side entries, but does not support highlighting
 	 * (attempting to serialize as highlighted is prohibited).
 	 */
-	class TextComponent: public Component {
+	class TextComponent final: public Component {
 	public:
 		std::string            content;
-		std::vector<MessageID> attached_messages;
+		std::vector<MessageID> linked_messages;
 
 		TextComponent(std::string content);
 
@@ -104,7 +105,7 @@ namespace dia_int::state {
 	 * Each code piece can participate in multiple highlight pointer_messages that
 	 * tie into pointer messages within a code section.
 	 */
-	class CodeComponent: public Component {
+	class CodeComponent final: public Component {
 	public:
 		std::string                   content;
 		std::vector<PointerMessageID> pointer_messages;
@@ -127,7 +128,7 @@ namespace dia_int::state {
 	/**
 	 * @brief Node component concatenating multiple child components in order.
 	 */
-	class ConcatComponent: public Component {
+	class ConcatComponent final: public Component {
 	private:
 
 	public:
@@ -146,7 +147,7 @@ namespace dia_int::state {
 	 * @brief Node component that toggles between primary and alternative
 	 * content upon interaction.
 	 */
-	class InteractiveComponent: public Component {
+	class InteractiveComponent final: public Component {
 	public:
 		enum class Status : bool { Primary, Alternative };
 
@@ -171,7 +172,7 @@ namespace dia_int::state {
 	 *
 	 * Line numbers are honored when placed within a code section.
 	 */
-	class StartLineComponent: public Component {
+	class StartLineComponent final: public Component {
 	public:
 		base::Optional<u64> number;
 
@@ -190,7 +191,7 @@ namespace dia_int::state {
 		usize       column;
 	};
 
-	class CodeBlockComponent: public Component {
+	class CodeBlockComponent final: public Component {
 	private:
 
 	public:
@@ -206,7 +207,7 @@ namespace dia_int::state {
 		void debugPrint(std::ostream& out, usize indent = 0) const override;
 	};
 
-	class CodeLocationComponent: public Component {
+	class CodeLocationComponent final: public Component {
 	public:
 		CodeLocation location;
 
@@ -219,19 +220,19 @@ namespace dia_int::state {
 		void debugPrint(std::ostream& out, usize indent = 0) const override;
 	};
 
-	class PointerMessage {
+	class PointerMessage final {
 	public:
 		std::string type;
 		std::string content;
 		u64         priority;
 	};
 
-	class ExploreEdge {
+	class ExploreEdge final {
 	public:
 		Box<Component> content;
 	};
 
-	class Message {
+	class Message final {
 	public:
 		template_file::Metadata                         metadata;
 		Box<Component>                                  header;
@@ -248,7 +249,8 @@ namespace dia_int::state {
 		);
 
 		/**
-		 * @brief Returns message IDs in the order they appear in the message.
+		 * @brief Returns message IDs in the order they appear in the message links.
+		 * Useful utlity.
 		 *
 		 * Traverses header first, then description, then explore_links.
 		 * Duplicate IDs are included only once (first occurrence).
@@ -258,7 +260,7 @@ namespace dia_int::state {
 		void debugPrint(std::ostream& out) const;
 	};
 
-	class Diagnostic {
+	class Diagnostic final {
 	public:
 		std::vector<state::MessageID> displayed_messages;  // The order also matters
 		std::vector<Message>          messages;

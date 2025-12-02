@@ -1,10 +1,12 @@
-#include "diagnostic_file_forward.hpp"
-#include "diagnostic_file.hpp"
+#include "diagnostic_arguments.hpp"
+
+#include "diagnostic_arguments_forward.hpp"
+
 #include <base/pointers/box.hpp>
 
-DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_file::Component);
+DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Component);
 
-namespace dia_int::dia_file {
+namespace dia_int::dia_args {
 	auto Component::fromJson(const json& elem) -> Box<Component> {
 		ASSUME_HAS(elem, "type");
 		std::string type = elem["type"];
@@ -242,9 +244,9 @@ namespace dia_int::dia_file {
 			result["explore_links"] = json::array();
 			for (const auto& edge: explore_links) result["explore_links"].push_back(edge.toJson());
 		}
-		if (!attached_messages.empty()) {
+		if (!linked_messages.empty()) {
 			result["attached_messages"] = json::array();
-			for (const auto& info_id: attached_messages)
+			for (const auto& info_id: linked_messages)
 				result["attached_messages"].push_back(info_id);
 		}
 		return result;
@@ -268,33 +270,33 @@ namespace dia_int::dia_file {
 
 		if (msg_json.contains("attached_messages")) {
 			ASSUME_ARR(msg_json, "attached_messages");
-			result.attached_messages = msg_json["attached_messages"].get<std::vector<MessageID>>();
+			result.linked_messages = msg_json["attached_messages"].get<std::vector<MessageID>>();
 		}
 
 		return result;
 	}
 
-	json Thread::toJson() const {
+	json Diagnostic::toJson() const {
 		json result;
 		result["main_message"]      = main_message.toJson();
-		result["attached_messages"] = json::object();
+		result["linked_messages"] = json::object();
 
-		for (const auto& [info_id, msg]: additional_messages)
-			result["attached_messages"][info_id] = msg.toJson();
+		for (const auto& [info_id, msg]: linked_messages)
+			result["linked_messages"][info_id] = msg.toJson();
 
 		return result;
 	}
 
-	Thread Thread::fromJson(const json& thread_json) {
-		ASSUME_HAS(thread_json, "main_message");
-		ASSUME_HAS(thread_json, "attached_messages");
+	Diagnostic Diagnostic::fromJson(const json& diag_json) {
+		ASSUME_HAS(diag_json, "main_message");
+		ASSUME_HAS(diag_json, "linked_messages");
 
-		Thread result;
-		result.main_message = Message::fromJson(thread_json["main_message"]);
+		Diagnostic result;
+		result.main_message = Message::fromJson(diag_json["main_message"]);
 
-		ASSUME_HAS(thread_json, "attached_messages");
-		for (const auto& [info_id, msg_json]: thread_json["attached_messages"].items())
-			result.additional_messages.put(info_id, Message::fromJson(msg_json));
+		ASSUME_HAS(diag_json, "linked_messages");
+		for (const auto& [info_id, msg_json]: diag_json["linked_messages"].items())
+			result.linked_messages.put(info_id, Message::fromJson(msg_json));
 
 		return result;
 	}

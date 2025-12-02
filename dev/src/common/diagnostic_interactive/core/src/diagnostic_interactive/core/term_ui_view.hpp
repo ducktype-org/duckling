@@ -1,3 +1,9 @@
+/**
+ * @file term_ui_view.hpp
+ * @author Wojciech Rzeplinski
+ * The term UI view representation of diagnostics.
+ * This layer is used to render diagnostics in terminal UI.
+ */
 #pragma once
 
 #include <base/types/ints.hpp>
@@ -10,23 +16,23 @@
 namespace dia_int::term_ui_view {
 	enum class StyleType { Error, Warning, Note, Hint, Docs };
 
-	struct PointerMessage {
+	struct PointerMessage final {
 		std::string text;
 		StyleType   type;
 		u64         priority;
 	};
 
-	struct CodePiece {
+	struct CodePiece final {
 		std::string   text;
 		std::set<u64> pointer_ids;
 	};
 
-	struct CodeLine {
+	struct CodeLine final {
 		base::Optional<u64>    line_no;
 		std::vector<CodePiece> pieces;
 	};
 
-	struct CodeSection {
+	struct CodeSection final {
 		std::string                        file;
 		u64                                line;
 		u64                                col;
@@ -37,14 +43,14 @@ namespace dia_int::term_ui_view {
 	using TextSection = std::string;
 	using Section     = std::variant<TextSection, CodeSection>;
 
-	struct Message {
+	struct Message final {
 		StyleType            type;
 		u64                  code;
 		std::string          header;
 		std::vector<Section> sections;
 	};
 
-	struct Diagnostic {
+	struct Diagnostic final {
 		std::vector<Message> messages;
 	};
 }

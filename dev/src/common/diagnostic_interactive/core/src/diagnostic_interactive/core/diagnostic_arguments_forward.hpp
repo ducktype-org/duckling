@@ -2,7 +2,7 @@
 
 #include <base/pointers/box.hpp>
 
-namespace dia_int::dia_file {
+namespace dia_int::dia_args {
 
 	struct Component;
 
@@ -22,7 +22,7 @@ namespace dia_int::dia_file {
     struct Metadata;
     struct Message;
     struct Entity;
-    struct Thread;
+    struct Diagnostic;
 }
 
-DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::dia_file::Component);
+DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::dia_args::Component);

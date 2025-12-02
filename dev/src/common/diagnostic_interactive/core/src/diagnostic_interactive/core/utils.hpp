@@ -1,10 +1,17 @@
+/**
+ * @file utils.hpp
+ * @author Wojciech Rzeplinski
+ * @brief Utility macros and functions for working with yaml and json deserialization.
+ *
+ */
 #pragma once
 #include "exceptions.hpp"
+
 #include <yaml-cpp/yaml.h>
 
-#include <base/pointers/box.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <json/json.hpp>
@@ -23,16 +30,21 @@ namespace dia_int {
 
 #define ASSUME_OBJ(jf) \
 	if (!jf.is_object()) throw ParsingDiagnosticFileError(#jf " is not an object")
-#define ASSUME_STR(jf, key) \
-	if (!jf[key].is_string()) throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not a string"))
-#define ASSUME_UINT(jf, key)                                                                     \
-	if (!jf[key].is_number_unsigned())                                                           \
-		throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not an unsigned integer"))
-#define ASSUME_ARR(jf, key) \
-	if (!jf[key].is_array()) throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not an array"))
+#define ASSUME_STR(jf, key)   \
+	if (!jf[key].is_string()) \
+	throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not a string"))
+#define ASSUME_UINT(jf, key)                                            \
+	if (!jf[key].is_number_unsigned())                                  \
+	throw ParsingDiagnosticFileError(                                   \
+		base::strConcat(#jf "[ ", key, " ] is not an unsigned integer") \
+	)
+#define ASSUME_ARR(jf, key)  \
+	if (!jf[key].is_array()) \
+	throw ParsingDiagnosticFileError(base::strConcat(#jf "[ ", key, " ] is not an array"))
 
 #define ASSUME_HAS(jf, key) \
-	if (!jf.contains(key)) throw ParsingDiagnosticFileError(base::strConcat(#jf " has no key ", key))
+	if (!jf.contains(key))  \
+	throw ParsingDiagnosticFileError(base::strConcat(#jf " has no key ", key))
 #define ASSUME_HAS_STR(jf, key) \
 	do {                        \
 		ASSUME_HAS(jf, key);    \
@@ -54,15 +66,15 @@ namespace dia_int {
 		key_var = jf[#key_var];             \
 	} while (false)
 
-#define ASSUME_VAL(jf, key, value)                                                               \
-	if (jf[key] != value)                                                                        \
-		throw ParsingDiagnosticFileError(base::strConcat(                                        \
-			"invalid ", #key, ", expected: ", value, " but provided: ", std::string(jf[key])     \
-		))
+#define ASSUME_VAL(jf, key, value)                                                       \
+	if (jf[key] != value)                                                                \
+	throw ParsingDiagnosticFileError(base::strConcat(                                    \
+		"invalid ", #key, ", expected: ", value, " but provided: ", std::string(jf[key]) \
+	))
 
-#define YAML_ASSUME_HAS_SCALAR(node, key)                                                        \
-	if (!node[key] || !node[key].IsScalar())                                                     \
-		throw ParsingTemplateFileError(base::strConcat("YAML node missing scalar key: ", key))
+#define YAML_ASSUME_HAS_SCALAR(node, key)    \
+	if (!node[key] || !node[key].IsScalar()) \
+	throw ParsingTemplateFileError(base::strConcat("YAML node missing scalar key: ", key))
 
 #define YAML_ASSUME_HAS(node, key) \
 	if (!node[key]) throw ParsingTemplateFileError(base::strConcat("YAML node missing key: ", key))

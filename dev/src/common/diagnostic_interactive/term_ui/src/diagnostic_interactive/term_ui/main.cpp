@@ -1,6 +1,6 @@
 #include <diagnostic_interactive/term_ui/printers.hpp>
 #include <diagnostic_interactive/core/template_registry.hpp>
-#include <diagnostic_interactive/core/diagnostic_file.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/view_constructors.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <json/json.hpp>
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     std::string file_path = argv[1];
 
     // Set template registry to embedded templates
-    dia_int::TemplateRegistry::setInstance(
+    dia_int::TemplateRegistrySingleton::setInstance(
         makeBox<dia_int::TemplateResistryMainProvider>()
     );
 
@@ -34,11 +34,11 @@ int main(int argc, char* argv[]) {
 
     try {
         auto j = nlohmann::json::parse(content);
-        auto thread = dia_int::dia_file::Thread::fromJson(j);
+        auto thread = dia_int::dia_args::Diagnostic::fromJson(j);
 
         // Create a tree view constructor and display it in the term ui
         auto state = dia_int::evaluateDiagnostic(thread);
-        auto view = dia_int::term_ui_view::constructTreeView(state);
+        auto view = dia_int::constructTreeView(state);
 
         term_ui::print(view, std::cout);
     } catch (const std::exception& e) {

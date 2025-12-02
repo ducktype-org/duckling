@@ -110,7 +110,7 @@ namespace dia_int::template_file {
 				base::strConcat("Unknown template_type in metadata: ", template_type_str)
 			);
 
-		return Metadata(
+		return {
 			template_type,
 			node["type"].as<std::string>(),
 			node["family"].as<std::string>(),
@@ -118,7 +118,7 @@ namespace dia_int::template_file {
 			node["code"].as<u64>(),
 			node["active_from"].as<std::string>(),
 			node["active_until"].as<std::string>()
-		);
+		};
 	}
 
 	Parameter Parameter::fromYaml(const YAML::Node& node) {

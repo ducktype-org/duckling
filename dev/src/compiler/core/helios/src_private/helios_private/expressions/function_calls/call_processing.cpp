@@ -329,7 +329,7 @@ namespace compiler::helios::code {
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
 			else
-				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+				first_candidate_msg.value()->attachMessage(std::move(candidate_note));
 		}
 
 		if (as_a_link)
@@ -337,7 +337,7 @@ namespace compiler::helios::code {
 				exact_matches.size(), std::move(first_candidate_msg).value()
 			);
 		else
-			main_msg->appendMessage(std::move(first_candidate_msg).value());
+			main_msg->attachMessage(std::move(first_candidate_msg).value());
 	}
 
 	void appendCoercibleMatchesErrors(
@@ -371,7 +371,7 @@ namespace compiler::helios::code {
 			if (not first_candidate_msg.has_value())
 				first_candidate_msg.emplace(std::move(candidate_note));
 			else
-				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+				first_candidate_msg.value()->attachMessage(std::move(candidate_note));
 		}
 
 		if (as_a_link)
@@ -379,7 +379,7 @@ namespace compiler::helios::code {
 				coercible_matches.size(), std::move(first_candidate_msg).value()
 			);
 		else
-			main_msg->appendMessage(std::move(first_candidate_msg).value());
+			main_msg->attachMessage(std::move(first_candidate_msg).value());
 	}
 
 	void appendFailedMatchesErrors(
@@ -398,14 +398,14 @@ namespace compiler::helios::code {
 			auto candidate_note
 				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
-			candidate_note->appendMessage(
+			candidate_note->attachMessage(
 				createDetailedCallErrorMessage(ctx, match.function, call_expr, match.reason, false)
 			);
 
 			if (first_candidate_msg.empty())
 				first_candidate_msg.emplace(std::move(candidate_note));
 			else
-				first_candidate_msg.value()->appendMessage(std::move(candidate_note));
+				first_candidate_msg.value()->attachMessage(std::move(candidate_note));
 		}
 
 		if (as_a_link)
@@ -413,7 +413,7 @@ namespace compiler::helios::code {
 				failed_matches.size(), std::move(first_candidate_msg).value()
 			);
 		else
-			main_msg->appendMessage(std::move(first_candidate_msg).value());
+			main_msg->attachMessage(std::move(first_candidate_msg).value());
 	}
 
 	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(

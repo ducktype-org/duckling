@@ -1,7 +1,7 @@
 #pragma once
 
 #include "message.hpp"
-// #include <diagnostic_interactive/core/diagnostic_file.hpp>
+// #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 
 namespace dia_int {
 	class MessageWithCodeFragment: public MessageBase {

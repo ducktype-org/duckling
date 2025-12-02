@@ -1,6 +1,6 @@
 #include "diagnostic_interactive/core/diagnostic_state.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_file.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <diagnostic_interactive/core/template_file.hpp>
 #include <yaml-cpp/yaml.h>
@@ -25,7 +25,7 @@ public:
 private:
 	void evaluateSimpleTextTemplate() {
 		// Create a simple text template
-		TemplateRegistry::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
 metadata:
   template_type: message
@@ -47,7 +47,7 @@ explore_links: {}
 pointer_messages: {}
 )" } }
 		));
-		auto diagnostic_file = dia_file::Thread::fromJson(json::parse(R"({
+		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"({
             "main_message": {
                 "metadata": {
                     "template_type": "message",
@@ -57,7 +57,7 @@ pointer_messages: {}
                 },
                 "params": {}
             },
-            "attached_messages": {},
+            "linked_messages": {},
             "entities": {}
             })"));
 
@@ -74,7 +74,7 @@ pointer_messages: {}
 
 	void evaluateComplexComponentTemplate() {
 		// Register templates
-		TemplateRegistry::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
 metadata:
   template_type: message
@@ -179,7 +179,7 @@ content:
 		));
 
 		// Construct diagnostic file from JSON
-		auto diagnostic_file = dia_file::Thread::fromJson(json::parse(R"({
+		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"({
     "main_message": {
         "metadata": {
             "template_type": "message",
@@ -223,7 +223,7 @@ content:
             }
         }
     },
-    "attached_messages": {
+    "linked_messages": {
         "0": {
             "metadata": {
                 "template_type": "component",
@@ -290,7 +290,7 @@ content:
 
 	void evaluatePointerMessageTemplate() {
 		// Register templates
-		TemplateRegistry::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
 metadata:
   template_type: message
@@ -408,7 +408,7 @@ pointer_messages:
 		));
 
 		// Construct diagnostic file from JSON
-		auto diagnostic_file = dia_file::Thread::fromJson(json::parse(R"json({
+		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"json({
     "main_message": {
         "metadata": {
             "template_type": "message",
@@ -442,7 +442,7 @@ pointer_messages:
         ],
         "attached_messages": ["msg_candidate"]
     },
-    "attached_messages": {
+    "linked_messages": {
         "msg_candidate": {
             "metadata": {
                 "template_type": "message",

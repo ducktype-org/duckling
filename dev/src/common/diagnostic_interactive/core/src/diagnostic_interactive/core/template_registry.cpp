@@ -2,6 +2,7 @@
 
 #include "exceptions.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/yaml_buffer.hpp>
 #include <diagnostic_interactive/dia_templates/templates.hpp>
 #include <yaml-cpp/yaml.h>
@@ -18,7 +19,7 @@ namespace dia_int {
 	// --------------------------------------------------------------------------------
 
 	static bool checkMetadataMatch(
-		const template_file::DiagnosticTemplate& tmpl, const dia_file::Metadata& metadata
+		const template_file::DiagnosticTemplate& tmpl, const dia_args::Metadata& metadata
 	) {
 		auto& template_metadata = tmpl.getMetadata();
 
@@ -78,20 +79,20 @@ namespace dia_int {
 	// TemplateRegistry Implementation
 	// --------------------------------------------------------------------------------
 
-	MBox<TemplateRegistry> TemplateRegistry::instance;
+	MBox<TemplateRegistrySingleton> TemplateRegistrySingleton::instance;
 
-	TemplateRegistry& TemplateRegistry::getInstance() {
+	TemplateRegistrySingleton& TemplateRegistrySingleton::getInstance() {
 		if (!instance.toOpt().has_value())
 			throw TemplateEvaluationException("TemplateRegistry instance not initialized.");
 		return *instance.toOpt().value();
 	}
 
-	void TemplateRegistry::setInstance(Box<TemplateRegistryProvider> provider) {
-		instance = base::makeBox<TemplateRegistry>(std::move(provider));
+	void TemplateRegistrySingleton::setInstance(Box<TemplateRegistryProvider> provider) {
+		instance = base::makeBox<TemplateRegistrySingleton>(std::move(provider));
 	}
 
-	template_file::DiagnosticTemplate& TemplateRegistry::loadTemplate(
-		const dia_file::Metadata& metadata
+	template_file::DiagnosticTemplate& TemplateRegistrySingleton::loadTemplate(
+		const dia_args::Metadata& metadata
 	) {
 		std::string key = metadata.type + "/" + metadata.family + "/" + metadata.name;
 
