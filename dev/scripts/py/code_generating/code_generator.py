@@ -32,7 +32,16 @@ class ScopeData:
     def put_in_dot(self, module_name: str):
         for i in range(len(self.vars)):
             self.vars[i] = f"{module_name}.{self.vars[i]}"
+
+        # hotfix: avoid renaming the same function multiple times,
+        # when it is duplicated in the list.
+        was_already_present = set()
         for i in range(len(self.funcs)):
+            if id(self.funcs[i]) in was_already_present:
+                continue
+            was_already_present.add(id(self.funcs[i]))
+           
+            # print(f"> {i} Renaming function {self.funcs[i].name} to {module_name}.{self.funcs[i].name}")
             self.funcs[i].name = f"{module_name}.{self.funcs[i].name}"
 
 @dataclass
