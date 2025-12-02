@@ -94,7 +94,7 @@ namespace compiler::helios::code {
 	struct LiteralNumericExpr final: public Expr {
 		numeric_value::NumericValue value;
 
-		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue ctv);
+		LiteralNumericExpr(query::Context& ctx, numeric_value::NumericValue value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

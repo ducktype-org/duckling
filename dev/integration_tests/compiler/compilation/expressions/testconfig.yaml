@@ -48,3 +48,10 @@ Tests:
         Output:
           String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
         ExitCode: 0
+  coercions:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0

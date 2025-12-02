@@ -1983,13 +1983,6 @@ private:
 		}
 
 		try {
-			getConstValueAs<i64>("INVALID_TYPES", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
