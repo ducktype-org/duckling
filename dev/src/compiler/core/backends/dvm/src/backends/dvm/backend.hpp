@@ -4,7 +4,6 @@
 #include <base/pointers/ref.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm {
 
@@ -13,6 +12,10 @@ namespace compiler::backend_vm {
 		base::Optional<CRef<lir::Function>> global_ctor;
 		base::Optional<CRef<lir::Function>> global_dtor;
 	};
+
+	namespace internal {
+		class ProgramLoweringContext;
+	}
 
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
@@ -35,6 +38,7 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::ValidProgram valid_program = vm::code::ValidProgram::withBuiltins();
+		// A Boxed pointer to allow forward declaration in order to hide implementation details.
+		Box<internal::ProgramLoweringContext> program_context;
 	};
 }

@@ -365,7 +365,7 @@ namespace compiler::lir {
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
-			  extra_params(std::move(extra_parameters)) {}
+			  extra_params(extra_parameters) {}
 	};
 
 	/**

@@ -1,6 +1,8 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time.
 add_library(DVMBackend STATIC
     src_private/backend.cpp
+    src_private/program_lowering_context.cpp
+    src_private/function_lowering_context.cpp
 )
 
 make_module(DVMBackend USES Base QueryFramework LIR LibVM Logger)
