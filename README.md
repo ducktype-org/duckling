@@ -12,9 +12,9 @@
 
 <p align="center">
   <a href="https://docs.duckling.pl/">Documentation</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://duckling.pl/">Website</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://duckling.pl/get_involved/">Community</a>
 </p>
 
