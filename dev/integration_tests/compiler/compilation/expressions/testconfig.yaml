@@ -48,6 +48,47 @@ Tests:
         Output:
           String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
         ExitCode: 0
+
+  floating_point_arithmetic:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  floating_point_comparisons:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  unsigned_integers:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  signed_integers:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  float_32:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+  
   coercions:
     Cases:
       llvm:

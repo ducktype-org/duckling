@@ -76,5 +76,5 @@ fun main() -> i64 = {
         builtin_output_i64(13);
     }
 
-    return 0;
+    return 0i64;
 }

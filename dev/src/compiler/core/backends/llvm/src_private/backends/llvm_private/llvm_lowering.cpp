@@ -1,5 +1,7 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <type_traits>
+
 LLVM_INCLUDE_BEGIN()
 
 #include <llvm/IR/BasicBlock.h>
@@ -39,6 +41,55 @@ LLVM_INCLUDE_END()
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
 namespace {
 	/**
+	 * @brief Converts a NumericValue into its corresponding llvm::Constant representation.
+	 * @param numeric The NumericValue to convert.
+	 * @param llvm_type The expected LLVM type.
+	 * @return The created llvm::Constant*.
+	 */
+	auto numericValueToLLVMConstant(
+		const compiler::numeric_value::NumericValue& numeric, llvm::Type* llvm_type
+	) {
+		return std::visit(
+			[&](auto&& val) -> llvm::Constant* {
+				using T = std::decay_t<decltype(val)>;
+
+				if constexpr (std::is_integral_v<T>) {
+					if (!llvm_type->isIntegerTy()) {
+						CORE_PANIC(
+							"LLVM lowering: Type mismatch. NumericValue is integer, but LLVM type "
+							"is not"
+						);
+					}
+
+					if constexpr (std::is_signed_v<T>)
+						return llvm::ConstantInt::getSigned(llvm_type, static_cast<i64>(val));
+					else
+						return llvm::ConstantInt::get(llvm_type, static_cast<u64>(val), false);
+				} else if constexpr (std::is_same_v<T, f32>) {
+					if (!llvm_type->isFloatTy()) {
+						CORE_PANIC(
+							"LLVM lowering: Type mismatch. NumericValue is f32, but LLVM type is "
+							"not"
+						);
+					}
+					return llvm::ConstantFP::get(llvm_type, static_cast<f64>(val));
+				} else if constexpr (std::is_same_v<T, f64>) {
+					if (!llvm_type->isDoubleTy()) {
+						CORE_PANIC(
+							"LLVM lowering: Type mismatch. NumericValue is f64, but LLVM type is "
+							"not"
+						);
+					}
+					return llvm::ConstantFP::get(llvm_type, val);
+				} else {
+					CORE_PANIC("LLVM lowering: Unsupported numeric type in NumericValue");
+				}
+			},
+			numeric.getStorage()
+		);
+	}
+
+	/**
 	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
 	 * @param ctv The CTV to convert.
 	 * @param llvm_type The expected type.
@@ -47,26 +98,22 @@ namespace {
 	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
 		variant_match(ctv.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
-				if (!llvm_type->isIntegerTy()) {
-					CORE_PANIC("LLVM lowering : Type mismatch. CTV is numeric, but LLVM type is not"
-					);
-				}
-
-				// @TODO: #1499 For now every numeric value is casted to i64 (including floating
-				// point literals).
-				i64 coerced_value = numeric.coerceTo<i64>().value();
-				return llvm::ConstantInt::getSigned(llvm_type, coerced_value);
+				return numericValueToLLVMConstant(numeric, llvm_type);
 			}
 			variant_case(bool, val) {
 				if (!llvm_type->isIntegerTy(1)) {
 					CORE_PANIC(
-						"LLVM lowering : Type mismatch. CTV is a boolean, but LLVM type is not"
+						"LLVM lowering: Type mismatch. CTV is a boolean, but LLVM type is not"
 					);
 				}
 				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
 			}
 			variant_default {
-				throw base::NotYetImplemented("Conversion from CTV to LLVM constant for this type.");
+				throw base::NotYetImplemented(base::strConcat(
+					"Conversion from CTV to LLVM constant for this type. Index in CTV "
+					"variant: ",
+					ctv.getStorage().index()
+				));
 			}
 		}
 		CORE_UNREACHABLE();
@@ -333,7 +380,7 @@ namespace compiler::backend_llvm {
 				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
 			);
 		} else {
-			// Initialise the global variable to null, sice it will be initialised in the constructor:
+			// Initialise the global variable to null, since it will be initialised in the constructor:
 			CORE_ASSERT(
 				not lir_global.initial_value.has_value(),
 				"Non-constant global should not have initial value set"
@@ -510,10 +557,10 @@ namespace compiler::backend_llvm {
 		auto loadLIRValue(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
-				variant_case(i64, value) {
-					return llvm::ConstantInt::getSigned(i64Type(context), value);
+				variant_case(lir::LIRConstant, constant) {
+					const auto llvm_type = typeFromLayout(module, constant.layout);
+					return ctvToLLVMConstant(constant.value, llvm_type);
 				}
-				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LIRPlace, place) {
 					// We store local values behind pointers to stack-allocated memory.
 					// We need to load them (or their fields) before using them.
@@ -753,6 +800,7 @@ namespace compiler::backend_llvm {
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
+			/// Integer arithmetic ///
 			case IntegerAdd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:
@@ -767,6 +815,32 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
 			case IntegerSMod:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
+			case IntegerNeg: {
+				const auto output   = lir_instruction.output.value();
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateNeg(argument);
+				storeOutput(output, value, builder);
+				break;
+			}
+
+			/// Floatin point arithmetic ///
+			case FloatAdd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FAdd)
+			case FloatSub:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FSub)
+			case FloatMul:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FMul)
+			case FloatDiv:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FDiv)
+			case FloatNeg: {
+				const auto output   = lir_instruction.output.value();
+				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateFNeg(argument);
+				storeOutput(output, value, builder);
+				break;
+			}
+
+			/// Integer comparisons ///
 			case IntegerULt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
 			case IntegerSLt:
@@ -787,13 +861,25 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpEQ)
 			case IntegerNeq:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
-			case IntegerNeg: {
-				const auto output   = lir_instruction.output.value();
-				const auto argument = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				const auto value    = builder.CreateNeg(argument);
-				storeOutput(output, value, builder);
-				break;
-			}
+
+			/// Floating point comparisons ///
+			// @note: We use Oxx instead of Uxx for the comparisons to be "ordered". This basically
+			// means if any of the operands is NaN the result of the operation is always false. The
+			// `unordered` alternative returns true if any of the operands is NaN.
+			case FloatLt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOLT)
+			case FloatGt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOGT)
+			case FloatLteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOLE)
+			case FloatGteq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOGE)
+			case FloatEq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOEQ)
+			case FloatNeq:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpONE)
+
+			/// Logic ///
 			case BooleanAnd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
 			case BooleanOr:

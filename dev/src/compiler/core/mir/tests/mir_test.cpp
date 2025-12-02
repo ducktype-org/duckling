@@ -2,6 +2,7 @@
  * @file mir_tests.cpp
  */
 
+#include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -31,6 +32,7 @@ public:
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(simpleFunctionCalls);
+		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
 		TESTER_ADD_TEST(moveValidation);
@@ -277,8 +279,11 @@ private:
 			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
 			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
 
-			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MIRBoolConst>().value, true);
-			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MIRBoolConst>().value, false);
+			const auto& true_mir_const  = true_mir_value.get<compiler::mir::MIRConstant>();
+			const auto& false_mir_const = false_mir_value.get<compiler::mir::MIRConstant>();
+
+			ASSERT_EQUAL(true_mir_const.value.get<bool>().value(), true);
+			ASSERT_EQUAL(false_mir_const.value.get<bool>().value(), false);
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir
@@ -321,6 +326,53 @@ private:
 			}
 
 			ASSERT_EQUAL(count_of_calls, 6);
+		});
+	}
+
+	void numericLiteralsTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/numeric_literals")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit     = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& main_fun = unit->functions.at(0);
+			ASSERT_EQUAL(main_fun.declaration->original_name, base::StrID("main"));
+			auto& main_mir = ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->value();
+
+			auto        entry_block_id = main_mir.block_order.front();
+			const auto& entry_block    = main_mir.blocks[entry_block_id];
+
+			bool found_a = false, found_b = false, found_c = false, found_d = false;
+
+			for (const auto& instr: entry_block.instructions) {
+				if (instr.operation != compiler::mir::Operation::Assign) continue;
+				const auto& output_place = instr.output.value();
+				const auto& local_ref    = output_place.getBase<compiler::mir::MIRLocalRef>();
+				auto        var_name     = local_ref->getName();
+
+				const auto& value_arg = instr.arguments.at(0);
+				const auto& constant  = value_arg.get<compiler::mir::MIRConstant>();
+				const auto& numeric_val
+					= constant.value.get<compiler::numeric_value::NumericValue>();
+
+				if (var_name == "a") {
+					ASSERT_EQUAL(numeric_val->get<i16>(), 123);
+					found_a = true;
+				} else if (var_name == "b") {
+					ASSERT_EQUAL(numeric_val->get<u32>(), 4'000'000'000);
+					found_b = true;
+				} else if (var_name == "c") {
+					ASSERT_EQUAL(numeric_val->get<f32>(), 1.25f);
+					found_c = true;
+				} else if (var_name == "d") {
+					ASSERT_EQUAL(numeric_val->get<f64>(), 987.654);
+					found_d = true;
+				}
+			}
+
+			assertTrue(found_a, "Assignment to 'a' was not found in MIR");
+			assertTrue(found_b, "Assignment to 'b' was not found in MIR");
+			assertTrue(found_c, "Assignment to 'c' was not found in MIR");
+			assertTrue(found_d, "Assignment to 'd' was not found in MIR");
 		});
 	}
 
