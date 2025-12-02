@@ -1,38 +1,38 @@
 fun good1(c: i64) = {
-    var a: i64 = 10i64;
-    var b: i64 = 15i64;
+    var a: i64 = 10;
+    var b: i64 = 15;
     a = b; # this is move (in test)
-    a = 3i64;
+    a = 3;
 }
 
 fun good2(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
-    if (b < 16i64){
+    if (b < 16){
         a = b; # this is move (in test)
     }
-    a = 3i64;
+    a = 3;
 }
 
 fun good3(c: i64) = {
-    var a: i64 = 10i64;
-    while (a < 16i64){
-        var b: i64 = 15i64;
-        if (b < 16i64){
-            b = 4i64;
+    var a: i64 = 10;
+    while (a < 16){
+        var b: i64 = 15;
+        if (b < 16){
+            b = 4;
             a = b; # this is move (in test)
         }
     }
-    a = 3i64;
+    a = 3;
 }
 
 fun good4(c: i64) = {
-    var a: i64 = 15i64;
-    while (a < 16i64){
-        var b: i64 = 10i64;
+    var a: i64 = 15;
+    while (a < 16){
+        var b: i64 = 10;
         a = b; # this is move (in test)
     }
-    a = 3i64;
+    a = 3;
 }
 
 fun bad1(c: i64) = {
@@ -44,19 +44,19 @@ fun bad1(c: i64) = {
 
 
 fun bad2(c: i64) = {
-    var a: i64 = 10i64;
-    var b: i64 = 15i64;
-    while (b < 16i64){
+    var a: i64 = 10;
+    var b: i64 = 15;
+    while (b < 16){
         a = b; # this is move (in test)
     }
 }
 
 
 fun bad3(c: i64) = {
-    var a: i64 = 10i64;
-    var b: i64 = 15i64;
-    if (b < 16i64){
+    var a: i64 = 10;
+    var b: i64 = 15;
+    if (b < 16){
         a = b; # this is move (in test)
     }
-    b = 3i64;
+    b = 3;
 }

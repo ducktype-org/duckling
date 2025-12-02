@@ -528,8 +528,8 @@ namespace compiler::mir {
 
 				hole.fillNop(scope);
 				res_data.instr.output.emplace(target);
-				res_data.hole.fill(res_data.instr);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
+				res_data.hole.fill(res_data.instr);
 				value = target;
 			}
 		}
