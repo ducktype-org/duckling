@@ -1,4 +1,6 @@
 #include <backends/dvm/backend.hpp>
+#include <ctv/ctv.hpp>
+#include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -6,6 +8,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/context.hpp>
 #include <string_id/string_id.hpp>
 
@@ -17,9 +20,9 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <iostream>
 #include <ranges>
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -44,7 +47,7 @@ namespace {
 	}
 
 	void pushInstruction(vm::code::Function& function, const InstructionBuilder& builder) {
-		for (const auto& instruction: builder.build()) pushInstruction(function, instruction);
+		pushInstruction(function, builder.build());
 	}
 }
 
@@ -302,14 +305,41 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		constexpr vm::opargs::OpCodeArg lirConstantToOpArg(const lir::LIRConstant& constant) {
+			variant_match(constant.value.getStorage()) {
+				variant_case(numeric_value::NumericValue, numeric) {
+					return std::visit(
+						[&](auto&& val) -> vm::opargs::OpCodeArg {
+							using T      = std::decay_t<decltype(val)>;
+							u64 arg_bits = 0;
+
+							if constexpr (std::is_integral_v<T>) {
+								arg_bits = static_cast<u64>(val);
+							} else if (std::is_floating_point_v<T>) {
+								f64 val_as_64 = static_cast<f64>(val);
+								arg_bits      = std::bit_cast<u64>(val_as_64);
+							} else {
+								CORE_PANIC("Unsupported NumericValue type for a VM constant operand"
+							    );
+							}
+							return vm::opargs::Immediate{ arg_bits };
+						},
+						numeric.getStorage()
+					);
+				}
+				variant_case(bool, value) { return vm::opargs::Immediate{ value }; }
+				variant_default {
+					CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
 			AddLIRFuncContext& ctx, const lir::LIRValue& lir_value
 		) {
 			variant_match(lir_value.getVariant()) {
-				variant_case(i64, value) {
-					return vm::opargs::Immediate{ vm::safeReadBytes<u64>(value) };
-				}
-				variant_case(bool, value) return vm::opargs::Immediate{ value };
+				variant_case(lir::LIRConstant, constant) { return lirConstantToOpArg(constant); }
 				variant_case(lir::LIRPlace, place) {
 					// @TODO: #1560 handle access into fields.
 					variant_match(place.base) {
@@ -355,36 +385,88 @@ namespace compiler::backend_vm {
 		constexpr vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
 			using namespace vm::code::builders;
 			switch (operation) {
-			case lir::Operation::Assign:
-				return OpKind::mov;
+			/// Integer operations ///
 			case lir::Operation::IntegerAdd:
 				return OpKind::add;
 			case lir::Operation::IntegerSub:
 				return OpKind::sub;
-			case lir::Operation::IntegerMul:
-				return OpKind::mul;
-			case lir::Operation::IntegerUDiv:
-				throw base::NotYetImplemented(base::enumToStr(operation));
-			case lir::Operation::IntegerSDiv:
-				return OpKind::div;
-			case lir::Operation::IntegerUMod:
-				throw base::NotYetImplemented(base::enumToStr(operation));
-			case lir::Operation::IntegerSMod:
-				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
 				return OpKind::neg;
-			case lir::Operation::Call:
-				return OpKind::call;
+			case lir::Operation::IntegerMul:
+				return OpKind::mul;
+			case lir::Operation::IntegerSDiv:
+				return OpKind::div;
+			case lir::Operation::IntegerSMod:
+				return OpKind::mod;
+			case lir::Operation::IntegerUDiv:
+				return OpKind::udiv;
+			case lir::Operation::IntegerUMod:
+				return OpKind::umod;
+
+			/// Floating point operations ///
+			case lir::Operation::FloatAdd:
+				return OpKind::fadd;
+			case lir::Operation::FloatSub:
+				return OpKind::fsub;
+			case lir::Operation::FloatMul:
+				return OpKind::fmul;
+			case lir::Operation::FloatDiv:
+				return OpKind::fdiv;
+			case lir::Operation::FloatNeg:
+				return OpKind::fneg;
+
+			/// Signed integer comparisons ///
+			case lir::Operation::IntegerEq:
+				return OpKind::cmpEq;
+			case lir::Operation::IntegerNeq:
+				return OpKind::cmpNeq;
+			case lir::Operation::IntegerSLt:
+				return OpKind::cmpL;
+			case lir::Operation::IntegerSLteq:
+				return OpKind::cmpLe;
+			case lir::Operation::IntegerSGt:
+				return OpKind::cmpG;
+			case lir::Operation::IntegerSGteq:
+				return OpKind::cmpGe;
+
+			/// Unsigned integer comparisons ///
+			case lir::Operation::IntegerULt:
+				return OpKind::ucmpL;
+			case lir::Operation::IntegerULteq:
+				return OpKind::ucmpLe;
+			case lir::Operation::IntegerUGt:
+				return OpKind::ucmpG;
+			case lir::Operation::IntegerUGteq:
+				return OpKind::ucmpGe;
+
+			/// Floating point comparisons ///
+			case lir::Operation::FloatLt:
+				return OpKind::fcmpL;
+			case lir::Operation::FloatGt:
+				return OpKind::fcmpG;
+			case lir::Operation::FloatLteq:
+				return OpKind::fcmpLe;
+			case lir::Operation::FloatGteq:
+				return OpKind::fcmpGe;
+			case lir::Operation::FloatEq:
+				return OpKind::fcmpEq;
+			case lir::Operation::FloatNeq:
+				return OpKind::fcmpNeq;
+
+			/// Logical operations ///
 			case lir::Operation::BooleanAnd:
 				return OpKind::log_and;
 			case lir::Operation::BooleanOr:
 				return OpKind::log_or;
 			case lir::Operation::BooleanNot:
 				return OpKind::log_not;
-			case lir::Operation::IntegerULt:
-				return OpKind::ucmpL;
-			case lir::Operation::IntegerSLt:
-				return OpKind::cmpL;
+
+			/// Other ///
+			case lir::Operation::Assign:
+				return OpKind::mov;
+			case lir::Operation::Call:
+				return OpKind::call;
+
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 			}
@@ -430,14 +512,18 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 			for (const auto& [arg_id, op_arg, type_name]:
 			     std::views::zip(std::views::iota(0), args, called_func_signature.parameters)) {
-				std::cerr << "Initializing: " << type_name.str.str() << '\n';
+				CORE_DEV_LOG(Backend, "Initializing: ", type_name.str.str(), '\n');
+
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
+
 				initType(ctx, arg_name, type_name);
 
 				InstructionBuilder mov_arg(OpKind::mov);
+
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
+
 				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
@@ -485,7 +571,9 @@ namespace compiler::backend_vm {
 
 			// Transforms arguments.
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
-			    || kind == OpKind::div || kind == OpKind::mod || kind == OpKind::log_and
+			    || kind == OpKind::div || kind == OpKind::udiv || kind == OpKind::mod
+			    || kind == OpKind::umod || kind == OpKind::fadd || kind == OpKind::fsub
+			    || kind == OpKind::fmul || kind == OpKind::fdiv || kind == OpKind::log_and
 			    || kind == OpKind::log_or || kind == OpKind::log_xor) {
 				CORE_ASSERT(args.size() == 3, "Invalid arithmetic/logical operation argument count");
 				if (args[0] == args[1]) {
@@ -502,8 +590,12 @@ namespace compiler::backend_vm {
 					args.pop_front();
 					args.push_front(output.value());
 				}
-			} else if (kind == OpKind::cmpL || kind == OpKind::ucmpL || kind == OpKind::cmpG
-			           || kind == OpKind::ucmpG || kind == OpKind::cmpEq) {
+			} else if (kind == OpKind::cmpEq || kind == OpKind::cmpNeq || kind == OpKind::cmpL
+			           || kind == OpKind::cmpLe || kind == OpKind::cmpG || kind == OpKind::cmpGe
+			           || kind == OpKind::ucmpL || kind == OpKind::ucmpLe || kind == OpKind::ucmpG
+			           || kind == OpKind::ucmpGe || kind == OpKind::fcmpEq
+			           || kind == OpKind::fcmpNeq || kind == OpKind::fcmpL || kind == OpKind::fcmpLe
+			           || kind == OpKind::fcmpG || kind == OpKind::fcmpGe) {
 				CORE_ASSERT(args.size() == 3, "Invalid cmp argument count");
 				// This resolves e.g. `x = a < b;`
 				// by splitting it into two instructions:
@@ -514,7 +606,7 @@ namespace compiler::backend_vm {
 					ctx.bytecode_func, { OpKind::cmov, args[0], vm::opargs::Immediate{ 1 } }
 				);
 				return;
-			} else if (kind == OpKind::neg || kind == OpKind::log_not) {
+			} else if (kind == OpKind::neg || kind == OpKind::fneg || kind == OpKind::log_not) {
 				CORE_ASSERT(
 					args.size() == 2,
 					"Invalid argument count for ",
@@ -564,8 +656,10 @@ namespace compiler::backend_vm {
 			auto false_block = lirValueToOpArg(ctx, terminator.arguments.at(2));
 
 			variant_match(terminator.arguments.at(0).getVariant()) {
-				variant_case(bool, value) {
-					if (value)
+				variant_case(lir::LIRConstant, constant) {
+					auto bool_val
+						= constant.value.get<bool>().expect("Expected boolean in LIRConstant");
+					if (bool_val)
 						pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
 					else
 						pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
@@ -578,8 +672,9 @@ namespace compiler::backend_vm {
 					pushInstruction(ctx.bytecode_func, { OpKind::jmpIfNot, false_block });
 				}
 			}
+		}
 
-		} else {
+		else {
 			InstructionBuilder terminator_instr;
 			terminator_instr.setKind(lirTerminatorToOpKind(terminator.operation));
 
@@ -589,11 +684,17 @@ namespace compiler::backend_vm {
 				CORE_ASSERT(
 					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
 				);
+
+				auto return_vm_type = getTypeFromLayout(ctx.lir_func->return_type_layout);
+				auto ret_val_arg    = ctx.lir_func->mangled_name == base::StrID("main")
+				                        ? vm::opargs::StackLocal64(base::StrID("ret_val"))
+				                        : outputToOpArg(return_vm_type, base::StrID("ret_val"));
+
 				pushInstruction(
 					ctx.bytecode_func,
 					{
 						OpKind::mov,
-						vm::opargs::StackLocal64(base::StrID("ret_val")),
+						ret_val_arg,
 						lirValueToOpArg(ctx, terminator.arguments.at(0)),
 					}
 				);
@@ -650,7 +751,7 @@ namespace compiler::backend_vm {
 		}
 
 		auto process_function = [&](CRef<lir::Function> lir_function) {
-			std::cerr << "Adding function: " << lir_function->mangled_name.strView() << "\n";
+			CORE_DEV_LOG(Backend, "Adding function: ", lir_function->mangled_name.strView(), "\n");
 
 			AddLIRFuncContext ctx(query_ctx, lir_function, valid_program.types(), signatures);
 

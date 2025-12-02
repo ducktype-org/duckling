@@ -45,6 +45,9 @@ namespace clah::exceptions {
 	 * @brief Raised by value parsers when input is malformed.
 	 */
 	struct ValueParsingException: public ClahException {
+		/**
+		 * @note start-end is an inclusive range of the input string where the error occurred.
+		 */
 		ValueParsingException(
 			base::RawView    type,
 			usize            start,

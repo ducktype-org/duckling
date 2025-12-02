@@ -21,47 +21,130 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
-#define HANDLE_INSTR_0ARGS(opcode)                                                    \
-	struct Op_##opcode final: ElementBase {                                           \
-		using ArgTypes = std::tuple<>;                                                \
-		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \
-	};
 
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                \
-	struct Op_##opcode final: ElementBase {                                  \
-		Op_##opcode(arg0_type arg0): arg0(arg0) {}                           \
-		using ArgTypes = std::tuple<arg0_type>;                              \
-		arg0_type      arg0;                                                 \
-		constexpr bool operator==(const Op_##opcode& other) const noexcept { \
-			return arg0 == other.arg0;                                       \
-		}                                                                    \
-	};
+#define DECLARE_0ARGS()                                                \
+	/* used for handling variable arity generically using templates */ \
+	auto argsAsTuple(this auto&&) { return std::forward_as_tuple(); }
 
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                       \
-	struct Op_##opcode final: ElementBase {                                    \
-		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
-		using ArgTypes = std::tuple<arg0_type, arg1_type>;                     \
-		arg0_type      arg0;                                                   \
-		arg1_type      arg1;                                                   \
-		constexpr bool operator==(const Op_##opcode& other) const noexcept {   \
-			return arg0 == other.arg0 && arg1 == other.arg1;                   \
-		}                                                                      \
+#define DECLARE_1ARGS(ARG0)                                          \
+	ARG0 arg0;                                                       \
+	template<typename Self>                                          \
+	auto argsAsTuple(this Self&& self) {                             \
+		return std::forward_as_tuple(std::forward<Self>(self).arg0); \
+	}
+
+#define DECLARE_2ARGS(ARG0, ARG1)                                                                   \
+	ARG0 arg0;                                                                                      \
+	ARG1 arg1;                                                                                      \
+	template<typename Self>                                                                         \
+	auto argsAsTuple(this Self&& self) {                                                            \
+		return std::forward_as_tuple(std::forward<Self>(self).arg0, std::forward<Self>(self).arg1); \
+	}
+
+#define DECLARE_3ARGS(ARG0, ARG1, ARG2)    \
+	ARG0 arg0;                             \
+	ARG1 arg1;                             \
+	ARG2 arg2;                             \
+	template<typename Self>                \
+	auto argsAsTuple(this Self&& self) {   \
+		return std::forward_as_tuple(      \
+			std::forward<Self>(self).arg0, \
+			std::forward<Self>(self).arg1, \
+			std::forward<Self>(self).arg2  \
+		);                                 \
+	}
+
+#define DECLARE_4ARGS(ARG0, ARG1, ARG2, ARG3) \
+	ARG0 arg0;                                \
+	ARG1 arg1;                                \
+	ARG2 arg2;                                \
+	ARG3 arg3;                                \
+	template<typename Self>                   \
+	auto argsAsTuple(this Self&& self) {      \
+		return std::forward_as_tuple(         \
+			std::forward<Self>(self).arg0,    \
+			std::forward<Self>(self).arg1,    \
+			std::forward<Self>(self).arg2,    \
+			std::forward<Self>(self).arg3     \
+		);                                    \
+	}
+
+// Macro "overloading" helper
+#define GET_MACRO(_1, _2, _3, _4, NAME, ...) NAME
+#define DECLARE_ARGS(...)                         \
+	GET_MACRO(                                    \
+		__VA_ARGS__ __VA_OPT__(, ) DECLARE_4ARGS, \
+		DECLARE_3ARGS,                            \
+		DECLARE_2ARGS,                            \
+		DECLARE_1ARGS,                            \
+		DECLARE_0ARGS                             \
+	)                                             \
+	(__VA_ARGS__)
+
+		namespace detail {
+			// Helper struct, simply a holder for arguments, specialisations use above macros.
+			template<typename T>
+			struct InstructionArgs;
+		}
+
+#define HANDLE_INSTR_ARGS(INSTR, ...)                                                         \
+	struct Op_##INSTR;                                                                        \
+	namespace detail {                                                                        \
+		template<>                                                                            \
+		struct InstructionArgs<Op_##INSTR> {                                                  \
+			DECLARE_ARGS(__VA_ARGS__)                                                         \
+			constexpr bool operator==(const InstructionArgs<Op_##INSTR>&) const = default;    \
+		};                                                                                    \
+	}                                                                                         \
+	struct Op_##INSTR final: ElementBase, detail::InstructionArgs<Op_##INSTR> {               \
+		using ArgTypes                         = std::tuple<__VA_ARGS__>;                     \
+		using ArgsWrapperType                  = detail::InstructionArgs<Op_##INSTR>;         \
+		constexpr static std::string_view NAME = #INSTR;                                      \
+		/* Constructor that simply forwards the arguments to the underlying ArgsWrapperType*/ \
+		template<typename... Args>                                                            \
+		requires std::is_constructible_v<ArgsWrapperType, Args...>                            \
+		      && (!std::same_as<std::remove_cvref_t<Args>, Op_##INSTR> && ...)                \
+		      && (sizeof...(Args) == std::tuple_size_v<ArgTypes>) Op_##INSTR(Args&&... args): \
+			  ArgsWrapperType{ std::forward<Args>(args)... } {}                               \
+		/* Ignores the position */                                                            \
+		constexpr bool operator==(const Op_##INSTR& other) const noexcept {                   \
+			return static_cast<const ArgsWrapperType&>(*this)                                 \
+			    == static_cast<const ArgsWrapperType&>(other);                                \
+		}                                                                                     \
 	};
 
 #include <vm/bytecode/instruction_definitions.hpp>
 
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
+#undef DECLARE_0ARGS
+#undef DECLARE_1ARGS
+#undef DECLARE_2ARGS
+#undef DECLARE_3ARGS
+#undef DECLARE_4ARGS
+#undef GET_MACRO
+#undef DECLARE_ARGS
+#undef HANDLE_INSTR_ARGS
+
+		struct Comment;
+
+		namespace detail {
+			template<>
+			struct InstructionArgs<Comment> {
+				auto argsAsTuple(this auto&&) { return std::forward_as_tuple(); }
+
+				constexpr bool operator==(const InstructionArgs<Comment>&) const = default;
+			};
+		}
 
 		/**
 		 * @brief An extra instruction that represents a comment.
 		 * @note It also helps with macro, because without it the template
 		 * below would finish with a `,`, which does not compile.
 		 */
-		struct Comment final: ElementBase {
-			Comment()      = default;
-			using ArgTypes = std::tuple<>;
+		struct Comment final: ElementBase, detail::InstructionArgs<Comment> {
+			Comment()                              = default;
+			using ArgTypes                         = std::tuple<>;
+			using ArgsWrapperType                  = detail::InstructionArgs<Comment>;
+			constexpr static std::string_view NAME = "Comment";
 
 			Comment(base::StrID comment): comment(comment) {}
 
@@ -81,13 +164,4 @@ namespace vm::code {
 
 	template<typename T>
 	concept IsInstruction = base::IS_VARIANT_MEMBER_V<std::remove_cvref_t<T>, Instruction>;
-
-	template<typename T>
-	concept TwoArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 2;
-
-	template<typename T>
-	concept OneArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 1;
-
-	template<typename T>
-	concept ZeroArgumentOpcode = IsInstruction<T> && std::tuple_size_v<typename T::ArgTypes> == 0;
 }

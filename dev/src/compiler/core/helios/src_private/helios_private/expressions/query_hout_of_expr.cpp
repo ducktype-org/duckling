@@ -1,5 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
+#include "coercions.hpp"
+#include "errors.hpp"
 #include "numeric_literals.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -99,10 +101,15 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
-				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
-				if (operation) {
+				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+				if (result) {
+					auto [operation, lhs_coercion, rhs_coercion] = std::move(result).value();
+
+					auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+					auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
 					return makeBox<BinaryOperatorExpr>(
-						ctx, operation.value(), std::move(lhs), std::move(rhs)
+						ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
 					);
 				}
 				return {};
@@ -165,17 +172,20 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
+				auto lhs_type = lhs->expression_type.getType();
+				auto rhs_type = rhs->expression_type.getType();
 
 				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
+					ctx.log(makeBox<code::UndefinedBinaryOperator>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						lhs_type.toString(),
+						rhs_type.toString()
+					));
 					// failed
 				}
 			}
@@ -349,17 +359,16 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner.value()));
+				auto expr_type = inner.value()->expression_type.getType();
+				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.value()));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
+					ctx.log(makeBox<UndefinedUnaryOperator>(
+						stmt->getSourcePosition(), stmt->getOperator().str(), expr_type.toString()
+					));
 					// failed
 				}
 			}
@@ -406,21 +415,34 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					match_optional(findBinaryBuiltin(
-						pst_operators.at(i), result_exprs.at(i).ref(), result_exprs.at(i + 1).ref()
-					)) {
-						opt_some(op) { operators.push_back(op); }
-						opt_none {
-							ctx.log(makeBox<
-									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-								stmt->getSourcePosition(), "No builtin operator found"
-							));
-							return;
-						}
+					auto lhs_type = result_exprs.at(i)->expression_type.getType();
+					auto rhs_type = result_exprs.at(i + 1)->expression_type.getType();
+
+					auto result = findBinaryBuiltin(
+						ctx,
+						pst_operators.at(i),
+						result_exprs.at(i).ref(),
+						result_exprs.at(i + 1).ref()
+					);
+
+					if (result) {
+						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
+						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
+						result_exprs[i + 1]
+							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
+						operators.push_back(op);
+					} else {
+						ctx.log(makeBox<code::UndefinedBinaryOperator>(
+							stmt->getSourcePosition(),
+							pst_operators.at(i).str(),
+							lhs_type.toString(),
+							rhs_type.toString()
+						));
+
+						return;
 					}
 				}
 
@@ -465,4 +487,26 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
+
+	ExprConstructionResult getHoutOfExprWithExpectedType(
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const tsh::SymbolType<>                          expected_type
+	) {
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+		if (expr_hout_qresult.hasError()) return query::QError(expr_hout_qresult.error());
+		auto expr_hout = std::move(expr_hout_qresult).value();
+
+		const auto coercion_qresult
+			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		if (coercion_qresult.hasError()) {
+			ctx.log(makeBox<CannotCoerceError>(
+				pst_expr.element.unlock(ctx)->getSourcePosition(),
+				expr_hout->expression_type.getSymbolType(),
+				expected_type
+			));
+			return query::QError(errors::Failed());
+		}
+		return coercion_qresult.value().coerce(ctx, std::move(expr_hout));
+	}
 }

@@ -66,5 +66,5 @@ fun main() -> i64 = {
     builtin_output_i64(expressionAsValue());
     builtin_output_i64(nestedTernaryValue());
 
-    return 0;
+    return 0i64;
 }
