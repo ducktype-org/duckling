@@ -43,6 +43,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
 	 * a function performing the coercion if it is.
+	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
 	 */
 	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(
 		query::Context& ctx, tsh::SymbolType<> from

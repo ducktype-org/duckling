@@ -4,7 +4,6 @@
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -47,6 +46,8 @@ namespace compiler::helios {
 
 	/**
 	 * Get a CTV representing a type evaluated from a PST expression.
+	 * @note This is most useful for evaluating expressions where a type is expected,
+	 * e.g. types in declarations or type assertions.
 	 * @param ctx The query context.
 	 * @param pst_expr The PST expression to evaluate to a type.
 	 * @return The CTV with the type, or errors::Failed if evaluation failed.
