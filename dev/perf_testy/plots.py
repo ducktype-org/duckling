@@ -11,15 +11,15 @@ def plot_regression_line(df, output):
     fig, ax = plt.subplots(figsize=(12, 10))
     ax.grid()
 
-    ax.plot([0, np.max(tokens_cpp)], [0, 0.7*np.max(tokens_cpp)], c='tab:gray', label=f'Target coeficcient: {0.7:.1%}')
+    ax.plot([0, np.max(tokens_cpp)], [0, 2.0*np.max(tokens_cpp)], c='tab:gray', label=f'Target coeficcient: {2.0:.1%}')
     ax.plot([0, np.max(tokens_cpp)], [0, 1*np.max(tokens_cpp)], c='tab:gray', linestyle='--', label=f'Base coeficcient: {1:.1%}')
     ax.plot([0, np.max(tokens_cpp)], [0, regression_coef*np.max(tokens_cpp)], c='tab:red', label=f'Current coeficcient: {regression_coef:0.1%}')
     
     ax.scatter(tokens_cpp, tokens_duck, c='tab:blue')
     
-    ax.set_title("Comparison of codelength (in tokens)\nC++ vs Duckling")
-    ax.set_xlabel("Tokens in C++")
-    ax.set_ylabel("Tokens in Duckling")
+    ax.set_title("Comparison of compilation time (in ms)\nGCC vs Duckling")
+    ax.set_xlabel("Compilation time in C++ (ms)")
+    ax.set_ylabel("Compilation time in Duckling (ms)")
     ax.legend()
     
     plt.savefig(output)
@@ -33,9 +33,9 @@ def plot_percentage_distribution(df, output):
     ax.axvline(x=np.mean(percentages), color='tab:red', label=f'Average: {np.mean(percentages):.1%}')
     ax.axvline(x=np.median(percentages), linestyle='--', color='tab:red', label=f'Median: {np.median(percentages):.1%}')
     
-    ax.set_xlabel('Ratio of tokens needed in Duckling vs C++')
+    ax.set_xlabel('Ratio of compilation time in Duckling vs C++')
     ax.set_ylabel('Number of cases')
-    ax.set_title('Summary of codelength ratio\nC++ vs Duckling')
+    ax.set_title('Summary of compilation time ratio\nC++ vs Duckling')
     ax.legend()
     
     plt.savefig(output)
@@ -51,7 +51,7 @@ def plot_box_categories(df, output):
     ax.boxplot(data, tick_labels=df.category.unique(),
             medianprops=dict(linewidth=1.5, linestyle='-', color='black'))
 
-    ax.axhline(y=0.7, color='tab:red', linestyle='--', label='Target')
+    ax.axhline(y=2.0, color='tab:red', linestyle='--', label='Target')
     ax.axhline(y=(df.duck/df.cpp).mean(), color='tab:gray', linestyle='--', label='Mean')
 
     for i, points, category in zip(range(1, len(data)+1), data, df.category.unique()):
@@ -59,8 +59,8 @@ def plot_box_categories(df, output):
         
 
     ax.set_xlabel('Category of the example')
-    ax.set_ylabel('Ratio of tokens needed in Duckling vs C++')
-    ax.set_title('Codelength ratio by category\nC++ vs Duckling')
+    ax.set_ylabel('Ratio of compilation time in Duckling vs C++')
+    ax.set_title('Compilation time ratio by category\nC++ vs Duckling')
     ax.legend()
     
     plt.savefig(output)
@@ -72,12 +72,14 @@ def main(data_file, output_dir):
     try:
         df = pd.read_csv(data_file)
         df.rename(columns={
-            "File": "file",
+            "Test Case": "test_case",
             "Category": "category",
-            "C++ Tokens": "cpp",
-            "Duck Tokens": "duck"
+            "Duck Compilation Time (ms)": "duck",
+            "C++ Compilation Time (ms)": "cpp",
         }, inplace=True)
-        df = df[["cpp", "duck", "file", "category"]]
+        
+
+        df = df[["cpp", "duck", "test_case", "category"]]
     except Exception as e:
         print(e)
     
@@ -93,4 +95,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args.data_file, args.output_dir)
 
-    

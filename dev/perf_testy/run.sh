@@ -21,7 +21,7 @@ time_format="%E"
 
 # variable to collect data in csv format
 csv_collect=""
-csv_collect="Category,Test Case,Language,Compilation Time (ms)\n"
+csv_collect="Category,Test Case,Duck Compilation Time (ms),C++ Compilation Time (ms)\n"
 
 # c++ setup:
 cpp_flags="-std=c++20 -w -O0"
@@ -51,6 +51,8 @@ for category_dir in ./cases/*/; do
         duck_binary="$binary_output_dir/duck_binary"
         cpp_binary="$binary_output_dir/cpp_binary"
 
+        csv_collect+="$category,$case_name,"
+
 
         # measure time taken to compile Duck code:
         ts=$(date +%s%N)  
@@ -63,7 +65,7 @@ for category_dir in ./cases/*/; do
         elapsed_ms=$((elapsed / 1000000))
         echo "Duck compilation time: $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
 
-        csv_collect+="$category,$case_name,duck,$elapsed_ms\n"
+        csv_collect+="$elapsed_ms,"
 
         # measure time taken to compile C++ code:
         ts=$(date +%s%N)  
@@ -74,7 +76,7 @@ for category_dir in ./cases/*/; do
         elapsed_ms=$((elapsed / 1000000))
         echo "C++ compilation time:  $(printf '%d.%03d seconds' $((elapsed_ms / 1000)) $((elapsed_ms % 1000)))"
 
-        csv_collect+="$category,$case_name,cpp,$elapsed_ms\n"
+        csv_collect+="$elapsed_ms\n"
 
         echo "-----------------------------------"
     done

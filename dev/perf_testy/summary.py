@@ -11,26 +11,26 @@ def summarize_results(file_path):
     with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            category = row.get('Category', '').strip()
-            test_case = row.get('Test Case', '').strip()
-            language = row.get('Language', '').strip().lower()
-            time_field = row.get('Compilation Time (ms)', '').strip()
+            category = row.get('Category').strip()
+            test_case = row.get('Test Case').strip()
+            time_field_duck = row.get('Duck Compilation Time (ms)').strip()
+            time_field_cpp = row.get('C++ Compilation Time (ms)').strip()
 
-            if not category or not test_case or not language or not time_field:
+            if not category or not test_case or not time_field_duck or not time_field_cpp:
                 assert False
 
             try:
-                time_ms = int(time_field)
+                time_ms_duck = int(time_field_duck)
+                time_ms_cpp = int(time_field_cpp)
             except ValueError:
                 assert False
 
             if category not in summary:
                 summary[category] = {}
 
-            if test_case not in summary[category]:
-                summary[category][test_case] = {}
+            assert test_case not in summary[category]
                 
-            summary[category][test_case][language] = time_ms
+            summary[category][test_case] = {'duck': time_ms_duck, 'cpp': time_ms_cpp}
             
     return summary
 

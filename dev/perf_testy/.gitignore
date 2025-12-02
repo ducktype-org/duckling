@@ -1,4 +1,6 @@
 cases/
 binary_outputs/
 cpp_setup/*.o
+.venv
+
 
