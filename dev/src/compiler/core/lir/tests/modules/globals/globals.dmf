@@ -4,8 +4,7 @@ var some_global: i64 = 42;
 fun foo() = {
 	var a: i64 = 23;
 	g = a;
-	# @TODO: #1543 Change '9i64' to '9' once `NumericValue::createOfType()` gets implemented. 
-	if (9i64) {
+	if (9) {
 		var b: i64 = g;
 	}
 	return 0;
