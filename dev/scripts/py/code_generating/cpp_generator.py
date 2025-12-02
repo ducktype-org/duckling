@@ -97,10 +97,12 @@ class CppCodeGenerator(CodeGenerator):
     
     # Classes
     def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
-        self.indenter.add_text(f"class {class_name}" + " {\n")
-        with self.indenter:
+        indenter = self.hpp_indenter if hasattr(self, 'hpp_indenter') else self.indenter
+        
+        indenter.add_text(f"class {class_name}" + " {\n")
+        with indenter:
             private_fields, public_fields = self.logic_generator.generate_class_fields()
-        self.indenter.add_text("};\n")
+        indenter.add_text("};\n")
         
         class_data = ClassData(
             name=class_name,
@@ -110,9 +112,11 @@ class CppCodeGenerator(CodeGenerator):
         return class_data
     
     def class_field(self, field_name: str, field_modifier: str) -> str:
-        self.indenter.add_text(f"{field_modifier}:\n")
-        with self.indenter:
-            self.indenter.add_text(f"long {field_name};\n")
+        indenter = self.hpp_indenter if hasattr(self, 'hpp_indenter') else self.indenter
+        
+        indenter.add_text(f"{field_modifier}:\n")
+        with indenter:
+            indenter.add_text(f"long {field_name};\n")
             
     def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
         self.indenter.add_text(f"{class_.name} {object_name};\n")

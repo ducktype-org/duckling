@@ -254,9 +254,9 @@ class LogicGenerator:
             field_modifier = random.choice(['private', 'public'])
             self.generator.class_field(field_name, field_modifier)
             if field_modifier == 'private':
-                private_fields.update(field_name)
+                private_fields.add(field_name)
             else:
-                public_fields.update(field_name)
+                public_fields.add(field_name)
             
         return (private_fields, public_fields)
             
