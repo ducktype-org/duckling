@@ -54,7 +54,7 @@ namespace compiler::helios::errors {
 	void checkForAliases(
 		query::Context&               ctx,
 		MessageBase&                  msg,
-		pst::Access<pst::ExprElement> elem,
+		pst::Access<pst::LangElement> elem,
 		std::vector<std::string>&     linked_messages
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
@@ -115,9 +115,9 @@ namespace compiler::helios::errors {
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia::SourcePosition source_position,
-		InteractiveType     expected_type,
-		InteractiveType     actual_type
+		dia::SourcePosition    source_position,
+		const InteractiveType& expected_type,
+		const InteractiveType& actual_type
 	):
 		  MessageWithCodeFragmentAndCause(source_position) {
 		addArgument<InteractiveArgument>("expected_type", makeBox<InteractiveType>(expected_type));
@@ -125,7 +125,7 @@ namespace compiler::helios::errors {
 	}
 
 	InteractiveType::InteractiveType(
-		tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::ExprElement>> pst_expr
+		tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::LangElement>> pst_expr
 	):
 		  symbol_type(symbol_type),
 		  pst_expr(std::move(pst_expr)) {}

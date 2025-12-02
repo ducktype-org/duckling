@@ -385,7 +385,7 @@ namespace dia_int {
 			throw TemplateEvaluationException("Variant alternative content evaluation failed.");
 
 		res = base::makeBox<state::InteractiveComponent>(
-			0, std::move(primary).value(), std::move(alternative).value()
+			state::ComponentID(0), std::move(primary).value(), std::move(alternative).value()
 		);
 	}
 
@@ -409,10 +409,7 @@ namespace dia_int {
 
 	void EvaluateDiagnosticFileVisitor::visitCodeComponent(const dia_args::CodeComponent& el) {
 		res = base::makeBox<state::CodeComponent>(
-			0,
-			el.content,
-			current_pointer_message_ids,
-			current_message_ids
+			state::ComponentID(0), el.content, current_pointer_message_ids, current_message_ids
 		);
 	}
 

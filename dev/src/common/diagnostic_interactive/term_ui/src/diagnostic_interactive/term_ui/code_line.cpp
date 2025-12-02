@@ -18,7 +18,7 @@ namespace term_ui {
 		std::ostream&                                                    out
 	) {
 		if_opt_some(line.line_no, number) { printLineStart(tab_space, number, out); }
-		else { printLineStart(tab_space, out); }
+		if_opt_none(line.line_no) { printLineStart(tab_space, out); }
 
 		// This is the relative column from the start of the code line.
 		u64 col = 0;

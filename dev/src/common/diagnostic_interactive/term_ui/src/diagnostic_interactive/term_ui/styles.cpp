@@ -39,19 +39,19 @@ namespace term_ui {
 		char        lowering_char,
 		char        lowering_attach_char
 	):
-		  NAME(std::move(name)),
-		  PREFIX(std::move(prefix)),
-		  PRINT_ID(print_id),
-		  COLOR(color),
-		  STYLE(style),
-		  MAIN_TEXT_STYLE(main_text_style),
-		  UNDERLINE_CHAR(underline_char),
-		  LOWERING_CHAR(lowering_char),
-		  LOWERING_ATTACH_CHAR(lowering_attach_char) {}
+		  name(std::move(name)),
+		  prefix(std::move(prefix)),
+		  print_id(print_id),
+		  color(color),
+		  style(style),
+		  main_text_style(main_text_style),
+		  underline_char(underline_char),
+		  lowering_char(lowering_char),
+		  lowering_attach_char(lowering_attach_char) {}
 
 	void Style::prepare(std::ostream& out) const {
-		if (use_color) out << COLOR;
-		out << STYLE;
+		if (use_color) out << color;
+		out << style;
 	}
 
 	void Style::printWith(const std::string& text, std::ostream& out) const {
@@ -60,7 +60,7 @@ namespace term_ui {
 		resetStyles(out);
 	}
 
-	void Style::prepareMainText(std::ostream& out) const { out << MAIN_TEXT_STYLE; }
+	void Style::prepareMainText(std::ostream& out) const { out << main_text_style; }
 
 	void Style::printMainWith(const std::string& text, std::ostream& out) const {
 		prepareMainText(out);
@@ -70,8 +70,8 @@ namespace term_ui {
 
 	void Style::printName(u64 id, std::ostream& out) const {
 		prepare(out);
-		out << NAME;
-		if (PRINT_ID) out << '[' << PREFIX << id << ']';
+		out << name;
+		if (print_id) out << '[' << prefix << id << ']';
 		resetStyles(out);
 	}
 

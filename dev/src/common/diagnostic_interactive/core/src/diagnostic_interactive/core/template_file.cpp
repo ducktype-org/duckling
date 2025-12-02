@@ -1,5 +1,4 @@
 #include <diagnostic_interactive/core/template_file.hpp>
-
 #include <diagnostic_interactive/core/utils.hpp>
 
 namespace dia_int::template_file {
@@ -97,7 +96,7 @@ namespace dia_int::template_file {
 		YAML_ASSUME_HAS_SCALAR(node, "active_from");
 		YAML_ASSUME_HAS_SCALAR(node, "active_until");
 
-		std::string  template_type_str = node["template_type"].as<std::string>();
+		auto         template_type_str = node["template_type"].as<std::string>();
 		TemplateType template_type     = TemplateType::Message;  // Default value
 		if (template_type_str == "message")
 			template_type = TemplateType::Message;

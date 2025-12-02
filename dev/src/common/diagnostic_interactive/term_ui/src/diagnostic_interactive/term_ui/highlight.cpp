@@ -44,18 +44,18 @@ namespace term_ui {
 		switch (stage) {
 		case PointerStage::Highlight: {
 			CORE_ASSERT(count > 0, "Cannot use a non-positive highlight width.");
-			str = std::string(count.value(), style.UNDERLINE_CHAR);
+			str = std::string(count.value(), style.underline_char);
 			break;
 		}
 		case PointerStage::HighlightWithLowering: {
 			CORE_ASSERT(count > 0, "Cannot use a non-positive highlight width.");
 
-			str = std::string(1, style.LOWERING_ATTACH_CHAR)
-			    + std::string(count.value() - 1, style.UNDERLINE_CHAR);
+			str = std::string(1, style.lowering_attach_char)
+			    + std::string(count.value() - 1, style.underline_char);
 			break;
 		}
 		case PointerStage::Lowering: {
-			str = std::string(1, style.LOWERING_CHAR);
+			str = std::string(1, style.lowering_char);
 			break;
 		}
 		case PointerStage::Message: {

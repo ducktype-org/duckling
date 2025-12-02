@@ -1,5 +1,7 @@
 #include "errors.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/usage.hpp>

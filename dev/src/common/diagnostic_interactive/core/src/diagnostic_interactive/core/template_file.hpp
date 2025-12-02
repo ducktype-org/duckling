@@ -51,7 +51,7 @@ namespace dia_int::template_file {
 	 * The only required method of each template element is `accept`.
 	 */
 	struct Component {
-		virtual ~Component() {}
+		virtual ~Component() = default;
 
 		virtual void acceptVisitor(ComponentVisitor& visitor) const = 0;
 

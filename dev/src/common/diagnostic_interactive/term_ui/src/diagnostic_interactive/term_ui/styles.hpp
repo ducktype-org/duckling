@@ -39,7 +39,7 @@ namespace term_ui {
 		 *
 		 * E.g. `error` or `note`.
 		 */
-		const std::string NAME;
+		const std::string name;
 
 		/**
 		 * @brief The style prefix.
@@ -49,7 +49,7 @@ namespace term_ui {
 		 *
 		 * E.g. `E` (for error) or `N` (for note).
 		 */
-		const std::string PREFIX;
+		const std::string prefix;
 		/**
 		 * @brief Whether the info code should be displayed after
 		 * the style name.
@@ -63,17 +63,17 @@ namespace term_ui {
 		 *
 		 * If off, `printName` method only displays the style name.
 		 */
-		const bool PRINT_ID;
+		const bool print_id;
 
 		// The color associated with this style.
-		const rang::fg COLOR;
+		const rang::fg color;
 
 		// The boldness modifier associated with this style for all text
 		// apart from the header message.
-		const rang::style STYLE;
+		const rang::style style;
 		// The boldness modifier associated with this style for the header
 		// message.
-		const rang::style MAIN_TEXT_STYLE;
+		const rang::style main_text_style;
 
 	public:
 		/**
@@ -82,7 +82,7 @@ namespace term_ui {
 		 * A series of chars of this type is displayed in the line below
 		 * the highlighted segment, acting as a colorful underlining.
 		 */
-		const char UNDERLINE_CHAR;
+		const char underline_char;
 		/**
 		 * @brief The character used for lowering the pointer message
 		 * with respect to the code line it refers to.
@@ -91,7 +91,7 @@ namespace term_ui {
 		 * (e.g. if other pointer messages block the view), this character
 		 * is used to connect the lowered message with the code underlining.
 		 */
-		const char LOWERING_CHAR;
+		const char lowering_char;
 		/**
 		 * @brief The character used when a code underlining meets with
 		 * a lowering character.
@@ -111,7 +111,7 @@ namespace term_ui {
 		 * pointer message
 		 * ```
 		 */
-		const char LOWERING_ATTACH_CHAR;
+		const char lowering_attach_char;
 
 		// Create a style object by specifying all of its fields.
 		Style(

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <diagnostic_interactive/logger.hpp>
-#include <token_source/forward.hpp>  // IWYU pragma: keep
 
 #include <base/misc/raw_view.hpp>
 
@@ -12,6 +11,7 @@
 #include <lexer/char.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/token.hpp>
+#include <token_source/forward.hpp>  // IWYU pragma: keep
 
 #include <set>
 

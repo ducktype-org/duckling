@@ -1,5 +1,7 @@
 #pragma once
 
+#include "frontend/pst_parser/lang_parser_element.hpp"
+
 #include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -7,14 +9,14 @@
 namespace compiler::helios::errors {
 	class InteractiveType: public dia_int::InteractiveElement {
 		tsh::SymbolType<>                             symbol_type;
-		base::Optional<pst::Access<pst::ExprElement>> pst_expr;
+		base::Optional<pst::Access<pst::LangElement>> pst_expr;
 
 		Box<dia_int::dia_args::Component> getValue(dia_int::MessageBase& msg) final;
 
 	public:
 		InteractiveType(
 			tsh::SymbolType<>                             symbol_type,
-			base::Optional<pst::Access<pst::ExprElement>> pst_expr = {}
+			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
 		);
 	};
 
@@ -30,9 +32,9 @@ namespace compiler::helios::errors {
 
 	public:
 		IncompatibleTypesError(
-			dia::SourcePosition source_position,
-			InteractiveType     expected_type,
-			InteractiveType     actual_type
+			dia::SourcePosition    source_position,
+			const InteractiveType& expected_type,
+			const InteractiveType& actual_type
 		);
 	};
 }

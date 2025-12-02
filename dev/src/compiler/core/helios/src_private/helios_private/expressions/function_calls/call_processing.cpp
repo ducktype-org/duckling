@@ -1,10 +1,5 @@
-#include <helios_private/expressions/function_calls/call_processing.hpp>
-
 #include <diagnostic_interactive/message.hpp>
-#include <helios_private/expressions/function_calls/errors.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
-
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -15,7 +10,10 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
+#include <helios_private/expressions/function_calls/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 

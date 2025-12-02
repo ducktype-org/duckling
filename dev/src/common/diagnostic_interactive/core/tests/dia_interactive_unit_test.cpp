@@ -57,8 +57,8 @@ private:
 		// Test ConcatComponent
 		{
 			std::vector<Box<dia_args::Component>> elements;
-			elements.push_back(base::makeBox<dia_args::TextComponent>("Error: "));
-			elements.push_back(base::makeBox<dia_args::CodeComponent>("variable"));
+			elements.emplace_back(base::makeBox<dia_args::TextComponent>("Error: "));
+			elements.emplace_back(base::makeBox<dia_args::CodeComponent>("variable"));
 			test_round_trip(base::makeBox<dia_args::ConcatComponent>(std::move(elements)), "concat");
 		}
 
@@ -77,12 +77,10 @@ private:
 		{
 			auto content = base::makeBox<dia_args::CodeComponent>("x + y");
 			std::vector<dia_args::PointerMessage> pointer_messages;
-			pointer_messages.push_back(dia_args::PointerMessage(
+			pointer_messages.emplace_back(
 				"error_location", base::Optional<dia_args::MessageID>("msg_1")
-			));
-			pointer_messages.push_back(
-				dia_args::PointerMessage("hint_location", base::Optional<dia_args::MessageID>())
 			);
+			pointer_messages.emplace_back("hint_location", base::Optional<dia_args::MessageID>());
 			test_round_trip(
 				base::makeBox<dia_args::PointedComponent>(
 					std::move(content), std::move(pointer_messages)
@@ -95,7 +93,7 @@ private:
 	void complexComponentJsonRoundTrip() {
 		// Create a complex nested structure
 		std::vector<Box<dia_args::Component>> inner_elements;
-		inner_elements.push_back(base::makeBox<dia_args::TextComponent>("Type "));
+		inner_elements.emplace_back(base::makeBox<dia_args::TextComponent>("Type "));
 
 		auto link_content = base::makeBox<dia_args::CodeComponent>("i32");
 		inner_elements.emplace_back(base::makeBox<dia_args::LinkComponent>(
@@ -105,8 +103,8 @@ private:
 		auto inner_concat = base::makeBox<dia_args::ConcatComponent>(std::move(inner_elements));
 
 		std::vector<Box<dia_args::Component>> outer_elements;
-		outer_elements.push_back(std::move(inner_concat));
-		outer_elements.push_back(
+		outer_elements.emplace_back(std::move(inner_concat));
+		outer_elements.emplace_back(
 			base::makeBox<dia_args::TextComponent>(" is a signed 32-bit integer")
 		);
 

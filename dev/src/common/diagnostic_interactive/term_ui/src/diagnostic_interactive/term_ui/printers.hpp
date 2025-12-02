@@ -8,7 +8,7 @@
  * separator (consisting of symbols `-`).
  *
  */
-#define TERM_UI_SEPARATOR_WIDTH 80
+constexpr std::size_t TERM_UI_SEPARATOR_WIDTH = 80;
 
 namespace term_ui {
 	/**

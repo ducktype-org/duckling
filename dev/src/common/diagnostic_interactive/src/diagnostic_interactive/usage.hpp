@@ -78,9 +78,10 @@ namespace dia_int {
 	 */
 	class PlaceholderCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
-			return {
-				.template_type = "message", .type = "error", .family = "misc", .name = "placeholder_code"
-			};
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "misc",
+				     .name          = "placeholder_code" };
 		}
 
 	public:
@@ -100,7 +101,9 @@ namespace dia_int {
 			if_opt_some(pointer_message_content, val) {
 				addArgument<TextArgument>("pointer_message_content", std::move(val));
 			}
-			{ addArgument<TextArgument>("pointer_message_content", ""); }
+			if_opt_none(pointer_message_content) {
+				addArgument<TextArgument>("pointer_message_content", "");
+			}
 
 			addPointerMessage("cause", source_position);
 		}

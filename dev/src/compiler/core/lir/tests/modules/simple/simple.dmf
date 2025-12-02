@@ -24,5 +24,6 @@ fun foo() -> i64 = {
 	};
 
 	add_something(2, 3);
+
 	return 0;
 }

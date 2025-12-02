@@ -1,7 +1,6 @@
-#include <diagnostic_interactive/core/view_constructors.hpp>
-
-#include <diagnostic_interactive/core/term_ui_view.hpp>
 #include <diagnostic_interactive/core/diagnostic_state.hpp>
+#include <diagnostic_interactive/core/term_ui_view.hpp>
+#include <diagnostic_interactive/core/view_constructors.hpp>
 
 namespace dia_int {
 
