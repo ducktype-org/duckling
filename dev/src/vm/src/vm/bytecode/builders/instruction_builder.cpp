@@ -24,9 +24,9 @@ namespace vm::code::builders {
 			out << base::enumToStr(kind);
 		}
 
-		/// Helper for makeInstructionFromUntypedArgs
+		/// Helper for makeInstructionFromArgs
 		template<vm::code::IsInstruction I>
-		vm::code::Instruction fromUntyped(const std::vector<opargs::OpCodeArg>& args) {
+		vm::code::Instruction fromArgs(const std::vector<opargs::OpCodeArg>& args) {
 			using ArgTypes        = I::ArgTypes;
 			constexpr usize ARITY = std::tuple_size_v<ArgTypes>;
 
@@ -56,11 +56,11 @@ namespace vm::code::builders {
 		}
 	}
 
-	vm::code::Instruction makeInstructionFromUntypedArgs(
+	vm::code::Instruction makeInstructionFromArgs(
 		base::StrID name, const std::vector<opargs::OpCodeArg>& args
 	) {
 #define HANDLE_INSTR(opcode) \
-	std::make_pair(base::StrID(#opcode), fromUntyped<VM_INSTR_FROM_NAME(opcode)>),
+	std::make_pair(base::StrID(#opcode), fromArgs<VM_INSTR_FROM_NAME(opcode)>),
 		static std::unordered_map name_to_factory{
 #include <vm/bytecode/instruction_definitions.hpp>
 		};
@@ -97,5 +97,5 @@ vm::code::Instruction vm::code::builders::InstructionBuilder::build() const {
 	}
 	auto instr_name = base::StrID{ name_stream.str().c_str() };
 
-	return makeInstructionFromUntypedArgs(instr_name, args);
+	return makeInstructionFromArgs(instr_name, args);
 }

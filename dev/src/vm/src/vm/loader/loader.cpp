@@ -33,7 +33,7 @@ namespace {
 	 */
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		auto instruction
-			= vm::code::builders::makeInstructionFromUntypedArgs(opcode.opcode_name, opcode.args);
+			= vm::code::builders::makeInstructionFromArgs(opcode.opcode_name, opcode.args);
 		VISIT(instruction, i, i.bytecode_pos = opcode.position);
 		return instruction;
 	}

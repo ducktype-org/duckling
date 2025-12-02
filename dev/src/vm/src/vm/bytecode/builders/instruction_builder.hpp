@@ -87,9 +87,10 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 namespace vm::code::builders {
 	/**
 	 * @brief Construct fat bytecode instruction from name and arg variant vector.
-	 * Checks that the instruction exists, has the correct arity, and argument types match.
+	 * Expects that the instruction exists, has the correct arity, and argument types match,
+	 * panics if arguments are invalid.
 	 */
-	vm::code::Instruction makeInstructionFromUntypedArgs(
+	vm::code::Instruction makeInstructionFromArgs(
 		base::StrID name, const std::vector<opargs::OpCodeArg>& args
 	);
 
