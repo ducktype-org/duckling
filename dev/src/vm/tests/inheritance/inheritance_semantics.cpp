@@ -39,9 +39,6 @@ private:
 		loadInvalidDbc(
 			"semantics/invalid_virtual_call_2.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
 		);
-		loadInvalidDbc(
-			"semantics/invalid_vtable_type.dbc", { vm::code::VTableTypeMismatchError::ERR_MSG }
-		);
 	}
 
 	void semantics() {

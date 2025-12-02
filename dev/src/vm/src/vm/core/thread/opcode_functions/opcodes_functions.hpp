@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../config.hpp"
-
 #include <base/except/exceptions.hpp>
 #include <base/misc/raw_view.hpp>
 

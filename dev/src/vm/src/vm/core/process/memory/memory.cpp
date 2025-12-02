@@ -311,16 +311,16 @@ namespace vm {
 		iterateOverDataAndExecute(block, &Memory::runObjectCopyConstructor);
 	}
 
+	void Memory::runDataCopyConstructors(base::ModRawView data, TypeCRef type) {
+		iterateOverDataAndExecute(data, type, &Memory::runObjectCopyConstructor);
+	}
+
 	void Memory::runDataConstructor(Ref<Block> block) {
 		iterateOverDataAndExecute(block, &Memory::runObjectConstructor);
 	}
 
 	void Memory::runDataConstructor(base::ModRawView data, TypeCRef type) {
 		iterateOverDataAndExecute(data, type, &Memory::runObjectConstructor);
-	}
-
-	void Memory::runDataCopyConstructors(base::ModRawView data, TypeCRef type) {
-		iterateOverDataAndExecute(data, type, &Memory::runObjectCopyConstructor);
 	}
 
 	void Memory::iterateOverDataAndExecute(
@@ -406,7 +406,9 @@ namespace vm {
 	void Memory::runObjectConstructor(base::ModRawView data, TypeCRef type) {
 		switch (type->getKind()) {
 		case Type::Kind::Data: {
-			writeToView<const Type*>(data, type.get());
+			// If our data has inheritance, we need to write the vtable pointer
+			if (type->getInheritanceMetadata().has_value())
+				writeToView<const Type*>(data, type.get());
 			break;
 		}
 		case Type::Kind::Pointer:
