@@ -101,7 +101,15 @@ namespace vm {
 		 */
 		void runDataCopyConstructors(base::ModRawView data, TypeCRef type);
 
+		/**
+		 * @brief Executes constructors on individual objects that are in the block.
+		 * @param block The block to source the data from.
+		 */
 		void runDataConstructor(Ref<Block> block);
+
+		/**
+		 * @brief Executes constructors on a range of objects, that lay next to each other.
+		 */
 		void runDataConstructor(base::ModRawView data, TypeCRef type);
 
 
