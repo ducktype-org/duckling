@@ -93,10 +93,12 @@ impl Local {
         &self.absolute
     }
 
+    /// Get the entry which was directly specified in the manifest.
     pub fn entry_in_manifest(&self) -> StrId {
         self.entry_in_manifest
     }
 
+    /// Whether [`entry_in_manifest`](Self::entry_in_manifest) was found to be a relative path.
     pub fn was_original_entry_relative(&self) -> bool {
         self.was_original_entry_relative
     }

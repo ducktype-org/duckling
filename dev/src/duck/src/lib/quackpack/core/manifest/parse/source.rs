@@ -15,6 +15,10 @@ use crate::{
 };
 
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
+
+/// Parse given [`DependencySchema`] into [`Source`].
+///
+/// It's the most important and complex part of current parsing process.
 pub(crate) fn parse(
     schema: &DependencySchema,
     package_root: &Path,
@@ -125,6 +129,7 @@ pub(crate) fn parse(
 }
 
 #[track_caller]
+/// Helper for creating repeated "couldn't determine the source of the dependency" errors.
 fn make_could_not_determine_error<const N: usize>(
     scope: &Scope,
     fields: [&'static str; N],
@@ -152,6 +157,7 @@ fn make_could_not_determine_error<const N: usize>(
     )
 }
 
+/// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.
 fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [
         (source.git_url.as_ref(), "git_url"),
@@ -174,6 +180,7 @@ fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     Ok(())
 }
 
+/// Check, that `source` doesn't contain any fields belonging to the [`Local`] source.
 fn check_no_local(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [(source.path.as_ref(), "path")];
     for (field, name) in fields {
@@ -191,6 +198,7 @@ fn check_no_local(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()>
     Ok(())
 }
 
+/// Check, that `source` doesn't contain any fields belonging to the [`Registry`] source.
 fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
     let fields = [(source.registry_url.as_ref(), "registry_url")];
     for (field, name) in fields {
@@ -208,6 +216,7 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
     Ok(())
 }
 
+/// Resolve [`GitRevision`] from the given `source`.
 fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRevision> {
     match (source.branch.as_ref(), source.tag.as_ref()) {
         (None, None) => Ok(GitRevision::Main),
@@ -222,6 +231,9 @@ fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRev
     }
 }
 
+/// Resolve absolute path to the local dependency with entry `manifest_root`.
+///
+/// This functions returns a tuple `(absolute_path, was_expanded_path_relative)`.
 fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,

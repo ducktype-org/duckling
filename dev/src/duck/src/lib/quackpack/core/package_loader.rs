@@ -13,6 +13,7 @@ use crate::{
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Is [`PackageLoader`] allowed to return a global package, if it doesn't find any package.
 pub enum AllowGlobalPackage {
     No,
     Yes,
@@ -42,10 +43,15 @@ impl PackageLoader {
     pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
     pub const LOCAL_STORAGE_NAME: &str = ".storage";
 
+    /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
         Err(InternalError::from("@TODO: #1394 it needs the EditableManifest").into())
     }
 
+    /// Find a [`PackageCtx`] from a given `start`.
+    ///
+    /// This function __expands tildes__ and __resolves__ fully path.
+    /// Also, it walks up the chain of path's ancestors.
     pub fn find_from_directory<'duck>(
         start: &Path,
         ctx: &'duck QpCtx<'duck>,
@@ -76,6 +82,10 @@ impl PackageLoader {
         }
     }
 
+    /// Find package at a given directory.
+    ///
+    /// Unlike [`find_from_directory`](Self::find_from_directory) this function __does not__ walk up
+    /// `path`'s ancestors.
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
         ctx: &'duck QpCtx<'duck>,
@@ -90,6 +100,7 @@ impl PackageLoader {
         PackageCtx::new(path.to_path_buf(), ctx)
     }
 
+    /// Convenient helper.
     pub fn find_from_cwd<'duck>(
         ctx: &'duck QpCtx<'duck>,
         allow_global_package: AllowGlobalPackage,

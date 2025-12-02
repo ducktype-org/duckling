@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// Context of a parsed package on a disk.
 pub struct PackageCtx<'duck> {
     package: Package,
     venv_config: VenvConfig,
@@ -13,6 +14,7 @@ pub struct PackageCtx<'duck> {
 }
 
 impl<'duck> PackageCtx<'duck> {
+    /// Create new [`PackageCtx`]
     pub fn new(project_root: PathBuf, ctx: &'duck QpCtx<'duck>) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
@@ -24,14 +26,17 @@ impl<'duck> PackageCtx<'duck> {
         })
     }
 
+    /// Get underlying [`Package`]
     pub fn package(&self) -> &Package {
         &self.package
     }
 
+    /// Get [`VenvConfig`] of this [`PackageCtx`]
     pub fn venv_config(&self) -> &VenvConfig {
         &self.venv_config
     }
 
+    /// Get [`QpCtx`] used to create this [`PackageCtx`]
     pub fn ctx(&self) -> &QpCtx<'duck> {
         self.ctx
     }

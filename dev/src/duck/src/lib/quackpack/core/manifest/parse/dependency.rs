@@ -22,6 +22,7 @@ use crate::quackpack::schemas::manifest::DependencySource;
 use crate::static_str_id;
 use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};
 
+/// Parse [`Dependencies`] from the [`DependenciesSchema`].
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
@@ -46,6 +47,7 @@ pub(crate) fn parse(
     Ok(Dependencies::new(dependencies))
 }
 
+/// Parse single [`Dependency`] from its [`DependencySchema`].
 fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
@@ -83,6 +85,7 @@ fn parse_single_dependency(
         .with_context(|| format!("when parsing the field `{}`", scope.format()))
 }
 
+/// Parse dependencies features
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
     scope: &mut Scope,
@@ -114,6 +117,7 @@ fn parse_features(
     Ok(result)
 }
 
+/// Parse [`Conditions`] from [`ConditionSchema`]
 fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Conditions> {
     Conditions::new(
         schema
@@ -124,6 +128,7 @@ fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Cond
     .with_context(|| format!("when parsing the field `{}`", scope.format()))
 }
 
+/// Helper for transforming slice of `&T: Into<StrId>` into `Vec<StrId>`
 fn vec_string_to_vec_str_id<T>(input: &[T]) -> Vec<StrId>
 where
     for<'a> &'a T: Into<StrId>,
@@ -131,6 +136,7 @@ where
     input.iter().map(<&T>::into).collect()
 }
 
+/// Parse the real name specified by the dependency.
 fn parse_real_name(schema: &DependencySchema) -> Option<StrId> {
     match schema.source.as_ref() {
         Some(DependencySource::Detailed(detailed)) => detailed.name.as_ref().map(<&String>::into),

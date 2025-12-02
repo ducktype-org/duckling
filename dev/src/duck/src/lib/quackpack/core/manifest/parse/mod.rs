@@ -18,6 +18,14 @@ mod source;
 #[cfg(test)]
 mod tests;
 
+/// Parse a manifest at a given `path`.
+///
+/// This function does not expand tildes or resolves paths: its callers responsibility to do that.
+///
+/// Entire parsing is done in three steps:
+/// 1. Read the entire YAML string.
+/// 2. Turn that string into [`ManifestSchema`].
+/// 3. Parse [`ManifestSchema`] into [`Manifest`].
 pub fn parse_manifest(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let span = span!(Level::DEBUG, "manifest", path = %path.display());
     let _guard = span.enter();
@@ -31,28 +39,34 @@ pub fn parse_manifest(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
 }
 
 #[derive(Debug)]
+/// Scope representing, which item in [`ManifestSchema`] we are currently working on.
 pub(crate) struct Scope {
     inner: Vec<StrId>,
 }
 
 impl Scope {
+    /// Create a new [`Scope`].
     pub fn new() -> Self {
         Scope { inner: Vec::new() }
     }
 
+    /// Push a `name` onto this [`Scope`].
     pub fn push(&mut self, name: StrId) {
         self.inner.push(name)
     }
 
+    /// Pop last item from this [`Scope`].
     pub fn pop(&mut self) -> Option<StrId> {
         self.inner.pop()
     }
 
+    /// Turn this [`Scope`] into a human friendly [`String`].
     pub fn format(&self) -> String {
         self.inner.iter().join(".")
     }
 }
 
+/// Helper for [`parse_manifest`].
 fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let package_root = path
         .parent()
@@ -72,6 +86,8 @@ fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     ))
 }
 
+/// Turn YAML string into the [`ManifestSchema`].
+/// This function also collects unused items in the [`ManifestSchema`].
 fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let mut unused = BTreeSet::new();
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
@@ -82,6 +98,7 @@ fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     Ok(schema)
 }
 
+/// Format [`serde_ignored::Path`] as a human readable [`String`].
 fn concat_unused_path(path: &serde_ignored::Path<'_>) -> String {
     use serde_ignored::Path;
 
@@ -109,6 +126,8 @@ fn concat_unused_path(path: &serde_ignored::Path<'_>) -> String {
     }
 }
 
+/// Create any manifest-related warnings.
+/// Right now this function only warns about unused items.
 fn create_warnings(
     _original_yaml: &str,
     schema: &ManifestSchema,

@@ -18,6 +18,7 @@ use crate::{
 
 use super::Scope;
 
+/// Parse [`Manifest`] from given [`ManifestSchema`].
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
@@ -71,6 +72,7 @@ pub(crate) fn parse(
     ))
 }
 
+/// Parse [`Features`] from the given features map.
 fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResult<Features> {
     let Some(features) = features else {
         return Features::new(HashMap::new());
@@ -82,6 +84,7 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
     Features::new(as_hash_map)
 }
 
+/// Parse [`CompilerSpecificOptions`] from the given compiler flags mapping.
 fn parse_compiler_flags(
     input: Option<&HashMap<String, CompilerOptions>>,
 ) -> HashMap<StrId, CompilerSpecificOptions> {
