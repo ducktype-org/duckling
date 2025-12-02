@@ -3,7 +3,9 @@
 #include "lang_parser_state.hpp"
 
 namespace pst::internal {
-	Box<LangParserState> makeState(tpc::TokenStream&& token_stream, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger) {
+	Box<LangParserState> makeState(
+		tpc::TokenStream&& token_stream, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger
+	) {
 		return base::makeBox<LangParserState>(std::move(token_stream), logger, int_logger);
 	}
 

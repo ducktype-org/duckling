@@ -3,6 +3,8 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/core/template_evaluation.hpp>
 #include <diagnostic_interactive/core/template_file.hpp>
+#include <diagnostic_interactive/core/template_registry.hpp>
+#include <diagnostic_interactive/core/view_constructors.hpp>
 #include <yaml-cpp/yaml.h>
 
 #include <tester/tester.hpp>
@@ -47,7 +49,7 @@ explore_links: {}
 pointer_messages: {}
 )" } }
 		));
-		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"({
+		auto diagnostic_file = dia_args::Diagnostic::fromJson(json::parse(R"({
             "main_message": {
                 "metadata": {
                     "template_type": "message",
@@ -179,7 +181,7 @@ content:
 		));
 
 		// Construct diagnostic file from JSON
-		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"({
+		auto diagnostic_file = dia_args::Diagnostic::fromJson(json::parse(R"({
     "main_message": {
         "metadata": {
             "template_type": "message",
@@ -408,7 +410,7 @@ pointer_messages:
 		));
 
 		// Construct diagnostic file from JSON
-		auto diagnostic_file = dia_args::Thread::fromJson(json::parse(R"json({
+		auto diagnostic_file = dia_args::Diagnostic::fromJson(json::parse(R"json({
     "main_message": {
         "metadata": {
             "template_type": "message",

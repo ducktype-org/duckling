@@ -63,7 +63,8 @@ namespace dia_int {
 			  provider(std::move(provider)) {}
 
 		template<class T, class Deleter, class... Args>
-		friend base::Box<T, Deleter> base::makeBox(Args&&... args); // @TODO: #1364 deal with friend makeBox
+		friend base::Box<T, Deleter> base::makeBox(Args&&... args
+		);  // @TODO: #1364 deal with friend makeBox
 
 	public:
 		/**

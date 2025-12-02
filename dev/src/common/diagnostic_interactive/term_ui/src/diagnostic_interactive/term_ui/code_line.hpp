@@ -24,9 +24,9 @@ namespace term_ui {
 	 * @return std::vector<Highlight>
 	 */
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia_int::term_ui_view::CodeLine&            line,
-		u64                                               tab_space,
+		const dia_int::term_ui_view::CodeLine&                           line,
+		u64                                                              tab_space,
 		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
-		std::ostream&                                     out
+		std::ostream&                                                    out
 	);
 }

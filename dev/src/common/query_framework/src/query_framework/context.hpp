@@ -9,11 +9,12 @@
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
 #include "internal/query_graph/query_state.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
+
 #include <base/extend_cpp/defer.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
-#include <diagnostic_interactive/logger.hpp>
 
 namespace query {
 
@@ -51,7 +52,7 @@ namespace query {
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
-		static dia::Logger logger;
+		static dia::Logger     logger;
 		static dia_int::Logger int_logger;
 
 		Context(const Context&) = delete;

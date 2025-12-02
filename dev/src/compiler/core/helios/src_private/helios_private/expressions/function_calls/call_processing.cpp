@@ -359,12 +359,14 @@ namespace compiler::helios::code {
 				auto& coercion = match.coercions[i];
 				if (not coercion.isEmptyCoercion()) {
 					auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-						 coercion.to.toString(), coercion.validated_from.toString()
+						coercion.to.toString(), coercion.validated_from.toString()
 					);
 					auto pm_message_id = dia_int::MessageBase::getUniqueID();
 					candidate_note->addLinkedMessage(pm_message_id, std::move(pm));
 					auto param_decl = getNthDeclarationParameter(ctx, decl, i);
-					candidate_note->addPointerMessage("coercion",  param_decl->getSourcePosition(), pm_message_id);
+					candidate_note->addPointerMessage(
+						"coercion", param_decl->getSourcePosition(), pm_message_id
+					);
 				}
 			}
 

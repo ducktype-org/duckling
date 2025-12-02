@@ -124,7 +124,7 @@ namespace dia_int {
 		/**
 		 * @brief The stack of message IDs collected during evaluation.
 		 * The nested components can push/pop IDs to this stack,
-		 * so in the state the leafs (text and code components) know which messages 
+		 * so in the state the leafs (text and code components) know which messages
 		 * they link to and which pointer messages they
 		 * highlight.
 		 */
@@ -161,12 +161,12 @@ namespace dia_int {
 	 */
 	class EvaluateDiagnosticFileVisitor final: public dia_args::ComponentVisitor {
 	public:
-		MessageEvaluationContext&             ctx;
-		
+		MessageEvaluationContext& ctx;
+
 		/**
 		 * @brief The stack of message IDs collected during evaluation.
 		 * The nested components can push/pop IDs to this stack,
-		 * so in the state the leafs (text and code components) know which messages 
+		 * so in the state the leafs (text and code components) know which messages
 		 * they link to and which pointer messages they
 		 * highlight.
 		 */
@@ -596,7 +596,8 @@ namespace dia_int {
 	}
 
 	/**
-	 * @brief Evaluates a diagnostic message template into a state message if the template is a message template.
+	 * @brief Evaluates a diagnostic message template into a state message if the template is a
+	 * message template.
 	 */
 	state::Message evaluateTemplateIfMessage(
 		DiagnosticEvaluationContext&             thread_ctx,
@@ -623,7 +624,8 @@ namespace dia_int {
 	}
 
 	/**
-	 * @brief Evaluates a diagnostic pointer message template into a state pointer message if the template is a pointer message template.
+	 * @brief Evaluates a diagnostic pointer message template into a state pointer message if the
+	 * template is a pointer message template.
 	 */
 	state::PointerMessage evaluateTemplateIfPointerMessage(
 		DiagnosticEvaluationContext&             thread_ctx,

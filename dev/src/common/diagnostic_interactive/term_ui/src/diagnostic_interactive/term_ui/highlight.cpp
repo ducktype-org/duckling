@@ -25,16 +25,20 @@ namespace term_ui {
 			return *this;
 		}
 		case LoweringStage::Medium: {
-			return {priority, beg, beg + 1, group, idx, stage};
+			return { priority, beg, beg + 1, group, idx, stage };
 		}
 		case LoweringStage::Last: {
-			return {priority, beg, beg + 1, group, idx, stage};
+			return { priority, beg, beg + 1, group, idx, stage };
 		}
 		}
 		return *this;
 	}
 
-	LinePiece intoLinePiece(const dia_int::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count) {
+	LinePiece intoLinePiece(
+		const dia_int::term_ui_view::PointerMessage& msg,
+		PointerStage                                 stage,
+		base::Optional<u64>                          count
+	) {
 		std::string str;
 		Style       style = getStyleFromType(msg.type);
 		switch (stage) {
@@ -45,7 +49,7 @@ namespace term_ui {
 		}
 		case PointerStage::HighlightWithLowering: {
 			CORE_ASSERT(count > 0, "Cannot use a non-positive highlight width.");
-			
+
 			str = std::string(1, style.LOWERING_ATTACH_CHAR)
 			    + std::string(count.value() - 1, style.UNDERLINE_CHAR);
 			break;
@@ -59,6 +63,6 @@ namespace term_ui {
 			break;
 		}
 		}
-		return {str, msg.type};
+		return { str, msg.type };
 	}
 }

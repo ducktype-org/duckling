@@ -7,4 +7,9 @@ add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/message.cpp
         src/diagnostic_interactive/logger.cpp
 )
-make_module(DiagnosticInteractive USES Printer Filesystem TokenSource TerminalUI DiagnosticInteractiveCore Diagnostic )
+make_module(DiagnosticInteractive USES  TerminalUI DiagnosticInteractiveCore Diagnostic )
+
+
+add_example(diagnostic_arguments_evaluator examples/diagnostic_arguments_evaluator.cpp USES DiagnosticInteractive)
+add_example(dia_usage_example examples/dia_usage_example.cpp USES DiagnosticInteractive)
+

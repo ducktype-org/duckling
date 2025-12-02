@@ -195,7 +195,7 @@ namespace dia_int {
 	term_ui_view::Diagnostic constructTreeView(const state::Diagnostic& state) {
 		term_ui_view::Diagnostic diag;
 		for (auto& msg_id: state.displayed_messages) {
-			auto&   msg = state.messages.at(msg_id);
+			auto&                 msg = state.messages.at(msg_id);
 			term_ui_view::Message view_msg;
 			view_msg.type   = styleTypeFromString(msg.metadata.type);
 			view_msg.code   = msg.metadata.code;

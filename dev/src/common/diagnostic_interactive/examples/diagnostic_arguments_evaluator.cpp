@@ -18,7 +18,6 @@ int main(int argc, char* argv[]) {
 
 	std::string file_path = argv[1];
 
-	// Set template registry to embedded templates
 	dia_int::TemplateRegistrySingleton::setInstance(makeBox<dia_int::TemplateResistryMainProvider>()
 	);
 

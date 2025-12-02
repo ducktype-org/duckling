@@ -107,7 +107,7 @@ namespace dia_int::state {
 
 	CodeComponent::CodeComponent(
 		ComponentID /* id */,
-		const std::string&                   content,
+		const std::string&            content,
 		std::vector<PointerMessageID> pointer_messages,
 		std::vector<MessageID>        attached_messages
 	):
@@ -213,7 +213,7 @@ namespace dia_int::state {
 		 * @brief Visitor that collects MessageIDs from attached_messages in traversal order.
 		 */
 		class MessageLinkCollector: public ComponentVisitor {
-			std::vector<MessageID>& result;
+			std::vector<MessageID>&       result;
 			std::unordered_set<MessageID> seen;
 
 			void addIfNew(MessageID id) {
@@ -266,9 +266,7 @@ namespace dia_int::state {
 
 		// 3. Explore links (iterate in insertion order if HashMap preserves it,
 		//    otherwise order is unspecified but we still collect them)
-		for (const auto& [name, edge]: explore_links) {
-			edge.content->acceptVisitor(collector);
-		}
+		for (const auto& [name, edge]: explore_links) edge.content->acceptVisitor(collector);
 
 		return result;
 	}

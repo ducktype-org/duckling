@@ -262,7 +262,7 @@ clah::Clah getClahForMain() {
 		                                                              : driver::BackendType::LLVM;
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
-					
+
 					defer(printContextErrors());
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });

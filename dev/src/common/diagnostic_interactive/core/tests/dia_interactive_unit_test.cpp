@@ -281,7 +281,7 @@ private:
 				"location": {"type": "text", "content": "line 42"}
 			}
 		})",
-			dia_args::ExploreEdge::fromJson
+			dia_args::ExploreLink::fromJson
 		);
 
 		// Test Message

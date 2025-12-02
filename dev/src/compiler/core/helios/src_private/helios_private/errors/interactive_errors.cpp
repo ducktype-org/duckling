@@ -1,10 +1,25 @@
 #include "interactive_errors.hpp"
 
-#include "diagnostic_interactive/usage.hpp"
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/usage.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 namespace compiler::helios::errors {
+	using namespace dia_int;
+
+	std::string getStr(dia::SourcePosition pos) {
+		return pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString();
+	}
 
 	class IsAliasNote: public MessageBase {
 		Metadata getMetadata() const final {

@@ -2,6 +2,7 @@
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
+
 #include <diagnostic_interactive/usage.hpp>
 
 namespace pst {
@@ -16,11 +17,7 @@ namespace pst {
 		state.parse(out).one(&out->params);
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
-		if (not state[0].is(NamedOperator::Assign)) {
-			// state.err->log(
-			// );
-			return nullptr;
-		}
+
 		state.parse(out)
 			.one(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);

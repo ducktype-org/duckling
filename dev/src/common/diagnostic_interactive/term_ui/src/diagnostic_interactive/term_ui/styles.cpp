@@ -1,7 +1,7 @@
 #include "styles.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <utility>
+
 #include <utility>
 
 namespace term_ui {

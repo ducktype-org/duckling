@@ -1,6 +1,6 @@
 @page dia-templates Diagnostic templates
 
-Diagnostic templates (or, actually, *message templates*) are recipes for
+Diagnostic templates (or, actually, *info templates*) are recipes for
 converting the raw diagnostic data
 emitted by the compiler into a human-readable messages.
 
@@ -14,15 +14,15 @@ continuous improvement of said representation independently
 from the compiler's source code.
 
 > This document goes through the technicalities of creating and using
-message templates. For more information on guidelines about writing the content
+info templates. For more information on guidelines about writing the content
 of these templates, see the \ref dia-guidelines page.
 
-## Anatomy of a message template
-A message template describes the representation of a standalone, coherent
+## Anatomy of an info template
+A template describes the representation of a standalone, coherent
 piece of a diagnostic referred to as an *info*. That info can in turn
-contain a header component, an optional description component, a fragment of code
+contain a header message, a description, a fragment of code
 with inline messages (referred to as *pointer messages*),
-and a series of, potentially interactive, triggers (called *explore links*)
+and a series of, potentially interactive, triggers (called *explore edges*)
 representing links to other infos specified by the compiler.
 
 For that reason, the template itself is divided into sections (some optional)
@@ -34,29 +34,19 @@ sections.
 ### Metadata
 > Note: this section is **mandatory**.
 
-Every template file is identified by its `template_type` and a triple of
-names: `(type, family, name)`.
-
-The `template_type` defines the structure of the template file. It can be one of:
-- `message` (for full diagnostic messages – `MessageTemplate`),
-- `component` (for reusable components – `ComponentTemplate`),
-- `pointer_message` (for standalone pointer-message templates –
-  `PointerMessageTemplate`).
+Every kind of info (and thus, every info template) can be identified by
+a triple of names: `(type, family, name)`.
 
 The `type` is one of:
-## Anatomy of a message template
-A message template is represented as a tree, where each component
-introduces new content or functionality to the message. There are a couple
-of component types, depending on their purpose:
-- text component,
-- concatenation component,
-- parameter component,
-- is param provided component,
-- macro component,
-- matching component,
-- code block component,
-- message link component,
-- variant component.
+- `error`,
+- `warning`,
+- `note`,
+- `hint`,
+- `docs`.
+
+The `family` refers to a group of templates within a given `type`.
+
+The `name` identifies the template within a given `family`.
 
 The whole triple is required to be reflected in the directory structure
 inside the template directory.
@@ -67,16 +57,15 @@ along with the aforementioned `type` can also be used to identify the template.
 
 > In diagnostic messages you often see text like `error[E1001]: ...`.
 The `E` in square brackets means an `error` type of the info and the number
-`1001` is the *info code*. Together, they uniquely identify the used message
+`1001` is the *info code*. Together, they uniquely identify the used info
 template.
 >
 > Note: the mechanism for global assignment of info codes has not yet been
-developed. When you design a message template, manually make sure to pick
+developed. When you design an info template, manually make sure to pick
 an info code which has not yet been taken.
 
 ~~~~~yaml
 metadata:
-  template_type: "message"
   type: "note"
   family: "declaration"
   name: "variable_decl"
@@ -104,27 +93,22 @@ it is required to create a specification of all parameters
 used in a template. Each parameter specification must include a `description`
 field documenting its purpose.
 
-> Parameter descriptions are **essential** to creating valid message templates.
+> Parameter descriptions are **essential** to creating valid info templates.
 They serve as a specification of what the compiler is expected to pass down
 to the template and can convey crucial, nontrivial information about
 the parameters' allowed behaviour (e.g. by limiting the use of in-place
 transformations in certain delicate cases).
 
 Some template parameters in the specification can be marked as optional.
-Additionally, a `component_type` can be specified to hint the expected type
-of the parameter (e.g., `code`, `concat`, `evaluated_template`).
 
 ~~~~~yaml
 params:
   operator:
     description: "The operator which does not match."
-    component_type: "code"
   left_type:
     description: "Type of the left operand."
-    component_type: "evaluated_template"
   right_type:
     description: "Type of the right operand."
-    component_type: "evaluated_template"
   is_static:
     description: "Whether the error is displayed in a static message."
   has_expanded_left_type:
@@ -142,57 +126,53 @@ params:
 and `expanded_right_type` parameters are optional. That is, they do not need
 to be passed down by the compiler.
 
-### Main components
-There are two main components displayed within an info:
-- a header component (required),
-- a description component (optional).
+### Main messages
+There are two main messages displayed within an info:
+- a header message (required),
+- a description (optional).
 
-Both of these are defined at the root level of a message template file
+Both of these are defined at the root level of an info template file
 in the following way:
 ~~~~~yaml
-header_message: <component>
-description: <component>
+header_message: <message>
+description: <message>
 ~~~~~
-where `<component>` is a message template component (more on those in the
+where `<message>` is a message template (more on those in the
 [**Anatomy of a message template**](#anatomy-of-a-message-template) section of this document).
 The `description` field is optional.
 
 ### Pointer messages
 > Note: this section is **optional**.
 
-An info's message template may define a set of components to be displayed inside
+An info template may define a set of messages to be displayed inside
 the code fragment provided by the compiler (aka *pointer messages*,
-because they *point* to their respective code fragment segments).
+because the *point* to their respective code fragment's segments).
 
 Each pointer message is identified by a *group name* (referring to the group
 of components that it points to) and must be assigned:
+- a priority (a natural number, where a lower number means higher priority;
+the UI may use that information for ordering pointer messages, should they
+be displayed at the same location),
 - a type (one of the info types mentioned in subsection
 [**metadata**](#metadata); in some UI's a pointer message may be displayed
 differently based on what type of information it conveys),
-- content (a message template component tree).
+- content (a message template).
 
-Optionally, a priority can be assigned:
-Anatomy of a message template
-A message template is represented as a tree, where each component
-the UI may use that information for ordering pointer messages, should they
-- component types, depending on their purpose:
-- text component,
-- concatenation component,
-- parameter component,
-- is param provided component,
-- macro component,
-- matching component,
-- code block component,
-- message link component,
-- variant component.
+~~~~~yaml
+pointer_messages:
+  <group_name>:
+    priority: <priority>
+    type: <type>
+    content: <message>
+~~~~~
+> A scheme for defining a pointer message in the template
 file. All pointer messages should be defined under
 the `pointer_messages` node at the root of the file.
-not all branches of the template tree have to be evaluated), which is crucial
-### Explore links
+
+### Explore edges
 Certain pieces of diagnostic data may be represented
 as a directed graph. Sometimes it might be useful
-### Text component
-The text component is just plain text. It does not introduce any metadata.
+for the user to explore such a graph by viewing
 a path from the starting vertex and choosing where
 to go next or where to go back.
 
@@ -200,86 +180,72 @@ to go next or where to go back.
 of exploration here in case it's not clear from
 the description
 
-For these scenarios you can use explore links
-in your message templates.
+For these scenarios you can use explore edges
+in your info templates.
 
-### Concatenation component
-The concatenation component, as the name suggests, concatenates multiple components.
-explore links are the outgoing edges of their corresponding
+Vertices of such a graph are infos and their respective
+explore edges are the outgoing edges of their corresponding
 vertices.
+
 Since the outgoing degrees of vertices are unbounded,
-and another text component.
-the templates of explore links define *classes* of links
+the templates of explore edges define *classes* of edges
 and not every individual one (otherwise the number
-### Parameter component
-The parameter component, upon evaluation, is replaced by the template parameter
+of outgoing edges for a given info template would need
 to be bounded or even constant).
 The compiler may then provide information about multiple
-it is possible for such a component to exist in the message template tree
-according to that class' explore link template.
-(local parameters shadow the global ones).
-the parameter component is replaced by the local parameter
-(local parameters shadow the global ones).
-Each link class may define a set of parameters
+edges of the same class, all of which are to be displayed
+according to that class' explore edge template.
+
+Each edge class may define a set of parameters
 (specified in the same way as in the
 [**parameters**](#parameters) subsection)
 it accepts and use these parameters, alongside
 the global info parameters in its `content` field.
-### Is param provided component
-The is param provided component checks if a parameter is provided. It evaluates to "true" or "false".
-It is often used as the `case` component in a matching component.
+
+> Note that in case of a name conflict, the edge class
 parameters shadow the global info parameters.
 
-Since explore links' primary objective is to provide
+Since explore edges' primary objective is to provide
 interaction on an info graph, all metadata of their
 contents is dropped. That means, in particular, that
-### Macro component
-The macro component, upon evaluation, is replaced by the content of the macro
-explore link's text.
+**no other interaction** will be available on the displayed
+explore edge's text.
 
 ~~~~~yaml
-explore_links:
-  <link_class>:
-### Matching component
-The matching component introduces logic to the message template evaluation.
+explore_edges:
+  <edge_class>:
+    content: <message>
     params: <params>
- *class cases* are specified in square brackets,
- `[other]` is a special class case, required in every matching component,
-All explore links should be defined under the `explore_links`
-case: <component>
+~~~~~
+> A scheme for defining an explore edge in the template file.
+All explore edges should be defined under the `explore_edges`
+node at the root of the file.
 
-  <case_1>: <component>
-  <case_2>: <component>
-  "[other]": <component>
+### Macros
+To facilitate the process of writing info templates you can
+specify non-parametrized macros which may help in avoiding
 duplication the the template file. Such macros are basically
 just aliases for potentially long and complicated message
 templates.
 
 ~~~~~yaml
-### Code block component
-The code block component represents a block of code, optionally with a location.
-  <macro_name>: <component>
-codeblock: <component>
+macros:
+  <macro_name>: <message>
+~~~~~
 > A scheme for defining a macro in the template file.
 All macros should be defined under the `macros` node
 at the root of the file.
 
 ## Anatomy of a message template
-### Message link component
-The message link component represents a link to another message.
+
 A message template (`<message>`) is represented as a tree, where each node
-content: <component>
+introduces new content or functionality to the message. There are a couple
 of node types, depending on their purpose:
 - text node,
 - concatenation node,
 - parameter node,
-- is param provided node,
-### Variant component
-The variant component allows providing a default content and an alternative content.
-- matching node,
-default: <component>
-alternative: <component>
-- variant node.
+- macro node,
+- matching node.
 
 All message templates are evaluated lazily (thanks to the matching node,
 not all branches of the template tree have to be evaluated), which is crucial
@@ -339,16 +305,6 @@ param: <param_name>
 ~~~~~
 > A scheme for defining a parameter node.
 
-### Is param provided node
-
-The is param provided node checks if a parameter is provided. It evaluates to "true" or "false".
-It is often used as the `case` component in a matching node.
-
-~~~~~yaml
-is_param_provided: <param_name>
-~~~~~
-> A scheme for defining an is param provided node.
-
 ### Macro node
 
 The macro node, upon evaluation, is replaced by the content of the macro
@@ -362,9 +318,25 @@ macro: <macro_name>
 ### Matching node
 
 The matching node introduces logic to the message template evaluation.
-Upon evaluation, the content of the `case` field (which is a component itself)
-is evaluated and then matched with all cases specified in the `of` field.
-Once a match is found, all other cases are discarded.
+Upon evaluation, the textual content of the `case` field (plain text
+without any metadata) is evaluated and then matched with all cases
+specified in the `of` field. Once a match is found, all other cases are
+discarded and only the content of the matching one is evaluated.
+
+A few things to note about the matching algorithm:
+- cases are divided into *exact cases* and *class cases*,
+- *exact cases* are matched first, in order of appearance, only later
+*class cases*, also in order of appearance, except for the `[other]` case,
+which is considered last,
+- *exact cases* are matched exactly with the value of the `case` field,
+- *class cases* are matched more broadly, depending on the logic associated
+with a given class,
+- *class cases* are specified in square brackets,
+- `[other]` is a special class case, required in every matching node,
+which always produces a match.
+
+> Currently, there is only one class case - `[other]`. More are to be
+introduced when needed.
 
 ~~~~~yaml
 case: <message>
@@ -375,33 +347,3 @@ of:
 ~~~~~
 > A scheme for defining a matching node. Any number of cases can be introduced.
 The `[other]` class case is required.
-
-### Code block node
-
-The code block node represents a block of code, optionally with a location.
-
-~~~~~yaml
-codeblock: <message>
-location: <message> # optional
-~~~~~
-> A scheme for defining a code block node.
-
-### Message link node
-
-The message link node represents a link to another message.
-
-~~~~~yaml
-content: <message>
-url: <message>
-~~~~~
-> A scheme for defining a message link node.
-
-### Variant node
-
-The variant node allows providing a default content and an alternative content.
-
-~~~~~yaml
-default: <message>
-alternative: <message>
-~~~~~
-> A scheme for defining a variant node.

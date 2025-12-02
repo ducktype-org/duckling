@@ -5,13 +5,16 @@
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
 #include "pst_state_forward.hpp"
 
-#include <token_source/source.hpp>
 #include <diagnostic_interactive/logger.hpp>
+
+#include <token_source/source.hpp>
 
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
-		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger);
+		Box<LangParserState> makeState(
+			tpc::TokenStream&&, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger
+		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
 	}
 
@@ -60,7 +63,7 @@ namespace pst {
                     token_data.tokens.size()
                 ),
                 file->getLogger(),
-				file->getIntLogger()
+                file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			imports = internal::extractState(std::move(state_box));

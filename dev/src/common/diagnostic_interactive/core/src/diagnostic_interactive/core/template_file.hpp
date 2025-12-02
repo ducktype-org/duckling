@@ -2,16 +2,16 @@
  * @file template_file.hpp
  * @author Wojciech Rzeplinski
  * @brief Implementation of diagnostic template file elements.
- * The logic for deserializing template files into element trees is here. 
- * 
+ * The logic for deserializing template files into element trees is here.
+ *
  */
 #pragma once
 
 #include <yaml-cpp/yaml.h>
 
-#include <base/pointers/box.hpp>
-#include <base/extend_cpp/visitor.hpp>
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/visitor.hpp>
+#include <base/pointers/box.hpp>
 
 namespace dia_int::template_file {
 
@@ -216,7 +216,7 @@ namespace dia_int::template_file {
 		std::string  family;
 		std::string  name;
 
-		u64       code;
+		u64         code;
 		std::string active_from;
 		std::string active_until;
 
@@ -341,7 +341,7 @@ namespace dia_int::template_file {
 		static PointerMessageTemplate fromYaml(const YAML::Node& node);
 	};
 
-	struct DiagnosticTemplate  final{
+	struct DiagnosticTemplate final {
 		std::variant<MessageTemplate, ComponentTemplate, PointerMessageTemplate> content;
 
 		static DiagnosticTemplate fromYaml(const YAML::Node& node);

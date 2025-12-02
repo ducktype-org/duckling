@@ -214,7 +214,7 @@ namespace dia_int::dia_args {
 		return result;
 	}
 
-	json ExploreEdge::toJson() const {
+	json ExploreLink::toJson() const {
 		json result;
 		result["name"]   = name;
 		result["params"] = json::object();
@@ -222,11 +222,11 @@ namespace dia_int::dia_args {
 		return result;
 	}
 
-	ExploreEdge ExploreEdge::fromJson(const json& edge_json) {
+	ExploreLink ExploreLink::fromJson(const json& edge_json) {
 		ASSUME_HAS_STR(edge_json, "name");
 		ASSUME_HAS(edge_json, "params");
 
-		ExploreEdge result;
+		ExploreLink result;
 		result.name   = edge_json["name"];
 		result.params = jsonToMap<Box<Component>>(edge_json["params"], [](const json& el) {
 			return Component::fromJson(el);
@@ -265,7 +265,7 @@ namespace dia_int::dia_args {
 		if (msg_json.contains("explore_links")) {
 			ASSUME_ARR(msg_json, "explore_links");
 			for (const auto& edge_json: msg_json["explore_links"])
-				result.explore_links.push_back(ExploreEdge::fromJson(edge_json));
+				result.explore_links.push_back(ExploreLink::fromJson(edge_json));
 		}
 
 		if (msg_json.contains("attached_messages")) {
@@ -278,7 +278,7 @@ namespace dia_int::dia_args {
 
 	json Diagnostic::toJson() const {
 		json result;
-		result["main_message"]      = main_message.toJson();
+		result["main_message"]    = main_message.toJson();
 		result["linked_messages"] = json::object();
 
 		for (const auto& [info_id, msg]: linked_messages)

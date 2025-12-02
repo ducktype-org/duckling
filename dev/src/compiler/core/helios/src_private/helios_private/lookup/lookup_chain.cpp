@@ -3,8 +3,6 @@
 
 #include <helios_private/lookup/interface.hpp>
 
-#include <iostream>
-
 namespace compiler::helios {
 
 
@@ -15,9 +13,6 @@ namespace compiler::helios {
 
 		bool       first_symbol = true;
 		SymbolList result;
-		for (auto id : key.names) {
-			std::cout << "Lookup chain name: " << id.value.strView() << "\n";
-		}
 		for (auto pointed: key.names) {
 			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
 			                                     : HInterface::ofSymbol(result.back());

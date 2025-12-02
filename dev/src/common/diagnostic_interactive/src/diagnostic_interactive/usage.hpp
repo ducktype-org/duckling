@@ -4,7 +4,7 @@
  * @brief Predefined message usages for common diagnostic messages.
  *
  * @warning
- * 
+ *
  * The classes should define constructors that set up the arguments
  * and pointer messages required by the message template.
  * In the constructor they should call the methods of MessageBase
@@ -67,7 +67,7 @@ namespace dia_int {
 
 	/**
 	 * @brief A TODO message with a code snippet and optional description and pointer message.
-	 * 
+	 *
 	 * Used when the developer is lazy and want's to have a fast error message.
 	 *
 	 * The content of the header message, description and pointer message

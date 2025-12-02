@@ -23,7 +23,6 @@ namespace dia_int {
 		operator dia_args::Metadata() const;
 	};
 
-
 	/**
 	 * @brief The base class for message arguments for the template evaluation.
 	 * The specializations should create dia_args::Component when requested.
@@ -46,7 +45,6 @@ namespace dia_int {
 
 		virtual ~Argument() = default;
 	};
-
 
 	/**
 	 * The Argument and CodeArgument are represented by two different classes
@@ -180,7 +178,7 @@ namespace dia_int {
 	/**
 	 * @brief Pointer message is an information for where the pointer should point
 	 * in the code snippet. The content of the pointer message is defined in the message template
-	 * with the right ID and here we just specify the ID. 
+	 * with the right ID and here we just specify the ID.
 	 */
 	class PointerMessage final {
 	public:
@@ -207,7 +205,7 @@ namespace dia_int {
 			  message_id(std::move(message_id)),
 			  arguments(std::move(arguments)) {}
 
-		dia_args::ExploreEdge getValue(MessageBase& message) const;
+		dia_args::ExploreLink getValue(MessageBase& message) const;
 	};
 
 	class MessageBase {

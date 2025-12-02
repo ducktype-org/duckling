@@ -124,8 +124,7 @@ namespace dia_int {
 
 			cache.put(key, std::move(diagnostic_template));
 			return cache[key];
-		}
-		catch (const ParsingTemplateFileError& e) {
+		} catch (const ParsingTemplateFileError& e) {
 			throw TemplateEvaluationException(
 				base::strConcat("Error parsing template '", key, "': ", e.what())
 			);

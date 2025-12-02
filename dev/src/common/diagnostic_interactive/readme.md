@@ -1,5 +1,7 @@
 # Diagnostic Interactive
 
+For trouble with new Diagnostic library usage search for implemented examples in the compiler.
+
 ## Description
 
 The main flow of the new diagnostic module uses **templates** for defining the message text content.
@@ -95,15 +97,22 @@ When having difficulty with instruction how to use this class search for the use
 This is a JSON-serializable and parsable file that contains the arguments for the template file.
 
 For more info about it's structure see:
-[diagnostic arguments file](./core/readme.md)
+[diagnostic arguments file](./core/diagnostic_arguments_file.md)
 
 ## Diagnostic templates
 
+This is a YAML file that defines the templates.
+
+For more info about it's structure see:
+[diagnostic template file](./core/diagnostic_template_file.md)
+
+## Guidelines
+
+There are also guidelines for writing good and infromative error messages,
+see [here](./core/guidelines.md)
 
 
 ## Glossary
 
-* **pointer message**
-* **entity**
-* **diagnostic arguments**
-* **components**
+* **pointer message** - a part of code that is highlighted and the highlight have a message
+* **entity** - a mechanism to automatically add links to all the element related to one entity, like variable name, type name in the code snippet

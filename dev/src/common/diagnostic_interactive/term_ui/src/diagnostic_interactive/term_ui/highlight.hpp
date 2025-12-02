@@ -3,8 +3,6 @@
 #include "line.hpp"
 #include "styles.hpp"
 
-
-
 namespace term_ui {
 	/**
 	 * @brief The stage of lowering a highlight with a specified ordering.
@@ -106,5 +104,9 @@ namespace term_ui {
 	 * `Highlight` and `HighlightWithLowering` stages).
 	 * @return LinePiece
 	 */
-	LinePiece intoLinePiece(const dia_int::term_ui_view::PointerMessage& msg, PointerStage stage, base::Optional<u64> count = {});
+	LinePiece intoLinePiece(
+		const dia_int::term_ui_view::PointerMessage& msg,
+		PointerStage                                 stage,
+		base::Optional<u64>                          count = {}
+	);
 }

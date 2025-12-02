@@ -12,10 +12,10 @@ namespace term_ui {
 	}
 
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia_int::term_ui_view::CodeLine&            line,
-		u64                                               tab_space,
+		const dia_int::term_ui_view::CodeLine&                           line,
+		u64                                                              tab_space,
 		const base::HashMap<u64, dia_int::term_ui_view::PointerMessage>& ctx,
-		std::ostream&                                     out
+		std::ostream&                                                    out
 	) {
 		if_opt_some(line.line_no, number) { printLineStart(tab_space, number, out); }
 		else { printLineStart(tab_space, out); }
@@ -26,7 +26,7 @@ namespace term_ui {
 		std::vector<Highlight>     lowered;
 		std::vector<std::set<u64>> visited_pointer_messages(line.pieces.size(), std::set<u64>());
 
-	
+
 		for (u64 i = 0; i < line.pieces.size(); ++i) {
 			const auto& piece = line.pieces[i];
 
@@ -41,12 +41,12 @@ namespace term_ui {
 						// This group on this piece has already been handled.
 						continue;
 					}
-					
+
 					// Find all contigous pieces in this line and merge them.
 					u64 last_idx = i;
 					u64 last_col = col;
-					while (last_idx < line.pieces.size() && line.pieces[last_idx].pointer_ids.contains(pointer_message_id)
-					) {
+					while (last_idx < line.pieces.size()
+					       && line.pieces[last_idx].pointer_ids.contains(pointer_message_id)) {
 						visited_pointer_messages[last_idx].insert(pointer_message_id);
 						last_col += line.pieces[last_idx].text.size();
 						++last_idx;

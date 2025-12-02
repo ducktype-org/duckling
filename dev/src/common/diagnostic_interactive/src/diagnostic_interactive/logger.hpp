@@ -9,6 +9,7 @@
 namespace dia_int {
 	class MessageBase;
 }
+
 DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::MessageBase);
 
 namespace dia_int {

@@ -64,9 +64,8 @@ namespace dia_int::template_file {
 		YAML_ASSUME_HAS(elem_node, "codeblock");
 		auto                  code_elements = Component::fromYaml(elem_node["codeblock"]);
 		base::MBox<Component> location;
-		if (elem_node["location"]) {
+		if (elem_node["location"])
 			location = base::MBox<Component>(Component::fromYaml(elem_node["location"]));
-		}
 		return base::makeBox<CodeBlockComponent>(std::move(code_elements), std::move(location));
 	}
 
@@ -87,7 +86,8 @@ namespace dia_int::template_file {
 	}
 
 	Metadata Metadata::fromYaml(const YAML::Node& node) {
-		if (!node || !node.IsMap()) throw ParsingTemplateFileError("Metadata definition must be a map.");
+		if (!node || !node.IsMap())
+			throw ParsingTemplateFileError("Metadata definition must be a map.");
 
 		YAML_ASSUME_HAS_SCALAR(node, "template_type");
 		YAML_ASSUME_HAS_SCALAR(node, "type");
@@ -110,15 +110,13 @@ namespace dia_int::template_file {
 				base::strConcat("Unknown template_type in metadata: ", template_type_str)
 			);
 
-		return {
-			template_type,
-			node["type"].as<std::string>(),
-			node["family"].as<std::string>(),
-			node["name"].as<std::string>(),
-			node["code"].as<u64>(),
-			node["active_from"].as<std::string>(),
-			node["active_until"].as<std::string>()
-		};
+		return { template_type,
+			     node["type"].as<std::string>(),
+			     node["family"].as<std::string>(),
+			     node["name"].as<std::string>(),
+			     node["code"].as<u64>(),
+			     node["active_from"].as<std::string>(),
+			     node["active_until"].as<std::string>() };
 	}
 
 	Parameter Parameter::fromYaml(const YAML::Node& node) {
@@ -142,7 +140,7 @@ namespace dia_int::template_file {
 		YAML_ASSUME_HAS(node, "params");
 		auto content    = Component::fromYaml(node["content"]);
 		auto params_map = yamlToMap<Parameter>(node, "params");
-		return {std::move(content), std::move(params_map)};
+		return { std::move(content), std::move(params_map) };
 	}
 
 	PointerMessage PointerMessage::fromYaml(const YAML::Node& node) {
@@ -158,7 +156,8 @@ namespace dia_int::template_file {
 	}
 
 	CommonTemplate CommonTemplate::fromYaml(const YAML::Node& node) {
-		if (!node || !node.IsMap()) throw ParsingTemplateFileError("Template definition must be a map.");
+		if (!node || !node.IsMap())
+			throw ParsingTemplateFileError("Template definition must be a map.");
 		YAML_ASSUME_HAS(node, "metadata");
 
 		auto metadata = Metadata::fromYaml(node["metadata"]);
@@ -172,7 +171,8 @@ namespace dia_int::template_file {
 	}
 
 	MessageTemplate MessageTemplate::fromYaml(const YAML::Node& node) {
-		if (!node || !node.IsMap()) throw ParsingTemplateFileError("Message template must be a map.");
+		if (!node || !node.IsMap())
+			throw ParsingTemplateFileError("Message template must be a map.");
 		auto common = CommonTemplate::fromYaml(node);
 		YAML_ASSUME_HAS(node, "header_message");
 
@@ -192,7 +192,8 @@ namespace dia_int::template_file {
 	}
 
 	ComponentTemplate ComponentTemplate::fromYaml(const YAML::Node& node) {
-		if (!node || !node.IsMap()) throw ParsingTemplateFileError("Component template must be a map.");
+		if (!node || !node.IsMap())
+			throw ParsingTemplateFileError("Component template must be a map.");
 		auto common = CommonTemplate::fromYaml(node);
 		YAML_ASSUME_HAS(node, "content");
 		auto content = Component::fromYaml(node["content"]);

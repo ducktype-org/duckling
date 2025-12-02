@@ -16,13 +16,13 @@ namespace dia_int::dia_args {
 	struct LinkComponent;
 	struct EvaluatedTemplateComponent;
 	struct MessageIDComponent;
-    
-    struct PointerMessage;
-    struct ExploreEdge;
-    struct Metadata;
-    struct Message;
-    struct Entity;
-    struct Diagnostic;
+
+	struct PointerMessage;
+	struct ExploreLink;
+	struct Metadata;
+	struct Message;
+	struct Entity;
+	struct Diagnostic;
 }
 
 DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::dia_args::Component);

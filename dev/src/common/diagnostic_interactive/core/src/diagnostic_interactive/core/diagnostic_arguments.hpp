@@ -306,19 +306,19 @@ namespace dia_int::dia_args {
 		static Metadata fromJson(const json& meta_json);
 	};
 
-	struct ExploreEdge final {
+	struct ExploreLink final {
 		std::string                                name;
 		base::HashMap<std::string, Box<Component>> params;
 
 		[[nodiscard]] json toJson() const;
 
-		static ExploreEdge fromJson(const json& edge_json);
+		static ExploreLink fromJson(const json& edge_json);
 	};
 
 	struct Message final {
 		Metadata                                   metadata;
 		base::HashMap<std::string, Box<Component>> arguments;
-		std::vector<ExploreEdge>                   explore_links;
+		std::vector<ExploreLink>                   explore_links;
 		std::vector<MessageID>                     linked_messages;
 
 		[[nodiscard]] json toJson() const;
