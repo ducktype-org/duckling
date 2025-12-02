@@ -42,13 +42,13 @@ impl PackageLoader {
     pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
     pub const LOCAL_STORAGE_NAME: &str = ".storage";
 
-    pub fn global_package<'duck>(_ctx: QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
+    pub fn global_package<'duck>(_ctx: &'duck QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
         Err(InternalError::from("@TODO: #1394 it needs the EditableManifest").into())
     }
 
     pub fn find_from_directory<'duck>(
         start: &Path,
-        ctx: QpCtx<'duck>,
+        ctx: &'duck QpCtx<'duck>,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageCtx<'duck>> {
         let start = start.expand_user()?.resolve()?;
@@ -78,7 +78,7 @@ impl PackageLoader {
 
     pub fn find_at_exact_directory<'duck>(
         path: &Path,
-        ctx: QpCtx<'duck>,
+        ctx: &'duck QpCtx<'duck>,
     ) -> QuackResult<PackageCtx<'duck>> {
         if !path.is_dir() {
             bail!("the path `{}` is not a directory", path.display())
@@ -91,7 +91,7 @@ impl PackageLoader {
     }
 
     pub fn find_from_cwd<'duck>(
-        ctx: QpCtx<'duck>,
+        ctx: &'duck QpCtx<'duck>,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageCtx<'duck>> {
         let cwd = ctx.cwd();

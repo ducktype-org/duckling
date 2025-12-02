@@ -25,7 +25,7 @@ use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};
 pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
-    ctx: QpCtx<'_>,
+    ctx: &QpCtx<'_>,
     scope: &mut Scope,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
@@ -50,7 +50,7 @@ fn parse_single_dependency(
     manifest_name: StrId,
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: QpCtx<'_>,
+    ctx: &QpCtx<'_>,
     scope: &mut Scope,
 ) -> QuackResult<Dependency> {
     trace!("parsing a dependency");

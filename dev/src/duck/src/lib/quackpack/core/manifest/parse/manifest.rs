@@ -18,7 +18,11 @@ use crate::{
 
 use super::Scope;
 
-pub(crate) fn parse(schema: &ManifestSchema, root: &Path, ctx: QpCtx<'_>) -> QuackResult<Manifest> {
+pub(crate) fn parse(
+    schema: &ManifestSchema,
+    root: &Path,
+    ctx: &QpCtx<'_>,
+) -> QuackResult<Manifest> {
     let Some(ref metadata) = schema.metadata else {
         bail!("missing the obligatory section `metadata`")
     };

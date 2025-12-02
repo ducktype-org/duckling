@@ -18,7 +18,7 @@ mod source;
 #[cfg(test)]
 mod tests;
 
-pub fn parse_manifest(path: &Path, ctx: QpCtx<'_>) -> QuackResult<Package> {
+pub fn parse_manifest(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let span = span!(Level::DEBUG, "manifest", path = %path.display());
     let _guard = span.enter();
     debug!("starting parsing...");
@@ -53,7 +53,7 @@ impl Scope {
     }
 }
 
-fn parse_inner(path: &Path, ctx: QpCtx<'_>) -> QuackResult<Package> {
+fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let package_root = path
         .parent()
         .ok_or_else(|| InternalError::from("the manifest path has no parent"))?;

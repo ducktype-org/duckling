@@ -13,7 +13,7 @@ metadata:
 fn no_package_from_directory() {
     let tmp_file = tempdir().unwrap();
     let ctx = DuckCtx::default();
-    let err = PackageLoader::find_from_directory(tmp_file.path(), QpCtx::new(&ctx), false.into())
+    let err = PackageLoader::find_from_directory(tmp_file.path(), &QpCtx::new(&ctx), false.into())
         .unwrap_err();
     assert_eq!(
         err.all_errors_to_vec(),
@@ -30,7 +30,7 @@ fn not_a_dir() {
     let file = tmp_file.path().join("x");
     let ctx = DuckCtx::default();
     let err =
-        PackageLoader::find_from_directory(&file, QpCtx::new(&ctx), false.into()).unwrap_err();
+        PackageLoader::find_from_directory(&file, &QpCtx::new(&ctx), false.into()).unwrap_err();
     assert_eq!(
         err.all_errors_to_vec(),
         [format!(
@@ -47,9 +47,9 @@ fn founds_from_directory() {
     file.touch().unwrap();
     file.write(BASIC_MANIFEST).unwrap();
     let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
     let package =
-        PackageLoader::find_from_directory(tmp_file.path(), QpCtx::new(&ctx), false.into())
-            .unwrap();
+        PackageLoader::find_from_directory(tmp_file.path(), &qpctx, false.into()).unwrap();
     assert_eq!(
         package.package().root_directory().resolve().unwrap(),
         tmp_file.path().resolve().unwrap()
@@ -66,8 +66,8 @@ fn founds_at_parent() {
     child.mkdir(MkdirOptions::WithoutParents).unwrap();
     assert!(child.is_dir());
     let ctx = DuckCtx::default();
-    let package =
-        PackageLoader::find_from_directory(&child, QpCtx::new(&ctx), false.into()).unwrap();
+    let qpctx = QpCtx::new(&ctx);
+    let package = PackageLoader::find_from_directory(&child, &qpctx, false.into()).unwrap();
     assert_eq!(
         package.package().root_directory().resolve().unwrap(),
         tmp_file.path().resolve().unwrap()
@@ -81,8 +81,8 @@ fn founds_at_exact_directory() {
     file.touch().unwrap();
     file.write(BASIC_MANIFEST).unwrap();
     let ctx = DuckCtx::default();
-    let package =
-        PackageLoader::find_at_exact_directory(tmp_file.path(), QpCtx::new(&ctx)).unwrap();
+    let qpctx = QpCtx::new(&ctx);
+    let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &qpctx).unwrap();
     assert_eq!(
         package.package().root_directory().resolve().unwrap(),
         tmp_file.path().resolve().unwrap()
@@ -95,7 +95,8 @@ fn founds_at_exact_directory_noadir() {
     let file = tmp_file.path().join("xd");
     assert!(!file.exists());
     let ctx = DuckCtx::default();
-    let err = PackageLoader::find_at_exact_directory(&file, QpCtx::new(&ctx)).unwrap_err();
+    let qpctx = QpCtx::new(&ctx);
+    let err = PackageLoader::find_at_exact_directory(&file, &qpctx).unwrap_err();
     assert_eq!(
         err.all_errors_to_vec(),
         [format!("the path `{}` is not a directory", file.display())]
@@ -104,7 +105,7 @@ fn founds_at_exact_directory_noadir() {
     file.touch().unwrap();
     assert!(!file.is_dir());
 
-    let err = PackageLoader::find_at_exact_directory(&file, QpCtx::new(&ctx)).unwrap_err();
+    let err = PackageLoader::find_at_exact_directory(&file, &qpctx).unwrap_err();
     assert_eq!(
         err.all_errors_to_vec(),
         [format!("the path `{}` is not a directory", file.display())]

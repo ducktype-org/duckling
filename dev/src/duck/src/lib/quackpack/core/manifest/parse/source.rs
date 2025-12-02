@@ -18,7 +18,7 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 pub(crate) fn parse(
     schema: &DependencySchema,
     package_root: &Path,
-    ctx: QpCtx<'_>,
+    ctx: &QpCtx<'_>,
     scope: &mut Scope,
 ) -> QuackResult<Source> {
     let Some(ref source) = schema.source else {
@@ -41,7 +41,6 @@ pub(crate) fn parse(
             hint: remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
         )
     }
-    // `let-else` doesn't work, somehow rust screws up pattern matching.
     let source = match source {
         SourceSchema::Simple(registry_url) => {
             return Ok(Registry::new(registry_url.into()).into());
@@ -226,7 +225,7 @@ fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRev
 fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,
-    ctx: QpCtx<'_>,
+    ctx: &QpCtx<'_>,
 ) -> QuackResult<PathBuf> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
