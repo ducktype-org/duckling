@@ -1940,38 +1940,43 @@ private:
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
 		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison
-		// chain. try { 	getConstValueAs<i64>("InvalidExpr", root_scope); 	CORE_PANIC("Should
-		// throw."); } catch (base::NotYetImplemented& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		// chain.
+		try {
+			getConstValueAs<i64>("InvalidExpr", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (base::NotYetImplemented& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
-		// try {
-		// 	getConstValueAs<i64>("InvalidSym", root_scope);
-		// 	CORE_PANIC("Should throw.");
-		// } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		try {
+			getConstValueAs<i64>("InvalidSym", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
-		// try {
-		// 	getConstValueAs<i64>("C", root_scope);
-		// 	CORE_PANIC("Should throw.");
-		// } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		try {
+			getConstValueAs<i64>("C", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
-		// // This fails on the HOUT creation level instead of during the evaluation.
-		// // @TODO: #1287 write a test that checks failing compile-time evaluation of comparison
-		// chain. try { 	getConstValueAs<bool>("InvalidCompMiddle", root_scope); 	CORE_PANIC("Should
-		// throw."); } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		// This fails on the HOUT creation level instead of during the evaluation.
+		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		try {
+			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
-		// try {
-		// 	getConstValueAs<bool>("InvalidCompFirst", root_scope);
-		// 	CORE_PANIC("Should throw.");
-		// } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		try {
+			getConstValueAs<bool>("InvalidCompFirst", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
 		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
@@ -1980,19 +1985,19 @@ private:
 			// Since this branch was chosen, everything worked well.
 		}
 
-		// try {
-		// 	getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-		// 	CORE_PANIC("Should throw.");
-		// } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		try {
+			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 
-		// try {
-		// 	getConstValueAs<bool>("INVALID_MODULO", root_scope);
-		// 	CORE_PANIC("Should throw.");
-		// } catch (errors::Failed& err) {
-		// 	// Since this branch was chosen, everything worked well.
-		// }
+		try {
+			getConstValueAs<bool>("INVALID_MODULO", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
 	}
 
 	void testErrorAmbiguousCallableCandidates() {
