@@ -1,5 +1,6 @@
 #include "query_hout_of_expr.hpp"
 
+#include "coercions.hpp"
 #include "errors.hpp"
 #include "numeric_literals.hpp"
 
@@ -486,4 +487,26 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
+
+	ExprConstructionResult getHoutOfExprWithExpectedType(
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const tsh::SymbolType<>                          expected_type
+	) {
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+		if (expr_hout_qresult.hasError()) return query::QError(expr_hout_qresult.error());
+		auto expr_hout = std::move(expr_hout_qresult).value();
+
+		const auto coercion_qresult
+			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		if (coercion_qresult.hasError()) {
+			ctx.log(makeBox<CannotCoerceError>(
+				pst_expr.element.unlock(ctx)->getSourcePosition(),
+				expr_hout->expression_type.getSymbolType(),
+				expected_type
+			));
+			return query::QError(errors::Failed());
+		}
+		return coercion_qresult.value().coerce(ctx, std::move(expr_hout));
+	}
 }
