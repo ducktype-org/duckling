@@ -6,7 +6,7 @@ use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("list")
-        .about("List all virtual environments")
+        .about("List all the virtual environments")
         .arg(
             optional("sort-by", "Properties to sort the output by")
                 .value_parser([

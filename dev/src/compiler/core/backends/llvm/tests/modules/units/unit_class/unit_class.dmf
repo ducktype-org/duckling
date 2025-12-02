@@ -15,5 +15,5 @@ fun foo(u: Unit) -> Unit = {
 
 fun main() -> i64 = {
     foo(a);
-    return 0;
+    return 0i64;
 }

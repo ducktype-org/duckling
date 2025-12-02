@@ -7,7 +7,7 @@ const M2: i32 = 120 / 5 / 4;
 
 namespace NS1 {
     namespace NS2 {
-        const A: i64 = 7i64;
+        const A: i64 = 7;
     }
 }
 

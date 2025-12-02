@@ -3,6 +3,7 @@
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
+#include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
@@ -54,6 +55,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerEq,    // Equal to
 	IntegerNeq,   // Not equal to
 
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatNeg,
+
+	FloatLt,    // Less then
+	FloatGt,    // Greater then
+	FloatLteq,  // Less then or equal to
+	FloatGteq,  // Greater then or equal to
+	FloatEq,    // Equal to
+	FloatNeq,   // Not equal to
 
 	BooleanAnd,
 	BooleanOr,
@@ -102,15 +115,11 @@ namespace compiler::mir {
 	 */
 	bool isTerminating(Operation);
 
+	struct MIRConstant final {
+		ctv::CompileTimeValue value;
+	};
+
 	struct MIRUnitConst final {};
-
-	struct MIRIntegerConst final {
-		i64 value;
-	};
-
-	struct MIRBoolConst final {
-		bool value;
-	};
 
 	/**
 	 * Represent a direct reference to a function linked to a HELIOS SymID.
@@ -353,16 +362,14 @@ namespace compiler::mir {
 	struct MIRValue final {
 	private:
 		using ValueType
-			= std::variant<MIRUnitConst, MIRIntegerConst, MIRBoolConst, MIRPlace, BlockID, MIRFunctionLiteral>;
+			= std::variant<MIRConstant, MIRUnitConst, MIRPlace, BlockID, MIRFunctionLiteral>;
 
 		ValueType value;
 
 	public:
 		MIRValue(MIRUnitConst value): value(value) {}
 
-		MIRValue(MIRIntegerConst value): value(value) {}
-
-		MIRValue(MIRBoolConst value): value(value) {}
+		MIRValue(MIRConstant value): value(value) {}
 
 		MIRValue(MIRLocalRef value): value(MIRPlace(value)) {}
 

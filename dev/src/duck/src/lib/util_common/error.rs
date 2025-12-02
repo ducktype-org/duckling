@@ -16,6 +16,20 @@ impl fmt::Debug for InternalError {
     }
 }
 
+#[macro_export]
+macro_rules! internal_bail {
+    ($msg:expr) => {
+        return Err($crate::InternalError::from($msg).into())
+    };
+}
+
+#[macro_export]
+macro_rules! internal {
+    ($msg:expr) => {
+        $crate::InternalError::from($msg).into()
+    };
+}
+
 impl From<anyhow::Error> for InternalError {
     fn from(value: anyhow::Error) -> Self {
         Self { inner: value }
