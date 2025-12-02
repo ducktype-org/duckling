@@ -1,5 +1,4 @@
 import random
-import random
 
 from contextlib import contextmanager
 
@@ -40,7 +39,7 @@ class DucklingCodeGenerator(CodeGenerator):
         self.indenter.flush_fragment()
         
         inner_scope = scope.copy()
-        inner_scope.vars.extend(args)
+        inner_scope.vars.update(args)
         
         # Generate code function body
         self.logic_generator.generate_function_body(inner_scope)
@@ -73,12 +72,15 @@ class DucklingCodeGenerator(CodeGenerator):
     # Classes
     def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
         self.indenter.add_text(f"class {class_name}" + " {\n")
-        class_data = ClassData(name=class_name)
-        
         with self.indenter:
-            class_data = self.logic_generator.generate_class_fields(class_data)
-        
+            private_fields, public_fields = self.logic_generator.generate_class_fields()
         self.indenter.add_text("}\n")
+        
+        class_data = ClassData(
+            name=class_name,
+            private_fields=frozenset(private_fields),
+            public_fields=frozenset(public_fields)
+        )
         return class_data
     
     def class_field(self, field_name: str, field_modifier: str) -> str:

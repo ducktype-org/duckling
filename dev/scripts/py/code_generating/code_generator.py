@@ -1,7 +1,7 @@
 import random
 import atexit
 
-from typing import Type, List
+from typing import Type, List, Set, FrozenSet, Tuple
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -11,16 +11,16 @@ from textwrap import indent
 
 from utils import PROB, random_identifier
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class FunctionData:
     name: str
     args: int = 0
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class ClassData:
     name: str
-    private_fields: List[str] = field(default_factory=list)
-    public_fields: List[str] = field(default_factory=list)
+    private_fields: FrozenSet[str] = field(default_factory=frozenset)
+    public_fields: FrozenSet[str] = field(default_factory=frozenset)
     
     def get_interface(self) -> 'ScopeData':
         scope = ScopeData()
@@ -29,35 +29,37 @@ class ClassData:
 
 @dataclass
 class ScopeData:
-    vars: List[str] = field(default_factory=list)
-    funcs: List[FunctionData] = field(default_factory=list)
-    classes: List[ClassData] = field(default_factory=list)
+    vars: Set[str] = field(default_factory=set)
+    funcs: Set[FunctionData] = field(default_factory=set)
+    classes: Set[ClassData] = field(default_factory=set)
 
     def __iadd__(self, other: 'ScopeData'):
-        self.vars += other.vars
-        self.funcs += other.funcs
-        self.classes += other.classes
+        self.vars |= other.vars
+        self.funcs |= other.funcs
+        self.classes |= other.classes
         return self
     
     def copy(self):
         return deepcopy(self)
     
     def put_in_dot(self, module_name: str):
-        for i in range(len(self.vars)):
-            self.vars[i] = f"{module_name}.{self.vars[i]}"
+        old_vars = self.vars.copy()
+        self.vars = set()
+        for var in old_vars:
+            self.vars.add(f"{module_name}.{var}")
 
-        # hotfix: avoid renaming the same function multiple times,
-        # when it is duplicated in the list.
-        was_already_present = set()
-        for i in range(len(self.funcs)):
-            if id(self.funcs[i]) in was_already_present:
-                continue
-            was_already_present.add(id(self.funcs[i]))
+        old_funcs = self.funcs.copy()
+        self.funcs = set()
+        for func in old_funcs:
+            name = f"{module_name}.{func.name}"
+            self.funcs.add(FunctionData(name, func.args))
            
-            # print(f"> {i} Renaming function {self.funcs[i].name} to {module_name}.{self.funcs[i].name}")
-            self.funcs[i].name = f"{module_name}.{self.funcs[i].name}"
-        for i in range(len(self.classes)):
-            self.classes[i].name = f"{module_name}.{self.classes[i].name}"
+        old_classes = self.classes.copy()
+        self.classes = set()
+        for class_ in old_classes:
+            name = f"{module_name}.{class_.name}"
+            self.classes.add(ClassData(name, class_.private_fields.copy(), class_.public_fields.copy()))
+            
 
 @dataclass
 class ModuleData:
@@ -227,38 +229,40 @@ class LogicGenerator:
     def generate_variable_declaration(self, scope: ScopeData):
         name = random_identifier(8)
         self.generator.variable_declaration(name, scope)
-        scope.vars.append(name)
+        scope.vars.add(name)
         
     def generate_constant_declaration(self, scope: ScopeData):
         name = random_identifier(8)
         self.generator.constant_declaration(name, scope)
-        scope.vars.append(name)
+        scope.vars.add(name)
         
     def generate_function_definition(self, scope: ScopeData):
         func_name = random_identifier(8)
         func_data = self.generator.function_definition(func_name, scope)
-        scope.funcs.append(func_data)
+        scope.funcs.add(func_data)
         
     def generate_class_definition(self, scope: ScopeData):
         class_name = random_identifier(8)
         class_data = self.generator.class_definition(class_name, scope)
-        scope.classes.append(class_data)
+        scope.classes.add(class_data)
         
-    def generate_class_fields(self, class_data: ClassData) -> ClassData:
+    def generate_class_fields(self) -> Tuple[Set[str], Set[str]]:
+        private_fields = set()
+        public_fields = set()
         for _ in range(random.randint(1, 5)):
             field_name = random_identifier(8)
             field_modifier = random.choice(['private', 'public'])
             self.generator.class_field(field_name, field_modifier)
             if field_modifier == 'private':
-                class_data.private_fields.append(field_name)
+                private_fields.update(field_name)
             else:
-                class_data.public_fields.append(field_name)
+                public_fields.update(field_name)
             
-        return class_data
+        return (private_fields, public_fields)
             
     def generate_object_instantiation(self, scope: ScopeData):
         object_name = random_identifier(8)
-        class_ = random.choice(scope.classes)
+        class_ = random.choice(list(scope.classes))
         self.generator.object_instantiation(object_name, scope, class_)
         new_objects = class_.get_interface()
         new_objects.put_in_dot(object_name)
@@ -275,7 +279,7 @@ class LogicGenerator:
     def generate_function_call(self, scope: ScopeData):
         if len(scope.funcs) == 0:
             return
-        self.generator.function_call(random.choice(scope.funcs), scope)   
+        self.generator.function_call(random.choice(list(scope.funcs)), scope)   
     
     def generate_expression(self, scope: ScopeData, prob: int, allow_function_calls: bool = True):
         op = False
@@ -291,7 +295,7 @@ class LogicGenerator:
                     k=1
                 )[0]
                 if action == 'symbol' and len(scope.vars) > 0:
-                    self.generator.symbol(random.choice(scope.vars))
+                    self.generator.symbol(random.choice(list(scope.vars)))
                 elif action == 'function_call' and len(scope.funcs) > 0:
                     self.generate_function_call(scope)
                 else:
@@ -307,7 +311,7 @@ class LogicGenerator:
     def generate_assignment(self, scope: ScopeData):
         if len(scope.vars) == 0:
             return
-        name = random.choice(scope.vars)
+        name = random.choice(list(scope.vars))
         self.generator.assignment(name, scope)
         
     def generate_print(self, scope: ScopeData):
