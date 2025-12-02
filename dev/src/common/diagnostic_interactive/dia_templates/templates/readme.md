@@ -28,8 +28,6 @@ representing links to other infos specified by the compiler.
 For that reason, the template itself is divided into sections (some optional)
 corresponding to each of the aforementioned info components.
 
-@TODO: maybe a screenshot from the web UI could be added here with outlined
-sections.
 
 ### Metadata
 > Note: this section is **mandatory**.
@@ -180,9 +178,6 @@ for the user to explore such a graph by viewing
 a path from the starting vertex and choosing where
 to go next or where to go back.
 
-@TODO: we could put some image of this concept
-of exploration here in case it's not clear from
-the description
 
 For these scenarios you can use explore edges
 in your info templates.

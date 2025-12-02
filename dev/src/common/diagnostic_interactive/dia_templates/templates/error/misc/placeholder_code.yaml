@@ -10,13 +10,13 @@ metadata:
 
 params:
   header_message:
-    description: "The header message of the TODO error."
+    description: "The header message of the placeholder error."
   
   description:
-    description: "The detailed description of the TODO error."
+    description: "The detailed description of the placeholder error."
   
   code:
-    description: "The code snippet where the TODO is located."
+    description: "The code snippet where the placeholder is located."
   
   code_location:
     description: "Location of the code snippet."

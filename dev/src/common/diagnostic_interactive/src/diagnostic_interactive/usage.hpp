@@ -56,7 +56,7 @@ namespace dia_int {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "misc",
-				     .name          = "todo_header" };
+				     .name          = "placeholder_header" };
 		}
 
 	public:
@@ -79,7 +79,7 @@ namespace dia_int {
 	class PlaceholderCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
 			return {
-				.template_type = "message", .type = "error", .family = "misc", .name = "todo_code"
+				.template_type = "message", .type = "error", .family = "misc", .name = "placeholder_code"
 			};
 		}
 
