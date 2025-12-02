@@ -59,21 +59,15 @@ namespace compiler::numeric_value {
 		}
 
 		/**
-		 * @brief Factory method for creating a NumericValue of a given tsh::SymbolType
-		 * @return The NumericValue storing specified type with a value of 0.
-		 */
-		[[nodiscard]] static NumericValue createZeroOfType(const tsh::SymbolType<>& type);
-
-		/**
 		 * @brief Factory method for creating a NumericValue from a specific value, of the given
 		 * tsh::SymbolType.
 		 * @return A new NumericValue or an empty optional if the value does not fit in the target
 		 * type.
 		 */
-		template<typename T>
+		template<typename T = i64>
 		requires(std::is_arithmetic_v<T>)
 		[[nodiscard]] static base::Optional<NumericValue> createOfType(
-			const tsh::SymbolType<>& type, T value
+			const tsh::SymbolType<>& type, T value = 0
 		) {
 			NumericValue initial = createMinimized(value);
 			return initial.castTo(type);
