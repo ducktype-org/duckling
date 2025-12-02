@@ -40,7 +40,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
-		TESTER_ADD_TEST(testDeleters);
+		TESTER_ADD_TEST(testCustomDeleter);
 	}
 
 private:
@@ -174,78 +174,21 @@ private:
 
 	template<class T>
 	struct StatefulDeleter final {
-		int               state   = 0;
 		static inline int s_state = 0;
 
 		void del(T* ptr) {
 			delete ptr;
-			if (ptr != nullptr) {
-				state++;
-				s_state++;
-			}
+			if (ptr != nullptr) s_state++;
 		}
 	};
 
-	template<class T>
-	struct FromStatefulDeleterByValue final {
-		FromStatefulDeleterByValue() = default;
-
-		FromStatefulDeleterByValue(StatefulDeleter<T>) {}
-
-		void del(T* ptr) { delete ptr; }
-	};
-
-	template<class T>
-	struct FromStatefulDeleterByCopy final {
-		FromStatefulDeleterByCopy() = default;
-
-		FromStatefulDeleterByCopy(const StatefulDeleter<T>&) {}
-
-		void del(T* ptr) { delete ptr; }
-	};
-
-	template<class T>
-	struct FromStatefulDeleterByMove final {
-		FromStatefulDeleterByMove() = default;
-
-		FromStatefulDeleterByMove(StatefulDeleter<T>&& a) { (void) std::move(a); }
-
-		void del(T* ptr) { delete ptr; }
-	};
-
-	void testDeleters() {
+	void testCustomDeleter() {
 		{
 			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
-				new int(42), StatefulDeleter<int>{ 7 }
+				new int(42), StatefulDeleter<int>()
 			);
 			ASSERT_EQUAL(*ib, 42);
 			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
-		}
-		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
-
-		static_assert(
-			not std::is_constructible_v<SharedBox<int, StatefulDeleter<int>>, SharedBox<int>>,
-			"SharedBox with custom deleter should not be constructible from Box with default "
-			"deleter"
-		);
-
-		{
-			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
-				new int(42), StatefulDeleter<int>{ 7 }
-			);
-			SharedBox<int, FromStatefulDeleterByValue<int>> jb = std::move(ib);
-		}
-		{
-			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
-				new int(42), StatefulDeleter<int>{ 7 }
-			);
-			SharedBox<int, FromStatefulDeleterByCopy<int>> jb = std::move(ib);
-		}
-		{
-			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
-				new int(42), StatefulDeleter<int>{ 7 }
-			);
-			SharedBox<int, FromStatefulDeleterByMove<int>> jb = std::move(ib);
 		}
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 	}

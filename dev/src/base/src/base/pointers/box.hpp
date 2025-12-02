@@ -18,7 +18,7 @@ namespace base {
 	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>.
 	 * It has to define static method `void del(T*)`.
 	 */
-	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
+	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
 	private:
 		static_assert(

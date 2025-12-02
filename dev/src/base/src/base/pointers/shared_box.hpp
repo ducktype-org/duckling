@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/comptime/type_traits.hpp>
+#include <base/misc/noexcept.hpp>
 #include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -10,8 +11,12 @@ namespace base {
 	 * @brief: A control block of SharedBox type.
 	 * Stores the number of owners.
 	 */
+	template<class Deleter>
 	struct ControlBlock final {
-		usize n_owners = 1;
+		usize                         n_owners = 1;
+		[[no_unique_address]] Deleter deleter;
+
+		ControlBlock(Deleter deleter): deleter(deleter) {}
 	};
 
 	/**
@@ -41,12 +46,8 @@ namespace base {
 			"redefinition."
 		);
 
-		T*                            data_ptr;
-		ControlBlock*                 ctrl_ptr;
-		[[no_unique_address]] Deleter deleter;
-
-		template<class U, class UDeleter>
-		friend class SharedBox;
+		T*                     data_ptr;
+		ControlBlock<Deleter>* ctrl_ptr;
 
 		constexpr void assertNotNull() const {
 			if (data_ptr == nullptr || ctrl_ptr == nullptr)
@@ -58,10 +59,9 @@ namespace base {
 			return (data_ptr == nullptr && ctrl_ptr == nullptr);
 		}
 
-		explicit SharedBox(T* ptr, ControlBlock* ctrl, Deleter deleter) noexcept:
+		explicit SharedBox(T* ptr, ControlBlock<Deleter>* ctrl) noexcept:
 			  data_ptr{ ptr },
-			  ctrl_ptr{ ctrl },
-			  deleter{ deleter } {
+			  ctrl_ptr{ ctrl } {
 			assertNotNull();
 		}
 
@@ -74,7 +74,7 @@ namespace base {
 			assertNotNull();
 			ctrl_ptr->n_owners--;
 			if (ctrl_ptr->n_owners == 0) {
-				deleter.del(data_ptr);
+				ctrl_ptr->deleter.del(data_ptr);
 				delete ctrl_ptr;
 			}
 			nullify();
@@ -100,7 +100,7 @@ namespace base {
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, new ControlBlock, deleter);
+			return SharedBox(ptr, new ControlBlock(deleter));
 		}
 
 		/**
@@ -112,8 +112,7 @@ namespace base {
 
 		SharedBox(const SharedBox& other) noexcept:
 			  data_ptr{ other.data_ptr },
-			  ctrl_ptr{ other.ctrl_ptr },
-			  deleter{ other.deleter } {
+			  ctrl_ptr{ other.ctrl_ptr } {
 			if (isFullyNull()) return;
 			assertNotNull();
 			ctrl_ptr->n_owners++;
@@ -121,19 +120,7 @@ namespace base {
 
 		SharedBox(SharedBox&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr },
-			  deleter{ std::move(other).deleter } {
-			if (isFullyNull()) return;
-			assertNotNull();
-			other.nullify();
-		}
-
-		template<class U, class UDeleter>
-		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox(SharedBox<U, UDeleter>&& other) noexcept:
-			  data_ptr{ std::move(other).data_ptr },
-			  ctrl_ptr{ std::move(other).ctrl_ptr },
-			  deleter{ std::move(other).deleter } {
+			  ctrl_ptr{ std::move(other).ctrl_ptr } {
 			if (isFullyNull()) return;
 			assertNotNull();
 			other.nullify();
@@ -152,7 +139,6 @@ namespace base {
 
 			data_ptr = other.data_ptr;
 			ctrl_ptr = other.ctrl_ptr;
-			deleter  = other.deleter;
 			if (!isFullyNull()) {
 				assertNotNull();
 				ctrl_ptr->n_owners++;
@@ -164,14 +150,11 @@ namespace base {
 		 * @brief Move assignment. The ownership of the object previously pointed to is renounced.
 		 * The number of the owners stays the same.
 		 */
-		template<class U, class UDeleter>
-		requires std::is_constructible_v<Deleter, UDeleter&&>
-		SharedBox& operator=(SharedBox<U, UDeleter>&& other) noexcept {
+		SharedBox& operator=(SharedBox&& other) noexcept {
 			renounceOwnership();
 
 			data_ptr = std::move(other).data_ptr;
 			ctrl_ptr = std::move(other).ctrl_ptr;
-			deleter  = std::move(other).deleter;
 			if (!isFullyNull()) {
 				assertNotNull();
 				other.nullify();
@@ -182,7 +165,6 @@ namespace base {
 		friend void swap(SharedBox& first, SharedBox& second) noexcept {
 			std::swap(first.data_ptr, second.data_ptr);
 			std::swap(first.ctrl_ptr, second.ctrl_ptr);
-			std::swap(first.deleter, second.deleter);
 		}
 
 		/**
