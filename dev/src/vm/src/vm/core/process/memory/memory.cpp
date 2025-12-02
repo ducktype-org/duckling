@@ -319,10 +319,6 @@ namespace vm {
 		iterateOverDataAndExecute(block, &Memory::runObjectConstructor);
 	}
 
-	void Memory::runDataConstructor(base::ModRawView data, TypeCRef type) {
-		iterateOverDataAndExecute(data, type, &Memory::runObjectConstructor);
-	}
-
 	void Memory::iterateOverDataAndExecute(
 		Ref<Block> block, void (Memory::*callback)(base::ModRawView data, TypeCRef type)
 	) {
