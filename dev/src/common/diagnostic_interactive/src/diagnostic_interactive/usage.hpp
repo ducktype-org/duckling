@@ -1,9 +1,27 @@
+/**
+ * @file usage.hpp
+ * @author Wojciech Rzeplinski
+ * @brief Predefined message usages for common diagnostic messages.
+ *
+ * @warning
+ * 
+ * The classes should define constructors that set up the arguments
+ * and pointer messages required by the message template.
+ * In the constructor they should call the methods of MessageBase
+ * to add arguments and pointer messages.
+ *
+ * The user should not call `addArgument` or `addPointerMessage` directly,
+ * but use the provided constructors to ensure the type correctness.
+ */
 #pragma once
 
 #include "message.hpp"
-// #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 
 namespace dia_int {
+	/**
+	 * @brief This is a helper base class for messages.
+	 * This is the same as MessageWithCodeFragmentAndCause, but without the cause pointer message.
+	 */
 	class MessageWithCodeFragment: public MessageBase {
 	protected:
 		MessageWithCodeFragment(dia::SourcePosition source_position) {
@@ -12,6 +30,13 @@ namespace dia_int {
 		}
 	};
 
+	/**
+	 * @brief This is a helper base class for messages.
+	 * The `code` and `code_location` arguments are the same arguments as any other,
+	 * they are not special in any way.
+	 * But they are very commonly used together with the `cause` pointer message,
+	 * so this base class adds them both based on the provided source position.
+	 */
 	class MessageWithCodeFragmentAndCause: public MessageBase {
 	protected:
 		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position) {
@@ -21,6 +46,11 @@ namespace dia_int {
 		}
 	};
 
+	/**
+	 * @brief A TODO message with a header only and no code snippet.
+	 *
+	 * Used when the developer is lazy and want's to have a fast error message.
+	 */
 	class TodoHeaderError: public MessageBase {
 		Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -35,6 +65,17 @@ namespace dia_int {
 		}
 	};
 
+	/**
+	 * @brief A TODO message with a code snippet and optional description and pointer message.
+	 * 
+	 * Used when the developer is lazy and want's to have a fast error message.
+	 *
+	 * The content of the header message, description and pointer message
+	 * can be customized and provided by the developer.
+	 *
+	 * This is not a recommended way of reporting errors to the user,
+	 * the text content of the error message should be inside the template files as much as possible.
+	 */
 	class TodoCodeError final: public MessageBase {
 		Metadata getMetadata() const final {
 			return {

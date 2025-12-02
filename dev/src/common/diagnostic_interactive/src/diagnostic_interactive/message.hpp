@@ -23,11 +23,12 @@ namespace dia_int {
 		operator dia_args::Metadata() const;
 	};
 
-	/**
-	 * The Argument and CodeArgument are represented by two different classes
-	 * because they have different serialization logic.
-	 */
 
+	/**
+	 * @brief The base class for message arguments for the template evaluation.
+	 * The specializations should create dia_args::Component when requested.
+	 * They have a mandatory name.
+	 */
 	class Argument {
 	private:
 		std::string name;
@@ -46,6 +47,11 @@ namespace dia_int {
 		virtual ~Argument() = default;
 	};
 
+
+	/**
+	 * The Argument and CodeArgument are represented by two different classes
+	 * because they have different serialization logic.
+	 */
 	class TextArgument final: public Argument {
 		std::string content;
 
@@ -105,7 +111,11 @@ namespace dia_int {
 		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
 
-
+	/**
+	 * @brief InteractiveElement is an interface for elements that can be used
+	 * as arguments in InteractiveArgument.
+	 * They can add new messages and entities when generating their value.
+	 */
 	class InteractiveElement {
 	public:
 		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
@@ -168,8 +178,9 @@ namespace dia_int {
 	};
 
 	/**
-	 * @brief Pointer message is a information for where the pointer should point
-	 * in the code snippet. The pointer message should be
+	 * @brief Pointer message is an information for where the pointer should point
+	 * in the code snippet. The content of the pointer message is defined in the message template
+	 * with the right ID and here we just specify the ID. 
 	 */
 	class PointerMessage final {
 	public:
@@ -233,6 +244,8 @@ namespace dia_int {
 		MessageBase() = default;
 
 	public:
+		static std::string getUniqueID();
+
 		/* =============================  MODIFIERS ============================= */
 		/**
 		 * @note The methods below should not be used directly.
@@ -245,6 +258,9 @@ namespace dia_int {
 			arguments.push_back(base::makeBox<T>(std::forward<Args>(args)...));
 		}
 
+		/**
+		 * @brief Adds a pointer message to this message.
+		 */
 		void addPointerMessage(PointerMessage msg) { pointer_messages.push_back(std::move(msg)); }
 
 		template<typename... Args>
@@ -252,6 +268,9 @@ namespace dia_int {
 			pointer_messages.push_back(PointerMessage(std::forward<Args>(args)...));
 		}
 
+		/**
+		 * @brief Adds an entity to this message.
+		 */
 		void addEntity(Box<Entity> entity) { entities.push_back(std::move(entity)); }
 
 		template<typename T, typename... Args>
@@ -259,32 +278,15 @@ namespace dia_int {
 			entities.push_back(base::makeBox<T>(std::forward<Args>(args)...));
 		}
 
+		/**
+		 * @brief Adds an explore link.
+		 */
 		void addExploreLink(ExploreLink link) { explore_links.push_back(std::move(link)); }
 
 		template<typename... Args>
 		void addExploreLink(Args&&... args) {
 			explore_links.push_back(ExploreLink(std::forward<Args>(args)...));
 		}
-
-		// ============================== ADDING MESSAGES ==============================
-
-		/**
-		 * @note The methods below can be used directly by the compiler code
-		 */
-
-		/**
-		 * @brief Adds a linked message that can be referenced by its ID.
-		 * It is not displayed, but can be linked from the other messages.
-		 * The pointer messages can also be linked here.
-		 */
-		void addLinkedMessage(std::string id, Box<MessageBase> message) {
-			linked_messages.insertOrAssign(std::move(id), std::move(message));
-		}
-
-		/**
-		 * @brief Attachs a message that will be displayed below this message. 
-		 */
-		void attachMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
 
 		/* =============================  ACCESSORS ============================= */
 
@@ -293,14 +295,35 @@ namespace dia_int {
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
+		// ============================== ADDING MESSAGES ==============================
+
+		/**
+		 * @note The methods below can be used directly by the users
+		 */
+
+		/**
+		 * @brief Adds a linked message that can be linked but is not attached.
+		 * It is not displayed, but can be linked from the other messages.
+		 * The pointer messages can also be linked here.
+		 */
+		void addLinkedMessage(std::string id, Box<MessageBase> message) {
+			linked_messages.insertOrAssign(std::move(id), std::move(message));
+		}
+
+		/**
+		 * @brief Attachs a message that will be displayed below this message.
+		 */
+		void attachMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
+
+		// ============================  BUILDING DIAGNOSTIC FILE =============================
+
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
 		 */
 		Box<dia_args::Diagnostic> buildDiagnosticFile();
 
-		virtual ~MessageBase() = default;
 
-		static std::string getUniqueID();
+		virtual ~MessageBase() = default;
 	};
 
 }
