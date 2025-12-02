@@ -466,7 +466,7 @@ namespace dia_int {
 		);
 
 		res = base::makeBox<state::InteractiveComponent>(
-			0, std::move(primary), std::move(alternative)
+			state::ComponentID(0), std::move(primary), std::move(alternative)
 		);
 	}
 
