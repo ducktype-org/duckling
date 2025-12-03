@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "ctv/ctv.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/hout.hpp>
@@ -294,10 +295,10 @@ namespace compiler::lir {
 				if (!loc.carriesInformation(ctx)) return {};
 
 				variant_match(loc.getVariant()) {
-					variant_case_novalue(mir::MIRUnitConst) {
-						CORE_PANIC("Cannot get location of MIR unit.");
-					}
 					variant_case(mir::MIRConstant, value) {
+						if (value.value.get<ctv::CompileTimeValue::UnitCTV>().has_value())
+							CORE_PANIC("Cannot get location of MIR unit.");
+
 						auto layout = ctx.query<tsl::QuerySymbolTypeLayout>(
 							value.value.getTypeOfStoredValue(ctx)
 						);

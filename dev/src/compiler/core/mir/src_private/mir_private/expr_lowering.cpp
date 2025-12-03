@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "ctv/ctv.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -66,7 +68,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
-			valueOutput(continuation, MIRValue{ MIRUnitConst{} });
+			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
 		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
