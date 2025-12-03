@@ -1,7 +1,7 @@
 #include "source.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/misc/raw_view.hpp>
+#include <base/misc/shared_view.hpp>
 
 #include <diagnostic/location.hpp>
 #include <lexer/lexer_class.hpp>
