@@ -7,6 +7,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <string>
+#include <variant>
 
 namespace compiler::ctv {
 	using numeric_value::NumericValue;
@@ -79,6 +80,15 @@ namespace compiler::ctv {
 				variant_case(T, val) { return val; }
 			}
 			return {};
+		}
+
+		/**
+		 * @brief Checks whether a CTV stores a value of a given type.
+		 * @return True, if the value of a given type is stored in the CTV, false otherwise.
+		 */
+		template<typename T>
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) [[nodiscard]] bool has() const {
+			return std::holds_alternative<T>(value);
 		}
 
 		/**

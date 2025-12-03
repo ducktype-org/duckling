@@ -295,7 +295,7 @@ namespace compiler::lir {
 
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MIRConstant, value) {
-						if (value.value.get<ctv::CompileTimeValue::UnitCTV>().has_value())
+						if (value.value.has<ctv::CompileTimeValue::UnitCTV>())
 							CORE_PANIC("Cannot get location of MIR unit.");
 
 						auto layout = ctx.query<tsl::QuerySymbolTypeLayout>(

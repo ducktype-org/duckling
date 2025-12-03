@@ -417,9 +417,7 @@ namespace compiler::mir {
 		bool carriesInformation(query::Context& ctx) const {
 			variant_match(value) {
 				variant_case(MIRConstant, constant) {
-					if (constant.value.get<ctv::CompileTimeValue::UnitCTV>().has_value())
-						return false;
-					return true;
+					return !constant.value.has<ctv::CompileTimeValue::UnitCTV>();
 				}
 				variant_case(MIRPlace, access) { return access.carriesInformation(ctx); }
 				variant_default { return true; }
