@@ -77,6 +77,8 @@ namespace tokenizer {
 		usize                                        end_line   = getLineColumn(end_char - 1).first;
 		std::vector<std::pair<usize, base::RawView>> res;
 
+		if (end_char == 0) return res;
+
 		for (usize line = begin_line; line <= end_line; line++) {
 			auto view = getCharRange(
 				std::max(begin_char, getLine(line).first), std::min(end_char, getLine(line).second)

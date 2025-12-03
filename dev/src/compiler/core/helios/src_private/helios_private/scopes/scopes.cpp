@@ -567,15 +567,7 @@ namespace compiler::helios {
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias
-					auto aliased_result = ctx.query<QueryDealias>(sym);
-					if (aliased_result->hasError()) {
-						// nothing
-					} else {
-						LookupResult inner{ .leaves = {}, .children = {} };
-						for (const auto& underlying_sym: aliased_result->value())
-							inner.leaves.push_back(underlying_sym);
-						result.children.emplace_back(sym, inner);
-					}
+					result.leaves.push_back(sym);
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
