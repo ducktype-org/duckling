@@ -294,10 +294,10 @@ namespace compiler::lir {
 				if (!loc.carriesInformation(ctx)) return {};
 
 				variant_match(loc.getVariant()) {
-					variant_case_novalue(mir::MIRUnitConst) {
-						CORE_PANIC("Cannot get location of MIR unit.");
-					}
 					variant_case(mir::MIRConstant, value) {
+						if (value.value.has<ctv::CompileTimeValue::UnitCTV>())
+							CORE_PANIC("Cannot get location of MIR unit.");
+
 						auto layout = ctx.query<tsl::QuerySymbolTypeLayout>(
 							value.value.getTypeOfStoredValue(ctx)
 						);

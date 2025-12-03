@@ -66,7 +66,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
-			valueOutput(continuation, MIRValue{ MIRUnitConst{} });
+			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
 		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {

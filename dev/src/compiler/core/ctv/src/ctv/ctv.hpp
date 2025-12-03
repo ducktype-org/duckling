@@ -82,6 +82,15 @@ namespace compiler::ctv {
 		}
 
 		/**
+		 * @brief Checks whether a CTV stores a value of a given type.
+		 * @return True, if the value of a given type is stored in the CTV, false otherwise.
+		 */
+		template<typename T>
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) [[nodiscard]] bool has() const {
+			return std::holds_alternative<T>(value);
+		}
+
+		/**
 		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the CTV.
 		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return The type of the value stored in the CTV.
