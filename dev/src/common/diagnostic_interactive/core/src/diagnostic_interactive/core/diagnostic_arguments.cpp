@@ -158,7 +158,7 @@ namespace dia_int::dia_args {
 	}
 
 	auto LinkComponent::fromJson(const json& elem) -> Box<LinkComponent> {
-		ASSUME_HAS_STR(elem, "target_messages");
+		ASSUME_HAS(elem, "target_messages");
 		ASSUME_HAS(elem, "content");
 		std::vector<MessageID> target_messages
 			= elem["target_messages"].get<std::vector<MessageID>>();
