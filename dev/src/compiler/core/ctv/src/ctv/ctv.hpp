@@ -7,7 +7,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <string>
-#include <variant>
 
 namespace compiler::ctv {
 	using numeric_value::NumericValue;
