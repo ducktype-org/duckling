@@ -1,0 +1,35 @@
+use crate::StrId;
+
+#[derive(Debug)]
+/// Various package metadata.
+/// This is mostly useless information for us, but it may be useful for a user.
+pub struct PackageMetadata {
+    authors: Vec<StrId>,
+    license: Option<StrId>,
+    description: Option<StrId>,
+}
+
+impl PackageMetadata {
+    pub fn new(authors: Vec<StrId>, license: Option<StrId>, description: Option<StrId>) -> Self {
+        Self {
+            authors,
+            license,
+            description,
+        }
+    }
+
+    /// Get the package license
+    pub fn license(&self) -> Option<StrId> {
+        self.license
+    }
+
+    /// Get the package authors
+    pub fn authors(&self) -> &[StrId] {
+        &self.authors
+    }
+
+    /// Get the package description
+    pub fn description(&self) -> Option<StrId> {
+        self.description
+    }
+}

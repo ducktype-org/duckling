@@ -1,6 +1,6 @@
 use rustvil::config_files::xdg::{self, MacOSBehaviour};
 use rustvil::os::env::Env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub const MANIFEST_FILENAME: &str = "quackconfig.yml";
 pub const FREEZEFILE_NAME: &str = "quackfreeze.json";
@@ -15,6 +15,7 @@ const QP_CONFIG_ENV: &str = "QP_CONFIG";
 const QP_CACHE_ENV: &str = "QP_CACHE";
 const QP_STORAGE_ENV: &str = "QP_STORAGE";
 const QP_GLOBAL_VENV_ENV: &str = "QP_GLOBAL_ENV";
+const DUCK_HOME: &str = "DUCK_HOME";
 
 const DEFAULT_MACOS_BEHAVIOUR: MacOSBehaviour = MacOSBehaviour::LinuxFallback;
 
@@ -102,5 +103,20 @@ pub fn config_file(env: &Env) -> Option<PathBuf> {
     config_dir(env, DEFAULT_MACOS_BEHAVIOUR).map(|mut buf| {
         buf.push("config.toml");
         buf
+    })
+}
+
+pub fn duck_home(env: &Env, user_home: &Path) -> PathBuf {
+    env.get_os(DUCK_HOME).map(PathBuf::from).unwrap_or_else(|| {
+        let mut home = user_home.to_path_buf();
+        if cfg!(windows) {
+            home.push("AppData");
+            home.push("Local");
+        } else {
+            home.push(".local");
+            home.push("share");
+        }
+        home.push("duck");
+        home
     })
 }

@@ -1,22 +1,24 @@
 use crate::quackpack::core::Version;
-use std::collections::{BTreeMap, BTreeSet};
+use paste::item;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
 use serde::Deserialize;
 use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
+pub type Dependencies = HashMap<String, Dependency>;
+
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
     pub metadata: Option<Metadata>,
-    pub dependencies: Option<BTreeMap<String, Dependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, Dependency>>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
-    pub targets: Option<BTreeMap<String, CompilerOptions>>,
-    pub profiles: Option<BTreeMap<String, CompilerOptions>>,
+    pub dependencies: Option<Dependencies>,
+    pub dev_dependencies: Option<Dependencies>,
+    pub features: Option<HashMap<String, Vec<String>>>,
+    pub profiles: Option<HashMap<String, CompilerOptions>>,
 
     #[serde(skip)]
-    pub _unused: BTreeSet<String>,
+    pub _unused_keys: BTreeSet<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,6 +43,25 @@ pub struct Dependency {
 #[derive(Debug)]
 pub struct OredSemver(pub Vec<Version>);
 
+macro_rules! forward_to_visit_string {
+    (
+        $(
+            $ty:ty $(,)?
+        ),*
+    ) => {
+        item! {
+            $(
+                fn [<visit_ $ty>]<E>(self, v: $ty) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    self.visit_string(v.to_string())
+                }
+            )*
+        }
+    };
+}
+
 impl<'de> Deserialize<'de> for OredSemver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -64,6 +85,13 @@ impl<'de> Deserialize<'de> for OredSemver {
                     .map_err(|e| de::Error::custom(e))
             }
 
+            // HACK: parser treats `0.1` as a float.
+            forward_to_visit_string! {
+                f32, f64,
+                i8, i16, i32, i64,
+                u8, u16, u32, u64
+            }
+
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: de::SeqAccess<'de>,
@@ -83,6 +111,7 @@ impl<'de> Deserialize<'de> for OredSemver {
 
 #[derive(Debug)]
 pub enum DependencySource {
+    /// `Simple` variant overwrites `registry_url` for a given dependency.
     Simple(String),
     Detailed(DetailedSource),
 }
@@ -157,14 +186,12 @@ impl DetailedSource {
 
 #[derive(Debug, Deserialize)]
 pub struct DependencyCondition {
-    pub system: Option<Vec<String>>,
-    pub arch: Option<Vec<String>>,
     pub package_features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
-pub struct DetailedFeature(pub BTreeMap<String, DependencyCondition>);
+pub struct DetailedFeature(pub HashMap<String, DependencyCondition>);
 
 #[derive(Debug)]
 pub enum DependencyFeature {
