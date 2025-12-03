@@ -50,7 +50,7 @@ impl PackageLoader {
 
     /// Find a [`PackageCtx`] from a given `start`.
     ///
-    /// This function __expands tildes__ and __resolves__ fully path.
+    /// This function __expands tildes__ and __resolves__ path fully.
     /// Also, it walks up the chain of path's ancestors.
     pub fn find_from_directory<'duck>(
         start: &Path,
