@@ -24,9 +24,7 @@ fn setup_logger() {
         prelude::*,
         registry,
     };
-    // @TODO: #1353 Something like `DUCK_DEBUG`? On the other hand it also affects loggers in the quackpack (the library),
-    //        but the cli tool is called duck...
-    let subscriber = EnvFilter::from_env("QP_DEBUG");
+    let subscriber = EnvFilter::from_env("DUCK_DEBUG");
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)

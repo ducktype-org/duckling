@@ -1,11 +1,7 @@
 use anyhow::Context;
-use rustvil::os::env::Env;
 use tracing::debug;
 
-use crate::{
-    QuackResult, duck::util::terminal::Terminal, quackpack::util::paths::config_file,
-    util_common::toml_config::TomlConfig,
-};
+use crate::{QuackResult, duck::util::duck_home::DuckHome, util_common::toml_config::TomlConfig};
 
 #[derive(Debug, Default)]
 pub struct DuckCfg {
@@ -13,17 +9,8 @@ pub struct DuckCfg {
 }
 
 impl DuckCfg {
-    pub fn new(env: &Env, term: &Terminal) -> QuackResult<DuckCfg> {
-        let inner = match config_file(env) {
-            Some(path) => {
-                debug!("reading the user config from `{}`", path.display());
-                TomlConfig::new(path)?
-            }
-            None => {
-                term.warning("couldn't detect a user config path, falling back to defaults...");
-                TomlConfig::default()
-            }
-        };
+    pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
+        let inner = TomlConfig::new(home.user_config().to_path_buf())?;
         debug!("parsed the user config `{inner:?}`");
         Ok(Self { inner })
     }
