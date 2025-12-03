@@ -192,6 +192,16 @@ private:
 		}
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 	}
+
+	void testEquality() {
+		auto a = makeSharedBox<int>(42);
+		// NOLINTBEGIN
+		auto b = a;
+		// NOLINTEND
+		auto c = makeSharedBox<int>(42);
+		ASSERT_EQUAL(a == b, true);
+		ASSERT_EQUAL(a == c, false);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/base/tests/");

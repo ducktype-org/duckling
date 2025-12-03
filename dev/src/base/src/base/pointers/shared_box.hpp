@@ -208,7 +208,14 @@ namespace base {
 			return *data_ptr;
 		}
 
-		bool operator==(const SharedBox& other) const { return data_ptr == other.data_ptr; }
+		bool operator==(const SharedBox& other) const {
+			CORE_ASSERT(
+				(data_ptr == other.data_ptr) == (ctrl_ptr == other.ctrl_ptr),
+				"Equality of control blocks should be equivalent to shared boxes owning the same "
+				"object!"
+			);
+			return data_ptr == other.data_ptr;
+		}
 
 		~SharedBox() { renounceOwnership(); }
 	};
