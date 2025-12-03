@@ -7,7 +7,6 @@
 
 #include <iomanip>
 #include <set>
-#include <variant>
 
 namespace compiler::lir {
 

@@ -1,8 +1,8 @@
 #include "program_lowering_context.hpp"
 
-vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::lowerLIRType(
-	CRef<tsl::TypeLayout> layout
-) {
+using namespace compiler::backend_vm::internal;
+
+vm::code::TypeOfData ProgramLoweringContext::lowerTslType(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
 			return vm::code::PrimitiveType(base::StrID("void"), 1);
@@ -31,4 +31,15 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 		}
 	}
 	CORE_UNREACHABLE();
+}
+
+const DVMGlobal& ProgramLoweringContext::getDVMGlobal(const lir::LIRGlobal& lir_global) {
+	if (!lir_global_to_dvm.contains(lir_global)) {
+		auto var_type = lowerTslType(lir_global.layout);
+		lir_global_to_dvm.put(
+			lir_global, DVMGlobal{ .name = lir_global.mangled_name, .type = var_type }
+		);
+	}
+
+	return lir_global_to_dvm.at(lir_global);
 }

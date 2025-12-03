@@ -22,18 +22,6 @@
 #include <string>
 #include <variant>
 
-#define INVALID_CASE(tp, reason)                                                    \
-	variant_case(tp, _) {                                                           \
-		CORE_PANIC("During handling of type ", base::typeName<tp>(), ": ", reason); \
-	}
-
-#define NOIMPL_CASE(tp, reason)                                              \
-	variant_case(tp, _) {                                                    \
-		throw base::NotYetImplemented(                                       \
-			base::strConcat("Type ", base::typeName<tp>(), " for: ", reason) \
-		);                                                                   \
-	}
-
 
 using namespace vm::code;
 using namespace vm::code::builders;
