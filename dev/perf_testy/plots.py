@@ -70,7 +70,7 @@ def main(data_file, output_dir):
         os.makedirs(output_dir)
     
     try:
-        df = pd.read_csv(data_file)
+        df = pd.concat([pd.read_csv(f) for f in data_file])
         df.rename(columns={
             "Test Case": "test_case",
             "Category": "category",
@@ -90,8 +90,8 @@ def main(data_file, output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot the results of perf tests.')
-    parser.add_argument('data_file', type=str, help='The file containing the data to plot')
-    parser.add_argument('output_dir', type=str, help='The directory to output the plots to')
+    parser.add_argument('-i', '--data_files', nargs='+', type=str, help='The file containing the data to plot')
+    parser.add_argument('-o', '--output_dir', type=str, help='The directory to output the plots to')
     args = parser.parse_args()
-    main(args.data_file, args.output_dir)
+    main(args.data_files, args.output_dir)
 
