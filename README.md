@@ -7,7 +7,7 @@
     <!-- <p>Duckling is the in-development programming language</p> -->
 </div>
 
-<div height="1px" style="border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));"></div>
+<div height="1px" style="border-bottom: 1px solid"></div>
 
 <p align="center">
   <a href="https://docs.duckling.pl/">Documentation</a>
