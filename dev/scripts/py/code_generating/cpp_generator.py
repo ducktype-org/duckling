@@ -116,7 +116,7 @@ class CppCodeGenerator(CodeGenerator):
         
         # indenter.add_text(f"{field_modifier}:\n")
         with indenter:
-            indenter.add_text(f"long {field_name};\n")
+            indenter.add_text(f"long {field_name} = 0;\n")
             
     def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
         self.indenter.add_text(f"{class_.name} {object_name};\n")
