@@ -12,7 +12,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	deinit; # z
 
-	fixedSizeTableLoad_lany_lptr       y, x;  # y = *x
+	fixedSizeTableLoad_lany_lptr_l64       y, x;  # y = *x
 
 	deinit; # y
 	deinit; # x

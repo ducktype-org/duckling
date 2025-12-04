@@ -6,8 +6,11 @@ use crate::duck::driver::cli_ext::{flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("tree")
-        .about("Print the dependency tree of a package")
-        .arg(flag("no-dedup", "Show subtree of a package everytime"))
+        .about("Print the dependency tree of the package")
+        .arg(flag(
+            "no-dedup",
+            "Don't deduplicate the subtrees of the same package",
+        ))
         .arg(
             Arg::new("max-depth")
                 .help("Set the maximal displayed depth of the tree")

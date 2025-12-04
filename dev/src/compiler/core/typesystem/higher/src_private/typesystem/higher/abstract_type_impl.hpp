@@ -739,7 +739,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Meta;
 
-		explicit MetaAbstractTypeImpl() { representation = "META"; }
+		explicit MetaAbstractTypeImpl() { representation = "type"; }
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 

@@ -137,6 +137,7 @@ private:
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
 		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
 		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
@@ -1923,10 +1924,15 @@ private:
 			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
 			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
 
-			assertThrows<compiler::helios::InvalidCoercion>(
-				[&] {
-					ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).valueOrThrow();
-				},
+			ctx.logger.clear();
+			assertTrue(
+				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasError(),
+				"Trying to lift an unliftable tuple to a type should fail."
+			);
+			std::stringstream ss;
+			ctx.logger.dumpLog(false, ss);
+			assertTrue(
+				ss.str().contains("Cannot coerce"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
@@ -1972,13 +1978,6 @@ private:
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("INVALID_TYPES", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.

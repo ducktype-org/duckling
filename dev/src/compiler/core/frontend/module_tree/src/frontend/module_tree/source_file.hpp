@@ -6,7 +6,7 @@
 #include <frontend/pst_parser/pst.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/misc/raw_view.hpp>
+#include <base/misc/shared_view.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <filesystem/file.hpp>
