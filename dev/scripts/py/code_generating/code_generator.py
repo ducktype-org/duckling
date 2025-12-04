@@ -20,7 +20,7 @@ class FunctionData:
 @dataclass(eq=True, frozen=True)
 class ClassData:
     name: str
-    private_fields: FrozenSet[str] = field(default_factory=frozenset)
+    # private_fields: FrozenSet[str] = field(default_factory=frozenset)
     public_fields: FrozenSet[str] = field(default_factory=frozenset)
     
     def get_interface(self) -> 'ScopeData':
@@ -59,7 +59,7 @@ class ScopeData:
         self.classes = set()
         for class_ in old_classes:
             name = f"{module_name}.{class_.name}"
-            self.classes.add(ClassData(name, class_.private_fields.copy(), class_.public_fields.copy()))
+            self.classes.add(ClassData(name, class_.public_fields.copy()))
             
 
 @dataclass
@@ -167,7 +167,7 @@ class CodeGenerator(ABC):
         assert False, "Trying to call abstract method."
     
     @abstractmethod
-    def class_field(self, field_name: str, field_modifier: str) -> str:
+    def class_field(self, field_name: str) -> str:
         assert False, "Trying to call abstract method."
 
     @abstractmethod
@@ -247,19 +247,19 @@ class LogicGenerator:
         class_data = self.generator.class_definition(class_name, scope)
         scope.classes.add(class_data)
         
-    def generate_class_fields(self) -> Tuple[Set[str], Set[str]]:
-        private_fields = set()
+    def generate_class_fields(self) -> Set[str]:
+        # private_fields = set()
         public_fields = set()
         for _ in range(random.randint(1, 5)):
             field_name = random_identifier(8)
-            field_modifier = random.choice(['private', 'public'])
-            self.generator.class_field(field_name, field_modifier)
-            if field_modifier == 'private':
-                private_fields.add(field_name)
-            else:
-                public_fields.add(field_name)
+            # field_modifier = random.choice(['private', 'public'])
+            self.generator.class_field(field_name)
+            # if field_modifier == 'private':
+            #     private_fields.add(field_name)
+            # else:
+            public_fields.add(field_name)
             
-        return (private_fields, public_fields)
+        return public_fields
             
     def generate_object_instantiation(self, scope: ScopeData):
         object_name = random_identifier(8)

@@ -73,18 +73,18 @@ class DucklingCodeGenerator(CodeGenerator):
     def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
         self.indenter.add_text(f"class {class_name}" + " {\n")
         with self.indenter:
-            private_fields, public_fields = self.logic_generator.generate_class_fields()
+            public_fields = self.logic_generator.generate_class_fields()
         self.indenter.add_text("}\n")
         
         class_data = ClassData(
             name=class_name,
-            private_fields=frozenset(private_fields),
+            # private_fields=frozenset(private_fields),
             public_fields=frozenset(public_fields)
         )
         return class_data
     
-    def class_field(self, field_name: str, field_modifier: str) -> str:
-        self.indenter.add_text(f"{field_modifier} var {field_name}: i64;\n")
+    def class_field(self, field_name: str) -> str:
+        self.indenter.add_text(f"var {field_name}: i64;\n")
         
     def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
         self.indenter.add_fragment(f"var {object_name}: {class_.name} = ")

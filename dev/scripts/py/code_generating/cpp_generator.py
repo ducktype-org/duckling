@@ -99,22 +99,22 @@ class CppCodeGenerator(CodeGenerator):
     def class_definition(self, class_name: str, scope: ScopeData) -> ScopeData:
         indenter = self.hpp_indenter if hasattr(self, 'hpp_indenter') else self.indenter
         
-        indenter.add_text(f"class {class_name}" + " {\n")
+        indenter.add_text(f"struct {class_name}" + " {\n")
         with indenter:
-            private_fields, public_fields = self.logic_generator.generate_class_fields()
+            public_fields = self.logic_generator.generate_class_fields()
         indenter.add_text("};\n")
         
         class_data = ClassData(
             name=class_name,
-            private_fields=frozenset(private_fields),
+            # private_fields=frozenset(private_fields),
             public_fields=frozenset(public_fields)
         )
         return class_data
     
-    def class_field(self, field_name: str, field_modifier: str) -> str:
+    def class_field(self, field_name: str) -> str:
         indenter = self.hpp_indenter if hasattr(self, 'hpp_indenter') else self.indenter
         
-        indenter.add_text(f"{field_modifier}:\n")
+        # indenter.add_text(f"{field_modifier}:\n")
         with indenter:
             indenter.add_text(f"long {field_name};\n")
             
