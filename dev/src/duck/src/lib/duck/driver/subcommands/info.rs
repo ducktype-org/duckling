@@ -6,7 +6,7 @@ use crate::duck::driver::cli_ext::subcommand;
 
 pub fn get_parser() -> Command {
     subcommand("info")
-        .about("Get a package information")
+        .about("Get package information")
         .arg(Arg::new("package").help("Package name"))
         .arg(Arg::new("version").help("Package version"))
 }

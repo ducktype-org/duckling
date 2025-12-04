@@ -12,7 +12,7 @@ pub fn indent(text: &str, indentation: usize) -> String {
         .collect::<String>();
     if !ends_in_nl && indented.ends_with('\n') {
         let popped = indented.pop();
-        debug_assert_eq!(popped, Some('\n'), "we didn't pop \\n");
+        debug_assert_eq!(popped, Some('\n'), "we haven't popped \\n");
     }
     indented
 }

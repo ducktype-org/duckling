@@ -109,8 +109,7 @@ namespace compiler::lir {
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
-				variant_case(i64, value) { output << value; }
-				variant_case(bool, value) { output << (value ? "true" : "false"); }
+				variant_case(LIRConstant, constant) { output << constant.value.toString(); }
 				variant_case(LIRPlace, place) {
 					variant_match(place.base) {
 						variant_case(LIRLocalRef, local) { printLocal(local, output); }
@@ -155,7 +154,7 @@ namespace compiler::lir {
 
 
 			std::string_view sep = "";
-			for (auto arg: instruction.arguments) {
+			for (const auto& arg: instruction.arguments) {
 				output << sep;
 				sep = ", ";
 				printValue(arg);

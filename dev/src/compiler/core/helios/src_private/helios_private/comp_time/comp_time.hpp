@@ -42,6 +42,17 @@ namespace compiler::helios {
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		CompTimeEvalResult,
 		({ .used_hashes = query::UsedHashes::StableHash })
-
 	)
+
+	/**
+	 * Get a CTV representing a type evaluated from a PST expression.
+	 * @note This is most useful for evaluating expressions where a type is expected,
+	 * e.g. types in declarations or type assertions.
+	 * @param ctx The query context.
+	 * @param pst_expr The PST expression to evaluate to a type.
+	 * @return The CTV with the type, or errors::Failed if evaluation failed.
+	 */
+	CompTimeEvalResult getTypeCTVFromPST(
+		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
+	);
 }

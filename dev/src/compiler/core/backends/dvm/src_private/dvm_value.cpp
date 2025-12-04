@@ -1,4 +1,7 @@
 #include "dvm_value.hpp"
+
+#include "vm/bytecode/opcode_args.hpp"
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
 using namespace compiler::backend_vm::internal;
@@ -60,25 +63,29 @@ namespace {
 	}
 }
 
-compiler::backend_vm::internal::DVMImmediate::DVMImmediate(u64 value):
-	  value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(u64 value): value(translateToU64(value)) {}
 
-compiler::backend_vm::internal::DVMImmediate::DVMImmediate(i64 value):
-	  value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(i64 value): value(translateToU64(value)) {}
 
-compiler::backend_vm::internal::DVMImmediate::DVMImmediate(bool value):
-	  value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(bool value): value(translateToU64(value)) {}
 
-compiler::backend_vm::internal::DVMImmediate::DVMImmediate(float value):
-	  value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(float value): value(translateToU64(value)) {}
 
-compiler::backend_vm::internal::DVMImmediate::DVMImmediate(double value):
-	  value(translateToU64(value)) {}
+DVMImmediate::DVMImmediate(double value): value(translateToU64(value)) {}
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMLabel::asArgument() const {
+DVMImmediate::DVMImmediate(i32 value): value(translateToU64(value)) {}
+
+DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
+
+[[nodiscard]] vm::opargs::OpCodeArg DVMLabel::asArgument() const {
 	return vm::opargs::Label{ name };
 }
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMFunctionName::asArgument() const {
-	return vm::opargs::FunctionName{ name };
+[[nodiscard]] vm::opargs::OpCodeArg DVMFunctionName::asArgument() const {
+	if (vm::builtins::isBuiltinFunction(name))
+		return vm::opargs::BuiltinFunctionName{ name };
+	else
+		return vm::opargs::FunctionName{ name };
 }
+
+DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }

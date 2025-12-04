@@ -25,6 +25,8 @@ namespace compiler::backend_vm::internal {
 	struct DVMImmediate {
 		DVMImmediate(u64 value);
 		DVMImmediate(i64 value);
+		DVMImmediate(i32 value);
+		DVMImmediate(u32 value);
 		DVMImmediate(bool value);
 		DVMImmediate(float value);
 		DVMImmediate(double value);
@@ -48,13 +50,15 @@ namespace compiler::backend_vm::internal {
 	};
 
 	class DVMValue {
-		using StoredValueVariant = std::variant<DVMLocal, DVMGlobal, DVMImmediate, DVMLabel, DVMFunctionName>;
+		using StoredValueVariant
+			= std::variant<DVMLocal, DVMGlobal, DVMImmediate, DVMLabel, DVMFunctionName>;
 
 		StoredValueVariant stored_value;
 
 	public:
 		DVMValue(StoredValueVariant value): stored_value(std::move(value)) {}
 
+		operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 }

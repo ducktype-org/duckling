@@ -1,8 +1,17 @@
 #include "function_lowering_context.hpp"
 
 #include "dvm_value.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
 #include "program_lowering_context.hpp"
+
+#include <lir/lir_structure/lir_structure.hpp>
+
+#include "base/except/exceptions.hpp"
+
+#include <string_id/string_id.hpp>
+
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+
 
 using namespace compiler::backend_vm::internal;
 
@@ -19,12 +28,20 @@ using namespace compiler::backend_vm::internal;
 	}
 
 FunctionLoweringContext::FunctionLoweringContext(
-	ProgramLoweringContext& program_context, CRef<lir::Function> lir_function
+	ProgramLoweringContext&                   program_context,
+	base::StrID                               name,
+	CRef<tsl::TypeLayout>                     return_type,
+	const std::vector<CRef<tsl::TypeLayout>>& parameter_types
 ):
 	  program_context(program_context),
-	  lir_function(lir_function) {
-	insertParameterLocals();
-}
+	  function_return_type(program_context.lowerAndKeepTslType(return_type)),
+	  function_parameter_types(
+		  parameter_types | std::views::transform([&](auto&& layout) {
+			  return program_context.lowerAndKeepTslType(layout);
+		  })
+		  | std::ranges::to<std::vector>()
+	  ),
+	  function_name(name) {}
 
 base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	if (!block_to_label.contains(block)) {
@@ -35,17 +52,47 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	return block_to_label.at(block);
 }
 
+namespace {
+	constexpr DVMImmediate lirConstantToImmediate(const compiler::lir::LIRConstant& constant) {
+		variant_match(constant.value.getStorage()) {
+			variant_case(compiler::numeric_value::NumericValue, numeric) {
+				return std::visit(
+					[&](auto&& val) -> DVMImmediate {
+						using T      = std::decay_t<decltype(val)>;
+						u64 arg_bits = 0;
+
+						if constexpr (std::is_integral_v<T>) {
+							arg_bits = static_cast<u64>(val);
+						} else if (std::is_floating_point_v<T>) {
+							f64 val_as_64 = static_cast<f64>(val);
+							arg_bits      = std::bit_cast<u64>(val_as_64);
+						} else {
+							CORE_PANIC("Unsupported NumericValue type for a VM constant operand");
+						}
+						return DVMImmediate{ arg_bits };
+					},
+					numeric.getStorage()
+				);
+			}
+			variant_case(bool, value) { return DVMImmediate{ value }; }
+			variant_default {
+				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+}
+
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	// i64, bool, LIRPlace, BlockRef, FunctionLiteral
 	variant_match(lir_value.getVariant()) {
-		variant_case(i64, value) { return { DVMImmediate(value) }; }
-		variant_case(bool, value) { return { DVMImmediate(value) }; }
+		variant_case(lir::LIRConstant, value) { return { lirConstantToImmediate(value) }; }
 		variant_case(lir::LIRPlace, place) {
 			// @TODO: #1560 handle access into fields.
 			variant_match(place.base) {
-				variant_case(lir::LIRLocalRef, local_ref) { return { getDVMLocal(local_ref) }; }
+				variant_case(lir::LIRLocalRef, local_ref) { return { getLirLocal(local_ref) }; }
 				variant_case(lir::LIRGlobal, global) {
-					return { program_context.getDVMGlobal(global) };
+					return { program_context.getLirGlobal(&global) };
 				}
 			}
 		}
@@ -58,25 +105,63 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 	CORE_UNREACHABLE();
 }
 
-const DVMLocal& FunctionLoweringContext::getDVMLocal(lir::LIRLocalRef local) {
-	if (!lir_local_to_dvm.contains(local)) {
-		auto new_local = insertLocalToDVMMapping(local);
-		// @TODO: initType(new_local.name, new_local.type);
-	}
+const DVMLocal& FunctionLoweringContext::insertLirLocal(lir::LIRLocalRef local) {
+	if (!lir_local_to_dvm.contains(local)) auto new_local = createLirLocalToDVMMapping(local);
 	return lir_local_to_dvm.at(local);
 }
 
-void FunctionLoweringContext::insertParameterLocals() {
-	for (const auto& local: lir_function->local_list) {
-		if_opt_some(local.parameter_index, _) { insertLocalToDVMMapping(&local); }
-	}
+const DVMLocal& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLocalRef lir_local) {
+	auto var_name = [&] {
+		match_optional(lir_local->parameter_index) {
+			opt_some(index) return base::strConcat("arg", index);
+			opt_none return base::strConcat("var", lir_local_to_dvm.size());
+		}
+		CORE_UNREACHABLE();
+	}();
+
+	auto var_name_str_id = base::StrID(var_name.data());
+
+	auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+	lir_local_to_dvm.put(lir_local, DVMLocal{ .name = var_name_str_id, .type = var_type });
+	return lir_local_to_dvm.at(lir_local);
 }
 
-const DVMLocal& FunctionLoweringContext::insertLocalToDVMMapping(lir::LIRLocalRef lir_local) {
-	auto var_type = program_context.lowerTslType(lir_local->layout);
-	auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()).c_str());
-	lir_local_to_dvm.put(
-		lir_local, DVMLocal{ .name = base::StrID(var_name.data()), .type = var_type }
-	);
-	return lir_local_to_dvm.at(lir_local);
+void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionParameter(
+	lir::LIRLocalRef lir_func_param
+) {
+	createLirLocalToDVMMapping(lir_func_param);
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
+	// Just ensure the label exists.
+	pushInstruction(vm::code::instructions::Op_label(getBlockLabel(block)));
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
+	const vm::code::Instruction& instruction
+) {
+	function_body.push_back(instruction);
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
+	const vm::code::builders::InstructionBuilder& instruction
+) {
+	pushInstruction(instruction.build());
+}
+
+vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
+	vm::code::Function function;
+	function.name                  = function_name;
+	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
+	for (const auto& param_type: function_parameter_types)
+		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+	function.body = std::move(function_body);
+	return function;
+}
+
+DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
+	return DVMLocal{
+		.name = base::StrID("ret_val"),
+		.type = function_return_type,
+	};
 }

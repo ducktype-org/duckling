@@ -30,12 +30,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/**
 		@brief Placeholder.
 		@todo Some decisions here to be made about operations like that.
-	*//**
 		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 
 		Some operations are sign-sensitive and are prefixed with U or S, e.g. UDiv and SDiv.
 	*/
+
+	/** Integer arithmetic. */
 	IntegerAdd,
 	IntegerSub,
 	IntegerNeg,
@@ -45,6 +46,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerUMod,
 	IntegerSMod,
 
+	/** Floating point arithmetic. */
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatNeg,
+
+	/** Integer comparisons. */
 	IntegerULt,
 	IntegerUGt,
 	IntegerULteq,
@@ -55,6 +64,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSGteq,
 	IntegerEq,
 	IntegerNeq,
+
+	/** Floating point comparisons. */
+	FloatLt,
+	FloatGt,
+	FloatLteq,
+	FloatGteq,
+	FloatEq,
+	FloatNeq,
 
 	BooleanAnd,
 	BooleanOr,
@@ -262,25 +279,29 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Representation of a constant known at compile time.
+	 */
+	struct LIRConstant final {
+		ctv::CompileTimeValue value;
+		CRef<tsl::TypeLayout> layout;
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LIRPlace, BlockRef, FunctionLiteral>;
+		using ValueType = std::variant<LIRConstant, LIRPlace, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
-		LIRValue(i64 value): value(value) {}
-
-		LIRValue(bool value): value(value) {}
+		LIRValue(LIRConstant value): value(value) {}
 
 		LIRValue(LIRPlace value): value(value) {}
 
 		LIRValue(BlockRef value): value(value) {}
 
 		LIRValue(FunctionLiteral value): value(value) {}
-
-		bool operator==(const LIRValue& other) const = default;
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {

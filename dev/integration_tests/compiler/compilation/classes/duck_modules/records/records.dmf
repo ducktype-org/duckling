@@ -34,5 +34,5 @@ fun main() -> i64 = {
 
     builtin_output_i64(big.y.c); # 4
 
-    return 0;
+    return 0i64;
 }

@@ -7,12 +7,6 @@
 
 namespace compiler::backend_vm {
 
-	struct BackendDVMGlobal {
-		lir::LIRGlobal                      lir_global;
-		base::Optional<CRef<lir::Function>> global_ctor;
-		base::Optional<CRef<lir::Function>> global_dtor;
-	};
-
 	namespace internal {
 		class ProgramLoweringContext;
 	}
@@ -25,11 +19,20 @@ namespace compiler::backend_vm {
 		base::StrID module_id;
 
 	public:
-		Module(
-			query::Context&                         ctx,
-			base::StrID                             module_id,
-			const std::vector<CRef<lir::Function>>& functions,
-			const std::vector<BackendDVMGlobal>&    globals
+		Module(base::StrID module_id);
+
+		/**
+		 * @brief Inserts a LIR function into the module.
+		 */
+		void insertLirFunction(CRef<lir::Function> lir_function);
+
+		/**
+		 * @brief Inserts a LIR global into the module.
+		 */
+		void insertLirGlobal(
+			const lir::LIRGlobal&               lir_global,
+			base::Optional<CRef<lir::Function>> global_ctor,
+			base::Optional<CRef<lir::Function>> global_dtor
 		);
 
 		/**

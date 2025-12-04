@@ -8,5 +8,5 @@ let a: () = ();
 
 fun main() -> i64 = {
     unit_simple_submodule.foo(a);
-    return 0;
+    return 0i64;
 }
