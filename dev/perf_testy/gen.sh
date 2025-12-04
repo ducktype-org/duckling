@@ -1,9 +1,8 @@
 
-./case_generation/functions.sh
-./case_generation/classes.sh
-./case_generation/multifile_classes.sh
-./case_generation/multifile_functions.sh
-
+bash ./case_generation/functions.sh
+bash ./case_generation/classes.sh
+bash ./case_generation/multifile_classes.sh
+bash ./case_generation/multifile_functions.sh
 
 
 
