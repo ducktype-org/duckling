@@ -1,3 +1,6 @@
+use anyhow::bail;
+
+use crate::QuackResult;
 use crate::StrId;
 use crate::quackpack::core::Source;
 use crate::quackpack::core::Version;
@@ -14,12 +17,15 @@ pub struct DependencyDescription {
 
 impl DependencyDescription {
     /// Create a new `DependencyDescription`.
-    pub fn new(manifest_name: StrId, versions: Vec<Version>, source: Source) -> Self {
-        Self {
+    pub fn new(manifest_name: StrId, versions: Vec<Version>, source: Source) -> QuackResult<Self> {
+        if source.is_registry() && versions.is_empty() {
+            bail!("a registry dependency must provide at least one version")
+        }
+        Ok(Self {
             manifest_name,
             versions,
             source,
-        }
+        })
     }
 
     /// Get the name of the dependency, specified in the manifest (may be an alias).

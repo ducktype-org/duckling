@@ -119,8 +119,6 @@ namespace compiler::mir {
 		ctv::CompileTimeValue value;
 	};
 
-	struct MIRUnitConst final {};
-
 	/**
 	 * Represent a direct reference to a function linked to a HELIOS SymID.
 	 */
@@ -361,14 +359,11 @@ namespace compiler::mir {
 	 */
 	struct MIRValue final {
 	private:
-		using ValueType
-			= std::variant<MIRConstant, MIRUnitConst, MIRPlace, BlockID, MIRFunctionLiteral>;
+		using ValueType = std::variant<MIRConstant, MIRPlace, BlockID, MIRFunctionLiteral>;
 
 		ValueType value;
 
 	public:
-		MIRValue(MIRUnitConst value): value(value) {}
-
 		MIRValue(MIRConstant value): value(value) {}
 
 		MIRValue(MIRLocalRef value): value(MIRPlace(value)) {}
@@ -421,7 +416,9 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool carriesInformation(query::Context& ctx) const {
 			variant_match(value) {
-				variant_case_novalue(MIRUnitConst) { return false; }
+				variant_case(MIRConstant, constant) {
+					return !constant.value.has<ctv::CompileTimeValue::UnitCTV>();
+				}
 				variant_case(MIRPlace, access) { return access.carriesInformation(ctx); }
 				variant_default { return true; }
 			}

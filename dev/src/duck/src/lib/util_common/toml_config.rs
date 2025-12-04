@@ -246,9 +246,13 @@ impl TomlConfig {
         &self.content
     }
 
-    pub fn get_path(&self, key: &str) -> QuackResult<Option<PathBuf>> {
+    pub fn get_path(&self, key: &str) -> QuackResult<Option<&Path>> {
         let path = self.get_str(key)?;
-        Ok(path.map(PathBuf::from))
+        Ok(path.map(Path::new))
+    }
+
+    pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
+        self.set_str(key, value.display().to_string())
     }
 }
 

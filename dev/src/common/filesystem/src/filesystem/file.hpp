@@ -2,7 +2,7 @@
 
 #include "file_path.hpp"
 
-#include <base/misc/raw_view.hpp>
+#include <base/misc/shared_view.hpp>
 
 #include <expected>
 #include <filesystem>

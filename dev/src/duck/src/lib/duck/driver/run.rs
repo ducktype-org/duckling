@@ -32,8 +32,13 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
-        std::env::set_current_dir(chdir)
-            .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
+        std::env::set_current_dir(chdir).with_context(|| {
+            format!(
+                "couldn't change the current working directory to `{}`",
+                chdir.display()
+            )
+        })?;
+        ctx.reload_cwd()?;
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;

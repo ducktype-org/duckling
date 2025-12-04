@@ -226,7 +226,6 @@ namespace compiler::mir {
 
 	void MIRValue::debugPrint(std::ostream& os) const {
 		variant_match(value) {
-			variant_case_novalue(MIRUnitConst) { os << "()"; }
 			variant_case(MIRConstant, value) { os << value.value.toString(); }
 			variant_case(MIRPlace, place) { place.debugPrint(os); }
 			variant_case(BlockID, block) { os << "Block(" << u64(block) << ")"; }
