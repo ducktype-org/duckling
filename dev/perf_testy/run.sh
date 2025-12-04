@@ -1,6 +1,8 @@
 # get args:
 result_csv=$1
 
+case_pattern=$2
+
 if [ -z "$result_csv" ]; then
     echo "No result CSV file provided!"
     exit 1
@@ -30,7 +32,7 @@ cpp_print_lib="./cpp_setup/print.o"
 
 
 # iterate all categories in cases:
-for category_dir in ./cases/*/; do
+for category_dir in ./cases/$case_pattern/; do
     [ -d "$category_dir" ] || continue
 
     for case_dir in "$category_dir"*/; do
