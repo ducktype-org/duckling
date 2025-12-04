@@ -15,7 +15,7 @@ cpp_c_path=g++-12
 
 # Set duckc binary:
 # duck_c_path=../build_no_debug/bin/duckc
-duck_c_path=../build_rel/bin/duckc
+duck_c_path=./binaries/duckc
 
 
 # time_format="%E real, %U user, %S sys"
