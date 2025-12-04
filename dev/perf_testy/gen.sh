@@ -1,8 +1,8 @@
 
-./cases/functions.sh
-./cases/classes.sh
-./cases/multifile_classes.sh
-./cases/multifile_functions.sh
+./case_generation/functions.sh
+./case_generation/classes.sh
+./case_generation/multifile_classes.sh
+./case_generation/multifile_functions.sh
 
 
 
