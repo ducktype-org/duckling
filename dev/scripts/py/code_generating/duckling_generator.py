@@ -84,7 +84,7 @@ class DucklingCodeGenerator(CodeGenerator):
         return class_data
     
     def class_field(self, field_name: str) -> str:
-        self.indenter.add_text(f"var {field_name}: i64 = 0;\n")
+        self.indenter.add_text(f"{field_name}: i64 = 0;\n")
         
     def object_instantiation(self, object_name: str, scope: ScopeData, class_: ClassData):
         self.indenter.add_fragment(f"var {object_name}: {class_.name} = ")
