@@ -2,6 +2,7 @@ cases/
 binary_outputs/
 cpp_setup/*.o
 plot_outputs/
+plots/
 binaries/
 *.tar
 
