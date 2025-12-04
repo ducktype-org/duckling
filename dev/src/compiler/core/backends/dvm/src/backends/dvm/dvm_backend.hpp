@@ -1,4 +1,6 @@
 
+#include "dvm_forward_decl.hpp"
+
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/pointers/ref.hpp>
@@ -6,10 +8,6 @@
 #include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::backend_vm {
-
-	namespace internal {
-		class ProgramLoweringContext;
-	}
 
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.

@@ -55,7 +55,7 @@ namespace compiler::backend_vm::internal {
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
 
-		base::Map<CRef<lir::LIRGlobal>, std::tuple<vm::code::GlobalData, DVMGlobal>>
-			lir_global_to_dvm;
+		base::Map<CRef<lir::LIRGlobal>, DVMGlobal>            lir_global_to_dvm;
+		base::Map<CRef<lir::LIRGlobal>, vm::code::GlobalData> lir_global_to_dvm_data;
 	};
 }

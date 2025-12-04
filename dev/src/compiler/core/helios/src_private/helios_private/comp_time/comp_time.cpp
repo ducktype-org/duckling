@@ -1,6 +1,6 @@
 #include "comp_time.hpp"
 
-#include <backends/dvm/backend.hpp>
+#include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -127,15 +127,17 @@ namespace compiler::helios {
 							        // cast expr beforehand.
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
-										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at "
-											"compile "
-											"time are of different type. This should be "
-											"prevented by casts.\nLeft side is:",
-											lhs.getTypeOfStoredValue(ctx).getType().toString(),
-											"\nRight side is: ",
-											rhs.getTypeOfStoredValue(ctx).getType().toString()
-										));
+										CORE_PANIC(
+											base::strConcat(
+												"Operands on binary expression evaluated at "
+												"compile "
+												"time are of different type. This should be "
+												"prevented by casts.\nLeft side is:",
+												lhs.getTypeOfStoredValue(ctx).getType().toString(),
+												"\nRight side is: ",
+												rhs.getTypeOfStoredValue(ctx).getType().toString()
+											)
+										);
 									}
 
 									LhsNumT rhs_val = maybe_rhs_val.value();
@@ -191,8 +193,9 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented("Other binary operators for bool type"
-							    );
+								throw base::NotYetImplemented(
+									"Other binary operators for bool type"
+								);
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -325,15 +328,17 @@ namespace compiler::helios {
 						    // cast expr beforehand.
 							auto maybe_rhs_val = second.get<LhsNumT>();
 							if (!maybe_rhs_val.has_value()) {
-								CORE_PANIC(base::strConcat(
-									"Operands on binary expression evaluated at "
-									"compile "
-									"time are of different type. This should be "
-									"prevented by casts.\nLeft side is:",
-									first.getTypeOfStoredValue(ctx).getType().toString(),
-									"\nRight side is: ",
-									second.getTypeOfStoredValue(ctx).getType().toString()
-								));
+								CORE_PANIC(
+									base::strConcat(
+										"Operands on binary expression evaluated at "
+										"compile "
+										"time are of different type. This should be "
+										"prevented by casts.\nLeft side is:",
+										first.getTypeOfStoredValue(ctx).getType().toString(),
+										"\nRight side is: ",
+										second.getTypeOfStoredValue(ctx).getType().toString()
+									)
+								);
 							}
 
 							LhsNumT rhs_num = maybe_rhs_val.value();
@@ -418,8 +423,7 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -555,7 +559,8 @@ namespace compiler::helios {
 				all_lir_functions.push_back(lir_func_result);
 			}
 
-			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), all_lir_functions, {} };
+			backend_vm::Module m(base::StrID("COMP_TIME"));
+			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 			vm::code::CodeCollection code = m.build();
 
 			std::vector<CompileTimeValue> ctv_arguments;

@@ -9,6 +9,7 @@
 
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 
@@ -164,4 +165,21 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 		.name = base::StrID("ret_val"),
 		.type = function_return_type,
 	};
+}
+
+[[nodiscard]] const compiler::backend_vm::internal::DVMLocal& compiler::backend_vm::internal::
+	FunctionLoweringContext::getLirLocal(lir::LIRLocalRef local) const {
+	CORE_ASSERT(lir_local_to_dvm.contains(local), "LIR local not found");
+	return lir_local_to_dvm.at(local);
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRLocalRef lir_local) {
+	auto dvm_local = insertLirLocal(lir_local);
+	pushInstruction(
+		{
+			vm::code::builders::OpKind::init,
+			vm::opargs::StackLocalAny(dvm_local.name),
+			vm::opargs::Type(typeName(dvm_local.type)),
+		}
+	);
 }

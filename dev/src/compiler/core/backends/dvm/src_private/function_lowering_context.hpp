@@ -42,6 +42,11 @@ namespace compiler::backend_vm::internal {
 		void pushTerminator(const lir::Instruction& lir_terminator);
 		void pushInstruction(const lir::Instruction& lir_instruction);
 
+		[[deprecated(
+			"@TODO: #1656 Delete this temporary helper when inits/deinits are handled correctly"
+		)]]
+		void pushInit(lir::LIRLocalRef lir_local);
+
 		/**
 		 * @brief Registers LIR function parameter as a DVM function parameter.
 		 * @param lir_func_param LIR local representing a function parameter.

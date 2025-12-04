@@ -117,16 +117,6 @@ namespace {
 		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
 		    || op == OpKind::fcmpGe;
 	}
-
-	struct FlagSet {};
-
-	std::variant<DVMValue, FlagSet> pushRaw(
-		FunctionLoweringContext&     ctx,
-		vm::code::builders::OpKind   kind,
-		const std::vector<DVMValue>& args
-	) {
-		throw base::NotYetImplemented("Raw instruction lowering not yet implemented");
-	}
 }
 
 void FunctionLoweringContext::handleFunctionCall(
@@ -207,7 +197,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		auto called_func_name = args.front();
 		args.pop_front();
 		handleFunctionCall(called_function, called_func_name, args, maybe_output);
-	} else {
+	} else if (args.size() == 2) {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
 		auto output = maybe_output.value();
@@ -215,10 +205,13 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// If instruction is of the form: a = b OP c, then
 		// we transform it to:
 		// a = b;
-        // a = a OP c;
+		// a = a OP c;
 		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
 
 		pushInstruction({ operation, output, args[1] });
+	} else {
+		auto output = maybe_output.value();
+		pushInstruction({ operation, output, args[0] });
 	}
 }
 
@@ -290,7 +283,11 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.type = type,
 	};
 	pushInstruction(
-		{ OpKind::init, vm::opargs::StackLocalAny(temp_local.name), temp_local.asArgument() }
+		{
+			OpKind::init,
+			vm::opargs::StackLocalAny(temp_local.name),
+			vm::opargs::Type(typeName(type)),
+		}
 	);
 	return temp_local;
 }

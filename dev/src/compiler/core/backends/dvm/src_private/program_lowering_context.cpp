@@ -2,7 +2,11 @@
 
 #include "function_lowering_context.hpp"
 
-#include "vm/bytecode/bytecode.hpp"
+#include <backends/dvm/dvm_forward_decl.hpp>
+
+#include "base/collections/optional.hpp"
+
+#include <vm/bytecode/bytecode.hpp>
 
 using namespace compiler::backend_vm::internal;
 
@@ -20,7 +24,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
 	if (auto maybe_global = lir_global_to_dvm.atMaybe(global))
-		return std::get<1>(**maybe_global);
+		return **maybe_global;
 	else
 		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
 }
@@ -30,10 +34,14 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	base::Optional<CRef<lir::Function>> global_ctor,
 	base::Optional<CRef<lir::Function>> global_dtor
 ) {
-	if (auto maybe_global = lir_global_to_dvm.atMaybe(&lir_global))
-		return std::get<0>(**maybe_global);
+	if (auto maybe_global = lir_global_to_dvm_data.atMaybe(&lir_global)) return **maybe_global;
 
-	auto var_type = lowerAndKeepTslType(lir_global.layout);
+	auto global_type = lowerAndKeepTslType(lir_global.layout);
+
+	lir_global_to_dvm.put(
+		&lir_global, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
+	);
+
 	using vm::code::Identifier;
 
 	base::Optional<Identifier> ctor_name;
@@ -50,19 +58,14 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	// @TODO: #1553 add a isConst to DVM and initial values, add source position to
 	// GlobalVariables
-	lir_global_to_dvm.put(
-		&lir_global,
-		std::make_tuple(
-			vm::code::GlobalData{
-				.name      = lir_global.mangled_name,
-				.type      = typeName(var_type),
-				.ctor_name = ctor_name,
-				.dtor_name = dtor_name,
-			},
-			DVMGlobal{ .name = lir_global.mangled_name, .type = var_type }
-		)
-	);
-	return std::get<0>(lir_global_to_dvm.at(&lir_global));
+	vm::code::GlobalData global_data{};
+	global_data.name      = lir_global.mangled_name;
+	global_data.type      = typeName(global_type);
+	global_data.ctor_name = ctor_name;
+	global_data.dtor_name = dtor_name;
+
+	lir_global_to_dvm_data.put(&lir_global, global_data);
+	return lir_global_to_dvm_data.at(&lir_global);
 }
 
 const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext::lowerAndKeepLirFunction(
@@ -80,16 +83,26 @@ const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext
 		                                     lir_function->return_type_layout,
 		                                     lir_function->parameter_layouts };
 
-	for (const auto& param: lir_function->local_list)
-		if_opt_some(param.parameter_index, _) func_ctx.registerFunctionParameter(&param);
+	for (const auto& param: lir_function->local_list) {
+		match_optional(param.parameter_index) {
+			opt_some(_) func_ctx.registerFunctionParameter(&param);
+			opt_none {
+				// @TODO: #1656 Handle local variable inits properly.
+				func_ctx.pushInit(&param);
+			}
+		}
+	}
 
 	for (const auto& block_ref: lir_function->block_order) {
 		func_ctx.beginBlock(block_ref);
 		for (const auto& instruction: block_ref->instructions)
 			func_ctx.pushInstruction(instruction);
+		func_ctx.pushTerminator(block_ref->terminator);
 	}
 
-	throw base::NotYetImplemented("Function lowering not yet implemented");
+	auto dvm_function = std::move(func_ctx).finish();
+	lir_function_to_dvm.put(lir_function, dvm_function);
+	return lir_function_to_dvm.at(lir_function);
 }
 
 vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::lowerTslTypeInternal(
@@ -129,10 +142,13 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	auto collection        = vm::code::CodeCollection();
 	collection.functions   = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
 	collection.global_data = std::ranges::to<std::vector>(
-		lir_global_to_dvm | std::views::values
-		| std::views::transform([](const auto& tuple) { return std::get<0>(tuple); })
+		lir_global_to_dvm_data | std::views::values
+		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+
+	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
+	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();
@@ -140,3 +156,5 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		return valid.produceValidCodeCollection();
 	} catch (vm::code::ValidationError& e) { return std::unexpected(e.what()); }
 }
+
+DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_vm::internal::ProgramLoweringContext);

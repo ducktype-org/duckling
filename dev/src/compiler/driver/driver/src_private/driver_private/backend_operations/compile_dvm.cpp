@@ -2,7 +2,7 @@
 
 #include "../statistics_private/statistics.hpp"
 
-#include <backends/dvm/backend.hpp>
+#include <backends/dvm/dvm_backend.hpp>
 #include <timer/timer.hpp>
 
 namespace compiler::driver {
@@ -11,16 +11,12 @@ namespace compiler::driver {
 	) {
 		timer::AddToTime _(&backend_compilation_time);
 
-		std::vector<backend_vm::BackendDVMGlobal> dvm_globals;
-		for (const auto& global: data.globals) {
-			backend_vm::BackendDVMGlobal dvm_global{
-				.lir_global  = global.lir_global,
-				.global_ctor = global.global_ctor,
-				.global_dtor = global.global_dtor,
-			};
-			dvm_globals.emplace_back(std::move(dvm_global));
-		}
-		backend_vm::Module module{ query_ctx, data.module_id, data.functions, dvm_globals };
+		backend_vm::Module module(data.module_id);
+
+		for (const auto& global: data.globals)
+			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
+
+		for (const auto& lir_function: data.functions) module.insertLirFunction(lir_function);
 
 		return module.build();
 	}
