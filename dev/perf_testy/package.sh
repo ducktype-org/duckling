@@ -1,6 +1,7 @@
 # package listed file into a tar archive:
 
-tar --create --verbose --file-archive=perf_tests.tar \
+rm perf_tests.tar
+tar --create --verbose --file=perf_tests.tar \
     cases/              \
     cpp_setup/print.cpp \
     run_tests.sh \
