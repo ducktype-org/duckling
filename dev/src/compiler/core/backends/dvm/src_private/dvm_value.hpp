@@ -12,12 +12,16 @@ namespace compiler::backend_vm::internal {
 		base::StrID          name;
 		vm::code::TypeOfData type;
 
+		bool operator==(const DVMLocal& other) const = default;
+
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
 	struct DVMGlobal {
 		base::StrID          name;
 		vm::code::TypeOfData type;
+
+		bool operator==(const DVMGlobal& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
@@ -34,17 +38,23 @@ namespace compiler::backend_vm::internal {
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
 		u64 value{};
 
+		bool operator==(const DVMImmediate& other) const = default;
+
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
 	struct DVMLabel {
 		base::StrID name;
 
+		bool operator==(const DVMLabel& other) const = default;
+
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
 	struct DVMFunctionName {
 		base::StrID name;
+
+		bool operator==(const DVMFunctionName& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
@@ -58,7 +68,9 @@ namespace compiler::backend_vm::internal {
 	public:
 		DVMValue(StoredValueVariant value): stored_value(std::move(value)) {}
 
-		operator vm::opargs::OpCodeArg() const;
+		bool operator==(const DVMValue& other) const = default;
+
+											operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 }

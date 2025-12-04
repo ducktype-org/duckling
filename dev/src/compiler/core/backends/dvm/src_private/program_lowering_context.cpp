@@ -86,7 +86,7 @@ const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext
 	for (const auto& block_ref: lir_function->block_order) {
 		func_ctx.beginBlock(block_ref);
 		for (const auto& instruction: block_ref->instructions)
-			func_ctx.lowerInstruction(instruction);
+			func_ctx.pushInstruction(instruction);
 	}
 
 	throw base::NotYetImplemented("Function lowering not yet implemented");

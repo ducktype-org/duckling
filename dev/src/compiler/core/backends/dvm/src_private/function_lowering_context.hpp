@@ -61,14 +61,14 @@ namespace compiler::backend_vm::internal {
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
 
-		void  handleFunctionCall(
-			 const lir::FunctionLiteral&  called_function,
-			 const DVMValue&              called_func_name,
-			 const std::vector<DVMValue>& func_args,
-			 base::Optional<DVMValue>     output
-		 );
+		void handleFunctionCall(
+			const lir::FunctionLiteral& called_function,
+			const DVMValue&             called_func_name,
+			const std::deque<DVMValue>& func_args,
+			base::Optional<DVMValue>    output
+		);
 
-		usize next_temp_id = 0;
+		usize    next_temp_id = 0;
 		DVMLocal pushTempLocal(
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
 		);

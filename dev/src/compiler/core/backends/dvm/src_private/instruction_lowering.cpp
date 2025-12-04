@@ -130,11 +130,16 @@ namespace {
 }
 
 void FunctionLoweringContext::handleFunctionCall(
-	const lir::FunctionLiteral&  called_function,
-	const DVMValue&              called_func_name,
-	const std::vector<DVMValue>& func_args,
-	base::Optional<DVMValue>     output
+	const lir::FunctionLiteral& called_function,
+	const DVMValue&             called_func_name,
+	const std::deque<DVMValue>& func_args,
+	base::Optional<DVMValue>    output
 ) {
+	CORE_ASSERT(
+		func_args.size() == called_function.parameter_layouts->size(),
+		"Function call argument count does not match function parameter count."
+	);
+
 	vm::code::TypeOfData called_result_type
 		= program_context.lowerAndKeepTslType(called_function.return_type_layout);
 	std::vector<vm::code::TypeOfData> param_types
@@ -179,9 +184,10 @@ void FunctionLoweringContext::handleFunctionCall(
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	auto args = lir_instruction.arguments
-	          | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
-	          | std::ranges::to<std::deque>();
+	std::deque<DVMValue> args
+		= lir_instruction.arguments
+	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
+	    | std::ranges::to<std::deque>();
 
 	const auto operation = lirOpToOpKind(lir_instruction.operation);
 
@@ -196,18 +202,24 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// cmov x, 1;
 		pushInstruction({ lirOpToOpKind(lir_instruction.operation), args[0], args[1] });
 		pushInstruction({ OpKind::cmov, maybe_output.value(), args[1] });
-		return;
-	} else if (operation ==)
+	} else if (operation == OpKind::call) {
+		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+		auto called_func_name = args.front();
+		args.pop_front();
+		handleFunctionCall(called_function, called_func_name, args, maybe_output);
+	} else {
+		// In this case we assume we have a very general quadruple of the form:
+		// output = arg1 OP arg2;
+		auto output = maybe_output.value();
 
-		if (lir_instruction.output.has_value()) {
-			auto output_arg = lowerLirValue(LIRValue{ lir_instruction.output.value() });
-			instr.setOutput(output_arg);
-		}
+		// If instruction is of the form: a = b OP c, then
+		// we transform it to:
+		// a = b;
+        // a = a OP c;
+		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
 
-	pushInstruction(instr);
-}
-
-else if (lir_instruction.output.has_value()) {}
+		pushInstruction({ operation, output, args[1] });
+	}
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
@@ -268,7 +280,6 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
 	}
 }
-}
 
 DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
@@ -278,6 +289,8 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.name = base::StrID(name.c_str()),
 		.type = type,
 	};
-	pushInstruction({ OpKind::init, vm::opargs::StackLocalAny(temp_local.name), temp_local });
+	pushInstruction(
+		{ OpKind::init, vm::opargs::StackLocalAny(temp_local.name), temp_local.asArgument() }
+	);
 	return temp_local;
 }
