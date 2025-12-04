@@ -10,6 +10,7 @@ from copy import deepcopy
 from textwrap import indent
 
 from utils import PROB, random_identifier
+import config
 
 @dataclass(eq=True, frozen=True)
 class FunctionData:
@@ -324,7 +325,7 @@ class LogicGenerator:
     def generate_non_control_flow(self, scope: ScopeData):
         action = random.choices(
             ['declaration', 'assignment', 'new_object', 'print'],
-            weights=[30, 40, 10, 20],
+            weights=[30, 40, config.NEW_OBJECT_WEIGHT, 20],
             k=1
         )[0]
         if action == 'declaration':
@@ -366,7 +367,7 @@ class LogicGenerator:
         for _ in range(global_symbol_count):
             action = random.choices(
                 ['variable_declaration', 'function_definition', 'class_definition'],
-                weights=[10, 70, 20],
+                weights=[10, 70, config.CLASS_DEFINITION_WEIGHT],
                 k=1
             )[0]
             if action == 'variable_declaration':

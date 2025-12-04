@@ -3,6 +3,7 @@ import argparse
 from code_generator import LogicGenerator
 from duckling_generator import DucklingCodeGenerator
 from cpp_generator import CppCodeGenerator
+import config
 
 
 if __name__ == "__main__":
@@ -15,6 +16,7 @@ if __name__ == "__main__":
                         ="Path to save the generated C++ code.")
     parser.add_argument("--length", type=int, default=50, help="Length of the generated code.")
     parser.add_argument("--global_symbol_count", type=int, default=1, help="Number of global symbols to generate (apart from main).")
+    parser.add_argument("--class_weight", type=int, default=1, help="Weight for class definitions in code generation.")
     parser.add_argument("--imports_count", type=int, default=0, help="Number of additional files to generate (apart from main).")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for code generation.")
     args = parser.parse_args()
@@ -25,6 +27,9 @@ if __name__ == "__main__":
     global_symbol_count = args.global_symbol_count
     imports_count = args.imports_count
     seed = args.seed if args.seed is not None else random.randint(0, 1000000)
+
+    config.CLASS_DEFINITION_WEIGHT *=  args.class_weight
+    config.NEW_OBJECT_WEIGHT *=  args.class_weight
     
     print(f"Using seed: {seed}")
     
