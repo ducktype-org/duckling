@@ -142,6 +142,14 @@ impl Terminal {
         hint => "Hint:" + cyan + bold,
         critical => "Critical:" + red + reverse + bold,
     }
+
+    pub fn verbosity(&self) -> &Verbosity {
+        &self.verbosity
+    }
+
+    pub fn term(&self) -> &Term {
+        &self.term
+    }
 }
 
 impl Write for Terminal {
