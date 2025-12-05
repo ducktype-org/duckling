@@ -58,7 +58,7 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
-		
+
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -91,11 +91,11 @@ namespace compiler::frontend {
 		std::vector<FileAccessLocked> getSourceFiles() const;
 
 		/**
-		 * Accesses the submodules located in this module. Submodules are indexed by their name.
-		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
+		 * Accesses the submodules located in this module.
+		 * @return A vector of ModuleAccessLocked representing all submodules.
 		 */
 		[[nodiscard]]
-		base::HashMap<base::StrID, ModuleAccessLocked> getSubmodules() const;
+		std::vector<ModuleAccessLocked> getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -127,6 +127,8 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
 
+		static const hashing::ComponentHash::HashType& getModuleHash(ModuleID module_id);
+
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
 		 * @param indentation For regular printing, leave 0.
@@ -145,13 +147,20 @@ namespace compiler::frontend {
 		/**
 		 * Invalidate current component hash, used when module structure changes
 		 */
-		void invalidateComponentHash();
+		void invalidateHash();
 
 		/**
-		 * Use a parent component hash, and update m_path_component_hash for this module only
-		 * This does not propagate to children
+		 * Use a parent component hash, and update m_path_component_hash and m_hash for this module
+		 * only This does not propagate to children
 		 */
-		void updateComponentHash();
+		void updateModuleHash();
+
+		/**
+		 * Updates the module hashes from the root module down to this module.
+		 * This is needed to ensure that all parent modules have their hashes updated before this
+		 * module.
+		 */
+		void updateModuleHashFromRootToThis();
 
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
@@ -163,9 +172,16 @@ namespace compiler::frontend {
 		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		base::Optional<hashing::ComponentHash>            m_path_component_hash;
-		base::Optional<hashing::ComponentHash::HashType>            m_hash;
+		base::HashMap<base::StrID, std::vector<fs::File>>
+			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
+		                    //happening with them. Do not use this in query unless AccesLocked is
+		                    //implemented for this
+
+		base::Optional<hashing::ComponentHash>
+			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
+		                            //packege_name/root/submodule1/sub2
+		base::Optional<hashing::ComponentHash::HashType>
+			m_hash;                 //< This is the actual hash for the Module used in SideInput
 
 		/**
 		 * Package ID associated with this module tree.

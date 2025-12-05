@@ -14,7 +14,7 @@ namespace compiler::frontend {
 	IMPLEMENT_QUERY_SIDE_INPUT(QueryFileSideInput);
 
 	query::QueryStableHash KeyOf_ModuleSideInput::queryStablePerfectHash() const {
-		return ModuleTree::getPathComponentHash(id).hash;
+		return ModuleTree::getModuleHash(id);
 	}
 
 	query::QueryStableHash KeyOf_FileSideInput::queryStablePerfectHash() const {

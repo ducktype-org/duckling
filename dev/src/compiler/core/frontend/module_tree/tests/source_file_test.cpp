@@ -37,7 +37,8 @@ private:
 
 		// Test basic properties
 		ASSERT_EQUAL(
-			temp_file.getFilePath().native(), source_file->getFileIllegalAccess().getFilePath().native()
+			temp_file.getFilePath().native(),
+			source_file->getFileIllegalAccess().getFilePath().native()
 		);
 		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID());
 		// Cleanup
@@ -54,8 +55,13 @@ private:
 
 		// Test file properties
 		assertTrue(source_file->getFileIllegalAccess().isFile(), "Should be recognized as file");
-		assertTrue(!source_file->getFileIllegalAccess().isDirectory(), "Should not be recognized as directory");
-		ASSERT_EQUAL(test_content, source_file->getFileIllegalAccess().getContent().view().stringView());
+		assertTrue(
+			!source_file->getFileIllegalAccess().isDirectory(),
+			"Should not be recognized as directory"
+		);
+		ASSERT_EQUAL(
+			test_content, source_file->getFileIllegalAccess().getContent().view().stringView()
+		);
 
 		// Test FileID uniqueness
 		auto another_source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
@@ -245,7 +251,9 @@ private:
 		auto source_file  = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Check initial cached content
-		ASSERT_EQUAL("original content", source_file->getCachedContentIllegalAcess().view().stringView());
+		ASSERT_EQUAL(
+			"original content", source_file->getCachedContentIllegalAcess().view().stringView()
+		);
 
 		// Modify file content
 		temp_file.writeToFile("new content");

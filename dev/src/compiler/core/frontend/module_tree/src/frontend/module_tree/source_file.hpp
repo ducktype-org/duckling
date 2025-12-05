@@ -30,6 +30,8 @@ namespace compiler::frontend {
 		base::Optional<FileID> file_id;
 		mutable base::Optional<hashing::ComponentHash>
 			component_hash;  //< Logical path hash for this file (module path + file name)
+		//< Any functions that actually modifies it like invalidateComponentHash should not be
+		//marked const
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.

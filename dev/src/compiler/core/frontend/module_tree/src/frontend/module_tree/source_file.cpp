@@ -66,7 +66,7 @@ namespace compiler::frontend {
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
 		if (!component_hash.has_value()) {
 			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
-			component_hash        = hashing::ComponentHash(m_path_component_hash, lang_file_name);
+			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
 		}
 		return component_hash.value();
 	}

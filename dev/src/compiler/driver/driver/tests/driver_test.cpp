@@ -89,12 +89,12 @@ private:
 			// This method can fail on module verification
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
+			auto module_name = base::StrID(
+				base::strConcat(
+					"module_", frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
 				)
-			                      .c_str());
+					.c_str()
+			);
 
 			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
@@ -252,12 +252,31 @@ private:
 		// Find submodule ID
 		auto root_ref   = frontend::getModuleRef(root_id);
 		auto submodules = root_ref->getSubmodules();
-		ASSERT_TRUE(submodules.contains(base::StrID("submodule")));
-		auto submodule_id = submodules.at(base::StrID("submodule")).illegalAccess().getID();
+		auto get_ref    = [](frontend::AccessLocked<frontend::ModuleID> access) {
+            return compiler::frontend::GetModuleID_Functor::
+                getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+                    access.illegalAccess().getID()
+                );
+		};
+		auto get_submodule = [&](const std::vector<frontend::ModuleAccessLocked>& subs,
+		                         base::StrID name) -> frontend::ModuleAccessLocked {
+			for (const auto& sub: subs)
+				if (get_ref(sub)->getName() == name) return sub;
+			throw std::out_of_range("Submodule not found");
+		};
+		auto has_submodule
+			= [&](const std::vector<frontend::ModuleAccessLocked>& subs, base::StrID name) -> bool {
+			for (const auto& sub: subs)
+				if (get_ref(sub)->getName() == name) return true;
+			return false;
+		};
+		ASSERT_TRUE(has_submodule(submodules, base::StrID("submodule")));
+		auto submodule_id
+			= get_submodule(submodules, base::StrID("submodule")).illegalAccess().getID();
 
-		ASSERT_TRUE(submodules.contains(base::StrID("empty_sub_module")));
+		ASSERT_TRUE(has_submodule(submodules, base::StrID("empty_sub_module")));
 		auto empty_sub_module_id
-			= submodules.at(base::StrID("empty_sub_module")).illegalAccess().getID();
+			= get_submodule(submodules, base::StrID("empty_sub_module")).illegalAccess().getID();
 
 		// Get Query Graph
 		auto graph = query::internal::ContextAccess::getState()->getGraphMutable();

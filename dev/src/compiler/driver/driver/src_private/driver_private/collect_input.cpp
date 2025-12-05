@@ -26,9 +26,7 @@ namespace compiler::driver {
 		auto module_ref = getModuleRef(module_id);
 
 		// Collect module side input
-		out->emplace_back(
-			QueryModuleSideInput::getID(), ModuleTree::getPathComponentHash(module_id).hash
-		);
+		out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
 
 		auto collect_from_pst = [&](auto& pst_ref) {
 			auto root = pst_ref->getRootElement();
@@ -79,7 +77,7 @@ namespace compiler::driver {
 		}
 
 		// Recurse into submodules
-		for (const auto& [name, submodule]: module_ref->getSubmodules())
+		for (const auto& submodule: module_ref->getSubmodules())
 			collectFromModule(submodule.illegalAccess().getID(), out);
 	}
 

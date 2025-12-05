@@ -58,22 +58,19 @@ namespace compiler::frontend {
 
 	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
-		if (!module->m_path_component_hash.has_value()) {
-			// iterate thru parents to find one with component hash set or reach root (go up)
-			base::Ref<ModuleTree>              g_parent          = module;
-			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
-			while (g_parent->m_parent.has_value()
-			       && !g_parent->m_parent.value()->m_path_component_hash.has_value()) {
-				g_parent = g_parent->m_parent.value();
-				modules_to_update.push_back(g_parent);
-			}
-			// go from top module to bottom module, so its in linear time
-			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateComponentHash();
-		}
+		module->updateModuleHashFromRootToThis();
 		CORE_ASSERT(
-			module->m_path_component_hash.has_value(), "Component hash should have value after update!"
+			module->m_path_component_hash.has_value(),
+			"Component hash should have value after update!"
 		);
 		return module->m_path_component_hash.value();
+	}
+
+	const hashing::ComponentHash::HashType& ModuleTree::getModuleHash(ModuleID module_id) {
+		Ref<ModuleTree> module = module_id.ref;
+		module->updateModuleHashFromRootToThis();
+		CORE_ASSERT(module->m_hash.has_value(), "Module hash should have value after update!");
+		return module->m_hash.value();
 	}
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
@@ -121,10 +118,10 @@ namespace compiler::frontend {
 		return out;
 	}
 
-	base::HashMap<base::StrID, ModuleAccessLocked> ModuleTree::getSubmodules() const {
-		base::HashMap<base::StrID, ModuleAccessLocked> out;
-		for (const auto& [name, module]: m_submodules)
-			out.put(name, ModuleAccessLocked(module->getModuleID()));
+	std::vector<ModuleAccessLocked> ModuleTree::getSubmodules() const {
+		std::vector<ModuleAccessLocked> out;
+		out.reserve(m_submodules.size());
+		for (const auto& [name, module]: m_submodules) out.emplace_back(module->getModuleID());
 		return out;
 	}
 
@@ -149,30 +146,33 @@ namespace compiler::frontend {
 
 		if (hasMainSourceFile())
 			output << indent << "├> "
-				   << getFileRef(getMainSourceFile().illegalAccess().getID())->file.name()
-				   << '\n';
+				   << getFileRef(getMainSourceFile().illegalAccess().getID())->file.name() << '\n';
 		else
 			output << indent << "├> Missing main module file!\n";
 
 		for (const auto& file_ref: getSourceFiles())
-			output << indent
-				   << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
+			output << indent << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
 				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
 			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
-		for (const auto& [name, submodule_ref]: getSubmodules())
+		for (const auto& submodule_ref: getSubmodules())
 			output << getModuleRef(submodule_ref.illegalAccess().getID())
 						  ->prettyPrint(indentation + 3);
 
 		return output.str();
 	}
 
-	void ModuleTree::invalidateComponentHash() {
+	void ModuleTree::invalidateHash() {
 		// If ModuleHash is invalid, then children are also invalid
 		if (!m_path_component_hash.has_value()) {
+			// m_hash should not have value if path component hash is invalid
+			// The are calculaten in the same function: updateModuleHash()
+			CORE_ASSERT(!m_hash.has_value(), "Module hash have value!");
+
 			// assert if children are invalid too
+
 			for (auto& sf: m_source_files)
 				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
 			if (m_main_source_file.has_value())
@@ -187,12 +187,13 @@ namespace compiler::frontend {
 			return;
 		}
 		m_path_component_hash.reset();
+		m_hash.reset();
 		for (auto& sf: m_source_files) sf->invalidateComponentHash();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
-		for (auto& [_, submodule]: m_submodules) submodule->invalidateComponentHash();
+		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
 	}
 
-	void ModuleTree::updateComponentHash() {
+	void ModuleTree::updateModuleHash() {
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
 			CORE_ASSERT(
@@ -218,10 +219,28 @@ namespace compiler::frontend {
 		// The number of SourceFiles
 		hashing::addToHash(partial, m_source_files.size());
 
-		//Number of SubModules 
+		// Number of SubModules
 		hashing::addToHash(partial, m_submodules.size());
 
+		// We do not need to add a module name and package_name, since they are already in the path
+		// component hash
+
 		m_hash = partial.finalize();
+	}
+
+	void ModuleTree::updateModuleHashFromRootToThis() {
+		if (!m_path_component_hash.has_value()) {
+			// iterate thru parents to find one with component hash set or reach root (go up)
+			base::Ref<ModuleTree>              g_parent          = this;
+			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
+			while (g_parent->m_parent.has_value()
+			       && !g_parent->m_parent.value()->m_path_component_hash.has_value()) {
+				g_parent = g_parent->m_parent.value();
+				modules_to_update.push_back(g_parent);
+			}
+			// go from top module to bottom module, so its in linear time
+			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateModuleHash();
+		}
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
@@ -498,7 +517,7 @@ namespace compiler::frontend {
 		}
 
 		// Invalidate component hash for the submodule and its children
-		submodule->invalidateComponentHash();
+		submodule->invalidateHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -603,7 +622,7 @@ namespace compiler::frontend {
 		module->m_parent = {};
 
 		// Invalidate component hash for the module and its children as the parent changed
-		module->invalidateComponentHash();
+		module->invalidateHash();
 	}
 
 	void ModuleTreeModifier::changePackageID(
@@ -627,7 +646,7 @@ namespace compiler::frontend {
 					change_package_id(submodule, internal_new_package_id);
 
 				// Invalidate component hash for the module and its children as the package ID changed
-				internal->invalidateComponentHash();
+				internal->invalidateHash();
 			};
 
 		change_package_id(module, new_package_id);
@@ -740,8 +759,10 @@ namespace compiler::frontend {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
-			for (const auto& [name, module]: module_tree->getSubmodules())
-				out.put(name, module.unlock(ctx).getID());
+			for (const auto& module: module_tree->getSubmodules()) {
+				auto module_ref = getModuleRef(module.illegalAccess().getID());
+				out.put(module_ref->getName(), module.unlock(ctx).getID());
+			}
 			return out;
 		}
 
