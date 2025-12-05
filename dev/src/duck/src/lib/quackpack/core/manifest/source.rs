@@ -30,6 +30,24 @@ impl Source {
     }
 }
 
+impl From<Registry> for Source {
+    fn from(val: Registry) -> Self {
+        Source::Registry(val)
+    }
+}
+
+impl From<Local> for Source {
+    fn from(val: Local) -> Self {
+        Source::Local(val)
+    }
+}
+
+impl From<Git> for Source {
+    fn from(val: Git) -> Self {
+        Source::Git(val)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
@@ -52,21 +70,37 @@ impl Registry {
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
-    _entry_in_manifest: StrId,
+    entry_in_manifest: StrId,
+    was_original_entry_relative: bool,
 }
 
 impl Local {
     /// Create a new local source.
-    pub fn new(absolute: PathBuf, entry_in_manifest: StrId) -> Self {
+    pub fn new(
+        absolute: PathBuf,
+        entry_in_manifest: StrId,
+        was_original_entry_relative: bool,
+    ) -> Self {
         Self {
             absolute,
-            _entry_in_manifest: entry_in_manifest,
+            entry_in_manifest,
+            was_original_entry_relative,
         }
     }
 
     /// Get the absolute path to the local package.
     pub fn absolute(&self) -> &Path {
         &self.absolute
+    }
+
+    /// Get the entry which was directly specified in the manifest.
+    pub fn entry_in_manifest(&self) -> StrId {
+        self.entry_in_manifest
+    }
+
+    /// Whether [`entry_in_manifest`](Self::entry_in_manifest) was found to be a relative path.
+    pub fn was_original_entry_relative(&self) -> bool {
+        self.was_original_entry_relative
     }
 }
 
@@ -100,7 +134,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum GitRevision {
     /// The main branch.

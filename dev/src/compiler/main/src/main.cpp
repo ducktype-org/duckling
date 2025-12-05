@@ -43,6 +43,7 @@ void printContextErrors() {
 	if (query::Context::logger.messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
 		query::Context::logger.dumpLog(true, std::cerr);
+		query::Context::int_logger.dumpLog(std::cerr);
 	}
 }
 
@@ -262,6 +263,7 @@ clah::Clah getClahForMain() {
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
+					defer(printContextErrors());
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
 

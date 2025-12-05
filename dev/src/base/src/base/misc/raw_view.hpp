@@ -135,41 +135,6 @@ namespace base {
 
 		~OwningView() { delete[] begin; }
 	};
-
-	/**
-	 * @brief Shared immutable byte array view
-	 */
-	class SharedView final {
-		std::shared_ptr<OwningView> content;
-
-	public:
-		SharedView(const SharedView&) = default;
-		SharedView(SharedView&&)      = default;
-
-		SharedView& operator=(const SharedView&) = default;
-		SharedView& operator=(SharedView&&)      = default;
-
-		/**
-		 * @note Takes ownership of shared_ptr
-		 */
-		explicit SharedView(std::shared_ptr<OwningView> content): content(std::move(content)) {}
-
-		/**
-		 * @note Takes ownership, begin should be on heap.
-		 */
-		SharedView(byte* begin, usize size): content(std::make_shared<OwningView>(begin, size)) {}
-
-		SharedView static copy(RawView view) {
-			return SharedView(std::make_shared<OwningView>(OwningView::copy(view)));
-		}
-
-		// Makes copy
-		explicit SharedView(const char* const c_str):
-			  content(std::make_shared<OwningView>(c_str)) {}
-
-		[[nodiscard]]
-		const RawView view() const;
-	};
 }
 
 // std::hash functor for RawView:

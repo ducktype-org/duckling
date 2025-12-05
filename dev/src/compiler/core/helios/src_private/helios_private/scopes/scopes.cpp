@@ -565,10 +565,13 @@ namespace compiler::helios {
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
+				} else if (isAlias(sym) && name(sym) == key.name) {
+					// @TODO: #1412 fix dealias
+					result.leaves.push_back(sym);
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
-					// nothing?
+					// nothing
 				}
 			}
 
