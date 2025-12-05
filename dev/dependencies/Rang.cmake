@@ -4,7 +4,8 @@ set(rang_TAG "v3.2")
 
 FetchContent_Declare(
   rang
-  GIT_REPOSITORY https://github.com/agauniyal/rang.git
-  GIT_TAG 	     ${rang_TAG}
+  URL https://github.com/agauniyal/rang/archive/${rang_TAG}.tar.gz
+  SYSTEM
 )
+
 FetchContent_MakeAvailable(rang)
