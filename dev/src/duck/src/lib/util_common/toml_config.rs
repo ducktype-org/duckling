@@ -4,12 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, anyhow, bail};
 use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
-use crate::{QuackResult, internal_bail};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 use paste::item;
 use toml::value::{Array, Datetime};
 
@@ -53,7 +52,7 @@ macro_rules! delegate_getter {
                     match value.[<as_ $toml_value_fn>]() {
                         Some(x) => Ok(Some(x)),
                         // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
-                        None => Err(anyhow!(self.make_location_error()))
+                        None => Err(qp_err!("{}", self.make_location_error()))
                                     .context(
                                         format!("the key `{key}` expects {}, not {}", $human_type, value.type_str_with_article())
                                     )
@@ -131,7 +130,7 @@ impl TomlConfig {
                 .unwrap_or_else(|| Path::new("<default-config>").display()) // It's dyn-hack.
         );
         if key.is_empty() {
-            internal_bail!("empty key")
+            qp_bail_internal!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -152,7 +151,7 @@ impl TomlConfig {
                 return Ok(None);
             };
             let Value::Table(next) = next else {
-                bail!(
+                qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
                     next.type_str_with_article()
@@ -170,7 +169,7 @@ impl TomlConfig {
     #[track_caller]
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
-            internal_bail!("empty key")
+            qp_bail_internal!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -191,7 +190,7 @@ impl TomlConfig {
             };
             let next_type = next.type_str_with_article();
             let Some(next) = next.as_table_mut() else {
-                bail!(
+                qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
                     next_type
@@ -208,7 +207,7 @@ impl TomlConfig {
             .with_context(|| self.make_location_error())
     }
 
-    fn make_empty_key_fragment_error(i: usize, key: &str) -> anyhow::Error {
+    fn make_empty_key_fragment_error(i: usize, key: &str) -> QuackError {
         let i = i + 1;
         let last_two = i % 100;
         let digit = last_two % 10;
@@ -219,7 +218,7 @@ impl TomlConfig {
             3 if decimal != 10 => "rd",
             _ => "th",
         };
-        anyhow!("{i}{suffix} part of the key `{key}` is empty")
+        qp_err!("{i}{suffix} part of the key `{key}` is empty")
     }
 
     delegate_getter! {

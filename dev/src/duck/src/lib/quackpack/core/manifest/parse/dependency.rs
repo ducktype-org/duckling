@@ -1,7 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
 use super::source;
-use anyhow::Context;
 use tracing::Level;
 use tracing::span;
 use tracing::trace;
@@ -9,6 +8,7 @@ use tracing::trace;
 use super::Scope;
 
 use crate::StrId;
+use crate::util_common::error::QuackResultContext;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
 use crate::quackpack::core::DependencyDescription;

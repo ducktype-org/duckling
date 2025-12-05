@@ -8,7 +8,6 @@ use crate::{
     DuckCtx, QpCtx,
     quackpack::core::{GitRevision, Source},
     static_str_id,
-    util_common::error::ErrorExt,
 };
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -126,11 +125,11 @@ dependencies:
     let ctx = DuckCtx::default();
     let err = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             ["dependencies.a.version: invalid digit found in string at line 8 column 14"]
-        )
+        ).join("\n")
     );
 }
 
@@ -220,14 +219,14 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             [
                 "expected the dependency `dependencies.a` to not be a git dependency, \
        but the field `dependencies.a.source.tag` is set"
             ]
-        )
+        ).join("\n")
     );
 }
 
@@ -250,14 +249,14 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             [
                 "when parsing the field `dependencies.a`",
                 "a registry dependency must provide at least one version",
             ]
-        )
+        ).join("\n")
     );
 }
 
@@ -281,14 +280,14 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             [
                 "couldn't determine the type of the dependency `dependencies.a`
 hint: remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
             ]
-        )
+        ).join("\n")
     )
 }
 
@@ -307,8 +306,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
-        make_errors_message(&dir, ["missing the obligatory section `metadata`"])
+        format!("{err}"),
+        make_errors_message(&dir, ["missing the obligatory section `metadata`"]).join("\n")
     )
 }
 
@@ -330,8 +329,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
-        make_errors_message(&dir, ["missing the obligatory key `metadata.name`"])
+        format!("{err}"),
+        make_errors_message(&dir, ["missing the obligatory key `metadata.name`"]).join("\n")
     )
 }
 
@@ -353,8 +352,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
-        make_errors_message(&dir, ["missing the obligatory key `metadata.version`"])
+        format!("{err}"),
+        make_errors_message(&dir, ["missing the obligatory key `metadata.version`"]).join("\n")
     )
 }
 
@@ -550,14 +549,14 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
                   `dependencies.a.source.branch`, `dependencies.a.source.commit`"
             ]
-        )
+        ).join("\n")
     );
 }
 
@@ -756,13 +755,13 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        format!("{err}"),
         make_errors_message(
             &dir,
             [
                 "when parsing the field `dependencies.a.conditions`",
                 "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
             ]
-        )
+        ).join("\n")
     );
 }
