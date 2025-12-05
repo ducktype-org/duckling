@@ -16,7 +16,6 @@
     #error "AtomicFlagMutex requires atomic wait/notify functionality (C++20)."
 #endif
 
-
 namespace concurrent {
     
     /**
