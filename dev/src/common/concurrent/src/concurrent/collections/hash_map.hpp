@@ -36,7 +36,18 @@ namespace concurrent {
 
         using KeyValuePair = typename HashMapType::KeyValuePair;
 
-        
+        struct WithLock final {
+            u64 shard_index;
+            ConcurrentStableHashMap& self;
+
+            WithLock(ConcurrentStableHashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
+                self.shard_mutexes[shard_index].lock();
+            }
+
+            ~WithLock() noexcept {
+                self.shard_mutexes[shard_index].unlock();
+            }
+        };
 
 
     public:
