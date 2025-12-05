@@ -40,10 +40,6 @@ namespace concurrent {
          */
 		void lock() noexcept {
 			while (atomic_flag.test_and_set(std::memory_order_acquire)) [[unlikely]] {
-				// Since C++20, locks can be acquired only after notification in the unlock,
-				// avoiding any unnecessary spinning.
-				// Note that even though wait guarantees it returns only after the value has
-				// changed, the lock is acquired after the next condition check.
 				atomic_flag.wait(true, std::memory_order_relaxed);
             }
 		}

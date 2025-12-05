@@ -4,6 +4,11 @@
 #include <concurrent/module_flags/worker_count.hpp>
 #include <concurrent/locks/atomic_flag_mutex.hpp>
 
+
+// remove this later:
+#include <semaphore>
+#include <mutex>
+
 namespace concurrent {
 
     /**
@@ -39,12 +44,14 @@ namespace concurrent {
             u64 shard_index;
             const HashMap& self;
 
-            WithLock(HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
+            WithLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
+                // self.shard_mutexes[shard_index].acquire();
                 self.shard_mutexes[shard_index].lock();
             }
 
             ~WithLock() noexcept {
                 self.shard_mutexes[shard_index].unlock();
+                // self.shard_mutexes[shard_index].release();
             }
         };
 
@@ -55,7 +62,7 @@ namespace concurrent {
             shard_mutexes(shard_counts) {}
 
         HashMap(const HashMap&) = delete;
-        HashMap(HashMap&&) = delete;
+        HashMap(HashMap&&)      = delete;
 
         ~HashMap() = default;
 
@@ -72,24 +79,70 @@ namespace concurrent {
             return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
         }
 
+        /**
+		 * Inserts key->value into the container.
+		 * Does nothing if key already exists.
+		 * @param key Data key
+		 * @param value The data
+		 * @returns A reference to the inserted key-value pair.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void tryPut(const K& key, const D& value) RELEASE_NOEXCEPT {
+            // auto shard = keyToShard(key);
+            // WithLock lock(*this, 1);
+
+            static std::mutex mutex;
+            std::lock_guard<std::mutex> guard(mutex);
+
+            if (shards[1].contains(key)) {
+                return;
+            }
+            shards[1].put(key, value);
+        }
+
+        /**
+         * Atomically retrieves a copy of the value associated with the given key.
+         */
         [[nodiscard]]
-		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
             WithLock lock(*this, keyToShard(key));
-            return shards[lock.shard_index].atMaybe(key);
+            DATA_T value = shards[lock.shard_index][key];
+            return value;
+        }
+
+        // PR: this does not work well with concurrent map, since
+        // there can be races on reference returned.
+        // [[nodiscard]]
+		// auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+        //     WithLock lock(*this, keyToShard(key));
+        //     return shards[lock.shard_index].atMaybe(key);
+        // }
+
+        
+
+        // operators[] don't work well with concurrent map, since
+        // DATA_T& operator[](const KEY_T& key) {
+        // }
+		// const DATA_T& operator[](const KEY_T& key) const { return **atMaybe(key); }
+
+        template<typename K = KEY_T, typename D = DATA_T>
+        void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+            WithLock lock(*this, keyToShard(key));
+            shards[lock.shard_index][key] = value;
         }
 
         [[nodiscard]]
-		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
             WithLock lock(*this, keyToShard(key));
-            return shards[lock.shard_index].atMaybe(key);
-        }
+            return shards[lock.shard_index].contains(key);
+		}
 
     private:
         const u64 worker_count = concurrent::getWorkerCount();
         const u64 shard_counts = worker_count * 4;
 
         std::vector<HashMapType> shards;
-        mutable std::vector<AtomicFlagMutex> shard_mutexes;
+        mutable std::vector<std::mutex> shard_mutexes;
     };
 
 }
