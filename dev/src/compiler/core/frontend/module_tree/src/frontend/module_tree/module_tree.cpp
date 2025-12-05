@@ -56,14 +56,14 @@ namespace {
 
 namespace compiler::frontend {
 
-	const hashing::ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
+	const hashing::ComponentHash& ModuleTree::getPathComponentHash(ModuleID module_id) {
 		Ref<ModuleTree> module = module_id.ref;
-		if (!module->m_component_hash.has_value()) {
+		if (!module->m_path_component_hash.has_value()) {
 			// iterate thru parents to find one with component hash set or reach root (go up)
 			base::Ref<ModuleTree>              g_parent          = module;
 			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
 			while (g_parent->m_parent.has_value()
-			       && !g_parent->m_parent.value()->m_component_hash.has_value()) {
+			       && !g_parent->m_parent.value()->m_path_component_hash.has_value()) {
 				g_parent = g_parent->m_parent.value();
 				modules_to_update.push_back(g_parent);
 			}
@@ -71,9 +71,9 @@ namespace compiler::frontend {
 			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateComponentHash();
 		}
 		CORE_ASSERT(
-			module->m_component_hash.has_value(), "Component hash should have value after update!"
+			module->m_path_component_hash.has_value(), "Component hash should have value after update!"
 		);
-		return module->m_component_hash.value();
+		return module->m_path_component_hash.value();
 	}
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
@@ -110,6 +110,7 @@ namespace compiler::frontend {
 	bool ModuleTree::hasMainSourceFile() const { return m_main_source_file.has_value(); }
 
 	FileAccessLocked ModuleTree::getMainSourceFile() const {
+		CORE_ASSERT(m_main_source_file.has_value(), "Main source file does not exist!");
 		return FileAccessLocked(m_main_source_file.value()->getFileID());
 	}
 
@@ -148,14 +149,14 @@ namespace compiler::frontend {
 
 		if (hasMainSourceFile())
 			output << indent << "├> "
-				   << getFileRef(getMainSourceFile().illegalAccess().getID())->getFile().name()
+				   << getFileRef(getMainSourceFile().illegalAccess().getID())->file.name()
 				   << '\n';
 		else
 			output << indent << "├> Missing main module file!\n";
 
 		for (const auto& file_ref: getSourceFiles())
 			output << indent
-				   << "├= " << getFileRef(file_ref.illegalAccess().getID())->getFile().name()
+				   << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
 				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
@@ -170,7 +171,7 @@ namespace compiler::frontend {
 
 	void ModuleTree::invalidateComponentHash() {
 		// If ModuleHash is invalid, then children are also invalid
-		if (!m_component_hash.has_value()) {
+		if (!m_path_component_hash.has_value()) {
 			// assert if children are invalid too
 			for (auto& sf: m_source_files)
 				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
@@ -181,11 +182,11 @@ namespace compiler::frontend {
 				);
 			for (auto& [_, submodule]: m_submodules)
 				CORE_ASSERT(
-					!submodule->m_component_hash.has_value(), "Child component hash have value!"
+					!submodule->m_path_component_hash.has_value(), "Child component hash have value!"
 				);
 			return;
 		}
-		m_component_hash.reset();
+		m_path_component_hash.reset();
 		for (auto& sf: m_source_files) sf->invalidateComponentHash();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
 		for (auto& [_, submodule]: m_submodules) submodule->invalidateComponentHash();
@@ -193,18 +194,34 @@ namespace compiler::frontend {
 
 	void ModuleTree::updateComponentHash() {
 		// Get parent component hash if existsS
-		base::Optional<hashing::ComponentHash> parent_hash;
 		if (m_parent.has_value()) {
 			CORE_ASSERT(
-				m_parent.value()->m_component_hash.has_value(),
+				m_parent.value()->m_path_component_hash.has_value(),
 				"Parent component hash should have value!"
 			);
-			m_component_hash.emplace(m_parent.value()->m_component_hash.value(), m_name);
+			m_path_component_hash.emplace(m_parent.value()->m_path_component_hash.value(), m_name);
 		} else {
 			// root module tree, use package id as base
 			CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for module tree!");
-			m_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
+			m_path_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
 		}
+
+		// Copy the path component hash to the component hash
+		hashing::ComponentHash::HashAlg partial = m_path_component_hash->partial;
+
+		// If a Module has parent
+		hashing::addToHash(partial, m_parent.has_value());
+
+		// If a Module has a main source file
+		hashing::addToHash(partial, hasMainSourceFile());
+
+		// The number of SourceFiles
+		hashing::addToHash(partial, m_source_files.size());
+
+		//Number of SubModules 
+		hashing::addToHash(partial, m_submodules.size());
+
+		m_hash = partial.finalize();
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(

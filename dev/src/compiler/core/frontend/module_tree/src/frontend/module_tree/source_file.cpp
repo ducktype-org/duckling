@@ -65,8 +65,8 @@ namespace compiler::frontend {
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
 		if (!component_hash.has_value()) {
-			auto m_component_hash = ModuleTree::getComponentHash(linked_module);
-			component_hash        = hashing::ComponentHash(m_component_hash, lang_file_name);
+			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
+			component_hash        = hashing::ComponentHash(m_path_component_hash, lang_file_name);
 		}
 		return component_hash.value();
 	}
@@ -81,7 +81,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	base::SharedView SourceFile::getCachedContent() {
+	base::SharedView SourceFile::getCachedContentIllegalAcess() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		if (to_content.contains(abs_path)) {
 			CORE_ASSERT(

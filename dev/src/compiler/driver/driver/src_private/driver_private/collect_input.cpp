@@ -27,7 +27,7 @@ namespace compiler::driver {
 
 		// Collect module side input
 		out->emplace_back(
-			QueryModuleSideInput::getID(), ModuleTree::getComponentHash(module_id).hash
+			QueryModuleSideInput::getID(), ModuleTree::getPathComponentHash(module_id).hash
 		);
 
 		auto collect_from_pst = [&](auto& pst_ref) {

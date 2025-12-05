@@ -36,7 +36,7 @@ namespace compiler::driver {
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
-		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
+		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
 		auto partial        = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
 		return partial.finalize();
@@ -102,7 +102,7 @@ namespace compiler::driver {
 			auto module_name
 				= base::StrID(base::strConcat(
 								  "module_",
-								  compiler::frontend::ModuleTree::getComponentHash(key.module_id)
+								  compiler::frontend::ModuleTree::getPathComponentHash(key.module_id)
 									  .hash.toStringHex()
 				)
 			                      .c_str());

@@ -92,7 +92,7 @@ private:
 			auto module_name
 				= base::StrID(base::strConcat(
 								  "module_",
-								  frontend::ModuleTree::getComponentHash(module).hash.toStringHex()
+								  frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
 				)
 			                      .c_str());
 

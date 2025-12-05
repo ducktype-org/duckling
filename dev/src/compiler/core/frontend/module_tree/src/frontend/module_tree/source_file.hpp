@@ -94,8 +94,9 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.
+		 * You can use it only outside the query.
 		 */
-		[[nodiscard]] fs::File getFile() const { return file; }
+		[[nodiscard]] fs::File getFileIllegalAccess() const { return file; }
 
 		/**
 		 * @brief Returns the module this SourceFile is linked to.
@@ -123,7 +124,7 @@ namespace compiler::frontend {
 		 * @return Cached base::SharedView for this SourceFile.
 		 * @throws Panics if the content is not found in the cache.
 		 */
-		[[nodiscard]] base::SharedView getCachedContent();
+		[[nodiscard]] base::SharedView getCachedContentIllegalAcess();
 
 		[[nodiscard]] const hashing::ComponentHash& getComponentHash() const;
 

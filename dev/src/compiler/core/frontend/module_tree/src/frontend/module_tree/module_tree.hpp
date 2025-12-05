@@ -58,6 +58,7 @@ namespace compiler::frontend {
 
 	public:
 		ModuleID getModuleID() const;
+		
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
 		 * @return If a module has parent module, then a reference to it is passed
@@ -124,7 +125,7 @@ namespace compiler::frontend {
 		 * @param module_id ModuleID of the module to get the component hash for.
 		 */
 		[[nodiscard]]
-		static const hashing::ComponentHash& getComponentHash(ModuleID module_id);
+		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -147,7 +148,7 @@ namespace compiler::frontend {
 		void invalidateComponentHash();
 
 		/**
-		 * Use a parent component hash, and update m_component_hash for this module only
+		 * Use a parent component hash, and update m_path_component_hash for this module only
 		 * This does not propagate to children
 		 */
 		void updateComponentHash();
@@ -163,7 +164,9 @@ namespace compiler::frontend {
 		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
-		base::Optional<hashing::ComponentHash>            m_component_hash;
+		base::Optional<hashing::ComponentHash>            m_path_component_hash;
+		base::Optional<hashing::ComponentHash::HashType>            m_hash;
+
 		/**
 		 * Package ID associated with this module tree.
 		 * Used for component hash calculation.
