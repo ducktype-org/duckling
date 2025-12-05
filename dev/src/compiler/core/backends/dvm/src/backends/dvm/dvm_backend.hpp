@@ -11,7 +11,6 @@ namespace compiler::backend_vm {
 
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
-	 * @note Currently it does not support dynamic function insertion, but it will.
 	 */
 	class Module {
 		base::StrID module_id;

@@ -1,16 +1,16 @@
 #pragma once
 
 #include "dvm_value.hpp"
-#include "typesystem/lower/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
 #include <base/pointers/ref.hpp>
 
-#include "vm/bytecode/builders/instruction_builder.hpp"
-#include "vm/bytecode/instructions.hpp"
-#include "vm/bytecode/type_of_data.hpp"
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace compiler::backend_vm::internal {

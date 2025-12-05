@@ -2,7 +2,7 @@
 
 #include <backends/dvm/dvm_backend.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
 namespace compiler::backend_vm {

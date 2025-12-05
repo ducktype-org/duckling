@@ -70,7 +70,7 @@ namespace compiler::backend_vm::internal {
 
 		bool operator==(const DVMValue& other) const = default;
 
-											operator vm::opargs::OpCodeArg() const;
+		operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 }

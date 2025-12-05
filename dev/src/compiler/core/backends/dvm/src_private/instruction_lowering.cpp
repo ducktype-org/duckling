@@ -4,15 +4,10 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
-
 #include <logger/logger.hpp>
 
-#include "vm/bytecode/opcode_args.hpp"
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 
 using namespace compiler::backend_vm::internal;
 using namespace vm::code;
@@ -166,13 +161,11 @@ void FunctionLoweringContext::handleFunctionCall(
 	pushInstruction({ OpKind::call, called_func_name });
 
 	if (output) {
-		pushInstruction(
-			{
-				OpKind::mov,
-				output.value(),
-				call_result_storage.value().asArgument(),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			output.value(),
+			call_result_storage.value().asArgument(),
+		});
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
@@ -231,13 +224,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(
-		instructions::Comment(
-			base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-			)
-		)
-	);
+	pushInstruction(instructions::Comment(base::StrID(
+		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
+	)));
 
 	if (lir_terminator.operation == lir::Operation::Branch) {
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
@@ -276,13 +265,11 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 
 		// Since VM does not support `return X;` operation, we must move the value to
 		// the ret_val local and then return.
-		pushInstruction(
-			{
-				OpKind::mov,
-				getFunctionReturnValueLocal().asArgument(),
-				lowerLirValue(lir_terminator.arguments.at(0)),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			getFunctionReturnValueLocal().asArgument(),
+			lowerLirValue(lir_terminator.arguments.at(0)),
+		});
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -297,12 +284,10 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.name = base::StrID(name.c_str()),
 		.type = type,
 	};
-	pushInstruction(
-		{
-			OpKind::init,
-			vm::opargs::StackLocalAny(temp_local.name),
-			vm::opargs::Type(typeName(type)),
-		}
-	);
+	pushInstruction({
+		OpKind::init,
+		vm::opargs::StackLocalAny(temp_local.name),
+		vm::opargs::Type(typeName(type)),
+	});
 	return temp_local;
 }
