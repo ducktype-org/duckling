@@ -30,6 +30,7 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(callNoCapture);
 	}
 
 protected:
@@ -119,6 +120,8 @@ private:
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+
+	void callNoCapture() { runTest("modules/call_no_capture", {}, {}, {}, 12); }
 };
 
 
