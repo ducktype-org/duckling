@@ -1,4 +1,4 @@
- This test checks record default values during construction and named arguments to constructors.
+# This test checks record default values during construction and named arguments to constructors.
 #
 # This includes calling a function every time the constructor
 # is called, if the function call is used as a default value.
