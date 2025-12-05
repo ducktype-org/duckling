@@ -2,7 +2,4 @@
 
 #include <base/>"
 
-namespace concurrent {
-
-}
-
+namespace concurrent {}
