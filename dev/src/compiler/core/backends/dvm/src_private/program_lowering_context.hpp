@@ -55,7 +55,8 @@ namespace compiler::backend_vm::internal {
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
 
-		base::Map<CRef<lir::LIRGlobal>, DVMGlobal>            lir_global_to_dvm;
-		base::Map<CRef<lir::LIRGlobal>, vm::code::GlobalData> lir_global_to_dvm_data;
+		// Using names as keys to avoid issues with CRef hash/equality.
+		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;
+		base::HashMap<base::StrID, vm::code::GlobalData> lir_global_to_dvm_data;
 	};
 }

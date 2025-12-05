@@ -9,7 +9,7 @@
 
 #include <string_id/string_id.hpp>
 
-#include "vm/bytecode/opcode_args.hpp"
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 
@@ -152,19 +152,38 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
 
 vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
 	vm::code::Function function;
-	function.name                  = function_name;
-	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
-	for (const auto& param_type: function_parameter_types)
-		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+	function.name = function_name;
+
+	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
+	// should be removed.
+	if (function_name == "main") {
+		function.signature.parameters.emplace_back(base::StrID("i64"));
+		function.signature.parameters.emplace_back(base::StrID("ptr_argv"));
+		function.signature.result_type = vm::code::Identifier(base::StrID("i64"));
+	} else {
+		for (const auto& param_type: function_parameter_types)
+			function.signature.parameters.emplace_back(vm::code::typeName(param_type));
+		function.signature.result_type
+			= vm::code::Identifier(vm::code::typeName(function_return_type));
+	}
 	function.body = std::move(function_body);
 	return function;
 }
 
 DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
-	return DVMLocal{
-		.name = base::StrID("ret_val"),
-		.type = function_return_type,
-	};
+	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
+	// should be removed.
+	if (function_name == "main") {
+		return DVMLocal{
+			.name = base::StrID("ret_val"),
+			.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
+		};
+	} else {
+		return DVMLocal{
+			.name = base::StrID("ret_val"),
+			.type = function_return_type,
+		};
+	}
 }
 
 [[nodiscard]] const compiler::backend_vm::internal::DVMLocal& compiler::backend_vm::internal::

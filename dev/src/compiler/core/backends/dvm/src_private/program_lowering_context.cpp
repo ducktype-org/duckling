@@ -23,7 +23,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
-	if (auto maybe_global = lir_global_to_dvm.atMaybe(global))
+	if (auto maybe_global = lir_global_to_dvm.atMaybe(global->mangled_name))
 		return **maybe_global;
 	else
 		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
@@ -34,12 +34,16 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	base::Optional<CRef<lir::Function>> global_ctor,
 	base::Optional<CRef<lir::Function>> global_dtor
 ) {
-	if (auto maybe_global = lir_global_to_dvm_data.atMaybe(&lir_global)) return **maybe_global;
+	if (auto maybe_global = lir_global_to_dvm_data.atMaybe(lir_global.mangled_name))
+		return **maybe_global;
 
 	auto global_type = lowerAndKeepTslType(lir_global.layout);
 
+	// Register the global variable itself before inserting ctor/dtor to handle
+	// recursive references.
+	std::cerr << "Registering global: " << lir_global.mangled_name.strView() << "\n";
 	lir_global_to_dvm.put(
-		&lir_global, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
+		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
 	);
 
 	using vm::code::Identifier;
@@ -64,8 +68,8 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	global_data.ctor_name = ctor_name;
 	global_data.dtor_name = dtor_name;
 
-	lir_global_to_dvm_data.put(&lir_global, global_data);
-	return lir_global_to_dvm_data.at(&lir_global);
+	lir_global_to_dvm_data.put(lir_global.mangled_name, global_data);
+	return lir_global_to_dvm_data.at(lir_global.mangled_name);
 }
 
 const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext::lowerAndKeepLirFunction(

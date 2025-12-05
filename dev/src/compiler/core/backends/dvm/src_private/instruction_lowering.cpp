@@ -10,6 +10,7 @@
 
 #include <logger/logger.hpp>
 
+#include "vm/bytecode/opcode_args.hpp"
 #include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 
@@ -117,6 +118,10 @@ namespace {
 		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
 		    || op == OpKind::fcmpGe;
 	}
+
+	bool isUnaryOperation(OpKind op) {
+		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
+	}
 }
 
 void FunctionLoweringContext::handleFunctionCall(
@@ -191,12 +196,22 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// a CMP b;
 		// cmov x, 1;
 		pushInstruction({ lirOpToOpKind(lir_instruction.operation), args[0], args[1] });
-		pushInstruction({ OpKind::cmov, maybe_output.value(), args[1] });
+		pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		auto called_func_name = args.front();
 		args.pop_front();
 		handleFunctionCall(called_function, called_func_name, args, maybe_output);
+	} else if (isUnaryOperation(operation)) {
+		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
+		auto output = maybe_output.value();
+		// If instruction is of the form: a = OP b, then
+		// we transform it to:
+		// a = b;
+		// a = OP a;
+		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
+
+		pushInstruction({ operation, output });
 	} else if (args.size() == 2) {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
