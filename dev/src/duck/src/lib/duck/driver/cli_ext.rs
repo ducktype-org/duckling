@@ -29,7 +29,9 @@ pub trait CommandExt: Sized {
     }
 
     fn add_profile(self) -> Self {
-        self._arg_impl(optional("profile", "Select compilation profile").conflicts_with("release"))
+        self._arg_impl(
+            optional("profile", "Select the compilation profile").conflicts_with("release"),
+        )
     }
 
     fn add_release(self) -> Self {
@@ -67,7 +69,7 @@ pub trait CommandExt: Sized {
 
     fn add_color(self) -> Self {
         self._arg_impl(
-            optional("color", "Control colored output")
+            optional("color", "Control the colored output")
                 .value_parser(["always", "never", "auto"])
                 .default_value("auto"),
         )
@@ -75,10 +77,13 @@ pub trait CommandExt: Sized {
 
     fn add_jobs(self) -> Self {
         self._arg_impl(
-            optional("jobs", "Specify number of threads to use by a compiler")
-                .short('j')
-                .value_name("N")
-                .value_parser(1..),
+            optional(
+                "jobs",
+                "Specify the number of threads to use by the compiler",
+            )
+            .short('j')
+            .value_name("N")
+            .value_parser(1..),
         )
     }
 

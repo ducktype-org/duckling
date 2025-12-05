@@ -25,9 +25,9 @@ impl Features {
             for pulled_feature in pulled_features {
                 if !features.contains_key(pulled_feature) {
                     bail!(
-                        "feature `{feature}` requires absent feature `{pulled_feature}`\n\
+                        "the feature `{feature}` requires an absent feature `{pulled_feature}`\n\
                          help: every feature needs to pull in some features, try adding \
-                         `{pulled_feature}: []` to your manifest"
+                         `{pulled_feature}: []` to the your manifest"
                     )
                 }
             }
@@ -68,7 +68,7 @@ impl Features {
     }
 
     /// Get the underlying feature map.
-    pub fn as_map(&self) -> &HashMap<FeatureName, Vec<FeatureName>> {
+    pub fn all_features(&self) -> &HashMap<FeatureName, Vec<FeatureName>> {
         &self.0
     }
 }
@@ -182,8 +182,8 @@ mod tests {
     fn invalid_features() {
         assert_eq!(
             Features::new(make_invalid_map()).unwrap_err().to_string(),
-            "feature `a` requires absent feature `b`
-help: every feature needs to pull in some features, try adding `b: []` to your manifest"
+            "the feature `a` requires an absent feature `b`
+help: every feature needs to pull in some features, try adding `b: []` to the your manifest"
         );
     }
 }

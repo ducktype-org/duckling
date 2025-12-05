@@ -1,5 +1,6 @@
 #include "queries.hpp"
 
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -14,6 +15,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
@@ -151,24 +153,21 @@ namespace compiler::helios {
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
 			) {
 				// Default return type is a direct unit.
-				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+				auto ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 
+				// Set return type if provided.
 				if (ret.has_value()) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluatePSTExpression>(ret.value().unlock(ctx)->getExpr()
-					    )) {
-						if (auto maybe_type = ctv.value().getType(ctx))
-							ret_type = maybe_type.value();
-						else
-							return;
-					} else {
-						// We just fail here, because we can't continue without type.
+					const auto ret_type_ctv
+						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr());
+					if (ret_type_ctv.hasError()) {
+						// we just fail here, because we can't continue without type
 						return;
 					}
+					ret_type = ret_type_ctv.value().get<tsh::SymbolType<>>().value();
 				}
 
 				// Parameters:
@@ -291,6 +290,7 @@ namespace compiler::helios {
 						  const auto field_type     = field.getType(ctx);
 						  const auto coercion
 							  = canCoerce(ctx, init_expr_type, field_type)
+					                // @TODO: #1620 report error here when HOUT exposes position.
 					                .expect(base::strConcat(
 										"Cannot coerce default field value of type ",
 										init_expr_type.toString(),
@@ -511,6 +511,12 @@ namespace compiler::helios {
 							"Left side of assignment can't be a literal."
 						)
 					);
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Left side of assignment is a literal",
+						var.unlock(ctx)->getSourcePosition(),
+						"",
+						"here"
+					));
 					return;  // fail
 				}
 
@@ -570,10 +576,8 @@ namespace compiler::helios {
 
 				// else just create an expression statement:
 
-				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })
-				                .expect("Not handling errors here yet... (ExprStmt)");
-
-				output(code::ExprStmt(std::move(expr)));
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr });
+				if (expr.hasValue()) output(code::ExprStmt(std::move(expr).value()));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
@@ -652,9 +656,7 @@ namespace compiler::helios {
 					          .expect("Not handling errors here yet... (variable initial value)");
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
-					auto coercion           = canCoerce(
-                        ctx, initial_value->expression_type.getSymbolType(), symbol_type
-                    );
+					auto coercion           = canCoerce(ctx, initial_value_type, symbol_type);
 					if (coercion.hasError()) {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -668,6 +670,13 @@ namespace compiler::helios {
 								initial_value_type.toString(),
 								"\n"
 							)
+						));
+						ctx.logInt(makeBox<errors::IncompatibleTypesError>(
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+							errors::InteractiveType(
+								symbol_type, { stmt->getType()->unlock(ctx)->getExpr().unlock(ctx) }
+							),
+							errors::InteractiveType(initial_value_type, {})
 						));
 						return;  // fail
 					}

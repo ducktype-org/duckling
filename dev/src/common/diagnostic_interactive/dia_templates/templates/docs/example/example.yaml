@@ -1,0 +1,25 @@
+metadata:
+  type: "docs"
+  family: "example"
+  name: "example"
+  code: "0000"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  language_name:
+    description: "The best programming languague in the world."
+  country_name:
+    description: "The country of origin of this language."
+
+header_message:
+  - "Important! The best programming lanaguage in the world is `"
+  - param: "language_name"
+  - "`."
+
+description:
+  - "This language was created in `"
+  - param: "country_name"
+  - "`."

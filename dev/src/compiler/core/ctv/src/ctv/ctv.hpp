@@ -36,19 +36,6 @@ namespace compiler::ctv {
 				return elements;
 			}
 
-			/**
-			 * @brief Checks whether the tuple can be interpreted as a type.
-			 * This is true iff all elements of the tuple can be interpreted as types.
-			 * @return True if the tuple can be interpreted as a type, false otherwise.
-			 * @TODO: #1618 Remove
-			 */
-			[[nodiscard]]
-			bool canBeType() const {
-				for (const auto& element: elements)
-					if (!element.canBeType()) return false;
-				return true;
-			}
-
 		private:
 			std::vector<CompileTimeValue> elements;
 		};
@@ -95,26 +82,13 @@ namespace compiler::ctv {
 		}
 
 		/**
-		 * @brief Retrieves the value of type from the CTV.
-		 * @note Possibly converts tuple and unit values to types.
-		 * @param ctx The query context for lifting unit value to unit type.
-		 * @return A type value or an empty optional if the CTV didn't store a type.
+		 * @brief Checks whether a CTV stores a value of a given type.
+		 * @return True, if the value of a given type is stored in the CTV, false otherwise.
 		 */
-		[[nodiscard]]
-		base::Optional<tsh::SymbolType<>> getType(query::Context& ctx) const;
-
-		/**
-		 * @brief Checks whether the CTV can be interpreted as a type.
-		 *
-		 * For example:
-		 * CTVs that are symbol types can always be interpreted as types.
-		 * Boolean and integral CTVs can never be interpreted as types.
-		 * Tuples can be interpreted as types iff all their elements can.
-		 *
-		 * @return True if the CTV can be interpreted as a type, false otherwise.
-		 */
-		[[nodiscard]]
-		bool canBeType() const;
+		template<typename T>
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) [[nodiscard]] bool has() const {
+			return std::holds_alternative<T>(value);
+		}
 
 		/**
 		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the CTV.

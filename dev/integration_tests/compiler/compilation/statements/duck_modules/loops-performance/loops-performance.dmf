@@ -20,5 +20,5 @@ fun main() -> i64 = {
         a = a + c;
     }
     builtin_output_i64(a); # a = 1000001
-    return 0;
+    return 0i64;
 }

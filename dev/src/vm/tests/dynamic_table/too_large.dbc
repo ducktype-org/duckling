@@ -8,8 +8,7 @@ function main { i64, ptr_argv } -> i64 {
     output_l64 size;
 
     init_lany_type ptr, ptr_b_a;
-    dynTableReAlloc_lptr_type ptr, byte_array;  # alloc 2^63 bytes
-    ext_l64 size;
+    dynTableReAlloc_lptr_type_l64 ptr, byte_array, size;  # alloc 2^63 bytes
 
     ret;
 }

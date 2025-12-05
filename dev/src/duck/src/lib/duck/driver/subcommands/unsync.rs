@@ -6,7 +6,7 @@ use crate::duck::driver::cli_ext::{optional, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("unsync")
-        .about("Unsynchronize current or choses venv by removing its state from the storage")
+        .about("Unsynchronize the chosen venv by removing its state from the storage")
         .arg(optional("venv-id", "Id of the venv to unsynchronize"))
 }
 

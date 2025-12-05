@@ -1,28 +1,33 @@
 use crate::{
     DuckCtx,
-    quackpack::{core::Summary, schemas::manifest::Manifest as ManifestSchema},
+    quackpack::{core::Manifest, schemas::manifest::Manifest as ManifestSchema},
 };
-use std::sync::Arc;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[derive(Debug, Clone)]
-/// High-level abstraction about a manifest of a package we're working on.
-pub struct Manifest {
-    inner: Arc<ManifestInner>,
+/// High-level abstraction over a package we are currently working on.
+pub struct Package {
+    inner: Arc<PackageInner>,
 }
 
-impl Manifest {
-    /// Create a new manifest.
+impl Package {
+    /// Create a new package.
     pub fn new(
         original_content: String,
         original_schema: ManifestSchema,
-        summary: Summary,
+        manifest: Manifest,
+        root: PathBuf,
         warnings: Vec<String>,
     ) -> Self {
         Self {
-            inner: Arc::new(ManifestInner {
+            inner: Arc::new(PackageInner {
                 original_content,
                 original_schema,
-                summary,
+                manifest,
+                root,
                 warnings,
             }),
         }
@@ -38,9 +43,14 @@ impl Manifest {
         &self.inner.original_schema
     }
 
-    /// Get the high-level summary of the manifest.
-    pub fn summary(&self) -> &Summary {
-        &self.inner.summary
+    /// Get the high-level abstraction over the manifest.
+    pub fn manifest(&self) -> &Manifest {
+        &self.inner.manifest
+    }
+
+    /// Get the root directory of the Package.
+    pub fn root_directory(&self) -> &Path {
+        &self.inner.root
     }
 
     pub fn emit_warnings(&self, ctx: &DuckCtx) {
@@ -51,10 +61,11 @@ impl Manifest {
 }
 
 #[derive(Debug)]
-struct ManifestInner {
+struct PackageInner {
     original_content: String,
     original_schema: ManifestSchema,
-    summary: Summary,
+    manifest: Manifest,
+    root: PathBuf,
     warnings: Vec<String>,
 }
 
@@ -63,10 +74,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn assert_send_sync_manifest() {
+    fn assert_send_sync_package() {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
-        assert_send::<Manifest>();
-        assert_sync::<Manifest>();
+        assert_send::<Package>();
+        assert_sync::<Package>();
     }
 }
