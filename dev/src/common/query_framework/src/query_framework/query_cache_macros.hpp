@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concurrent/collections/hash_map.hpp>
+
 /**
  * @brief Macro defining typical hash based cache.
  * It caches PResults using base::HashMap and returns copies of results on cache hit.
@@ -80,7 +82,7 @@
  * on cache hit.
  */
 #define QUERY_AUTO_CACHE_CREF                                                              \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
+	static inline concurrent::HashMap<KHash, query::CacheEntry<PResult>> cache;            \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
 			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };           \

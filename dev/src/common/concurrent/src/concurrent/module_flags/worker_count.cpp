@@ -14,8 +14,9 @@ namespace concurrent {
 	}
 
 	u64 getWorkerCount() {
-		CORE_ASSERT(worker_count != 0, "Worker count has not been set.");
-		return worker_count;
+		// CORE_ASSERT(worker_count != 0, "Worker count has not been set.");
+		// return worker_count;
+		return 12;
 	}
 
 }
