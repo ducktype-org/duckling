@@ -9,12 +9,13 @@ pub fn main() {
     let mut ctx = match DuckCtx::new() {
         Ok(ctx) => ctx,
         Err(err) => {
+            let stdout = Terminal::stdout();
             let stderr = Terminal::stderr();
-            print_error_and_exit(err, &stderr);
+            print_error_and_exit(err, &stdout, &stderr);
         }
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.error_console())
+        print_error_and_exit(e, ctx.console(), ctx.error_console())
     }
 }
 
@@ -35,8 +36,13 @@ fn setup_logger() {
     debug!("start = {:#?}", std::time::SystemTime::now());
 }
 
-fn print_error_and_exit(error: QuackError, stderr: &Terminal) -> ! {
-    print_error(&error, stderr);
+fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
+    if error.exit_code() == 0 {
+        print_error(&error, stdout);
+    }
+    else {
+        print_error(&error, stderr);
+    }
     std::process::exit(error.exit_code())
 }
 
