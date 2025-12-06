@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, iter::Rev, slice::Iter, num::TryFromIntError};
+use std::{error::Error, fmt, iter::Rev, num::TryFromIntError, slice::Iter};
 
 use crate::QuackResult;
 
