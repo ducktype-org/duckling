@@ -129,7 +129,8 @@ dependencies:
         make_errors_message(
             &dir,
             ["dependencies.a.version: invalid digit found in string at line 8 column 14"]
-        ).join("\n")
+        )
+        .join("\n")
     );
 }
 
@@ -226,7 +227,8 @@ dependencies:
                 "expected the dependency `dependencies.a` to not be a git dependency, \
        but the field `dependencies.a.source.tag` is set"
             ]
-        ).join("\n")
+        )
+        .join("\n")
     );
 }
 
@@ -256,7 +258,8 @@ dependencies:
                 "when parsing the field `dependencies.a`",
                 "a registry dependency must provide at least one version",
             ]
-        ).join("\n")
+        )
+        .join("\n")
     );
 }
 
@@ -285,9 +288,10 @@ dependencies:
             &dir,
             [
                 "couldn't determine the type of the dependency `dependencies.a`
-hint: remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
+remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
             ]
-        ).join("\n")
+        )
+        .join("\n")
     )
 }
 

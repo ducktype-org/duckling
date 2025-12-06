@@ -4,10 +4,8 @@ use rustvil::fs::PathExt;
 use tracing::{debug, trace};
 
 use crate::{
-    QpCtx, QuackResult,
+    QpCtx, QuackResult, qp_bail, qp_internal,
     quackpack::{core::PackageCtx, util::paths::MANIFEST_FILENAME},
-    qp_bail,
-    qp_internal
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

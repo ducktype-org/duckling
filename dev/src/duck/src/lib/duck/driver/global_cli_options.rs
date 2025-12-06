@@ -23,7 +23,7 @@ impl FromStr for Color {
             _ => Err(qp_err!(
                 "`{}` is not a valid color. This should be guarded by a parser",
                 s
-            ))
+            )),
         }
     }
 }

@@ -8,7 +8,6 @@ use tracing::trace;
 use super::Scope;
 
 use crate::StrId;
-use crate::util_common::error::QuackResultContext;
 use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
 use crate::quackpack::core::DependencyDescription;
@@ -18,6 +17,7 @@ use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
 use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
+use crate::util_common::error::QuackResultContext;
 
 use crate::static_str_id;
 use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};

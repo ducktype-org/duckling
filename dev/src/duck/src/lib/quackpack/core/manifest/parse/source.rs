@@ -6,10 +6,11 @@ use rustvil::fs::PathExt;
 
 use super::Scope;
 use crate::{
-    QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal, quackpack::{
+    QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
+    quackpack::{
         core::{Git, GitRevision, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
-    }
+    },
 };
 
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
@@ -31,16 +32,21 @@ pub(crate) fn parse(
         scope.pop();
         return Err(QuackError::new()
             .add_hint("provide one of the `version` or the `source` fields")
-            .context(format!("couldn't determine the source of the dependency `{}`", scope.format()))
-        )
+            .context(format!(
+                "couldn't determine the source of the dependency `{}`",
+                scope.format()
+            )));
     };
     if schema.version.is_some() && source.has_local() {
         scope.pop();
         let formatted = scope.format();
         return Err(QuackError::new()
-            .add_hint(format!("remove one of the fields `{formatted}.version` or `{formatted}.source.path`"))
-            .context(format!("couldn't determine the type of the dependency `{formatted}`"))
-        )
+            .add_hint(format!(
+                "remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
+            ))
+            .context(format!(
+                "couldn't determine the type of the dependency `{formatted}`"
+            )));
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
@@ -63,11 +69,14 @@ pub(crate) fn parse(
                 Registry::new(ctx.registry_url()?).into()
             } else {
                 scope.pop();
-                qp_bail!(
-                    "couldn't determine the source of the dependency `{}`\n\
-                    hint: provide one of the fields `version` or the `source`",
-                    scope.format()
-                )
+                return Err(QuackError::new()
+                    .add_hint(format!(
+                        "provide one of the fields `version` or the `source`"
+                    ))
+                    .context(format!(
+                        "couldn't determine the source of the dependency `{}`",
+                        scope.format()
+                    )));
             }
         }
         (Some(registry_url), None, None) => {
@@ -130,28 +139,24 @@ pub(crate) fn parse(
 fn make_could_not_determine_error<const N: usize>(
     scope: &Scope,
     fields: [&'static str; N],
-) -> String {
+) -> QuackError {
     assert!(N == 2 || N == 3, "implementation relies on it");
     let source = fields
         .iter()
         .map(|field| format!("`source.{}`", field))
         .collect::<Vec<_>>();
     let hint_text = if N == 2 {
-        format!(
-            "hint: remove one of the fields {} or {}",
-            source[0], source[1]
-        )
+        format!("remove one of the fields {} or {}", source[0], source[1])
     } else {
         format!(
-            "hint: leave only one of the fields: {}, {}, or {}",
+            "leave only one of the fields: {}, {}, or {}",
             source[0], source[1], source[2]
         )
     };
-    format!(
-        "couldn't determine the source of the dependency `{}`\n{}",
-        scope.format(),
-        hint_text
-    )
+    QuackError::new().add_hint(hint_text).context(format!(
+        "couldn't determine the source of the dependency `{}`",
+        scope.format()
+    ))
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.

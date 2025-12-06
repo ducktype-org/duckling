@@ -5,12 +5,14 @@ use tracing::debug;
 use super::dependency;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail, quackpack::{
+    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail,
+    quackpack::{
         core::{
             CompilerSpecificOptions, Features, Manifest, PackageMetadata, Profiles, RootDescription,
         },
         schemas::manifest::{CompilerOptions, Manifest as ManifestSchema},
-    }, static_str_id
+    },
+    static_str_id,
 };
 
 use super::Scope;

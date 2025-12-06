@@ -54,7 +54,7 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
             match e {
                 QpErrorType::Hint(hint) => {
                     term.hint(indent(hint.as_ref().as_ref(), 2));
-                },
+                }
                 QpErrorType::Note(note) => {
                     term.note(indent(note.as_ref().as_ref(), 2));
                 }
