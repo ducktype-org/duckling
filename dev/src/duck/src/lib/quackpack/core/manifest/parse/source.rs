@@ -70,9 +70,7 @@ pub(crate) fn parse(
             } else {
                 scope.pop();
                 return Err(QuackError::new()
-                    .add_hint(format!(
-                        "provide one of the fields `version` or the `source`"
-                    ))
+                    .add_hint("provide one of the fields `version` or the `source`")
                     .context(format!(
                         "couldn't determine the source of the dependency `{}`",
                         scope.format()

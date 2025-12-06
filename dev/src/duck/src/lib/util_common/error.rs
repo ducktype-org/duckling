@@ -8,6 +8,16 @@ pub struct QuackError {
     exit_code: i32,
 }
 
+/// Enum for single messages on error stack.
+/// The underlying options represent:
+///     Error - error at the user side (wrong usage of the program).
+///     Internal - program's internal logic error, means a critical bug is present.
+///     Hint - a suggestion for the user how to fix the error.
+///     Note - any additional information that the user should know.
+///
+/// # Usage
+/// The errors are added on a stack, so when addind an error with a hint, the hint should be added before the error.
+///
 pub enum QpErrorType {
     Error(Box<dyn AsRef<str>>),
     Internal(Box<dyn AsRef<str>>),
@@ -15,7 +25,14 @@ pub enum QpErrorType {
     Note(Box<dyn AsRef<str>>),
 }
 
+impl Default for QuackError {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QuackError {
+    /// Creates an empty QuackError.
     pub fn new() -> Self {
         Self {
             inner: Vec::new(),
@@ -23,6 +40,7 @@ impl QuackError {
         }
     }
 
+    /// Creates a QuackError with a single error message.
     pub fn error<T>(err: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
@@ -33,6 +51,7 @@ impl QuackError {
         }
     }
 
+    /// Creates a QuackError with a single internal error message.
     pub fn internal<T>(err: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
@@ -43,7 +62,8 @@ impl QuackError {
         }
     }
 
-    pub fn add_hint<T>(mut self: Self, hint: T) -> Self
+    /// Adds a hint on top of the QuackError's stack.
+    pub fn add_hint<T>(mut self, hint: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
     {
@@ -51,7 +71,8 @@ impl QuackError {
         self
     }
 
-    pub fn add_note<T>(mut self: Self, note: T) -> Self
+    /// Adds a note on top of the QuackError's stack.
+    pub fn add_note<T>(mut self, note: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
     {
@@ -59,7 +80,8 @@ impl QuackError {
         self
     }
 
-    pub fn context<T>(mut self: Self, ctx: T) -> Self
+    /// Adds an error on top of the QuackError's stack.
+    pub fn context<T>(mut self, ctx: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
     {
@@ -67,7 +89,8 @@ impl QuackError {
         self
     }
 
-    pub fn context_internal<T>(mut self: Self, ctx: T) -> Self
+    /// Adds an internal error on top of the QuackError's stack.
+    pub fn context_internal<T>(mut self, ctx: T) -> Self
     where
         T: AsRef<str> + Sized + 'static,
     {
@@ -75,15 +98,18 @@ impl QuackError {
         self
     }
 
-    pub fn change_exit_code(mut self: Self, new_code: i32) -> Self {
+    /// Sets the exit code of the error.
+    pub fn change_exit_code(mut self, new_code: i32) -> Self {
         self.exit_code = new_code;
         self
     }
 
+    /// Gets the exit code of the error.
     pub fn exit_code(&self) -> i32 {
         self.exit_code
     }
 
+    /// Gets the underlying messages stack.
     pub fn stack(&self) -> &[QpErrorType] {
         &self.inner
     }
@@ -141,6 +167,7 @@ impl fmt::Debug for QpErrorType {
 
 impl Error for QuackError {}
 
+/// Returns with a single error message QuackError wrapped in Result::Err.
 #[macro_export]
 macro_rules! qp_bail {
     ($msg:literal) => {{
@@ -160,6 +187,7 @@ macro_rules! qp_bail {
     };
 }
 
+/// Creates a single error message QuackError.
 #[macro_export]
 macro_rules! qp_err {
     ($msg:expr) => {{
@@ -179,6 +207,7 @@ macro_rules! qp_err {
     };
 }
 
+/// Returns with a single internal error message QuackError wrapped in Result::Err.
 #[macro_export]
 macro_rules! qp_bail_internal {
     ($msg:expr) => {{
@@ -198,6 +227,7 @@ macro_rules! qp_bail_internal {
     };
 }
 
+/// Creates a single internal error message QuackError.
 #[macro_export]
 macro_rules! qp_internal {
     ($msg:expr) => {{
@@ -217,21 +247,26 @@ macro_rules! qp_internal {
     };
 }
 
+/// A trait for adding contexts to results.
 pub trait QuackResultContext<T, E> {
-    fn context<C>(self: Self, ctx: C) -> QuackResult<T>
+    /// Transforms self into a QuackResult<T> and adds context.
+    fn context<C>(self, ctx: C) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static;
 
+    /// Transforms self into a QuackResult<T> and adds internal error context.
     fn context_internal<C>(self, ctx: C) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static;
 
-    fn with_context<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    /// Transforms self into a QuackResult<T>, computes and adds context.
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C;
 
-    fn with_context_internal<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    /// Transforms self into a QuackResult<T>, computes and adds internal error context.
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C;
@@ -241,7 +276,7 @@ impl<T, E> QuackResultContext<T, E> for Result<T, E>
 where
     E: Into<QuackError>,
 {
-    fn context<C>(self: Self, ctx: C) -> QuackResult<T>
+    fn context<C>(self, ctx: C) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
     {
@@ -255,7 +290,7 @@ where
         self.map_err(|e| e.into().context_internal(ctx))
     }
 
-    fn with_context<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C,
@@ -263,7 +298,7 @@ where
         self.map_err(|e| e.into().context(ctx()))
     }
 
-    fn with_context_internal<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C,
@@ -273,7 +308,7 @@ where
 }
 
 impl<T> QuackResultContext<T, QuackError> for Option<T> {
-    fn context<C>(self: Self, ctx: C) -> QuackResult<T>
+    fn context<C>(self, ctx: C) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
     {
@@ -287,7 +322,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         self.ok_or_else(|| QuackError::internal(ctx))
     }
 
-    fn with_context<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C,
@@ -295,7 +330,7 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
         self.ok_or_else(|| QuackError::error(ctx()))
     }
 
-    fn with_context_internal<C, F>(self: Self, ctx: F) -> QuackResult<T>
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
     where
         C: AsRef<str> + Sized + 'static,
         F: FnOnce() -> C,
