@@ -205,4 +205,19 @@ namespace base {
 		}
 		return name;
 	}
+
+
+	template<typename T>
+	struct Ref;
+
+	template<typename T>
+	struct CRefifyAux;
+
+	template<template<typename...> typename T, typename... Args>
+	struct CRefifyAux<T<Args...>> {
+		using type = T<Ref<const Args>...>;
+	};
+
+	template<typename T>
+	using CRefify = CRefifyAux<T>::type;
 }
