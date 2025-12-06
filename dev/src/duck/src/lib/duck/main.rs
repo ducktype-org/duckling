@@ -52,7 +52,7 @@ fn print_error(error: &QuackError, term: &Terminal) {
 }
 
 fn print_errors_stack(error: &QuackError, term: &Terminal) {
-    for (i, e) in error.stack().iter().rev().enumerate() {
+    for (i, e) in error.stack().enumerate() {
         if i == 0 {
             term.error(e);
         } else {
@@ -79,7 +79,7 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
 
 fn print_internals(error: &QuackError, term: &Terminal) {
     let mut internal_errors = false;
-    for e in error.stack().iter().rev() {
+    for e in error.stack() {
         if let QpErrorType::Internal(e) = e {
             internal_errors = true;
             term.print("");

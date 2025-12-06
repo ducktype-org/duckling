@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, num::TryFromIntError};
+use std::{error::Error, fmt, iter::Rev, slice::Iter, num::TryFromIntError};
 
 use crate::QuackResult;
 
@@ -8,7 +8,7 @@ pub struct QuackError {
     exit_code: i32,
 }
 
-/// Enum for single messages on error stack.
+/// Enum for single messages on the error stack.
 /// The underlying options represent:
 ///     Error - error at the user side (wrong usage of the program).
 ///     Internal - program's internal logic error, means a critical bug is present.
@@ -16,7 +16,7 @@ pub struct QuackError {
 ///     Note - any additional information that the user should know.
 ///
 /// # Usage
-/// The errors are added on a stack, so when addind an error with a hint, the hint should be added before the error.
+/// The errors are added on a stack, so when adding an error with a hint, the hint should be added before the error.
 ///
 pub enum QpErrorType {
     Error(Box<dyn AsRef<str>>),
@@ -109,9 +109,9 @@ impl QuackError {
         self.exit_code
     }
 
-    /// Gets the underlying messages stack.
-    pub fn stack(&self) -> &[QpErrorType] {
-        &self.inner
+    /// Iterates over the messages stack, from the top to the bottom.
+    pub fn stack(&self) -> Rev<Iter<'_, QpErrorType>> {
+        self.inner.iter().rev()
     }
 }
 
