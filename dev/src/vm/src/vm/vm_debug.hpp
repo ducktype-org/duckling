@@ -36,4 +36,7 @@ private:
 	DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args = {});
 
 	void run_vm();
+	void get_status();
+	void step();
+	void resume();
 };
