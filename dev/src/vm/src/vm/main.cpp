@@ -1,5 +1,6 @@
 #include "cli.hpp"
 #include "server.hpp"
+#include "vm_debug.hpp"
 #include "vm_repl.hpp"
 
 #include <clah/clah.hpp>
@@ -71,6 +72,21 @@ clah::Clah getVmClah() {
 								   args.push_back(*options.getExtra<std::string>(argc));
 
 							   return cli(file, args);
+						   }))
+
+	    .addSubcommand(clah::Clah("debug", "Start the VM debugger (BeRD).")
+	                       .addPositional(clah::FileParser::make("file"))
+	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   vm::Supervisor::get();
+							   auto file = options.getPositional<fs::File>(0);
+							   std::vector<std::string> args;
+							   args.reserve(options.getExtraParameterCount());
+							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+								   args.push_back(*options.getExtra<std::string>(argc));
+								   
+							   DuckVMDebug::get(file, args).run();
+							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

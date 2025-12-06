@@ -18,6 +18,7 @@ set(exec_sources
     src/vm/server.cpp
     src/vm/cli.cpp
     src/vm/vm_repl.cpp
+    src/vm/vm_debug.cpp
 )
 
 # There are three "libraries":.
