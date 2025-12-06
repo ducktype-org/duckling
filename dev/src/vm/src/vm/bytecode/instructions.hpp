@@ -146,7 +146,7 @@ namespace vm::code {
 		}
 
 		template<typename V>
-		auto visit(V&& visitor) {
+		decltype(auto) visit(V&& visitor) const {
 			switch (instr_kind) {
 #define HANDLE_INSTR(name)              \
 	case VM_INSTR_KIND_FROM_NAME(name): \
