@@ -267,7 +267,7 @@ private:
 					ASSERT_EQUAL(
 						local.layout->getSourceType(),
 						ctx.query<compiler::tsh::QueryIntegralType>(
-							{ 64, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+							{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
 						)
 					);
 				}
