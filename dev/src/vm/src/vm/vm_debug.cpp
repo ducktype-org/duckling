@@ -62,6 +62,8 @@ void DuckVMDebug::run() {
 			run_vm();
 		} else if (stripped_line == "resume") {
 			resume();
+		} else if (stripped_line == "pause") {
+			pause();
 		} else if (stripped_line == "print") {
 			// print();
 			throw -1;
@@ -100,7 +102,7 @@ DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string
 void DuckVMDebug::run_vm(){
 
 	if (!vm::api::run(pid, debug_args)) throw -1;
-	if (!vm::api::join(pid)) throw -1;
+	// if (!vm::api::join(pid)) throw -1;
 }
 
 void DuckVMDebug::get_status(){
@@ -118,4 +120,8 @@ void DuckVMDebug::step(){
 
 void DuckVMDebug::resume(){
 	if (!vm::api::resume(pid)) throw -1;
+}
+
+void DuckVMDebug::pause(){
+	if (!vm::api::pause(pid)) throw -1;
 }

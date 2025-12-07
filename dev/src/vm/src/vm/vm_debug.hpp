@@ -39,4 +39,5 @@ private:
 	void get_status();
 	void step();
 	void resume();
+	void pause();
 };
