@@ -342,16 +342,15 @@ where
     E: std::error::Error + 'static,
 {
     fn from(value: E) -> Self {
-        let xd = &value as &dyn Any;
-        if let Some(clap_err) = xd.downcast_ref::<clap::Error>() {
+        let test_err = &value as &dyn Any;
+        if let Some(clap_err) = test_err.downcast_ref::<clap::Error>() {
             let err = QuackError::error(format!("{}", clap_err.render().ansi()));
             if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
                 err.change_exit_code(0)
             } else {
                 err
             }
-        }
-        else {
+        } else {
             QuackError::error(value.to_string())
         }
     }
