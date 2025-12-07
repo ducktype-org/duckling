@@ -11,5 +11,5 @@ namespace Mspc {
 
     const ABC = 4 + 4;
 
-    var XB = foooo(i32(10));
+    var XB = foooo(10);
 }
