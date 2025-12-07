@@ -2,9 +2,9 @@
 
 #include <tester/tester.hpp>
 
-STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, std::int64_t);
+STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU8, std::uint8_t);
-STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, std::uint64_t);
+STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, u64);
 
 class StronglyTypedIntTest: public tester::TestSuite {
 #undef TESTER_CLASS
