@@ -49,7 +49,7 @@ public:
 		i64    as_i64 = static_cast<i64>(m);
 		assertTrue(as_i64 == 123, "Cast failed 1");
 
-		double as_f64 = static_cast<double>(m);
+		auto as_f64 = static_cast<double>(m);
 		assertTrue(as_f64 == 123.0, "Cast failed 2");
 
 		TestU8 small(255);
