@@ -18,14 +18,14 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     (dir, manifest)
 }
 
-fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> Vec<String> {
+fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> String {
     let mut vec = [format!(
         "when trying to parse the user manifest at `{}/x`",
         root.path().display()
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
-    vec
+    vec.join("\n")
 }
 
 #[test]
@@ -125,12 +125,11 @@ dependencies:
     let ctx = DuckCtx::default();
     let err = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             ["dependencies.a.version: invalid digit found in string at line 8 column 14"]
         )
-        .join("\n")
     );
 }
 
@@ -220,7 +219,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
@@ -228,7 +227,6 @@ dependencies:
        but the field `dependencies.a.source.tag` is set"
             ]
         )
-        .join("\n")
     );
 }
 
@@ -251,7 +249,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
@@ -259,7 +257,6 @@ dependencies:
                 "a registry dependency must provide at least one version",
             ]
         )
-        .join("\n")
     );
 }
 
@@ -283,7 +280,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
@@ -291,7 +288,6 @@ dependencies:
 remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
             ]
         )
-        .join("\n")
     )
 }
 
@@ -310,8 +306,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
-        make_errors_message(&dir, ["missing the obligatory section `metadata`"]).join("\n")
+        err.to_string(),
+        make_errors_message(&dir, ["missing the obligatory section `metadata`"])
     )
 }
 
@@ -333,8 +329,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
-        make_errors_message(&dir, ["missing the obligatory key `metadata.name`"]).join("\n")
+        err.to_string(),
+        make_errors_message(&dir, ["missing the obligatory key `metadata.name`"])
     )
 }
 
@@ -356,8 +352,8 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
-        make_errors_message(&dir, ["missing the obligatory key `metadata.version`"]).join("\n")
+        err.to_string(),
+        make_errors_message(&dir, ["missing the obligatory key `metadata.version`"])
     )
 }
 
@@ -553,14 +549,14 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
                   `dependencies.a.source.branch`, `dependencies.a.source.commit`"
             ]
-        ).join("\n")
+        )
     );
 }
 
@@ -759,13 +755,13 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        format!("{err}"),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
                 "when parsing the field `dependencies.a.conditions`",
                 "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
             ]
-        ).join("\n")
+        )
     );
 }

@@ -1,4 +1,10 @@
-use std::{error::Error, fmt, iter::Rev, num::TryFromIntError, slice::Iter};
+use std::{
+    error::Error,
+    fmt,
+    iter::Rev,
+    num::{ParseIntError, TryFromIntError},
+    slice::Iter,
+};
 
 use crate::QuackResult;
 
@@ -36,7 +42,7 @@ impl QuackError {
     pub fn new() -> Self {
         Self {
             inner: Vec::new(),
-            exit_code: 0,
+            exit_code: 1,
         }
     }
 
@@ -182,7 +188,7 @@ macro_rules! qp_bail {
     ($err:expr) => {{
         return Err($err.into());
     }};
-    ($fmt:expr, $($args:expr),*) => {
+    ($fmt:expr, $($args:expr),+ $(,)?) => {
         return Err($crate::QuackError::error(format!($fmt, $($args),*)))
     };
 }
@@ -202,7 +208,7 @@ macro_rules! qp_err {
     ($err:expr) => {{
         $err.into()
     }};
-    ($fmt:expr, $($args:expr),*) => {
+    ($fmt:expr, $($args:expr),+ $(,)?) => {
         $crate::QuackError::error(format!($fmt, $($args),*))
     };
 }
@@ -222,7 +228,7 @@ macro_rules! qp_bail_internal {
     ($err:expr) => {{
         return Err($err.into());
     }};
-    ($fmt:expr, $($args:expr),*) => {
+    ($fmt:expr, $($args:expr),+ $(,)?) => {
         return Err($crate::QuackError::internal(format!($fmt, $($args),*)))
     };
 }
@@ -242,7 +248,7 @@ macro_rules! qp_internal {
     ($err:expr) => {{
         return Err($err.into());
     }};
-    ($fmt:expr, $($args:expr),*) => {
+    ($fmt:expr, $($args:expr),+ $(,)?) => {
         $crate::QuackError::internal(format!($fmt, $($args),*))
     };
 }
@@ -371,6 +377,12 @@ impl From<clap::Error> for QuackError {
         } else {
             err
         }
+    }
+}
+
+impl From<ParseIntError> for QuackError {
+    fn from(value: ParseIntError) -> Self {
+        QuackError::error(format!("{value}"))
     }
 }
 

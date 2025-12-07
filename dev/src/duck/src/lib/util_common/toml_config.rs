@@ -146,7 +146,7 @@ impl TomlConfig {
             let Some(next) = current.get(part) else {
                 debug!(
                     "there is no table `[{part}]` in the chain `{}`",
-                    parts[0..=i].join(".")
+                    parts[0..=i].join("."),
                 );
                 return Ok(None);
             };
@@ -154,7 +154,7 @@ impl TomlConfig {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next.type_str_with_article()
+                    next.type_str_with_article(),
                 )
             };
             current = next;
@@ -193,7 +193,7 @@ impl TomlConfig {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next_type
+                    next_type,
                 )
             };
             current = next;

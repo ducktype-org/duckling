@@ -116,7 +116,7 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
     if visited.contains(&next.into()) {
         qp_bail!(
             "user-defined alias `{current}` cycles: {} -> {next}",
-            visited.join(" -> ")
+            visited.join(" -> "),
         );
     }
     Ok(())

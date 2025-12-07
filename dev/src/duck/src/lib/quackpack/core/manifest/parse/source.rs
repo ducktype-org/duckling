@@ -105,28 +105,28 @@ pub(crate) fn parse(
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
-            qp_bail!(make_could_not_determine_error(scope, ["path", "git_url"]))
+            return Err(make_could_not_determine_error(scope, ["path", "git_url"]));
         }
         (Some(_), None, Some(_)) => {
             scope.pop();
-            qp_bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "git_url"]
-            ))
+                ["registry_url", "git_url"],
+            ));
         }
         (Some(_), Some(_), None) => {
             scope.pop();
-            qp_bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "path"]
-            ))
+                ["registry_url", "path"],
+            ));
         }
         (Some(_), Some(_), Some(_)) => {
             scope.pop();
-            qp_bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "path", "git_url"]
-            ))
+                ["registry_url", "path", "git_url"],
+            ));
         }
     };
     Ok(source)
@@ -243,7 +243,7 @@ fn resolve_local_dep_root(
     let Some(home) = home.to_str() else {
         qp_bail!(
             "the user home directory `{}` is not a utf-8 path, which is unsupported",
-            home.display()
+            home.display(),
         )
     };
     let expanded = Path::new(manifest_root)

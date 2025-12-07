@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{QuackResult, qp_err, qp_internal};
+use crate::{QuackResult, qp_internal};
 use clap::ArgMatches;
 
 use crate::{DuckCtx, duck::util::terminal::Verbosity};
@@ -20,9 +20,9 @@ impl FromStr for Color {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            _ => Err(qp_err!(
+            _ => Err(qp_internal!(
                 "`{}` is not a valid color. This should be guarded by a parser",
-                s
+                s,
             )),
         }
     }

@@ -73,7 +73,7 @@ impl PackageLoader {
             qp_bail!(
                 "no manifest has been found from the `{}` to the `{}`",
                 start.display(),
-                current.display()
+                current.display(),
             )
         }
     }
