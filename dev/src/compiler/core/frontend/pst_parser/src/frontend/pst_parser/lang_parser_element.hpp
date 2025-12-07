@@ -235,6 +235,26 @@ namespace pst {
 
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
+		dia::SourcePosition source_position;
+		std::vector<InternalSubElement>
+			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
+		base::Optional<AccessLocked<LangElement>>
+			parent;        ///< Parent element in PST if element is not root.
+		base::Optional<hashing::ComponentHash>
+			element_path_hash;  ///< The Path that uniquely identifies the
+		                        ///< element and allows to conserve some
+		                        ///< information between compilations. Has
+		                        ///< no value if it's incalculable.
+		base::Optional<HashType>
+			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
+		           ///< information between compilations. Has no value if it's incalculable.
+
+		/**
+		 * @brief Kind of the element.
+		 * @note This is mostly for HELIOS to decide how to create scopes.
+		 */
+		ElementKind element_kind = ElementKind::KindNotSet;
+
 		void dprintPrefix(std::ostream& out) const override {
 			tpc::Element::dprintPrefix(out);
 			out << R"("position": )";
@@ -332,26 +352,6 @@ namespace pst {
 		 * `<<` operator).
 		 */
 		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
-
-		dia::SourcePosition source_position;
-		std::vector<InternalSubElement>
-			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
-		base::Optional<AccessLocked<LangElement>>
-			parent;        ///< Parent element in PST if element is not root.
-		base::Optional<hashing::ComponentHash>
-			element_path_hash;  ///< The Path that uniquely identifies the
-		                        ///< element and allows to conserve some
-		                        ///< information between compilations. Has
-		                        ///< no value if it's incalculable.
-		base::Optional<HashType>
-			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
-		           ///< information between compilations. Has no value if it's incalculable.
-
-		/**
-		 * @brief Kind of the element.
-		 * @note This is mostly for HELIOS to decide how to create scopes.
-		 */
-		ElementKind element_kind = ElementKind::KindNotSet;
 
 		void addToken(const lexer::Token& token);
 		void addToken(const Box<lexer::Token>& token);
