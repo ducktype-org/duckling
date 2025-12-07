@@ -220,4 +220,15 @@ namespace base {
 
 	template<typename T>
 	using CRefify = CRefifyAux<T>::type;
+
+	template<template<typename...> typename T, typename Tuple>
+	struct ParameteriseByTupleAux;
+
+	template<template<typename...> typename T, typename... TupleArgs>
+	struct ParameteriseByTupleAux<T, std::tuple<TupleArgs...>> {
+		using type = T<TupleArgs...>;
+	};
+
+	template<template<typename...> typename T, typename Tuple>
+	using ParameteriseByTuple = ParameteriseByTupleAux<T, Tuple>::type;
 }

@@ -18,7 +18,7 @@
 
 namespace vm::code {
 
-	enum class InstructionKind {
+	enum class InstructionKind : u64 {
 #define HANDLE_INSTR(name) Op_##name,
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
@@ -28,6 +28,9 @@ namespace vm::code {
 	namespace detail {
 		// @TODOB comment, this whole file actually
 		struct InstructionBase: ElementBase {};
+
+		template<typename THead, typename... TTail>
+		using TailTuple = std::tuple<TTail...>;
 	}
 
 	template<typename T>
@@ -47,11 +50,13 @@ namespace vm::code {
 #define ARG_INIT_LIST(type, name) \
 	, name { std::move(name) }
 #define ARG_ALIAS(instr_name, arg_type_name) &alts.op_##instr_name.ARG_NAME arg_type_name,
+#define ARG_TYPE_LIST(type, name)            , type
 
 #define HANDLE_INSTR_ARGS(name, ...)                                                                \
 	struct Op_##name final: detail::InstructionBase {                                               \
 		constexpr static std::string_view NAME = #name;                                             \
 		constexpr static InstructionKind  KIND = VM_INSTR_KIND_FROM_NAME(name);                     \
+		using ArgTypes = detail::TailTuple<void FOR_EACH(ARG_TYPE_LIST EXPAND, __VA_ARGS__)>;       \
                                                                                                     \
 		FOR_EACH(ARG_DECLARE EXPAND, __VA_ARGS__)                                                   \
                                                                                                     \
@@ -84,6 +89,7 @@ namespace vm::code {
 			Comment()                              = default;
 			constexpr static std::string_view NAME = "Comment";
 			constexpr static InstructionKind  KIND = InstructionKind::Comment;
+			using ArgTypes                         = std::tuple<>;
 
 			Comment(base::StrID comment): comment(comment) {}
 
@@ -95,12 +101,12 @@ namespace vm::code {
 		};
 	}
 
-	class Instruction {
+	class Instruction final {
 	public:
 		Instruction()                              = delete;
 		Instruction(const Instruction&)            = default;
-		Instruction(Instruction&&)                 = delete;
-		Instruction& operator=(const Instruction&) = delete;
+		Instruction(Instruction&&)                 = default;
+		Instruction& operator=(const Instruction&) = default;
 		Instruction& operator=(Instruction&&)      = delete;
 
 #define HANDLE_INSTR_ARGS(name, ...)                                        \
@@ -134,6 +140,19 @@ namespace vm::code {
 
 		[[nodiscard]] InstructionKind kind() const { return instr_kind; }
 
+		[[nodiscard]] base::StrID name() const {
+			static std::array map = {
+#define HANDLE_INSTR(name) base::StrID(#name),
+#include "instruction_definitions.hpp"
+#undef HANDLE_INSTR
+				base::StrID("[comment]")
+			};
+			return map.at(std::to_underlying(instr_kind));
+		}
+
+		template<IsInstruction T>
+		[[nodiscard]] T& get();
+
 		template<IsInstruction T>
 		[[nodiscard]] const T& get() const;
 
@@ -146,18 +165,19 @@ namespace vm::code {
 		}
 
 		template<typename V>
-		decltype(auto) visit(V&& visitor) const {
-			switch (instr_kind) {
+		decltype(auto) visit(this auto&& self, V&& visitor) {
+			switch (self.instr_kind) {
 #define HANDLE_INSTR(name)              \
 	case VM_INSTR_KIND_FROM_NAME(name): \
-		return std::forward<V>(visitor)(get<VM_INSTR_FROM_NAME(name)>());
+		return std::forward<V>(visitor)(self.template get<VM_INSTR_FROM_NAME(name)>());
 				break;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
 			case InstructionKind::Comment:
-				return std::forward<V>(visitor)(get<instructions::Comment>());
+				return std::forward<V>(visitor)(self.template get<instructions::Comment>());
 				break;
 			}
+			CORE_UNREACHABLE();
 		}
 
 		[[nodiscard]] std::vector<opargs::OpCodeArgCRef> args() const {
@@ -172,6 +192,7 @@ namespace vm::code {
 				return {};
 				break;
 			}
+			CORE_UNREACHABLE();
 		}
 
 
@@ -194,7 +215,12 @@ namespace vm::code {
 
 #define HANDLE_INSTR(name)                                                                     \
 	template<>                                                                                 \
-		[[nodiscard]] const VM_INSTR_FROM_NAME(name) & Instruction::get() const {              \
+		[[nodiscard]] inline const VM_INSTR_FROM_NAME(name) & Instruction::get() const {       \
+		CORE_ASSERT(instr_kind == VM_INSTR_KIND_FROM_NAME(name), "Invalid instruction kind."); \
+		return alts.op_##name;                                                                 \
+	}                                                                                          \
+	template<>                                                                                 \
+		[[nodiscard]] inline VM_INSTR_FROM_NAME(name) & Instruction::get() {                   \
 		CORE_ASSERT(instr_kind == VM_INSTR_KIND_FROM_NAME(name), "Invalid instruction kind."); \
 		return alts.op_##name;                                                                 \
 	}
@@ -202,11 +228,33 @@ namespace vm::code {
 #undef HANDLE_INSTR
 
 	template<>
-	[[nodiscard]] const instructions::Comment& Instruction::get() const {
+	[[nodiscard]] inline const instructions::Comment& Instruction::get() const {
 		CORE_ASSERT(instr_kind == InstructionKind::Comment, "Invalid instruction kind.");
 		return alts.comment;
 	}
 
+	template<>
+	[[nodiscard]] inline instructions::Comment& Instruction::get() {
+		CORE_ASSERT(instr_kind == InstructionKind::Comment, "Invalid instruction kind.");
+		return alts.comment;
+	}
+
+	inline constexpr bool operator==(const Instruction& a, const Instruction& b) {
+		if (a.kind() != b.kind()) return false;
+
+		switch (a.kind()) {
+#define HANDLE_INSTR(name)              \
+	case VM_INSTR_KIND_FROM_NAME(name): \
+		return a.get<VM_INSTR_FROM_NAME(name)>() == b.get<VM_INSTR_FROM_NAME(name)>();
+			break;
+#include "instruction_definitions.hpp"
+#undef HANDLE_INSTR
+		case InstructionKind::Comment:
+			return a.get<instructions::Comment>() == b.get<instructions::Comment>();
+			break;
+		}
+		CORE_UNREACHABLE();
+	}
 }
 
 #define instr_match(value)                                                              \

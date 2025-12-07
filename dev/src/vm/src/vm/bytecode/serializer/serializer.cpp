@@ -11,6 +11,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
+#include <ranges>
 
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
@@ -46,35 +47,23 @@ namespace vm::code {
 		out << '#' << ' ' << comment_content;
 	}
 
-	namespace {
-		void displayOpcodeArgs(std::ostream& out, const auto& head, const auto&... tail) {
-			out << std::setw(8) << std::right << toString(head);
-			((out << ", " << std::setw(8) << std::right << toString(tail)), ...);
-		}
-	}
-
-	template<IsInstruction I>
-	void displayOpcode(const I& instruction, std::ostream& out) {
-		out << std::setw(22) << std::left << I::NAME;
-		std::apply(
-			[&](const auto&... args) {
-				if constexpr (sizeof...(args) > 0) {
-					out << " ";
-					displayOpcodeArgs(out, args...);
-				}
-			},
-			instruction.argsAsTuple()
-		);
-		out << ";";
-	}
-
-	template<>
-	void displayOpcode(const instructions::Comment& comment, std::ostream& out) {
-		displayComment(comment.comment.strView(), out);
-	}
-
 	void displayInstruction(Instruction instruction, std::ostream& out) {
-		VISIT(instruction, i, displayOpcode(i, out));
+        instr_match(instruction) {
+            instr_case(instructions::Comment, comment) {
+                displayComment(comment.comment.strView(), out);
+            }
+            instr_default {
+                out << std::setw(22) << std::left << instruction.name().strView();
+                auto args = instruction.args();
+                if (args.size() > 0) {
+					out << " ";
+                    out << std::setw(8) << std::right << VISIT(args[0], a, return toString(*a));
+                    for (auto arg : args | std::views::drop(1)) {
+			            out << ", " << std::setw(8) << std::right << VISIT(arg, a, return toString(*a));
+                    }
+                }
+            }
+        }
 	}
 
 	class FunctionSerializer final {
