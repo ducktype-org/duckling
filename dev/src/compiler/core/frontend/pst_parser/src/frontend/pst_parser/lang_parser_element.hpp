@@ -317,9 +317,7 @@ namespace pst {
 		/**
 		 * @brief Calculates Element paths for a completely ordered list of statements.
 		 */
-		void calcOrderedListChildPath(
-			std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&
-		);
+		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&);
 
 		/**
 		 * @brief Calculates the hashes recursively for the element and all children.
