@@ -1,10 +1,4 @@
-use std::{
-    error::Error,
-    fmt,
-    iter::Rev,
-    num::{ParseIntError, TryFromIntError},
-    slice::Iter,
-};
+use std::{fmt, iter::Rev, slice::Iter};
 
 use crate::QuackResult;
 
@@ -171,7 +165,7 @@ impl fmt::Debug for QpErrorType {
     }
 }
 
-impl Error for QuackError {}
+//impl Error for QuackError {}
 
 /// Returns with a single error message QuackError wrapped in Result::Err.
 #[macro_export]
@@ -345,49 +339,11 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
     }
 }
 
-impl From<std::io::Error> for QuackError {
-    fn from(value: std::io::Error) -> Self {
-        QuackError::error(format!("{value}"))
-    }
-}
-
-impl From<toml::de::Error> for QuackError {
-    fn from(value: toml::de::Error) -> Self {
-        QuackError::error(format!("{value}"))
-    }
-}
-
-impl From<serde_yaml_ng::Error> for QuackError {
-    fn from(value: serde_yaml_ng::Error) -> Self {
-        QuackError::error(format!("{value}"))
-    }
-}
-
-impl From<TryFromIntError> for QuackError {
-    fn from(value: TryFromIntError) -> Self {
-        QuackError::error(format!("{value}"))
-    }
-}
-
-impl From<clap::Error> for QuackError {
-    fn from(value: clap::Error) -> Self {
-        let err = QuackError::error(format!("{}", value.render().ansi()));
-        if matches!(value.kind(), clap::error::ErrorKind::DisplayHelp) {
-            err.change_exit_code(0)
-        } else {
-            err
-        }
-    }
-}
-
-impl From<ParseIntError> for QuackError {
-    fn from(value: ParseIntError) -> Self {
-        QuackError::error(format!("{value}"))
-    }
-}
-
-impl From<String> for QuackError {
-    fn from(value: String) -> Self {
-        QuackError::error(value)
+impl<E> From<E> for QuackError
+where
+    E: std::error::Error,
+{
+    fn from(value: E) -> Self {
+        QuackError::error(value.to_string())
     }
 }

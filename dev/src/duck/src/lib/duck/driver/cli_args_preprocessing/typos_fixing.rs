@@ -43,7 +43,7 @@ pub fn fix_typos(
         let new_args = fix(name, first, subcmd_args)?;
         Ok(new_args)
     } else {
-        qp_bail!(make_levenshtein_nofix_msg(name, &closest_targets))
+        qp_bail!("{}", make_levenshtein_nofix_msg(name, &closest_targets))
     }
 }
 
