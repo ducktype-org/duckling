@@ -1,15 +1,22 @@
+#include "base/types/floats.hpp"
+#include "base/types/ints.hpp"
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <tester/tester.hpp>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
+STRONG_TYPEDEF_INT_DIMENSIONAL(TestU8, std::uint8_t);
+STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, u64);
 
 class StronglyTypedIntTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS StronglyTypedIntTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(stronglyTypedInt); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(stronglyTypedInt);
+		TESTER_ADD_TEST(castingTest);
+	}
 
 	void stronglyTypedInt() {
 		Meters m(0);
@@ -37,6 +44,35 @@ public:
 		assertTrue(m2 == Meters(12), "Basic math failed (16)");
 		m2 -= Meters(20);
 		assertTrue(m2 == Meters(-8), "Basic math failed (17)");
+	}
+
+	void castingTest() {
+		Meters m(123);
+		i64    as_i64 = static_cast<i64>(m);
+		assertTrue(as_i64 == 123, "Cast failed 1");
+
+		f64 as_f64 = static_cast<f64>(m);
+		assertTrue(as_f64 == 123.0, "Cast failed 2");
+
+		TestU8 small(255);
+		auto   big = static_cast<TestU64>(small);
+		assertTrue(static_cast<u64>(big) == 255, "Cast failed 3");
+
+		TestU64 large(257);
+		auto    smaller = static_cast<TestU8>(large);
+		assertTrue(static_cast<uint8_t>(smaller) == 1, "Cast failed 4");
+		assertTrue(static_cast<u8>(smaller) == u8(1), "Cast failed 5");
+
+		u8  a(8);
+		u64 b = static_cast<u64>(a);
+		assertTrue(b == 8, "Cast failed 6");
+
+		u8   no(0);
+		u8   yes(0);
+		bool x = static_cast<bool>(no);
+		assertFalse(x, "Cast failed 7");
+		bool y = static_cast<bool>(yes);
+		assertFalse(y, "Cast failed 8");
 	}
 
 	~StronglyTypedIntTest() override = default;
