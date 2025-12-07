@@ -1,12 +1,10 @@
-#include "base/types/floats.hpp"
-#include "base/types/ints.hpp"
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <tester/tester.hpp>
 
-STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
+STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, std::int64_t);
 STRONG_TYPEDEF_INT_DIMENSIONAL(TestU8, std::uint8_t);
-STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, u64);
+STRONG_TYPEDEF_INT_DIMENSIONAL(TestU64, std::uint64_t);
 
 class StronglyTypedIntTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -51,7 +49,7 @@ public:
 		i64    as_i64 = static_cast<i64>(m);
 		assertTrue(as_i64 == 123, "Cast failed 1");
 
-		f64 as_f64 = static_cast<f64>(m);
+		double as_f64 = static_cast<double>(m);
 		assertTrue(as_f64 == 123.0, "Cast failed 2");
 
 		TestU8 small(255);
