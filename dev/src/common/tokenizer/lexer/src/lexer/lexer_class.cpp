@@ -659,7 +659,7 @@ namespace lexer {
 
 	bool Lexer::isBlockCommentBegin() const { return tryRawValue('#') && tryRawValue('{', 1); }
 
-	bool Lexer::isBlockCommentEnd() const { return tryRawValue('}') && tryRawValue('#', 1); }
+	bool Lexer::isBlockCommentEnd() const { return tryRawValue('#') && tryRawValue('}', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
