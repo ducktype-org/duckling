@@ -1,4 +1,4 @@
-use std::{fmt, iter::Rev, slice::Iter};
+use std::{any::Any, fmt, iter::Rev, slice::Iter};
 
 use crate::QuackResult;
 
@@ -164,8 +164,6 @@ impl fmt::Debug for QpErrorType {
         Ok(())
     }
 }
-
-//impl Error for QuackError {}
 
 /// Returns with a single error message QuackError wrapped in Result::Err.
 #[macro_export]
@@ -341,9 +339,20 @@ impl<T> QuackResultContext<T, QuackError> for Option<T> {
 
 impl<E> From<E> for QuackError
 where
-    E: std::error::Error,
+    E: std::error::Error + 'static,
 {
     fn from(value: E) -> Self {
-        QuackError::error(value.to_string())
+        let xd = &value as &dyn Any;
+        if let Some(clap_err) = xd.downcast_ref::<clap::Error>() {
+            let err = QuackError::error(format!("{}", clap_err.render().ansi()));
+            if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
+                err.change_exit_code(0)
+            } else {
+                err
+            }
+        }
+        else {
+            QuackError::error(value.to_string())
+        }
     }
 }

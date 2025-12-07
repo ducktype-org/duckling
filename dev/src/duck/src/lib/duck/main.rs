@@ -38,7 +38,8 @@ fn setup_logger() {
 
 fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
     if error.exit_code() == 0 {
-        print_error(&error, stdout);
+        stdout.print(error);
+        std::process::exit(0)
     } else {
         print_error(&error, stderr);
     }
