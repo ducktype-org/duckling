@@ -181,7 +181,7 @@ namespace pst {
 		 * @brief Returns a string of element type.
 		 *
 		 * Mostly for debugging and visualization.
-		 * @todo add element type the stringifyable enum
+		 * @todo add element type the stringifiable enum
 		 * @note it is used by helios as a hacky way to check if given element in an expression
 		 */
 		[[nodiscard]]
