@@ -43,7 +43,6 @@ namespace pst {
 		 */
 		using HashType = HashAlg::result_type;
 
-	public:
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -62,23 +61,6 @@ namespace pst {
 		 */
 		friend class ClassStmt;
 
-	protected:
-		/**
-		 * @brief Map from stable hash to lang element for all created elements.
-		 * @note Used to view dependent tokens of node in the query graph.
-		 */
-		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
-
-		using InternalChild = Ref<LangElement>;
-
-		struct InternalNamedChild final {
-			std::string      name;
-			Ref<LangElement> element;
-		};
-
-		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
-
-	public:
 		using Child = AccessLocked<LangElement>;
 
 		struct NamedChild final {
@@ -109,105 +91,6 @@ namespace pst {
 		[[nodiscard]]
 		static AccessLocked<LangElement> getByStableHash(query::QueryStableHash stable_hash);
 
-	protected:
-		void dprintPrefix(std::ostream& out) const override {
-			tpc::Element::dprintPrefix(out);
-			out << R"("position": )";
-			source_position.printToJson(out);
-			out << ", ";
-		}
-
-		/**
-		 * @brief Calculates the Element paths for children of this element, has to be overriden for
-		 * elements that have unnamed children.
-		 */
-		virtual void calcElementPathHashRecursive();
-
-		/**
-		 * @brief Calculates Element paths for this Element and children.
-		 */
-		void calcElementPathHash(const hashing::ComponentHash& path) {
-			// append element type to incoming ComponentHash path
-			element_path_hash = hashing::ComponentHash(path, elementType());
-			calcElementPathHashRecursive();
-		}
-
-		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements (otherwise it would need each element would need to be a friend)
-		 */
-		template<typename Element>
-		void calcChildPath(
-			AccessInternalAnonymous<Element>& access_ref, const hashing::ComponentHash& path
-		) const {
-			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
-		}
-
-		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements (otherwise it would need each element would need to be a friend)
-		 */
-		template<typename Element, base::TemplateStringLiteral name>
-		void calcNamedChildPath(
-			AccessInternal<Element, name>& access_ref, const hashing::ComponentHash& path
-		) const {
-			if (auto ref = access_ref.internalMut())
-				ref->calcElementPathHash(hashing::ComponentHash(path, std::string_view(name.value)));
-		}
-
-		/**
-		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
-		 * from other elements (otherwise it would need each element would need to be a friend)
-		 */
-		template<typename Element>
-		void calcIndexedListChildPath(
-			std::span<AccessInternalAnonymous<Element>> vec, const hashing::ComponentHash& path
-		) const {
-			for (usize i = 0; i < vec.size(); i++) {
-				hashing::ComponentHash child_path(path, std::format("[{}]", i));
-				calcChildPath(vec[i], child_path);
-			}
-		}
-
-		/**
-		 * @brief Calculates Element paths for a completely ordered list of statements.
-		 */
-		void calcOrderedListChildPath(std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&);
-
-	protected:
-		/**
-		 * @brief Calculates the hashes recursively for the element and all children.
-		 */
-		void calcHashRecursive();
-
-		/**
-		 * @brief Calculates and sets the hash for this element, can be modified to change between
-		 * stable and unstable hashes.
-		 */
-		void calcHash();
-
-		/**
-		 * @brief Calculates the whole hash for the element including common parts like path and
-		 * element type. Can be overriden for specific parent elements that add common information.
-		 */
-		[[nodiscard]]
-		HashAlg calcStableHash() const;
-
-		/**
-		 * @brief Used to add additional data that is generic to multiple elements for example in
-		 * Stmt.
-		 */
-		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
-
-		/**
-		 * @brief Adds the element specific information to the hash (Not generic ones such as number
-		 * of attributes or path). Should be overriden for each element.
-		 * @important Each implementation has to return the same reference it received (similar to
-		 * `<<` operator).
-		 */
-		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
-
-	public:
 		/**
 		 * @brief View all sub-elements.
 		 */
@@ -298,7 +181,7 @@ namespace pst {
 		 * @brief Returns a string of element type.
 		 *
 		 * Mostly for debugging and visualization.
-		 * @todo add element type the stringifiable enum
+		 * @todo add element type the stringifyable enum
 		 * @note it is used by helios as a hacky way to check if given element in an expression
 		 */
 		[[nodiscard]]
@@ -337,6 +220,119 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
+		/**
+		 * @brief Map from stable hash to lang element for all created elements.
+		 * @note Used to view dependent tokens of node in the query graph.
+		 */
+		static base::HashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
+
+		using InternalChild = Ref<LangElement>;
+
+		struct InternalNamedChild final {
+			std::string      name;
+			Ref<LangElement> element;
+		};
+
+		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
+
+		void dprintPrefix(std::ostream& out) const override {
+			tpc::Element::dprintPrefix(out);
+			out << R"("position": )";
+			source_position.printToJson(out);
+			out << ", ";
+		}
+
+		/**
+		 * @brief Calculates the Element paths for children of this element, has to be overriden for
+		 * elements that have unnamed children.
+		 */
+		virtual void calcElementPathHashRecursive();
+
+		/**
+		 * @brief Calculates Element paths for this Element and children.
+		 */
+		void calcElementPathHash(const hashing::ComponentHash& path) {
+			// append element type to incoming ComponentHash path
+			element_path_hash = hashing::ComponentHash(path, elementType());
+			calcElementPathHashRecursive();
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
+		 */
+		template<typename Element>
+		void calcChildPath(
+			AccessInternalAnonymous<Element>& access_ref, const hashing::ComponentHash& path
+		) const {
+			if (auto ref = access_ref.internalMut()) ref->calcElementPathHash(path);
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
+		 */
+		template<typename Element, base::TemplateStringLiteral name>
+		void calcNamedChildPath(
+			AccessInternal<Element, name>& access_ref, const hashing::ComponentHash& path
+		) const {
+			if (auto ref = access_ref.internalMut())
+				ref->calcElementPathHash(hashing::ComponentHash(path, std::string_view(name.value)));
+		}
+
+		/**
+		 * @brief Calculates Element paths for `access_ref` and children. A version that is visible
+		 * from other elements (otherwise it would need each element would need to be a friend)
+		 */
+		template<typename Element>
+		void calcIndexedListChildPath(
+			std::span<AccessInternalAnonymous<Element>> vec, const hashing::ComponentHash& path
+		) const {
+			for (usize i = 0; i < vec.size(); i++) {
+				hashing::ComponentHash child_path(path, std::format("[{}]", i));
+				calcChildPath(vec[i], child_path);
+			}
+		}
+
+		/**
+		 * @brief Calculates Element paths for a completely ordered list of statements.
+		 */
+		void calcOrderedListChildPath(
+			std::vector<AccessInternalAnonymous<Stmt>>&, const hashing::ComponentHash&
+		);
+
+		/**
+		 * @brief Calculates the hashes recursively for the element and all children.
+		 */
+		void calcHashRecursive();
+
+		/**
+		 * @brief Calculates and sets the hash for this element, can be modified to change between
+		 * stable and unstable hashes.
+		 */
+		void calcHash();
+
+		/**
+		 * @brief Calculates the whole hash for the element including common parts like path and
+		 * element type. Can be overriden for specific parent elements that add common information.
+		 */
+		[[nodiscard]]
+		HashAlg calcStableHash() const;
+
+		/**
+		 * @brief Used to add additional data that is generic to multiple elements for example in
+		 * Stmt.
+		 */
+		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
+
+		/**
+		 * @brief Adds the element specific information to the hash (Not generic ones such as number
+		 * of attributes or path). Should be overriden for each element.
+		 * @important Each implementation has to return the same reference it received (similar to
+		 * `<<` operator).
+		 */
+		virtual HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const = 0;
+
 		dia::SourcePosition source_position;
 		std::vector<InternalSubElement>
 			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
