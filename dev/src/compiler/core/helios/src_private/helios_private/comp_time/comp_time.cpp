@@ -506,6 +506,9 @@ namespace compiler::helios {
 			// order to evaluate this one.
 			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
 
+			std::cerr << "-------------------------------- 111\n";
+			
+
 			std::string                      func_to_call_name;
 			std::vector<CRef<lir::Function>> all_lir_functions;
 			for (const SymID& func_id: *dependencies) {
@@ -523,8 +526,15 @@ namespace compiler::helios {
 				all_lir_functions.push_back(lir_func_result);
 			}
 
+			std::cerr << "--------------------------------222\n";
+
 			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), all_lir_functions, {} };
+			
+			std::cerr << "-------------------------------- 222-333\n";
+
 			vm::code::CodeCollection code = m.build();
+
+			std::cerr << "-------------------------------- 333\n";
 
 			std::vector<CompileTimeValue> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {

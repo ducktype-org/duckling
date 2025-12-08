@@ -463,7 +463,8 @@ namespace base {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
 					MRef next_node = current_node->next;
-					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					// HMM:
+					node_allocator.justDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
 				bucket = nullptr;

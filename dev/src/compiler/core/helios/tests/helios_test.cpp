@@ -138,7 +138,11 @@ private:
 		// ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
 		// ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
 		// getConstValueAs<i64>();
-		getConstValue("COMPLEX_VM_CALL", root_scope);
+
+		// getChain("COMPLEX_VM_CALL", root_scope);
+		getConstValue("FIB_10", root_scope);
+		
+		
 		// ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 		// ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
 	}
