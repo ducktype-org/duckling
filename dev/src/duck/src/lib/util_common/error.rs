@@ -167,7 +167,7 @@ impl fmt::Debug for QpErrorType {
 /// Returns with a single error message QuackError wrapped in Result::Err.
 #[macro_export]
 macro_rules! qp_bail {
-    ($msg:literal) => {{
+    ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
             return Err($crate::QuackError::error(static_msg));
@@ -176,7 +176,7 @@ macro_rules! qp_bail {
             return Err($crate::QuackError::error(format!($msg)));
         }
     }};
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         return Err($err.into());
     }};
     ($fmt:expr, $($args:expr),+ $(,)?) => {
@@ -187,7 +187,7 @@ macro_rules! qp_bail {
 /// Creates a single error message QuackError.
 #[macro_export]
 macro_rules! qp_err {
-    ($msg:expr) => {{
+    ($msg:expr $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
             $crate::QuackError::error(static_msg)
@@ -196,7 +196,7 @@ macro_rules! qp_err {
             $crate::QuackError::error(format!($msg))
         }
     }};
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         $err.into()
     }};
     ($fmt:expr, $($args:expr),+ $(,)?) => {
@@ -207,7 +207,7 @@ macro_rules! qp_err {
 /// Returns with a single internal error message QuackError wrapped in Result::Err.
 #[macro_export]
 macro_rules! qp_bail_internal {
-    ($msg:expr) => {{
+    ($msg:expr $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
             return Err($crate::QuackError::internal(static_msg));
@@ -216,7 +216,7 @@ macro_rules! qp_bail_internal {
             return Err($crate::QuackError::internal(format!($msg)));
         }
     }};
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         return Err($err.into());
     }};
     ($fmt:expr, $($args:expr),+ $(,)?) => {
@@ -227,7 +227,7 @@ macro_rules! qp_bail_internal {
 /// Creates a single internal error message QuackError.
 #[macro_export]
 macro_rules! qp_internal {
-    ($msg:expr) => {{
+    ($msg:expr $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
             $crate::QuackError::internal(static_msg)
@@ -236,7 +236,7 @@ macro_rules! qp_internal {
             $crate::QuackError::internal(format!($msg))
         }
     }};
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         return Err($err.into());
     }};
     ($fmt:expr, $($args:expr),+ $(,)?) => {
