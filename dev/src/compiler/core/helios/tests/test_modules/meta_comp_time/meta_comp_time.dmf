@@ -1,0 +1,21 @@
+fun createBox(t: type) -> type = box t;
+fun createRef(t: type) -> type = ref t;
+# TODOP: Add opt?
+# fun createOpt(t: type) -> type = ?t;
+fun createConst(t: type) -> type = const t;
+fun createSmallVariant(a: type, b: type) -> type = a | b;
+fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+fun createSmallTuple(a: type, b: type) -> type = (a, b);
+fun createBigTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
+# fun getTypeSize(a: type) -> i64 = a::size;
+
+# TODOP: More complex test
+
+const A = createBox(i32);
+const B = createRef(i32);
+const C = createOpt(i32);
+const D = createConst(i32);
+const E = createSmallVariant(i32, f64);
+const F = createBigVariant(i16, i32, i64, i128);
+const G = createSmallTuple(i32, f64);
+const H = createBigTuple(i16, i32, i64, i128);
