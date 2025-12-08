@@ -110,7 +110,7 @@ impl QuackError {
     }
 
     /// Iterates over the messages stack, from the top to the bottom.
-    pub fn stack(&self) -> Rev<Iter<'_, QpErrorType>> {
+    pub fn stack(&self) -> impl Iterator<Item = QpErrorType> {
         self.inner.iter().rev()
     }
 }
