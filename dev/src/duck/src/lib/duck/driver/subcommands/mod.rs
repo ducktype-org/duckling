@@ -2,6 +2,7 @@ use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
 mod add;
+mod bar;
 mod build;
 #[cfg(feature = "shell-completion")]
 mod generate;
@@ -32,6 +33,7 @@ pub fn subcommands() -> Vec<Command> {
         sync::get_parser(),
         tree::get_parser(),
         unsync::get_parser(),
+        bar::get_parser(),
     ]
 }
 
@@ -40,6 +42,7 @@ pub type ExecFn = fn(&DuckCtx, &ArgMatches) -> QuackResult<()>;
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "add" => add::execute,
+        "bar" => bar::execute,
         "build" => build::execute,
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
