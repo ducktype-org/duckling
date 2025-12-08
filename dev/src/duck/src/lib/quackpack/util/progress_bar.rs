@@ -83,7 +83,7 @@ impl DownloadingPackagesProgressBarManager {
         }
         let mut state = self.state.write().await;
         if state.reverse_map.contains_key(&pkg) {
-            debug!("package `{pkg}` has already been downloading");
+            debug!("download of package `{pkg}` has already started");
             return;
         }
         let id = state.next_id;
@@ -113,7 +113,7 @@ impl DownloadingPackagesProgressBarManager {
         let mut state = self.state.write().await;
 
         let Some(id) = state.reverse_map.remove(&pkg) else {
-            debug!("the download of `{pkg}` hasn't started");
+            debug!("download of package `{pkg}` hasn't started");
             return;
         };
         state.currently_downloading.remove(&id);
