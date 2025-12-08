@@ -33,7 +33,7 @@ namespace pst {
 		 * @note Optional of MCRef here is intentional
 		 */
 		[[nodiscard]]
-		base::Optional<AccessLocked<ExprHolder>> getRet() const; 
+		base::Optional<AccessLocked<ExprHolder>> getRet() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {
