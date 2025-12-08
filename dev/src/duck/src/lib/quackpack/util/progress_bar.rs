@@ -93,8 +93,14 @@ impl DownloadingPackagesProgressBarManager {
         state.reverse_map.insert(pkg, id);
 
         let formatted = state.format();
-        drop(state);
+        debug!("package `{pkg}` has been assigned id `{id}`");
+        // We care about concurrency: we want to set new message under the lock, to avoid a following scenario:
+        // 1. We want to add a package.
+        // 2. Some other threads remove its package and finished everything except setting a new message.
+        // 3. We complete adding a new package.
+        // 4. Removing thread finished, and our package disappears from the progress bar.
         self.bar.bar.set_message(formatted);
+        drop(state);
     }
 
     pub async fn finish_download_of(&self, pkg: StrId) {
@@ -112,8 +118,17 @@ impl DownloadingPackagesProgressBarManager {
         };
         state.currently_downloading.remove(&id);
         let formatted = state.format();
-        drop(state);
+        debug!("package `{pkg}` has deduced its id `{id}`");
+        // We want to set message under the lock, to avoid a following scenario:
+        // 1. We want to remove a package.
+        // 2. We're up to this point, we've created `formatted`.
+        // 3. Some other threads wants to *start* a new download.
+        // 4. It creates its own `formatted` and sets it.
+        // 5. We override it here, causing a new package to disappear.
+        // However, we can tick without a lock: drawing backend takes care of concurrency/parallelism,
+        // and we tick only here: user doesn't care, if ticks came from wrong threads, he only cares that a tick has happened.
         self.bar.bar.set_message(formatted);
+        drop(state);
         self.bar.bar.inc(1);
     }
 }
