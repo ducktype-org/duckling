@@ -1,0 +1,293 @@
+#include "dvm_value.hpp"
+#include "function_lowering_context.hpp"
+#include "program_lowering_context.hpp"
+
+#include <lir/lir_structure/lir_structure.hpp>
+
+#include <logger/logger.hpp>
+
+#include <vm/bytecode/builders/instruction_builder.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+
+using namespace compiler::backend_vm::internal;
+using namespace vm::code;
+using namespace compiler;
+using namespace vm::code::builders;
+
+namespace {
+	vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
+		switch (operation) {
+		/// Integer operations ///
+		case lir::Operation::IntegerAdd:
+			return OpKind::add;
+		case lir::Operation::IntegerSub:
+			return OpKind::sub;
+		case lir::Operation::IntegerNeg:
+			return OpKind::neg;
+		case lir::Operation::IntegerMul:
+			return OpKind::mul;
+		case lir::Operation::IntegerSDiv:
+			return OpKind::div;
+		case lir::Operation::IntegerSMod:
+			return OpKind::mod;
+		case lir::Operation::IntegerUDiv:
+			return OpKind::udiv;
+		case lir::Operation::IntegerUMod:
+			return OpKind::umod;
+
+		/// Floating point operations ///
+		case lir::Operation::FloatAdd:
+			return OpKind::fadd;
+		case lir::Operation::FloatSub:
+			return OpKind::fsub;
+		case lir::Operation::FloatMul:
+			return OpKind::fmul;
+		case lir::Operation::FloatDiv:
+			return OpKind::fdiv;
+		case lir::Operation::FloatNeg:
+			return OpKind::fneg;
+
+		/// Signed integer comparisons ///
+		case lir::Operation::IntegerEq:
+			return OpKind::cmpEq;
+		case lir::Operation::IntegerNeq:
+			return OpKind::cmpNeq;
+		case lir::Operation::IntegerSLt:
+			return OpKind::cmpL;
+		case lir::Operation::IntegerSLteq:
+			return OpKind::cmpLe;
+		case lir::Operation::IntegerSGt:
+			return OpKind::cmpG;
+		case lir::Operation::IntegerSGteq:
+			return OpKind::cmpGe;
+
+		/// Unsigned integer comparisons ///
+		case lir::Operation::IntegerULt:
+			return OpKind::ucmpL;
+		case lir::Operation::IntegerULteq:
+			return OpKind::ucmpLe;
+		case lir::Operation::IntegerUGt:
+			return OpKind::ucmpG;
+		case lir::Operation::IntegerUGteq:
+			return OpKind::ucmpGe;
+
+		/// Floating point comparisons ///
+		case lir::Operation::FloatLt:
+			return OpKind::fcmpL;
+		case lir::Operation::FloatGt:
+			return OpKind::fcmpG;
+		case lir::Operation::FloatLteq:
+			return OpKind::fcmpLe;
+		case lir::Operation::FloatGteq:
+			return OpKind::fcmpGe;
+		case lir::Operation::FloatEq:
+			return OpKind::fcmpEq;
+		case lir::Operation::FloatNeq:
+			return OpKind::fcmpNeq;
+
+		/// Logical operations ///
+		case lir::Operation::BooleanAnd:
+			return OpKind::log_and;
+		case lir::Operation::BooleanOr:
+			return OpKind::log_or;
+		case lir::Operation::BooleanNot:
+			return OpKind::log_not;
+
+		/// Other ///
+		case lir::Operation::Assign:
+			return OpKind::mov;
+		case lir::Operation::Call:
+			return OpKind::call;
+
+		default:
+			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
+		}
+		CORE_UNREACHABLE();
+	}
+
+	bool isComparison(OpKind op) {
+		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpL
+		    || op == OpKind::cmpLe || op == OpKind::cmpG || op == OpKind::cmpGe
+		    || op == OpKind::ucmpL || op == OpKind::ucmpLe || op == OpKind::ucmpG
+		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
+		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
+		    || op == OpKind::fcmpGe;
+	}
+
+	bool isUnaryOperation(OpKind op) {
+		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
+	}
+}
+
+void FunctionLoweringContext::handleFunctionCall(
+	const lir::FunctionLiteral& called_function,
+	const DVMValue&             called_func_name,
+	const std::deque<DVMValue>& func_args,
+	base::Optional<DVMValue>    output
+) {
+	CORE_ASSERT(
+		func_args.size() == called_function.parameter_layouts->size(),
+		"Function call argument count does not match function parameter count."
+	);
+
+	vm::code::TypeOfData called_result_type
+		= program_context.lowerAndKeepTslType(called_function.return_type_layout);
+	std::vector<vm::code::TypeOfData> param_types
+		= *called_function.parameter_layouts | std::views::transform([&](const auto& layout) {
+			  return program_context.lowerAndKeepTslType(layout);
+		  })
+	    | std::ranges::to<std::vector>();
+
+
+	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
+		if (typeName(called_result_type) != "void")
+			return pushTempLocal(called_result_type, "call_result");
+		else
+			return {};
+	}();
+
+	// Instantiate function parameters on the stack.
+	for (const auto& [arg_id, func_arg, param_type]:
+	     std::views::zip(std::views::iota(0), func_args, param_types)) {
+		CORE_DEV_LOG(Backend, "Initializing: ", typeName(param_type), '\n');
+
+		auto arg_name = base::strConcat("call", "_arg", arg_id, "_");
+
+		auto temp_arg = pushTempLocal(param_type, arg_name.c_str());
+
+		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
+	}
+
+	pushInstruction({ OpKind::call, called_func_name });
+
+	if (output) {
+		pushInstruction({
+			OpKind::mov,
+			output.value(),
+			call_result_storage.value().asArgument(),
+		});
+	}
+
+	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
+}
+
+void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	std::deque<DVMValue> args
+		= lir_instruction.arguments
+	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
+	    | std::ranges::to<std::deque>();
+
+	const auto operation = lirOpToOpKind(lir_instruction.operation);
+
+	const auto maybe_output
+		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
+
+	if (isComparison(operation)) {
+		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
+		// This resolves e.g. `x = a CMP b;`
+		// by splitting it into two instructions:
+		// a CMP b;
+		// cmov x, 1;
+		pushInstruction({ lirOpToOpKind(lir_instruction.operation), args[0], args[1] });
+		pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
+	} else if (operation == OpKind::call) {
+		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+		auto called_func_name = args.front();
+		args.pop_front();
+		handleFunctionCall(called_function, called_func_name, args, maybe_output);
+	} else if (isUnaryOperation(operation)) {
+		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
+		auto output = maybe_output.value();
+		// If instruction is of the form: a = OP b, then
+		// we transform it to:
+		// a = b;
+		// a = OP a;
+		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
+
+		pushInstruction({ operation, output });
+	} else if (args.size() == 2) {
+		// In this case we assume we have a very general quadruple of the form:
+		// output = arg1 OP arg2;
+		auto output = maybe_output.value();
+
+		// If instruction is of the form: a = b OP c, then
+		// we transform it to:
+		// a = b;
+		// a = a OP c;
+		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
+
+		pushInstruction({ operation, output, args[1] });
+	} else {
+		auto output = maybe_output.value();
+		pushInstruction({ operation, output, args[0] });
+	}
+}
+
+void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
+	pushInstruction(instructions::Comment(base::StrID(
+		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
+	)));
+
+	if (lir_terminator.operation == lir::Operation::Branch) {
+		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
+		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
+		auto false_block = lowerLirValue(lir_terminator.arguments.at(2));
+
+		variant_match(lir_terminator.arguments.at(0).getVariant()) {
+			variant_case(lir::LIRConstant, constant) {
+				auto bool_val
+					= constant.value.get<bool>().expect("Expected boolean in LIRConstant");
+				if (bool_val)
+					pushInstruction({ OpKind::jmp, true_block });
+				else
+					pushInstruction({ OpKind::jmp, false_block });
+			}
+			variant_default {
+				pushInstruction({ OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } });
+				pushInstruction({ OpKind::jmpIf, true_block });
+				pushInstruction({ OpKind::jmpIfNot, false_block });
+			}
+		}
+	}
+
+	else if (lir_terminator.operation == lir::Operation::ReturnVoid) {
+		pushInstruction({ OpKind::ret });
+	} else if (lir_terminator.operation == lir::Operation::Jump) {
+		CORE_ASSERT(
+			lir_terminator.arguments.size() == 1, "Invalid number of arguments for jump terminator."
+		);
+		auto target_block = lowerLirValue(lir_terminator.arguments.at(0));
+		pushInstruction({ OpKind::jmp, target_block });
+	} else if (lir_terminator.operation == lir::Operation::ReturnValue) {
+		CORE_ASSERT(
+			lir_terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
+		);
+
+		// Since VM does not support `return X;` operation, we must move the value to
+		// the ret_val local and then return.
+		pushInstruction({
+			OpKind::mov,
+			getFunctionReturnValueLocal().asArgument(),
+			lowerLirValue(lir_terminator.arguments.at(0)),
+		});
+		pushInstruction({ OpKind::ret });
+	} else {
+		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
+	}
+}
+
+DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
+	const vm::code::TypeOfData& type, base::Optional<const char*> name_hint
+) {
+	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
+	auto temp_local = DVMLocal{
+		.name = base::StrID(name.c_str()),
+		.type = type,
+	};
+	pushInstruction({
+		OpKind::init,
+		vm::opargs::StackLocalAny(temp_local.name),
+		vm::opargs::Type(typeName(type)),
+	});
+	return temp_local;
+}
