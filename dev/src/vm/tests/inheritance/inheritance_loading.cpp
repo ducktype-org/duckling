@@ -1,10 +1,9 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
-#include <vm/api/api.hpp>
+#include <string_id/string_id.hpp>
 
 class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS

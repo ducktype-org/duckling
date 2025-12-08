@@ -1,8 +1,8 @@
 #pragma once
 
-#include "forward.hpp"
+#include <diagnostic_interactive/logger.hpp>
 
-#include <base/raw_view.hpp>
+#include <base/misc/shared_view.hpp>
 
 #include <diagnostic/location.hpp>
 #include <diagnostic/logger.hpp>
@@ -10,8 +10,8 @@
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
 #include <lexer/decode.hpp>
-#include <lexer/lexer.hpp>
 #include <lexer/token.hpp>
+#include <token_source/forward.hpp>  // IWYU pragma: keep
 
 #include <set>
 
@@ -21,9 +21,10 @@ namespace tokenizer {
 	 *
 	 * @note For now it's very minimal and doesn't check proper usage.
 	 */
-	class TokenSource {
+	class TokenSource final {
 	private:
 		dia::Logger                            log;
+		dia_int::Logger                        int_log;
 		base::Box<dia::Location>               location;
 		base::Optional<const base::SharedView> content;
 		base::Optional<const lexer::CharArray> decoded;
@@ -51,8 +52,8 @@ namespace tokenizer {
 		 */
 		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
 
-		template<class T, class... Ts>
-		friend base::Box<T> base::makeBox(Ts&&... args);
+		template<class... Ts>
+		friend Box<TokenSource> makeTokenSource(Ts&&... args);
 
 	public:
 		TokenSource(const TokenSource&) = delete;
@@ -91,6 +92,9 @@ namespace tokenizer {
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
 		Ref<dia::Logger>    getLogger();
+
+		Ref<dia_int::Logger> getIntLogger() { return &int_log; }
+
 		[[nodiscard]]
 		fs::File getFile() const;
 
@@ -121,6 +125,6 @@ namespace tokenizer {
 
 	template<class... Ts>
 	Box<TokenSource> makeTokenSource(Ts&&... args) {
-		return makeBox<TokenSource>(std::forward<Ts>(args)...);
+		return Box<TokenSource>::fromPointer(new TokenSource(std::forward<Ts>(args)...));
 	}
 }

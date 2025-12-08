@@ -5,7 +5,7 @@
 
 #include "char.hpp"
 
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <unicode_classification/classifications.hpp>
 
@@ -14,7 +14,7 @@ namespace lexer {
 	Char::Char(UChar32 value, u8 size, usize index): value(value), size(size), index(index) {
 		if (size == u8{ 0 }) {
 			CORE_ASSERT(
-				value == unicode::Classifications::end_of_file_value,
+				value == unicode::Classifications::END_OF_FILE_VALUE,
 				"non-EOF Char created with size 0"
 			);
 		} else {
@@ -31,6 +31,8 @@ namespace lexer {
 	}
 
 	bool Char::isBinDigit() const { return is('0') or is('1'); }
+
+	bool Char::isOctDigit() const { return isInRange('0', '7'); }
 
 	bool Char::isDigit() const { return isInRange('0', '9'); }
 

@@ -10,13 +10,13 @@ class VmUnitTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(globalsTest);
+		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(pointerTest);
-		TESTER_ADD_TEST(commandLineArguments);
-		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
@@ -83,8 +83,8 @@ private:
 	}
 
 	void literalsTest() {
-		runTestOnVm("literals_test_32.dbc", "", "3", {});
-		runTestOnVm("literals_test_64.dbc", "", "3", {});
+		runTestOnVm("literals_test_32.dbc", "", "1", {});
+		runTestOnVm("literals_test_64.dbc", "", "1", {});
 	}
 
 	void verySimpleUnsignedTest() { runTestOnVm("very_simple_unsigned.dbc", "", "1235", {}); }
@@ -103,9 +103,16 @@ private:
 	}
 
 	void checkLiteralErrorHandling() {
-		loadInvalidDbc("invalid_type_specifier.dbc", { "Invalid literal: Unknown type specifier" });
-		loadInvalidDbc("invalid_literal.dbc", { "Invalid literal: Number not read fully for" });
-		loadInvalidDbc("invalid_literal_value.dbc", { "Invalid literal: Not a valid number for" });
+		loadInvalidDbc(
+			"invalid_literal.dbc",
+			{
+				"Invalid literal: Numeric literal overflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal underflows a 32-bit signed integer",
+				"Invalid literal: Numeric literal overflows a 32-bit unsigned integer",
+				"Invalid literal: Numeric literal overflows a 64-bit signed integer",
+				"Invalid literal: Floating-point literals must be in decimal base for",
+			}
+		);
 	}
 
 	void invalidPrimitiveTypes() {

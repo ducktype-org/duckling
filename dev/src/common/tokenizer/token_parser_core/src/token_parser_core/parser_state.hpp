@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base_element.hpp"
-#include "common_elements.hpp"
 #include "token_stream.hpp"
+
+#include <diagnostic_interactive/logger_fwd.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -29,15 +29,18 @@ namespace tpc {
 
 		// clang-format off
 		[[nodiscard]]
-		inline const Token& operator[](i64 fwd) const {
+		const Token& operator[](i64 fwd) const {
 			return ctokens().peek(fwd);
 		}
 
 		// clang-format on
 
-		Ref<dia::Logger> err;  ///< Stores parsing errors
+		Ref<dia::Logger>      err;      ///< Stores parsing errors
+		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err): err(err) {
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
+			  err(err),
+			  int_err(int_err) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 

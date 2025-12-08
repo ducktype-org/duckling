@@ -4,11 +4,8 @@
 #include "token.hpp"
 
 #include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
-
-#include <vector>
 
 namespace lexer {
 
@@ -19,7 +16,7 @@ namespace lexer {
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
 	 * controls)
 	 */
-	class Lexer {
+	class Lexer final {
 	public:
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
@@ -33,12 +30,6 @@ namespace lexer {
 		const Ref<dia::Logger> getLogger() const {
 			return logger;
 		}
-
-		/**
-		 * @brief Sets value of token_messages flag
-		 * that determines if lexer print debug token messages to cerr.
-		 */
-		static void setTokenMessages(bool value);
 
 	private:
 		/**
@@ -76,11 +67,22 @@ namespace lexer {
 		void stringHandler(Tokens& output);
 		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
-		void typeSpecifierHandler(Tokens& output);
+
+		template<typename NumberParser>
+		void numericLiteralHandler(Tokens& output, NumberParser parse_number);
+
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
+		void octLiteralHandler(Tokens& output);
 		void hexLiteralHandler(Tokens& output);
+
+		/**
+		 * @brief Consumes a numeric literal type suffix (e.g., i32, f64).
+		 * @return The suffix token or an empty optional if no suffix exists.
+		 */
+		base::Optional<Token> typeSpecifierHandler();
 		/**@}*/
+
 
 		/**
 		 * @name helper functions checking for patterns ahead
@@ -116,12 +118,6 @@ namespace lexer {
 		Ref<dia::Logger>            logger;
 		const CharArray&            char_array;
 		Tokens                      tokens;
-
-		/**
-		 * @brief Informs whether to print messages about what tokens are created to the debug
-		 * stream based on the PRINT_LOG define
-		 */
-		static bool token_messages;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
 	};

@@ -22,7 +22,7 @@ namespace vm::api {
 		};
 
 		struct LoadCode {
-			code::CodeCollection code_collections;
+			code::CodeCollection code_collection;
 		};
 
 		struct Pause {};
@@ -72,6 +72,8 @@ namespace vm::api {
 		struct Detach {};
 
 		struct ExitCodeRequest {};
+
+		struct DeinitAndValidate {};
 	}
 
 	using RequestVariant = std::variant<
@@ -93,7 +95,8 @@ namespace vm::api {
 		request::Output,
 		request::Attach,
 		request::Detach,
-		request::ExitCodeRequest>;
+		request::ExitCodeRequest,
+		request::DeinitAndValidate>;
 
 	struct SupervisorRequest {
 		PID            pid;

@@ -1,5 +1,5 @@
 #pragma once
-#include <base/exceptions.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace vm::exceptions {
 	class VMRuntimeException: public base::Exception {
@@ -28,9 +28,7 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
 	VM_RUNTIME_EXCEPTION(VMResumedWithPausedStatusException, "Resumed with paused status");
 	VM_RUNTIME_EXCEPTION(VMNegativeOffsetException, "Moving offset to negative value");
-	VM_RUNTIME_EXCEPTION(
-		VMUnreferencedBlockDeletionException, "Tried deleting a reference to an unreferenced block"
-	);
 	VM_RUNTIME_EXCEPTION(VMZeroDivisionException, "Tried dividing by zero");
+	VM_RUNTIME_EXCEPTION(VMFoundMemoryLeakException, "Memory leak detected");
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
 }

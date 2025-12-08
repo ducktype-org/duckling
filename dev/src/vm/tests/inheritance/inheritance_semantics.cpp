@@ -1,9 +1,7 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
-#include <base/variant.hpp>
+#include <base/collections/optional.hpp>
 
-#include <vm/api/api.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceSemanticsTest: public VmTestSuite {
@@ -47,13 +45,9 @@ private:
 	}
 
 	void semantics() {
-		using namespace vm::code;
-		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-			{ "semantics/invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
-			{ "semantics/missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },
-		});
-
-		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });
+		loadInvalidDbc(
+			"semantics/invalid_instantiation.dbc", { vm::code::UninstantiableValueError::ERR_MSG }
+		);
 	}
 };
 

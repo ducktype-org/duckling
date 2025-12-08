@@ -10,6 +10,7 @@ class VmFunctionsTests: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testSimpleFunctionCall);
 		TESTER_ADD_TEST(testSimpleReturnValue);
 		TESTER_ADD_TEST(testReturnL32);
@@ -19,7 +20,6 @@ public:
 		TESTER_ADD_TEST(testRecursion);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
-		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
 		TESTER_ADD_TEST(testSignaturesValidation);

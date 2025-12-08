@@ -1,14 +1,15 @@
 
 #include "link.hpp"
 
+#include <logger/logger.hpp>
 #include <system_command/system_command.hpp>
 
-namespace compiler::driver {
+namespace compiler::linker {
 
 	void link(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
-		LinkOptions                                 options
+		const LinkingOptions&                       options
 	) {
 		// Link the object file.
 		// Use the default system linker - for Ubuntu it is advised to use gcc.
@@ -21,11 +22,16 @@ namespace compiler::driver {
 		for (const auto& object_file_path: inputs)
 			command.addArg(object_file_path.FILE.getFilePath().native());
 
+		for (const auto& link_path: options.external_static_libraries)
+			command.addArg(link_path.native());
 
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");
 		command.addArg(output.FILE.getFilePath().native());
+
+		CORE_USER_LOG("[?/?] Linking executable: ", output.FILE.getFilePath().name(), "\n");
+
 		command.execute();
 	}
 }

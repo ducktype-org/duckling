@@ -1,20 +1,23 @@
+#include <driver/exit.hpp>
 #include <driver/initialize.hpp>
+#include <driver/module_flags/module_flags.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
-#include <global_state/options.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
-#include <linker/link.hpp>
-
-#include <base/string_id.hpp>
+#include <global_state/packages.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <filesystem/file_path.hpp>
+#include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
 #include <filesystem>
+
+namespace {
+	std::string package_name = "driver_test_package";
+}
 
 class DriverTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -33,13 +36,19 @@ public:
 		TESTER_ADD_TEST(packageCompiles);
 		TESTER_ADD_TEST(globalsTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
+		TESTER_ADD_TEST(saveArtifactsTest);
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.main_package_info = {
+					.package_name = package_name,
+					.package_path = fs::FilePath(path("modules/functions_1")),
+				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
-				.debug_options         = {}
+				.debug_options         = {},
+				.incremental           = {}
 			}
 		);
 	}
@@ -48,7 +57,8 @@ private:
 	void objFileGenerated() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_1")));
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -63,19 +73,23 @@ private:
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 
-		global_state::getDynamicDebugOptions()->llvm_dump_ir  = true;
-		global_state::getDynamicDebugOptions()->llvm_dump_asm = true;
-		defer(global_state::getDynamicDebugOptions()->llvm_dump_ir  = false;
-		      global_state::getDynamicDebugOptions()->llvm_dump_asm = false;);
+		compiler::driver::llvm_dump_ir  = true;
+		compiler::driver::llvm_dump_asm = true;
+		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_2")));
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
 
 			auto module_name
-				= base::StrID(base::strConcat("module_", module.queryUnstablePerfectHash()).c_str());
+				= base::StrID(base::strConcat(
+								  "module_",
+								  frontend::ModuleTree::getComponentHash(module).hash.toStringHex()
+				)
+			                      .c_str());
 
 			auto asm_file     = module_name.str() + ".s";
 			auto llvm_ir_file = module_name.str() + ".ll";
@@ -91,7 +105,8 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/functions_3")));
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -106,8 +121,16 @@ private:
 		using namespace compiler;
 
 		// this also checks if llvm IR lib compile and link into the executable:
-		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::LLVM
+
+		global_state::PackageInfo package_info{
+			.root_module
+			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name),
+		};
+
+		driver::compileEntirePackage(
+			package_info,
+			driver::BackendType::LLVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 
 		auto exe_path = artifacts_path / "package_llvm.exe";
@@ -116,15 +139,17 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		driver::compilerEntirePackage(
-			fs::File(path("modules/functions_4")), driver::BackendType::DVM
+		driver::compileEntirePackage(
+			package_info,
+			driver::BackendType::DVM,
+			{ .external_static_libraries = {}, .link_c_standard_library = true }
 		);
 	}
 
 	void globalsTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals")));
+		auto module = frontend::createModuleTree(fs::File(path("modules/globals")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -152,13 +177,54 @@ private:
 	void globalsInitializationTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals_initialization")));
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/globals_initialization")), package_name
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
 			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});
+	}
+
+	void saveArtifactsTest() {
+		using namespace compiler;
+
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_1")), "artifacts_test_package"
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+		});
+
+		// Serialize current graph
+		auto original = query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
+
+		// Call the driver saveArtifacts implementation
+		driver::exit();
+
+		// Print path where artifact should have been saved for human inspection
+		std::filesystem::path root_path = artifacts_path.getPath();
+		auto                  artc_path = root_path / "query" / std::string("query.artc");
+		std::cerr << "Query graph artifact path: " << artc_path << '\n';
+
+		// Load an independent ArtifactCollection from disk and read the blob back
+		artifacts::ArtifactCollection loaded_root(root_path);
+		auto                          query_col = loaded_root.subCollectionAt(base::StrID("query"));
+		const auto&                   blob = query_col->blobArtifactAt(base::StrID("query_graph"));
+		auto                          view = query_col->getBlobDataView(blob);
+
+		// Deserialize the blob into a QueryGraph and compare with the in-memory graph
+		std::span<const byte> span(view.getBegin(), view.size());
+		auto                  reloaded = query::internal::QueryGraph::deserialize(span);
+
+		// Get pointer to the in-memory graph we serialized earlier
+		auto graph_ptr = query::internal::ContextAccess::getState()->getGraphMutable();
+
+		ASSERT_TRUE(graph_ptr->compare(reloaded));
+		ASSERT_TRUE(reloaded.compare(*graph_ptr));
 	}
 };
 

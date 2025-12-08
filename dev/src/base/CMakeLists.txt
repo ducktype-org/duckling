@@ -1,13 +1,16 @@
 add_library(Base
-        src/base/impl/argument_splitter.cpp
-        src/base/impl/exceptions.cpp
-        src/base/impl/pretty_stacktrace.cpp
-        src/base/impl/raw_view.cpp
-        src/base/impl/string_id.cpp
-        src/base/impl/convert.cpp
-        src/base/impl/str_utils.cpp
-        src/base/impl/init_guards.cpp
-        src/base/impl/bit256.cpp
+        src/base/preproc/argument_splitter.cpp
+        
+        src/base/except/exceptions.cpp
+        src/base/except/pretty_stacktrace.cpp
+        
+        src/base/misc/raw_view.cpp
+        src/base/misc/convert.cpp
+        src/base/misc/init_guards.cpp
+        
+        src/base/str/str_utils.cpp
+        
+        src/base/types/bit256.cpp
 )
 
 # @TODO: unicode dependency might not be optimal.
@@ -22,7 +25,6 @@ duck_add_test(base flag_type tests/flag_type_test.cpp USES Base)
 
 duck_add_test(base stable_container tests/stable_container_test.cpp USES Base)
 
-duck_add_test(base string_id tests/string_id_test.cpp USES Base)
 
 duck_add_test(base optional tests/optional_test.cpp USES Base)
 
@@ -54,29 +56,36 @@ duck_add_test(base str_enum tests/str_enum_test.cpp USES Base)
 
 duck_add_test(base bit256 tests/bit256_test.cpp USES Base)
 
-add_example(anycast_example src/base/examples/anycast_example.cpp
+duck_add_test(base memory tests/memory_test.cpp USES Base)
+
+duck_add_test(base map tests/map_test.cpp USES Base)
+
+duck_add_test(base numeric_utils tests/numeric_utils_test.cpp USES Base)
+
+duck_add_test(base base tests/base_test.cpp USES Base)
+
+duck_add_test(base shared_box tests/shared_box_test.cpp USES Base)
+
+add_example(anycast_example examples/anycast_example.cpp
         USES Base)
 
-add_example(constexpr_cat_example src/base/examples/constexpr_cat_example.cpp
+add_example(constexpr_cat_example examples/constexpr_cat_example.cpp
         USES Base)
 
-add_example(defer_example src/base/examples/defer_example.cpp
+add_example(defer_example examples/defer_example.cpp
         USES Base)
 
-add_example(optional_simple_example src/base/examples/optional_simple_example.cpp
+add_example(optional_simple_example examples/optional_simple_example.cpp
         USES Base)
 
-add_example(str_utils_example src/base/examples/str_utils_example.cpp
+add_example(stringifyable_enum_example examples/stringifyable_enum_example.cpp
         USES Base)
 
-add_example(stringifyable_enum_example src/base/examples/stringifyable_enum_example.cpp
+add_example(strongly_typed_int_example examples/strongly_typed_int_example.cpp
         USES Base)
 
-add_example(strongly_typed_int_example src/base/examples/strongly_typed_int_example.cpp
+add_example(variant_match_example examples/variant_match_example.cpp
         USES Base)
 
-add_example(variant_match_example src/base/examples/variant_match_example.cpp
-        USES Base)
-
-add_example(variant_visit_example src/base/examples/variant_visit_example.cpp
+add_example(variant_visit_example examples/variant_visit_example.cpp
         USES Base)

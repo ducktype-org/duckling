@@ -5,9 +5,7 @@
 
 #pragma once
 
-#include "token.hpp"
-
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
 #include <token_source/forward.hpp>

@@ -1,0 +1,48 @@
+metadata:
+  type: "component"
+  family: "general"
+  name: "type_with_alias"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "component"
+
+params:
+  type_name:
+    description: "The type in the form that is written in the source code."
+  is_static:
+    description: "Whether the error is displayed in a static message."
+  expanded_type:
+    description: "Expanded type of the left operand."
+    optional: true
+
+content:
+  - case:
+      param: "is_static"
+    of:
+      "true":
+        - "`"
+        - param: "type_name"
+        - "`"
+        - case:
+            is_param_provided: "expanded_type"
+          of:
+            true:
+              - " (aka `"
+              - param: "expanded_type"
+              - "`)"
+            false:
+              - []
+      "false":
+        - "`"
+        - case:
+            is_param_provided: "expanded_type"
+          of:
+            true:
+              - default:
+                - param: "type_name"
+                alternative:
+                - param: "expanded_type"
+            false:
+              - param: "type_name"
+        - "`"

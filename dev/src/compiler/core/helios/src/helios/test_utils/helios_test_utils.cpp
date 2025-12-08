@@ -1,22 +1,19 @@
 #include "helios_test_utils.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/param.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
-#include <pst_parser/pst_visitor.hpp>
 
-#include <base/anycast.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -24,7 +21,7 @@
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
-		auto module = compiler::frontend::createModuleTree(path);
+		auto module = compiler::frontend::createModuleTreeWithRandomPackageID(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
 			return queryRootScopeOfMainModuleFile(ctx, module);
@@ -38,13 +35,14 @@ namespace compiler::helios::test_utils {
 		SymbolList result;
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
-			auto symbol      = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-                                             { scope, base::StrID(sym.c_str()), true }
-                                         )
-			                                : query::entryPoint<QueryLookupInSymbol>(
-                                             { result.back(), base::StrID(sym.c_str()), false }
+			auto symbol = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
+											 { scope, base::StrID(sym.c_str()), true }
+										 )
+			                           : query::entryPoint<QueryLookupInSymbol>(
+											 { result.back(), base::StrID(sym.c_str()), false }
 
-                                         );
+										 );
+			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
@@ -55,7 +53,7 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {
+	ctv::CompileTimeValue getConstValue(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
@@ -106,7 +104,7 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				CORE_ASSERT(stmt->getValue().has_value(), "Visited Const had no declared value");
+				CORE_ASSERT(stmt->getValue().has_value(), "Visited Variable had no declared value");
 				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};

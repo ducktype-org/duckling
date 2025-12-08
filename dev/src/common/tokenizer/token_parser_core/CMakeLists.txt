@@ -5,4 +5,4 @@ add_library(TPC STATIC
 	src/token_parser_core/debug_print.cpp
 )
 
-make_module(TPC USES Printer Base Lexer Diagnostic)
+make_module(TPC USES Printer Base Lexer Diagnostic DiagnosticInteractive Hashing)

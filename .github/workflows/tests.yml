@@ -1,5 +1,9 @@
 name: tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "dev" ]
@@ -25,6 +29,7 @@ env:
 
 jobs:
   determine-runners:
+    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
     with:
       self-hosted-labels: '["debug", "release"]'
@@ -48,6 +53,7 @@ jobs:
       # According to: https://github.com/orgs/community/discussions/38088
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+      itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
     timeout-minutes: 25  # (Per matrix run)
@@ -175,6 +181,7 @@ jobs:
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
+          CTEST_PARALLEL_LEVEL=${{ steps.set-jobs.outputs.jobs }} \
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
@@ -187,10 +194,19 @@ jobs:
               -D STRIP_SYMBOL_INFORMATION=ON \
               -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
               ${{ steps.cmake-flags.outputs.flags }}
-              
+
+      # Build all tests.
+      # We additionally build coverage targets in case of coverage enabled,
+      # so they are nicely parallelized and cached.
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
+        run: |
+          cmake                                 \
+          --build ${{ env.BUILD_DIR }}          \
+          -j ${{ steps.set-jobs.outputs.jobs }} \
+          --                                    \
+          build_all_tests                       \
+          ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
@@ -208,13 +224,13 @@ jobs:
         run: |
           echo "build:"
           du -hs ${{ env.BUILD_DIR }}
-          
+
           echo "build/lib:"
           du -hs ${{ env.BUILD_DIR }}/lib
 
           echo "build/bin:"
           du -hs ${{ env.BUILD_DIR }}/bin
-          
+
           echo "ccache:"
           du -hs ${{ env.CCACHE_DIR }}
 
@@ -256,7 +272,7 @@ jobs:
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
+        run: cmake --build ${{ env.BUILD_DIR }} -- test_parallel
 
       - name: Test Coverage
         id: test-coverage
@@ -266,10 +282,26 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+
+      - name: Delete coverage data files
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          # Remove only .gcda files, so that .gcno files are still present for integration tests
+          find ${{ env.BUILD_DIR }} -name '*.gcda' -type f -delete
+
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+
+      - name: Test Coverage After Integration Tests
+        id: test-coverage-itests
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -- coverage
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       - name: Test TODO Count
         id: todo-counter
@@ -297,6 +329,14 @@ jobs:
           value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
+      - name: Save main integration test coverage percentage
+        uses: action-pack/set-variable@v1
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        with:
+          name: 'MAIN_ITEST_COVERAGE_VALUE'
+          value: ${{ needs.build.outputs.itest-coverage-value }}
+          token: ${{ secrets.QUACKER_PAT }}
+
       - name: Save main TODO count
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
@@ -308,6 +348,10 @@ jobs:
       - name: Read main coverage percentage
         id: read-main-coverage
         run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
+
+      - name: Read main integration test coverage percentage
+        id: read-main-itest-coverage
+        run: echo value=${{ vars.MAIN_ITEST_COVERAGE_VALUE }} > $GITHUB_OUTPUT
 
       - name: Read main TODO count
         id: read-main-todo-count
@@ -356,6 +400,9 @@ jobs:
                     \n⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \
                     \n⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \
                     \n${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
+                    \n## Coverage of Integration Tests \
+                    \n⭐ Lines covered by integration tests on the **current** branch: **${{ needs.build.outputs.itest-coverage-value }}%** \
+                    \n⭐ Lines covered by integration tests on the main branch: ${{ steps.read-main-itest-coverage.outputs.value }}% \
                     \n## TODOs \
                     \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
                     \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \

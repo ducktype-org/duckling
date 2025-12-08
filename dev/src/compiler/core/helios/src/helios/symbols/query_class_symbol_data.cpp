@@ -4,13 +4,13 @@
 #include "simple.hpp"
 #include "symbol_kind.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
-#include <pst_parser/elements/includes/basic.hpp>
-#include <pst_parser/pst_visitor.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -70,44 +70,29 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				if (auto ctv = ctx.query<QueryEvaluateExpression>({ base })) {
-					if (auto maybe_type = ctv.value().asType()) {
-						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
-						// the base class has any specifiers other than the abstract type.
-						class_info.base = maybe_type.value().getType();
-					} else {
-						return query::QError(errors::Failed());
-					}
-				} else {
-					// We just fail here, error should be reported by QueryEvaluateExpression.
-					return query::QError(errors::Failed());
-				}
+				auto ctv = getTypeCTVFromPST(ctx, base);
+				if (ctv.hasError()) return query::QError(errors::Failed());
+				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
+				// type of the base class has any specifiers.
+				class_info.base = ctv.value().get<tsh::SymbolType<>>()->getType();
+				class_info.implements.push_back(ctv.value().get<tsh::SymbolType<>>()->getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluateExpression>(interface.unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().asType()) {
-							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
-							// of the base class has any specifiers other than the abstract type.
-							class_info.implements.push_back(maybe_type.value().getType());
-						} else {
-							return query::QError(errors::Failed());
-						}
-					} else {
-						// We just fail here, error should be reported by QueryEvaluateExpression.
-						return query::QError(errors::Failed());
-					}
+					auto ctv = getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr());
+					if (ctv.hasError()) return query::QError(errors::Failed());
+					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
+					// type of the base class has any specifiers.
+					class_info.implements.push_back(ctv.value().get<tsh::SymbolType<>>()->getType());
 				}
 			}
 
 			return class_info;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
-
 }

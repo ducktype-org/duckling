@@ -4,7 +4,7 @@
 
 #include <set>
 
-namespace tsh {
+namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return key.source == key.target
@@ -39,11 +39,12 @@ namespace tsh {
 		static auto provide(Context& context, const QKey& key) -> PResult {
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({
-					   key.source.getType(),
-					   key.target.getType(),
-				   })
-			   and (key.source.getMutability() == Mutability::Mutable
-			        or key.target.getMutability() == Mutability::Immutable);
+				key.source.getType(),
+				key.target.getType(),
+			});
+			// @TODO: #1488 readd/rethink mutability handling here
+			//    and (key.source.getMutability() == Mutability::Mutable
+			//         or key.target.getMutability() == Mutability::Immutable);
 		}
 
 		QUERY_AUTO_CACHE_COPY

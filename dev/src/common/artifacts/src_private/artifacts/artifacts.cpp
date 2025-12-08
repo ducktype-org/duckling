@@ -1,9 +1,10 @@
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <base/optional.hpp>
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/misc/int_conv.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -95,8 +96,12 @@ void artifacts::ArtifactCollection::loadData() {
 
 void artifacts::ArtifactCollection::flushDown() {
 	auto artc_file_path = getArtcFile();
-	std::cerr << "Flushing ArtifactCollection at: " << std::filesystem::absolute(artc_file_path)
-			  << '\n';
+	CORE_DEV_LOG(
+		Artifacts,
+		"Flushing ArtifactCollection at: ",
+		std::filesystem::absolute(artc_file_path),
+		"\n"
+	);
 
 	std::ofstream file(artc_file_path.getPath());
 	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;

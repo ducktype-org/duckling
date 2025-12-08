@@ -156,10 +156,10 @@ class RegistrySource(NewDependencySource):
     @override
     def make_entry(self, ctx: GlobalContext, root: Package) -> DependencySchema:
         _ = root
-        # NOTE: Bierzemy wersję z manifestu, żeby uniknąć takiej sytuacji:
-        #       - podaliśmy dokładną wersję
-        #       - fetcher znalazł wersję pasującą (jakoś)
-        #       - ale feature flagi się rozjechały.
+        # NOTE: We take the version from the manifest to avoid this situation:
+        #       - we specified the exact version
+        #       - the fetcher found a matching version (somehow)
+        #       - but the feature flags mismatched.
         version = self.get_summary(ctx).version
         schema = OredSemverSchema(str(version))
         return DependencySchema(version=schema)

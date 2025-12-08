@@ -1,23 +1,17 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/maps.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/pointers/box.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
+#include <string_id/string_id.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/token_stream.hpp>
-#include <token_source/source.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::loader::parser {
 
@@ -84,8 +78,6 @@ namespace vm::loader::parser {
 
 		~ByteCode() override = default;
 	};
-
-	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
 
 	struct Func final: AsmElement {
 		using AsmElement::AsmElement;

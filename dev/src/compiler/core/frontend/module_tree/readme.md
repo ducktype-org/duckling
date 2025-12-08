@@ -24,7 +24,7 @@ The **ModuleTree** component provides a hierarchical, in-memory representation o
 #include <frontend/module_tree/module_tree.hpp>
 
 fs::File root_dir("path/to/project");
-auto module_tree = compiler::frontend::ModuleTreeBuilder::create(root_dir);
+auto module_tree = compiler::frontend::ModuleTreeBuilder::create(root_dir, "package_id");
 
 // Access submodules
 for (const auto& [name, submodule] : module_tree->getSubmodules()) {

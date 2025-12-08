@@ -3,50 +3,50 @@
 - \subpage vm-old-out-files-structure
 - \subpage vm-old-andrzej-raport
 
-# Wersje maszyn:
-JavaScript: 20.2.0 z https://nodejs.org/en
-Python: 3.11.3 z https://www.python.org/downloads/release/python-3113/
-Java 20.0.1 z https://jdk.java.net/20/
+# Machine Versions:
+JavaScript: 20.2.0 from https://nodejs.org/en
+Python: 3.11.3 from https://www.python.org/downloads/release/python-3113/
+Java 20.0.1 from https://jdk.java.net/20/
 
-python: ./configure --enable-optimizations --with-lto i później 
+python: ./configure --enable-optimizations --with-lto and then
 
-# Wykonanie:
-Pamiętajcie o używaniu dobrej ścieżki do najnowszej wersji, JDK i nodejs przychodzą już skompilowane, python u mnie zainstalował się jako python3.11
+# Execution:
+Remember to use the correct path to the latest version; JDK and nodejs come pre-compiled, python installed as python3.11 on my machine.
 
-Ustawcie komputer na najwyższe obroty jakie pozwala tak sensownie odpalić. Bez niepotrzebnych programów włączonych w tle i odpalajcie z czystego terminala.
+Set the computer to the highest performance settings reasonably possible. Ensure no unnecessary programs are running in the background and run from a clean terminal.
 
 ## JavaScript:
-Dwie wersje uruchomienia
-1. Z JIT-em: `time node {plik}.js < input{n}.in > dump.out`
-2. Bez JIT-a: `time node --jitless {plik}.js < input{n}.in > dump.out`
+Two execution versions
+1. With JIT: `time node {file}.js < input{n}.in > dump.out`
+2. Without JIT: `time node --jitless {file}.js < input{n}.in > dump.out`
 ## Python:
-`time python3 {plik}.py < input{n}.in > dump.out`
+`time python3 {file}.py < input{n}.in > dump.out`
 ## Java:
-`javac {plik}.java`
-Dwie wersje uruchomienia
-1. Z JIT-em: `time java {plik} < input{n}.in > dump.out`
-2. Bez JIT-a: `time java -Xint {plik} < input{n}.in > dump.out`
+`javac {file}.java`
+Two execution versions
+1. With JIT: `time java {file} < input{n}.in > dump.out`
+2. Without JIT: `time java -Xint {file} < input{n}.in > dump.out`
 
 ## RiftVM:
-Dwie wersje:
+Two versions:
 1. RiftVM + debug:  
-W src/services/executor_f8/op_case_config.hpp:
+In src/services/executor_f8/op_case_config.hpp:
 ```
 constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 // #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```
-`time ./RiftVM -f {plik}.rbc < input{n}.in > dump.out`
+`time ./RiftVM -f {file}.rbc < input{n}.in > dump.out`
 2. RiftVM:  
-W src/services/executor_f8/op_case_config.hpp:
+In src/services/executor_f8/op_case_config.hpp:
 ```
 constexpr bool IGNORE_EXECUTION_STRATEGY = true;
 #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```
-`time ./RiftVM -f {plik}.rbc < input{n}.in > dump.out`
+`time ./RiftVM -f {file}.rbc < input{n}.in > dump.out`
 
-# Raportowanie
-W rozdziale 7 w pracy trzeba wpisać swój procesor i ilość i rodzaj (DDR3/DDR4 itp) ramu i swój system operacyjny. Dalej wypełnijcie odpowiednie tabelki z prędkością w sekundach zaokrąglone do 2 miejsc po przecinku. Bierzemy czas "real"
+# Reporting
+In Chapter 7 of the thesis, you must enter your processor, the amount and type of RAM (DDR3/DDR4, etc.), and your operating system. Next, fill in the appropriate tables with the speed in seconds, rounded to 2 decimal places. We use the "real" time.
 
-Dobrze znaleźć kogoś kto ma ARMa na kompie, bo to może być ciekawe
+It would be good to find someone with an ARM processor on their computer, as that could be interesting.

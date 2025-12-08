@@ -1,66 +1,114 @@
-
 #include "builtin_operations.hpp"
 
-#include <typesystem/higher/queries.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 
-namespace compiler::helios::code {
+#include <tuple>
+#include <utility>
 
-	base::Optional<BuiltinBinary> findBinaryBuiltin(
-		lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+namespace {
+	using namespace compiler;
+	using namespace compiler::helios;
+	using namespace compiler::helios::code;
+
+	/**
+	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
+	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
+	 */
+	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypewithCoercion(
+		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
 	) {
-		// note: this is mock that works only for very simple int op int and bool op bool.
-		// @todo: make it smarter?
-		// when refactoring it remember about unaryBuiltin
+		auto lhs_type = lhs->expression_type.getSymbolType();
+		auto rhs_type = rhs->expression_type.getSymbolType();
 
-		// Get argument types.
-		auto lhs_type = lhs->expression_type;
-		auto rhs_type = rhs->expression_type;
+		// Types the same -> no coercion.
+		if (lhs_type.getType() == rhs_type.getType()) {
+			return std::make_tuple(
+				lhs_type, Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type)
+			);
+		}
 
-		// Confirm appropriate types.
-		auto argument_kind           = lhs_type.getType().getKind();
-		bool are_arguments_same_kind = argument_kind == rhs_type.getType().getKind();
-		bool are_arguments_int_or_bool
-			= argument_kind == tsh::Kind::Integral or argument_kind == tsh::Kind::Bool;
+		// Try coercing left to right.
+		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
+		if (lhs_to_rhs.hasValue()) {
+			return std::make_tuple(
+				rhs_type, std::move(lhs_to_rhs.value()), Coercion::emptyCoercion(rhs_type)
+			);
+		}
 
-		if (not are_arguments_same_kind or not are_arguments_int_or_bool) {
+		// Try coercing right to left.
+		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
+		if (rhs_to_lhs.hasValue()) {
+			return std::make_tuple(
+				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.value())
+			);
+		}
+
+		// Invalid coercion.
+		return {};
+	}
+}
+
+namespace compiler::helios::code {
+	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	) {
+		auto common_type_res = findCommonTypewithCoercion(ctx, lhs, rhs);
+		if (!common_type_res.has_value()) {
 			// @TODO: report an error?
-			// No builtins for types other than ints and bools for now.
 			return {};
 		}
 
-		// Confirm matching sizes and signedness in the case of integers.
-		if (argument_kind == tsh::Kind::Integral) {
-			auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
-			auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
+		auto& [common_type, lhs_coercion, rhs_coercion] = common_type_res.value();
 
-			if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
-			    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
-				return {};
-			}
-		}
+		auto operation_kind = common_type.getType().getKind();
+
 
 		// @TODO: change to base::map when possible
-		using enum BuiltinBinary;
-		const static std::map<base::StrID, BuiltinBinary> operators = {
-			{ base::StrID("+"), IntegerAdd },
-			{ base::StrID("-"), IntegerSub },
-			{ base::StrID("*"), IntegerMul },
-			{ base::StrID("/"), IntegerDiv },
-			{ base::StrID("%"), IntegerMod },
-			{ base::StrID("**"), IntegerPow },
-			{ base::StrID("<"), IntegerLt },
-			{ base::StrID(">"), IntegerGt },
-			{ base::StrID("<="), IntegerLteq },
-			{ base::StrID(">="), IntegerGteq },
-			{ base::StrID("=="), IntegerEq },
-			{ base::StrID("!="), IntegerNeq },
-			{ keywordToStr(lang_def::Keyword::And), BooleanAnd },
-			{ keywordToStr(lang_def::Keyword::Or), BooleanOr },
+		const static std::map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinary> operators = {
+			/// Integer arithmetic ///
+			{ { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
+			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinBinary::IntegerSub },
+			{ { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
+			{ { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
+			{ { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
+			{ { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
+
+			/// Integer comparisons ///
+			{ { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
+			{ { base::StrID(">"), tsh::Kind::Integral }, BuiltinBinary::IntegerGt },
+			{ { base::StrID("<="), tsh::Kind::Integral }, BuiltinBinary::IntegerLteq },
+			{ { base::StrID(">="), tsh::Kind::Integral }, BuiltinBinary::IntegerGteq },
+			{ { base::StrID("=="), tsh::Kind::Integral }, BuiltinBinary::IntegerEq },
+			{ { base::StrID("!="), tsh::Kind::Integral }, BuiltinBinary::IntegerNeq },
+
+			/// Floating point arithmetic ///
+			{ { base::StrID("+"), tsh::Kind::Float }, BuiltinBinary::FloatAdd },
+			{ { base::StrID("-"), tsh::Kind::Float }, BuiltinBinary::FloatSub },
+			{ { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
+			{ { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
+			{ { base::StrID("**"), tsh::Kind::Float }, BuiltinBinary::FloatPow },
+
+			/// Floating point comparisons ///
+			{ { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },
+			{ { base::StrID(">"), tsh::Kind::Float }, BuiltinBinary::FloatGt },
+			{ { base::StrID("<="), tsh::Kind::Float }, BuiltinBinary::FloatLteq },
+			{ { base::StrID(">="), tsh::Kind::Float }, BuiltinBinary::FloatGteq },
+			{ { base::StrID("=="), tsh::Kind::Float }, BuiltinBinary::FloatEq },
+			{ { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
+
+			{ { keywordToStr(lang_def::Keyword::And), tsh::Kind::Bool }, BuiltinBinary::BooleanAnd },
+			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
 		};
 
-		if (operators.contains(op)) return operators.at(op);
+		if (operators.contains({ op, operation_kind }))
+			return std::make_tuple(
+				operators.at({ op, operation_kind }),
+				std::move(lhs_coercion),
+				std::move(rhs_coercion)
+			);
+
 		return {};
 	}
 
@@ -75,11 +123,14 @@ namespace compiler::helios::code {
 		static const LookupMap lookup = {
 			// Integral
 			{ { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
+			// Floating point
+			{ { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
 			// Boolean
 			{ { keywordToStr(lang_def::Keyword::Not), tsh::Kind::Bool }, BuiltinUnary::BooleanNot },
 			// Meta
 			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
 			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
+			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
 		};
 
 		// Single lookup

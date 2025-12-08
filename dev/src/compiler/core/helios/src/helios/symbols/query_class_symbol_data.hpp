@@ -4,10 +4,9 @@
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
-#include <base/string_id.hpp>
-
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios {
 
@@ -52,6 +51,5 @@ namespace compiler::helios {
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in its definition.
 	 */
-	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
-
+	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>, ({}))
 }

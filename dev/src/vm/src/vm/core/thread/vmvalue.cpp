@@ -1,5 +1,7 @@
 #include "vmvalue.hpp"
 
+#include <logger/logger.hpp>
+
 #include <vm/core/process/vmprocess.hpp>
 
 #include <ostream>
@@ -32,14 +34,16 @@ vm::VmValue::VmValue(VMProcess& process, TypeCRef type):
 	  my_process(&process),
 	  memory(&process.memory),
 	  type(type),
-	  pointer(memory->allocateDummy(type, data.data()), 0) {}
+	  pointer(memory->allocateDummy(type, data.data()), 0) {
+	memory->increaseBlockRefcount(pointer.getBlock());
+}
 
 vm::VmValue::VmValue(VMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
 	importData(src);
 }
 
 vm::VmValue::~VmValue() {
-	if (!pointer.isNull()) std::cerr << "VmValue not freed!\n";
+	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VmValue not freed!\n");
 }
 
 void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
@@ -47,7 +51,8 @@ void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, p
 void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
 void vm::VmValue::freeData() {
-	memory->freeBlock(pointer.getBlock());
+	memory->freeBlockData(pointer.getBlock());
+	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }
 

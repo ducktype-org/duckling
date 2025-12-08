@@ -1,13 +1,13 @@
 #include "types.hpp"
 
-#include "../internal/abstract_type_impl.hpp"
+#include <typesystem/higher/abstract_type_impl.hpp>
 
 #include <query_framework/query_impl.hpp>
 
-namespace tsh {
+namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto unit_impl = internal::UnitAbstractTypeImpl{};
+			static auto unit_impl = UnitAbstractTypeImpl{};
 			return &unit_impl;
 		}
 
@@ -18,7 +18,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVoidType, VoidAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto void_impl = internal::VoidAbstractTypeImpl{};
+			static auto void_impl = VoidAbstractTypeImpl{};
 			return &void_impl;
 		}
 
@@ -29,7 +29,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryByteType, ByteAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto byte_impl = internal::ByteAbstractTypeImpl{};
+			static auto byte_impl = ByteAbstractTypeImpl{};
 			return &byte_impl;
 		}
 
@@ -40,7 +40,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryBoolType, BoolAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto bool_impl = internal::BoolAbstractTypeImpl{};
+			static auto bool_impl = BoolAbstractTypeImpl{};
 			return &bool_impl;
 		}
 
@@ -51,7 +51,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryCharType, CharAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto char_impl = internal::CharAbstractTypeImpl{};
+			static auto char_impl = CharAbstractTypeImpl{};
 			return &char_impl;
 		}
 
@@ -172,14 +172,16 @@ namespace tsh {
 				{ 128, Impl{ 128 } },  // Quad precision
 			};
 
-			if (!cache.contains(size)) {
+			if (!cache.contains(size.value)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size));
+				context.log(
+					makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size.value)
+				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}
 
-			return &cache.at(size);
+			return &cache.at(size.value);
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -190,9 +192,9 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			static auto raw_pointer_impl
-				= std::array{ internal::RawPointerAbstractTypeImpl{ Mutability::Immutable },
-				              internal::RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-			return &raw_pointer_impl.at(key);
+				= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
+				              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
+			return &raw_pointer_impl.at(key.value);
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -200,21 +202,19 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
-	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto pointer_pimpl = new internal::PointerAbstractTypeImpl{ key };
-			pushType(Box<internal::PointerAbstractTypeImpl>::fromPointer(pointer_pimpl));
-			return pointer_pimpl;
+			return PointerAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
 	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto string_impl = internal::StringAbstractTypeImpl{};
+			static auto string_impl = StringAbstractTypeImpl{};
 			return &string_impl;
 		}
 
@@ -223,72 +223,56 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
 
-	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey key) -> PResult {
-			const auto dynamic_array_pimpl = new internal::DynamicArrayAbstractTypeImpl{ key };
-			pushType(Box<internal::DynamicArrayAbstractTypeImpl>::fromPointer(dynamic_array_pimpl));
-			return dynamic_array_pimpl;
-		}
+	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
 
-	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto tuple_pimpl = new internal::TupleAbstractTypeImpl{ key.components };
-			pushType(Box<internal::TupleAbstractTypeImpl>::fromPointer(tuple_pimpl));
-			return tuple_pimpl;
-		}
+	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Impl) {
+		static auto provide(Context&, const QKey& key) -> PResult { return { key.components }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
-	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto variant_pimpl
-				= new internal::VariantAbstractTypeImpl{ key.underlying_types };
-			pushType(Box<internal::VariantAbstractTypeImpl>::fromPointer(variant_pimpl));
-			return variant_pimpl;
+			return VariantAbstractTypeImpl(key.underlying_types);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
-	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
-			const auto function_pimpl
-				= new internal::FunctionAbstractTypeImpl{ params, result, pure, free };
-			pushType(Box<internal::FunctionAbstractTypeImpl>::fromPointer(function_pimpl));
-			return function_pimpl;
+			return { params, result, pure, free };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
-	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto class_pimpl = new internal::ClassAbstractTypeImpl{ key };
-			pushType(Box<internal::ClassAbstractTypeImpl>::fromPointer(class_pimpl));
-			return class_pimpl;
+			return ClassAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
 
 	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto namespace_impl = internal::NamespaceAbstractTypeImpl{};
+			static auto namespace_impl = NamespaceAbstractTypeImpl{};
 			return &namespace_impl;
 		}
 
@@ -299,7 +283,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryModuleType, ModuleAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto module_impl = internal::ModuleAbstractTypeImpl{};
+			static auto module_impl = ModuleAbstractTypeImpl{};
 			return &module_impl;
 		}
 
@@ -310,7 +294,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryMetaType, MetaAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto meta_impl = internal::MetaAbstractTypeImpl{};
+			static auto meta_impl = MetaAbstractTypeImpl{};
 			return &meta_impl;
 		}
 
@@ -321,7 +305,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryImportType, ImportAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto import_impl = internal::ImportAbstractTypeImpl{};
+			static auto import_impl = ImportAbstractTypeImpl{};
 			return &import_impl;
 		}
 

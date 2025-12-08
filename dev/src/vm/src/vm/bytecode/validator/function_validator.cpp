@@ -2,19 +2,17 @@
 
 #include "errors.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/ref.hpp>
-#include <base/type_traits.hpp>
-#include <base/variant.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -25,73 +23,23 @@ using namespace vm;
 using namespace code;
 
 namespace {
-	// Helpers for validation, mainly `ext_*` instructions
+	// Helpers
 	using namespace instructions;
 
-	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
-	using DeinitializingInstructions
-		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
-	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
+	using ValidLastInstructions      = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	using DeinitializingInstructions = std::tuple<
+		Op_deinit,
+		Op_call_func,
+		Op_call_builtinfunc,
+		Op_call_cfunc,
+		Op_virtual_call_lptr_method>;
+	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
 
-	template<typename T>
-	concept Extension = base::IsTupleMember<T, ExtensionTypes>;
 	template<typename T>
 	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
 
 	template<typename T>
 	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
-
-	template<Extension E>
-	struct ExtensionMetadata;
-
-	template<>
-	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter = std::tuple<
-			Op_fixedSizeTableLea_lptr_lptr,
-			Op_fixedSizeTableLoad_lany_lptr,
-			Op_fixedSizeTableStore_lptr_lany,
-			Op_dynTableLea_lptr_lptr,
-			Op_dynTableLoad_lany_lptr,
-			Op_dynTableStore_lptr_lany,
-			Op_dynTableReAlloc_lptr_type>;
-		using OptionalAfter = std::tuple<>;
-	};
-
-	template<>
-	struct ExtensionMetadata<Op_ext_type> {
-		using RequiredAfter = std::tuple<
-			Op_downcast_lptr_lptr,
-			Op_variantGetInner_lptr_lvnt,
-			Op_variantGetInner_lptr_lptr>;
-		using OptionalAfter = std::tuple<>;
-	};
-
-	template<>
-	struct ExtensionMetadata<Op_ext_field> {
-		using RequiredAfter
-			= std::tuple<Op_structLea_lptr_lptr, Op_structLoad_lany_lptr, Op_structStore_lptr_lany>;
-		using OptionalAfter = std::tuple<>;
-	};
-
-	template<typename Tup>
-	struct CatRequired;
-
-	template<typename... Ts>
-	struct CatRequired<std::tuple<Ts...>> {
-		using Value = base::tuple_cat_t<typename ExtensionMetadata<Ts>::RequiredAfter...>;
-	};
-
-	template<Extension E>
-	bool acceptsExtension(CRef<Instruction> instr) {
-		return base::variantHoldsOneOf<base::tuple_cat_t<
-			typename ExtensionMetadata<E>::RequiredAfter,
-			typename ExtensionMetadata<E>::OptionalAfter>>(*instr);
-	}
-
-	bool requiresSomeExtension(CRef<Instruction> instr) {
-		return base::variantHoldsOneOf<CatRequired<ExtensionTypes>::Value>(*instr);
-	}
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
@@ -104,7 +52,7 @@ namespace {
 	}
 
 	template<class ErrorT = PointerTypeMismatchError, class... Args>
-	void validateStructExtFieldType(
+	void validateStructFieldType(
 		const DataType&      ztruct,
 		const opargs::Field& field_arg,
 		base::StrID          expected_field_type,
@@ -173,7 +121,7 @@ public:
 	/**
 	 * @brief Pops the top element from the stack state and updates local variable mappings.
 	 * Can be only used with instructions which effectively deinitialize the local stack
-	 * (deinit, call_func, virtual_call and call_builtin_func)
+	 * (deinit, call_func, virtual_call and call_builtinfunc)
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
@@ -213,6 +161,7 @@ class FunctionValidator {
 	const TypeMetadata&                              type_metadata;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
 	std::vector<bool>                                        visited_instructions;
@@ -227,6 +176,8 @@ class FunctionValidator {
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
             if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
                 return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
+                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
             return &signatures.at(instr.arg0.function_name);
 		}();
 
@@ -327,16 +278,13 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		auto args = std::visit(
-			[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
-				if constexpr (TwoArgumentOpcode<T>)
-					return { instr.arg0, instr.arg1 };
-				else if constexpr (OneArgumentOpcode<T>)
-					return { instr.arg0 };
-				else
-					return {};
-			},
-			instruction
+		auto args = VISIT(
+			instruction,
+			i,
+			return std::apply(
+				[](auto... arg_pack) { return std::vector<opargs::OpCodeArg>{ arg_pack... }; },
+				i.argsAsTuple()
+			)
 		);
 
 		std::vector<PrimitiveType> arg_types;
@@ -404,6 +352,12 @@ class FunctionValidator {
 						}
 					}
 				}
+				variant_case(opargs::StackLocalOpq, local) {
+					if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+					CRef<TypeOfData> type = current_stack.at(local.var_name);
+					if (!std::holds_alternative<OpaqueType>(*type))
+						throw InvalidArgumentTypeError(arg);
+				}
 				variant_case_novalue(opargs::Immediate) {}
 				variant_case(opargs::Type, type_value) {
 					if (!tod_map.contains(type_value.type_name)) throw UnknownTypeError(arg);
@@ -418,6 +372,12 @@ class FunctionValidator {
 					auto generic_arg = opargs::OpCodeArg{ function_value };
 					if (!builtins::isBuiltinFunction(fun_name))
 						throw InvalidBuiltinFunctionError(generic_arg);
+				}
+				variant_case(opargs::ExtCFunctionName, function_value) {
+					auto fun_name    = function_value.function_name;
+					auto generic_arg = opargs::OpCodeArg{ function_value };
+					if (!ext_c_signatures.contains(fun_name))
+						throw UnknownFunctionError(generic_arg);
 				}
 				variant_case(opargs::MethodName, method_value) {
 					auto method_name = method_value.method_name;
@@ -475,25 +435,25 @@ class FunctionValidator {
 		}
 
 		// We assert no cross-type operations on primitive types.
-		if (arg_types.size() == 2) {
-			if (arg_types.at(0).size == arg_types.at(1).size
-			    && arg_types.at(0).name != arg_types.at(1).name)
-				throw ArgumentMismatchError(instruction);
+		if (arg_types.size() >= 2) {
+			bool sizes_match = std::ranges::all_of(arg_types, [&](auto x) {
+				return x.size == arg_types.front().size;
+			});
+			bool names_match = std::ranges::all_of(arg_types, [&](auto x) {
+				return x.name == arg_types.front().name;
+			});
+			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
 		}
 	}
 
 	/**
 	 * @brief Validates instruction's arguments non-trivially - using specific logic for each
 	 * instruction. For instance, an instruction may expect type `T` as arg0, a `Pointer<T>` as
-	 * arg1 and another `Pointer<T>` as an extension. This is the place to express such logic.
+	 * arg1 and another `Pointer<T>` as arg2. This is the place to express such logic.
 	 * @param instruction Instruction that is validated.
-	 * @param next_instruction Optional next instruction. Used when expecting e.g. `ext_*`.
-	 * @note Presence of extensions is checked by different function: `validateExtension`.
 	 */
 	void validateArgTypesNonTrivially(
-		const Instruction&                                       instruction,
-		[[maybe_unused]] base::Optional<base::CRef<Instruction>> next_instruction,
-		const LocalStack&                                        current_stack
+		const Instruction& instruction, const LocalStack& current_stack
 	) const {
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
@@ -569,6 +529,12 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
+			variant_case(Op_mov_lopq_lopq, instr) {
+				const auto& dst_type = std::get<OpaqueType>(*current_stack.at(instr.arg0.var_name));
+				const auto& src_type = std::get<OpaqueType>(*current_stack.at(instr.arg1.var_name));
+				if (dst_type.name != src_type.name) throw OpaqueTypeMismatchError(instr);
+			}
+			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}
 			variant_case_novalue(Op_add_l64_imm) {}
 			variant_case_novalue(Op_add_l32_l32) {}
@@ -675,7 +641,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lvnt, instr) {
+			variant_case(Op_variantGetInner_lptr_lvnt_type, instr) {
 				const auto& variant_type
 					= std::get<VariantType>(*current_stack.at(instr.arg1.var_name));
 				const auto& pointer_type
@@ -685,8 +651,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
-				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.arg2 != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
 				const auto& variant_pointer
@@ -699,7 +664,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lptr, instr) {
+			variant_case(Op_variantGetInner_lptr_lptr_type, instr) {
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				base::StrID wanted_type = pointer_type.inner;
@@ -712,15 +677,15 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				const auto& ext = std::get<Op_ext_type>(*next_instruction.value());
-				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.arg2 != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
 			variant_case_novalue(Op_jmpIf_label) {}
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
-			variant_case_novalue(Op_call_builtin_func) {}
+			variant_case_novalue(Op_call_builtinfunc) {}
+			variant_case_novalue(Op_call_cfunc) {}
 			variant_case(Op_virtual_call_lptr_method, instr) {
 				// For a method all to be valid, the called method has to be declared as a virtual
 				// method in this inheritable or it's superclasses or interfaces.
@@ -762,7 +727,7 @@ class FunctionValidator {
 				if (pointer_type.inner != instr.arg1.type_name)
 					throw VTableTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_downcast_lptr_lptr) {}
+			variant_case_novalue(Op_downcast_lptr_lptr_type) {}
 			variant_case_novalue(Op_free_lptr) {}
 			variant_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
@@ -785,7 +750,7 @@ class FunctionValidator {
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_structLea_lptr_lptr, instr) {
+			variant_case(Op_structLea_lptr_lptr_field, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -793,30 +758,27 @@ class FunctionValidator {
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
-				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
+				validateStructFieldType(ztruct, instr.arg2, destination.inner, instr);
 			}
-			variant_case(Op_structLoad_lany_lptr, instr) {
+			variant_case(Op_structLoad_lany_lptr_field, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& ztruct_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
-				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*destination), instr);
+				validateStructFieldType(ztruct, instr.arg2, typeName(*destination), instr);
 			}
-			variant_case(Op_structStore_lptr_lany, instr) {
+			variant_case(Op_structStore_lptr_lany_field, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& ztruct_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction.value());
-				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
+				validateStructFieldType(ztruct, instr.arg2, typeName(*source), instr);
 			}
-			variant_case(Op_fixedSizeTableLea_lptr_lptr, instr) {
+			variant_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -828,7 +790,7 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLea_lptr_lptr, instr) {
+			variant_case(Op_dynTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 
@@ -840,7 +802,7 @@ class FunctionValidator {
 				if (destination.inner != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableLoad_lany_lptr, instr) {
+			variant_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& table_pointer
@@ -851,7 +813,7 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLoad_lany_lptr, instr) {
+			variant_case(Op_dynTableLoad_lany_lptr_l64, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
@@ -860,7 +822,7 @@ class FunctionValidator {
 				if (typeName(*destination) != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableStore_lptr_lany, instr) {
+			variant_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& table_pointer
@@ -871,7 +833,7 @@ class FunctionValidator {
 				if (table_type.inner != typeName(*source))
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableStore_lptr_lany, instr) {
+			variant_case(Op_dynTableStore_lptr_lany_l64, instr) {
 				const auto& source = current_stack.at(instr.arg1.var_name);
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
@@ -881,7 +843,7 @@ class FunctionValidator {
 				if (table_type.inner != typeName(*source))
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableReAlloc_lptr_type, instr) {
+			variant_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				const auto& table_type
@@ -897,11 +859,6 @@ class FunctionValidator {
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 				if (table_type.inner != "byte") throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_ext_l64) {}
-			variant_case_novalue(Op_ext_type) {}
-			variant_case_novalue(Op_ext_field) {}
-			variant_case_novalue(Op_ext_type_field) {}
-			variant_case_novalue(Op_ext_type_l64) {}
 			variant_case_novalue(Op_nop) {}
 			variant_case_novalue(Op_exit) {}
 			variant_case_novalue(Op_breakpoint) {}
@@ -910,35 +867,6 @@ class FunctionValidator {
 				CORE_PANIC("Unhandled instruction: ", instructionToString(instruction));
 			}
 		}
-	}
-
-	/**
-	 * @brief Meant to be called for every instruction in a function, not just extension.
-	 * In case it's an extension, it validates whether `predecessor` really expected this
-	 * extension.
-	 */
-	void validateExtension(
-		base::Optional<base::CRef<Instruction>> predecessor, const Instruction& instruction
-	) const {
-		// This check assumes that the last instruction in a function is non-extendable,
-		// this is checked in `validate`.
-		bool valid_extension = std::visit(
-			[&]<typename T>(const T&) {
-				if constexpr (Extension<T>)
-					// If the current instruction is an extension, the situation is valid
-				    // if the previous instruction can take this extension.
-				    // Extensions must always come after some instruction, so it's invalid for it to
-				    // be the first instruction in a function (to not have a predecessor).
-					return predecessor.map(acceptsExtension<T>).copyValueOr(false);
-				else
-					// It is invalid if the current instruction is not an extension, but the
-				    // previous instruction *requires* one. If there was no previous instruction,
-				    // it's not invalid.
-					return !predecessor.map(requiresSomeExtension).copyValueOr(false);
-			},
-			instruction
-		);
-		if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
 	}
 
 	/**
@@ -1019,19 +947,9 @@ class FunctionValidator {
 		auto& instructions = function.body;
 
 		while (index != function.body.size()) {
-			validateExtension(
-				index > 0 ? &instructions[index - 1] : base::Optional<base::CRef<Instruction>>(),
-				instructions[index]
-			);
-
 			validateArgTypes(instructions[index], local_stack);
 
-			validateArgTypesNonTrivially(
-				instructions[index],
-				index + 1 < instructions.size() ? &instructions[index + 1]
-												: base::Optional<base::CRef<Instruction>>(),
-				local_stack
-			);
+			validateArgTypesNonTrivially(instructions[index], local_stack);
 
 			visited_instructions[index] = true;
 			variant_match(instructions[index]) {
@@ -1076,7 +994,11 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_call_builtin_func, instr) {
+				variant_case(Op_call_builtinfunc, instr) {
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
+				variant_case(Op_call_cfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
@@ -1117,12 +1039,14 @@ public:
 		const TypeMetadata&                              type_metadata,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
 		  tod_map(tod_map),
 		  type_metadata(type_metadata),
 		  globals(globals),
 		  signatures(signatures),
+		  ext_c_signatures(ext_c_signatures),
 		  function(function) {}
 
 	std::vector<Instruction> validateAndExtractReachableCode() {
@@ -1143,11 +1067,14 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	const TypeMetadata&                              type_metadata,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
+	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	FunctionValidator validator(tod_map, type_metadata, globals_map, signatures, function);
+	FunctionValidator validator(
+		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function
+	);
 
 	Function new_function;
 	new_function.name         = function.name;

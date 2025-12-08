@@ -1,19 +1,13 @@
 /**
  * @file dvm_backend_unit_tests.cpp
  */
-#include <base/string_id.hpp>
-
+#include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/errors.hpp>
 
-#include <sstream>
 
 using namespace vm::code::builders;
 using namespace vm::code::instructions;
@@ -45,9 +39,8 @@ private:
 		const auto arg0 = vm::opargs::StackLocal32{ base::StrID("arg0") };
 		const auto arg1 = vm::opargs::StackLocal32{ base::StrID("arg1") };
 		instr_builder.pushArgs(arg0, arg1);
-		std::vector<Instruction> instr = instr_builder.build();
-		ASSERT_TRUE(instr.size() == 1);
-		assertInstructionsEqual(instr[0], Op_mov_l32_l32{ arg0, arg1 });
+		Instruction instr = instr_builder.build();
+		assertInstructionsEqual(instr, Op_mov_l32_l32{ arg0, arg1 });
 
 		// Test `ret_l32_l32` does not exist
 		instr_builder.setKind(vm::code::builders::OpKind::ret);

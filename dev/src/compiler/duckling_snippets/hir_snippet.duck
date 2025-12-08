@@ -42,14 +42,14 @@ namespace T {
 # T -> using(g) -> h
 # it is: global.T.g.h, ...g.h
 # T.h;
-}#
+#}
 
 #{
 struct T {
 	const a: Q;
 	alias x = a.x;
 }
-}#
+#}
 
 namespace X {
 	namespace Z {

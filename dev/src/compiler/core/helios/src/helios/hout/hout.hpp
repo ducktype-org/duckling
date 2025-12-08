@@ -7,15 +7,14 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include "elements/expr.hpp"  // IWYU pragma: export
+#include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
+#include "hout_fd.hpp"        // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
+#include <ctv/ctv.hpp>
 
-#include <base/box.hpp>
-#include <base/string_id.hpp>
+#include <base/pointers/box.hpp>
 
-#include <query_framework/query_int.hpp>
+#include <string_id/string_id.hpp>
 
 #include <memory>
 #include <variant>
@@ -25,6 +24,10 @@ namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
+
+	namespace houtgen {
+		struct ImplementationOf_QueryImplicitClassConstructor;
+	}
 
 	namespace code {
 		// Forward declaration:
@@ -37,17 +40,16 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
-		// @TODO:
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		HOUTFunctionDeclaration() = delete;
 
-		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = default;
+		HOUTFunctionDeclaration(const HOUTFunctionDeclaration&) = delete;
 		HOUTFunctionDeclaration(HOUTFunctionDeclaration&&)      = default;
 
 		/**
 		 * @note it is used for hashes
-		 * @note For now it works,
+		 * @note For now, it works,
 		 * but in the future with generics, and templates it might not
 		 * We might want to add actual hash?
 		 */
@@ -57,15 +59,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> return_type;
 
-		/**
-		 * @note use of shared_ptr's is intentional, as they
-		 * work well for incomplete types, and fit the use case.
-		 * In the future we might optimize it to single (or zero) shared_ptr, but
-		 * that will require some boilerplate. Stored vector can't be const, because
-		 * it is moved (contains boxes), when handling initial arguments. @TODO #1300
-		 */
-		std::shared_ptr<std::vector<code::Parameter>> parameters;
-
+		std::vector<code::Parameter> parameters;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -75,9 +69,7 @@ namespace compiler::helios {
 
 	private:
 		HOUTFunctionDeclaration(
-			SymID                                                symbol,
-			tsh::SymbolType<>                                    ret_type,
-			const std::shared_ptr<std::vector<code::Parameter>>& parameters
+			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
 	};
@@ -88,13 +80,16 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction final {
 	private:
-		HOUTFunction(HOUTFunctionDeclaration, const std::shared_ptr<const code::CodeBlock>& body);
-		friend struct ImplementationOf_QueryCodeOFFun;
+		HOUTFunction(
+			CRef<HOUTFunctionDeclaration>, const std::shared_ptr<const code::CodeBlock>& body
+		);
+		friend struct ImplementationOf_QueryCodeOfFun;
+		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
 
 	public:
 		HOUTFunction() = delete;
 
-		HOUTFunctionDeclaration declaration;
+		CRef<HOUTFunctionDeclaration> declaration;
 
 		/**
 		 * @note use of shared_ptr's is intentional, as they
@@ -114,7 +109,7 @@ namespace compiler::helios {
 	enum class HOUTGlobalDataType { Constant, Variable };
 
 	struct HOUTGlobalConst final {
-		CompileTimeValue value;
+		ctv::CompileTimeValue value;
 	};
 
 	struct HOUTGlobalVariable final {
@@ -153,16 +148,16 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> type;
 
-		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
+		explicit HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 
 	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTUnit {
+	struct HOUTUnit final {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?
@@ -176,6 +171,6 @@ namespace compiler::helios {
 		std::vector<HOUTFunction> functions;
 
 		[[nodiscard]]
-		std::string debugPrint() const;
+		std::string debugPrint(query::Context& ctx) const;
 	};
 }

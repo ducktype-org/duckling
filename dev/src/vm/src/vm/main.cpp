@@ -4,6 +4,7 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
@@ -30,6 +31,21 @@ clah::Clah getVmClah() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		})
+#ifdef BUILD_TYPE_DEV_DEBUG
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('d')
+	             .addLongName("debug-logs")
+	             .addShortDesc("Enables DVM debug logs.")
+	             .build())
+	    .setPreHandler([](const clah::ParsingResult& options) {
+			if (options.isFlag("debug-logs")) {
+				std::cerr << "Debug logs enabled.\n";
+				logger::enable_dev_logs = true;
+				logger::enableDevCategory(logger::DevLogCategories::DVM);
+				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
+			}
+		})
+#endif
 	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
 	                                .addShortName('p')
@@ -72,25 +88,25 @@ int main(int argc, const char** argv) {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "DVM Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "DVM Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::DEFAULT },
-			{ e.what(), printer::Color::DEFAULT },
-			{ "\nAborting\n", printer::Color::DEFAULT },
+			{ "[ERROR] ", printer::Color::Red },
+			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+			{ e.what(), printer::Color::Default },
+			{ "\nAborting\n", printer::Color::Default },
 		});
 		return 1;
 	} catch (...) {
 		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::RED },
+			{ "[ERROR] ", printer::Color::Red },
 			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
-		      printer::Color::DEFAULT },
+		      printer::Color::Default },
 		});
 		return 1;
 	}

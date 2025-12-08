@@ -1,8 +1,9 @@
 #pragma once
 
 #include "node_id.hpp"
+#include "node_making.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <ostream>
 #include <vector>
@@ -11,7 +12,7 @@ namespace query::internal {
 
 	class QueryState;
 
-	class QueryGraph {
+	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 		/*
 		 * for direct acces to node_deps
@@ -60,7 +61,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDeps(typename Query::QKey key) const {
-			internal::NodeID node_id = makeNodeID(Query::getID(), key);
+			internal::NodeID node_id = makeNodeID<Query>(key);
 			return this->getNodeDeps(node_id);
 		}
 
@@ -69,7 +70,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDepsFiltered(typename Query::QKey key, internal::QueryID dependency_id) const {
-			internal::NodeID node_id = makeNodeID(Query::getID(), key);
+			internal::NodeID node_id = makeNodeID<Query>(key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
 
@@ -92,6 +93,25 @@ namespace query::internal {
 		 * @return True if the graphs are equal, false otherwise.
 		 */
 		[[nodiscard]] bool compare(const QueryGraph& other) const;
+
+		/**
+		 * @brief Checks if a node exists in the graph.
+		 * @param node_id The NodeID to check.
+		 * @return True if the node exists, false otherwise.
+		 */
+		[[nodiscard]]
+		bool nodeExists(const NodeID& node_id) const {
+			return node_deps.contains(node_id);
+		}
+
+		/**
+		 * @brief Get all Nodes in the graph.
+		 * @return A vector of all NodeIDs in the graph.
+		 */
+		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
+
+		/** @brief Check if a node has any dependencies. */
+		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
 
 		~QueryGraph() = default;
 	};

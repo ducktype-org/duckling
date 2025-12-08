@@ -31,7 +31,7 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
-#include <base/maps.hpp>
+#include <base/collections/maps.hpp>
 
 #include <query_framework/query_int.hpp>
 
@@ -40,7 +40,7 @@
 // The current coercion implementation has not yet been tested.
 // @TODO: Consider the above and add tests
 
-namespace tsh {
+namespace compiler::tsh {
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */
@@ -82,7 +82,10 @@ namespace tsh {
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(
-		QueryImplicitCoercibilityOnAbstractType, KeyFor_QueryImplicitCoercibilityOnAbstractType, bool
+		QueryImplicitCoercibilityOnAbstractType,
+		KeyFor_QueryImplicitCoercibilityOnAbstractType,
+		bool,
+		({})
 	)
 
 	/**
@@ -126,7 +129,10 @@ namespace tsh {
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(
-		QueryImplicitCoercibilityOnSymbolType, KeyFor_QueryImplicitCoercibilityOnSymbolType, bool
+		QueryImplicitCoercibilityOnSymbolType,
+		KeyFor_QueryImplicitCoercibilityOnSymbolType,
+		bool,
+		({})
 	)
 
 	/**
@@ -172,6 +178,7 @@ namespace tsh {
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnExpressionType,
 		KeyFor_QueryImplicitCoercibilityOnExpressionType,
-		bool
+		bool,
+		({})
 	)
 }

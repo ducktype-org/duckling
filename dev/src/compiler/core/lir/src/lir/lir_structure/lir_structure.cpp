@@ -2,12 +2,11 @@
 
 #include <helios/symbols/simple.hpp>
 
-#include <base/maps.hpp>
-#include <base/variant.hpp>
+#include <base/collections/maps.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <iomanip>
 #include <set>
-#include <variant>
 
 namespace compiler::lir {
 
@@ -23,9 +22,9 @@ namespace compiler::lir {
 		return block_ids;
 	}
 
-	base::Map<LocalRef, u64> Function::getLocalVariableIDs() const {
-		base::Map<LocalRef, usize> local_ids;
-		usize                      next_id = 0;
+	base::Map<LIRLocalRef, u64> Function::getLocalVariableIDs() const {
+		base::Map<LIRLocalRef, usize> local_ids;
+		usize                         next_id = 0;
 		for (const auto& local: local_list) {
 			local_ids.put(&local, next_id);
 			next_id++;
@@ -54,7 +53,7 @@ namespace compiler::lir {
 
 				parameter_indexes.insert(index);
 				if (index >= parameter_layouts.size()) return base::BAD;
-				if (local.layout != parameter_layouts.at(index)) return base::BAD;
+				if (*local.layout != *parameter_layouts.at(index)) return base::BAD;
 			}
 		}
 
@@ -70,56 +69,72 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LirPrinter {
+	struct LIRPrinter {
 		query::Context& ctx;
 		std::ostream&   output;
 
-		base::Map<LocalRef, usize> local_id;
-		base::Map<BlockRef, usize> block_id;
+		base::Map<LIRLocalRef, usize> local_id;
+		base::Map<BlockRef, usize>    block_id;
 
-		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
+		LIRPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
-		void printLocalDesc(LocalRef local) {
+		void printLocalDesc(LIRLocalRef local) {
 			output << "  Local(" << local_id[local] << ")";
 			if (local->helios_id.has_value())
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
-			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:\n" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
 		 * @note Custom output, so we can align when printing instruction
 		 */
-		void printLocal(LocalRef local, std::ostream& loc_output) const {
+		void printLocal(LIRLocalRef local, std::ostream& loc_output) const {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
-		void printGlobal(const LirGlobal& global, std::ostream& loc_output) const {
+		void printGlobal(const LIRGlobal& global, std::ostream& loc_output) const {
 			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
-		void printOutput(const std::variant<LocalRef, LirGlobal>& output, std::ostream& loc_output) {
-			variant_match(output) {
-				variant_case(LocalRef, local) { printLocal(local, loc_output); }
-				variant_case(LirGlobal, global) { printGlobal(global, loc_output); }
-				variant_default { CORE_PANIC("Unhandled variant in printOutput"); }
+		void printOutput(const LIRPlace& output, std::ostream& loc_output) {
+			variant_match(output.base) {
+				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
+				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
+			for (const auto& arg: output.access_chain) loc_output << "." << name(arg).strView();
 		}
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
-				variant_case(i64, value) { output << value; }
-				variant_case(bool, value) { output << (value ? "true" : "false"); }
-				variant_case(LocalRef, local) { printLocal(local, output); }
+				variant_case(LIRConstant, constant) { output << constant.value.toString(); }
+				variant_case(LIRPlace, place) {
+					variant_match(place.base) {
+						variant_case(LIRLocalRef, local) { printLocal(local, output); }
+						variant_case(LIRGlobal, global) { printGlobal(global, output); }
+					}
+					for (const auto& arg: place.access_chain) output << "." << name(arg).strView();
+				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
 					output << "Func(" << func.mangled_name.strView() << ")";
 				}
-				variant_case(LirGlobal, global) { printGlobal(global, output); }
 				variant_default { CORE_PANIC("Unhandled variant in printValue"); }
 			}
+		}
+
+		void printInstructionExtraParams(const InstrParameters& instr_params) {
+			output << "  ";
+			variant_match(instr_params) {
+				variant_case_novalue(NoInstrParameters) { /* nothing */ }
+				variant_case(CastParameters, params) {
+					output << "{ from:" << params.source_type.toString()
+						   << ", to:" << params.target_type.toString() << " }";
+				}
+			}
+			output << " ";
 		}
 
 		void printInstruction(const Instruction& instruction) {
@@ -135,10 +150,11 @@ namespace compiler::lir {
 			output << output_value.str() << " ";
 
 			output << std::left << std::setw(15);
-			output << base::enumToStr(instruction.operation).strView() << "  ";
+			output << base::enumToStr(instruction.operation) << "  ";
+
 
 			std::string_view sep = "";
-			for (auto arg: instruction.arguments) {
+			for (const auto& arg: instruction.arguments) {
 				output << sep;
 				sep = ", ";
 				printValue(arg);
@@ -146,6 +162,8 @@ namespace compiler::lir {
 
 			// restore flags
 			output.flags(output_flags);
+
+			printInstructionExtraParams(instruction.extra_params);
 		}
 
 		void debugPrint(const Function& function) {
@@ -179,6 +197,16 @@ namespace compiler::lir {
 	};
 
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
-		LirPrinter{ ctx, output }.debugPrint(*this);
+		LIRPrinter{ ctx, output }.debugPrint(*this);
+	}
+
+	FunctionLiteral FunctionLiteral::fromFunction(const Function& function) {
+		return FunctionLiteral{
+			.mangled_name = function.mangled_name,
+			.abi          = function.abi,
+			.parameter_layouts
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
+			.return_type_layout = function.return_type_layout
+		};
 	}
 }

@@ -15,6 +15,6 @@ namespace n1{
 
 fun foo1(a: i32) -> i32 = {
     var h: i64 = 9;
-    var i: i32 = 3;
+    var i: i64 = 3;
     return a;
 }

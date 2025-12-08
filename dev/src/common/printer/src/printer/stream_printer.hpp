@@ -33,6 +33,8 @@
 
 #include "printer_content.hpp"
 
+#include <base/types/ints.hpp>
+
 #include <iostream>
 
 namespace printer {
@@ -40,7 +42,7 @@ namespace printer {
 	public:
 		static void print(const PrinterContent& content, std::ostream& out = std::cerr);
 		static void print(const PrinterContentsSeq& contents, std::ostream& out = std::cerr);
-		static void newline(int times = 1, std::ostream& out = std::cerr);
+		static void newline(usize times = 1, std::ostream& out = std::cerr);
 
 		static void printNL(const PrinterContent& content, std::ostream& out = std::cerr) {
 			print(content, out);

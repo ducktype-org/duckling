@@ -1,0 +1,15 @@
+# Simple self-contained test for units as values and types.
+
+let a: () = ();
+# const unitType: type = ();
+# @TODO: #902 when type consts work, use the above type somewhere below.
+
+fun foo(u: ()) -> () = {
+    builtin_output_i64(1i64);
+    return u;
+}
+
+fun main() -> i64 = {
+    foo(a);
+    return 0;
+}

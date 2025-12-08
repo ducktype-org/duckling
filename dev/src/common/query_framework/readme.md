@@ -33,8 +33,7 @@ Query Framework is responsible for following things:
 * **Query declaration and implementation base** -- Query Framework provides tools to easily declare and implement queries in the "one-correct-way".
 * **Dependency tracking and cycle detection** -- Query Framework automatically tracks dependencies in the back and will report when query calls will create a cycle.
 * **Error reporting** -- Query Framework formalize how errors should be reported. It does not however implement an error/diagnostic class itself.
-
-In the future Query Framework will also implement big part of incremental compilation.
+* **Incremental compilation** -- Query Framework is a backbone of the incremental compilation.
 
 
 Side-effect Provide Load Store Model {#s-psl-model}
@@ -52,8 +51,8 @@ Each query in this model consist of following main components:
 * `QResult` -- Query Result, a data type returned from the query.
 * `PResult` -- Provider Result, a data type returned from the query provider function. This type will more often than not be equal (or almost equal) to `QResult`. The purpose of `PResult` is just to simplify the code of Query Providers.
 * `provide` function -- Query Provider, a function with a signature similar to `QKey -> PResult`. This function performs the actual computation that calculates the query result and performs compilation steps.
-* `store` function -- A function with a signature similar to `(UKHash), PResult -> QResult`. This function stores the result of provider computation in some cache/table/database and returns the final Query result.
-* `load` function -- A function with a signature similar to `(UKHash) -> QResult?`. This function checks if the Query result is not already present in cache. It returns an optional holding the Query Result.
+* `store` function -- A function with a signature similar to `(KHash), PResult -> QResult`. This function stores the result of provider computation in some cache/table/database and returns the final Query result.
+* `load` function -- A function with a signature similar to `(KHash) -> QResult?`. This function checks if the Query result is not already present in cache. It returns an optional holding the Query Result.
 
 @note 
 Actual types of the `provide`, `load`, and `store` functions are slightly different and are explained in sections related to writing them.
@@ -81,10 +80,11 @@ Declaring the query is very simple and requires the programmer to provide three 
 - Query Name -- just a name of the declaration that will represent the query in the program
 - Query Key Type (`QKey`) -- a type of value that the query takes as a parameter
 - Query Result Type (`QResult`) -- a type of value that the query outputs
+- Set of query tags (see query tags section bellow) 
 
 @attention 
 Query keys need to have two critical functionalities: they need to be copyable,
-and they need to implement `customPerfectHash` (see: @ref perfect_hash.hpp) in a way that is per-query-collision free.
+and they need to implement a perfect hash (see: @ref perfect_hash.hpp) in a way that is per-query-collision free.
 See: @ref qkey-requirements for more details.
 
 @include query_framework_decl.hpp
@@ -137,10 +137,10 @@ After all of the above is done, the only thing left is to write query `provide`,
         static auto provide(Context& context, QKey key) -> PResult {
             /* ... */
         }
-        static auto load((UKHash) key) -> LoadResult {
+        static auto load((KHash) key) -> LoadResult {
             /* ... */
         }
-        static auto store((UKHash) key, PResult res, query::ACD acd) -> QResult {
+        static auto store((KHash) key, PResult res, query::ACD acd) -> QResult {
             /* ... */
         }
     }
@@ -244,7 +244,7 @@ There are two very simple concepts to unravel before we can go into implementati
 Now we can finally write the functions:
 
 ~~~~~cpp
-    static auto load((UKHash) key) -> LoadResult {
+    static auto load((KHash) key) -> LoadResult {
         if (/* cache miss */) {
             return {}; // empty optional
         }
@@ -255,7 +255,7 @@ Now we can finally write the functions:
         }
     }
 
-    static auto store((UKHash) key, PResult q_res, query::ACD acd) -> QResult {
+    static auto store((KHash) key, PResult q_res, query::ACD acd) -> QResult {
         // maybe perform some simple computation arising from the fact that
         // PResult != QResult:
         
@@ -278,6 +278,20 @@ Now we can finally write the functions:
     and `store` trivializes to simply transforming `PResult` into `QResult`.
     One must, however, conform to @ref general-requirements.
 
+### Optional: loading results directly from disk (loadFromDisc)
+
+For expensive queries with a stable key, you can add a small helper that tries to reuse a previously
+saved result from disk without running the provider.
+
+- Signature: `static auto loadFromDisc(const QKey& key) -> base::Optional<PResult>`
+
+Important:
+- To make reuse possible across runs, the query key must be stable (implement
+    `queryStablePerfectHash`).
+- A concrete example exists in the driver, but your PResult can be any type, not only file artifacts.
+- The provide function should store results in a query artifact, and loadFromDisc should load the
+    previously saved results.
+
 #### Full working example
 
 @include query_framework_decl.cpp
@@ -285,12 +299,47 @@ Now we can finally write the functions:
 
 ## Other most important concepts
 
+### Incremental compilation
+
+- Incremental compilation is supported: the framework builds an explicit dependency graph and
+    selectively recomputes only what has changed.
+- On startup, the previous query graph state is loaded from disk and dependencies are registered.
+    During execution, for queries that implement a stable key and `loadFromDisc(key) -> Optional<PResult>`,
+    the system automatically tries to restore the result from disk.
+- Reuse occurs when the query key and all its dependencies remain the same between compilations. If
+    loading fails or anything relevant has changed, the framework calls `provide(key)` and proceeds
+    normally (you may then persist the new result).
+- Stable hashes (`queryStablePerfectHash`) enable consistent addressing of persisted results across
+    runs.
+
 ### Cycles
 
 @attention
     As of right now when the Query Framework detects cycles, it just throws a `panic`.
     In future versions, it will report a critical compilation error.
     Even later, proper handling of cyclic queries will be added.
+
+### Query Tags
+
+Query framework defines a set of tags that can customize the query behavior or link some additional properties to it. Tags are set in a query declaration like so:
+
+~~~~~cpp
+    :caption: Query tags example
+
+    DECLARE_QUERY(
+        Name,
+        Key,
+        Result,
+        ({
+            /* non-default tags go here: */
+            .tag1 = value,
+            .tag2 = value,
+            // ...
+        })
+    )
+~~~~~
+
+For meaning and default values of each tag refer to `query_data.hpp`.
 
 Running queries from outside the query framework
 ================================================

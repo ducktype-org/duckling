@@ -2,21 +2,11 @@
 
 #include "../instructions.hpp"
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
-#include <base/string_id.hpp>
-#include <base/stringifyable_enum.hpp>
-#include <base/strongly_typed_id.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
 
-#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 
@@ -53,10 +43,23 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 
 	cmpNull,
 	cmpEq,
+	cmpNeq,
 	cmpG,
+	cmpGe,
 	ucmpG,
+	ucmpGe,
 	cmpL,
+	cmpLe,
 	ucmpL,
+	ucmpLe,
+	
+	fcmpEq,
+	fcmpNeq,
+	fcmpG,
+	fcmpGe,
+	fcmpL,
+	fcmpLe,
+	
 	jmp,
 	jmpIf,
 	jmpIfNot,
@@ -89,11 +92,6 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	variantGetInner,
 	variantSetInner,
 
-	/**
-	 *  Do not use directly. If an instruction supports `ext` opcodes,
-	 *  just push another argument to the instruction builder.
-	 */
-	ext,
 	exit
 )
 // clang-format on
@@ -101,13 +99,22 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 
 namespace vm::code::builders {
 	/**
+	 * @brief Construct fat bytecode instruction from name and arg variant vector.
+	 * Expects that the instruction exists, has the correct arity, and argument types match,
+	 * panics if arguments are invalid.
+	 */
+	vm::code::Instruction makeInstructionFromArgs(
+		base::StrID name, const std::vector<opargs::OpCodeArg>& args
+	);
+
+	/**
 	 * @brief Helper to compose bytecode instructions.
 	 * It supports creating all available opcodes.
 	 *
 	 * Some operations support more arguments than their corresponding opcodes:
 	 * * In case of `load` and `store`, third argument gets its own `ext` opcode.
 	 */
-	class InstructionBuilder {
+	class InstructionBuilder final {
 		std::vector<vm::opargs::OpCodeArg> args;
 		OpKind                             kind{};
 		bool                               kind_set = false;
@@ -130,6 +137,6 @@ namespace vm::code::builders {
 			(pushArg(std::forward<Args>(args)), ...);
 		}
 
-		[[nodiscard]] std::vector<Instruction> build() const;
+		[[nodiscard]] Instruction build() const;
 	};
 }

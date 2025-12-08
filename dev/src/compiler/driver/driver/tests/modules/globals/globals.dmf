@@ -1,9 +1,10 @@
-var g: i64 = 4;
-var global: i32 = 2;
+# @TODO: #1571 Remove type specifiers from all driver tests once casts exist in DVM.
+var g: i64 = 4i64;
+var global: i64 = 2i64;
 
 fun main() = {
-    g = 4;
-    var a: i32 = 0;
+    g = 4i64;
+    var a: i64 = 0i64;
     global = a;
     a = global;
     return;

@@ -3,18 +3,96 @@
 Tests:
   ternary:
     Cases:
-      default:
+      dvm:
+        backend: dvm
         Output:
-          String: "9 \n9 \n9 \n18 \n4 \n"
+          String: "9\n9\n9\n18\n4\n"
+      llvm:
+        backend: llvm
+        Output:
+          String: "9\n9\n9\n18\n4\n"
   single-comparison: # Any type of comparison between two values.
     Cases:
-      default:
+      llvm:
+        backend: llvm
         Output:
           String: ""
         ExitCode: 0
+
   comparison-chain:
     Cases:
-      default:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+  unit_simple:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+  unit_simple_multiple_modules:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  casts:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
+        ExitCode: 0
+
+  floating_point_arithmetic:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  floating_point_comparisons:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  unsigned_integers:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  signed_integers:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  float_32:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+  
+  coercions:
+    Cases:
+      llvm:
+        backend: llvm
         Output:
           String: ""
         ExitCode: 0

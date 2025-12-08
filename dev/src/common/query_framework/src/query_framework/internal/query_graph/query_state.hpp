@@ -3,11 +3,20 @@
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
-#include <base/maps.hpp>
-#include <base/ref.hpp>
+#include <base/collections/maps.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace query::internal {
-	class QueryState {
+	class QueryState final {
+	public:
+		/**
+		 * @brief Color of a node in graph from previous compilation.
+		 * Red   - node is outdated
+		 * Green - node is up to date
+		 */
+		enum class PrevColor { Red, Green };
+
+	private:
 		/**
 		 * @brief Color of a node in the graph that is used for cycle detection.
 		 */
@@ -28,6 +37,10 @@ namespace query::internal {
 			 * Used for cycle recovery.
 			 */
 			NodeID parent;
+
+			NodeData() = delete;
+
+			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
 
 		/**
@@ -41,9 +54,34 @@ namespace query::internal {
 		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
+		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
+		 */
+		struct PreviousCompilation final {
+			/**
+			 * The immutable query graph from the previous compilation.
+			 * @note We assume that this graph is correct and does not contain cycles.
+			 */
+			const QueryGraph                 graph;
+			base::HashMap<NodeID, PrevColor> node_colors;
+
+			PreviousCompilation() = delete;
+
+			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+				  graph(std::move(g)),
+				  node_colors(std::move(colors)) {}
+
+			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
+		};
+
+		/**
 		 * The query graph that holds the dependencies and structure of the queries.
 		 */
 		QueryGraph query_graph;
+
+		/**
+		 * The previous compilation data if any.
+		 */
+		base::Optional<PreviousCompilation> previous;
 
 	public:
 		QueryState()                             = default;
@@ -66,12 +104,16 @@ namespace query::internal {
 		}
 
 		/**
+		 * @brief Returns the graph from previous compilation.
+		 */
+		[[nodiscard]]
+		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
+
+		/**
 		 * @brief Returns the current size of the query stack.
 		 */
 		[[nodiscard]]
-		u64 queryStackSize() const {
-			return query_stack_size;
-		}
+		u64 queryStackSize() const;
 
 		/**
 		 * @brief Marks beginning of new query calculation.
@@ -85,5 +127,47 @@ namespace query::internal {
 		 * @brief Marks exit of a query calculation.
 		 */
 		void setExit(internal::NodeID node);
+
+		/**
+		 * @brief Sets the color of a node from the previous compilation.
+		 * Should only be used by incremental handling logic.
+		 */
+		void setPrevNodeColor(internal::NodeID node, PrevColor color);
+
+		/**
+		 * @brief Returns previous_node_colors map. Used for Tests.
+		 * Does not perform any red-green logic, just returns the map as-is.
+		 */
+		[[nodiscard]]
+		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+
+		/**
+		 * @brief Sets the previous query graph.
+		 */
+		void setPreviousGraph(QueryGraph&& graph);
+
+		/**
+		 * Performs a red-green sweep starting from the specified node in the current query graph.
+		 * This function propagates the red/green markings through the graph to determine which
+		 * nodes need to be recomputed.
+		 * @return the color of the start_node after the sweep.
+		 * @param start_node The starting node for the red-green sweep.
+		 */
+		PrevColor redGreenSweep(NodeID start_node);
+
+		/**
+		 * Merges the previous query graph into the current query graph.
+		 * This function updates the current graph with the nodes and edges from the previous graph.
+		 * @param start_node The starting node for the merge operation.
+		 * @note This function should be called after the red-green sweep to ensure that only the
+		 * relevant nodes are merged.
+		 * This function will only merge nodes that are not merged yet.
+		 * This function assumes that the previous graph is acyclic.
+		 * It will panic if a cycle is detected during the merge.
+		 * The nodes with unstable hashes will be assigned new QueryIDs to avoid collisions in the
+		 * current graph. The new QueryIDs will be a 'dummy' queries. Dummy queries in next
+		 * compilation will be unregistered.
+		 */
+		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
 	};
 }

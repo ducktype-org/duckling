@@ -4,7 +4,7 @@
 
 #include <typesystem/higher/abstract_type.hpp>
 
-#include <base/box.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/query_result.hpp>
 
@@ -42,7 +42,7 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * Interface is an abstraction over the lookup process.
+	 * HInterface is an abstraction over the lookup process.
 	 * It is used to perform lookups in different contexts, and on different entities.
 	 * @note All lookups should be performed through HInterface.
 	 */
@@ -91,7 +91,7 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief A custom interface -- anyone can create their own interface.
+		 * @brief A custom interface — anyone can create their own interface.
 		 */
 		struct CustomInterface {
 			Box<CustomInterfaceABC> custom;
@@ -107,7 +107,7 @@ namespace compiler::helios {
 
 		VariantT data;
 
-		HInterface(VariantT data): data(std::move(data)) {}
+		explicit HInterface(VariantT data): data(std::move(data)) {}
 
 	public:
 		HInterface()                  = delete;
@@ -119,14 +119,14 @@ namespace compiler::helios {
 		 */
 		CRef<LookupResult> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
-		);
+		) const;
 
 		/**
 		 * A lookup function that performs a most common lookup operation,
 		 * hiding a lot of boilerplate associated with it. It performs the following steps:
 		 * 1. It looks-ups the interface.
 		 * 2. It reports error if more than one symbol is found.
-		 * 3. It performs deliasing if needed.
+		 * 3. It performs dealiasing if needed.
 		 * 4. Return dealiased symbol list.
 		 *
 		 * It some error occurs, it will report it in @p error_position.
@@ -139,21 +139,25 @@ namespace compiler::helios {
 			query::Context&     ctx,
 			base::StrID         name,
 			AdditionalLookupParameters = {}
-		);
+		) const;
 
-		static HInterface ofScope(ScopeID scope) { return HInterface{ ScopeInterface{ scope } }; }
+		static HInterface ofScope(const ScopeID scope) {
+			return HInterface{ ScopeInterface{ scope } };
+		}
 
-		static HInterface ofScopeWithParents(ScopeID scope) {
+		static HInterface ofScopeWithParents(const ScopeID scope) {
 			return HInterface{ ScopeWithParentsInterface{ scope } };
 		}
 
-		static HInterface ofSymbol(SymID symbol) { return HInterface{ SymbolInterface{ symbol } }; }
+		static HInterface ofSymbol(const SymID symbol) {
+			return HInterface{ SymbolInterface{ symbol } };
+		}
 
-		static HInterface ofTypeInstance(tsh::AbstractType type) {
+		static HInterface ofTypeInstance(const tsh::AbstractType type) {
 			return HInterface{ TypeInstanceInterface{ type } };
 		}
 
-		static HInterface ofTypeMeta(tsh::AbstractType type) {
+		static HInterface ofTypeMeta(const tsh::AbstractType type) {
 			return HInterface{ TypeMetaInterface{ type } };
 		}
 

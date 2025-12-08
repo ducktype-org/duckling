@@ -1,9 +1,12 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <base/optional.hpp>
+#include <linker/link.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
 
 #include <string>
 #include <variant>
@@ -50,11 +53,25 @@ namespace compiler::driver {
 			BackendOptions backend;
 		};
 
+		/**
+		 * Options used to control debug related behavior like
+		 * logging, dump of intermediate representations, etc.
+		 */
 		struct DebugOptions final {
-			bool lexer_cerr    = false;
-			bool logger_cerr   = false;
+			// options mapping to logger categories:
+			std::vector<std::string> dev_log_categories;
+
+			// options mapping to driver module flags:
 			bool dump_llvm_ir  = false;
 			bool dump_llvm_asm = false;
+		};
+
+		/**
+		 * Options related to incremental compilation.
+		 * @param enabled Whether incremental compilation is enabled.
+		 */
+		struct IncrementalOptions final {
+			bool enabled = true;
 		};
 
 		struct ArtifactsOptions final {
@@ -70,8 +87,8 @@ namespace compiler::driver {
 		};
 
 		struct PackageInfo final {
-			std::string package_name;
-			std::string package_path;
+			std::string  package_name;
+			fs::FilePath package_path;
 		};
 
 		// struct DependencyInfo {
@@ -112,11 +129,12 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			// options_types::PackageInfo      main_package_info;
+			options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
 			// options_types::CompilationOptions compilation_options;
-			options_types::DebugOptions debug_options;
+			options_types::DebugOptions       debug_options;
+			options_types::IncrementalOptions incremental;
 		};
 
 		/**

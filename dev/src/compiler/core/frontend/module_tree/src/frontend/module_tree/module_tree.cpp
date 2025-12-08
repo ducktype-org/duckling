@@ -3,13 +3,16 @@
 #include "functors.hpp"
 #include "queries.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/stable_container.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/except/exceptions.hpp>
 
+#include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <random>
+#include <ranges>
 #include <regex>
 #include <sstream>
 
@@ -52,17 +55,47 @@ namespace {
 }
 
 namespace compiler::frontend {
+
+	const hashing::ComponentHash& ModuleTree::getComponentHash(ModuleID module_id) {
+		Ref<ModuleTree> module = module_id.ref;
+		if (!module->m_component_hash.has_value()) {
+			// iterate thru parents to find one with component hash set or reach root (go up)
+			base::Ref<ModuleTree>              g_parent          = module;
+			std::vector<base::Ref<ModuleTree>> modules_to_update = { g_parent };
+			while (g_parent->m_parent.has_value()
+			       && !g_parent->m_parent.value()->m_component_hash.has_value()) {
+				g_parent = g_parent->m_parent.value();
+				modules_to_update.push_back(g_parent);
+			}
+			// go from top module to bottom module, so its in linear time
+			for (auto& it: std::ranges::reverse_view(modules_to_update)) it->updateComponentHash();
+		}
+		CORE_ASSERT(
+			module->m_component_hash.has_value(), "Component hash should have value after update!"
+		);
+		return module->m_component_hash.value();
+	}
+
 	Ref<ModuleTree> ModuleTreeBuilder::create(
-		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
+		const fs::File&   root,
+		std::string_view  package_id,
+		const std::regex& file_reject,
+		const std::regex& dir_reject
 	) {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 
 		if (root.isDirectory())
-			builder->buildFromDirectory(root, file_reject, dir_reject);
+			builder->buildFromDirectory(root, package_id, file_reject, dir_reject);
 		else
-			builder->buildFromSingleFile(root);
+			builder->buildFromSingleFile(root, package_id);
 
 		return builder->finalize();
+	}
+
+	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
+		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
+	) {
+		return create(root, base::generateRandomString(32), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree() = default;
@@ -124,8 +157,50 @@ namespace compiler::frontend {
 		return output.str();
 	}
 
+	void ModuleTree::invalidateComponentHash() {
+		// If ModuleHash is invalid, then children are also invalid
+		if (!m_component_hash.has_value()) {
+			// assert if children are invalid too
+			for (auto& sf: m_source_files)
+				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
+			if (m_main_source_file.has_value())
+				CORE_ASSERT(
+					!m_main_source_file.value()->component_hash.has_value(),
+					"Child component hash have value!"
+				);
+			for (auto& [_, submodule]: m_submodules)
+				CORE_ASSERT(
+					!submodule->m_component_hash.has_value(), "Child component hash have value!"
+				);
+			return;
+		}
+		m_component_hash.reset();
+		for (auto& sf: m_source_files) sf->invalidateComponentHash();
+		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
+		for (auto& [_, submodule]: m_submodules) submodule->invalidateComponentHash();
+	}
+
+	void ModuleTree::updateComponentHash() {
+		// Get parent component hash if existsS
+		base::Optional<hashing::ComponentHash> parent_hash;
+		if (m_parent.has_value()) {
+			CORE_ASSERT(
+				m_parent.value()->m_component_hash.has_value(),
+				"Parent component hash should have value!"
+			);
+			m_component_hash.emplace(m_parent.value()->m_component_hash.value(), m_name);
+		} else {
+			// root module tree, use package id as base
+			CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for module tree!");
+			m_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
+		}
+	}
+
 	void ModuleTreeBuilder::buildFromDirectory(
-		const fs::File& directory, const std::regex& file_reject, const std::regex& dir_reject
+		const fs::File&   directory,
+		std::string_view  package_id,
+		const std::regex& file_reject,
+		const std::regex& dir_reject
 	) {
 		CORE_ASSERT(
 			directory.isDirectory(),
@@ -133,6 +208,7 @@ namespace compiler::frontend {
 		);
 
 		setName(base::StrID(directory.name().c_str()));
+		setPackageID(package_id);
 
 		// Process all files and directories in the current directory
 		for (const auto& path: directory.listFilePaths()) {
@@ -145,7 +221,10 @@ namespace compiler::frontend {
 				// Handle subdirectory
 				if (!isDirectoryNameValid(file.name(), dir_reject)) continue;
 
-				auto submodule = ModuleTreeBuilder::create(file, file_reject, dir_reject);
+				// build sub-module from directory
+				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				submodule_builder->buildFromDirectory(file, package_id, file_reject, dir_reject);
+				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
 					submodule->getName() == base::StrID(file.name().c_str()),
 					"Submodule name does not match"
@@ -162,7 +241,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file) {
+	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, std::string_view package_id) {
 		std::string stem      = file.stem();
 		std::string extension = file.extension();
 		CORE_ASSERT(
@@ -170,6 +249,7 @@ namespace compiler::frontend {
 			"Expected a module file, got: " + file.getFilePath().string()
 		);
 		setName(base::StrID(stem.c_str()));
+		setPackageID(package_id);
 		setMainSourceFile(file);
 	}
 
@@ -191,7 +271,9 @@ namespace compiler::frontend {
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
-				auto submodule = ModuleTreeBuilder::create(file);
+				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				submodule_builder->buildFromSingleFile(file, this->m_package_id.strView());
+				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
 			}
@@ -209,6 +291,12 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::create() {
 		return base::makeBox<ModuleTreeBuilder>(ModuleTreeBuilder());
+	}
+
+	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
+		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
+		builder->setPackageID(base::generateRandomString(32));
+		return builder;
 	}
 
 	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
@@ -251,6 +339,12 @@ namespace compiler::frontend {
 		m_parent = parent;
 	}
 
+	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
+		m_package_id = base::StrID(std::string(package_id).c_str());
+	}
+
 	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
 
 	base::Ref<ModuleTree> ModuleTreeBuilder::finalize() {
@@ -269,6 +363,11 @@ namespace compiler::frontend {
 		module_ref->m_name        = m_name;
 		module_ref->m_other_files = std::move(m_other_files);
 
+		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
+		module_ref->m_package_id = m_package_id;
+
+		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
+
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
@@ -279,8 +378,6 @@ namespace compiler::frontend {
 			auto source_file = SourceFile::create(file_path, mod_id);
 			module_ref->m_source_files.push_back(source_file);
 		}
-
-		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);
@@ -346,6 +443,34 @@ namespace compiler::frontend {
 			base::strConcat("Submodule ", name.strView(), " already has a parent")
 		);
 		submodule->m_parent = module;
+
+		CORE_ASSERT(
+			submodule->m_package_id == module->m_package_id,
+			"Submodule package ID must match parent module package ID"
+		);
+
+		// we need to detect cycles as someone could accidentally create one
+		// for example if module A is parent of B in oryginal module tree
+		// and function addSubmodule(B, A) is called
+		// we would have a cycle A -> B -> A
+		// this is a programer error, because cycle is not possible in standard module tree from
+		// path creation
+		auto current = module;
+		while (current->m_parent.has_value()) {
+			if (current->m_parent.value() == submodule) {
+				CORE_PANIC(
+					"Adding submodule '",
+					submodule->getName().strView(),
+					"' to module '",
+					module->getName().strView(),
+					"' would create a cycle in the module tree!"
+				);
+			}
+			current = current->m_parent.value();
+		}
+
+		// Invalidate component hash for the submodule and its children
+		submodule->invalidateComponentHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -448,6 +573,36 @@ namespace compiler::frontend {
 		submodules.erase(it);
 
 		module->m_parent = {};
+
+		// Invalidate component hash for the module and its children as the parent changed
+		module->invalidateComponentHash();
+	}
+
+	void ModuleTreeModifier::changePackageID(
+		base::Ref<ModuleTree> module, std::string_view new_package_id
+	) {
+		CORE_ASSERT(
+			!module->m_parent.has_value(),
+			"Only root modules can have their package ID changed, the parent is: ",
+			module->m_parent.value()->getName().strView()
+		);
+
+		std::function<void(base::Ref<ModuleTree>, std::string_view)> change_package_id =
+			[&](base::Ref<ModuleTree> internal, std::string_view internal_new_package_id) {
+				CORE_ASSERT(
+					internal->m_package_id.isGood(), "Module does not have a valid package ID"
+				);
+				internal->m_package_id = base::StrID(std::string(internal_new_package_id).c_str());
+
+				// Change the package ID for all submodules recursively
+				for (auto& [_, submodule]: internal->m_submodules)
+					change_package_id(submodule, internal_new_package_id);
+
+				// Invalidate component hash for the module and its children as the package ID changed
+				internal->invalidateComponentHash();
+			};
+
+		change_package_id(module, new_package_id);
 	}
 
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
@@ -493,8 +648,12 @@ namespace compiler::frontend {
 		return GetModuleID_Functor::get(module)->prettyPrint();
 	}
 
-	ModuleID createModuleTree(const fs::File& file) {
-		return ModuleTreeBuilder::create(file)->getModuleID();
+	ModuleID createModuleTree(const fs::File& file, std::string_view package_id) {
+		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
+	}
+
+	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
+		return ModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
 	}
 
 	/*********************
@@ -540,7 +699,7 @@ namespace compiler::frontend {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -558,7 +717,7 @@ namespace compiler::frontend {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
@@ -587,7 +746,12 @@ namespace compiler::frontend {
 
 		// @note: unstable ref here is only possible, because
 		// PResult is already a reference
-		QUERY_AUTO_CACHE_COPY
+		//
+		// In the `file->getPST();` there is already caching mechanism implemented
+		// which checks if the PST was compiled for the SourceFile.
+		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't
+		// invalidate the query cache of this query, so we have to disable caching here.
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);

@@ -1,16 +1,20 @@
 #pragma once
 
-#include "function_forward.hpp"
+#include "function_forward.hpp"  // IWYU pragma: keep
 
-#include <helios/ctv/ctv.hpp>
-#include <helios/hout/hout.hpp>
+#include <ctv/ctv.hpp>
+#include <helios/hout/hout_fd.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include <base/ok_bad.hpp>
-#include <base/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <base/collections/optional.hpp>
+#include <base/collections/stable_container.hpp>
+#include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/types/ok_bad.hpp>
+
+#include <query_framework/context_fd.hpp>
 
 #include <memory>
 #include <utility>
@@ -26,12 +30,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/**
 		@brief Placeholder.
 		@todo Some decisions here to be made about operations like that.
-	*//**
 		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 
 		Some operations are sign-sensitive and are prefixed with U or S, e.g. UDiv and SDiv.
 	*/
+
+	/** Integer arithmetic. */
 	IntegerAdd,
 	IntegerSub,
 	IntegerNeg,
@@ -41,6 +46,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerUMod,
 	IntegerSMod,
 
+	/** Floating point arithmetic. */
+	FloatAdd,
+	FloatSub,
+	FloatMul,
+	FloatDiv,
+	FloatNeg,
+
+	/** Integer comparisons. */
 	IntegerULt,
 	IntegerUGt,
 	IntegerULteq,
@@ -51,10 +64,21 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerSGteq,
 	IntegerEq,
 	IntegerNeq,
-	
+
+	/** Floating point comparisons. */
+	FloatLt,
+	FloatGt,
+	FloatLteq,
+	FloatGteq,
+	FloatEq,
+	FloatNeq,
+
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
+
+	Cast,
+
 	Call,
 
 	ReturnVoid,
@@ -64,13 +88,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 )
 
 namespace compiler::lir {
-	struct LirLocal;
+	struct LIRLocal;
 	struct Block;
+	struct Function;
 
 	/**
 	 * @brief Reference to local variable in LIR.
 	 */
-	using LocalRef = CRef<LirLocal>;
+	using LIRLocalRef = CRef<LIRLocal>;
 
 	/**
 	 * @brief Reference to block in LIR.
@@ -81,41 +106,93 @@ namespace compiler::lir {
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral {
-		base::StrID                                   mangled_name;
-		std::shared_ptr<std::vector<tsl::TypeLayout>> parameter_layouts;
-		std::shared_ptr<tsl::TypeLayout>              return_type_layout;
+		base::StrID                                         mangled_name;
+		helios::SymbolABI                                   abi;
+		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
+		CRef<tsl::TypeLayout>                               return_type_layout;
+
+		static FunctionLiteral fromFunction(const Function&);
 	};
 
-	enum class LirGlobalType { Variable, Constant };
+	/**
+	 * @brief Description of a LIR Local variable or function argument.
+	 * @note This structure should only be stored directly in LIR Function, as part of the
+	 * description of a function. Other uses should use LocalRef to reference the variable
+	 * description.
+	 */
+	struct LIRLocal final {
+		/**
+		 * @brief HELIOS id of the variable, if exists.
+		 */
+		base::Optional<helios::SymID> helios_id;
+
+		CRef<tsl::TypeLayout> layout;
+
+		/**
+		 * @brief Index of the parameter in the function, if this is a function parameter.
+		 */
+		base::Optional<u64> parameter_index;
+
+	private:
+		LIRLocal(
+			const base::Optional<helios::SymID> helios_id,
+			const CRef<tsl::TypeLayout>         layout,
+			const base::Optional<u64>           parameter_index
+		):
+			  helios_id(helios_id),
+			  layout(layout),
+			  parameter_index(parameter_index) {}
+
+		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
+
+		friend Function;
+		friend LIRLocalRef;
+
+	public:
+		/**
+		 * @note Do not use this function outside of LIR lowering.
+		 */
+		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
+
+		/**
+		 * @brief Crates unique local with bool-type, and without
+		 * helios_id.
+		 * @note it's used to create lifetime-flags
+		 * @param ctx
+		 * @return LIRLocal
+		 */
+		static LIRLocal boolLocal(query::Context& ctx);
+	};
+
+	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable in LIR.
-	 * layout is in shared_ptr, so the LirGlobal can be copied
+	 * @brief Global variable/constant in LIR.
 	 */
-	struct LirGlobal final {
+	struct LIRGlobal final {
 		/**
 		 * @brief HELIOS id of the variable.
 		 */
 		helios::SymID helios_id;
 
-		std::shared_ptr<tsl::TypeLayout> layout;
+		CRef<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
 
-		LirGlobalType type;
+		LIRGlobalType type;
 
-		base::Optional<helios::CompileTimeValue> initial_value;
+		base::Optional<ctv::CompileTimeValue> initial_value;
 
 	private:
-		LirGlobal(
-			const helios::SymID                      helios_id,
-			const tsl::TypeLayout&                   layout,
-			const base::StrID&                       mangled_name,
-			const LirGlobalType                      type          = LirGlobalType::Variable,
-			base::Optional<helios::CompileTimeValue> initial_value = {}
+		LIRGlobal(
+			const helios::SymID                          helios_id,
+			const CRef<tsl::TypeLayout>                  layout,
+			const base::StrID&                           mangled_name,
+			const LIRGlobalType                          type          = LIRGlobalType::Variable,
+			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
 		):
 			  helios_id(helios_id),
-			  layout(std::make_shared<tsl::TypeLayout>(layout)),
+			  layout(layout),
 			  mangled_name(mangled_name),
 			  type(type),
 			  initial_value(initial_value) {}
@@ -126,12 +203,87 @@ namespace compiler::lir {
 		/**
 		 * @note Do not use this function outside of LIR lowering.
 		 */
-		static LirGlobal fromMIR(query::Context& ctx, mir::MirGlobal mir_global);
+		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
 		/**
-		 * @note Do not use this function outside of LIR lowering.
+		 * @note Do not use this function outside of LIR lowering / driver.
+		 * This handles both global variables and constants. For constants, it also sets CTV initial
+		 * value of the global.
 		 */
-		static LirGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+	};
+
+	/**
+	 * @brief Represents access into a variable (local or global), or its component.
+	 *
+	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
+	 * and `b` and `c` are fields within that variable, this structure would contain
+	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 *
+	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
+	 */
+	struct LIRPlace final {
+		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
+		/**
+		 * @brief Base of the LIR place, either local or global variable.
+		 */
+		BaseVariant base;
+
+		/**
+		 * @brief Get the type layout of the base variable.
+		 */
+		[[nodiscard]]
+		CRef<tsl::TypeLayout> getBaseLayout() const {
+			variant_match(base) {
+				variant_case(LIRLocalRef, local) { return local->layout; }
+				variant_case(LIRGlobal, global) { return global.layout; }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		template<class T>
+		const T& getBase() const {
+			return std::get<T>(base);
+		}
+
+		/**
+		 * @brief The symbols of the fields accessed within the variable.
+		 */
+		std::vector<helios::SymID> access_chain;
+
+		/**
+		 * @brief The type layout of the final accessed field.
+		 * @note This type layout may be different from the layout of the base variable,
+		 * especially when the access chain is not empty.
+		 */
+		CRef<tsl::TypeLayout> layout;
+
+		LIRPlace(
+			query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
+		);
+
+		[[nodiscard]]
+		bool isLocal() const {
+			return std::holds_alternative<LIRLocalRef>(base);
+		}
+
+		[[nodiscard]]
+		bool isGlobal() const {
+			return std::holds_alternative<LIRGlobal>(base);
+		}
+
+		[[nodiscard]]
+		bool hasAccess() const {
+			return !access_chain.empty();
+		}
+	};
+
+	/**
+	 * @brief Representation of a constant known at compile time.
+	 */
+	struct LIRConstant final {
+		ctv::CompileTimeValue value;
+		CRef<tsl::TypeLayout> layout;
 	};
 
 	/**
@@ -139,27 +291,31 @@ namespace compiler::lir {
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral, LirGlobal>;
+		using ValueType = std::variant<LIRConstant, LIRPlace, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
-		LIRValue(i64 value): value(value) {}
+		LIRValue(LIRConstant value): value(value) {}
 
-		LIRValue(bool value): value(value) {}
-
-		LIRValue(LocalRef value): value(value) {}
+		LIRValue(LIRPlace value): value(value) {}
 
 		LIRValue(BlockRef value): value(value) {}
 
 		LIRValue(FunctionLiteral value): value(value) {}
 
-		LIRValue(LirGlobal value): value(value) {}
-
-		bool operator==(const LIRValue& other) const = default;
-
 		[[nodiscard]]
 		const ValueType& getVariant() const {
 			return value;
+		}
+
+		[[nodiscard]]
+		bool isLocal() const {
+			return std::holds_alternative<LIRPlace>(value) && std::get<LIRPlace>(value).isLocal();
+		}
+
+		[[nodiscard]]
+		bool isGlobal() const {
+			return std::holds_alternative<LIRPlace>(value) && std::get<LIRPlace>(value).isGlobal();
 		}
 
 		/**
@@ -176,78 +332,61 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief Description of a LIR Local variable or function argument.
-	 * @note This structure should only be stored directly in LIR Function, as part of the
-	 * description of a function. Other uses should use LocalRef to reference the variable
-	 * description.
+	 * @brief Used to inform that the instruction doesn't require any additional parameters.
 	 */
-	struct LirLocal final {
+	struct NoInstrParameters final {};
+
+	struct CastParameters final {
 		/**
-		 * @brief HELIOS id of the variable, if exists.
+		 * @brief The source type of the cast operation.
 		 */
-		base::Optional<helios::SymID> helios_id;
-
-		// a copy of type-layout here might be suboptimal
-		tsl::TypeLayout layout;
-
+		tsh::SymbolType<> source_type;
 		/**
-		 * @brief Index of the parameter in the function, if this is a function parameter.
+		 * @brief The target type of the cast operation.
 		 */
-		base::Optional<u64> parameter_index;
-
-	private:
-		LirLocal(
-			const base::Optional<helios::SymID> helios_id,
-			tsl::TypeLayout                     layout,
-			base::Optional<u64>                 parameter_index
-		):
-			  helios_id(helios_id),
-			  layout(std::move(layout)),
-			  parameter_index(parameter_index) {}
-
-		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
-
-		friend Function;
-		friend LocalRef;
-
-	public:
+		tsh::SymbolType<> target_type;
 		/**
-		 * @note Do not use this function outside of LIR lowering.
+		 * @brief The source type layout of the cast operation.
 		 */
-
-		static LirLocal fromMIR(query::Context& ctx, mir::LocalRef mir_local);
-
+		CRef<tsl::TypeLayout> source_layout;
 		/**
-		 * @brief Crates unique local with bool-type, and without
-		 * helios_id.
-		 * @note it's used to create lifetime-flags
-		 * @param ctx
-		 * @return LirLocal
+		 * @brief The target type layout of the cast operation.
 		 */
-		static LirLocal boolLocal(query::Context& ctx);
+		CRef<tsl::TypeLayout> target_layout;
 	};
+
+	/**
+	 * @brief Additional parameters for LIR instructions that depend on the operation type.
+	 */
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
 
 	/**
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		Operation operation = Operation::Uninitialized;
-		using OutputType    = base::Optional<std::variant<LocalRef, LirGlobal>>;
-		OutputType            output;
-		std::vector<LIRValue> arguments;
+		Operation                operation = Operation::Uninitialized;
+		base::Optional<LIRPlace> output;
+		std::vector<LIRValue>    arguments;
+		InstrParameters          extra_params{ NoInstrParameters{} };
 
 		// @TODO: each Instruction should have source position reference
 
-		Instruction()                   = default;
-		Instruction(const Instruction&) = default;
-		Instruction(Instruction&&)      = default;
+		Instruction()                       = default;
+		Instruction(const Instruction&)     = default;
+		Instruction(Instruction&&) noexcept = default;
 
 		Instruction& operator=(Instruction&&) noexcept = default;
 
-		Instruction(const Operation operation, OutputType output, std::vector<LIRValue> arguments):
+		Instruction(
+			const Operation          operation,
+			base::Optional<LIRPlace> output,
+			std::vector<LIRValue>    arguments,
+			InstrParameters          extra_parameters = NoInstrParameters{}
+		):
 			  operation(operation),
 			  output(std::move(output)),
-			  arguments(std::move(arguments)) {}
+			  arguments(std::move(arguments)),
+			  extra_params(extra_parameters) {}
 	};
 
 	/**
@@ -264,13 +403,14 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID mangled_name;
+		base::StrID       mangled_name;
+		helios::SymbolABI abi;
 
-		tsl::TypeLayout              return_type_layout;
-		std::vector<tsl::TypeLayout> parameter_layouts;
+		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
+		CRef<tsl::TypeLayout>              return_type_layout;
 
 		base::StableVector<Block>    blocks;
-		base::StableVector<LirLocal> local_list;
+		base::StableVector<LIRLocal> local_list;
 
 		std::vector<BlockRef> block_order;
 
@@ -301,11 +441,11 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Returns a map from all locals to unique ids.
-		 * @note Those ids do not cary any meaning, they are made here to be consistent in
+		 * @note Those ids do not carry any meaning, they are made here to be consistent in
 		 * different part of compiler (e.g. lir printing, llvm lowering).
 		 * @return base::Map<BlockRef, u64>
 		 */
 		[[nodiscard]]
-		base::Map<LocalRef, u64> getLocalVariableIDs() const;
+		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
 	};
 }

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <base/string_id.hpp>
-
 #include <lang_definitions/key_spec_op.hpp>
+#include <string_id/string_id.hpp>
 
 namespace lexer {
 	/**

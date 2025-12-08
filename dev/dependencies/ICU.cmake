@@ -17,7 +17,7 @@ include(ExternalProject)
 
 # ICU_LIBRARIES and ICU_INCLUDE_DIRS variables are set
 # for use by targets that wish to use ICU headers or ICU library functions.
-message("-- Searching for ICU ${FindOrBuildICU_VERSION}")
+message("-- Searching for ICU ${ICU_VERSION_REQUIRED}")
 
 if(NOT BUILD_STATIC_ICU)
 	find_package(ICU ${ICU_VERSION_REQUIRED} COMPONENTS data i18n uc io)
@@ -190,6 +190,7 @@ add_library(unicode INTERFACE)
 target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
 set(ICU_LIBRARIES ICU::i18n ICU::uc ICU::data ICU::io)
 
+message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
 message("-- ICU libraries: ${ICU_LIBRARIES}")
 

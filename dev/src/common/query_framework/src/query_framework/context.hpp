@@ -7,10 +7,11 @@
 #include "context_fd.hpp"                        // IWYU pragma: keep
 #include "internal/query_graph/node_id.hpp"
 #include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
-#include "internal/query_graph/query_graph.hpp"
 #include "internal/query_graph/query_state.hpp"
 
-#include <base/defer.hpp>
+#include <diagnostic_interactive/logger.hpp>
+
+#include <base/extend_cpp/defer.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -51,7 +52,8 @@ namespace query {
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
-		static dia::Logger logger;
+		static dia::Logger     logger;
+		static dia_int::Logger int_logger;
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
@@ -59,7 +61,7 @@ namespace query {
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
-			internal::NodeID dep_id = makeNodeID(OthQuery::id, key);
+			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
 
 			this->active = false;
@@ -73,6 +75,8 @@ namespace query {
 		 * @param message The dia::Message to be logged.
 		 */
 		void log(Box<dia::Message> message);
+
+		void logInt(Box<dia_int::MessageBase> diagnostic);
 
 		/**
 		 * @brief Returns a const reference to the main query state.

@@ -4,20 +4,19 @@
  */
 #pragma once
 
-#include <helios/ctv/ctv.hpp>
+#include "generated_symbol_data.hpp"
+
+#include <ctv/ctv.hpp>
+#include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
-#include <pst_parser/generic_query_key.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 
-#include <base/bit256.hpp>
-#include <base/string_id.hpp>
+#include <base/types/bit256.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios {
 
@@ -30,9 +29,14 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
-	 * @brief Query symbols associated with given element in PST
+	 * @brief Query symbol associated with given element in PST
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
+	DECLARE_QUERY(
+		QuerySymbolOfSTMT,
+		pst::GenericPSTQueryKey<>,
+		SymID,
+		({ .used_hashes = query::UsedHashes::StableHash })
+	);
 
 	struct KeyOf_LookupInSymbol {
 		/**
@@ -58,24 +62,24 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 */
-	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({}));
 
 	using QueryDealias_Result = query::QResult<SymbolList, errors::Failed>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>);
+	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
 	using PotentialParsingErrors
 		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 
-	using QueryConstValueOf_Result = query::QResult<CompileTimeValue, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, errors::Failed>;
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result);
+	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
 
 	namespace builtin {
 		/**
@@ -84,4 +88,45 @@ namespace compiler::helios {
 		 */
 		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
 	}
+
+	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
+
+	/**
+	 * @brief Query stmt specifiers associated with given symbol in HELIOS
+	 */
+	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>, ({}));
+
+	namespace houtgen {
+		struct KeyFor_QueryGeneratedSymbol {
+			base::StrID         name;
+			GeneratedSymbolData generated_symbol_data;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * @brief Query a compiler-generated symbol ID, given its identifying parameters.
+		 *
+		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
+		 * SymIDs are returned for the same parameters.
+		 */
+		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID, ({}));
+	}
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
+	 * all SymID-s of functions called directly by this one.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({}));
+
+	/**
+	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
+	 * this function or all functions called by the called functions).
+	 * @note This query is used to determine all other functions that have to be compiled when
+	 * compile time evaluating a function.
+	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 */
+	DECLARE_QUERY(QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({}));
 }

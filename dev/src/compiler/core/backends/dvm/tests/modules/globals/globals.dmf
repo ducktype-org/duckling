@@ -1,8 +1,9 @@
-var g: i64 = 48;
+# @TODO: #1571 Remove type specifiers from this file once casts exist in DVM.
+var g: i64 = 48i64;
 
-fun main() = {
+fun main() -> i64 = {
 	var a: i64 = g;
-	a = 48;
+	a = 48i64;
 	g = a;
 	return a;
 }

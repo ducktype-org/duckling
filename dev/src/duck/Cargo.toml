@@ -1,0 +1,37 @@
+[package]
+name = "duck"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "duck"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "duck"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.48", features = ["cargo"] }
+clap_complete = { version = "4.5.58", optional = true }
+console = "0.16.1"
+itertools = "0.14.0"
+paste = "1.0.15"
+rustvil = { version = "0.9", features = ["full"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde-untagged = "0.1.9"
+serde_ignored = "0.1.14"
+serde_json = "1.0.145"
+serde_yaml_ng = "0.10.0"
+shellexpand = "3.1.1"
+symbol_table = { version = "0.5.0", features = ["global", "serde"] }
+toml = "0.9.8"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[features]
+shell-completion = ["dep:clap_complete"]

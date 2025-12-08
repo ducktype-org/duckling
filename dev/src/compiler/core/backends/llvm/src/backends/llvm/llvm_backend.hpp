@@ -1,29 +1,16 @@
 #pragma once
 
+#include "module_impl_fd.hpp"
+
 #include <lir/lir_structure/function_forward.hpp>
 
-#include <base/box.hpp>
-#include <base/ok_bad.hpp>
-#include <base/string_id.hpp>
+#include <base/pointers/box.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <query_framework/context_fd.hpp>
+#include <string_id/string_id.hpp>
 
 #include <filesystem>
-
-namespace compiler::backend_llvm {
-	struct ModuleImpl;
-}
-
-namespace base::extend {
-	/**
-	 * @brief Custom Box/MBox deleter for ModuleImpl.
-	 * It is needed to avoid UB with delete on incomplete type.
-	 */
-	template<>
-	struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
-		static void del(compiler::backend_llvm::ModuleImpl* ptr);
-	};
-}
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
@@ -64,7 +51,7 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
-		void addGlobalToModule(const lir::LirGlobal& lir_global);
+		void addGlobalToModule(const lir::LIRGlobal& lir_global);
 
 		/**
 		 * @brief Adds a function to the LLVM module's list of global constructors.
@@ -93,7 +80,12 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param output_file Path where the output file will be saved.
 		 */
-		void debugDumpToFile(base::StrID output_file) const;
+		void dumpLLVMToFile(base::StrID output_file) const;
+
+		/**
+		 * @brief Dumps the LLVM IR to string.
+		 */
+		[[nodiscard]] std::string dumpLLVMToString() const;
 
 		[[nodiscard]]
 		base::OkBad verify() const;

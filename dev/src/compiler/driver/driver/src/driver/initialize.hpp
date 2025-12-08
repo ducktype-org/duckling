@@ -2,8 +2,6 @@
 
 #include "options.hpp"
 
-#include <base/box.hpp>
-
 namespace compiler::driver {
 
 	/**

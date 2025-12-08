@@ -1,24 +1,15 @@
 #include "logger.hpp"
 
-#include "diagnostic_converters.hpp"
+#include <base/misc/int_conv.hpp>
 
-#include <base/int_conv.hpp>
+#include <logger/logger.hpp>
 
 #include <ranges>
 
 namespace dia {
 
-	constinit bool Logger::immediately_dump = false;
-
-	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
-
-	void Logger::log(Box<Message> message_ptr, const bool detailed, const bool immediately_dump_arg) {
-		if (immediately_dump_arg) {
-			printer::StreamPrinter::print(
-				DiagnosticToUserConverter::toPrinterContents(message_ptr.ref(), detailed)
-			);
-			printer::StreamPrinter::newline(2);
-		}
+	void Logger::log(Box<Message> message_ptr) {
+		CORE_DEV_LOG(Diagnostics, "Diagnostic message: ", message_ptr->toString(true), "\n\n");
 
 		const auto severity_id
 			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));
@@ -33,11 +24,11 @@ namespace dia {
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		constexpr auto borrower
+		constexpr auto BORROWER
 			= [](const Box<Message>& message) -> CRef<Message> { return message.ref(); };
 
 		auto messages = std::ranges::join_view(message_log);
-		auto refed    = std::ranges::transform_view(messages, borrower);
+		auto refed    = std::ranges::transform_view(messages, BORROWER);
 
 		printer::StreamPrinter::print(Converter::listToPrinterContents(refed, detailed), stream);
 	}

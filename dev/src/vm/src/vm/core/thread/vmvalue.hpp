@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/raw_view.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -19,15 +18,15 @@ namespace vm {
 	 * @note VmValues can be used only in the processes which where used when initializing them.
 	 * They can't be transferred in between different processes.
 	 *
-	 * @note There is two ways to create a VmValue:
-	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. It's
+	 * @note There are two ways to create a VmValue:
+	 * 1) with `VMProcess::createVmValue()` function - creates a VmValue owned by the process. Its
 	 * lifetime is guarded by VMProcess. All VmValues created by this function are deinitialized
 	 * when VmProcess is destroyed.
 	 * 2) with `VMProcess::createOwnedVmValue()` function - creates a
 	 * VmValue and transfers the ownership to the caller. The caller is expected to free the VmValue
 	 * by calling freeData().
 	 */
-	class VmValue {
+	class VmValue final {
 	private:
 		friend class VMProcess;
 
@@ -119,7 +118,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::VmValue, "VmValue");
 template<>
 struct nlohmann::adl_serializer<vm::VmValue> {
 	static void to_json(json& j, const vm::VmValue& v) {
-		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::name.data());
+		j["type"]        = std::string(TypeParseTraits<vm::VmValue>::NAME.data());
 		j["data_type"]   = v.type->getName().str();
 		j["data_length"] = v.type->getSize();
 		// Convert VmValue's bytes to HEX string

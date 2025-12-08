@@ -1,15 +1,13 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/pst_query/code_dependency.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
-#include <pst_parser/pst_query/code_dependency.hpp>
-#include <pst_parser/pst_query/pst_access_side_input.hpp>
 
-#include <base/defer.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -55,16 +53,16 @@ int notMain(int argc, const char* const* argv) {
 
 	using namespace compiler;
 
-	auto root = frontend::createModuleTree(path_to_compile);
+	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 	for (auto& i: top_level->functions) {
-		if (i.declaration.original_name == base::StrID("main")) {
-			auto positions = pst::queryPositionDependencies<helios::QueryCodeOFFun>(
-				i.declaration.original_symbol
+		if (i.declaration->original_name == base::StrID("main")) {
+			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
+				i.declaration->original_symbol
 			);
 
 			printer::PrinterOStream str;

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <helios/ctv/ctv.hpp>
-#include <helios/helios_errors.hpp>
+#include <ctv/ctv.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
@@ -9,7 +8,7 @@
 #include <string>
 
 namespace compiler::helios {
-	struct VmEvaluationError {
+	struct VmEvaluationError final {
 		enum class Kind {
 			ProcessSpawnFailed,
 			CodeLoadFailed,
@@ -38,11 +37,11 @@ namespace compiler::helios {
 	 * @param return_type The expected return type of the function.
 	 * @return The resulting CTV on success, or a VmEvaluationError.
 	 */
-	std::expected<CompileTimeValue, VmEvaluationError> executeInVm(
-		const std::string&                   func_name,
-		const vm::code::CodeCollection&      code,
-		const std::vector<CompileTimeValue>& args,
-		const tsh::SymbolType<>&             return_type
+	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
+		const std::string&                        func_name,
+		const vm::code::CodeCollection&           code,
+		const std::vector<ctv::CompileTimeValue>& args,
+		const tsh::SymbolType<>&                  return_type
 	);
 
 }

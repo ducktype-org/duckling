@@ -14,32 +14,35 @@
 
 #include <helios/scope_symbol_id.hpp>
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include <base/collections/optional.hpp>
 
-#include <map>
-#include <set>
-#include <string>
-#include <variant>
+#include <string_id/string_id.hpp>
 
-namespace tsh {
-	enum class Visibility { Public, Protected, Private };
+#include <ranges>
+
+namespace compiler::tsh {
+	enum class ClassMemberVisibility { Public, Protected, Private };
 
 	/**
-	 * @brief A single element of an interface, defined by its symbol (not name).
+	 * @brief A single element of a type interface, defined by its symbol (not name).
 	 */
 	class InterfaceElement final {
 	public:
 		/**
-		 * @brief A record which describes a parameter of a function.
-		 *
-		 * A parameter is described with its name, type, and whether it has a default value.
+		 * The kind of a type interface element.
+		 * @note In the future we might add more class-specific kinds here,
+		 * such as for example special-methods, base classes, etc.
 		 */
-		struct Parameter final {
-			base::StrID          name;
-			SymbolType<>         type;
-			bool                 has_default_value;
-			std::strong_ordering operator<=>(const Parameter& other) const = default;
+		enum class InterfaceElementKind {
+			Field,
+			Method,
+
+			/**
+			 * Other elements are symbols that are not "part of" a type
+			 * in a direct way, but are declared within the class body.
+			 * For example: constants, using declarations
+			 */
+			Other,
 		};
 
 	private:
@@ -57,25 +60,13 @@ namespace tsh {
 		 */
 		AbstractType source;
 
-		// @TODO: Add declaration order in source.
-		// That is: Add information which describes the index of a field / method in
-		// the declaration source code of a class / scope. The first declared field would
-		// have index 0, the next one would have 1, etc.
-		// This could be useful later on when addressing fields by index and when forming
-		// packing strategies which the user can influence with the order of declarations.
-
 		/**
-		 * @brief The input parameters of this element of the interface.
-		 * If the optional is empty, then the element is a field.
-		 *
-		 * Otherwise, if the vector inside the optional is empty, then it is a parameterless method.
+		 * The index of a field / method in the declaration source code of a class / scope.
+		 * Is relevant mostly for fields.
 		 */
-		base::Optional<std::vector<Parameter>> parameters;
+		u32 declaration_order;
 
-		/**
-		 * @brief The type of a field or the return type of a method.
-		 */
-		SymbolType<> result_type;
+		InterfaceElementKind kind;
 
 		/**
 		 * @brief The visibility of an element of the interface.
@@ -85,28 +76,29 @@ namespace tsh {
 		 * It's better to say "this element is present, but it is private and you cannot use it"
 		 * rather than "this element is not recognised, go figure out why".
 		 */
-		Visibility visibility;
+		ClassMemberVisibility visibility;
 
 	public:
 		/**
 		 * @brief Construct an element of an interface of a type.
 		 * @param symbol The symbol of this element.
 		 * @param parameters The parameters of this element.
+		 * @param declaration_order The index of this element in the declaration source code.
 		 * @param result_type The result type of this element.
 		 * @param source The source of this element, i.e. the class which declares it.
 		 * @param visibility The visibility level of this element.
 		 */
 		explicit InterfaceElement(
-			const compiler::helios::SymID          symbol,
-			const AbstractType                     source,
-			base::Optional<std::vector<Parameter>> parameters,
-			const SymbolType<>                     result_type,
-			const Visibility                       visibility
+			const compiler::helios::SymID symbol,
+			const AbstractType            source,
+			const u32                     declaration_order,
+			const InterfaceElementKind    kind,
+			const ClassMemberVisibility   visibility
 		):
 			  symbol(symbol),
 			  source(source),
-			  parameters(std::move(parameters)),
-			  result_type(result_type),
+			  declaration_order(declaration_order),
+			  kind(kind),
 			  visibility(visibility) {}
 
 		/**
@@ -138,7 +130,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		bool isField() const {
-			return parameters.empty();
+			return kind == InterfaceElementKind::Field;
 		}
 
 		/**
@@ -152,27 +144,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		bool isMethod() const {
-			return parameters.has_value();
-		}
-
-		/**
-		 * @brief Gets the parameter types of this element.
-		 * @return The parameter types of this element.
-		 */
-		[[nodiscard]]
-		base::Optional<base::CRef<std::vector<Parameter>>> getParameters() const {
-			return parameters.has_value()
-			         ? base::Optional<base::CRef<std::vector<Parameter>>>(&parameters.value())
-			         : base::Optional<base::CRef<std::vector<Parameter>>>();
-		}
-
-		/**
-		 * @brief Gets the result type of this element.
-		 * @return The result type of this element.
-		 */
-		[[nodiscard]]
-		SymbolType<> getResultType() const {
-			return result_type;
+			return kind == InterfaceElementKind::Method;
 		}
 
 		/**
@@ -193,7 +165,7 @@ namespace tsh {
 		 * @return The visibility of this element.
 		 */
 		[[nodiscard]]
-		Visibility getVisibility() const {
+		ClassMemberVisibility getVisibility() const {
 			return visibility;
 		}
 
@@ -211,7 +183,11 @@ namespace tsh {
 	/**
 	 * @brief An aggregate of the elements of the interface of an object.
 	 *
-	 * @note Expected to be used predominantly for symbol resolution in type-dependent contexts.
+	 * @note Expected to be used predominantly for getting structural information about the type
+	 * content.
+	 * @important It is used in type-instance lookup,
+	 * but it does not implement the lookup logic directly, and should not be used for that.
+	 * Use HInterface for that instead.
 	 *
 	 * Full information about all elements of an interface is obtained via the `getElements` method.
 	 * The returned map is indexed by string IDs (instead of symbols) because element names may be
@@ -222,7 +198,13 @@ namespace tsh {
 		/**
 		 * @brief The collection of elements of the interface of a type.
 		 */
-		const base::Map<base::StrID, std::set<InterfaceElement>> elements{};
+		std::vector<InterfaceElement> elements;
+
+		/**
+		 * @brief The collection of elements of the interface, grouped by name.
+		 * @note This is duplicated from `elements` for performance reasons.
+		 */
+		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 
 	public:
 		TypeInterface() = default;
@@ -231,16 +213,19 @@ namespace tsh {
 		 * @brief Construct the interface of a type from the elements of that interface.
 		 * @param elements The elements of the interface.
 		 */
-		explicit TypeInterface(const std::set<InterfaceElement>& elements);
+		explicit TypeInterface(const std::vector<InterfaceElement>& elements);
+
+		[[nodiscard]]
+		const std::vector<InterfaceElement>& getElements() const {
+			return elements;
+		}
 
 		/**
 		 * @brief Gets all the elements of an interface, grouped by name.
 		 * @return The elements of an interface, grouped by name.
 		 */
 		[[nodiscard]]
-		const base::Map<base::StrID, std::set<InterfaceElement>>& getElements() const {
-			return elements;
-		}
+		const base::Map<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
 
 		/**
 		 * @brief Gets all the elements of an interface with a given name.
@@ -248,153 +233,26 @@ namespace tsh {
 		 * @return The elements of an interface with the requested name.
 		 */
 		[[nodiscard]]
-		const std::set<InterfaceElement>& getElements(const base::StrID name) const {
-			static std::set<InterfaceElement> empty_set{};
-			if (!elements.contains(name)) return empty_set;
-			return elements.at(name);
+		const std::vector<InterfaceElement>& getElementsWithName(base::StrID name) const;
+
+		/**
+		 * @brief Gets a view of all the fields of this interface.
+		 * @return A view of all the fields of this interface.
+		 */
+		[[nodiscard]]
+		auto getFieldsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isField(); });
 		}
 
-		/*-------------------------*\
-		|    OVERLOAD RESOLUTION    |
-		\*-------------------------*/
-
 		/**
-		 * @brief A record which describes a named argument provided to a function call.
-		 *
-		 * A named argument is described with its name and type.
+		 * @brief Gets a view of all the methods of this interface.
+		 * @return A view of all the methods of this interface.
 		 */
-		struct NamedArgument final {
-			base::StrID  name;
-			AbstractType type;
-		};
-
-		/**
-		 * @brief A resolution result which means that no match was found.
-		 */
-		struct NoMatch final {
-			/**
-			 * @brief Elements with the requested name.
-			 */
-			std::set<InterfaceElement> non_matches;
-		};
-
-		/**
-		 * @brief A resolution result which means that a single match was found.
-		 */
-		struct SingleMatch final {
-			/**
-			 * @brief The best match.
-			 */
-			InterfaceElement best_match;
-
-			/**
-			 * @brief Other members of the same name which matched less accurately.
-			 */
-			std::set<InterfaceElement> alternative_matches;
-
-			/**
-			 * @brief Elements with the requested name which did not match.
-			 */
-			std::set<InterfaceElement> non_matches;
-		};
-
-		/**
-		 * @brief A resolution result which means that member resolution is ambiguous.
-		 *
-		 * @note An exact match is still possible when the resolution is ambiguous. Consider
-		 * the overloaded function `foo` with signatures `foo(a : i32, b : bool = true)` and
-		 * `foo(a : i32, c : char = 'a')`. A call of `foo(2)` matches both signatures perfectly,
-		 * but remains ambiguous.
-		 */
-		struct AmbiguousMatch final {
-			/**
-			 * @brief The conflicting matches.
-			 */
-			std::set<InterfaceElement> conflicting_matches;
-
-			/**
-			 * @brief Other members of the same name which matched less accurately.
-			 */
-			std::set<InterfaceElement> alternative_matches;
-
-			/**
-			 * @brief Elements with the requested name which did not match.
-			 */
-			std::set<InterfaceElement> non_matches;
-		};
-
-		using ResolutionResult = std::variant<NoMatch, SingleMatch, AmbiguousMatch>;
-
-		/**
-		 * @brief Gets the elements which match a name.
-		 *
-		 * @note This should be the primary method of resolving fields (as opposed to methods).
-		 *
-		 * @param name The requested name of an element.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(base::StrID name, query::Context& ctx);
-
-		/**
-		 * @brief Gets the elements which match a name and given arguments.
-		 *
-		 * @note This should not be used to resolve fields. This function assumes that it is
-		 * resolving a method, with perhaps an empty parameter list.
-		 *
-		 * @param name The requested name of an element.
-		 * @param positional_arg_types The types of the supplied positional arguments.
-		 * @param named_args The supplied named arguments.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(
-			base::StrID                      name,
-			const std::vector<AbstractType>& positional_arg_types,
-			const std::set<NamedArgument>&   named_args,
-			query::Context&                  ctx
-		);
-
-		/**
-		 * @brief Gets the elements which match a name and a single given argument.
-		 *
-		 * Only methods which can take exactly one argument are considered. In particular, methods
-		 * which *might* take one argument (for example, all other arguments are defaulted), are
-		 * not considered and do not affect resolution ambiguity.
-		 *
-		 * @param name The requested name of an element.
-		 * @param single_arg_type The type of a single argument.
-		 * @param ctx The query context for implicit coercion checks.
-		 * @return The elements which match the name.
-		 */
-		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
-
-		/**
-		 * @brief Auxiliary function to stringify a member lookup request.
-		 * @param name The name of the requested member.
-		 * @param argument_info The arguments provided.
-		 * Empty optional if no arguments list was provided.
-		 * Optional with empty argument lists if an empty argument list was provided.
-		 * The first list represents the types of the positional arguments,
-		 * while the second list represents the named arguments.
-		 * @return The stringified signature.
-		 *
-		 * For example:
-		 *
-		 * The request `obj.mem` for member `mem` in object `obj` corresponds to
-		 * `name = mem` and `argument_info = {}`, and stringifies to `"mem"`.
-		 *
-		 * The request `obj.foo()` corresponds to
-		 * `name = foo` and `argument_info = {{},{}}`, and stringifies to `foo()`.
-		 *
-		 * The request `obj.foo(1, 3.14, print_result = true)` corresponds to
-		 * `name = foo` and `argument_info = {{i32, f32}, {{"print_result", bool}}}`
-		 * (notation simplified), and stringifies to `foo(i32, f32, print_result : bool)`.
-		 */
-		static std::string stringifyRequestSignature(
-			base::StrID name,
-			const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
-				argument_info
-		);
+		[[nodiscard]]
+		auto getMethodsView() const {
+			return elements
+			     | std::views::filter([](const InterfaceElement& e) { return e.isMethod(); });
+		}
 	};
 }

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/types/ints.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vm/bytecode/element_base.hpp>
 
@@ -54,6 +55,7 @@ namespace vm::opargs {
 	DEFINE_STACK_LOCAL(64, "l64");
 	DEFINE_STACK_LOCAL(Any, "lany");
 	DEFINE_STACK_LOCAL(Ptr, "lptr");
+	DEFINE_STACK_LOCAL(Opq, "lopq");
 
 	/**
 	 * @brief Represents local variant argument.
@@ -62,7 +64,7 @@ namespace vm::opargs {
 
 #define VM_OPARG_LOCAL_TYPES                                                             \
 	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalAny, StackLocalPtr, \
-		StackLocalVnt
+		StackLocalVnt, StackLocalOpq
 
 	DEFINE_GLOBAL(8, "g8");
 	DEFINE_GLOBAL(16, "g16");
@@ -130,7 +132,7 @@ namespace vm::opargs {
 	};
 
 	struct BuiltinFunctionName final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "builtin_func";
+		static constexpr std::string_view OP_SHORT = "builtinfunc";
 
 		BuiltinFunctionName() = default;
 
@@ -139,6 +141,23 @@ namespace vm::opargs {
 		base::StrID function_name = base::StrID("");
 
 		constexpr bool operator==(const BuiltinFunctionName& other) const noexcept {
+			return function_name == other.function_name;
+		}
+	};
+
+	/**
+	 * @brief Represents extern C function name argument.
+	 */
+	struct ExtCFunctionName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "cfunc";
+
+		ExtCFunctionName() = default;
+
+		ExtCFunctionName(const base::StrID function_name): function_name(function_name) {}
+
+		base::StrID function_name = base::StrID("");
+
+		constexpr bool operator==(const ExtCFunctionName& other) const noexcept {
 			return function_name == other.function_name;
 		}
 	};
@@ -185,10 +204,11 @@ namespace vm::opargs {
 		Field,
 		FunctionName,
 		BuiltinFunctionName,
+		ExtCFunctionName,
 		MethodName,
 		Label>;
 	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
-	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName>;
+	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
 	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
 }
 
