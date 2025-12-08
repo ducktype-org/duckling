@@ -65,7 +65,6 @@ namespace vm {
 
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
-	// (CG, executor.cpp)
 	constexpr u64 OP_CASES_COUNT = ::internal::countOpCases();
 
 	struct MicroInstruction final {
