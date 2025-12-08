@@ -63,10 +63,8 @@ function(add_vm_variant suffix compile_def)
 endfunction()
 
 # Define suffixes and their respective compile definitions
-# sc is default, so `USE_SWITCH_CASE` is already defined in `config.hpp`
 add_vm_variant(tc "USE_TAIL_CALLS")
-add_vm_variant(sc "")
-add_vm_variant(cg "USE_COMPUTED_GOTO")
+add_vm_variant(sc "USE_SWITCH_CASE")
 
 # Default alias to "sc"
 add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
