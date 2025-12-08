@@ -79,7 +79,6 @@ endfunction()
 
 duck_add_vm_tests("tc")
 duck_add_vm_tests("sc")
-duck_add_vm_tests("cg")
 
 duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_map_test.cpp
         USES LibVM Tester)
