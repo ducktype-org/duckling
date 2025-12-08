@@ -25,21 +25,7 @@ pub enum QpErrorType {
     Note(Box<dyn AsRef<str>>),
 }
 
-impl Default for QuackError {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl QuackError {
-    /// Creates an empty QuackError.
-    pub fn new() -> Self {
-        Self {
-            inner: Vec::new(),
-            exit_code: 1,
-        }
-    }
-
     /// Creates a QuackError with a single error message.
     pub fn error<T>(err: T) -> Self
     where
@@ -58,6 +44,28 @@ impl QuackError {
     {
         Self {
             inner: vec![QpErrorType::Internal(Box::new(err))],
+            exit_code: 1,
+        }
+    }
+
+    /// Creates a QuackError with a single hint message.
+    pub fn hint<T>(err: T) -> Self
+    where
+        T: AsRef<str> + Sized + 'static,
+    {
+        Self {
+            inner: vec![QpErrorType::Hint(Box::new(err))],
+            exit_code: 1,
+        }
+    }
+
+    /// Creates a QuackError with a single note message.
+    pub fn note<T>(err: T) -> Self
+    where
+        T: AsRef<str> + Sized + 'static,
+    {
+        Self {
+            inner: vec![QpErrorType::Note(Box::new(err))],
             exit_code: 1,
         }
     }

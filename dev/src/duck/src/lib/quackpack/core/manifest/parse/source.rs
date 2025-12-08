@@ -30,23 +30,24 @@ pub(crate) fn parse(
             return Ok(Source::Registry(Registry::new(ctx.registry_url()?)));
         }
         scope.pop();
-        return Err(QuackError::new()
-            .add_hint("provide one of the `version` or the `source` fields")
-            .context(format!(
-                "couldn't determine the source of the dependency `{}`",
-                scope.format()
-            )));
+        return Err(
+            QuackError::hint("provide one of the `version` or the `source` fields").context(
+                format!(
+                    "couldn't determine the source of the dependency `{}`",
+                    scope.format()
+                ),
+            ),
+        );
     };
     if schema.version.is_some() && source.has_local() {
         scope.pop();
         let formatted = scope.format();
-        return Err(QuackError::new()
-            .add_hint(format!(
-                "remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
-            ))
-            .context(format!(
-                "couldn't determine the type of the dependency `{formatted}`"
-            )));
+        return Err(QuackError::hint(format!(
+            "remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
+        ))
+        .context(format!(
+            "couldn't determine the type of the dependency `{formatted}`"
+        )));
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
@@ -69,12 +70,13 @@ pub(crate) fn parse(
                 Registry::new(ctx.registry_url()?).into()
             } else {
                 scope.pop();
-                return Err(QuackError::new()
-                    .add_hint("provide one of the fields `version` or the `source`")
-                    .context(format!(
-                        "couldn't determine the source of the dependency `{}`",
-                        scope.format()
-                    )));
+                return Err(QuackError::hint(
+                    "provide one of the fields `version` or the `source`",
+                )
+                .context(format!(
+                    "couldn't determine the source of the dependency `{}`",
+                    scope.format()
+                )));
             }
         }
         (Some(registry_url), None, None) => {
@@ -151,7 +153,7 @@ fn make_could_not_determine_error<const N: usize>(
             source[0], source[1], source[2]
         )
     };
-    QuackError::new().add_hint(hint_text).context(format!(
+    QuackError::hint(hint_text).context(format!(
         "couldn't determine the source of the dependency `{}`",
         scope.format()
     ))
