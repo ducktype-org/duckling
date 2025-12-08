@@ -73,6 +73,7 @@ We specify following ares (mostly relevant on the Duckling repo):
 * `[Compiler]` -- for work focusing on duckc development,
 * `[DVM]` -- for work focusing on DVM development,
 * `[QuackPack]` -- for work focusing on QuackPack development,
+* `[Duck]` -- for work focusing on duck main cli interface module development,
 * `[Base]` -- for work focusing on base module development,
 * `[module-from-common]` -- for work focusing on development of given common module,
 * `[Docs]` -- for work focusing on docs,
