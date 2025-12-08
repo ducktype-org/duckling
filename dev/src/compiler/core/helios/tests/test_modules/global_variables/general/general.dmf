@@ -1,6 +1,6 @@
 
 namespace Nmspc {
-    var B: i64 = 4 + 4;
+    var B = 4 + 4;
 }
 
 fun foooo(a: i32) -> i32 = {
@@ -9,7 +9,7 @@ fun foooo(a: i32) -> i32 = {
 
 namespace Mspc {
 
-    const ABC: i64 = 4 + 4;
+    const ABC = 4 + 4;
 
-    var XB: i64 = foooo(i32(10));
+    var XB = foooo(10);
 }

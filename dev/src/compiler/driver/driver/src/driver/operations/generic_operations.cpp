@@ -136,7 +136,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
 				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -210,7 +210,7 @@ namespace compiler::driver {
 	) {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
-		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};
 
