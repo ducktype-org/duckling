@@ -13,6 +13,7 @@
 #include <utility>
 
 namespace pst {
+
 	/**
 	 * @brief State used for parsing Duckling to PST
 	 */
@@ -20,8 +21,10 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 	public:
-		LangParserState(tpc::TokenStream&& tokens, Ref<dia::Logger> err):
-			  tpc::ParserState(std::move(tokens), err) {}
+		LangParserState(
+			tpc::TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err
+		):
+			  tpc::ParserState(std::move(tokens), err, int_err) {}
 
 		/**
 		 * @brief Adds import to the list of imports.

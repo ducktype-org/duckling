@@ -1,7 +1,7 @@
 #{
 # Program calculating n-th 
 # fibbonacci number in O(n)
-}#
+#}
 
 include std.io;
 

@@ -1,0 +1,29 @@
+metadata:
+  type: "note"
+  family: "type_check"
+  name: "function_declared_here"
+  code: "5001"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet showing the alias definition."
+  code_location:
+    description: "Location of the code snippet."
+
+header_message:
+  - "Function declared here."
+
+description:
+  codeblock:
+    param: "code"
+  location:
+    param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "note"
+    content: ""

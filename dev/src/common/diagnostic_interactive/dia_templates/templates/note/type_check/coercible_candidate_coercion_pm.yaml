@@ -1,0 +1,28 @@
+metadata:
+  type: "note"
+  family: "type_check"
+  name: "coercible_candidate_coercion_pm"
+  code: "6012"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "pointer_message"
+
+
+params:
+  parameter_type:
+    description: "Type of the parameter."
+  argument_type:
+    description: "Type of the argument provided to the call."
+
+
+pointer_messages:
+  coercion:
+    priority: 1
+    type: "note"
+    content:
+      - "Coerced from `"
+      - param: "argument_type"
+      - "` to `"
+      - param: "parameter_type"
+      - "`"
+
