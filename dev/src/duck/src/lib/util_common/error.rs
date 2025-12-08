@@ -117,7 +117,7 @@ impl QuackError {
 
 impl fmt::Display for QuackError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, x) in self.inner.iter().rev().enumerate() {
+        for (i, x) in self.stack().enumerate() {
             if i < self.inner.len() - 1 {
                 writeln!(f, "{x}")?;
             } else {
