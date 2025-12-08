@@ -46,12 +46,13 @@ Our focus and development status as of December 2025, divided by the main sub-pa
 
 # Why Duckling?
 
-The project focuses on creating a language that scales seamlessly — from small scripts to large projects. We want the language to provide a comfortable scripting and prototyping experience, and to remain frictionless as the project grows. This creates a unique set of challenges which the language and its toolset must solve. For example, the language has to be compiled to machine code, but at the same time it must be usable in notebooks (like Jupyter). We believe that at the moment none of the main stream languages provide such experience.
+The project focuses on creating a language that scales seamlessly — from small scripts to large projects. We want the language to provide a comfortable scripting and prototyping experience, and to remain frictionless as the project grows. This introduces a set of seemingly contradicting goals. For example, the language has to be compiled to machine code, but at the same time it must be usable in notebooks (like Jupyter). We tackle such challenges not only by proper language and toolset design, but also through robust technological improvements that unlock new possibilities currently beyond the reach of most mainstream languages. This includes:
 
-From technological point of view Duckling ....
-* Stateful compiler -- ...
-* CPU-DVM dual architecture -- ...
+* **Stateful compilation**. The `duckc` compiler is not built around a traditional paradigm of black-box, pass-based compilation in which each compilation process performs single, atomic operation. Rather it is a stateful, query-based compiler that can store and modify live state within memory and on disk. This opens up essential qualities that enable features such as fine-grained incremental compilation, gradual compilation in REPL environment or acting directly as a language server. 
 
+  <!-- We believe that the quality of the compiler is one of the most important aspects of a programming language, and can often have a bigger impact on the language than the language’s design. The compiler impacts areas such as compilation speed, error messages, tooling integration, and even subtler aspects like how quickly the language can evolve.  -->
+
+* **CPU-DVM dual architecture**. Duckling compilation targets two backend – dedicated Duckling Virtual Machine and LLVM IR. The former acting as a primary development environment, compile time evaluation engine, debugger, script execution engine while the latter enables Duckling to be compiled to highly performant code on a wide range of architectures.
 
 You can read more about Duckling technology and goals in the [Documentation](https://docs.duckling.pl/duckling/introduction/index.html) and on the [Duckling website](https://duckling.pl/pl/why_duckling/).
 
