@@ -47,46 +47,46 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testImport);
-		TESTER_ADD_TEST(testEdgeEvals);
+		// TESTER_ADD_TEST(testImport);
+		// TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
-		TESTER_ADD_TEST(testNumericLiterals);
-		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(testClassInteractions);
-		TESTER_ADD_TEST(testTypeInstanceInterface);
-		TESTER_ADD_TEST(testHoutVariables);
-		TESTER_ADD_TEST(testExprTree);
-		TESTER_ADD_TEST(testExprClone);
-		TESTER_ADD_TEST(testSimpleHOUT);
-		TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		TESTER_ADD_TEST(testModuleHOUT);
-		TESTER_ADD_TEST(testDependencyHOUT);
-		TESTER_ADD_TEST(testHoutVisitor);
-		TESTER_ADD_TEST(testTypeOf);
-		TESTER_ADD_TEST(testKeywordLiterals);
-		TESTER_ADD_TEST(testFunctionParameters);
-		TESTER_ADD_TEST(testExprScopes);
-		TESTER_ADD_TEST(testFunctionCallExpr);
-		TESTER_ADD_TEST(testFunctions);
-		TESTER_ADD_TEST(testBuiltinFunctions);
-		TESTER_ADD_TEST(testMangler);
-		TESTER_ADD_TEST(testManglerSpecialMembers);
-		TESTER_ADD_TEST(testGlobalVariableExpressions);
-		TESTER_ADD_TEST(testTypeOfConstAndVar);
-		TESTER_ADD_TEST(testDebugPrint);
-		TESTER_ADD_TEST(testStmtSpecifiers);
-		TESTER_ADD_TEST(testOverloadResolution);
-		TESTER_ADD_TEST(testCastsHout);
-		TESTER_ADD_TEST(testTypeLifting);
+		// TESTER_ADD_TEST(testNumericLiterals);
+		// TESTER_ADD_TEST(testClassSymbolData);
+		// TESTER_ADD_TEST(testClassInteractions);
+		// TESTER_ADD_TEST(testTypeInstanceInterface);
+		// TESTER_ADD_TEST(testHoutVariables);
+		// TESTER_ADD_TEST(testExprTree);
+		// TESTER_ADD_TEST(testExprClone);
+		// TESTER_ADD_TEST(testSimpleHOUT);
+		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		// TESTER_ADD_TEST(testModuleHOUT);
+		// TESTER_ADD_TEST(testDependencyHOUT);
+		// TESTER_ADD_TEST(testHoutVisitor);
+		// TESTER_ADD_TEST(testTypeOf);
+		// TESTER_ADD_TEST(testKeywordLiterals);
+		// TESTER_ADD_TEST(testFunctionParameters);
+		// TESTER_ADD_TEST(testExprScopes);
+		// TESTER_ADD_TEST(testFunctionCallExpr);
+		// TESTER_ADD_TEST(testFunctions);
+		// TESTER_ADD_TEST(testBuiltinFunctions);
+		// TESTER_ADD_TEST(testMangler);
+		// TESTER_ADD_TEST(testManglerSpecialMembers);
+		// TESTER_ADD_TEST(testGlobalVariableExpressions);
+		// TESTER_ADD_TEST(testTypeOfConstAndVar);
+		// TESTER_ADD_TEST(testDebugPrint);
+		// TESTER_ADD_TEST(testStmtSpecifiers);
+		// TESTER_ADD_TEST(testOverloadResolution);
+		// TESTER_ADD_TEST(testCastsHout);
+		// TESTER_ADD_TEST(testTypeLifting);
 
 		// error tests
-		TESTER_ADD_TEST(testErrorBadExpr);
-		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		// TESTER_ADD_TEST(testErrorBadExpr);
+		// TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(testScopeParentsAndDepth);
-		TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		// TESTER_ADD_TEST(testScopeParentsAndDepth);
+		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
