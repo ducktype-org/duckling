@@ -99,7 +99,7 @@ impl QuackError {
     }
 
     /// Sets the exit code of the error.
-    pub fn change_exit_code(mut self, new_code: i32) -> Self {
+    pub fn set_exit_code(mut self, new_code: i32) -> Self {
         self.exit_code = new_code;
         self
     }
