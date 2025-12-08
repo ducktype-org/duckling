@@ -160,11 +160,17 @@ impl DownloadingPackagesProgressBar {
         // https://docs.rs/indicatif/latest/indicatif/style/struct.ProgressStyle.html#method.with_template
         // https://docs.rs/indicatif/latest/indicatif/index.html#templates
         ProgressStyle::with_template(if terminal.term().size().1 > 80 {
-            "{prefix:>12} [{bar:57}] {pos}/{len} {wide_msg}"
+            "{prefix:>12.cyan.bold} [{bar:57}] {pos}/{len} {wide_msg}"
         } else {
-            "{prefix:>12} [{bar:57}] {pos}/{len}"
+            "{prefix:>12.cyan.bold} [{bar:57}] {pos}/{len}"
         })
         .expect("We set this statically, it should never fail")
         .progress_chars(PrefixChars::Pacman.as_str())
+    }
+}
+
+impl Drop for DownloadingPackagesProgressBar {
+    fn drop(&mut self) {
+        self.bar.finish_and_clear()
     }
 }
