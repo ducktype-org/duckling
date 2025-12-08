@@ -1,7 +1,7 @@
 #include "../../hierarchy/lists/implements_list.hpp"
 
-#include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expressions/ternary.hpp"
+#include "../../hierarchy/expr_holders.hpp"
+#include "../../hierarchy/expressions/ternary.hpp"
 #include "impl_template.hpp"
 
 namespace pst {
