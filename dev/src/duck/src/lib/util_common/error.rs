@@ -144,12 +144,11 @@ impl fmt::Debug for QuackError {
 impl fmt::Display for QpErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            QpErrorType::Error(error) => write!(f, "{}", error.as_ref().as_ref())?,
-            QpErrorType::Internal(error) => write!(f, "{}", error.as_ref().as_ref())?,
-            QpErrorType::Hint(hint) => write!(f, "{}", hint.as_ref().as_ref())?,
-            QpErrorType::Note(note) => write!(f, "{}", note.as_ref().as_ref())?,
+            QpErrorType::Error(error) => write!(f, "{}", error.as_ref().as_ref()),
+            QpErrorType::Internal(error) => write!(f, "{}", error.as_ref().as_ref()),
+            QpErrorType::Hint(hint) => write!(f, "{}", hint.as_ref().as_ref()),
+            QpErrorType::Note(note) => write!(f, "{}", note.as_ref().as_ref()),
         }
-        Ok(())
     }
 }
 
