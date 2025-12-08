@@ -197,7 +197,7 @@
 namespace vm {
 	class ExtCFuncError: public base::LogicError {
 	public:
-		ExtCFuncError(std::string reason): base::LogicError(std::move(reason)) {}
+		ExtCFuncError(const std::string& reason): base::LogicError(std::move(reason)) {}
 	};
 
 	class ExtCArgumentSizeMismatch: public ExtCFuncError {
@@ -210,9 +210,19 @@ namespace vm {
 			const std::string& vm_type,
 			const usize        vm_type_size
 		):
-			  ExtCFuncError(base::strConcat(
-				  ERR_MSG, cpp_type, "(", cpp_type_size, ") vs. ", vm_type, "(", vm_type_size, ")"
-			  )) {}
+			  ExtCFuncError(
+				  base::strConcat(
+					  ERR_MSG,
+					  cpp_type,
+					  "(",
+					  cpp_type_size,
+					  ") vs. ",
+					  vm_type,
+					  "(",
+					  vm_type_size,
+					  ")"
+				  )
+			  ) {}
 	};
 
 	class ExtCVmTypeNotExists: public ExtCFuncError {

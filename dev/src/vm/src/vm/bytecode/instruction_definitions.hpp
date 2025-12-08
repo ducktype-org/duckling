@@ -310,6 +310,8 @@ DEF_INSTR(output_l32, vm::opargs::StackLocal32)
 
 // initialises vtable pointer
 DEF_INSTR(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+// deinitialises vtable pointer
+DEF_INSTR(resetVTable_lptr, vm::opargs::StackLocalPtr)
 // casts pointed object to its superclass
 DEF_INSTR(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass
