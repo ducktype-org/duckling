@@ -1,5 +1,5 @@
 include(FetchContent)
-set(yaml_cpp_TAG "0.8.0")
+set(yaml_cpp_TAG "65c1c270dbe7eec37b2df2531d7497c4eea79aee")
 
 
 FetchContent_Declare(
