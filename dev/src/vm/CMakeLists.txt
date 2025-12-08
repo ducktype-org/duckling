@@ -23,12 +23,12 @@ set(exec_sources
 # There are three "libraries":.
 # - LibCommonVM from ${vm_common_sources}
 #    - this is created from the source files that do not require CONFIG compile definitions.
-# - LibThreadVM_{sc/cg/tc} from ${vm_config_dependent_sources}
+# - LibThreadVM_{sc/tc} from ${vm_config_dependent_sources}
 #    - this is created from the source files that require CONFIG compile definitions.
 # - MainVM from ${exec_sources}
 #    - this are the main files that are not dependent on CONFIG compile definitions.
 #
-# The LibCommonVM and LibThreadVM_{sc/cg/tc} should always be linked together
+# The LibCommonVM and LibThreadVM_{sc/tc} should always be linked together
 # as they depend on each other.
 
 set(vm_dependencies
@@ -41,8 +41,8 @@ make_module(LibCommonVM USES ${vm_dependencies})
 add_library(MainVM OBJECT ${exec_sources})
 make_module(MainVM USES ${vm_dependencies})
 
-# Create the LibVM_{sc/cg/tc} static libraries and the VM_{sc/cg/tc} executables.
-# In the middle it creates the LibThreadVM_{sc/cg/tc} object libraries.
+# Create the LibVM_{sc/tc} static libraries and the VM_{sc/tc} executables.
+# In the middle it creates the LibThreadVM_{sc/tc} object libraries.
 # The configuration depends on the suffix and the compile_def.
 function(add_vm_variant suffix compile_def)
     set(lib_thread_vm_name "LibThreadVM_${suffix}")
