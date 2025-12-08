@@ -1,4 +1,4 @@
-use std::{any::Any, fmt, iter::Rev, slice::Iter};
+use std::{any::Any, fmt};
 
 use crate::QuackResult;
 
@@ -110,7 +110,7 @@ impl QuackError {
     }
 
     /// Iterates over the messages stack, from the top to the bottom.
-    pub fn stack(&self) -> impl Iterator<Item = QpErrorType> {
+    pub fn stack(&self) -> impl Iterator<Item = &QpErrorType> {
         self.inner.iter().rev()
     }
 }
@@ -345,7 +345,7 @@ where
         if let Some(clap_err) = test_err.downcast_ref::<clap::Error>() {
             let err = QuackError::error(format!("{}", clap_err.render().ansi()));
             if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
-                err.change_exit_code(0)
+                err.set_exit_code(0)
             } else {
                 err
             }
