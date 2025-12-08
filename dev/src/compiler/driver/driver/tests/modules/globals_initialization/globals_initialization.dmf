@@ -1,4 +1,4 @@
-var g: i64 = 5;
-fun main() = {
+var g = 5i64;
+fun main() -> i64 = {
     return g;
 }
