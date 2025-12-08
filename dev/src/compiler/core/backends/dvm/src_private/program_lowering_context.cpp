@@ -2,7 +2,7 @@
 
 #include "function_lowering_context.hpp"
 
-#include <backends/dvm/dvm_forward_decl.hpp>
+#include <backends/dvm/dvm_internal_fwd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
@@ -89,7 +89,7 @@ const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext
 			opt_some(_) func_ctx.registerFunctionParameter(&param);
 			opt_none {
 				// @TODO: #1656 Handle local variable inits properly.
-				func_ctx.pushInit(&param);
+				func_ctx.pushInit(&param);  // NOLINT(clang-diagnostic-deprecated-declarations)
 			}
 		}
 	}

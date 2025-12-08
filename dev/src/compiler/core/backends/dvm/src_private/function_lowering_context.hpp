@@ -30,20 +30,14 @@ namespace compiler::backend_vm::internal {
 		FunctionLoweringContext& operator=(const FunctionLoweringContext&) = delete;
 		FunctionLoweringContext& operator=(FunctionLoweringContext&&)      = delete;
 
-		base::StrID getBlockLabel(lir::BlockRef block);
-
-		const DVMLocal&               insertLirLocal(lir::LIRLocalRef local);
-		[[nodiscard]] const DVMLocal& getLirLocal(lir::LIRLocalRef local) const;
-
-		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
-
 		void beginBlock(lir::BlockRef block);
 
 		void pushTerminator(const lir::Instruction& lir_terminator);
 		void pushInstruction(const lir::Instruction& lir_instruction);
 
 		[[deprecated(
-			"@TODO: #1656 Delete this temporary helper when inits/deinits are handled correctly"
+			"@TODO: #1656 Move this temporary helper when inits/deinits are handled correctly to "
+			"pushInstruction's implementation of init"
 		)]]
 		void pushInit(lir::LIRLocalRef lir_local);
 
@@ -61,6 +55,13 @@ namespace compiler::backend_vm::internal {
 	private:
 		// Creates a mapping between a LIR local and DVM local.
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
+
+		base::StrID getBlockLabel(lir::BlockRef block);
+
+		const DVMLocal&               insertLirLocal(lir::LIRLocalRef local);
+		[[nodiscard]] const DVMLocal& getLirLocal(lir::LIRLocalRef local) const;
+
+		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
 		void pushInstruction(const vm::code::Instruction& instruction);
 

@@ -6,9 +6,7 @@
 #include <timer/timer.hpp>
 
 namespace compiler::driver {
-	vm::code::CodeCollection compileLIRModuleToDVM(
-		query::Context& query_ctx, const LIRModuleData& data
-	) {
+	vm::code::CodeCollection compileLIRModuleToDVM(const LIRModuleData& data) {
 		timer::AddToTime _(&backend_compilation_time);
 
 		backend_vm::Module module(data.module_id);

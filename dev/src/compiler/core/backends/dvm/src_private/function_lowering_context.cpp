@@ -83,7 +83,6 @@ namespace {
 }
 
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
-	// i64, bool, LIRPlace, BlockRef, FunctionLiteral
 	variant_match(lir_value.getVariant()) {
 		variant_case(lir::LIRConstant, value) { return { lirConstantToImmediate(value) }; }
 		variant_case(lir::LIRPlace, place) {
@@ -132,7 +131,6 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
-	// Just ensure the label exists.
 	pushInstruction(vm::code::instructions::Op_label(getBlockLabel(block)));
 }
 
@@ -172,16 +170,19 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 	// @TODO: #1659 - When main will be able to accept no parameters, then the first if branch
 	// should be removed.
 	if (function_name == "main") {
-		return DVMLocal{
-			.name = base::StrID("ret_val"),
-			.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
-		};
-	} else {
-		return DVMLocal{
-			.name = base::StrID("ret_val"),
-			.type = function_return_type,
-		};
+		if (function_return_type
+		    != vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) }) {
+			CORE_PANIC("Main function must have i64 return type");
+		}
+		// return DVMLocal{
+		// 	.name = base::StrID("ret_val"),
+		// 	.type = vm::code::PrimitiveType(base::StrID("i64"), 8),
+		// };
 	}
+	return DVMLocal{
+		.name = base::StrID("ret_val"),
+		.type = function_return_type,
+	};
 }
 
 [[nodiscard]] const compiler::backend_vm::internal::DVMLocal& compiler::backend_vm::internal::

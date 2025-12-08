@@ -1,5 +1,5 @@
 
-#include "dvm_forward_decl.hpp"
+#include "dvm_internal_fwd.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -33,7 +33,7 @@ namespace compiler::backend_vm {
 		);
 
 		/**
-		 * @brief Builds a module representation.
+		 * @brief Validates and builds module's representation as DVM program.
 		 */
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
