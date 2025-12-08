@@ -5,9 +5,9 @@
 
 
 namespace {
-	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Box<vm::VmValue> getIntVmValue(const vm::PID pid, const i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
-		if (!response.has_value()) throw -1;
+		if (!response.has_value()) throw BeRDFailedToCreateAVmValue();
 		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
 		return vm_value;
@@ -32,14 +32,15 @@ namespace {
 		     | std::ranges::to<vm::FunctionRunArguments>();
 	}
 
-	void freeArguments(DuckVMDebug::OwnedArgumentList& arguments) {
-		for (auto& arg: arguments) arg->freeData();
+	void freeArguments(const DuckVMDebug::OwnedArgumentList& arguments) {
+		for (const auto& arg: arguments) arg->freeData();
 	}
 }
 
-void DuckVMDebug::run() {
-	std::cout << "++++++++++++++++++++++++\n+ BeRD has "
-				 "started +\n++++++++++++++++++++++++\n";
+void DuckVMDebug::run() const {
+	std::cout << "++++++++++++++++++++++++\n"
+			     "+ BeRD has started +\n"
+				 "++++++++++++++++++++++++\n";
 
 	std::string line;
 	while (true) {
@@ -49,26 +50,28 @@ void DuckVMDebug::run() {
 			break;
 		}
 		std::string stripped_line = strip(line);
-		if (line == "") {
+		if (line.empty()) {
 			continue;
-		} else if (stripped_line == "exit" || stripped_line == "q") {
+		}
+		if (stripped_line == "exit" || stripped_line == "q" || stripped_line == "quit") {
 			std::cout << "Exiting BeRD\n";
 			break;
-		} else if (stripped_line == "s" || stripped_line == "step") {
+		}
+		if (stripped_line == "s" || stripped_line == "step") {
 			step();
 		} else if (stripped_line == "status") {
-			get_status();
+			getStatus();
 		} else if (stripped_line == "run") {
-			run_vm();
+			runVm();
 		} else if (stripped_line.starts_with("run ")) {
-			run_fun(lstrip(lstrip(line).substr(3)));
+			runFun(lstrip(lstrip(line).substr(3)));
 		} else if (stripped_line == "resume") {
 			resume();
 		} else if (stripped_line == "pause") {
 			pause();
 		} else if (stripped_line == "print") {
 			// print();
-			throw -1;
+			throw base::NotYetImplemented("Printing not implemented yet.");
 		} else if (lstrip(line).starts_with("$")) {
 			// processGlobalOutput(line);
 		// } else if (lstrip(line).starts_with("!")) {
@@ -85,32 +88,29 @@ void DuckVMDebug::run() {
 DuckVMDebug DuckVMDebug::get(const fs::File& filepath, const std::vector<std::string>& args) { return {filepath, args}; }
 
 DuckVMDebug::DuckVMDebug() {
-	auto process_pid_response = vm::api::spawn();
-	if (!process_pid_response.has_value()) throw -1;
+	const auto process_pid_response = vm::api::spawn();
+	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
-	if (!vm::api::attach(pid, std::cin, std::cout)) throw -1;
+	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args) {
-	debug_args = args;
-	auto process_pid_response = vm::api::spawn();
-	if (!process_pid_response.has_value()) throw -1;
+DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args) : debug_args(args) {
+	const auto process_pid_response = vm::api::spawn();
+	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
-	if (!vm::api::loadFiles(pid, { filepath })) throw -1;
+	if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
 	std::cout<<"File loaded\n";
-	if (!vm::api::attach(pid, std::cin, std::cout)) throw -1;
+	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-void DuckVMDebug::run_vm(){
-
+void DuckVMDebug::runVm() const {
 	if (!vm::api::run(pid, debug_args)) throw std::runtime_error("Failed to run VM");
-	get_exit_value();
+	getExitValue();
 }
 
-void DuckVMDebug::run_fun(const std::string& string){
-
-	u64 paren_open  = string.find('(');
-	u64 paren_close = string.rfind(')');
+void DuckVMDebug::runFun(const std::string& string) const {
+	const u64 paren_open  = string.find('(');
+	const u64 paren_close = string.rfind(')');
 
 	if (paren_open == std::string::npos || paren_close == std::string::npos
 	    || paren_close <= paren_open) {
@@ -118,20 +118,18 @@ void DuckVMDebug::run_fun(const std::string& string){
 		return;
 	}
 
-
-	std::string function_name = strip(string.substr(0, paren_open));
+	const std::string function_name = strip(string.substr(0, paren_open));
 	if (function_name.empty()) {
 		std::cerr << "Error: Invalid function call -> function name is empty\n";
 		return;
 	}
 
 	if (function_name == "main") {
-		run_vm();
-		// std::cerr << "Error: Calling 'main' function directly is not supported\n";
+		runVm();
 		return;
 	}
 
-	std::string args_str      = string.substr(paren_open + 1, paren_close - paren_open - 1);
+	std::string args_str = string.substr(paren_open + 1, paren_close - paren_open - 1);
 
 	u64               start = 0;
 	OwnedArgumentList arguments;
@@ -144,46 +142,47 @@ void DuckVMDebug::run_fun(const std::string& string){
 		std::string arg = strip(args_str.substr(start, end - start));
 		try {
 			if (!arg.empty()) arguments.push_back(getIntVmValue(pid, std::stoll(arg)));
-		} catch (const std::exception& e) {
+		} catch (const std::exception& _) {
 			std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
-			throw -1;
+			return;
 		}
 		start = end + 1;
 	}
 	if (!vm::api::runFunction(pid, function_name, createArgumentList(arguments)))
-		throw -1;
-	get_exit_value();
+		throw BeRDFailedToRunCodeException();
+	getExitValue();
 	freeArguments(arguments);
 }
 
-void DuckVMDebug::get_exit_value(){
-	if (!vm::api::join(pid).has_value()) throw -1;
+void DuckVMDebug::getExitValue() const {
+	if (!vm::api::join(pid).has_value()) throw BeRDFailedToJoinProcessException();
 
-	auto exit_code_response = vm::api::getExitValue(pid);
-	if (!exit_code_response.has_value()) throw -1;
+	const auto exit_code_response = vm::api::getExitValue(pid);
+	if (!exit_code_response.has_value()) throw BeRDEmptyExitCodeException();
 
 	if (exit_code_response.value()->type->getName() != base::StrID("i64"))
-		throw -1;
+		throw BeRDWrongTypeException();
 	std::cout<< "Ret: " << exit_code_response.value()->readBytes<i64>() << "\n";
 }
 
-void DuckVMDebug::get_status(){
+void DuckVMDebug::getStatus() const {
 	auto response = vm::api::getExecutionStatus(pid);
 
 	//TODO: Process response and print status
+	throw base::NotYetImplemented("getStatus not implemented yet.");
 }
 
-void DuckVMDebug::step(){
-	if (!vm::api::step(pid)) throw -1;
+void DuckVMDebug::step() const {
+	if (!vm::api::step(pid)) throw BeRDFailedToMakeStep();
 	// auto response = vm::api::getCurrentPosition(pid);
 	// if (!response.has_value()) throw -1;
 	// std::cout << response.value().function_id << " " << response.value().instr_number << "\n";
 }
 
-void DuckVMDebug::resume(){
-	if (!vm::api::resume(pid)) throw -1;
+void DuckVMDebug::resume() const {
+	if (!vm::api::resume(pid)) throw BeRDFailedToResumeVM();
 }
 
-void DuckVMDebug::pause(){
-	if (!vm::api::pause(pid)) throw -1;
+void DuckVMDebug::pause() const {
+	if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
 }

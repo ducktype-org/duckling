@@ -19,7 +19,7 @@ public:
 	DuckVMDebug(const DuckVMDebug&)            = delete;
 	DuckVMDebug& operator=(const DuckVMDebug&) = delete;
 
-	void run();
+	void run() const;
 
 private:
 	struct CallInfo {
@@ -35,11 +35,40 @@ private:
 	DuckVMDebug();
 	DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args = {});
 
-	void run_vm();
-	void run_fun(const std::string& string);
-	void get_exit_value();
-	void get_status();
-	void step();
-	void resume();
-	void pause();
+	void runVm() const;
+	void runFun(const std::string& string) const;
+	void getExitValue() const;
+	void getStatus() const;
+	void step() const;
+	void resume() const;
+	void pause() const;
 };
+
+class DuckVMDebugException: public base::Exception {
+	std::string message;
+
+public:
+	DuckVMDebugException(std::string message): base::Exception(), message(std::move(message)) {}
+
+	[[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
+};
+
+#define DEFINE_DEBUG_EXCEPTION(err, msg)                     \
+struct err: public DuckVMDebugException {                \
+constexpr static std::string_view ERR_MSG = msg;    \
+err(): DuckVMDebugException(std::string(ERR_MSG)) {} \
+}
+
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToSpawnProcessException, "Failed to spawn the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(
+	BeRDFailedToAttachStreamsException, "Failed to attach streams to the VM process for BeRD."
+);
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToJoinProcessException, "Failed to join the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToLoadFile, "Failed to load files to the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToPauseVM, "Failed to pause the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToResumeVM, "Failed to resume the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToMakeStep, "Failed to make one step in the VM process for BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToRunCodeException, "Failed to run code in BeRD.");
+DEFINE_DEBUG_EXCEPTION(BeRDWrongTypeException, "BeRD encountered a different type than 'i64'");
+DEFINE_DEBUG_EXCEPTION(BeRDFailedToCreateAVmValue, "Failed to create a VmValue for arguments.");
+DEFINE_DEBUG_EXCEPTION(BeRDEmptyExitCodeException, "Exit code is empty, cannot continue.");
