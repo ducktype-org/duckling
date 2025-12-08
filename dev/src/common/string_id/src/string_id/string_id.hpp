@@ -171,7 +171,7 @@ namespace base {
 			return this->id;
 		}
 
-		friend class std::hash<StrID>;
+		friend struct std::hash<StrID>;
 	};
 
 	/**
