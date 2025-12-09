@@ -8,9 +8,8 @@ use rustvil::{config_files::home, os::env::Env};
 
 use crate::{
     QuackResult,
-    duck::util::{duck_cfg::DuckCfg, terminal::Terminal},
-    quackpack::util::paths::duck_home,
-    util_common::toml_config::TomlConfig,
+    duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
+    quackpack::util::paths::duck_home_path,
 };
 
 #[derive(Debug)]
@@ -20,7 +19,7 @@ pub struct DuckCtx {
     duck_cfg: DuckCfg,
     cwd: PathBuf,
     user_home: PathBuf,
-    duck_home: PathBuf,
+    duck_home: DuckHome,
     env: Env,
 }
 
@@ -29,10 +28,13 @@ impl DuckCtx {
         let env = Env::default();
         let console = Terminal::stdout();
         let error_console = Terminal::stderr();
-        let config = DuckCfg::new(&env, &error_console)?;
-        let cwd = current_dir().context("while trying to get the current working directory")?;
         let user_home = home().context("while trying to get user home directory")?;
-        let duck_home = duck_home(&env, &user_home);
+        let duck_home = DuckHome::new(
+            duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
+            &env,
+        );
+        let config = DuckCfg::new(&duck_home)?;
+        let cwd = current_dir().context("while trying to get the current working directory")?;
         Ok(Self {
             console,
             error_console,
@@ -64,10 +66,6 @@ impl DuckCtx {
         &self.duck_cfg
     }
 
-    pub fn toml_cfg(&self) -> &TomlConfig {
-        self.duck_cfg().toml_config()
-    }
-
     #[cfg(test)]
     pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
         &mut self.duck_cfg
@@ -75,10 +73,6 @@ impl DuckCtx {
 
     pub fn env(&self) -> &Env {
         &self.env
-    }
-
-    pub fn env_mut(&mut self) -> &mut Env {
-        &mut self.env
     }
 
     /// Get a path to the current working directory.
@@ -96,7 +90,7 @@ impl DuckCtx {
         &self.user_home
     }
 
-    pub fn duck_home(&self) -> &Path {
+    pub fn duck_home(&self) -> &DuckHome {
         &self.duck_home
     }
 }
@@ -106,7 +100,7 @@ impl Default for DuckCtx {
     fn default() -> Self {
         let env = Default::default();
         let user_home = home().unwrap();
-        let duck_home = duck_home(&env, &user_home);
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap(), &env);
         Self {
             console: Terminal::stdout(),
             error_console: Terminal::stderr(),
