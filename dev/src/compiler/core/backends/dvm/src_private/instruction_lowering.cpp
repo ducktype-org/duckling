@@ -1,4 +1,3 @@
-#include <ranges>
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
@@ -14,6 +13,8 @@
 #include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+
+#include <ranges>
 
 using namespace compiler::backend_vm::internal;
 using namespace vm::code;
@@ -139,8 +140,9 @@ void FunctionLoweringContext::emitExtCall(
 
 ) {
 	// TODOP: We need some way to get the ext func return type in a nice way.
-	// For now assume all extern C functions return an opaque pointer. This should be more integrated with the backend TODOP.
-	auto opaque_type = vm::code::PrimitiveType(base::StrID("opaque_type"), 8);
+	// For now assume all extern C functions return an opaque pointer. This should be more
+	// integrated with the backend TODOP.
+	auto opaque_type    = vm::code::PrimitiveType(base::StrID("opaque_type"), 8);
 	auto result_storage = pushTempLocal(opaque_type, "ext_ret_val");
 
 	for (const auto& [arg_id, func_arg]: std::views::zip(std::views::iota(0), func_args)) {
@@ -154,13 +156,11 @@ void FunctionLoweringContext::emitExtCall(
 	pushInstruction({ OpKind::call_cfunc, DVMFunctionName{ base::StrID(func_name) }.asArgument() });
 
 	if (output) {
-		pushInstruction(
-			{
-				OpKind::mov,
-				output.value(),
-				result_storage.asArgument(),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			output.value(),
+			result_storage.asArgument(),
+		});
 	}
 
 	// if (result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result

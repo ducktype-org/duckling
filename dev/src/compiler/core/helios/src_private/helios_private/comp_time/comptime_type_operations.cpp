@@ -7,6 +7,7 @@
 #include "base/except/exceptions.hpp"
 
 #include "vm/api/vm.hpp"
+#include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/extern_c_function.hpp"
 #include "vm/utils/interpret.hpp"
 
@@ -68,11 +69,7 @@ namespace compiler::helios::comptime_ops {
 		return static_cast<i64>(layout->getSize());
 	}
 
-	DEF_VM_EXT_C_FUNC(
-		TupleTypeBuilder*,
-		"opaque_ptr",
-		__comptime_tuple_builder_new
-	) {
+	DEF_VM_EXT_C_FUNC(TupleTypeBuilder*, "opaque_ptr", __comptime_tuple_builder_new) {
 		auto* builder = new TupleTypeBuilder();
 		return builder;
 	}
@@ -171,4 +168,47 @@ namespace compiler::helios::comptime_ops {
 		delete builder_ptr;
 		return result;
 	}
+
+	std::vector<vm::code::ExternalCFunction> getComptimeTypeOperations(vm::PID pid) {
+		return {
+			VM_INSTANCE_EXT_C_FUNC(__comptime_create_box, __comptime_create_box, pid),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_create_ref, __comptime_create_ref, pid),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_create_const, __comptime_create_const, pid),
+			// TODOP: Optionals now?
+			// VM_INSTANCE_EXT_C_FUNC(__comptime_create_optional, __comptime_create_optional, pid),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_get_size, __comptime_get_size, pid),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_tuple_builder_new, __comptime_tuple_builder_new, pid),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_tuple_builder_push, __comptime_tuple_builder_push, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_tuple_builder_finalize, __comptime_tuple_builder_finalize, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_variant_builder_new, __comptime_variant_builder_new, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_variant_builder_push, __comptime_variant_builder_push, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_variant_builder_finalize, __comptime_variant_builder_finalize, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_func_type_builder_new, __comptime_func_type_builder_new, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_func_type_builder_set_ret_type,
+				__comptime_func_type_builder_set_ret_type,
+				pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_func_type_builder_push_arg, __comptime_func_type_builder_push_arg, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(
+				__comptime_func_type_builder_finalize, __comptime_func_type_builder_finalize, pid
+			),
+		};
+	}
+
+
 }
