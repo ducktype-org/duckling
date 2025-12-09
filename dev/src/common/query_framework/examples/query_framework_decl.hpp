@@ -34,9 +34,9 @@ struct Value {
  * Query declaration.
  * Under the hood it will create a struct called `MyQuery` which is the query interface struct.
  */
-DECLARE_QUERY(MyQuery, Key, Value, ({}))
+DECLARE_QUERY(MyQuery, Key, Value, ({.uses_qresult            = false}))
 
 /**
  * Another query. This query returns std::string as a result.
  */
-DECLARE_QUERY(Query2, Key, std::string, ({}))
+DECLARE_QUERY(Query2, Key, std::string, ({.uses_qresult            = false}))

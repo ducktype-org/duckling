@@ -62,7 +62,7 @@ namespace compiler::helios {
 	 * @todo: Currently root scopes are somewhat problematic.
 	 * See description of "root_element_file_back_map" for details.
 	 */
-	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID, ({}));
+	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID, ({.uses_qresult            = false}));
 
 	/**
 	 * @brief Generate HELIOS-scope associated with given PST element.
@@ -82,7 +82,7 @@ namespace compiler::helios {
 		QueryPrimaryCodeScopeFor,
 		pst::GenericPSTQueryKey<>,
 		ScopeID,
-		({ .used_hashes = query::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult            = false })
 	);
 
 	/**
@@ -105,24 +105,24 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({}));
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({.uses_qresult            = false}));
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>, ({}));
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>, ({.uses_qresult            = false}));
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
 	 * Also: dictates what symbols are contained in what scopes.
 	 */
-	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({}));
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({.uses_qresult            = false}));
 
 	/**
 	 * @brief Query all scopes defined in a given module.
 	 * Note: Not implemented yet.
 	 */
-	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>, ({}));
+	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>, ({.uses_qresult            = false}));
 
 	template<typename Element>
 	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
@@ -139,7 +139,7 @@ namespace compiler::helios {
 		QueryMacroExpansion,
 		pst::GenericPSTQueryKey<pst::Expand>,
 		ExpansionResult<pst::Stmt>,
-		({ .used_hashes = query::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult            = false })
 	)
 
 	/**

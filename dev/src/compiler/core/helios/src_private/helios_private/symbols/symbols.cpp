@@ -52,7 +52,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({.uses_qresult            = false}));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -411,7 +411,7 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({.uses_qresult            = false}));
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {

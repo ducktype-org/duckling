@@ -35,7 +35,7 @@ namespace compiler::helios {
 		QuerySymbolOfSTMT,
 		pst::GenericPSTQueryKey<>,
 		SymID,
-		({ .used_hashes = query::UsedHashes::StableHash })
+		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult            = false })
 	);
 
 	struct KeyOf_LookupInSymbol {
@@ -62,7 +62,7 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 */
-	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({}));
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({.uses_qresult            = false}));
 
 	using QueryDealias_Result = query::QResult<SymbolList, query::Failed>;
 
@@ -91,7 +91,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query stmt specifiers associated with given symbol in HELIOS
 	 */
-	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>, ({}));
+	DECLARE_QUERY(QuerySpecifiersOfSymbol, SymID, CRef<QuerySpecifiersOfSymbol_Result>, ({.uses_qresult            = false}));
 
 	namespace houtgen {
 		struct KeyFor_QueryGeneratedSymbol {
@@ -108,7 +108,7 @@ namespace compiler::helios {
 		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
 		 * SymIDs are returned for the same parameters.
 		 */
-		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID, ({}));
+		DECLARE_QUERY(QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID, ({.uses_qresult            = false}));
 	}
 
 	/**
@@ -116,7 +116,7 @@ namespace compiler::helios {
 	 * all SymID-s of functions called directly by this one.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 */
-	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({}));
+	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({.uses_qresult            = false}));
 
 	/**
 	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
@@ -125,5 +125,5 @@ namespace compiler::helios {
 	 * compile time evaluating a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 */
-	DECLARE_QUERY(QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({}));
+	DECLARE_QUERY(QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({.uses_qresult            = false}));
 }
