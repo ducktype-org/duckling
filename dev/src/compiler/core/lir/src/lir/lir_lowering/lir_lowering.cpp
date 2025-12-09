@@ -114,7 +114,7 @@ namespace compiler::lir {
 			  this->access_chain.size() == 0
 				  ? getBaseLayout()
 				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
+						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->valueOrThrow()
 					)
 		  ) {}
 
@@ -647,7 +647,7 @@ namespace compiler::lir {
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->expect(
+							return ctx.query<helios::QuerySymbolABI>(name.id)->throwOnFail(
 								"Handling errors in MIR is not supported yet"
 							);
 						}
@@ -765,10 +765,10 @@ namespace compiler::lir {
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		                                     ->expect("Handling errors in MIR is not supported yet")
+		                                     ->throwOnFail("Handling errors in MIR is not supported yet")
 		                                     .getType();
 
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->expect(
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->throwOnFail(
 			"Handling errors in MIR is not supported yet"
 		);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
