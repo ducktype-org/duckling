@@ -119,7 +119,9 @@ namespace base {
 				rehash();
 		}
 
-		void assertElementCountAllocatorConsistency() const {
+		
+	public:
+	void assertElementCountAllocatorConsistency() const {
 			[[maybe_unused]]
 			auto allocated_nodes = node_allocator.getAllocatedCount();
 			CORE_ASSERT_NOEXCEPT(
@@ -149,7 +151,7 @@ namespace base {
 			);
 		}
 
-	public:
+		
 		HashMap(): buckets(INITIAL_BUCKETS) { assertElementCountAllocatorConsistency(); }
 
 		HashMap(const HashMap&) = delete;
@@ -161,8 +163,8 @@ namespace base {
 			other.element_count = 0;
 			other.buckets.resize(1, nullptr);
 
-			assertElementCountAllocatorConsistency();
-			other.assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
+			// other.assertElementCountAllocatorConsistency();
 		}
 
 		HashMap& operator=(const HashMap& other) noexcept {
@@ -171,8 +173,9 @@ namespace base {
 			for (auto& kv_pair: other) put(kv_pair.key, kv_pair.value);
 			
 			CORE_ASSERT_NOEXCEPT(size() == other_size, "Size mismatch after copy assignment");
-			assertElementCountAllocatorConsistency();
-			other.assertElementCountAllocatorConsistency();
+
+			// assertElementCountAllocatorConsistency();
+			// other.assertElementCountAllocatorConsistency();
 
 			return *this;
 		}
@@ -185,8 +188,9 @@ namespace base {
 			other.clear();
 			
 			CORE_ASSERT_NOEXCEPT(size() == other_size, "Size mismatch after move assignment");
-			assertElementCountAllocatorConsistency();
-			other.assertElementCountAllocatorConsistency();
+	
+			// assertElementCountAllocatorConsistency();
+			// other.assertElementCountAllocatorConsistency();
 			
 			return *this;
 		}
@@ -310,11 +314,13 @@ namespace base {
 		 */
 		// template<typename K = KEY_T, typename D = DATA_T>
 		HashMap copy() const {
+			assertElementCountAllocatorConsistency();
+
 			HashMap result;
 			for (auto& kv_pair: (*this)) result.put(kv_pair.key, kv_pair.value);
 			
-			assertElementCountAllocatorConsistency();
-			result.assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
+			// result.assertElementCountAllocatorConsistency();
 			
 			return result;
 		}
@@ -328,9 +334,13 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			auto new_node = node_allocator.allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
+			// we increment element count here, to keep consistency in case of panic in addToBucket/contains
+			element_count++;
 
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
@@ -339,10 +349,9 @@ namespace base {
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
-			element_count++;
 			maybeRehash();
 
-			assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
 
 			return &new_node->key_value;
 		}
@@ -356,25 +365,26 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			auto new_node = node_allocator.allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
+			element_count++;
 
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
-				assertElementCountAllocatorConsistency();
-
+				
+				// assertElementCountAllocatorConsistency();
 				return nullptr;
 			}
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
-			element_count++;
 			maybeRehash();
 
-			assertElementCountAllocatorConsistency();
-
+			// assertElementCountAllocatorConsistency();
 			return &new_node->key_value;
 		}
 
@@ -389,22 +399,26 @@ namespace base {
 			auto new_node = node_allocator.allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
+			element_count++;
+
 
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
+				
 				node_allocator.deallocateDestroy(new_node);
+				element_count--;
+
 				(*this)[key] = value;
 	
-				assertElementCountAllocatorConsistency();
+				// assertElementCountAllocatorConsistency();
 				return false;
 			}
 
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
-			element_count++;
 			maybeRehash();
 
-			assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
 			return true;
 		}
 
@@ -429,9 +443,14 @@ namespace base {
 		base::Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(keyToBucket(key));
 			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				if (current_node->key_value.key == key) {
+					// assertElementCountAllocatorConsistency();
+					return &current_node->key_value.value;
+				}
 				current_node = current_node->next;
 			}
+
+			// assertElementCountAllocatorConsistency();
 			return {};
 		}
 
@@ -439,28 +458,40 @@ namespace base {
 		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(keyToBucket(key));
 			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				if (current_node->key_value.key == key) {
+					// assertElementCountAllocatorConsistency();
+					return &current_node->key_value.value;
+				}
 				current_node = current_node->next;
 			}
+			// assertElementCountAllocatorConsistency();
 			return {};
 		}
 
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			auto current_node = buckets.at(keyToBucket(key));
 			while (current_node) {
 				if (current_node->key_value.key == key) return current_node->key_value.value;
 				current_node = current_node->next;
 			}
+			
 			return {};
 		}
 
-		DATA_T& operator[](const KEY_T& key) { return **atMaybe(key); }
+		DATA_T& operator[](const KEY_T& key) { 
+			// assertElementCountAllocatorConsistency(); 
+			return **atMaybe(key); }
 
-		const DATA_T& operator[](const KEY_T& key) const { return **atMaybe(key); }
+		const DATA_T& operator[](const KEY_T& key) const { 
+			// assertElementCountAllocatorConsistency(); 
+			return **atMaybe(key); }
 
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
 			return atMaybe(key).has_value();
 		}
 
@@ -470,6 +501,8 @@ namespace base {
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			u64        bucket_index  = keyToBucket(key);
 			MRef<Node> current_node  = buckets.at(bucket_index);
 			MRef<Node> previous_node = nullptr;
@@ -490,14 +523,14 @@ namespace base {
 					node_allocator.deallocateDestroy(current_node.toOpt().value());
 					element_count--;
 
-					assertElementCountAllocatorConsistency();
+					// assertElementCountAllocatorConsistency();
 					return true;
 				}
 				previous_node = current_node;
 				current_node  = current_node->next;
 			}
 
-			assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
 			return false;
 		}
 
@@ -506,6 +539,7 @@ namespace base {
 		 * @note does not free the memory used to store the elements.
 		 */
 		void clear() RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
@@ -516,7 +550,7 @@ namespace base {
 				bucket = nullptr;
 			}
 			element_count = 0;
-			assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
 		}
 
 		/**
@@ -525,6 +559,7 @@ namespace base {
 		 * @TODO PR: unify this and move 
 		 */
 		void clearAndFree() RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
 			for (u64 i = 0; i < buckets.size(); i++) {
 				MRef<Node> current_node = buckets[i];
 				while (current_node) {
@@ -536,7 +571,7 @@ namespace base {
 				buckets[i] = nullptr;
 			}
 			element_count = 0;
-			assertElementCountAllocatorConsistency();
+			// assertElementCountAllocatorConsistency();
 		}
 
 		/**
@@ -558,6 +593,8 @@ namespace base {
 		}
 
 		IteratorT begin() RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			u64        bucket_index = 0;
 			MRef<Node> current_node = nullptr;
 
@@ -571,10 +608,14 @@ namespace base {
 		}
 
 		IteratorT end() RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			return IteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 
 		ConstIteratorT begin() const RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			u64        bucket_index = 0;
 			MRef<Node> current_node = nullptr;
 
@@ -588,6 +629,8 @@ namespace base {
 		}
 
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
+			// assertElementCountAllocatorConsistency();
+
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 
