@@ -1,7 +1,7 @@
-use crate::QuackError;
 use crate::duck::util::indent::indent;
-use crate::util_common::error::QpErrorType;
+use crate::util_common::error::{DisplayPlace, QpErrorType};
 use crate::{DuckCtx, duck::util::terminal::Terminal};
+use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
 
 pub fn main() {
@@ -37,13 +37,35 @@ fn setup_logger() {
 }
 
 fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
-    if error.exit_code() == 0 {
-        stdout.print(error);
-        std::process::exit(0)
+    if matches!(error.display_place(), DisplayPlace::StdOut) {
+        if let Err(e) = print_message(&error, stdout) {
+            print_error_and_exit(e, stdout, stderr)
+        }
     } else {
         print_error(&error, stderr);
     }
     std::process::exit(error.exit_code())
+}
+
+fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
+    for (i, msg) in msgs.stack().enumerate() {
+        if i > 0 {
+            term.print("");
+        }
+        match msg {
+            QpErrorType::Hint(hint) => {
+                term.hint(hint.as_ref().as_ref());
+            }
+            QpErrorType::Note(note) => {
+                term.note(note.as_ref().as_ref());
+            }
+            QpErrorType::BareMessage(msg) => {
+                term.print(msg.as_ref().as_ref());
+            }
+            _ => qp_bail_internal!("Errors and internal errors should not be printed on stdout"),
+        }
+    }
+    Ok(())
 }
 
 fn print_error(error: &QuackError, term: &Terminal) {
@@ -59,10 +81,13 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
             term.print("");
             match e {
                 QpErrorType::Hint(hint) => {
-                    term.hint(indent(hint.as_ref().as_ref(), 2));
+                    term.hint(hint.as_ref().as_ref());
                 }
                 QpErrorType::Note(note) => {
-                    term.note(indent(note.as_ref().as_ref(), 2));
+                    term.note(note.as_ref().as_ref());
+                }
+                QpErrorType::BareMessage(msg) => {
+                    term.print(msg.as_ref().as_ref());
                 }
                 QpErrorType::Error(e) => {
                     term.print(indent("Caused by:", 2));
