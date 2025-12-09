@@ -14,7 +14,7 @@ int dir_counter  = 0;
 void countFiles(const compiler::frontend::ModuleTree& tree) {
 	file_counter += (int) tree.getSourceFiles().size();
 	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-	for (const auto& [_, submodule]: tree.getSubmodules()) {
+	for (const auto& submodule: tree.getSubmodules()) {
 		countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
 		dir_counter++;
 	}
