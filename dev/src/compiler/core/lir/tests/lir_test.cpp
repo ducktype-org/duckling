@@ -93,7 +93,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (const auto& hout_func: unit->functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->value();
+				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
 				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -108,7 +108,7 @@ private:
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
 							hout_glob.original_name, std::make_tuple(hout_glob, mir_func, lir_func)

@@ -29,7 +29,7 @@ namespace compiler::helios {
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
 		auto&& [node_id, inner] = children.at(0);
-		SymbolList child_path   = inner.getAsSingle().expect(
+		SymbolList child_path   = inner.getAsSingle().throwOnFail(
             "This cannot be error, "
 			  "because it was asserted above."
         );

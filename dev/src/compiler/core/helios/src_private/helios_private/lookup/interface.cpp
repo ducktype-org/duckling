@@ -79,7 +79,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList, query::Failed> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,
@@ -102,10 +102,10 @@ namespace compiler::helios {
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}
-			return query::QError(errors::Failed());
+			return query::QError(query::Failed());
 		}
 
-		const auto& symbols = get_as_single.value();
+		const auto& symbols = get_as_single.valueOrThrow();
 
 		SymbolList dealiased_result;
 

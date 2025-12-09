@@ -175,7 +175,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::QResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+	query::QResult<Function, query::Failed> finalizeFunctionEnd(
 		query::Context&, Function function
 	) {
 		CORE_ASSERT(
@@ -197,7 +197,7 @@ namespace compiler::mir {
 		} else {
 			// @todo there should be logging here of missing return value / control reaches the
 			// end of non-void function
-			return query::QError(helios::errors::Failed());
+			return query::QError(query::Failed());
 		}
 	}
 
@@ -260,7 +260,7 @@ namespace compiler::mir {
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
 			if (validateFunction(function_reachable).isBad())
-				return query::QError(helios::errors::Failed());
+				return query::QError(query::Failed());
 
 			return function_reachable;
 		}

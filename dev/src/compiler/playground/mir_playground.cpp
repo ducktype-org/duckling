@@ -49,7 +49,7 @@ int notMain(int argc, const char* const* argv) {
 	for (auto& glob_data: top_level.glob_data) {
 		if (std::holds_alternative<helios::HOUTGlobalConst>(glob_data.value)) continue;
 		CRef mir_fun
-			= &query::entryPoint<compiler::mir::LowerGlobalDataToMIRCtor>({ glob_data })->value();
+			= &query::entryPoint<compiler::mir::LowerGlobalDataToMIRCtor>({ glob_data })->valueOrThrow();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";
@@ -57,7 +57,7 @@ int notMain(int argc, const char* const* argv) {
 
 
 	for (auto& fun: top_level.functions) {
-		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->value();
+		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";

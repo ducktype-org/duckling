@@ -64,7 +64,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({}));
 
-	using QueryDealias_Result = query::QResult<SymbolList, errors::Failed>;
+	using QueryDealias_Result = query::QResult<SymbolList, query::Failed>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
@@ -72,9 +72,9 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
 	using PotentialParsingErrors
-		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
+		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, query::Failed>;
 
-	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, errors::Failed>;
+	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, query::Failed>;
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

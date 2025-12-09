@@ -23,7 +23,7 @@ namespace compiler::helios {
 	 * a list of names that are assumed to form expression of form `name1.name2.name3...`.
 	 * It is currently used for looking up symbols in usings/aliases.
 	 */
-	query::QResult<SymbolList, errors::Failed> lookupChain(
+	query::QResult<SymbolList, query::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
 	);
 }

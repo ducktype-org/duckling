@@ -14,7 +14,7 @@
  * evaluates it on DVM.
  */
 namespace compiler::helios {
-	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, errors::Failed>;
+	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, query::Failed>;
 
 	struct KeyFor_QueryEvaluateHOUTExpression {
 		CRef<code::Expr> expr;
@@ -50,7 +50,7 @@ namespace compiler::helios {
 	 * e.g. types in declarations or type assertions.
 	 * @param ctx The query context.
 	 * @param pst_expr The PST expression to evaluate to a type.
-	 * @return The CTV with the type, or errors::Failed if evaluation failed.
+	 * @return The CTV with the type, or query::Failed if evaluation failed.
 	 */
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr

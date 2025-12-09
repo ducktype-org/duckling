@@ -29,7 +29,7 @@ namespace compiler::helios {
 
 	using SymbolABI = std::variant<DefaultAbi, CAbi>;
 
-	using QuerySymbolABI_Result = query::QResult<SymbolABI, errors::Failed>;
+	using QuerySymbolABI_Result = query::QResult<SymbolABI, query::Failed>;
 
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.
