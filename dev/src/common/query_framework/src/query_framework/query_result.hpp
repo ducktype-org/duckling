@@ -360,6 +360,12 @@ namespace query {
 	private:
 		std::expected<ResTp, ErrorType> storage;
 	};
+
+	template<typename T>
+	struct IsQResult : std::false_type {};
+
+	template<typename... Args>
+	struct IsQResult<query::QResult<Args...>> : std::true_type {};
 }
 
 /**
@@ -385,3 +391,5 @@ namespace query {
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var std::move(RES_VAR_NAME).valueOrThrow()
+
+	

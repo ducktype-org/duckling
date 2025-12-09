@@ -31,12 +31,6 @@
 
 namespace query::internal {
 
-	template<typename T>
-	struct IsQResult : std::false_type {};
-
-	template<typename... Args>
-	struct IsQResult<query::QResult<Args...>> : std::true_type {};
-
 	/**
 	 * @brief Internal function implementing the call to a query.
 	 *
@@ -121,7 +115,8 @@ namespace query::internal {
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
-			if constexpr (IsQResult<typename QueryImplType::PResult>::value && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+			if constexpr (QueryImplType::USES_QRESULT
+			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
 				try {
 					return QueryImplType::store(
 						perfect_hash, QueryImplType::provide(context, key), acd
@@ -169,6 +164,7 @@ namespace query::internal {
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
 		constexpr static bool CAN_BE_LOADED_FROM_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
+		constexpr static bool USES_QRESULT = QueryType_tp::QUERY_DATA.tags.uses_qresult;
 		constexpr static bool CATCH_EXCEPTIONS_IF_USING_QRESULT
 			= QueryType_tp::QUERY_DATA.tags.catch_exceptions_if_using_qresult;
 
@@ -264,6 +260,19 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>), \
 		"loadFromDisk must be implemented for queries that are cached on disk"                                                         \
+	);                                                                                                                                 \
+	static_assert(                                                                                                                     \
+		LAZY_IMPLIES(                                                                                                                  \
+			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
+		),                                                                                                                             \
+		"PResult must be a QResult if uses_qresult is true"                                                                            \
+	);                                                                                                                                 \
+	static_assert(                                                                                                                     \
+		LAZY_IMPLIES(                                                                                                                  \
+			not type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                         \
+			not query::IsQResult<type::PResult>::value                                                                                 \
+		),                                                                                                                             \
+		"PResult must not be a QResult if uses_qresult is false"                                                                       \
 	);                                                                                                                                 \
 	decltype(type::QueryType::id) type::QueryType::id                                                                                  \
 		= ::query::internal::registerQuery(type::QueryType::QUERY_DATA);
