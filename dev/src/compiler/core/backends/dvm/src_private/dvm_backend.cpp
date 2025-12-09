@@ -5,6 +5,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
+
 namespace compiler::backend_vm {
 
 	Module::Module(base::StrID module_id):
@@ -23,8 +25,8 @@ namespace compiler::backend_vm {
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 
-	void Module::insertExternCFunction(CRef<lir::Function> lir_function) {
-		// TODOP:
+	void Module::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
+		program_context->insertExternFunction(extern_func);
 	}
 
 	void Module::insertLirGlobal(

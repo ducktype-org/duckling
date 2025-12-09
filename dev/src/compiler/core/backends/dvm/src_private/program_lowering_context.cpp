@@ -71,7 +71,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	return lir_global_to_dvm_data.at(lir_global.mangled_name);
 }
 
-const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext::lowerAndKeepLirFunction(
+const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
 	if (auto maybe_lowered = lir_function_to_dvm.atMaybe(lir_function)) return **maybe_lowered;
@@ -108,9 +108,11 @@ const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext
 	return lir_function_to_dvm.at(lir_function);
 }
 
-vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::lowerTslTypeInternal(
-	CRef<tsl::TypeLayout> layout
-) {
+void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
+	extern_c_functions.push_back(extern_func);
+}
+
+vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
 			return vm::code::PrimitiveType(base::StrID("void"), 1);
@@ -153,6 +155,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+	collection.external_c_functions = extern_c_functions;
 
 	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
 	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);

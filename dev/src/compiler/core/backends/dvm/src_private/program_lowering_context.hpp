@@ -40,6 +40,11 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] const DVMGlobal& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
 
 		/**
+		 * @brief Inserts an extern C function into the program context.
+		 */
+		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
+
+		/**
 		 * @brief Produces the final bytecode program.
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
@@ -53,6 +58,8 @@ namespace compiler::backend_vm::internal {
 		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
+
+		std::vector<vm::code::ExternalCFunction> extern_c_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;

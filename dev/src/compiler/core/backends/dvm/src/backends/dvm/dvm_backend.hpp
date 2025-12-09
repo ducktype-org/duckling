@@ -26,7 +26,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts an extern C function into the module.
 		 */
-		void insertExternCFunction();
+		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
 
 		/**
 		 * @brief Inserts a LIR global into the module.
