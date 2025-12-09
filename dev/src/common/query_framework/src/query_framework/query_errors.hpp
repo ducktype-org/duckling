@@ -5,11 +5,11 @@
 namespace query {
 	class Failed final {};
 
-	class QueryFailedException final: public base::Exception {
+	class FailedStateException final: public base::Exception {
 		std::string what_str;
 
 	public:
-		QueryFailedException(std::string_view reason) {
+		FailedStateException(std::string_view reason) {
 			what_str = std::string("Query failure not handled: ");
 			what_str += std::string(reason) + "\n\n";
 			what_str += "Stacktrace:\n";

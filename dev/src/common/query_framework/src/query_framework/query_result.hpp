@@ -12,6 +12,8 @@
 #include <utility>
 #include <variant>
 
+#include "query_errors.hpp"
+
 namespace query {
 	namespace impl {
 		namespace flatten {
@@ -240,7 +242,7 @@ namespace query {
 		requires std::is_constructible_v<ResTp, T> constexpr QResult(const QResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
-			if (oth.hasValue()) storage = oth.value();
+			if (oth.hasValue()) storage = oth.valueOrThrow();
 
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
@@ -279,17 +281,6 @@ namespace query {
 		explicit constexpr operator bool() const { return hasValue(); }
 
 		/**
-		 * @brief Access the value, throw on no value.
-		 */
-		constexpr const ResTp& value() const& { return expect("Result is empty!"); }
-
-		constexpr const ResTp&& value() const&& { return std::move(expect("Result is empty!")); }
-
-		constexpr ResTp& value() & { return expect("Result is empty!"); }
-
-		constexpr ResTp&& value() && { return std::move(expect("Result is empty!")); }
-
-		/**
 		 * @brief Access the value as an optional.
 		 */
 		constexpr base::Optional<base::Ref<ResTp>> optValue() {
@@ -309,24 +300,25 @@ namespace query {
 
 		/**
 		 * @brief Access the value, throw on no value with a message.
+		 * Used when we always except a value to be present.
 		 */
-		constexpr const ResTp& expect(std::string_view message) const& {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr const ResTp& throwOnFail(std::string_view message) const& {
+			if (!storage.has_value()) throw query::FailedStateException(message);
 			return storage.value();
 		}
 
-		constexpr const ResTp&& expect(std::string_view message) const&& {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr const ResTp&& throwOnFail(std::string_view message) const&& {
+			if (!storage.has_value()) throw query::FailedStateException(message);
 			return std::move(storage.value());
 		}
 
-		constexpr ResTp& expect(std::string_view message) & {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr ResTp& throwOnFail(std::string_view message) & {
+			if (!storage.has_value()) throw query::FailedStateException(message);
 			return storage.value();
 		}
 
-		constexpr ResTp&& expect(std::string_view message) && {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr ResTp&& throwOnFail(std::string_view message) && {
+			if (!storage.has_value()) throw query::FailedStateException(message);
 			return std::move(storage.value());
 		}
 
@@ -345,22 +337,22 @@ namespace query {
 		 * @brief Access the value, throw the error if no value.
 		 */
 		constexpr const ResTp& valueOrThrow() const& {
-			if (hasError()) throw error();
+			if (hasError()) throw query::FailedStateException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr const ResTp&& valueOrThrow() const&& {
-			if (hasError()) throw error();
+			if (hasError()) throw query::FailedStateException("Result is empty.");
 			return std::move(storage.value());
 		}
 
 		constexpr ResTp& valueOrThrow() & {
-			if (hasError()) throw error();
+			if (hasError()) throw query::FailedStateException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr ResTp&& valueOrThrow() && {
-			if (hasError()) throw error();
+			if (hasError()) throw query::FailedStateException("Result is empty.");
 			return std::move(storage.value());
 		}
 
@@ -387,9 +379,9 @@ namespace query {
 #define UNPACK_RESULT(var, new_value)                                         \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
-	var RES_VAR_NAME.value()
+	var RES_VAR_NAME.valueOrThrow()
 
 #define UNPACK_RESULT_MOVE(var, new_value)                                    \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
-	var std::move(RES_VAR_NAME).value()
+	var std::move(RES_VAR_NAME).valueOrThrow()

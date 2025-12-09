@@ -51,7 +51,7 @@ namespace query {
 			bool can_be_loaded_from_disk = false;
 
 
-			bool uses_qresult = true;
+			bool catch_exceptions_if_using_qresult = true;
 		};
 
 		/**

@@ -31,6 +31,12 @@
 
 namespace query::internal {
 
+	template<typename T>
+	struct IsQResult : std::false_type {};
+
+	template<typename... Args>
+	struct IsQResult<query::QResult<Args...>> : std::true_type {};
+
 	/**
 	 * @brief Internal function implementing the call to a query.
 	 *
@@ -115,13 +121,19 @@ namespace query::internal {
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
-			if constexpr (QueryImplType::uses_qresult) {
+			if constexpr (IsQResult<typename QueryImplType::PResult>::value && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
 				try {
 					return QueryImplType::store(
 						perfect_hash, QueryImplType::provide(context, key), acd
 					);
-				} catch (const QueryFailedException& qfe) {
-					return QueryImplType::store(query::QError(Failed()), acd);
+				} catch (const FailedStateException& qfe) {
+					CORE_DEV_LOG(
+						Query,
+						"[QUERY \"",
+						QueryIntType::QUERY_DATA.name,
+						"\"]: Caught failed exception.\n"
+					);
+					return QueryImplType::store(perfect_hash, query::QError(Failed()), acd);
 				}
 			} else {
 				// This is all at the end, with defer above,
@@ -157,8 +169,8 @@ namespace query::internal {
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
 		constexpr static bool CAN_BE_LOADED_FROM_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
-		constexpr static bool uses_qresult
-			= QueryType_tp::QUERY_DATA.tags.uses_qresult;
+		constexpr static bool CATCH_EXCEPTIONS_IF_USING_QRESULT
+			= QueryType_tp::QUERY_DATA.tags.catch_exceptions_if_using_qresult;
 
 
 		/**
