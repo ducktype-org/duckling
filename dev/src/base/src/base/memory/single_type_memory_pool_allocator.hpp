@@ -75,6 +75,56 @@ namespace base {
 			}
 		};
 
+
+		/** 
+		 * Finds the (buffer,index) location of the given pointer in the allocator.
+		 * Panics in dev-builds if the pointer was not allocated by this allocator.
+		 * @note Behavior is undefined in release builds if pointer was not allocated by this allocator.
+		 */
+		[[nodiscard]]
+		BufferItemIndex findPointerInAllocator(Ref<T> pointer) const RELEASE_NOEXCEPT {
+			BufferItemIndex found_index;
+			bool found = false;
+
+			const auto* ptr_byte = reinterpret_cast<const std::byte*>(pointer.get());
+
+			// naively find the buffer and the index within the buffer:
+			for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
+				
+				auto buffer_pointer_start = 
+					reinterpret_cast<const std::byte*>(&(*std::begin(buffers[buffer_idx]->items)));
+				auto buffer_pointer_end =
+					reinterpret_cast<const std::byte*>(&(*(std::begin(buffers[buffer_idx]->items) + std::size(buffers[buffer_idx]->items))));
+
+				// we use std:less / std::less_equal to ensure pointer comparisons are well defined:
+				if (std::less_equal<>{}(buffer_pointer_start, ptr_byte)
+				    and std::less<>{}(ptr_byte, buffer_pointer_end)) {
+
+					// this is the buffer containing the pointer,
+					// now we need to find the index within the buffer:
+
+					u64 memory_offset = static_cast<u64>(ptr_byte - buffer_pointer_start);
+					u64 item_index = memory_offset / sizeof(StorageT);
+
+					found_index.buffer_idx = buffer_idx;
+					found_index.item_idx = item_index;
+
+					CORE_ASSERT(
+						pointer.get() == buffers[buffer_idx]->items[found_index.item_idx].get(),
+						"Calculated deallocation index does not point to the given object"
+					);
+
+					found = true;
+					break;
+				}
+			}
+
+			CORE_ASSERT(found, "Object to deallocate was not allocated by this allocator");
+
+			return found_index;
+		}
+
+
 	public:
 		SingleTypeMemoryPoolAllocator()                                     = default;
 		SingleTypeMemoryPoolAllocator(const SingleTypeMemoryPoolAllocator&) = delete;
@@ -137,7 +187,14 @@ namespace base {
 		 */
 		void justDestroy(Ref<T> obj_ref) {
 			IF_BUILD_TYPE_DEV(allocated_count--;)
+
+			IF_BUILD_TYPE_DEV(
+				// this is called just to ensure that the object was allocated by this allocator:
+				(void) findPointerInAllocator(obj_ref);
+			);
+
 			Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
+			
 			obj_storage->destroy();
 		}
 
@@ -154,35 +211,11 @@ namespace base {
 			Ref<StorageT> obj_storage = StorageT::getSelf(obj_ref);
 
 			// idx, in which the object is stored:
-			BufferItemIndex deallocation_idx;
-
-			bool found = false;
-
-			// naively find the buffer and the index within the buffer:
-			for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
-				StorageT* buffer_pointer_start = std::begin(buffers[buffer_idx]->items);
-				StorageT* buffer_pointer_end   = std::end(buffers[buffer_idx]->items);
-				if (std::less_equal<>{}(buffer_pointer_start, obj_storage.get())
-				    and std::less<>{}(obj_storage.get(), buffer_pointer_end)) {
-					deallocation_idx.buffer_idx = buffer_idx;
-					deallocation_idx.item_idx
-						= static_cast<u64>(obj_storage.get() - buffer_pointer_start);
-					found = true;
-
-					CORE_ASSERT(
-						obj_ref.get() == buffers[buffer_idx]->items[deallocation_idx.item_idx].get(),
-						"Calculated deallocation index does not point to the given object"
-					);
-
-					break;
-				}
-			}
-
-			CORE_ASSERT(found, "Object to deallocate was not allocated by this allocator");
+			BufferItemIndex deallocation_index = findPointerInAllocator(obj_ref);
 
 			// actually destroy and deallocate the object:
 			obj_storage->destroy();
-			free_list.push_back(deallocation_idx);
+			free_list.push_back(deallocation_index);
 		}
 
 		IF_BUILD_TYPE_DEV(~SingleTypeMemoryPoolAllocator() {

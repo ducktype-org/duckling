@@ -88,6 +88,18 @@ namespace base {
 			return std::launder(reinterpret_cast<T*>(&data));
 		}
 
+		// /**
+		//  * Obtains const byte pointer to the stored data.
+		//  */
+		// [[nodiscard]]
+		// const std::byte* getBytePtrToData() const noexcept { return data; }
+
+		// /**
+		//  * Obtains const byte pointer to self.
+		//  */
+		// [[nodiscard]]
+		// const std::byte* getBytePtrToSelf() const noexcept { return reinterpret_cast<const std::byte*>(this); }
+	
 		/**
 		 * Obtains pointer to the ManualLifetimeStorage from the object reference.
 		 * @note Behavior is undefined if obj_ref was not constructed in ManualLifetimeStorage.
