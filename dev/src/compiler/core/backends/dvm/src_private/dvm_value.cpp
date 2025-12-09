@@ -1,5 +1,6 @@
 #include "dvm_value.hpp"
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
@@ -15,6 +16,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::StackLocalPtr(name); }
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::StackLocalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
 		}
@@ -31,6 +33,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::Global8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::GlobalPtr(name); }
+		// TODOP: Add global opq?
 		variant_default {
 			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));
 		}

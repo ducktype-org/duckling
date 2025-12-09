@@ -556,6 +556,7 @@ namespace compiler::helios {
 			}
 
 			backend_vm::Module m(base::StrID("COMP_TIME"));
+			// TODOP: Insert extern C functions.
 			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 			vm::code::CodeCollection code = m.build();
 

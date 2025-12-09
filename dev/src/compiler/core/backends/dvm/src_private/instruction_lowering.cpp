@@ -1,3 +1,4 @@
+#include <ranges>
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
@@ -138,34 +139,32 @@ void FunctionLoweringContext::emitExtCall(
 
 ) {
 	// TODOP: We need some way to get the ext func return type in a nice way.
-	// auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-	// 	if (typeName(called_result_type) != "void")
-	// 		return pushTempLocal(called_result_type, "call_result");
-	// 	else
-	// 		return {};
-	// }();
+	// For now assume all extern C functions return an opaque pointer. This should be more integrated with the backend TODOP.
+	auto opaque_type = vm::code::PrimitiveType(base::StrID("opaque_type"), 8);
+	auto result_storage = pushTempLocal(opaque_type, "ext_ret_val");
 
-	// for (const auto& [arg_id, func_arg]: std::views::zip(std::views::iota(0), func_args)) {
-	// 	auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
+	for (const auto& [arg_id, func_arg]: std::views::zip(std::views::iota(0), func_args)) {
+		CORE_DEV_LOG(Backend, "Initializing: ", typeName(opaque_type), '\n');
+		auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
+		auto temp_arg = pushTempLocal(opaque_type, arg_name.c_str());
 
-	// 	auto temp_arg = pushTempLocal(func_arg, arg_name.c_str());
+		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
+	}
 
-	// 	pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
-	// }
+	pushInstruction({ OpKind::call_cfunc, DVMFunctionName{ base::StrID(func_name) }.asArgument() });
 
-	// pushInstruction({ OpKind::call_cfunc, DVMFunctionName{ base::StrID(func_name) }.asArgument() });
+	if (output) {
+		pushInstruction(
+			{
+				OpKind::mov,
+				output.value(),
+				result_storage.asArgument(),
+			}
+		);
+	}
 
-	// if (output) {
-	// 	pushInstruction(
-	// 		{
-	// 			OpKind::mov,
-	// 			output.value(),
-	// 			call_result_storage.value().asArgument(),
-	// 		}
-	// 	);
-	// }
-
-	// if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
+	// if (result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
+	pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
 void FunctionLoweringContext::handleFunctionCall(
