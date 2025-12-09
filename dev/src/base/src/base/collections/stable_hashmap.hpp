@@ -119,8 +119,20 @@ namespace base {
 				rehash();
 		}
 
+		void assertElementCountAllocatorConsistency() const {
+			[[maybe_unused]]
+			auto allocated_nodes = node_allocator.getAllocatedCount();
+			CORE_ASSERT_NOEXCEPT(
+				element_count == allocated_nodes,
+				"Element count and allocated nodes count mismatch: ",
+				element_count,
+				" vs ",
+				allocated_nodes
+			);
+		}
+
 	public:
-		HashMap(): buckets(INITIAL_BUCKETS) {}
+		HashMap(): buckets(INITIAL_BUCKETS) { assertElementCountAllocatorConsistency(); }
 
 		HashMap(const HashMap&) = delete;
 
@@ -130,18 +142,33 @@ namespace base {
 			  element_count(other.element_count) {
 			other.element_count = 0;
 			other.buckets.resize(1, nullptr);
+
+			assertElementCountAllocatorConsistency();
+			other.assertElementCountAllocatorConsistency();
 		}
 
 		HashMap& operator=(const HashMap& other) noexcept {
-			clearAndFree();
+			auto other_size = other.size();
+			clear();
 			for (auto& kv_pair: other) put(kv_pair.key, kv_pair.value);
+			
+			CORE_ASSERT_NOEXCEPT(size() == other_size, "Size mismatch after copy assignment");
+			assertElementCountAllocatorConsistency();
+			other.assertElementCountAllocatorConsistency();
+
 			return *this;
 		}
 
 		HashMap& operator=(HashMap&& other) noexcept {
-			clearAndFree();
+			auto other_size = other.size();
+			clear();
 			for (auto& kv_pair: other) put(kv_pair.key, kv_pair.value);
 			other.clear();
+			
+			CORE_ASSERT_NOEXCEPT(size() == other_size, "Size mismatch after move assignment");
+			assertElementCountAllocatorConsistency();
+			other.assertElementCountAllocatorConsistency();
+			
 			return *this;
 		}
 
@@ -261,10 +288,14 @@ namespace base {
 		 * Not a constructor, to make this call explicit.
 		 * @returns A copy of the hashmap.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T>
-		HashMap<K, D> copy() const {
-			auto result = HashMap<K, D>();
+		// template<typename K = KEY_T, typename D = DATA_T>
+		HashMap copy() const {
+			HashMap result;
 			for (auto& kv_pair: (*this)) result.put(kv_pair.key, kv_pair.value);
+			
+			assertElementCountAllocatorConsistency();
+			result.assertElementCountAllocatorConsistency();
+			
 			return result;
 		}
 
@@ -291,6 +322,8 @@ namespace base {
 			element_count++;
 			maybeRehash();
 
+			assertElementCountAllocatorConsistency();
+
 			return &new_node->key_value;
 		}
 
@@ -310,6 +343,8 @@ namespace base {
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
+				assertElementCountAllocatorConsistency();
+
 				return nullptr;
 			}
 
@@ -317,6 +352,8 @@ namespace base {
 
 			element_count++;
 			maybeRehash();
+
+			assertElementCountAllocatorConsistency();
 
 			return &new_node->key_value;
 		}
@@ -337,6 +374,8 @@ namespace base {
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
 				(*this)[key] = value;
+	
+				assertElementCountAllocatorConsistency();
 				return false;
 			}
 
@@ -345,6 +384,7 @@ namespace base {
 			element_count++;
 			maybeRehash();
 
+			assertElementCountAllocatorConsistency();
 			return true;
 		}
 
@@ -429,11 +469,15 @@ namespace base {
 
 					node_allocator.deallocateDestroy(current_node.toOpt().value());
 					element_count--;
+
+					assertElementCountAllocatorConsistency();
 					return true;
 				}
 				previous_node = current_node;
 				current_node  = current_node->next;
 			}
+
+			assertElementCountAllocatorConsistency();
 			return false;
 		}
 
@@ -452,24 +496,27 @@ namespace base {
 				bucket = nullptr;
 			}
 			element_count = 0;
+			assertElementCountAllocatorConsistency();
 		}
 
 		/**
 		 * Clears the map, destroying all stored elements.
 		 * @note Frees the memory used to store the elements.
+		 * @TODO PR: unify this and move 
 		 */
 		void clearAndFree() RELEASE_NOEXCEPT {
-			for (auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
+			for (u64 i = 0; i < buckets.size(); i++) {
+				MRef<Node> current_node = buckets[i];
 				while (current_node) {
 					MRef next_node = current_node->next;
 					// HMM:
 					node_allocator.justDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
-				bucket = nullptr;
+				buckets[i] = nullptr;
 			}
 			element_count = 0;
+			assertElementCountAllocatorConsistency();
 		}
 
 		/**
@@ -523,6 +570,7 @@ namespace base {
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
+
 
 	private:
 		/**

@@ -112,8 +112,8 @@ namespace compiler::backend_vm {
 			usize                                                     next_call_id = 0;
 			base::Map<lir::LIRLocalRef, u64>                          variable_to_id;
 			base::Map<lir::BlockRef, u64>                             block_to_id;
-			const base::HashMap<base::StrID, TypeOfData>              TYPE_OF_DATA;
-			const base::HashMap<base::StrID, vm::code::FuncSignature> SIGNATURES;
+			const base::HashMap<base::StrID, TypeOfData>              type_of_data;
+			const base::HashMap<base::StrID, vm::code::FuncSignature> signatures;
 
 			AddLIRFuncContext(
 				query::Context&                                            ctx,
@@ -124,12 +124,13 @@ namespace compiler::backend_vm {
 				  ctx(ctx),
 				  lir_func(lir_function),
 				  bytecode_func(Function({}, lir_function->mangled_name, {}, {})),
-				  TYPE_OF_DATA([&type_map] {
+				  type_of_data([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()),
-				  SIGNATURES(signatures.copy()) {
+				  signatures(signatures.copy()) {
+			
 				if (lir_function->mangled_name == "main") {
 					bytecode_func.signature.parameters.emplace_back(base::StrID("i64"));
 					bytecode_func.signature.parameters.emplace_back(base::StrID("ptr_argv"));
@@ -167,7 +168,7 @@ namespace compiler::backend_vm {
 					opt_some(param_idx) {
 						// In this case we are handling a parameter
 						CORE_ASSERT(
-							vm_type == ctx.TYPE_OF_DATA[func_signature.parameters.at(param_idx)],
+							vm_type == ctx.type_of_data[func_signature.parameters.at(param_idx)],
 							"getTypeFromLayout created an invalid type..."
 						);
 
@@ -416,7 +417,7 @@ namespace compiler::backend_vm {
 			args.pop_front();
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-			auto called_func_signature = ctx.SIGNATURES[called_func_name];
+			auto called_func_signature = ctx.signatures[called_func_name];
 
 			// Init result type
 			usize call_id     = ctx.next_call_id++;
@@ -439,7 +440,7 @@ namespace compiler::backend_vm {
 
 				InstructionBuilder mov_arg(OpKind::mov);
 
-				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
+				mov_arg.pushArg(outputToOpArg(ctx.type_of_data[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
 
 				pushInstruction(ctx.bytecode_func, mov_arg);
@@ -618,7 +619,11 @@ namespace compiler::backend_vm {
 	):
 		  module_id(module_id) {
 		CodeCollection                            compiled_collection;
+
+		// this hash map breaks:
 		base::HashMap<base::StrID, FuncSignature> signatures;
+		
+		
 		std::vector<CRef<lir::Function>>          ctors;
 		std::vector<CRef<lir::Function>>          dtors;
 

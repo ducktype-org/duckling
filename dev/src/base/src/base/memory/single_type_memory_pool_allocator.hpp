@@ -226,6 +226,14 @@ namespace base {
 		})
 		IF_BUILD_TYPE_RELEASE(~SingleTypeMemoryPoolAllocator() = default;)
 
+
+		IF_BUILD_TYPE_DEV(
+			[[nodiscard]]
+			u64 getAllocatedCount() const noexcept {
+				return allocated_count;
+			}
+		)
+
 	private:
 		/**
 		 * Actual storage for all allocated buffers.
