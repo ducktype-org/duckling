@@ -10,8 +10,10 @@
 #include "internal/query_graph/node_making.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_errors.hpp"
 #include "query_hash.hpp"
 #include "query_int.hpp"
+#include "query_result.hpp"
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -113,9 +115,19 @@ namespace query::internal {
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
-			// This is all at the end, with defer above,
-			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			if constexpr (QueryImplType::uses_qresult) {
+				try {
+					return QueryImplType::store(
+						perfect_hash, QueryImplType::provide(context, key), acd
+					);
+				} catch (const QueryFailedException& qfe) {
+					return QueryImplType::store(query::QError(Failed()), acd);
+				}
+			} else {
+				// This is all at the end, with defer above,
+				// to guarantee copy elision with "prvalue semantics".
+				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			}
 		}
 	}
 
@@ -145,6 +157,8 @@ namespace query::internal {
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
 		constexpr static bool CAN_BE_LOADED_FROM_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
+		constexpr static bool uses_qresult
+			= QueryType_tp::QUERY_DATA.tags.uses_qresult;
 
 
 		/**

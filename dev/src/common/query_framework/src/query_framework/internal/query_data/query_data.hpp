@@ -49,6 +49,9 @@ namespace query {
 			 * function.
 			 */
 			bool can_be_loaded_from_disk = false;
+
+
+			bool uses_qresult = true;
 		};
 
 		/**
