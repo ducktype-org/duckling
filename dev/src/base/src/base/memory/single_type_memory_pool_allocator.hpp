@@ -185,7 +185,7 @@ namespace base {
 			free_list.push_back(deallocation_idx);
 		}
 
-		IF_BUILD_TYPE_DEV(~SingleTypeMemoryPoolAllocator() {
+		IF_BUILD_TYPE_DEV(~SingleTypeMemoryPoolAllocator() noexcept {
 			CORE_ASSERT_NOEXCEPT(
 				allocated_count == 0,
 				"Not all allocated objects were deallocated before destruction of the allocator"
