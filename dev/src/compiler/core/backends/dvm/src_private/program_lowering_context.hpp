@@ -5,6 +5,8 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "string_id/string_id.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -40,6 +42,15 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] const DVMGlobal& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
 
 		/**
+		 * @brief Retrieves the extern C function with the given name.
+		 * @note The extern C function must have been previously declared using
+		 * insertExternCFunction, panics otherwise.
+		 */
+		[[nodiscard]] const vm::code::ExternalCFunction& getExternCFunction(
+			const base::StrID& func_name
+		) const;
+
+		/**
 		 * @brief Inserts an extern C function into the program context.
 		 */
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
@@ -59,7 +70,9 @@ namespace compiler::backend_vm::internal {
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
 
-		std::vector<vm::code::ExternalCFunction> extern_c_functions;
+		// Extern function name to definition.
+		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
+
 
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;

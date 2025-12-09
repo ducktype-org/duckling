@@ -73,7 +73,7 @@ namespace compiler::backend_vm::internal {
 
 		void handleMetaOperation(const lir::Instruction& instruction);
 
-		void emitExtCall(
+		void handleExtCall(
 			const base::StrID&          called_function,
 			const std::deque<DVMValue>& func_args,
 			base::Optional<DVMValue>    output

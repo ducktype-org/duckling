@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "helios_private/comp_time/comptime_type_operations.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -18,6 +20,8 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
+#include "vm/api/data/process_info.hpp"
+#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/bytecode.hpp>
 
 #include <cmath>
@@ -545,20 +549,42 @@ namespace compiler::helios {
 				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
 				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
 				CRef<mir::Function> mir_func = &mir_func_result->value();
-				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
+
+				std::cout << "Produced MIR code:\n";
+				mir_func->debugPrint(std::cout);
+				std::cout << "\n";
+
+
+				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
 				if (func_id == function_sym_id)
 					func_to_call_name = lir_func_result->mangled_name.str();
 
+				std::cout << "Produced LIR code:\n";
+				lir_func_result->debugPrint(ctx, std::cout);
+				std::cout << "\n";
+
 				all_lir_functions.push_back(lir_func_result);
 			}
 
 			backend_vm::Module m(base::StrID("COMP_TIME"));
+
+			// TODOP: Figure out what with pid.
+			auto ext_c_functions = comptime_ops::getComptimeTypeOperations(vm::PID(0));
+
+			// Insert all extern C functions for the the comptime VM instance (meta type operations).
+			for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
+
 			// TODOP: Insert extern C functions.
 			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 			vm::code::CodeCollection code = m.build();
+
+			std::cout << "Produced DVM bytecode:\n";
+			vm::code::serialize(code, std::cout);
+			std::cout << "\n";
+
 
 			std::vector<CompileTimeValue> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {

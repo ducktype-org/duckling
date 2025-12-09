@@ -61,7 +61,6 @@ namespace {
 			variant_case(bool, val) {
 				auto vm_value_response = vm::api::getVmValue(pid, "byte");
 				if (!vm_value_response.has_value())
-
 					return std::unexpected(VmEvaluationError(
 						VmEvaluationError::Kind::ArgConversionFailed,
 						"Failed to get VM value for 'byte'(bool) type."
@@ -69,6 +68,19 @@ namespace {
 
 				auto res = std::move(vm_value_response->vm_value);
 				res->writeBytes<bool>(val);
+				return res;
+			}
+			variant_case(compiler::tsh::SymbolType<>, type) {
+				auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
+				if (!vm_value_response.has_value())
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::ArgConversionFailed,
+						"Failed to get VM value for 'opaque_ptr' type."
+					));
+
+				auto                               res = std::move(vm_value_response->vm_value);
+				const compiler::tsh::SymbolType<>* type_ptr = &type;
+				res->writeBytes<const compiler::tsh::SymbolType<>*>(type_ptr);
 				return res;
 			}
 			variant_default {

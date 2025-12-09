@@ -5,8 +5,12 @@
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
 
+#include "string_id/string_id.hpp"
+
 #include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/bytecode.hpp>
+
+#include <ranges>
 
 using namespace compiler::backend_vm::internal;
 
@@ -26,6 +30,15 @@ const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> globa
 		return **maybe_global;
 	else
 		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
+}
+
+const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
+	const base::StrID& func_name
+) const {
+	if (auto maybe_ext_func = extern_c_functions.atMaybe(func_name))
+		return **maybe_ext_func;
+	else
+		CORE_PANIC("Extern C function not found: ", func_name);
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
@@ -109,7 +122,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 }
 
 void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
-	extern_c_functions.push_back(extern_func);
+	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
 vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
@@ -155,7 +168,8 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
-	collection.external_c_functions = extern_c_functions;
+	collection.external_c_functions
+		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
 	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
 	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
