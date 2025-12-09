@@ -72,13 +72,8 @@ void DuckVMDebug::run() const {
 		} else if (stripped_line == "print") {
 			// print();
 			throw base::NotYetImplemented("Printing not implemented yet.");
-		} else if (lstrip(line).starts_with("$")) {
-			// processGlobalOutput(line);
-		// } else if (lstrip(line).starts_with("!")) {
-		// 	// processExecuteInstruction(line);
-		// } else if (line.find('(') != std::string::npos && line.find(')') != std::string::npos
-		//            && line.find('(') < line.find(')')) {
-		// 	// processFunctionCall(line);
+		} else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
+			help();
 		} else {
 			std::cout << "Invalid input: \"" << line << "\"\n";
 		}
@@ -185,4 +180,17 @@ void DuckVMDebug::resume() const {
 
 void DuckVMDebug::pause() const {
 	if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
+}
+
+void DuckVMDebug::help() const {
+	std::cout << "BeRD Debugger Commands:\n"
+			     "  s, step              	- Execute one step in the VM\n"
+			     "  run                  	- Run the VM until completion\n"
+			     "  run <func([args])>   	- Run a specific function with arguments\n"
+			     "  resume               	- Resume execution of the VM\n"
+			     "  pause               	- Pause execution of the VM\n"
+			     "  status              	- Get the current status of the VM\n"
+			     "  print <var>         	- Print the value of a variable (not implemented yet)\n"
+			     "  exit, q, quit       	- Exit the debugger\n"
+			     "  help, h, ?          	- Show this help message\n";
 }
