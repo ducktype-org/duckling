@@ -19,6 +19,7 @@ pub struct QuackError {
 ///     Internal - program's internal logic error, means a critical bug is present.
 ///     Hint - a suggestion for the user how to fix the error.
 ///     Note - any additional information that the user should know.
+///     BareMessage - a non-error message, which does not classify as hint nor note.
 ///
 /// # Usage
 /// The errors are added on a stack, so when adding an error with a hint, the hint should be added before the error.
