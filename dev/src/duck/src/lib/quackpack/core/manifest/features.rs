@@ -1,8 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use anyhow::bail;
-
-use crate::{QuackResult, StrId};
+use crate::{QuackResult, StrId, qp_bail};
 
 /// Name of a feature.
 pub type FeatureName = StrId;
@@ -24,7 +22,7 @@ impl Features {
         for (feature, pulled_features) in features {
             for pulled_feature in pulled_features {
                 if !features.contains_key(pulled_feature) {
-                    bail!(
+                    qp_bail!(
                         "the feature `{feature}` requires an absent feature `{pulled_feature}`\n\
                          help: every feature needs to pull in some features, try adding \
                          `{pulled_feature}: []` to the your manifest"
@@ -52,7 +50,7 @@ impl Features {
                 continue;
             }
             let Some(pulled_features) = self.0.get(&feature) else {
-                bail!("there is no such feature as `{feature}`")
+                qp_bail!("there is no such feature as `{feature}`")
             };
             let to_insert = pulled_features.iter().filter_map(|feature| {
                 if visited.contains(feature) {

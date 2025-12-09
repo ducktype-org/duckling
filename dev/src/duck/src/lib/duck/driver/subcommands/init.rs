@@ -1,5 +1,4 @@
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
@@ -30,5 +29,5 @@ pub fn get_parser() -> Command {
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    bail!("implement init")
+    qp_bail!("implement init")
 }

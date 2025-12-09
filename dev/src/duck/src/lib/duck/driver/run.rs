@@ -5,8 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::{Context, bail};
+use crate::{DuckCtx, QuackResult, QuackResultContext, qp_bail};
 use clap::ArgMatches;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -117,7 +116,7 @@ fn run_subcmd(
             execute_external_subcmd(exec_path, args)
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
-        (None, None) => bail!("No such command: `{sub_cmd}`"),
+        (None, None) => qp_bail!("No such command: `{sub_cmd}`"),
     }
 }
 
