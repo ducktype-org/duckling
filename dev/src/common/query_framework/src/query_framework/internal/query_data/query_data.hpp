@@ -54,10 +54,11 @@ namespace query {
 			 * Whether query uses the failable QResult type as the result type.
 			 */
 			bool uses_qresult = true;
-			
+
 			/**
 			 * Whether the query implementation should catch exceptions thrown from provide()
-			 * function, and convert them into QResult::Failed() value. Relevant only if uses_qresult is true.
+			 * function, and convert them into QResult::Failed() value. Relevant only if
+			 * uses_qresult is true.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
 		};

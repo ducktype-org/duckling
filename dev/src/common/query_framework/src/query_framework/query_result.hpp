@@ -2,6 +2,8 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
+#include "query_errors.hpp"
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
@@ -11,8 +13,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include "query_errors.hpp"
 
 namespace query {
 	namespace impl {
@@ -362,10 +362,10 @@ namespace query {
 	};
 
 	template<typename T>
-	struct IsQResult : std::false_type {};
+	struct IsQResult: std::false_type {};
 
 	template<typename... Args>
-	struct IsQResult<query::QResult<Args...>> : std::true_type {};
+	struct IsQResult<query::QResult<Args...>>: std::true_type {};
 }
 
 /**
@@ -391,5 +391,3 @@ namespace query {
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
 	var std::move(RES_VAR_NAME).valueOrThrow()
-
-	

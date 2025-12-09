@@ -94,8 +94,8 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
 
-			auto& c_ctor
-				= ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })->valueOrThrow();
+			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
+			                   ->valueOrThrow();
 			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
@@ -336,7 +336,8 @@ private:
 			auto  unit     = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& main_fun = unit->functions.at(0);
 			ASSERT_EQUAL(main_fun.declaration->original_name, base::StrID("main"));
-			auto& main_mir = ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->valueOrThrow();
+			auto& main_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->valueOrThrow();
 
 			auto        entry_block_id = main_mir.block_order.front();
 			const auto& entry_block    = main_mir.blocks[entry_block_id];

@@ -52,7 +52,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({.uses_qresult            = false}));
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -411,7 +411,12 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({.uses_qresult            = false}));
+			DECLARE_QUERY(
+				QueryGlobalBuiltinSymbols,
+				query::EmptyKey,
+				CRef<std::vector<SymID>>,
+				({ .uses_qresult = false })
+			);
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
@@ -632,7 +637,8 @@ namespace compiler::helios {
 			if (hout_qresult.hasError()) return query::QError(query::Failed());
 
 			// Evaluate the HOUT expression at compile-time
-			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
 			if (ctv.hasError()) return query::QError(query::Failed());
 			return ctv.valueOrThrow();
 		}

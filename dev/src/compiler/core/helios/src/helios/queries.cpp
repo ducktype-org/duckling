@@ -437,7 +437,8 @@ namespace compiler::helios {
 			if (as_expr) {
 				auto expr
 					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
-				          .throwOnFail("Not handling errors here yet... (single expr function body)");
+				          .throwOnFail("Not handling errors here yet... (single expr function body)"
+				          );
 				// @TODO #1291 coerce expr to function return type
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr)));
 				return block;
@@ -558,7 +559,8 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.valueOrThrow().coerce(ctx, std::move(new_value_expr));
+				auto new_value_coerced
+					= coercion.valueOrThrow().coerce(ctx, std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -653,7 +655,9 @@ namespace compiler::helios {
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
-					          .throwOnFail("Not handling errors here yet... (variable initial value)");
+					          .throwOnFail(
+								  "Not handling errors here yet... (variable initial value)"
+							  );
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 					auto coercion           = canCoerce(ctx, initial_value_type, symbol_type);
@@ -682,7 +686,9 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.valueOrThrow().coerce(ctx, std::move(initial_value)), symbol_type, symbol
+						coercion.valueOrThrow().coerce(ctx, std::move(initial_value)),
+						symbol_type,
+						symbol
 					));
 				}
 			}

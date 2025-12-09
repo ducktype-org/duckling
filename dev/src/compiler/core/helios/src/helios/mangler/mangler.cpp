@@ -205,8 +205,9 @@ namespace compiler::helios::mangler {
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
-				ret       = "F";
-				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->valueOrThrow().getType();
+				ret = "F";
+				auto type
+					= ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->valueOrThrow().getType();
 				auto fun_type = tsh::FunctionAbstractType(type);
 
 				auto ret_type = fun_type.getResultType();

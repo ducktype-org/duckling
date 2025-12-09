@@ -52,8 +52,8 @@ private:
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();
+						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
+						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						m.insertLirGlobal(
 							lir_glob,

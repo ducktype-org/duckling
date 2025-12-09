@@ -1,4 +1,3 @@
 #pragma once
 
-namespace compiler::helios::errors {
-}
+namespace compiler::helios::errors {}

@@ -19,6 +19,7 @@ namespace compiler::helios {
 
 	namespace errors {
 		class Ambiguity final {};
+
 		class SymbolNotFound final {};
 	}
 

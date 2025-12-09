@@ -184,7 +184,8 @@ namespace compiler::helios::code {
 
 			argument_origin[param_idx]
 				= NamedArgumentOrigin{ .index_in_named_args = i,
-				                       .requires_coercion = not coercion.valueOrThrow().isEmptyCoercion() };
+				                       .requires_coercion
+				                       = not coercion.valueOrThrow().isEmptyCoercion() };
 			coercions[param_idx].emplace(std::move(coercion).valueOrThrow());
 		}
 

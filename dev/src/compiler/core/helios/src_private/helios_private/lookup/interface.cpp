@@ -31,7 +31,12 @@ namespace compiler::helios {
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type-instance lookups.
 	 */
-	DECLARE_QUERY(QueryLookupInTypeInstance, KeyOf_LookupInTypeInstance, CRef<LookupResult>, ({.uses_qresult            = false}))
+	DECLARE_QUERY(
+		QueryLookupInTypeInstance,
+		KeyOf_LookupInTypeInstance,
+		CRef<LookupResult>,
+		({ .uses_qresult = false })
+	)
 
 	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {

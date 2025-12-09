@@ -75,7 +75,9 @@ namespace compiler::helios {
 				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 				// type of the base class has any specifiers.
 				class_info.base = ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType());
+				class_info.implements.push_back(
+					ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
+				);
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
@@ -84,7 +86,9 @@ namespace compiler::helios {
 					if (ctv.hasError()) return query::QError(query::Failed());
 					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 					// type of the base class has any specifiers.
-					class_info.implements.push_back(ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType());
+					class_info.implements.push_back(
+						ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
+					);
 				}
 			}
 

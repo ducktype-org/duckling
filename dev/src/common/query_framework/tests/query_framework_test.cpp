@@ -37,8 +37,8 @@ struct Key2 {
 	}
 };
 
-DECLARE_QUERY(Fibonacci, Key1, u64, ({.uses_qresult            = false}));
-DECLARE_QUERY(FibonacciSum, Key2, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(Fibonacci, Key1, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(FibonacciSum, Key2, u64, ({ .uses_qresult = false }));
 
 /* * * *
  * Q1: *
@@ -72,7 +72,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
-DECLARE_QUERY(FibonacciStringAutoCache, query::U64Key, std::string, ({.uses_qresult            = false}));
+DECLARE_QUERY(FibonacciStringAutoCache, query::U64Key, std::string, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -105,7 +105,7 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 
-DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 	static auto provide(Context&, QKey key) -> PResult {
@@ -119,7 +119,7 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
 
-DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({.uses_qresult            = false}));
+DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -130,7 +130,9 @@ struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(ReferenceQuery);
 
 
-DECLARE_QUERY(VectorReferenceQuery, query::U64Key, CRef<std::vector<u64>>, ({.uses_qresult            = false}));
+DECLARE_QUERY(
+	VectorReferenceQuery, query::U64Key, CRef<std::vector<u64>>, ({ .uses_qresult = false })
+);
 
 struct IMPLEMENT_QUERY(VectorReferenceQuery, std::vector<u64>) {
 	static auto provide(Context&, QKey key) -> PResult { return { 1, 2, key.value }; }
@@ -171,7 +173,7 @@ struct Result {
 	}
 };
 
-DECLARE_QUERY(LifeTimeQueryStable, query::U64Key, Result, ({.uses_qresult            = false}));
+DECLARE_QUERY(LifeTimeQueryStable, query::U64Key, Result, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -181,7 +183,7 @@ struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryStable);
 
-DECLARE_QUERY(LifeTimeQueryUnstable, query::U64Key, Result, ({.uses_qresult            = false}));
+DECLARE_QUERY(LifeTimeQueryUnstable, query::U64Key, Result, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -192,8 +194,8 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
 
-DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({.uses_qresult            = false}));
-DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CyclicQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult { return ctx.query<CyclicQuery2>(key); }
@@ -221,7 +223,7 @@ struct ConstructTo {
 	ConstructTo(ConstructFrom from): v(from.v) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructCacheTest, query::U64Key, ConstructTo, ({.uses_qresult            = false}));
+DECLARE_QUERY(ConstructCacheTest, query::U64Key, ConstructTo, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
@@ -238,7 +240,9 @@ struct ConstructToViaCRef {
 	ConstructToViaCRef(CRef<ConstructFrom> from): v(from) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructFromCRefCacheTest, query::U64Key, ConstructToViaCRef, ({.uses_qresult            = false}));
+DECLARE_QUERY(
+	ConstructFromCRefCacheTest, query::U64Key, ConstructToViaCRef, ({ .uses_qresult = false })
+);
 
 struct IMPLEMENT_QUERY(ConstructFromCRefCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
@@ -256,9 +260,9 @@ namespace context_leak {
 	// assertions did not prevent it
 	bool use_leaked_query_happened = false;
 
-	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({.uses_qresult            = false}));
-	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({.uses_qresult            = false}));
-	DECLARE_QUERY(UseLeakedContext, query::U64Key, u64, ({.uses_qresult            = false}));
+	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({ .uses_qresult = false }));
+	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({ .uses_qresult = false }));
+	DECLARE_QUERY(UseLeakedContext, query::U64Key, u64, ({ .uses_qresult = false }));
 
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
 		static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -312,7 +316,7 @@ struct KeyOf_SideInput {
 DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
-DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -322,7 +326,7 @@ struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
 
-DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -335,7 +339,7 @@ struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
 
-DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({.uses_qresult            = false}));
+DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -372,7 +376,7 @@ private:
 	NoctrKey& operator=(NoctrKey&&) & noexcept      = default;
 };
 
-DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32, ({.uses_qresult            = false}));
+DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
 	static auto provide(Context& context, const QKey& key) -> PResult {
@@ -407,7 +411,12 @@ struct KeyStable final {
 	}
 };
 
-DECLARE_QUERY(StableHashTest, KeyStable, u64, ({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult            = false }));
+DECLARE_QUERY(
+	StableHashTest,
+	KeyStable,
+	u64,
+	({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
+);
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	// record the hash value passed to load()

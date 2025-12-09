@@ -20,7 +20,7 @@ namespace query::utils {
 			}
 		};
 
-		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, std::any, ({.uses_qresult            = false}))
+		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, std::any, ({ .uses_qresult = false }))
 
 		struct IMPLEMENT_QUERY(DoWithContext, std::any) {
 			static auto provide(Context& ctx, const QKey& key) -> PResult { return key.value(ctx); }

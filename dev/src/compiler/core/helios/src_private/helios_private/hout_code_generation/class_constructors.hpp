@@ -12,5 +12,10 @@ namespace compiler::helios::houtgen {
 	 * The implicit constructor is a function that takes parameters for each field of the class
 	 * and returns an instance of the class with those fields initialised accordingly.
 	 */
-	DECLARE_QUERY(QueryImplicitClassConstructor, tsh::ClassAbstractType, CRef<HOUTFunction>, ({.uses_qresult            = false}));
+	DECLARE_QUERY(
+		QueryImplicitClassConstructor,
+		tsh::ClassAbstractType,
+		CRef<HOUTFunction>,
+		({ .uses_qresult = false })
+	);
 }

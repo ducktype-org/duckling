@@ -134,7 +134,8 @@ int main(int argc, const char* argv[]) {
 	}
 
 	for (auto& fun: top_level->functions) {
-		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+		CRef mir_fun
+			= &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n\n\n";

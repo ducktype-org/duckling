@@ -1,5 +1,7 @@
 #include "helios_test_utils.hpp"
 
+#include "helios/utils/symbol_list.hpp"
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
@@ -18,7 +20,6 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include "helios/utils/symbol_list.hpp"
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
@@ -44,11 +45,9 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			auto as_single = symbol->getAsSingle();
+			auto as_single   = symbol->getAsSingle();
 			auto symbol_path = std::get_if<SymbolList>(&as_single);
-			if (!symbol_path) {
-				query::throwFailed();
-			}
+			if (!symbol_path) query::throwFailed();
 			for (auto&& elem: *symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
 				result.appendList(dealiased);

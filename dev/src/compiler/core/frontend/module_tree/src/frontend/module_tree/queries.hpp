@@ -19,17 +19,17 @@ namespace compiler::frontend {
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
 	 */
-	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({.uses_qresult            = false}))
+	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query main source file of a module.
 	 */
-	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({.uses_qresult            = false}))
+	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query sources files of a module (without main source file).
 	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({.uses_qresult            = false}))
+	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
 
 
 	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
@@ -37,13 +37,13 @@ namespace compiler::frontend {
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({.uses_qresult            = false}))
+	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({ .uses_qresult = false }))
 
 
 	/**
 	 * @brief Query PST of given file.
 	 */
-	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({.uses_qresult            = false}))
+	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Returns ModuleID

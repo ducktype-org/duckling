@@ -41,7 +41,9 @@ namespace compiler::helios {
 		QueryEvaluatePSTExpression,
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		CompTimeEvalResult,
-		({ .used_hashes = query::UsedHashes::StableHash,  })
+		({
+			.used_hashes = query::UsedHashes::StableHash,
+		})
 	)
 
 	/**

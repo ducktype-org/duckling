@@ -441,7 +441,9 @@ namespace compiler::helios {
 						return;
 					}
 
-					subtypes.emplace_back(sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value());
+					subtypes.emplace_back(
+						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
@@ -513,7 +515,8 @@ namespace compiler::helios {
 				}
 				// Panics if the CTV cannot be lifted to a type.
 				// This is fine, because we assume that this has been checked beforehand by HOUT.
-				result = CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
+				result
+					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
 			}
 		};
 

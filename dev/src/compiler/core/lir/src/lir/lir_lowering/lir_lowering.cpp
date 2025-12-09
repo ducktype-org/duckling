@@ -114,7 +114,8 @@ namespace compiler::lir {
 			  this->access_chain.size() == 0
 				  ? getBaseLayout()
 				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->valueOrThrow()
+						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())
+							->valueOrThrow()
 					)
 		  ) {}
 
@@ -764,9 +765,10 @@ namespace compiler::lir {
 	}
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
-		tsh::FunctionAbstractType type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		                                     ->throwOnFail("Handling errors in MIR is not supported yet")
-		                                     .getType();
+		tsh::FunctionAbstractType type
+			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+		          ->throwOnFail("Handling errors in MIR is not supported yet")
+		          .getType();
 
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->throwOnFail(
 			"Handling errors in MIR is not supported yet"
