@@ -349,43 +349,6 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->tc_opfun(instr, local_stack, frame, *this);
 
-#elif defined(USE_COMPUTED_GOTO)
-		// We use computed-gotos here,
-		// so we turn off pedantic warnings
-		// for this case
-		PUSH_DIAGNOSTIC
-		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
-		) constexpr static std::array<void*, OP_CASES_COUNT>
-			opcode_label = {
-
-
-	#define HANDLE_MICRO_INSTR(opcode) (&&LABEL_##opcode),
-	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-
-
-	#undef HANDLE_MICRO_INSTR
-			};
-
-		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
-
-	#define HANDLE_MICRO_INSTR(opcode_name)                                     \
-		LABEL_##opcode_name: {                                                  \
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
-			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
-			              opcode_str == "exit") {                               \
-				goto End;                                                       \
-			} else {                                                            \
-				goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];      \
-			}                                                                   \
-		}
-	#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
-
-
-	#undef HANDLE_MICRO_INSTR
-
-	End:
-
-		POP_DIAGNOSTIC
 #elif defined(USE_SWITCH_CASE)
 		while (true) {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
