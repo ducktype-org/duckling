@@ -6,7 +6,7 @@ use std::{
 use rustvil::{config_files::home, os::env::Env};
 
 use crate::{
-    QuackResult, QuackResultContext, 
+    QuackResult, QuackResultContext,
     duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
     quackpack::util::paths::duck_home_path,
 };
