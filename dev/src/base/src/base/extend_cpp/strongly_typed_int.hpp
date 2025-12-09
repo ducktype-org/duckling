@@ -43,19 +43,19 @@
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op)               \
-	inline constexpr SELF_T& operator op(const SELF_T & rhs) noexcept { \
-		value op rhs.value;                                             \
-		return *this;                                                   \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op)              \
+	inline constexpr SELF_T& operator op(const SELF_T& rhs) noexcept { \
+		value op rhs.value;                                            \
+		return *this;                                                  \
 	}
 
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op)        \
-	inline constexpr SELF_T& operator op(const BASE_T & rhs) noexcept { \
-		value op rhs;                                                   \
-		return *this;                                                   \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op)       \
+	inline constexpr SELF_T& operator op(const BASE_T& rhs) noexcept { \
+		value op rhs;                                                  \
+		return *this;                                                  \
 	}
 
 
@@ -73,8 +73,16 @@
 		inline NAME& operator=(const NAME& rhs)     = default;                                     \
 		inline NAME& operator=(NAME&& rhs) noexcept = default;                                     \
 		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}       \
+		template<typename T>                                                                       \
+		requires(std::is_arithmetic_v<T>)                                                          \
+		inline constexpr explicit(EXPLICIT_BASE) NAME(T x) noexcept:                               \
+			  value(static_cast<BASE>(x)) {}                                                       \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }  \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
+		template<typename T>                                                                       \
+		inline constexpr explicit(EXPLICIT_BASE) operator T() const noexcept {                     \
+			return static_cast<T>(value);                                                          \
+		}                                                                                          \
 		inline constexpr NAME  operator+() const noexcept { return NAME(+value); }                 \
 		inline constexpr NAME  operator-() const noexcept { return NAME(-value); }                 \
 		inline constexpr NAME& operator++() noexcept {                                             \

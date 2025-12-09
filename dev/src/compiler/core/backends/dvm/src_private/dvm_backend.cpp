@@ -23,6 +23,10 @@ namespace compiler::backend_vm {
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 
+	void Module::insertExternCFunction(CRef<lir::Function> lir_function) {
+		// TODOP:
+	}
+
 	void Module::insertLirGlobal(
 		const lir::LIRGlobal&               lir_global,
 		base::Optional<CRef<lir::Function>> global_ctor,

@@ -24,6 +24,11 @@ namespace compiler::backend_vm {
 		void insertLirFunction(CRef<lir::Function> lir_function);
 
 		/**
+		 * @brief Inserts an extern C function into the module.
+		 */
+		void insertExternCFunction();
+
+		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
 		void insertLirGlobal(

@@ -197,7 +197,7 @@
 namespace vm {
 	class ExtCFuncError: public base::LogicError {
 	public:
-		ExtCFuncError(std::string reason): base::LogicError(std::move(reason)) {}
+		ExtCFuncError(const std::string& reason): base::LogicError(std::move(reason)) {}
 	};
 
 	class ExtCArgumentSizeMismatch: public ExtCFuncError {

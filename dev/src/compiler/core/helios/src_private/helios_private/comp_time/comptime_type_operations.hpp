@@ -1,10 +1,15 @@
+#pragma once
 
-
+#include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/symbol_type.hpp"
+
+#include "base/collections/optional.hpp"
 
 #include "query_framework/context.hpp"
 #include "string_id/string_id.hpp"
 
+#include "vm/api/data/process_info.hpp"
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/bytecode/extern_c_function.hpp>
 
 namespace compiler::helios::comptime_ops {
@@ -13,6 +18,14 @@ namespace compiler::helios::comptime_ops {
 	 */
 	struct VariantTypeBuilder {
 		std::vector<tsh::SymbolType<>> subtypes;
+
+		tsh::SymbolType<> produce(query::Context& ctx) {
+			return tsh::SymbolType<>{
+				ctx.query<tsh::QueryVariantType>({ subtypes }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			};
+		}
 	};
 
 	/**
@@ -20,17 +33,35 @@ namespace compiler::helios::comptime_ops {
 	 */
 	struct TupleTypeBuilder {
 		std::vector<tsh::SymbolType<>> subtypes;
+
+		tsh::SymbolType<> produce(query::Context& ctx) {
+			return tsh::SymbolType<>{
+				ctx.query<tsh::QueryTupleType>({ subtypes }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			};
+		}
 	};
 
 	/**
 	 * @brief Builder for constructing function types.
 	 */
 	struct FunctionTypeBuilder {
-		std::vector<tsh::SymbolType<>> subtypes;
+		base::Optional<tsh::SymbolType<>> return_type;
+		std::vector<tsh::SymbolType<>>    arg_types;
+
+		tsh::SymbolType<> produce(query::Context& ctx) {
+			return tsh::SymbolType<>{
+				ctx.query<tsh::QueryFunctionType>({ arg_types, return_type.value() }),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			};
+		}
 	};
 
 	/**
 	 * @brief Builder for constructing struct types.
+	 * TODOP: Maybe remove in this PR
 	 */
 	struct StructTypeBuilder {
 		struct Field {
@@ -41,22 +72,6 @@ namespace compiler::helios::comptime_ops {
 		std::vector<Field> fields;
 	};
 
-	namespace type_ops {
-		// comptime_create_box(ctx: opq, b: opq) -> opq
-		// comptime_create_ref(ctx: opq, b: opq) -> opq
-		// comptime_create_optional(ctx: opq, b: opq) -> opq
-		// comptime_create_get_size(ctx: opq, b: opq) -> opq
-		// comptime_tuple_builder_new(ctx: opq) -> opq
-		// comptime_tuple_builder_push(ctx: opq, b: opq, tp: opq)
-		// comptime_tuple_builder_finalize(ctx: opq, b: opq) -> opq
-		// comptime_variant_builder_new(ctx: opq) -> opq
-		// comptime_variant_builder_push(ctx: opq, b: opq, tp: opq)
-		// comptime_variant_builder_finalize(ctx: opq, b: opq) -> opq
-		// comptime_func_type_builder_new(ctx: opq) -> opq
-		// comptime_func_type_builder_push_arg(ctx: opq, b: opq, tp: opq)
-		// comptime_func_type_set_ret_type(ctx: opq, b: opq, tp: opq)
-		// comptime_func_type_builder_finalize(ctx: opq, b: opq) -> opq
-	}
-
-
+	// TODOP: Comment.
+	std::vector<vm::code::ExternalCFunction> getComptimeTypeOperations(vm::PID);
 }
