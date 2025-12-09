@@ -4,8 +4,13 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
+
+#include "string_id/string_id.hpp"
 #include <logger/logger.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
@@ -117,6 +122,50 @@ namespace {
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
 	}
+
+	bool isMetaTypeOperation(compiler::lir::Operation op) {
+		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
+		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateOptional
+		    || op == lir::Operation::MetaCreateTuple || op == lir::Operation::MetaCreateVariant
+		    || op == lir::Operation::MetaCreateFuncType || op == lir::Operation::MetaGetSize;
+	}
+}
+
+void FunctionLoweringContext::emitExtCall(
+	const base::StrID&          func_name,
+	const std::deque<DVMValue>& func_args,
+	base::Optional<DVMValue>    output
+
+) {
+	// TODOP: We need some way to get the ext func return type in a nice way.
+	// auto call_result_storage = [&] -> base::Optional<DVMLocal> {
+	// 	if (typeName(called_result_type) != "void")
+	// 		return pushTempLocal(called_result_type, "call_result");
+	// 	else
+	// 		return {};
+	// }();
+
+	// for (const auto& [arg_id, func_arg]: std::views::zip(std::views::iota(0), func_args)) {
+	// 	auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
+
+	// 	auto temp_arg = pushTempLocal(func_arg, arg_name.c_str());
+
+	// 	pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
+	// }
+
+	// pushInstruction({ OpKind::call_cfunc, DVMFunctionName{ base::StrID(func_name) }.asArgument() });
+
+	// if (output) {
+	// 	pushInstruction(
+	// 		{
+	// 			OpKind::mov,
+	// 			output.value(),
+	// 			call_result_storage.value().asArgument(),
+	// 		}
+	// 	);
+	// }
+
+	// if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
 void FunctionLoweringContext::handleFunctionCall(
@@ -161,17 +210,123 @@ void FunctionLoweringContext::handleFunctionCall(
 	pushInstruction({ OpKind::call, called_func_name });
 
 	if (output) {
-		pushInstruction({
-			OpKind::mov,
-			output.value(),
-			call_result_storage.value().asArgument(),
-		});
+		pushInstruction(
+			{
+				OpKind::mov,
+				output.value(),
+				call_result_storage.value().asArgument(),
+			}
+		);
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
+void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_instruction) {
+	using namespace compiler::lir;
+
+	std::deque<DVMValue> args
+		= lir_instruction.arguments
+	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
+	    | std::ranges::to<std::deque>();
+
+	const auto maybe_output
+		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
+
+	auto ctx_local = pushTempLocal(vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "ctx");
+	DVMValue ctx   = { ctx_local };
+	// TODOP: Make those function names not hardcoded?
+	switch (lir_instruction.operation) {
+	case Operation::MetaCreateBox:
+		emitExtCall(base::StrID("__comptime_create_box"), { ctx, args[0] }, maybe_output);
+		break;
+	case Operation::MetaCreateRef:
+		emitExtCall(base::StrID("__comptime_create_ref"), { ctx, args[0] }, maybe_output);
+		break;
+	case Operation::MetaCreateOptional:
+		emitExtCall(base::StrID("__comptime_create_optional"), { ctx, args[0] }, maybe_output);
+		break;
+	case Operation::MetaCreateConst:
+		emitExtCall(base::StrID("__comptime_create_const"), { ctx, args[0] }, maybe_output);
+		break;
+	case Operation::MetaGetSize:
+		emitExtCall(base::StrID("__comptime_get_size"), { ctx, args[0] }, maybe_output);
+		break;
+	case Operation::MetaCreateTuple: {
+		auto builder
+			= pushTempLocal(vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "tuple_builder");
+		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
+
+		emitExtCall(base::StrID("__comptime_tuple_builder_new"), { ctx }, builder_value);
+
+		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
+			emitExtCall(
+				base::StrID("__comptime_tuple_builder_push"), { ctx, builder_value, args[i] }, {}
+			);
+
+		emitExtCall(
+			base::StrID("__comptime_tuple_builder_finalize"), { ctx, builder_value }, maybe_output
+		);
+
+		// TODOP: Deinit builder?
+		break;
+	}
+	case Operation::MetaCreateVariant: {
+		auto builder = pushTempLocal(
+			vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "variant_builder"
+		);
+		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
+
+		emitExtCall(base::StrID("__comptime_variant_builder_new"), { ctx }, builder_value);
+
+		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
+			emitExtCall(
+				base::StrID("__comptime_variant_builder_push"), { ctx, builder_value, args[i] }, {}
+			);
+
+		emitExtCall(
+			base::StrID("__comptime_variant_builder_finalize"), { ctx, builder_value }, maybe_output
+		);
+
+		// TODOP: Deinit builder?
+		break;
+	}
+	case Operation::MetaCreateFuncType: {
+		CORE_ASSERT(!lir_instruction.arguments.empty(), "FuncType must have at least a return type");
+
+		auto builder = pushTempLocal(
+			vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "function_builder"
+		);
+		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
+
+		emitExtCall(base::StrID("__comptime_func_type_builder_new"), { ctx }, builder_value);
+
+		emitExtCall(base::StrID("__comptime_func_type_set_ret_type"), { ctx }, builder_value);
+
+		for (usize i = 1; i < lir_instruction.arguments.size(); i++)
+			emitExtCall(
+				base::StrID("__comptime_func_type_builder_push_arg"),
+				{ ctx, builder_value, args[i] },
+				{}
+			);
+
+		emitExtCall(
+			base::StrID("__comptime_func_type_builder_finalize"),
+			{ ctx, builder_value },
+			maybe_output
+		);
+
+		// TODOP: Deinit builder?
+		break;
+	}
+	default:
+		CORE_PANIC("Unknown meta operation");
+	}
+}
+
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	if (isMetaTypeOperation(lir_instruction.operation)) handleMetaOperation(lir_instruction);
+
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
@@ -224,9 +379,13 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(instructions::Comment(base::StrID(
-		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-	)));
+	pushInstruction(
+		instructions::Comment(
+			base::StrID(
+				base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
+			)
+		)
+	);
 
 	if (lir_terminator.operation == lir::Operation::Branch) {
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
@@ -265,11 +424,13 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 
 		// Since VM does not support `return X;` operation, we must move the value to
 		// the ret_val local and then return.
-		pushInstruction({
-			OpKind::mov,
-			getFunctionReturnValueLocal().asArgument(),
-			lowerLirValue(lir_terminator.arguments.at(0)),
-		});
+		pushInstruction(
+			{
+				OpKind::mov,
+				getFunctionReturnValueLocal().asArgument(),
+				lowerLirValue(lir_terminator.arguments.at(0)),
+			}
+		);
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -284,10 +445,12 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.name = base::StrID(name.c_str()),
 		.type = type,
 	};
-	pushInstruction({
-		OpKind::init,
-		vm::opargs::StackLocalAny(temp_local.name),
-		vm::opargs::Type(typeName(type)),
-	});
+	pushInstruction(
+		{
+			OpKind::init,
+			vm::opargs::StackLocalAny(temp_local.name),
+			vm::opargs::Type(typeName(type)),
+		}
+	);
 	return temp_local;
 }

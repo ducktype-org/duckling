@@ -1,11 +1,13 @@
 #pragma once
 
+#include <string>
 #include "dvm_value.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/pointers/ref.hpp>
+#include "string_id/string_id.hpp"
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -66,6 +68,14 @@ namespace compiler::backend_vm::internal {
 		void pushInstruction(const vm::code::Instruction& instruction);
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
+		
+		void handleMetaOperation(const lir::Instruction& instruction);
+		
+		void emitExtCall(
+			const base::StrID& called_function,
+			const std::deque<DVMValue>& func_args,
+			base::Optional<DVMValue>    output
+		);
 
 		void handleFunctionCall(
 			const lir::FunctionLiteral& called_function,

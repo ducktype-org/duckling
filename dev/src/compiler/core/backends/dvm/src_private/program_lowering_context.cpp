@@ -1,14 +1,17 @@
 #include "program_lowering_context.hpp"
 
 #include "function_lowering_context.hpp"
+#include "typesystem/lower/type_layout.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/bytecode.hpp>
 
 using namespace compiler::backend_vm::internal;
 
-const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
+	CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
 		return tsl_type_to_dvm.at(layout);
@@ -132,6 +135,9 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 
 			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 		}
+		variant_case_novalue(tsl::MetaTypeLayout) {
+			return vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8);
+		}
 		variant_default {
 			CORE_PANIC(base::strConcat("Type not handled yet: ", layout->toStringIdentification()));
 		}
@@ -139,8 +145,7 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
-) {
+std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram() {
 	auto collection        = vm::code::CodeCollection();
 	collection.functions   = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
 	collection.global_data = std::ranges::to<std::vector>(
