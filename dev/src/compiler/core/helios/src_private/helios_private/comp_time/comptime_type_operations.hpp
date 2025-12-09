@@ -42,20 +42,20 @@ namespace compiler::helios::comptime_ops {
 	};
 
 	namespace type_ops {
-        // comptime_create_box(ctx: opq, b: opq) -> opq
-        // comptime_create_ref(ctx: opq, b: opq) -> opq
-        // comptime_create_optional(ctx: opq, b: opq) -> opq
-        // comptime_create_get_size(ctx: opq, b: opq) -> opq
-        // comptime_tuple_builder_new(ctx: opq) -> opq
-        // comptime_tuple_builder_push(ctx: opq, b: opq, tp: opq)
-        // comptime_tuple_builder_finalize(ctx: opq, b: opq) -> opq 
-        // comptime_variant_builder_new(ctx: opq) -> opq
-        // comptime_variant_builder_push(ctx: opq, b: opq, tp: opq)
-        // comptime_variant_builder_finalize(ctx: opq, b: opq) -> opq 
-        // comptime_func_type_builder_new(ctx: opq) -> opq
-        // comptime_func_type_builder_push_arg(ctx: opq, b: opq, tp: opq)
-        // comptime_func_type_set_ret_type(ctx: opq, b: opq, tp: opq)
-        // comptime_func_type_builder_finalize(ctx: opq, b: opq) -> opq
+		// comptime_create_box(ctx: opq, b: opq) -> opq
+		// comptime_create_ref(ctx: opq, b: opq) -> opq
+		// comptime_create_optional(ctx: opq, b: opq) -> opq
+		// comptime_create_get_size(ctx: opq, b: opq) -> opq
+		// comptime_tuple_builder_new(ctx: opq) -> opq
+		// comptime_tuple_builder_push(ctx: opq, b: opq, tp: opq)
+		// comptime_tuple_builder_finalize(ctx: opq, b: opq) -> opq
+		// comptime_variant_builder_new(ctx: opq) -> opq
+		// comptime_variant_builder_push(ctx: opq, b: opq, tp: opq)
+		// comptime_variant_builder_finalize(ctx: opq, b: opq) -> opq
+		// comptime_func_type_builder_new(ctx: opq) -> opq
+		// comptime_func_type_builder_push_arg(ctx: opq, b: opq, tp: opq)
+		// comptime_func_type_set_ret_type(ctx: opq, b: opq, tp: opq)
+		// comptime_func_type_builder_finalize(ctx: opq, b: opq) -> opq
 	}
 
 

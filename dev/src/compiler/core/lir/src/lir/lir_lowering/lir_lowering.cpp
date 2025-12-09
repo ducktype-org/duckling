@@ -195,7 +195,7 @@ namespace compiler::lir {
 			return Operation::FloatEq;
 		case mir::Operation::FloatNeq:
 			return Operation::FloatNeq;
-		
+
 		/// Meta type operations ///
 		case mir::Operation::MetaCreateBox:
 			return Operation::MetaCreateBox;
@@ -538,14 +538,14 @@ namespace compiler::lir {
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
 
-				case mir::Operation::MetaCreateBox:	
-				case mir::Operation::MetaCreateRef:	
-				case mir::Operation::MetaCreateConst:	
-				case mir::Operation::MetaCreateOptional:	
-				case mir::Operation::MetaCreateTuple:	
-				case mir::Operation::MetaCreateVariant:	
-				case mir::Operation::MetaCreateFuncType:	
-				case mir::Operation::MetaGetSize:	
+				case mir::Operation::MetaCreateBox:
+				case mir::Operation::MetaCreateRef:
+				case mir::Operation::MetaCreateConst:
+				case mir::Operation::MetaCreateOptional:
+				case mir::Operation::MetaCreateTuple:
+				case mir::Operation::MetaCreateVariant:
+				case mir::Operation::MetaCreateFuncType:
+				case mir::Operation::MetaGetSize:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:

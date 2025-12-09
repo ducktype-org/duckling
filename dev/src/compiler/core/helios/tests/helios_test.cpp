@@ -533,43 +533,38 @@ private:
 			          .back()
 			          .getSymbol();
 			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(
-				makeBox<compiler::helios::code::AccessExpr>(
-					ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
-				)
-			);
+			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
+				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
+			));
 
 			// Build sequence expressions
 			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
 			sequence_exprs.emplace_back(
 				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
 			);
-			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+				ctx,
+				compiler::helios::code::BuiltinBinary::IntegerAdd,
+				makeBox<compiler::helios::code::ParenthesisExpr>(
 					ctx,
-					compiler::helios::code::BuiltinBinary::IntegerAdd,
-					makeBox<compiler::helios::code::ParenthesisExpr>(
-						ctx,
-						makeBox<compiler::helios::code::UnaryOperatorExpr>(
-							compiler::helios::code::BuiltinUnary::IntegerNegation,
-							makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
-						)
-					),
-					makeBox<compiler::helios::code::CallExpr>(
-						ctx,
-						makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
-						std::move(call_args)
+					makeBox<compiler::helios::code::UnaryOperatorExpr>(
+						compiler::helios::code::BuiltinUnary::IntegerNegation,
+						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
 					)
+				),
+				makeBox<compiler::helios::code::CallExpr>(
+					ctx,
+					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					std::move(call_args)
 				)
-			);
+			));
 
 			// Build variant subtypes
 			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
 			variant_subtypes.emplace_back(
 				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
 			);
-			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
+			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
 			);
 			variant_subtypes.emplace_back(
 				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
@@ -786,12 +781,10 @@ private:
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
 						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
-							this->fail(
-								base::strConcat(
-									"Got a constant with a different type than expected: ",
-									name.strView()
-								)
-							);
+							this->fail(base::strConcat(
+								"Got a constant with a different type than expected: ",
+								name.strView()
+							));
 						}
 						ASSERT_EQUAL(exp_val, val);
 						return;
@@ -1288,18 +1281,16 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
 		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1422,18 +1413,16 @@ private:
 	}
 
 	void testGlobalVariableExpressions() {
-		auto find_function
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTFunction> {
+		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
 			for (const auto& fun: unit.functions)
 				if (fun.declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
 
-		auto find_global
-			= [&](const compiler::helios::HOUTUnit& unit,
-		          const base::StrID& name) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
+		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
 			for (const auto& glob: unit.glob_data)
 				if (glob.original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
@@ -1483,11 +1472,9 @@ private:
 			std::vector<char> globals = { 'A', 'B', 'C' };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
-					ASSERT_TRUE(
-						compiler::helios::isGlobalVar(
-							ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
-						)
-					);
+					ASSERT_TRUE(compiler::helios::isGlobalVar(
+						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+					));
 
 				for (const auto& fun: hout_unit.functions) {
 					if (fun.declaration->original_name.str() == "foo0") {
@@ -1832,9 +1819,9 @@ private:
 			});
 		}
 		{
-			auto [module_id, root_scope] = getModule(
-				fs::File(path("test_modules/error_generating/ambiguous_coercion_match"))
-			);
+			auto [module_id, root_scope]
+				= getModule(fs::File(path("test_modules/error_generating/ambiguous_coercion_match"))
+			    );
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
@@ -1951,17 +1938,15 @@ private:
 			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
 			                        .withMutability(Immutable);
 			const auto tuple_ii_st
-				= st(
-					  ctx.query<compiler::tsh::QueryTupleType>(
-						  { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
-					  )
-				).withMutability(Immutable);
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+					 )
+			    ).withMutability(Immutable);
 			const auto tuple_tt_st
-				= st(
-					  ctx.query<compiler::tsh::QueryTupleType>(
-						  { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
-					  )
-				).withMutability(Immutable);
+				= st(ctx.query<compiler::tsh::QueryTupleType>(
+						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+					 )
+			    ).withMutability(Immutable);
 
 			check_types(unit1, unit_st, "Unit1 should be of unit type.");
 			check_types(unit2, unit_st, "Unit2 should be of unit type.");
@@ -2065,9 +2050,9 @@ private:
 	}
 
 	void testErrorAmbiguousCallableCandidates() {
-		auto [module_id, root_scope] = getModule(
-			fs::File(path("test_modules/error_generating/ambiguous_callable_candidates"))
-		);
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_callable_candidates")
+		    ));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
