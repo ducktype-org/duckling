@@ -14,8 +14,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "base/extend_cpp/variant_match.hpp"
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>
 
