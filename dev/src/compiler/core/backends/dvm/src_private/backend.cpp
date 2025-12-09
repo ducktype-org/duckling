@@ -211,6 +211,8 @@ namespace compiler::backend_vm {
 					if (lir_instruction.operation == lir::Operation::Call) {
 						auto func_literal
 							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+
+						// TODO PR: there was put here, it does not work!:
 						signatures.put(
 							func_literal.mangled_name,
 							getDVMSignatureFromLayouts(

@@ -151,7 +151,7 @@ namespace base {
 			);
 		}
 
-		
+
 		HashMap(): buckets(INITIAL_BUCKETS) { assertElementCountAllocatorConsistency(); }
 
 		HashMap(const HashMap&) = delete;
@@ -375,6 +375,8 @@ namespace base {
 			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
+				element_count--;
+
 				
 				// assertElementCountAllocatorConsistency();
 				return nullptr;

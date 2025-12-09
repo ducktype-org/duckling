@@ -25,6 +25,8 @@ namespace base {
 		  position(position),
 		  reason(reason) {
 		makeWhatStr();
+
+		std::cerr << ">>>>>>>>>>>> EARLY PANIC at " << this->getPosition() << ": " << this->what_str << "\n\n\n--------------------------------";
 	}
 
 	void Panic::makeWhatStr() {

@@ -2,7 +2,6 @@ fun gib(n: i64) -> i64 = {
    return 1;
 }
 
-
 fun fib(n: i64) -> i64 = {
    return gib(1);
 }
