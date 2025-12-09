@@ -129,6 +129,24 @@ namespace base {
 				" vs ",
 				allocated_nodes
 			);
+			
+
+			// more detailed check (O(n)):
+			u64 counted_elements = 0;
+			for (const auto& bucket: buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					counted_elements++;
+					current_node = current_node->next;
+				}
+			}
+			CORE_ASSERT_NOEXCEPT(
+				element_count == counted_elements,
+				"Element count and counted elements mismatch: ",
+				element_count,
+				" vs ",
+				counted_elements
+			);
 		}
 
 	public:
@@ -159,6 +177,7 @@ namespace base {
 			return *this;
 		}
 
+		// TODO PR: change to move like 
 		HashMap& operator=(HashMap&& other) noexcept {
 			auto other_size = other.size();
 			clear();
@@ -173,6 +192,7 @@ namespace base {
 		}
 
 		~HashMap() {
+			assertElementCountAllocatorConsistency();
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
