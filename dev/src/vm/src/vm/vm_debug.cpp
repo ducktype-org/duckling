@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <string>
+#include "vm/api/data/api_error.hpp"
+#include "vm/api/data/status.hpp"
 
 
 namespace {
@@ -162,9 +164,17 @@ void DuckVMDebug::getExitValue() const {
 
 void DuckVMDebug::getStatus() const {
 	auto response = vm::api::getExecutionStatus(pid);
-
-	//TODO: Process response and print status
-	throw base::NotYetImplemented("getStatus not implemented yet.");
+	if (response.has_value()) {
+		vm::api::ProcStatus status = response.value();
+		std::cerr << "The program is "; 
+		std::visit([](auto&& arg) -> void {
+			using T = std::decay_t<decltype(arg)>;
+			std::cerr << TypeParseTraits<T>::NAME.data();
+		}, status);
+	} else {
+		const vm::api::ApiError& err = response.error();
+		std::cerr << "error: " << vm::api::errorToString(err) << "\n";
+	}
 }
 
 void DuckVMDebug::step() const {
