@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <variant>
 #include "vm/api/data/api_error.hpp"
 #include "vm/api/data/status.hpp"
 
@@ -178,6 +179,11 @@ void DuckVMDebug::getStatus() const {
 }
 
 void DuckVMDebug::step() const {
+	auto response = vm::api::getExecutionStatus(pid);
+	if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
+		std::cerr << "Not paused program - make sure you started it.";
+		return;
+	}
 	if (!vm::api::step(pid)) throw BeRDFailedToMakeStep();
 	// auto response = vm::api::getCurrentPosition(pid);
 	// if (!response.has_value()) throw -1;
@@ -185,10 +191,20 @@ void DuckVMDebug::step() const {
 }
 
 void DuckVMDebug::resume() const {
+	auto response = vm::api::getExecutionStatus(pid);
+	if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
+		std::cerr << "Not paused program - make sure you started it.";
+		return;
+	}
 	if (!vm::api::resume(pid)) throw BeRDFailedToResumeVM();
 }
 
 void DuckVMDebug::pause() const {
+	auto response = vm::api::getExecutionStatus(pid);
+	if (response.has_value() && !vm::api::isExecuting(response.value())) {
+		std::cerr << "Not running program right now - make sure you started it.";
+		return;
+	}
 	if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
 }
 
