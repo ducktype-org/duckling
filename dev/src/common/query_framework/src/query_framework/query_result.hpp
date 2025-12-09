@@ -303,22 +303,22 @@ namespace query {
 		 * Used when we always except a value to be present.
 		 */
 		constexpr const ResTp& throwOnFail(std::string_view message) const& {
-			if (!storage.has_value()) throw query::FailedStateException(message);
+			if (!storage.has_value()) throw query::QueryFailedException(message);
 			return storage.value();
 		}
 
 		constexpr const ResTp&& throwOnFail(std::string_view message) const&& {
-			if (!storage.has_value()) throw query::FailedStateException(message);
+			if (!storage.has_value()) throw query::QueryFailedException(message);
 			return std::move(storage.value());
 		}
 
 		constexpr ResTp& throwOnFail(std::string_view message) & {
-			if (!storage.has_value()) throw query::FailedStateException(message);
+			if (!storage.has_value()) throw query::QueryFailedException(message);
 			return storage.value();
 		}
 
 		constexpr ResTp&& throwOnFail(std::string_view message) && {
-			if (!storage.has_value()) throw query::FailedStateException(message);
+			if (!storage.has_value()) throw query::QueryFailedException(message);
 			return std::move(storage.value());
 		}
 
@@ -337,22 +337,22 @@ namespace query {
 		 * @brief Access the value, throw the error if no value.
 		 */
 		constexpr const ResTp& valueOrThrow() const& {
-			if (hasError()) throw query::FailedStateException("Result is empty.");
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr const ResTp&& valueOrThrow() const&& {
-			if (hasError()) throw query::FailedStateException("Result is empty.");
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return std::move(storage.value());
 		}
 
 		constexpr ResTp& valueOrThrow() & {
-			if (hasError()) throw query::FailedStateException("Result is empty.");
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr ResTp&& valueOrThrow() && {
-			if (hasError()) throw query::FailedStateException("Result is empty.");
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return std::move(storage.value());
 		}
 

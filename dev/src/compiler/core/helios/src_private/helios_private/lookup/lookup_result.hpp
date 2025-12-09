@@ -17,6 +17,11 @@
 
 namespace compiler::helios {
 
+	namespace errors {
+		class Ambiguity final {};
+		class SymbolNotFound final {};
+	}
+
 	struct NestedResult;
 
 	/**
@@ -57,7 +62,7 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
 
 		/**
 		 * Adds another LookupResult to self (leaves to leaves, children ot children).

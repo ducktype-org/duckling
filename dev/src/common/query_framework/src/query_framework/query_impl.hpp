@@ -126,7 +126,7 @@ namespace query::internal {
 					return QueryImplType::store(
 						perfect_hash, QueryImplType::provide(context, key), acd
 					);
-				} catch (const FailedStateException& qfe) {
+				} catch (const QueryFailedException& qfe) {
 					CORE_DEV_LOG(
 						Query,
 						"[QUERY \"",

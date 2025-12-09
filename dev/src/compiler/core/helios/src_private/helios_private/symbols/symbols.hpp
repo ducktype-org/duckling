@@ -71,9 +71,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
-	using PotentialParsingErrors
-		= std::variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, query::Failed>;
-
 	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, query::Failed>;
 
 	/**

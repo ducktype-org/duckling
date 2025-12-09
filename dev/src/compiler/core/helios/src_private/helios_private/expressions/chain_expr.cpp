@@ -31,6 +31,8 @@
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 
+#include <variant>
+
 namespace compiler::helios::code {
 
 	/**
@@ -328,7 +330,8 @@ namespace compiler::helios::code {
 			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			if (hout_expr.hasError()) return query::QError(query::Failed());
 
-			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.valueOrThrow().get())) {
+			if (auto literal_type_expr
+			    = dynamic_cast<LiteralTypeExpr*>(hout_expr.valueOrThrow().get())) {
 				auto args = call_expr->getArgs().unlock(query_ctx);
 				if (args->size() != 1) {
 					query_ctx.log(
@@ -452,14 +455,15 @@ namespace compiler::helios::code {
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
 
-			if (looked_up_symbols.hasError()) {
+			if (not std::holds_alternative<SymbolList>(looked_up_symbols)) {
 				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
 				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
 				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::QError(query::Failed());
 			}
+			auto sym = std::get_if<SymbolList>(&looked_up_symbols)->back();
 
-			const auto sym = looked_up_symbols.valueOrThrow().back();
+			// const auto sym = looked_up_symbols.valueOrThrow().back();
 			if (kind(sym) == SymbolKind::Field) {
 				auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
 				return ChainState::ofExpr(std::move(node));

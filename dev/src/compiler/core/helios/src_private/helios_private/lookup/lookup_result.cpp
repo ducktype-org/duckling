@@ -19,27 +19,27 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
+	std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
 	) const {
-		if (isEmpty()) return query::QError(errors::SymbolNotFound());
-		if (!isSingle()) return query::QError(errors::Ambiguity());
+		if (isEmpty()) return errors::SymbolNotFound();
+		if (!isSingle()) return errors::Ambiguity();
 
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
 		auto&& [node_id, inner] = children.at(0);
-		SymbolList child_path   = inner.getAsSingle().throwOnFail(
-            "This cannot be error, "
-			  "because it was asserted above."
-        );
+		auto child_path         = inner.getAsSingle();
+		if (auto sym_list = std::get_if<SymbolList>(&child_path)) {
+			CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
-		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
-
-		SymbolList result;
-		result.pushBack(node_id);
-		result.appendList(child_path);
-		return result;
+			SymbolList result;
+			result.pushBack(node_id);
+			result.appendList(*sym_list);
+			return result;
+		} else {
+			return child_path;
+		}
 	}
 
 	u64 LookupResult::symbolCount() const {

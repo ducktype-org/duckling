@@ -1696,7 +1696,7 @@ private:
 			try {
 				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
 				CORE_PANIC("Should throw for invalid ABI.");
-			} catch (compiler::query::Failed& err) {
+			} catch (query::Failed& err) {
 				// Expected failure for invalid ABI
 			}
 		});

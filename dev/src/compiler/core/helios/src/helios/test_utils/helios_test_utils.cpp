@@ -18,6 +18,7 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include "helios/utils/symbol_list.hpp"
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {
@@ -43,8 +44,12 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			auto symbol_path = symbol->getAsSingle().valueOrThrow();
-			for (auto&& elem: symbol_path) {
+			auto as_single = symbol->getAsSingle();
+			auto symbol_path = std::get_if<SymbolList>(&as_single);
+			if (!symbol_path) {
+				query::throwFailed();
+			}
+			for (auto&& elem: *symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
 				result.appendList(dealiased);
 			}
