@@ -127,6 +127,12 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		static const hashing::ComponentHash& getPathComponentHash(ModuleID module_id);
 
+		/**
+		 * Returns the stable hash of the module.
+		 * This is the proper hash of the module to use in SideInputs.
+		 * @param module_id ModuleID of the module to get the hash for.
+		 */
+		[[nodiscard]]
 		static const hashing::ComponentHash::HashType& getModuleHash(ModuleID module_id);
 
 		/**
@@ -145,13 +151,15 @@ namespace compiler::frontend {
 
 
 		/**
-		 * Invalidate current component hash, used when module structure changes
+		 * Invalidate current module hash and component hash, used when module structure changes
+		 * This also invalidates all children modules recursively
 		 */
 		void invalidateHash();
 
 		/**
-		 * Use a parent component hash, and update m_path_component_hash and m_hash for this module
+		 * Use a parent component hash, and update module hash and path component hash for this module
 		 * only This does not propagate to children
+		 * still query invalidation needs to be added
 		 */
 		void updateModuleHash();
 
@@ -159,6 +167,7 @@ namespace compiler::frontend {
 		 * Updates the module hashes from the root module down to this module.
 		 * This is needed to ensure that all parent modules have their hashes updated before this
 		 * module.
+		 * @note This fuction will update both module hash and path component hash.
 		 */
 		void updateModuleHashFromRootToThis();
 
@@ -174,12 +183,12 @@ namespace compiler::frontend {
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>>
 			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    //happening with them. Do not use this in query unless AccesLocked is
-		                    //implemented for this
+		                    // happening with them. Do not use this in query unless AccesLocked is
+		                    // implemented for this
 
 		base::Optional<hashing::ComponentHash>
 			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            //packege_name/root/submodule1/sub2
+		                            // packege_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
 

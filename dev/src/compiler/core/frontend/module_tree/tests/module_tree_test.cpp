@@ -21,7 +21,7 @@ namespace {
 	}
 
 	// Helper to convert vector of submodules to a map for name-based lookup
-	inline base::HashMap<base::StrID, ModuleAccessLocked> submodulesMap(
+	base::HashMap<base::StrID, ModuleAccessLocked> submodulesMap(
 		const std::vector<ModuleAccessLocked>& submodules
 	) {
 		base::HashMap<base::StrID, ModuleAccessLocked> map;
@@ -30,14 +30,14 @@ namespace {
 	}
 
 	// Helper to check if a submodule exists by name
-	inline bool hasSubmodule(const std::vector<ModuleAccessLocked>& submodules, base::StrID name) {
+	bool hasSubmodule(const std::vector<ModuleAccessLocked>& submodules, base::StrID name) {
 		for (const auto& submod: submodules)
 			if (getRef(submod)->getName() == name) return true;
 		return false;
 	}
 
 	// Helper to get a submodule by name
-	inline ModuleAccessLocked getSubmodule(
+	ModuleAccessLocked getSubmodule(
 		const std::vector<ModuleAccessLocked>& submodules, base::StrID name
 	) {
 		for (const auto& submod: submodules)

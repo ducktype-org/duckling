@@ -194,6 +194,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTree::updateModuleHash() {
+		// Component hash part
 		// Get parent component hash if existsS
 		if (m_parent.has_value()) {
 			CORE_ASSERT(
@@ -206,6 +207,10 @@ namespace compiler::frontend {
 			CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for module tree!");
 			m_path_component_hash.emplace(hashing::ComponentHash(m_package_id), m_name);
 		}
+
+		// Module hash part
+
+		// @TODO: #1389 verify it
 
 		// Copy the path component hash to the component hash
 		hashing::ComponentHash::HashAlg partial = m_path_component_hash->partial;
@@ -760,8 +765,9 @@ namespace compiler::frontend {
 
 			PResult out{};
 			for (const auto& module: module_tree->getSubmodules()) {
-				auto module_ref = getModuleRef(module.illegalAccess().getID());
-				out.put(module_ref->getName(), module.unlock(ctx).getID());
+				auto module_id  = module.unlock(ctx).getID();
+				auto module_ref = getModuleRef(module_id);
+				out.put(module_ref->getName(), module_id);
 			}
 			return out;
 		}

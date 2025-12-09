@@ -18,6 +18,12 @@ namespace compiler::frontend {
 	}
 
 	query::QueryStableHash KeyOf_FileSideInput::queryStablePerfectHash() const {
+		// We can youse file component hash for stable hash of FileID
+		// This is because we can only get from file 1) Its parent module 2) Its name
+		// Both are included in component hash
+		// The PST Tree has its own access side input for its content
+		// Also: Every SourceFile has a PST associated with it
+		// This might change in the future but for now we don't need much from a SourceFile itself
 		return getFileRef(id)->getComponentHash().hash;
 	}
 
