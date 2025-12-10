@@ -105,7 +105,6 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
-		std::cout << "I called jion thread builtin with id: " << thread_id << "\n";
 		vm::api::join(thread.process.getPID(), thread_id);
 		return 0;
 	}
