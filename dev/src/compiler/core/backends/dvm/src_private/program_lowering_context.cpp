@@ -7,14 +7,18 @@
 
 #include "string_id/string_id.hpp"
 
+#include "vm/bytecode/builtin_types.hpp"
+#include "vm/bytecode/serializer/serializer.hpp"
 #include "vm/bytecode/type_of_data.hpp"
+#include "vm/core/process/builtin_functions.hpp"
 #include <vm/bytecode/bytecode.hpp>
 
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
 
-const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
+	CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
 		return tsl_type_to_dvm.at(layout);
@@ -64,7 +68,6 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	// Register the global variable itself before inserting ctor/dtor to handle
 	// recursive references.
-	std::cerr << "Registering global: " << lir_global.mangled_name.strView() << "\n";
 	lir_global_to_dvm.put(
 		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
 	);
@@ -161,7 +164,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
-			return vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8);
+			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
 		variant_default {
 			CORE_PANIC(base::strConcat("Type not handled yet: ", layout->toStringIdentification()));
@@ -170,8 +173,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
-) {
+std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram() {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
 	collection.functions.insert(
@@ -181,12 +183,27 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		lir_global_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
-	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+	collection.types = std::ranges::to<std::vector>(
+		tsl_type_to_dvm | std::views::values
+		| std::views::filter([](const auto& type) { return !vm::code::isBuiltinType(type); })
+	);
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
 	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
 	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
+
+	std::cout << "DVM Backend serialization before validation:\n";
+	std::cout << "================================\n";
+	vm::code::serialize(collection, std::cout);
+	std::cout << "================================\n";
+	std::cout << "TSL types\n";
+	for (const auto& type: tsl_type_to_dvm) {
+		std::cout << type.first->toStringIdentification() << " | "
+				  << vm::code::typeToString(type.second) << '\n';
+	}
+	std::cout << "================================\n";
+
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

@@ -89,6 +89,7 @@ DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
 }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMFunctionName::asArgument() const {
+	// TODOP: Separate structure for externs?
 	if (is_extern_c)
 		return vm::opargs::ExtCFunctionName{ name };
 	else if (vm::builtins::isBuiltinFunction(name))

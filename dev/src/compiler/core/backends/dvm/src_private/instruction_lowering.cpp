@@ -141,8 +141,15 @@ namespace {
 		if (type_name == "i8" || type_name == "u8" || type_name == "bool") return 1;
 		CORE_PANIC("Unsupported VM type");
 	}
+
+	vm::code::TypeOfData getTypeFromSignatureName(base::StrID type_name) {
+		if (type_name == "opaque_ptr")
+			return vm::code::OpaqueType{ type_name, getByteSizeForType(type_name) };
+		return vm::code::PrimitiveType(type_name, getByteSizeForType(type_name));
+	}
 }
 
+// TODOP: Unify handleCall and handleExtCall
 void FunctionLoweringContext::handleExtCall(
 	const base::StrID&          func_name,
 	const std::deque<DVMValue>& func_args,
@@ -160,8 +167,8 @@ void FunctionLoweringContext::handleExtCall(
 	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
 		auto result_type_name = extern_func_signature.result_type.str;
 		if (result_type_name != "void") {
-			auto arg_size = getByteSizeForType(result_type_name);
-			auto arg_type = vm::code::PrimitiveType(result_type_name, arg_size);
+			// TODOP: Would be nice for extern functions to store TypeOfData instead of identifiers
+			auto arg_type = getTypeFromSignatureName(result_type_name);
 			return pushTempLocal(arg_type, "call_result");
 		} else
 			return {};
@@ -169,8 +176,7 @@ void FunctionLoweringContext::handleExtCall(
 
 	for (const auto& [arg_id, func_arg, type_name]:
 	     std::views::zip(std::views::iota(0), func_args, extern_func_signature.parameters)) {
-		auto arg_size = getByteSizeForType(type_name.str);
-		auto arg_type = vm::code::PrimitiveType(type_name.str, arg_size);
+		auto arg_type = getTypeFromSignatureName(type_name.str);
 
 		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
 		auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
@@ -179,15 +185,19 @@ void FunctionLoweringContext::handleExtCall(
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
-	pushInstruction({ OpKind::call, DVMFunctionName{ .name = base::StrID(func_name) }.asArgument() }
+	pushInstruction(
+		{ OpKind::call,
+	      DVMFunctionName{ .name = base::StrID(func_name), .is_extern_c = true }.asArgument() }
 	);
 
 	if (output) {
-		pushInstruction({
-			OpKind::mov,
-			output.value(),
-			call_result_storage->asArgument(),
-		});
+		pushInstruction(
+			{
+				OpKind::mov,
+				output.value(),
+				call_result_storage->asArgument(),
+			}
+		);
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
@@ -235,11 +245,13 @@ void FunctionLoweringContext::handleFunctionCall(
 	pushInstruction({ OpKind::call, called_func_name });
 
 	if (output) {
-		pushInstruction({
-			OpKind::mov,
-			output.value(),
-			call_result_storage.value().asArgument(),
-		});
+		pushInstruction(
+			{
+				OpKind::mov,
+				output.value(),
+				call_result_storage.value().asArgument(),
+			}
+		);
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
@@ -257,37 +269,43 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
 
 	// TODOP: Figure out what to do with the context.
-	auto ctx_local = pushTempLocal(vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "ctx");
-	DVMValue ctx   = { ctx_local };
+	auto ctx_local = pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "ctx");
+	pushInstruction(
+		{ OpKind::mov,
+	      ctx_local.asArgument(),
+	      vm::opargs::GlobalOpq(base::StrID("__comptime_query_ctx")) }
+	);
+	DVMValue ctx = { ctx_local };
 	// TODOP: Make those function names not hardcoded?
 	switch (lir_instruction.operation) {
 	case Operation::MetaCreateBox:
 		std::cout << "Meta create box\n";
-		handleExtCall(base::StrID("__comptime_create_box"), { ctx, args[0] }, maybe_output);
+		handleExtCall(base::StrID("__comptime_create_box"), { args[0] }, maybe_output);
 		break;
 	case Operation::MetaCreateRef:
-		handleExtCall(base::StrID("__comptime_create_ref"), { ctx, args[0] }, maybe_output);
+		handleExtCall(base::StrID("__comptime_create_ref"), { args[0] }, maybe_output);
 		break;
 	case Operation::MetaCreateOptional:
-		handleExtCall(base::StrID("__comptime_create_optional"), { ctx, args[0] }, maybe_output);
+		handleExtCall(base::StrID("__comptime_create_optional"), { args[0] }, maybe_output);
 		break;
 	case Operation::MetaCreateConst:
-		handleExtCall(base::StrID("__comptime_create_const"), { ctx, args[0] }, maybe_output);
+		handleExtCall(base::StrID("__comptime_create_const"), { args[0] }, maybe_output);
 		break;
 	case Operation::MetaGetSize:
 		handleExtCall(base::StrID("__comptime_get_size"), { ctx, args[0] }, maybe_output);
 		break;
 	case Operation::MetaCreateTuple: {
 		auto builder
-			= pushTempLocal(vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "tuple_builder");
+			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "tuple_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_tuple_builder_new"), { ctx }, builder_value);
+		handleExtCall(base::StrID("__comptime_tuple_builder_new"), {}, builder_value);
 
-		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
+		for (usize i = 0; i < lir_instruction.arguments.size(); i++) {
 			handleExtCall(
-				base::StrID("__comptime_tuple_builder_push"), { ctx, builder_value, args[i] }, {}
+				base::StrID("__comptime_tuple_builder_push"), { builder_value, args[i] }, {}
 			);
+		}
 
 		handleExtCall(
 			base::StrID("__comptime_tuple_builder_finalize"), { ctx, builder_value }, maybe_output
@@ -297,16 +315,15 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 		break;
 	}
 	case Operation::MetaCreateVariant: {
-		auto builder = pushTempLocal(
-			vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "variant_builder"
-		);
+		auto builder
+			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "variant_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_variant_builder_new"), { ctx }, builder_value);
+		handleExtCall(base::StrID("__comptime_variant_builder_new"), { }, builder_value);
 
 		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
 			handleExtCall(
-				base::StrID("__comptime_variant_builder_push"), { ctx, builder_value, args[i] }, {}
+				base::StrID("__comptime_variant_builder_push"), {  builder_value, args[i] }, {}
 			);
 
 		handleExtCall(
@@ -319,19 +336,18 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 	case Operation::MetaCreateFuncType: {
 		CORE_ASSERT(!lir_instruction.arguments.empty(), "FuncType must have at least a return type");
 
-		auto builder = pushTempLocal(
-			vm::code::PrimitiveType(base::StrID("opaque_ptr"), 8), "function_builder"
-		);
+		auto builder
+			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "function_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_func_type_builder_new"), { ctx }, builder_value);
+		handleExtCall(base::StrID("__comptime_func_type_builder_new"), { }, builder_value);
 
-		handleExtCall(base::StrID("__comptime_func_type_set_ret_type"), { ctx }, builder_value);
+		handleExtCall(base::StrID("__comptime_func_type_set_ret_type"), { builder_value, args[0] }, {});
 
 		for (usize i = 1; i < lir_instruction.arguments.size(); i++)
 			handleExtCall(
 				base::StrID("__comptime_func_type_builder_push_arg"),
-				{ ctx, builder_value, args[i] },
+				{  builder_value, args[i] },
 				{}
 			);
 
@@ -408,9 +424,13 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(instructions::Comment(base::StrID(
-		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-	)));
+	pushInstruction(
+		instructions::Comment(
+			base::StrID(
+				base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
+			)
+		)
+	);
 
 	if (lir_terminator.operation == lir::Operation::Branch) {
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
@@ -449,11 +469,13 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 
 		// Since VM does not support `return X;` operation, we must move the value to
 		// the ret_val local and then return.
-		pushInstruction({
-			OpKind::mov,
-			getFunctionReturnValueLocal().asArgument(),
-			lowerLirValue(lir_terminator.arguments.at(0)),
-		});
+		pushInstruction(
+			{
+				OpKind::mov,
+				getFunctionReturnValueLocal().asArgument(),
+				lowerLirValue(lir_terminator.arguments.at(0)),
+			}
+		);
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -468,10 +490,12 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.name = base::StrID(name.c_str()),
 		.type = type,
 	};
-	pushInstruction({
-		OpKind::init,
-		vm::opargs::StackLocalAny(temp_local.name),
-		vm::opargs::Type(typeName(type)),
-	});
+	pushInstruction(
+		{
+			OpKind::init,
+			vm::opargs::StackLocalAny(temp_local.name),
+			vm::opargs::Type(typeName(type)),
+		}
+	);
 	return temp_local;
 }

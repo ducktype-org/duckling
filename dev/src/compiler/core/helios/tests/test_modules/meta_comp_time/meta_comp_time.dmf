@@ -1,6 +1,10 @@
 fun createBox(t: type) -> type = box t;
 const A = createBox(i32);
 
+# fun foo(A: i64) -> i32 = {
+#     return 123;
+# }
+# const G = foo(123);
 # fun createRef(t: type) -> type = ref t;
 # fun createSmallVariant(a: type, b: type) -> type = a | b;
 # fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;

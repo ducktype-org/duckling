@@ -105,7 +105,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }
 		variant_case(lir::FunctionLiteral, function) {
-			return { DVMFunctionName{ function.mangled_name } };
+			return { DVMFunctionName{ .name=function.mangled_name } };
 		}
 		variant_default { CORE_PANIC("Unhandled value case"); }
 	}

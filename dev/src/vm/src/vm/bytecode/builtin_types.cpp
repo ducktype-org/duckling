@@ -2,8 +2,13 @@
 
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+
+#include <crow/http_parser_merged.h>
+
+#include <algorithm>
 
 namespace vm::code {
 	const SpecialTypes& SpecialTypes::get() {
@@ -16,8 +21,8 @@ namespace vm::code {
 		return instance;
 	}
 
-	TypeContext getBuiltinTypes() {
-		static const std::array builtin_types = {
+	const std::vector<TypeOfData>& rawBuiltins() {
+		static const std::vector<TypeOfData> types = {
 			TypeOfData(PrimitiveType(base::StrID("byte"), 1)),
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
@@ -37,10 +42,20 @@ namespace vm::code {
 
 			SpecialTypes::get().vtable_ptr,
 		};
+		return types;
+	}
+
+	TypeContext getBuiltinTypes() {
 		TypeContext type_context;
-
-		for (const auto& tp: builtin_types) type_context.insertType(tp);
-
+		for (const auto& tp: rawBuiltins()) type_context.insertType(tp);
 		return type_context;
+	}
+
+	bool isBuiltinType(const TypeOfData& type) {
+		std::cout << "Checking type: " << typeToString(type) << '\n';
+		const auto& types = rawBuiltins();
+		bool res = std::ranges::find(types, type) != types.end();
+		std::cout << "Found: " << res << '\n';
+		return res;
 	}
 }

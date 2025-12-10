@@ -341,7 +341,7 @@ namespace compiler::helios {
 		auto* query_context_ptr = &ctx;
 		ctx_vm_value->writeBytes(query_context_ptr);
 
-		if (auto res = vm::api::runFunction(pid, "__set_comptime_ctx", { ctx_vm_value.refMut() });
+		if (auto res = vm::api::runFunction(pid, "__comptime_set_ctx", { ctx_vm_value.refMut() });
 		    !res)
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,

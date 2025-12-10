@@ -24,4 +24,9 @@ namespace vm::code {
 	 * @note The types defined here are used by the builtin functions.
 	 */
 	code::TypeContext getBuiltinTypes();
+
+	/**
+	 * @brief Is the given Type a DVM builtin.
+	 */
+	bool isBuiltinType(const TypeOfData& type);
 }
