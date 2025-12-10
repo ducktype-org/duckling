@@ -3,6 +3,7 @@
 #include <ctv/ctv.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include "lir/lir_structure/lir_structure.hpp"
 
 #include <expected>
 #include <string>
@@ -39,7 +40,7 @@ namespace compiler::helios {
 	 */
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
 		const std::string&                        func_name,
-		const vm::code::CodeCollection&           code,
+		const std::vector<CRef<lir::Function>>&		lir_functions,
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	);

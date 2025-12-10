@@ -174,11 +174,12 @@ void FunctionLoweringContext::handleExtCall(
 
 		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
 		auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
+		std::cout << "Arg type in handleExtCall: " << typeName(arg_type).strView() << '\n';
 		auto temp_arg = pushTempLocal(arg_type, arg_name.c_str());
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
-	pushInstruction({ OpKind::call_cfunc, DVMFunctionName{ base::StrID(func_name) }.asArgument() });
+	pushInstruction({ OpKind::call, DVMFunctionName{ .name=base::StrID(func_name) }.asArgument() });
 
 	if (output) {
 		pushInstruction({
@@ -260,6 +261,7 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 	// TODOP: Make those function names not hardcoded?
 	switch (lir_instruction.operation) {
 	case Operation::MetaCreateBox:
+		std::cout << "Meta create box\n";
 		handleExtCall(base::StrID("__comptime_create_box"), { ctx, args[0] }, maybe_output);
 		break;
 	case Operation::MetaCreateRef:
@@ -347,7 +349,10 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	if (isMetaTypeOperation(lir_instruction.operation)) handleMetaOperation(lir_instruction);
+	if (isMetaTypeOperation(lir_instruction.operation)){
+		handleMetaOperation(lir_instruction);
+		return;
+	}
 
 	std::deque<DVMValue> args
 		= lir_instruction.arguments

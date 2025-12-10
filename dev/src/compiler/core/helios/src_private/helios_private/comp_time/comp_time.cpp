@@ -569,23 +569,7 @@ namespace compiler::helios {
 				all_lir_functions.push_back(lir_func_result);
 			}
 
-			backend_vm::Module m(base::StrID("COMP_TIME"));
-
-			// TODOP: Figure out what with pid.
-			auto ext_c_functions = comptime_ops::getComptimeTypeOperations(vm::PID(0));
-
-			// Insert all extern C functions for the the comptime VM instance (meta type operations).
-			for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
-
-			// TODOP: Insert extern C functions.
-			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
-			vm::code::CodeCollection code = m.build();
-
-			std::cout << "Produced DVM bytecode:\n";
-			vm::code::serialize(code, std::cout);
-			std::cout << "\n";
-
-
+			// Lower all function arguments.
 			std::vector<CompileTimeValue> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {
 				auto arg_result = evalHoutExpr(ctx, arg_expr.ref());
@@ -603,7 +587,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result
-				= executeInVm(func_to_call_name, code, ctv_arguments, func_type.getResultType());
+				= executeInVm(func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType());
 
 			if (!vm_eval_result) return query::QError(errors::Failed());
 			return vm_eval_result.value();

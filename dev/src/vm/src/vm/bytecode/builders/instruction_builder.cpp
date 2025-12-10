@@ -17,6 +17,7 @@ namespace vm::code::builders {
 			out << std::visit([]<class T>(const T&) { return T::OP_SHORT; }, arg);
 		}
 
+		
 		/**
 		 * @brief Appends opcode kind as string to a to a stream.
 		 */
@@ -36,7 +37,7 @@ namespace vm::code::builders {
 
 			return [&]<usize... Indices>(std::index_sequence<Indices...>) {
 				(
-					// Lambda is required since CORE_ASSERT is a stament (not an expression),
+					// Lambda is required since CORE_ASSERT is a statement (not an expression),
 				    // so it can't be used in a fold expression as-is.
 					[&] {
 						CORE_ASSERT(

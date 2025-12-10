@@ -26,7 +26,7 @@ namespace compiler::backend_vm {
 	}
 
 	void Module::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
-		program_context->insertExternFunction(extern_func);
+		program_context->insertExternCFunction(extern_func);
 	}
 
 	void Module::insertLirGlobal(
