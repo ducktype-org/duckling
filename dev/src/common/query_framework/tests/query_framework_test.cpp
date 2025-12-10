@@ -767,9 +767,9 @@ private:
 		ASSERT_TRUE(hr1.hasValue());
 		ASSERT_TRUE(bool(hr1));
 		ASSERT_TRUE(!hr1.hasError());
-		ASSERT_EQUAL(1, hr1.value());
+		ASSERT_EQUAL(1, hr1.valueOrPanic());
 
-		int                      temp_val = hr1.value();
+		int                      temp_val = hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
