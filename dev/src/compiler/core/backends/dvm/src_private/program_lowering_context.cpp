@@ -190,6 +190,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
+	// TODOP: remove
 	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
 	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
 
