@@ -4,6 +4,7 @@
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include "vm/api/vm.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
@@ -99,6 +100,16 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
+	i64 FunctionHandlers::builtinStartThread(VMThread& thread) {
+		return vm::api::runFunction(thread.process.getPID(), "func").value();
+	}
+
+	i64 FunctionHandlers::builtinJoinThread(VMThread& thread, i64 thread_id) {
+		std::cout << "I called jion thread builtin with id: " << thread_id << "\n";
+		vm::api::join(thread.process.getPID(), thread_id);
+		return 0;
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
@@ -114,7 +125,8 @@ namespace vm::builtins {
 		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi, StartThread, JoinThread)
+
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -145,7 +157,18 @@ namespace vm::builtins {
 						 base::StrID("builtin_stoi_lptr"),
 						 code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
 					 },
+				 },
+			     {
+					 BuiltinFunctionID::StartThread,
+					 { base::StrID("builtin_start_thread"),
+			           code::FuncSignature(base::StrID("i64"), {}) },
+				 },
+			     {
+					 BuiltinFunctionID::JoinThread,
+					 { base::StrID("builtin_join_thread"),
+			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
 				 } };
+
 
 		return &map;
 	}

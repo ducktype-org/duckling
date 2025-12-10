@@ -56,7 +56,7 @@ namespace vm::api {
 	 *
 	 * @return Nothing if the function was run successfully or an API error otherwise.
 	 */
-	std::expected<void, ApiError> runFunction(
+	std::expected<response::ThreadID, ApiError> runFunction(
 		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 
@@ -74,6 +74,7 @@ namespace vm::api {
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
+	std::expected<void, ApiError> join(PID pid, i64 thread_id);
 	std::expected<void, ApiError> join(PID pid);
 
 	/**
@@ -99,6 +100,7 @@ namespace vm::api {
 	 * @return Code position of the next instruction to execute after the program is paused or an
 	 * error in which case the state is undefined.
 	 */
+	std::expected<response::CodePosition, ApiError> pause(PID pid, i64 thread_id);
 	std::expected<response::CodePosition, ApiError> pause(PID pid);
 
 	/**
@@ -106,6 +108,7 @@ namespace vm::api {
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
+	std::expected<void, ApiError> resume(PID pid, i64 thread_id);
 	std::expected<void, ApiError> resume(PID pid);
 
 	/**

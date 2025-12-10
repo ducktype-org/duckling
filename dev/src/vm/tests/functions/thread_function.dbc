@@ -1,0 +1,87 @@
+global_data counter i64 {};
+
+function fib {} -> i64 {
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	# n - 32
+	# m - 40
+	# a - 48
+	# b - 56
+	# c - 64
+
+	init_lany_type       n, i64;
+	init_lany_type       m, i64;
+
+    mov_l64_imm n, 1;
+    mov_l64_imm m, 32;
+
+	init_lany_type       a, i64;
+	init_lany_type       b, i64;
+
+	mov_l64_imm     a, 0; # a = 0
+	mov_l64_imm     b, 1; # b = 1
+
+	# while(x > 0)
+	label Loop;
+		# c = (a + b) % m
+		init_lany_type       c, i64;
+
+		mov_l64_l64     c, a;
+		add_l64_l64     c, b;
+		mod_l64_l64     c, m;
+		# a = b
+		mov_l64_l64     a, b;
+		# b = c
+		mov_l64_l64     b, c;
+
+		# n--;
+		sub_l64_imm    n, 1;
+
+		deinit; # c
+
+		# if n > 0 : end
+		cmpG_l64_imm    n, 0;
+		jmpIf_label  Loop;
+
+
+	deinit; # b
+	deinit; # a
+	deinit; # m
+	deinit; # n
+	ret;
+}
+function func {} -> void {
+    init_lany_type ret_sadfasfd, i64;
+    call_func fib;
+
+    mov_g64_imm counter, 3;
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+	init_lany_type           xd, i64;
+    call_builtinfunc builtin_start_thread;
+    init_lany_type ret_blabl, i64;
+    init_lany_type nice, i64;
+    mov_l64_l64 nice, xd;
+    call_builtinfunc builtin_output_i64;
+    init_lany_type wiec_ret, i64;
+    init_lany_type wiec, i64;
+    mov_l64_g64 wiec, counter;
+    add_l64_imm wiec, 1;
+    call_builtinfunc builtin_output_i64;
+
+    init_lany_type dwa, i64;
+    mov_l64_l64 dwa, xd;
+    call_builtinfunc builtin_join_thread;
+
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    ret;
+}

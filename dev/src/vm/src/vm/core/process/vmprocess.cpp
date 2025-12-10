@@ -54,17 +54,22 @@ namespace vm {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
+		vm_threads.emplace_back(*this);
+		VMThread& thread   = vm_threads.back();
+		bool      response = thread.spawnThreadAndRun(loaded_program, func_name, run_arguments);
 
-		bool response
-			= getMainVMThread().spawnThreadAndRun(loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
+		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+		std::cout << "Started thread with id: " << id << "\n";
 
-		return api::Response(api::response::Empty());
+		return api::Response(api::response::ThreadID{ id });
 	}
 
-	std::expected<api::Response, api::ApiError> VMProcess::join() {
+	std::expected<api::Response, api::ApiError> VMProcess::join(i64 thread_id) {
 		// @TODO: check status
-		auto& thread          = getMainVMThread();
+		std::cout << "Joining thread with id: " << thread_id << "\n";
+		auto& thread = thread_id == 0 ? getMainVMThread() : getVMThreadByID(thread_id);
+
 		auto& opt_exec_thread = thread.exec_thread;
 		if (!opt_exec_thread || !opt_exec_thread->joinable())
 			return std::unexpected(api::ApiError{ api::JoinError{} });
@@ -115,20 +120,22 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::stop() {
-		auto& thread          = getMainVMThread();
-		auto  response        = thread.stop();
-		auto& opt_exec_thread = thread.exec_thread;
+		for (auto& thread: vm_threads) {
+			auto  response        = thread.stop();
+			auto& opt_exec_thread = thread.exec_thread;
 
-		if (opt_exec_thread && opt_exec_thread->joinable()) {
-			opt_exec_thread->join();
-			getMainVMThread().exec_thread.reset();
-		} else {
-			return std::unexpected(api::ApiError{ api::JoinError{} });
+			if (opt_exec_thread && opt_exec_thread->joinable()) {
+				opt_exec_thread->join();
+				thread.exec_thread.reset();
+			} else {
+				return std::unexpected(api::ApiError{ api::JoinError{} });
+			}
+
+			// @TODO: make two different "stop" functions, one that throws error if program panicked
+			if (!response)
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "unexpected status response" } });
 		}
-
-		// @TODO: make two different "stop" functions, one that throws error if program panicked
-		if (!response)
-			return std::unexpected(api::ApiError{ api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
 	}
 
@@ -160,16 +167,22 @@ namespace vm {
 				return runFunction(run_func_request.func_name, run_func_request.func_args);
 			}
 
-			variant_case_novalue(api::request::Join) { return join(); }
+			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
 
-			variant_case_novalue(api::request::Pause) {
-				auto response = getMainVMThread().pause();
+			variant_case(api::request::Pause, pause_request) {
+				auto& thread   = pause_request.thread_id == 0
+				                   ? getMainVMThread()
+				                   : getVMThreadByID(pause_request.thread_id);
+				auto  response = thread.pause();
 				if (!response) return std::unexpected(api::ApiError{ api::PauseError{} });
-				return getMainVMThread().getCurrentPosition();
+				return getVMThreadByID(pause_request.thread_id).getCurrentPosition();
 			}
 
-			variant_case_novalue(api::request::Resume) {
-				auto response = getMainVMThread().resume();
+			variant_case(api::request::Resume, resume_request) {
+				auto& thread   = resume_request.thread_id == 0
+				                   ? getMainVMThread()
+				                   : getVMThreadByID(resume_request.thread_id);
+				auto  response = thread.resume();
 				if (!response) return std::unexpected(api::ApiError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
@@ -305,13 +318,19 @@ namespace vm {
 	VMProcess::VMProcess(const PID my_pid):
 		  my_pid(my_pid),
 		  status(api::ExecutionNotStarted{}),
-		  loaded_program(loader.getProgram()) {
-		vm_threads.emplace_back(*this);
-	}
+		  loaded_program(loader.getProgram()) {}
 
 	ProcIO& VMProcess::getIO() { return io; }
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
+
+	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
+		for (auto& thread: vm_threads) {
+			i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+			if (id == thread_id) return thread;
+		}
+		return getMainVMThread();
+	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::attach(
 		std::istream& istream, std::ostream& ostream

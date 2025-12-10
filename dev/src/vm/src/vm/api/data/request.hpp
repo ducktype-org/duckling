@@ -25,9 +25,13 @@ namespace vm::api {
 			code::CodeCollection code_collection;
 		};
 
-		struct Pause {};
+		struct Pause {
+			i64 thread_id;
+		};
 
-		struct Resume {};
+		struct Resume {
+			i64 thread_id;
+		};
 
 		struct Stop {};
 
@@ -40,7 +44,9 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
-		struct Join {};
+		struct Join {
+			i64 thread_id;
+		};
 
 		struct Step {};
 
