@@ -36,4 +36,8 @@ namespace compiler::backend_vm {
 	) {
 		program_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
+
+	void Module::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
+		program_context->insertRawBytecodeDefinitions(bytecode);
+	}
 }

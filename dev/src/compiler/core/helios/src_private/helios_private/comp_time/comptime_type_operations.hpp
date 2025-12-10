@@ -73,5 +73,7 @@ namespace compiler::helios::comptime_ops {
 	};
 
 	// TODOP: Comment.
-	std::vector<vm::code::ExternalCFunction> getComptimeTypeOperations(vm::PID);
+	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid);
+
+
 }

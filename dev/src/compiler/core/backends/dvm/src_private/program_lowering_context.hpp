@@ -56,6 +56,11 @@ namespace compiler::backend_vm::internal {
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
 
 		/**
+		 * @brief Insert raw bytecode into program context.
+		 */
+		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
+
+		/**
 		 * @brief Produces the final bytecode program.
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
@@ -73,6 +78,8 @@ namespace compiler::backend_vm::internal {
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
 
+		// Additional, non-lir functions loaded into a module. Used in CTE.
+		std::vector<vm::code::Function> extra_bytecode_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
 		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;

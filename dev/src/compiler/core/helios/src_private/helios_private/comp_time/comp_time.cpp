@@ -587,7 +587,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
-				func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) return query::QError(errors::Failed());

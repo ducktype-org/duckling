@@ -4,6 +4,8 @@
 
 #include <ctv/ctv.hpp>
 
+#include "query_framework/context.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 
 #include <expected>
@@ -40,6 +42,7 @@ namespace compiler::helios {
 	 * @return The resulting CTV on success, or a VmEvaluationError.
 	 */
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
+		query::Context&                           ctx,
 		const std::string&                        func_name,
 		const std::vector<CRef<lir::Function>>&   lir_functions,
 		const std::vector<ctv::CompileTimeValue>& args,

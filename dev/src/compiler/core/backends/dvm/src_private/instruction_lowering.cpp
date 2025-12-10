@@ -360,6 +360,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
 	    | std::ranges::to<std::deque>();
 
+	// TODOP: Integrate with meta ops so this returns a variant.
 	const auto operation = lirOpToOpKind(lir_instruction.operation);
 
 	const auto maybe_output

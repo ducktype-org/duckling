@@ -38,7 +38,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::Global8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::GlobalPtr(name); }
-		// TODOP: Add global opq?
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::GlobalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));
 		}

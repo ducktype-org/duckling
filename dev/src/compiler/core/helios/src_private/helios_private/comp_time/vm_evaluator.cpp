@@ -9,6 +9,8 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "query_framework/context.hpp"
+
 #include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
 #include <vm/api/vm.hpp>
@@ -274,12 +276,13 @@ namespace {
 	) {
 		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
 
-		auto ext_c_functions = comptime_ops::getComptimeTypeOperations(pid);
-
-		// Insert all extern C functions for the the comptime VM instance (meta type operations).
-		for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
+		// TODOP: Move comptime func loading to constructor?
+		auto comptime_definitions = comptime_ops::getComptimeTypeOperations(pid);
+		m.insertRawBytecodeDefinitions(comptime_definitions);
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
+
+		// TODOP: Inline m.build() once debug prints are removed.
 		vm::code::CodeCollection code = m.build();
 
 		std::cout << "Produced DVM bytecode:\n";
@@ -292,6 +295,7 @@ namespace {
 
 namespace compiler::helios {
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
+		query::Context&                           ctx,
 		const std::string&                        func_name,
 		const std::vector<CRef<lir::Function>>&   lir_functions,
 		const std::vector<ctv::CompileTimeValue>& args,
@@ -324,6 +328,29 @@ namespace compiler::helios {
 		// If the code load succeeded, we expand the VMs manger context. If any of the functions
 		// was rejected the internal VMs state won't be changed.
 		vm_manager.expandLoadedCode(filtered_code);
+
+		// TODOP: Split this. Probablby move to VMManager.
+		// Pass the query context into DVM.
+		auto response = vm::api::getVmValue(pid, "opaque_ptr");
+		if (!response.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgConversionFailed,
+				"Failed to fetch an opaque pointer when evaluating '" + func_name + "' on DVM."
+			));
+		auto  ctx_vm_value      = std::move(response->vm_value);
+		auto* query_context_ptr = &ctx;
+		ctx_vm_value->writeBytes(query_context_ptr);
+
+		if (auto res = vm::api::runFunction(pid, "__set_comptime_ctx", { ctx_vm_value.refMut() });
+		    !res)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				"Failed to initialize the global context on DVM."
+			));
+		if (auto res = vm::api::join(pid); !res)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
+			));
 
 
 		std::vector<Box<vm::VmValue>> owned_arguments;

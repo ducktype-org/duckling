@@ -6,9 +6,14 @@
 
 #include "base/except/exceptions.hpp"
 
+#include "string_id/string_id.hpp"
+
 #include "vm/api/vm.hpp"
 #include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/extern_c_function.hpp"
+#include "vm/bytecode/instructions.hpp"
+#include "vm/bytecode/opcode_args.hpp"
+#include "vm/bytecode/type_of_data.hpp"
 #include "vm/utils/interpret.hpp"
 
 // TODOP: Comments in this file.
@@ -165,7 +170,7 @@ namespace compiler::helios::comptime_ops {
 		return result;
 	}
 
-	std::vector<vm::code::ExternalCFunction> getComptimeTypeOperations(vm::PID pid) {
+	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
 		return {
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_box, __comptime_create_box, pid),
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_ref, __comptime_create_ref, pid),
@@ -203,6 +208,43 @@ namespace compiler::helios::comptime_ops {
 			VM_INSTANCE_EXT_C_FUNC(
 				__comptime_func_type_builder_finalize, __comptime_func_type_builder_finalize, pid
 			),
+		};
+	}
+
+	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid) {
+		// A global storing an opaque pointer to `query::Context` needed for performing type
+		// system calls during DVM evaluation.
+		vm::code::GlobalData context_global{ .name      = base::StrID("__comptime_query_ctx"),
+			                                 .type      = base::StrID("opaque_ptr"),
+			                                 .ctor_name = {},
+			                                 .dtor_name = {} };
+
+		// A function used for initializing the global context pointer. Called by the comptime
+		// VM instance, before comptime operations. Takes in an opaque pointer storing the
+		// `query::Context*` and sets the value of the global context pointer. The function looks as
+		// follows:
+		//
+		// function __comptime_set_ctx { opaque_ptr } -> void {
+		// 		mov_gopq_lopq __comptime_query_ctx, arg0;
+		// 		ret;
+		// }
+		vm::code::Instruction mov_gopq_lopq = vm::code::instructions::Op_mov_gopq_lopq(
+			vm::opargs::GlobalOpq(context_global.name),
+			vm::opargs::StackLocalOpq(base::StrID("arg0"))
+		);
+		vm::code::Instruction ret = vm::code::instructions::Op_ret{};
+
+		vm::code::Function init_global_context{ .name = base::StrID("__comptime_set_ctx"),
+			                                    .body = { mov_gopq_lopq, ret },
+			                                    .signature
+			                                    = { .result_type = base::StrID("void"),
+			                                        .parameters = { base::StrID("opaque_ptr") } } };
+
+		return {
+			.functions            = { init_global_context },
+			.types                = {},
+			.global_data          = { context_global },
+			.external_c_functions = getComptimeTypeExternOperations(pid),
 		};
 	}
 

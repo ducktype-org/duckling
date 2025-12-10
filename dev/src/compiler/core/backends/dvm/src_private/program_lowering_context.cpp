@@ -41,6 +41,17 @@ const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 		CORE_PANIC("Extern C function not found: ", func_name);
 }
 
+void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
+	for (const auto& global: bytecode.global_data) lir_global_to_dvm_data.put(global.name, global);
+
+	for (const auto& ext_func: bytecode.external_c_functions)
+		extern_c_functions.put(ext_func.name.str, ext_func);
+
+	extra_bytecode_functions.insert(
+		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
+	);
+}
+
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	const lir::LIRGlobal&               lir_global,
 	base::Optional<CRef<lir::Function>> global_ctor,
@@ -161,8 +172,11 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 
 std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
 ) {
-	auto collection        = vm::code::CodeCollection();
-	collection.functions   = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	auto collection      = vm::code::CodeCollection();
+	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	collection.functions.insert(
+		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
+	);
 	collection.global_data = std::ranges::to<std::vector>(
 		lir_global_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
