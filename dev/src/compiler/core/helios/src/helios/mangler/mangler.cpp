@@ -422,9 +422,9 @@ namespace compiler::helios::mangler {
 			using namespace std::literals::string_view_literals;
 
 			if (key.kind == ManglingSymbolKind::Standard) {
-				auto sym_id = std::get<0>(key.symbol_key);
+				auto sym_id = std::get<SymID>(key.symbol_key);
 				// a temporary hack:
-				// @TODO: #895 fix it when we do add script based package targets
+				// @TODO: #895 fix it when we add script based package targets
 				if (name(sym_id) == "main") {
 					// main is not mangled
 					return base::StrID{ "main" };
@@ -437,8 +437,10 @@ namespace compiler::helios::mangler {
 				}
 
 				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-					variant_match(abi->valueOrThrow()) {
+					variant_match(abi->value()) {
 						variant_case_novalue(CAbi) { return name(sym_id); }
+						variant_case_novalue(DefaultAbi) { /* Handled below */ }
+						variant_default { CORE_UNREACHABLE(); }
 					}
 				}
 			}

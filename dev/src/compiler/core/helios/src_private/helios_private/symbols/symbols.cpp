@@ -80,6 +80,7 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
+			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
 				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
