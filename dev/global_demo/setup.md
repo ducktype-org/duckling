@@ -31,4 +31,8 @@ duckc compile_package global_demo/class/ -n class -a build_duck --no-incremental
 duckc compile_package global_demo/floats/ -n floats -a build_duck --no-incremental --external-static-library ./global_demo/c_ffi/prints.c
 
 
+## Tuple units
+duckc get_hout ./global_demo/tuple_units
+
+
 ## Incremental
