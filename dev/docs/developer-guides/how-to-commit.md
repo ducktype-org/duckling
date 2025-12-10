@@ -1,7 +1,6 @@
 # How to commit
 
-This page describes how to commit changes to our repositories following good practices and standards. Keep in mind that this tutorial is focused on `duckling` - our repository. Other repositories do not require as strict practices.
-
+This page describes how to commit changes to our repositories following good practices and standards. Keep in mind that this tutorial is focused on `duckling` — our main development repository. Other repositories may not require equally strict practices.
 
 ## Repository setup
 
@@ -10,13 +9,11 @@ Set up your repo in a standard way. Some repositories have a `toolbox.py` script
 
 ## Create a branch
 
-Most of our repositories don't allow committing directly to the `main` branch. To make any changes you need to create a new feature branch. You can do that via GH issue or link a branch to an existing issue or kanban card (see ...).
-
+Most of our repositories don't allow committing directly to the `main` branch. To make any changes you need to create a new feature branch and link it to a GitHub issue. You can create an appropriate through the GH issue, or link an existing branch to an existing issue.
 
 ## Make some changes
 
-Don't forget to write tests and docs! On `duckling` repo Quacker bot will block the merge if coverage percentage drops (this can be bypassed if really needed).
-
+Don't forget to write tests and docs! On the `duckling` repo, the Quacker bot will block the merge if coverage percentage drops (this can be bypassed if justified).
 
 ### Format your code
 
@@ -109,7 +106,17 @@ If multiple commit types fit your commit, pick the best ones, and separate them 
 #### Very short description
 
 Just a very short description. Try to avoid ambiguity.
-You can treat the `Character of changes` component as a verb preceding this description, but do it only if it will be clear to the reader and the description doesn't list multiple things.
+You can treat the `Character of changes` component as a verb preceding the description, but do it only if it will be clear to the reader and the description doesn't list multiple things. Here are few good examples of commit titles with such description:
+
+* `Remove: CompileTimeValue::getType() (#1642)`,
+* `[Compiler] Add: Builtin operator coercions (#1633)`.
+
+And here is an example of commit title that doesn't use this scheme and provides its own verb:
+
+* `[DevOps] Fix: Remove duplicate coverage status message (#1611)`.
+
+If unsure, use the second approach.
+
 
 #### PR number
 
