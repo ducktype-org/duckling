@@ -95,7 +95,6 @@ namespace vm::detail {
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
 #define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
 
-// Modified validation to use safe_sizeof instead of sizeof to support void types
 #define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                                        \
 	auto tp_##Name = vm::api::getType(pid, VmType);                                          \
 	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                      \
@@ -233,9 +232,19 @@ namespace vm {
 			const std::string& vm_type,
 			const usize        vm_type_size
 		):
-			  ExtCFuncError(base::strConcat(
-				  ERR_MSG, cpp_type, "(", cpp_type_size, ") vs. ", vm_type, "(", vm_type_size, ")"
-			  )) {}
+			  ExtCFuncError(
+				  base::strConcat(
+					  ERR_MSG,
+					  cpp_type,
+					  "(",
+					  cpp_type_size,
+					  ") vs. ",
+					  vm_type,
+					  "(",
+					  vm_type_size,
+					  ")"
+				  )
+			  ) {}
 	};
 
 	class ExtCVmTypeNotExists: public ExtCFuncError {
