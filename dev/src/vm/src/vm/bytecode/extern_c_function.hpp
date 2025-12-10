@@ -77,7 +77,7 @@
 #include <type_traits>
 
 namespace vm::detail {
-	// Helper trait to safely get size of types including void (as 0)
+	// Helper trait to safely get size of types including void (as 1)
 	template<typename T>
 	struct safe_sizeof {
 		static constexpr usize VALUE = sizeof(T);
