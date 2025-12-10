@@ -79,7 +79,6 @@ namespace {
 			}
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
-
 				// TODOP: This should probably get removed?
 				// Representation of a meta type in DVM is a pointer to the symbol type.
 				return DVMImmediate{ std::bit_cast<u64>(&type_val) };
@@ -106,7 +105,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 		}
 		variant_case(lir::BlockRef, block_ref) { return { DVMLabel{ getBlockLabel(block_ref) } }; }
 		variant_case(lir::FunctionLiteral, function) {
-			return { DVMFunctionName{ .name=function.mangled_name } };
+			return { DVMFunctionName{ .name = function.mangled_name } };
 		}
 		variant_default { CORE_PANIC("Unhandled value case"); }
 	}

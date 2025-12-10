@@ -95,6 +95,7 @@ DEF_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
 // Copies an opaque value between globals and locals
 DEF_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
 DEF_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
+DEF_INSTR(mov_lopq_imm, vm::opargs::StackLocalOpq, vm::opargs::Immediate)
 
 
 // ========= ARITHMETIC OPERATIONS ========

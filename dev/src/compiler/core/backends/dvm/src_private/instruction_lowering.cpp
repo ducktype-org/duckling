@@ -190,13 +190,11 @@ void FunctionLoweringContext::handleExtCall(
 	);
 
 	if (output) {
-		pushInstruction(
-			{
-				OpKind::mov,
-				output.value(),
-				call_result_storage->asArgument(),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			output.value(),
+			call_result_storage->asArgument(),
+		});
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
@@ -244,13 +242,11 @@ void FunctionLoweringContext::handleFunctionCall(
 	pushInstruction({ OpKind::call, called_func_name });
 
 	if (output) {
-		pushInstruction(
-			{
-				OpKind::mov,
-				output.value(),
-				call_result_storage.value().asArgument(),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			output.value(),
+			call_result_storage.value().asArgument(),
+		});
 	}
 
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
@@ -269,11 +265,9 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 
 	// TODOP: Figure out what to do with the context.
 	auto ctx_local = pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "ctx");
-	pushInstruction(
-		{ OpKind::mov,
-	      ctx_local.asArgument(),
-	      vm::opargs::GlobalOpq(base::StrID("__comptime_query_ctx")) }
-	);
+	pushInstruction({ OpKind::mov,
+	                  ctx_local.asArgument(),
+	                  vm::opargs::GlobalOpq(base::StrID("__comptime_query_ctx")) });
 	DVMValue ctx = { ctx_local };
 	// TODOP: Make those function names not hardcoded?
 	switch (lir_instruction.operation) {
@@ -423,13 +417,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(
-		instructions::Comment(
-			base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-			)
-		)
-	);
+	pushInstruction(instructions::Comment(base::StrID(
+		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
+	)));
 
 	if (lir_terminator.operation == lir::Operation::Branch) {
 		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
@@ -468,13 +458,11 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 
 		// Since VM does not support `return X;` operation, we must move the value to
 		// the ret_val local and then return.
-		pushInstruction(
-			{
-				OpKind::mov,
-				getFunctionReturnValueLocal().asArgument(),
-				lowerLirValue(lir_terminator.arguments.at(0)),
-			}
-		);
+		pushInstruction({
+			OpKind::mov,
+			getFunctionReturnValueLocal().asArgument(),
+			lowerLirValue(lir_terminator.arguments.at(0)),
+		});
 		pushInstruction({ OpKind::ret });
 	} else {
 		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
@@ -489,12 +477,10 @@ DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 		.name = base::StrID(name.c_str()),
 		.type = type,
 	};
-	pushInstruction(
-		{
-			OpKind::init,
-			vm::opargs::StackLocalAny(temp_local.name),
-			vm::opargs::Type(typeName(type)),
-		}
-	);
+	pushInstruction({
+		OpKind::init,
+		vm::opargs::StackLocalAny(temp_local.name),
+		vm::opargs::Type(typeName(type)),
+	});
 	return temp_local;
 }

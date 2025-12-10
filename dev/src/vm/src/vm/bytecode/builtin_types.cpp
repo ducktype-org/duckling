@@ -54,7 +54,7 @@ namespace vm::code {
 	bool isBuiltinType(const TypeOfData& type) {
 		std::cout << "Checking type: " << typeToString(type) << '\n';
 		const auto& types = rawBuiltins();
-		bool res = std::ranges::find(types, type) != types.end();
+		bool        res   = std::ranges::find(types, type) != types.end();
 		std::cout << "Found: " << res << '\n';
 		return res;
 	}

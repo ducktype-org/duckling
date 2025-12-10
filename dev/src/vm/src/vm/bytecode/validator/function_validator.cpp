@@ -538,6 +538,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_lptr_lptr) {}
 			variant_case_novalue(Op_mov_lopq_lopq) {}
 			variant_case_novalue(Op_mov_lopq_gopq) {}
+			variant_case_novalue(Op_mov_lopq_imm) {}
 			variant_case_novalue(Op_mov_gopq_lopq) {}
 			variant_case_novalue(Op_setNull_lptr) {}
 			variant_case_novalue(Op_add_l64_l64) {}

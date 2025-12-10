@@ -1,8 +1,8 @@
-# fun createBox(t: type) -> type = box t;
+fun createBox(t: type) -> type = box t;
 # const A = createBox(i32);
 # const A_2 = createBox(i16);
 # 
-# fun createRef(t: type) -> type = ref t;
+fun createRef(t: type) -> type = ref t;
 # const B = createRef(i32);
 # 
 # fun createSmallVariant(a: type, b: type) -> type = a | b;
@@ -20,9 +20,9 @@ fun fib(n: i64) -> i64 = {
 
 fun complexLogic(n: i64) -> type = {
     if (fib(n) < 15i64) {
-        return i32;
+        return createBox(i32);
     } else {
-        return i64;
+        return createRef(i64);
     }
 }
 

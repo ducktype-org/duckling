@@ -370,6 +370,13 @@ namespace vm::loader::compiler::detail {
 		addLow<Op_mov_lopq_gopq>(arg0, arg1);
 	}
 
+	template<>
+	void MicroBytecodeBuilder::lower<high::Op_mov_lopq_imm>(
+		vm::opargs::StackLocalOpq arg0, vm::opargs::Immediate arg1
+	) {
+		addLow<Op_mov_lopq_imm>(arg0, arg1);
+	}
+
 	// ========= ARITHMETIC OPERATIONS ========
 
 	template<>
