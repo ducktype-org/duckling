@@ -25,14 +25,3 @@ void cWork(CHashMap& map, concurrent::WDRef worker_data) {
 }
 
 
-void gtlWork(GTLMap& map, concurrent::WDRef worker_data) {
-    u64 key = 123123 + (worker_data->rng() % 4096);
-
-    map.insert_or_assign(key, 0);
-    
-    auto new_val = map[key] + 1;
-    map.insert_or_assign(key, new_val);
-
-
-}
-

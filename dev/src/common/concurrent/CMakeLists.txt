@@ -3,7 +3,7 @@ add_library(Concurrent
     src/concurrent/workers/worker_data.cpp
 )
 
-make_module(Concurrent USES Base gtl)
+make_module(Concurrent USES Base)
 
 add_example(map_perf_test examples/map_test.cpp
         USES Base Concurrent)

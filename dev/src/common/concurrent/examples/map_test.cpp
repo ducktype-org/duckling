@@ -12,7 +12,6 @@ u64 concurrent::AtomicFlagSpinlock::yield_count = 0;
 int main() {
     HashMap map;
     CHashMap cmap;
-    GTLMap gtlmap;
 
     std::vector<std::jthread> threads;
     std::vector<Box<concurrent::WorkerData>> wd;
@@ -29,18 +28,16 @@ int main() {
     for (int i = 0; i < THREAD_COUNT; i++) {
         
 
-        threads.emplace_back([i, &map, &cmap, &gtlmap, &wd]() mutable {
+        threads.emplace_back([i, &map, &cmap, &wd]() mutable {
             (void)map;
             (void)cmap;
-            (void)gtlmap;
 
             for (u64 j = 0; j < 40'000'000; j++) {
                 if (j % 1'000'000 == 0) {
                     std::cerr << "Thread " << std::this_thread::get_id() << " at iteration " << j << " yield_count: " << concurrent::AtomicFlagSpinlock::yield_count << "\n";
                 }
                 // work(map,  wd.at(u64(i)).refMut()); static_assert(THREAD_COUNT == 1);
-                // cWork(cmap, wd.at(u64(i)).refMut());
-                gtlWork(gtlmap, wd.at(u64(i)).refMut());
+                cWork(cmap, wd.at(u64(i)).refMut());
             }
         });
     }
