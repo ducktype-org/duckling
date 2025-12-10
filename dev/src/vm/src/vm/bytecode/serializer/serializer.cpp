@@ -69,6 +69,7 @@ namespace vm::code {
 					for (auto arg: args | std::views::drop(1))
 						out << ", " << std::setw(8) << std::right << argumentToString(arg);
 				}
+				out << ';';
 			}
 		}
 	}
