@@ -139,8 +139,11 @@ namespace vm::detail {
 				if constexpr (std::is_void_v<ResCType>) {                                               \
 					f();                                                                                \
 				} else {                                                                                \
-					/* Because f() is dependent on F, this branch is not semantically checked */        \
-					/* if ResultType is void, preventing the "passing void to function" error. */       \
+					/*                                                                                  \
+					 * Because f() is independent from FuncName::call, this branch is not               \
+					 * semantically checked if ResCType is void, preventing the "passing void to        \
+					 * function" error.                                                                 \
+					 */                                                                                 \
 					vm::safeWriteBytes(storage, f());                                                   \
 				}                                                                                       \
 			}([&] {                                                                                     \
