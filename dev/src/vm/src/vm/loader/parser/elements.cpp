@@ -331,7 +331,6 @@ namespace vm::loader::parser {
 #undef HANDLE_INSTR_ARGS
 #undef ARG_TYPE
 		};
-
 	}
 
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
