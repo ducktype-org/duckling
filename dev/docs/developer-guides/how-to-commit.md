@@ -9,7 +9,7 @@ Set up your repo in a standard way. Some repositories have a `toolbox.py` script
 
 ## Create a branch
 
-Most of our repositories don't allow committing directly to the `main` branch. To make any changes you need to create a new feature branch and link it to a GitHub issue. You can create an appropriate through the GH issue, or link an existing branch to an existing issue.
+Most of our repositories don't allow committing directly to the `main` branch. To make any changes you need to create a new feature branch and link it to a GitHub issue. You can create an appropriate branch through the GH issue, or link an existing branch to an existing issue.
 
 ## Make some changes
 
@@ -106,12 +106,12 @@ If multiple commit types fit your commit, pick the best ones, and separate them 
 
 Just a very short description. Try to be clear and concise.
 
-You can treat the `Character of changes` component as a verb preceding this description, but do it only if it will be clear to the reader and the description doesn't list multiple things. Here are few good examples of commit titles with such description:
+You can treat the `Character of changes` component as a verb preceding this description, but do it only if it will be clear to the reader and the description doesn't list multiple things. Here are few good examples of commit titles with such a description:
 
 * `Remove: CompileTimeValue::getType() (#1642)`,
 * `[Compiler] Add: Builtin operator coercions (#1633)`.
 
-And here is an example of commit title that doesn't use this scheme and provides its own verb:
+And here is an example of a commit title that doesn't use this scheme and provides its own verb:
 
 * `[DevOps] Fix: Remove duplicate coverage status message (#1611)`.
 
