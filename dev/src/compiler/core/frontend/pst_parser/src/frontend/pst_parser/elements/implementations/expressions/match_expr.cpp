@@ -94,7 +94,6 @@ namespace pst::expr {
 		if (state.notEmpty()) state.log(makeBox<NotACaseExpression>(state.getPosition()));
 
 		state.parse(out).goUpAndSkip();
-		state.parse(out).one(Special::Semicolon);
 		return out;
 	}
 

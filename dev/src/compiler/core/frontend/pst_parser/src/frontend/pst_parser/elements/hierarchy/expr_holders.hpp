@@ -49,10 +49,12 @@ namespace pst {
 	public:
 		ExprParserHelper() = delete;
 		static MBox<ExprElement> parseUniversal(LangParserState& state);
+		static MBox<ExprElement> parseUniversalAllowBlock(LangParserState& state);
 		static MBox<ExprElement> parseComma(LangParserState& state);
 		static MBox<ExprElement> parseAssignment(LangParserState& state);
 		static MBox<ExprElement> parseForType(LangParserState& state);
 		static MBox<ExprElement> parseImplementsList(LangParserState& state);
+		static MBox<ExprElement> parseValuePattern(LangParserState& state);
 	};
 
 	/**
@@ -93,6 +95,20 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolder() final = default;
+	};
+
+	/**
+	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
+	 * top-level
+	 */
+	class UniversalAllowBlockExprHolder final:
+		  public ExprHolderTemplate<
+			  UniversalAllowBlockExprHolder,
+			  ExprParserHelper::parseUniversalAllowBlock,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalAllowBlockExprHolder() final = default;
 	};
 
 	/**
@@ -152,5 +168,15 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ImplementsListExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for Implements list.
+	 */
+	class ValuePatternExprHolder final:
+		  public ExprHolderTemplate<ValuePatternExprHolder, ExprParserHelper::parseValuePattern, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ValuePatternExprHolder() final = default;
 	};
 }

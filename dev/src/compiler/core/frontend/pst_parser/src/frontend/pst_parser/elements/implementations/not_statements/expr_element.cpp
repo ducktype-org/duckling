@@ -55,11 +55,18 @@ namespace pst {
 	namespace {
 		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
+			    || ExprClassify::isAssignment(state, fwd)
+			    || internal::Conditions::isBlockGroup(state, fwd);
+		}
+
+		bool universalAllowBlockEnd(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
 			    || ExprClassify::isAssignment(state, fwd);
 		}
 
 		bool universalEndAllowComma(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
+			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
+			    || internal::Conditions::isBlockGroup(state, fwd);
 		}
 
 		bool assignmentEnd(const LangParserState& state, i64 fwd = 0) {
@@ -69,6 +76,10 @@ namespace pst {
 
 	MBox<ExprElement> ExprParserHelper::parseUniversal(LangParserState& state) {
 		return expr::parseUntil<expr::MatchExpr, universalEnd>(state);
+	}
+
+	MBox<ExprElement> ExprParserHelper::parseUniversalAllowBlock(LangParserState& state) {
+		return expr::parseUntil<expr::MatchExpr, universalAllowBlockEnd>(state);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {

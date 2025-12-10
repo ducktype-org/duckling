@@ -105,8 +105,11 @@ namespace pst {
 
 	class ExprHolder;
 	class UniversalExprHolder;
+	class UniversalAllowBlockExprHolder;
 	class UniversalExprHolderLowerLevel;
 	class CommaExprHolder;
 	class AssignmentExprHolder;
+	class ValuePatternExprHolder;
+	class ImplementsListExprHolder;
 	class ForTypeExprHolder;
 }

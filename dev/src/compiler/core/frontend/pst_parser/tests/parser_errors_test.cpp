@@ -320,7 +320,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x + {return 2;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{
+		"(x + {return 2;})"
+	};
+	Example<pst::ExprHolder, true, pst::AssignmentExprHolder> simple_block_expr2{
+		"x + {return 2;}"
+	};
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_round_expr{ "x + (x, y)" };
 
@@ -329,7 +334,7 @@ class PSTErrorTests: public tester::TestSuite {
 	};
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_template_expr{
-		"(x * t).y:{x, y}.z:{}(4)[3]"
+		"((x * t).y:{x, y}.z:{}(4)[3])"
 	};
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };

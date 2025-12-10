@@ -1,5 +1,7 @@
 #include "parser_state.hpp"
 
+#include <base/except/exceptions.hpp>
+
 namespace tpc {
 	TokenStream& ParserState::tokens() { return stream_stack.back(); }
 
@@ -27,7 +29,10 @@ namespace tpc {
 
 	void ParserState::goDown() { stream_stack.emplace_back(tokens().getRecursive()); }
 
-	void ParserState::goUp() { stream_stack.pop_back(); }
+	void ParserState::goUp() {
+		CORE_ASSERT(stream_stack.size(), "No recursive token stack to unroll");
+		stream_stack.pop_back();
+	}
 
 	void ParserState::goUpAndSkip() {
 		goUp();
