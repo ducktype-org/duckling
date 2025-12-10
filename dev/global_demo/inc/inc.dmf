@@ -1,0 +1,42 @@
+
+import C as C;
+
+fun main() -> i64 = {
+    builtin_output_i64(C.foo());
+    builtin_output_i64(C.sum_up_to(10));
+
+    #  let b:
+    #  if C.foo()==0 then str else i64
+    #  = 0;
+
+    return 0;
+}
+
+
+
+
+
+# reset: rm -r ducks/inc_build/*    
+# ./bin/duckc compile_package ./ducks/inc -a ./ducks/inc_build -n inc
+# ./ducks/inc_build/package_llvm.exe
+# du -hs ducks/inc_build/query/query.artc  
+
+
+#{ Incremental:
+ 1. swap function order
+ 2. add commnets, whitespaces
+ 3. change definition in other module
+ 4. change definition in other module, but is used in compile time
+ 5. add non-top level entities in other module
+ 6. modify default_n -- showcase false dependency
+ 7. add type to default_n and modify it again -- no more false dependencies now!
+}#
+
+
+
+#{ graph:
+  ./bin/duckc compile_package ./ducks/inc -a ./ducks/inc_build -n inc  --print-graph --no-incremental
+    
+
+}#
+

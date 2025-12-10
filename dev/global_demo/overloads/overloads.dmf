@@ -1,0 +1,26 @@
+fun foo() -> () = {
+    builtin_output_i64(1);
+}
+
+fun foo(a: i64, b: i64) -> () = {
+    builtin_output_i64(2);
+}
+
+fun bar(kg: i32) -> () = {
+    builtin_output_i64(3);
+}
+
+fun bar(grams: i64) -> () = {
+    builtin_output_i64(4);
+}
+
+
+fun main() -> i64 = {
+    foo();
+    foo(10, 20);
+
+    bar(kg = 2);
+    bar(grams = 2000);
+
+    return 0i64;
+}

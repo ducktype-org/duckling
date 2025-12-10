@@ -1,0 +1,11 @@
+fun foo() = {
+    builtin_output_i64(1);
+}
+
+fun foo(v: bool = false) = {
+    builtin_output_i64(3);
+}
+
+fun main() = {
+    foo();
+}
