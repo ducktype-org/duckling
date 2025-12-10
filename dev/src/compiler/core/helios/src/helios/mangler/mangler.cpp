@@ -437,7 +437,7 @@ namespace compiler::helios::mangler {
 				}
 
 				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-					variant_match(abi->value()) {
+					variant_match(abi->valueOrThrow()) {
 						variant_case_novalue(CAbi) { return name(sym_id); }
 						variant_case_novalue(DefaultAbi) { /* Handled below */ }
 						variant_default { CORE_UNREACHABLE(); }
