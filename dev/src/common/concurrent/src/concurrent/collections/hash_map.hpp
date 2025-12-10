@@ -168,7 +168,7 @@ namespace concurrent {
     private:
         // const u64 worker_count = concurrent::getWorkerCount();
         // const u64 shard_counts = 4 * worker_count;
-        const u64 shard_counts = 256;
+        const u64 shard_counts = 4096;
 
         std::vector<HashMapType> shards;
         mutable std::vector<concurrent::AtomicFlagSpinlock> shard_mutexes;

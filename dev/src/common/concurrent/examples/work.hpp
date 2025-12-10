@@ -7,7 +7,6 @@
 using HashMap = base::StableHashMap<u64, u64>;
 using CHashMap = concurrent::HashMap<u64, u64>;
 
-void work(HashMap& map);
-// void work(HashMap& map, concurrent::WDRef worker_data);
+void work(HashMap& map, concurrent::WDRef worker_data);
 
-void cWork(CHashMap& map, concurrent::WDRef worker_data);;
+void cWork(CHashMap& map, concurrent::WDRef worker_data);
