@@ -276,9 +276,9 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
-	                     .addShortName('n')
-	                     .addLongName("name")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("package-name"))
+	                     .addShortName('p')
+	                     .addLongName("package-name")
 	                     .addShortDesc("Name of the package the module belongs to.")
 	                     .required()
 	                     .build())

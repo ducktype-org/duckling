@@ -72,19 +72,37 @@
 #include <base/pointers/box.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <utility>
+#include <vm/utils/interpret.hpp>
+
+#include <type_traits>
+
+namespace vm::detail {
+	// Helper trait to safely get size of types including void (as 0)
+	template<typename T>
+	struct safe_sizeof {
+		static constexpr usize VALUE = sizeof(T);
+	};
+
+	template<>
+	struct safe_sizeof<void> {
+		static constexpr usize VALUE = 1;
+	};
+
+}
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
 #define VM_EXT_C_INTO_FIELDS(Type, VmType, Name)       Type Name;
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
 #define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
-#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                   \
-	auto tp_##Name = vm::api::getType(pid, VmType);                     \
-	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType); \
-	if (tp_##Name->type->getSize() != sizeof(Type))                     \
-		throw vm::ExtCArgumentSizeMismatch(                             \
-			#Type, sizeof(Type), #VmType, tp_##Name->type->getSize()    \
-		);                                                              \
+
+// Modified validation to use safe_sizeof instead of sizeof to support void types
+#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                                        \
+	auto tp_##Name = vm::api::getType(pid, VmType);                                          \
+	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                      \
+	if (tp_##Name->type->getSize() != vm::detail::safe_sizeof<Type>::VALUE)                  \
+		throw vm::ExtCArgumentSizeMismatch(                                                  \
+			#Type, vm::detail::safe_sizeof<Type>::VALUE, #VmType, tp_##Name->type->getSize() \
+		);                                                                                   \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
@@ -99,7 +117,7 @@
  * wrapper for a C++ function that allows it to be called from the VM when
  * passed by a function pointer.
  *
- * @param ResCType The C++ result type of the function (CAN'T be void).
+ * @param ResCType The C++ result type of the function (can be void).
  * @param ResVMType The corresponding VM type for the result, passed as a string.
  * @param FuncName The identifier that will be used in C++ to identify the new external function.
  * @param ... A variable-length list of arguments, where each argument is a parenthesized triplet:
@@ -119,16 +137,21 @@
 		static ResCType       call([[maybe_unused]] u64 _                                               \
 		                               FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)); \
 		constexpr static void wrapper(std::byte* storage, std::byte* data) {                            \
-			[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                    \
-			if constexpr (std::is_same_v<ResCType, void>)                                               \
-				FuncName::call(0ULL FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_ARGS, __VA_ARGS__));      \
-			else                                                                                        \
-				vm::safeWriteBytes(                                                                     \
-					storage,                                                                            \
-					FuncName::call(                                                                     \
-						0ULL FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_ARGS, __VA_ARGS__)               \
-					)                                                                                   \
+			/* A templated helper, that calls the function and type checks correctly */                 \
+			[&](auto f) {                                                                               \
+				if constexpr (std::is_void_v<ResCType>) {                                               \
+					f();                                                                                \
+				} else {                                                                                \
+					/* Because f() is dependent on F, this branch is not semantically checked */        \
+					/* if ResultType is void, preventing the "passing void to function" error. */       \
+					vm::safeWriteBytes(storage, f());                                                   \
+				}                                                                                       \
+			}([&] {                                                                                     \
+				[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                \
+				return FuncName::call(                                                                  \
+					0ULL FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_ARGS, __VA_ARGS__)                   \
 				);                                                                                      \
+			});                                                                                         \
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
 			usize vm_arg_type_size_sum = 0;                                                             \
@@ -197,7 +220,7 @@
 namespace vm {
 	class ExtCFuncError: public base::LogicError {
 	public:
-		ExtCFuncError(std::string reason): base::LogicError(std::move(reason)) {}
+		ExtCFuncError(const std::string& reason): base::LogicError(std::move(reason)) {}
 	};
 
 	class ExtCArgumentSizeMismatch: public ExtCFuncError {
