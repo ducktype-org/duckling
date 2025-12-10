@@ -1,8 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include "tester/tester.hpp"
-
-#include "vm/api/data/api_error.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/extern_c_function.hpp>
 

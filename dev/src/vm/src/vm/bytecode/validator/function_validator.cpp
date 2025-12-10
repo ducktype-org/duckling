@@ -536,11 +536,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_mov_l8_g8) {}
 			variant_case_novalue(Op_mov_lptr_gptr) {}
 			variant_case_novalue(Op_mov_lptr_lptr) {}
-			variant_case(Op_mov_lopq_lopq, instr) {
-				const auto& dst_type = std::get<OpaqueType>(*current_stack.at(instr.arg0.var_name));
-				const auto& src_type = std::get<OpaqueType>(*current_stack.at(instr.arg1.var_name));
-				if (dst_type.name != src_type.name) throw OpaqueTypeMismatchError(instr);
-			}
+			variant_case_novalue(Op_mov_lopq_lopq) {}
 			variant_case_novalue(Op_mov_lopq_gopq) {}
 			variant_case_novalue(Op_mov_gopq_lopq) {}
 			variant_case_novalue(Op_setNull_lptr) {}
