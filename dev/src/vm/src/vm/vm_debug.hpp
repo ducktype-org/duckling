@@ -43,6 +43,7 @@ private:
 	void resume() const;
 	void pause() const;
 	void help() const;
+	void stop() const;
 };
 
 class DuckVMDebugException: public base::Exception {
