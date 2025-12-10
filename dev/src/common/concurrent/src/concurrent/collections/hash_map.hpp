@@ -3,11 +3,14 @@
 #include <base/collections/stable_hashmap.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 #include <concurrent/locks/atomic_flag_mutex.hpp>
+#include <concurrent/locks/atomic_flag_spinlock.hpp>
+#include <concurrent/locks/rw_spinlock.hpp>
 
 
 // remove this later:
 #include <semaphore>
 #include <mutex>
+#include <shared_mutex>
 
 namespace concurrent {
 
@@ -45,18 +48,42 @@ namespace concurrent {
         /**
          * RAII lock for a given shard.
          */
-        struct WithLock final {
+        struct WithWriterLock final {
             u64 shard_index;
             const HashMap& self;
 
-            WithLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
+            WithWriterLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
                 // self.shard_mutexes[shard_index].acquire();
                 self.shard_mutexes[shard_index].lock();
+                // self.shard_mutexes[shard_index].acquireWrite();
             }
 
-            ~WithLock() noexcept {
+            ~WithWriterLock() noexcept {
                 self.shard_mutexes[shard_index].unlock();
+                // self.shard_mutexes[shard_index].releaseWrite();
+            }
+        };
+
+        /**
+         * RAII lock for a given shard.
+         */
+        struct WithReaderLock final {
+            u64 shard_index;
+            const HashMap& self;
+
+            WithReaderLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
+                self.shard_mutexes[shard_index].lock();
+                // self.shard_mutexes[shard_index].acquire();
+                // self.shard_mutexes[shard_index].lock_shared();
+                // self.shard_mutexes[shard_index].lock_shared();
+                // self.shard_mutexes[shard_index].acquireRead();
+            }
+
+            ~WithReaderLock() noexcept {
+                self.shard_mutexes[shard_index].unlock();
+                // self.shard_mutexes[shard_index].unlock_shared();
                 // self.shard_mutexes[shard_index].release();
+                // self.shard_mutexes[shard_index].releaseRead();
             }
         };
 
@@ -80,7 +107,7 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
-            WithLock lock(*this, keyToShard(key));
+            WithWriterLock lock(*this, keyToShard(key));
             return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
         }
 
@@ -94,7 +121,7 @@ namespace concurrent {
 		template<typename K = KEY_T, typename D = DATA_T>
 		void tryPut(const K& key, const D& value) RELEASE_NOEXCEPT {
             auto shard = keyToShard(key);
-            WithLock lock(*this, shard);
+            WithWriterLock lock(*this, shard);
 
             if (shards.at(shard).contains(key)) {
                 return;
@@ -107,7 +134,7 @@ namespace concurrent {
          */
         [[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-            WithLock lock(*this, keyToShard(key));
+            WithReaderLock lock(*this, keyToShard(key));
             DATA_T value = shards[lock.shard_index][key];
             return value;
         }
@@ -129,13 +156,13 @@ namespace concurrent {
 
         template<typename K = KEY_T, typename D = DATA_T>
         void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
-            WithLock lock(*this, keyToShard(key));
+            WithWriterLock lock(*this, keyToShard(key));
             shards[lock.shard_index][key] = value;
         }
 
         [[nodiscard]]
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-            WithLock lock(*this, keyToShard(key));
+            WithReaderLock lock(*this, keyToShard(key));
             return shards[lock.shard_index].contains(key);
 		}
 
@@ -145,7 +172,7 @@ namespace concurrent {
         const u64 shard_counts = 256;
 
         std::vector<HashMapType> shards;
-        mutable std::vector<concurrent::AtomicFlagMutex> shard_mutexes;
+        mutable std::vector<concurrent::AtomicFlagSpinlock> shard_mutexes;
     };
 
 }
