@@ -12,7 +12,6 @@ path = "src/lib/lib.rs"
 name = "duck"
 
 [dependencies]
-anyhow = "1.0.100"
 async-scoped = { version = "0.9.0", features = ["use-tokio"] }
 clap = { version = "4.5.48", features = ["cargo"] }
 clap_complete = { version = "4.5.58", optional = true }

@@ -1,14 +1,13 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use anyhow::Context;
 use itertools::Itertools;
 use rustvil::fs::PathExt;
 use tracing::{Level, debug, span};
 
 use crate::quackpack::core::Manifest;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::{InternalError, QpCtx, StrId};
+use crate::{QpCtx, QuackResultContext, StrId, qp_internal};
 use crate::{QuackResult, quackpack::core::Package};
 
 mod dependency;
@@ -70,7 +69,7 @@ impl Scope {
 fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let package_root = path
         .parent()
-        .ok_or_else(|| InternalError::from("the manifest path has no parent"))?;
+        .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;
     let content = path
         .read_to_string()
         .context("failed to read the manifest's content")?;
