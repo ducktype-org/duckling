@@ -1,0 +1,19 @@
+extern("C") fundecl print_float(value: f64) -> ();
+
+
+fun main() = {
+    var a: f64 = 3.14;
+    var b: f64 = 2.0;
+
+    var c: f64 = a + b;
+    print_float(c);
+
+    var d: f64 = a * b;
+    print_float(d);
+
+    var e: f64 = a / b;
+    print_float(e);
+
+    var f: f64 = a - b;
+    print_float(f);
+}

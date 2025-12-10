@@ -10,3 +10,8 @@ void print_space() {
     printf(" ");
 }
 
+
+void print_float(double value) {
+    printf("%f\n", value);
+}
+
