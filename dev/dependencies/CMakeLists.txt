@@ -8,6 +8,7 @@ include(Rang.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
+include(GTL.cmake)
 
 # These dependencies should be handled in main CMakeLists (for correct context)
 macro (insertDependencies)
