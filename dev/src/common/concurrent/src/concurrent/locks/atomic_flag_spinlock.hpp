@@ -11,6 +11,7 @@
 #include <thread>
 #include <concurrent/utils/nop_wait.hpp>
 
+
 namespace concurrent {
  
     /**
@@ -20,32 +21,34 @@ namespace concurrent {
      */
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
-	public:
+
+        
+    public:
+        // TODO PR: this is purely for statistics gathering, remove later
+        static u64 yield_count;
 
         /**
          * Acquires the lock, blocking or waiting if necessary.
          */
 		void lock() noexcept {
             // try to acquire the lock few times
-            constexpr u64 SPIN_TRIES = 64;
+
+            // PR note: higher numbers make it less fair, but faster
+            constexpr u64 SPIN_TRIES = 128;
+            u64 wait_rep = 2;
             for (u64 i = 0; i < SPIN_TRIES; i++) {
                 if (!atomic_flag.test_and_set(std::memory_order_acquire)) {
                     return;
                 }
-                concurrent::nopWait(u64(4) << i);
+                wait_rep *= 2;
+                wait_rep = std::min(wait_rep, u64(4096));
+                concurrent::nopWait(wait_rep);
             }
-
+            
+            // if not successful, yield until the lock is acquired
             while (atomic_flag.test_and_set(std::memory_order_acquire)) {
+                yield_count++;
                 std::this_thread::yield();
-                // concurrent::nopWait(wait_cycles);
-                // if (wait_cycles < 64) {
-                //     wait_cycles *= 2;
-                // }
-                // if (wait_cycles == 128) [[unlikely]] {
-                //     std::this_thread::yield();
-                //     // we waited for too long, sleep for a bit to lower contention and free CPU:
-                //     // wait_cycles = 4;
-                // }
             }
 		}
 

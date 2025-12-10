@@ -22,7 +22,6 @@ namespace concurrent {
                 nop
                 nop
                 nop
-                nop
             )");
 		}
 	}

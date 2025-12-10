@@ -1,6 +1,9 @@
 #pragma once
 
 #include <base/types/ints.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/pointers/box.hpp>
+#include <random>
 
 namespace concurrent {
 
@@ -10,18 +13,22 @@ namespace concurrent {
 	 * implementations.
 	 */
 	struct WorkerData final {
-		WorkerData(u64 id);
+		WorkerData(u64 id, std::mt19937_64 rng);
 
 	public:
 		WorkerData()                              = delete;
 		WorkerData(const WorkerData&)             = delete;
+		WorkerData(WorkerData&&)                  = default;
+
 		WorkerData& operator=(const WorkerData&)  = delete;
-		WorkerData(WorkerData&&)                  = delete;
 		WorkerData&       operator=(WorkerData&&) = delete;
-		static WorkerData make();
+		static Box<WorkerData> make();
 
 		u64 id;
-		// std::minstd_rand rng;
+		std::mt19937_64 rng;
+
 	};
+
+	using WDRef = Ref<WorkerData>;
 
 }

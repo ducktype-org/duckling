@@ -120,13 +120,12 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void tryPut(const K& key, const D& value) RELEASE_NOEXCEPT {
-            auto shard = keyToShard(key);
-            WithWriterLock lock(*this, shard);
+            WithWriterLock lock(*this, keyToShard(key));
 
-            if (shards.at(shard).contains(key)) {
+            if (shards.at(lock.shard_index).contains(key)) {
                 return;
             }
-            shards.at(shard).put(key, value);
+            shards.at(lock.shard_index).put(key, value);
         }
 
         /**
@@ -167,7 +166,7 @@ namespace concurrent {
 		}
 
     private:
-        const u64 worker_count = concurrent::getWorkerCount();
+        // const u64 worker_count = concurrent::getWorkerCount();
         // const u64 shard_counts = 4 * worker_count;
         const u64 shard_counts = 256;
 
