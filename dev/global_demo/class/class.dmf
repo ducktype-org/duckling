@@ -1,0 +1,48 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+fun addPoints(p1: Point, p2: Point) -> Point = Point(
+    x = p1.x + p2.x,
+    y = p1.y + p2.y
+);
+
+class PointInPoint {
+    x: Point = Point();
+    y: Point = Point();
+}
+
+
+fun main() = {
+    var p1 = Point(x = 10, y = 20);
+    var p2 = Point(x = 30, y = 20);
+
+    var p3 = addPoints(p1, p2);
+    p3.y  = p3.y + 10;
+
+    printPoint(p3);
+
+    var zero_point = Point();
+    printPoint(zero_point);
+
+    var point_in_point = PointInPoint(x = p1);
+    printPoint(point_in_point.x);
+    printPoint(point_in_point.y);
+}
+
+
+
+
+
+
+
+
+
+fun printPoint(p: Point) = {
+    print_i64_no_space(p.x);
+    print_space();
+    builtin_output_i64(p.y);
+}
+extern("C") fundecl print_i64_no_space(n: i64) -> ();
+extern("C") fundecl print_space() -> ();
