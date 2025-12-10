@@ -448,8 +448,6 @@ namespace vm {
 			if (arg_count == 0 && is_void) {
 				// Special case: void function with no arguments.
 				ext_func->function_pointer(nullptr, nullptr);
-				FUNCTION_CONT(1);
-				return;
 			} else {
 				// Calculate the index of the result value on the block stack.
 				// If the function is void, there is no result value, so we don't
