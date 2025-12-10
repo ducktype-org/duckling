@@ -8,6 +8,7 @@
 
 #include "hout/hout_fd.hpp"
 #include "scope_symbol_id.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 
@@ -31,6 +32,11 @@ namespace compiler::helios {
 	 * @brief Debug/testing query for extracting top-level functions and constants from module
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<HOUTUnit>, ({}))
+
+	/**
+	 * @brief Query function return type, deduced based on return statements in its body.
+	 */
+	DECLARE_QUERY(QueryFuncReturnTypeDeduction, SymID, CRef<tsh::SymbolType<>>, ({}))
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.

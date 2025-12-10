@@ -138,7 +138,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
-	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
+	struct IMPLEMENT_QUERY(QueryFuncReturnTypeDeduction, tsh::SymbolType<>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -154,8 +154,13 @@ namespace compiler::helios {
 				this->out.emplace(std::forward<T>(value));
 			}
 
-			void visitFun(pst::Access<pst::Fun> stmt) final {
-				auto fun_body = stmt->getBody();
+			template<class Stmts>
+			void visitRecursion(const Stmts& stmts) {
+				for (const auto& stmt: *stmts.unlock(ctx)) stmt.unlock(ctx)->acceptVisitor(*this);
+			}
+
+			void visitFun(pst::Access<pst::Fun> fun) final {
+				auto fun_body = fun->getBody();
 
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					auto as_expr
@@ -172,7 +177,7 @@ namespace compiler::helios {
 					} else {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getSourcePosition(),
+							fun->getSourcePosition(),
 							"Function body in single-statement function must be an expression "
 							"statement"
 						));
@@ -181,6 +186,14 @@ namespace compiler::helios {
 							"function body)"
 						);
 					}
+				} else {
+					CORE_ASSERT(
+						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						"This should not happen"
+					);
+
+					for (const auto& stmt: *fun_body.unlock(ctx))
+						stmt.unlock(ctx)->acceptVisitor(*this);
 				}
 			}
 
@@ -191,8 +204,46 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				}
 			}
+
+			void visitIf(pst::Access<pst::If> stmt) final {
+				visitRecursion(stmt->getThenBody());
+
+				if (stmt->getElseBody().has_value()) visitRecursion(stmt->getElseBody().value());
+			}
+
+			void visitWhile(pst::Access<pst::While> stmt) final { visitRecursion(stmt->getBody()); }
 		};
 
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			ReturnTypeCollector return_collector(ctx, key);
+			stmt(ctx, key).value()->acceptVisitor(return_collector);
+			switch (return_collector.out.size()) {
+			case 0:
+				// there are no returns to deduce the type
+				// we default to unit type
+				return tsh::SymbolType<>{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			case 1:
+				// deduced type is conclusive
+				return *return_collector.out.begin();
+			default:
+				// there are multiple candidates and return type deduction is inconclusive
+				CORE_PANIC(
+					"Function declared with no explicit return type and inconsistent "
+					"returns!"
+				);
+			}
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFuncReturnTypeDeduction);
+
+	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -224,28 +275,9 @@ namespace compiler::helios {
 					}
 					ret_type = ret_type_ctv.value().get<tsh::SymbolType<>>().value();
 				}
-				// Try to deduce return type if not provided.
+				// Deduce return type if not provided.
 				else {
-					ReturnTypeCollector return_collector(ctx, original_symbol);
-					stmt(ctx, original_symbol).value()->acceptVisitor(return_collector);
-					std::cout << "Fonud " << return_collector.out.size()
-							  << " candidates for return type.\n";
-					switch (return_collector.out.size()) {
-					case 0:
-						// there are no returns to deduce the type
-						// we stick to the default unit type
-						break;
-					case 1:
-						// deduced type is conclusive
-						ret_type = *return_collector.out.begin();
-						break;
-					default:
-						// there are multiple candidates and deduction is inconclusive
-						CORE_PANIC(
-							"Function declared with no explicit return type and inconsistent "
-							"returns!"
-						);
-					}
+					ret_type = *ctx.query<QueryFuncReturnTypeDeduction>(original_symbol).toMRef();
 				}
 
 				// Parameters:
