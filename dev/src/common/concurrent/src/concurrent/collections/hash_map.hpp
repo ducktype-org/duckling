@@ -115,6 +115,14 @@ namespace concurrent {
             shards.at(lock.shard_index).put(key, value);
         }
 
+        template<typename K = KEY_T, typename D = DATA_T, typename Func>
+		void tryPutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
+            WithWriterLock lock(*this, keyToShard(key));
+
+            shards[lock.shard_index].maybePut(key, value);
+            f(shards[lock.shard_index][key]);
+        }
+
         /**
          * Atomically retrieves a copy of the value associated with the given key.
          */

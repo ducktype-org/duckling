@@ -3,7 +3,7 @@
 #include <iostream>
 #include <concurrent/workers/worker_data.hpp>
 
-constexpr int THREAD_COUNT = 16;
+constexpr int THREAD_COUNT = 8;
 
 // u64 concurrent::AtomicFlagSpinlock::yield_count = 0;
 

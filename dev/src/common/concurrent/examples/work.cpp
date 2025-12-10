@@ -17,11 +17,18 @@ void work(HashMap& map, concurrent::WDRef worker_data) {
 
 
 void cWork(CHashMap& map, concurrent::WDRef worker_data) {
-    u64 key = 123123 + (worker_data->rng() % 123);
+    u64 key = 123123 + (worker_data->rng() % 12);
 
-    map.tryPut(key, 0);
-    auto new_val = map.getCopy(key) + 1;
-    map.update(key, new_val);
+
+
+    // map.tryPut(key, 0);
+    // auto new_val = map.getCopy(key) + 1;
+    // map.update(key, new_val);
+
+    // single atomic operation:
+    map.tryPutAndUpdate(key, 0, [](u64& val) {
+        val = val + 1;
+    });
 }
 
 
