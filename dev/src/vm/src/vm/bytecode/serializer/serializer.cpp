@@ -43,27 +43,34 @@ namespace vm::code {
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
+	std::string argumentToString(const opargs::OpCodeArg& arg) {
+		return VISIT(arg, a, return toString(a));
+	}
+
+	std::string argumentToString(opargs::OpCodeArgCRef arg) {
+		return VISIT(arg, a, return toString(*a));
+	}
+
 	void displayComment(const std::string_view comment_content, std::ostream& out) {
 		out << '#' << ' ' << comment_content;
 	}
 
 	void displayInstruction(Instruction instruction, std::ostream& out) {
-        instr_match(instruction) {
-            instr_case(instructions::Comment, comment) {
-                displayComment(comment.comment.strView(), out);
-            }
-            instr_default {
-                out << std::setw(22) << std::left << instruction.name().strView();
-                auto args = instruction.args();
-                if (args.size() > 0) {
+		instr_match(instruction) {
+			instr_case(instructions::Comment, comment) {
+				displayComment(comment.comment.strView(), out);
+			}
+			instr_default {
+				out << std::setw(22) << std::left << instruction.name().strView();
+				auto args = instruction.args();
+				if (args.size() > 0) {
 					out << " ";
-                    out << std::setw(8) << std::right << VISIT(args[0], a, return toString(*a));
-                    for (auto arg : args | std::views::drop(1)) {
-			            out << ", " << std::setw(8) << std::right << VISIT(arg, a, return toString(*a));
-                    }
-                }
-            }
-        }
+					out << std::setw(8) << std::right << argumentToString(args[0]);
+					for (auto arg: args | std::views::drop(1))
+						out << ", " << std::setw(8) << std::right << argumentToString(arg);
+				}
+			}
+		}
 	}
 
 	class FunctionSerializer final {
@@ -265,10 +272,6 @@ namespace vm::code {
 		out << '\n';
 		for (const auto& func: code.functions) serialize(func, out);
 		out << '\n';
-	}
-
-	std::string argumentToString(const opargs::OpCodeArg& arg) {
-		return VISIT(arg, a, return toString(a));
 	}
 
 	std::string instructionToString(const Instruction& instruction) {

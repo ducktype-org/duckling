@@ -308,9 +308,10 @@ namespace vm::loader::parser {
 
 #undef HANDLE_STR_ARG
 
+		// Dummy parameter to help with leading commas from macros.
 		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
 		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// Seperate case for no args passed (first arg defaulted)
+			// Seperate case for no (nondummy) args passed (first arg defaulted)
 			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {
 				return {};
@@ -322,13 +323,13 @@ namespace vm::loader::parser {
 		}
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#define ARG(type, name) , type
+#define ARG_TYPE(type, name) , type
 #define HANDLE_INSTR_ARGS(NAME, ...) \
-	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG EXPAND, __VA_ARGS__)>),
+	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG_TYPE EXPAND, __VA_ARGS__)>),
 
 #include <vm/bytecode/instruction_definitions.hpp>
 #undef HANDLE_INSTR_ARGS
-#undef ARG
+#undef ARG_TYPE
 		};
 
 	}

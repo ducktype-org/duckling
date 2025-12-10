@@ -206,29 +206,25 @@ namespace base {
 		return name;
 	}
 
-
 	template<typename T>
 	struct Ref;
 
+	namespace internal {
+		template<typename T>
+		struct CRefifyImpl;
+
+		template<template<typename...> typename T, typename... Args>
+		struct CRefifyImpl<T<Args...>> {
+			using type = T<Ref<const Args>...>;
+		};
+	}
+
+	/**
+	 * @brief Wrap template parameter in `CRef`s.
+	 * For `T = Foo<Bar1, Bar2, Bar3>`,
+	 * `Crefify<T> = Foo<CRef<Bar1>, CRef<Bar2>, CRef<Bar3>>`
+	 * This is useful for creating variants of references from a variant of values.
+	 */
 	template<typename T>
-	struct CRefifyAux;
-
-	template<template<typename...> typename T, typename... Args>
-	struct CRefifyAux<T<Args...>> {
-		using type = T<Ref<const Args>...>;
-	};
-
-	template<typename T>
-	using CRefify = CRefifyAux<T>::type;
-
-	template<template<typename...> typename T, typename Tuple>
-	struct ParameteriseByTupleAux;
-
-	template<template<typename...> typename T, typename... TupleArgs>
-	struct ParameteriseByTupleAux<T, std::tuple<TupleArgs...>> {
-		using type = T<TupleArgs...>;
-	};
-
-	template<template<typename...> typename T, typename Tuple>
-	using ParameteriseByTuple = ParameteriseByTupleAux<T, Tuple>::type;
+	using CRefify = internal::CRefifyImpl<T>::type;
 }

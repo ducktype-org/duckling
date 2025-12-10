@@ -1,7 +1,24 @@
 /**
  * @brief This file contains structures representing VM instructions.
  * Each instruction has a corresponding structure with name `Op_{instruction_name}`.
- * A variant structure that can store any instruction is called `Instruction`.
+ * `Instruction` is a handmade variant of sorts grouping all concrete `Op_{foo}` instructions.
+ * Not using `std::variant` is a very deliberate choice, as when working with 200+ alternatives
+ * compilation times and artifact sizes get very unpleasant.
+ * (For connoisseurs: getting to the n-th alternative of a variant
+ * is fast at runtime, but at compile time requires instantiating O(n) templates.
+ * Furhtermore, each alternative does not share the template instances with the other alternatives
+ * resulting in a quadratic number of templates getting instantiated when e.g. visiting a variant.)
+ *
+ * This code uses a lot of X-macros, making it somewhat unwieldy, but strives to provide a usable
+ * interface so that the users of `Instruction` can hopefully be macro-free. In particular it offers:
+ * - `Instruction::kind() -> InstructionKind`
+ * - `Instruction::name() -> StrID`
+ * - `Instruction::get<ConcreteInstructionType>() -> ConcreteInstructionType`
+ * - `Instruction::getMaybe<ConcreteInstructionType>() -> Optional<ConcreteInstructionType>`
+ * - `Instruction::visit(CallableAcceptingEachConcreteInstruction) -> ResultOfSaidCallable`
+ * - `instr_match` macro anologous to `variant_match`
+ * - `args() -> std::vector<opargs::OpCodeArgCRef>` helpful for generic operations on args
+ *   (like serialisation) with runtime dispatch for faster compilation and less template mess
  */
 
 #pragma once
@@ -13,6 +30,7 @@
 
 #include <vm/bytecode/opcode_args.hpp>
 
+// Useful for turning a name to a properly qualified type name in X-macros.
 #define VM_INSTR_FROM_NAME(name)      vm::code::instructions::Op_##name
 #define VM_INSTR_KIND_FROM_NAME(name) vm::code::InstructionKind::Op_##name
 
@@ -26,9 +44,10 @@ namespace vm::code {
 	};
 
 	namespace detail {
-		// @TODOB comment, this whole file actually
+		// This struct is to that we can easily define the `IsInstruction` context.
 		struct InstructionBase: ElementBase {};
 
+		// Helper useful for getting rid of the leading comma resulting from `FOR_EACH`.
 		template<typename THead, typename... TTail>
 		using TailTuple = std::tuple<TTail...>;
 	}
@@ -42,6 +61,7 @@ namespace vm::code {
 	namespace instructions {
 
 
+// Macros used as arguments for `FOR_EACH` throughout the definition of the instructions.
 #define ARG_DECLARE(type, name) type name;
 #define ARG_COMPARE(type, name) name == other.name&&
 #define ARG_TYPE(type, name)    type
@@ -52,12 +72,15 @@ namespace vm::code {
 #define ARG_ALIAS(instr_name, arg_type_name) &alts.op_##instr_name.ARG_NAME arg_type_name,
 #define ARG_TYPE_LIST(type, name)            , type
 
+		// Concrete instruction type
 #define HANDLE_INSTR_ARGS(name, ...)                                                                \
 	struct Op_##name final: detail::InstructionBase {                                               \
+		/* Aliases useful in templates */                                                           \
 		constexpr static std::string_view NAME = #name;                                             \
 		constexpr static InstructionKind  KIND = VM_INSTR_KIND_FROM_NAME(name);                     \
 		using ArgTypes = detail::TailTuple<void FOR_EACH(ARG_TYPE_LIST EXPAND, __VA_ARGS__)>;       \
                                                                                                     \
+		/* Each argument is held directly as a member and is named as in the definition file */     \
 		FOR_EACH(ARG_DECLARE EXPAND, __VA_ARGS__)                                                   \
                                                                                                     \
 		Op_##name(                                                                                  \
@@ -67,7 +90,6 @@ namespace vm::code {
 		):                                                                                          \
 			  detail::InstructionBase{ bytecode_pos } FOR_EACH(ARG_INIT_LIST EXPAND, __VA_ARGS__) { \
 		}                                                                                           \
-                                                                                                    \
                                                                                                     \
 		/* Ignores the position */                                                                  \
 		constexpr bool operator==([[maybe_unused]] const Op_##name& other) const noexcept {         \
@@ -82,8 +104,9 @@ namespace vm::code {
 
 		/**
 		 * @brief An extra instruction that represents a comment.
-		 * @note It also helps with macro, because without it the template
-		 * below would finish with a `,`, which does not compile.
+		 * @note It also helps with macros, as it often goes after an othewise trailing comma.
+		 * It's treated seperately and while useful for debugging
+		 * the compiler backend, the parser does not generate them.
 		 */
 		struct Comment final: detail::InstructionBase {
 			Comment()                              = default;
@@ -101,42 +124,46 @@ namespace vm::code {
 		};
 	}
 
+	namespace internal {
+		// Plain unions don't do anything clever when copying/moving,
+		// therefore unless we want to write a lot of boilerplate, we have to make sure that all
+		// concrete instructions can me copied using a simple memcopy.
+		// This is a good property for an instruction to have anyways, as the VM will have to handle
+		// a lot of instructions and we don't want custom operations to slow it down.
+		template<typename T>
+		concept VeryTrivial
+			= std::is_trivially_copy_constructible_v<T> && std::is_trivially_move_constructible_v<T>
+		   && std::is_trivially_copy_assignable_v<T> && std::is_trivially_move_assignable_v<T>;
+	}
+
+	/// Handmade variant of all concrete instructions with helper accessors.
+	// Be careful when editing: notice that many things have to be seperately defined
+	// for `Comment` as it's not an instruction defined in the definition file.
 	class Instruction final {
+		// Sanity check for better errors.
+#define HANDLE_INSTR(name) static_assert(internal::VeryTrivial<VM_INSTR_FROM_NAME(name)>);
+#include "instruction_definitions.hpp"
+#undef HANDLE_INSTR
+		static_assert(internal::VeryTrivial<instructions::Comment>);
+
 	public:
 		Instruction()                              = delete;
 		Instruction(const Instruction&)            = default;
 		Instruction(Instruction&&)                 = default;
 		Instruction& operator=(const Instruction&) = default;
-		Instruction& operator=(Instruction&&)      = delete;
+		Instruction& operator=(Instruction&&)      = default;
 
-#define HANDLE_INSTR_ARGS(name, ...)                                        \
-	template<typename T>                                                    \
-	requires std::same_as<std::remove_cvref_t<T>, VM_INSTR_FROM_NAME(name)> \
-	Instruction(T&& concrete):                                              \
-		  instr_kind{ VM_INSTR_KIND_FROM_NAME(name) },                      \
-		  alts{ .op_##name = std::forward<T>(concrete) } {}
+		// copy constructors from concrete instructions
+#define HANDLE_INSTR_ARGS(name, ...)                        \
+	Instruction(const VM_INSTR_FROM_NAME(name) & concrete): \
+		  instr_kind{ VM_INSTR_KIND_FROM_NAME(name) },      \
+		  alts{ .op_##name = concrete } {}
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR_ARGS
 
-		template<typename T>
-		requires std::same_as<std::remove_cvref_t<T>, instructions::Comment>
-		Instruction(T&& concrete):
+		Instruction(const instructions::Comment& concrete):
 			  instr_kind{ InstructionKind::Comment },
-			  alts{ .comment = std::forward<T>(concrete) } {}
-
-		~Instruction() {
-			switch (instr_kind) {
-#define HANDLE_INSTR(name)              \
-	case VM_INSTR_KIND_FROM_NAME(name): \
-		alts.op_##name.~Op_##name();    \
-		break;
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR
-			case InstructionKind::Comment:
-				alts.comment.~Comment();
-				break;
-			}
-		}
+			  alts{ .comment = concrete } {}
 
 		[[nodiscard]] InstructionKind kind() const { return instr_kind; }
 
@@ -150,11 +177,19 @@ namespace vm::code {
 			return map.at(std::to_underlying(instr_kind));
 		}
 
+		// Specialisations are outside the class, as required by gcc
 		template<IsInstruction T>
 		[[nodiscard]] T& get();
-
 		template<IsInstruction T>
 		[[nodiscard]] const T& get() const;
+
+		template<IsInstruction T>
+		[[nodiscard]] base::Optional<Ref<T>> getMaybe() {
+			if (instr_kind == T::KIND)
+				return &get<T>();
+			else
+				return std::nullopt;
+		}
 
 		template<IsInstruction T>
 		[[nodiscard]] base::Optional<CRef<T>> getMaybe() const {
@@ -180,6 +215,7 @@ namespace vm::code {
 			CORE_UNREACHABLE();
 		}
 
+		/// View of instruction arguments for generic operations.
 		[[nodiscard]] std::vector<opargs::OpCodeArgCRef> args() const {
 			switch (instr_kind) {
 #define HANDLE_INSTR_ARGS(name, ...)                           \
@@ -204,12 +240,6 @@ namespace vm::code {
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
 			instructions::Comment comment;
-
-			// `Instruction` takes care of destroying the active alternative based on `kind`.
-			// Unions by default don't get a destructor when having a nontrivially destructable
-			// alternative, this silly definition is needed since `~Instruction` implicitely calls
-			// `alts.~Alts()`, so it has to be present.
-			~Alts() {}
 		} alts;
 	};
 
@@ -239,7 +269,7 @@ namespace vm::code {
 		return alts.comment;
 	}
 
-	inline constexpr bool operator==(const Instruction& a, const Instruction& b) {
+	constexpr bool operator==(const Instruction& a, const Instruction& b) {
 		if (a.kind() != b.kind()) return false;
 
 		switch (a.kind()) {
@@ -255,8 +285,18 @@ namespace vm::code {
 		}
 		CORE_UNREACHABLE();
 	}
+
+#undef ARG_DECLARE
+#undef ARG_COMPARE
+#undef ARG_TYPE
+#undef ARG_NAME
+#undef ARG_PARAM
+#undef ARG_INIT_LIST
+#undef ARG_ALIAS
+#undef ARG_TYPE_LIST
 }
 
+// The following macros are almost copied from <base/extend_cpp/variant_match.hpp>.
 #define instr_match(value)                                                              \
 	PUSH_DIAGNOSTIC                                                                     \
 	NO_SHADOW if (bool instr_match_stop                                                 \

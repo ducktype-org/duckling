@@ -281,11 +281,9 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		auto args = instruction.args();
+		std::vector<PrimitiveType> primitive_args;
 
-		std::vector<PrimitiveType> arg_types;
-
-		for (auto arg: args) {
+		for (auto arg: instruction.args()) {
 			variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
 	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
@@ -295,7 +293,7 @@ class FunctionValidator {
 			variant_case(PrimitiveType, primitive_type) {                                  \
 				if (primitive_type.size != (BIT_COUNT / 8))                                \
 					throw InvalidArgumentSizeError(*local);                                \
-				arg_types.push_back(primitive_type);                                       \
+				primitive_args.push_back(primitive_type);                                  \
 			}                                                                              \
 			variant_default { throw InvalidArgumentTypeError(*local); }                    \
 		}                                                                                  \
@@ -309,7 +307,7 @@ class FunctionValidator {
 			variant_case(PrimitiveType, primitive_type) {                                       \
 				if (primitive_type.size != (BIT_COUNT / 8))                                     \
 					throw InvalidArgumentSizeError(*global);                                    \
-				arg_types.push_back(primitive_type);                                            \
+				primitive_args.push_back(primitive_type);                                       \
 			}                                                                                   \
 			variant_default { throw InvalidArgumentTypeError(*global); }                        \
 		}                                                                                       \
@@ -427,19 +425,18 @@ class FunctionValidator {
 
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
-					auto stringified = VISIT(arg, a, return argumentToString(*a));
-					CORE_PANIC("Unhandled argument case during validation: ", stringified);
+					CORE_PANIC("Unhandled argument case during validation: ", argumentToString(arg));
 				}
 			}
 		}
 
 		// We assert no cross-type operations on primitive types.
-		if (arg_types.size() >= 2) {
-			bool sizes_match = std::ranges::all_of(arg_types, [&](auto x) {
-				return x.size == arg_types.front().size;
+		if (primitive_args.size() >= 2) {
+			bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
+				return x.size == primitive_args.front().size;
 			});
-			bool names_match = std::ranges::all_of(arg_types, [&](auto x) {
-				return x.name == arg_types.front().name;
+			bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
+				return x.name == primitive_args.front().name;
 			});
 			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
 		}

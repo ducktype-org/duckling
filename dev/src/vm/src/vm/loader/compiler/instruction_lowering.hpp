@@ -16,21 +16,9 @@ namespace vm::loader::compiler::detail {
 	/**
 	 * Helper class for lowering high bytecode instructions.
 	 * This class simply holds all the relevant context and defines some helper methods, which make
-	 * defining instruction lowering recipes free from extra context arguments noise, typesafe and
-	 * macro-free. When adding a new instruction simply provide a new `lower` specialisation like so:
-	 * ```
-	 * template<>
-	 * void MicroBytecodeBuilder::lower<high::Op_do_something_complex>(
-	 *     opargs::Foo foo, opargs::Bar bar
-	 * ) {
-	 *     addLow<Op_first_step>(foo, bar);
-	 *     addLow<Op_second_step>(foo);
-	 *     addLow<Op_finish_up_the_thing>();
-	 * }
-	 * ```
-	 * You will get a compile time error (sadly a big one) if you forget to implement lowering for
-	 * an instruction. Micro instruction arguments are type-checked.
-	 *
+	 * defining instruction lowering recipes clean and succint.
+	 * When adding a new instruction simply add a new switch branch in `MicroBytecodeBuilder::add`.
+     *
 	 * Beside generating a vector of `MicroInstruction`s, this class also provides a map
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
