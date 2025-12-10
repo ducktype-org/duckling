@@ -6,7 +6,7 @@
 #include <atomic>
 
 namespace concurrent {
-
+	
     enum class CmpRes {
 		Changed,
 		NotChanged,
