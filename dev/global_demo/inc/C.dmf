@@ -1,24 +1,20 @@
 
-fun boo() -> i64 = 0;
+fun boo() -> i64 = 0i64;
 
-fun foo() -> i64 = 10;
+fun foo() -> i64 = 10i64;
 
-## aa
-
-fun sum_up_to(n: i64) -> i64 = {
-    var result = 0;
+fun sum_up_to(n: i64 = N.default_n) -> i64 = {
+    var result = 0i64;
     while (n > 0) {
-        n = n-1;
+        n = n - 1i64;
         result = result + n;
     }
     return result;
 }
 
 namespace N {
-    var default_n: i64 = 1 + 1 + 1;
-
+    var default_n: i64 = 1;
     var g = 0;
-    var g1 = 0;
 }
 
 
