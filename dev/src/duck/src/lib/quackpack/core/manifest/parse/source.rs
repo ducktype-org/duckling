@@ -1,13 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, bail};
 use tracing::debug;
 
 use rustvil::fs::PathExt;
 
 use super::Scope;
 use crate::{
-    InternalError, QpCtx, QuackResult,
+    QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::{
         core::{Git, GitRevision, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
@@ -31,19 +30,24 @@ pub(crate) fn parse(
             return Ok(Source::Registry(Registry::new(ctx.registry_url()?)));
         }
         scope.pop();
-        bail!(
-            "couldn't determine the source of the dependency `{}`\n\
-            hint: provide one of the `version` or the `source` fields",
-            scope.format()
-        )
+        return Err(
+            QuackError::hint("provide one of the `version` or the `source` fields").context(
+                format!(
+                    "couldn't determine the source of the dependency `{}`",
+                    scope.format()
+                ),
+            ),
+        );
     };
     if schema.version.is_some() && source.has_local() {
         scope.pop();
         let formatted = scope.format();
-        bail!(
-            "couldn't determine the type of the dependency `{formatted}`\n\
-            hint: remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
-        )
+        return Err(QuackError::hint(format!(
+            "remove one of the fields `{formatted}.version` or `{formatted}.source.path`"
+        ))
+        .context(format!(
+            "couldn't determine the type of the dependency `{formatted}`"
+        )));
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
@@ -66,11 +70,13 @@ pub(crate) fn parse(
                 Registry::new(ctx.registry_url()?).into()
             } else {
                 scope.pop();
-                bail!(
-                    "couldn't determine the source of the dependency `{}`\n\
-                    hint: provide one of the fields `version` or the `source`",
-                    scope.format()
+                return Err(QuackError::hint(
+                    "provide one of the fields `version` or the `source`",
                 )
+                .context(format!(
+                    "couldn't determine the source of the dependency `{}`",
+                    scope.format()
+                )));
             }
         }
         (Some(registry_url), None, None) => {
@@ -101,28 +107,28 @@ pub(crate) fn parse(
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
-            bail!(make_could_not_determine_error(scope, ["path", "git_url"]))
+            return Err(make_could_not_determine_error(scope, ["path", "git_url"]));
         }
         (Some(_), None, Some(_)) => {
             scope.pop();
-            bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "git_url"]
-            ))
+                ["registry_url", "git_url"],
+            ));
         }
         (Some(_), Some(_), None) => {
             scope.pop();
-            bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "path"]
-            ))
+                ["registry_url", "path"],
+            ));
         }
         (Some(_), Some(_), Some(_)) => {
             scope.pop();
-            bail!(make_could_not_determine_error(
+            return Err(make_could_not_determine_error(
                 scope,
-                ["registry_url", "path", "git_url"]
-            ))
+                ["registry_url", "path", "git_url"],
+            ));
         }
     };
     Ok(source)
@@ -133,28 +139,24 @@ pub(crate) fn parse(
 fn make_could_not_determine_error<const N: usize>(
     scope: &Scope,
     fields: [&'static str; N],
-) -> String {
+) -> QuackError {
     assert!(N == 2 || N == 3, "implementation relies on it");
     let source = fields
         .iter()
         .map(|field| format!("`source.{}`", field))
         .collect::<Vec<_>>();
     let hint_text = if N == 2 {
-        format!(
-            "hint: remove one of the fields {} or {}",
-            source[0], source[1]
-        )
+        format!("remove one of the fields {} or {}", source[0], source[1])
     } else {
         format!(
-            "hint: leave only one of the fields: {}, {}, or {}",
+            "leave only one of the fields: {}, {}, or {}",
             source[0], source[1], source[2]
         )
     };
-    format!(
-        "couldn't determine the source of the dependency `{}`\n{}",
-        scope.format(),
-        hint_text
-    )
+    QuackError::hint(hint_text).context(format!(
+        "couldn't determine the source of the dependency `{}`",
+        scope.format()
+    ))
 }
 
 /// Check, that `source` doesn't contain any fields belonging to the [`Git`] source.
@@ -169,10 +171,10 @@ fn check_no_git(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()> {
         if field.is_some() {
             let old = scope.pop();
             let old = old.ok_or_else(|| {
-                InternalError::from("when parsing the manifest scope should always be non-empty")
+                qp_internal!("when parsing the manifest scope should always be non-empty")
             })?;
             let formatted = scope.format();
-            bail!(
+            qp_bail!(
                 "expected the dependency `{formatted}` to not be a git dependency, but the field `{formatted}.{old}.{name}` is set"
             )
         }
@@ -187,10 +189,10 @@ fn check_no_local(source: &DetailedSource, scope: &mut Scope) -> QuackResult<()>
         if field.is_some() {
             let old = scope.pop();
             let old = old.ok_or_else(|| {
-                InternalError::from("when parsing the manifest scope should always be non-empty")
+                qp_internal!("when parsing the manifest scope should always be non-empty")
             })?;
             let formatted = scope.format();
-            bail!(
+            qp_bail!(
                 "expected the dependency `{formatted}` to not be a local dependency, but the field `{formatted}.{old}.{name}` is set"
             )
         }
@@ -205,10 +207,10 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
         if field.is_some() {
             let old = scope.pop();
             let old = old.ok_or_else(|| {
-                InternalError::from("when parsing the manifest scope should always be non-empty")
+                qp_internal!("when parsing the manifest scope should always be non-empty")
             })?;
             let formatted = scope.format();
-            bail!(
+            qp_bail!(
                 "expected the dependency `{formatted}` to not be a registry dependency, but the field `{formatted}.{old}.{name}` is set"
             )
         }
@@ -224,7 +226,7 @@ fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRev
         (Some(branch), None) => Ok(GitRevision::Branch(branch.into())),
         (Some(_), Some(_)) => {
             let formatted = scope.format();
-            bail!(
+            qp_bail!(
                 "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.commit`"
             );
         }
@@ -241,9 +243,9 @@ fn resolve_local_dep_root(
 ) -> QuackResult<(PathBuf, bool)> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
-        bail!(
+        qp_bail!(
             "the user home directory `{}` is not a utf-8 path, which is unsupported",
-            home.display()
+            home.display(),
         )
     };
     let expanded = Path::new(manifest_root)
