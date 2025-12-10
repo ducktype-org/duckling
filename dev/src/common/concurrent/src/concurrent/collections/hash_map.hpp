@@ -30,9 +30,14 @@ namespace concurrent {
         constexpr u64 keyToShard(const KEY_T& key) const
             noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
             u64 hash = HASH_T{}(key);
+            
             CORE_ASSERT(shard_counts == shard_mutexes.size() and shard_counts == shards.size(), "Shard count mismatch");
             CORE_ASSERT(shard_counts > 0, "Shard count must be greater than zero");
-            return hash % shard_counts;
+            
+            u64 result = hash % shard_counts;
+            CORE_ASSERT(result < shard_counts, "Shard index out of bounds");
+
+            return result;
         }
 
         using KeyValuePair = typename HashMapType::KeyValuePair;
@@ -88,13 +93,13 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void tryPut(const K& key, const D& value) RELEASE_NOEXCEPT {
-            // auto shard = keyToShard(key);
-            // WithLock lock(*this, 1);
+            auto shard = keyToShard(key);
+            WithLock lock(*this, shard);
 
-            if (shards.at(1).contains(key)) {
+            if (shards.at(shard).contains(key)) {
                 return;
             }
-            shards.at(1).put(key, value);
+            shards.at(shard).put(key, value);
         }
 
         /**
@@ -135,11 +140,12 @@ namespace concurrent {
 		}
 
     private:
-        // const u64 worker_count = concurrent::getWorkerCount();
-        const u64 shard_counts = 4;
+        const u64 worker_count = concurrent::getWorkerCount();
+        // const u64 shard_counts = 4 * worker_count;
+        const u64 shard_counts = 256;
 
         std::vector<HashMapType> shards;
-        mutable std::vector<std::mutex> shard_mutexes;
+        mutable std::vector<concurrent::AtomicFlagMutex> shard_mutexes;
     };
 
 }
