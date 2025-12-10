@@ -75,14 +75,13 @@ namespace compiler::helios::comptime_ops {
 	}
 
 	DEF_VM_EXT_C_FUNC(
-		i64,  // TODOP: Fix the macro so it works with voids
-		"i64",
+		void,
+		"void",
 		__comptime_tuple_builder_push,
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		builder_ptr->subtypes.push_back(*type_ptr);
-		return 0;
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -104,14 +103,13 @@ namespace compiler::helios::comptime_ops {
 	}
 
 	DEF_VM_EXT_C_FUNC(
-		i64,  // TODOP: Fix the macro so it works with voids
-		"i64",
+		void,
+		"void",
 		__comptime_variant_builder_push,
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		builder_ptr->subtypes.push_back(*type_ptr);
-		return 0;
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -133,26 +131,24 @@ namespace compiler::helios::comptime_ops {
 	}
 
 	DEF_VM_EXT_C_FUNC(
-		i64,  // TODOP: Fix the macro so it works with voids
-		"i64",
+		void,
+		"void",
 		__comptime_func_type_builder_set_ret_type,
 		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		CORE_ASSERT(!builder_ptr->return_type, "Return type set twice");
 		builder_ptr->return_type = *type_ptr;
-		return 0;
 	}
 
 	DEF_VM_EXT_C_FUNC(
-		i64,  // TODOP: Fix the macro so it works with voids
-		"i64",
+		void,
+		"void",
 		__comptime_func_type_builder_push_arg,
 		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		builder_ptr->arg_types.push_back(*type_ptr);
-		return 0;
 	}
 
 	DEF_VM_EXT_C_FUNC(

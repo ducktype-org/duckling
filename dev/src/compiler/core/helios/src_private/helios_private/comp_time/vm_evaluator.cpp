@@ -1,7 +1,10 @@
 #include "vm_evaluator.hpp"
 
+#include "ctv/ctv.hpp"
 #include "helios_private/comp_time/comptime_type_operations.hpp"
 #include "lir/lir_structure/lir_structure.hpp"
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
 #include <typesystem/higher/types.hpp>
@@ -163,7 +166,16 @@ namespace {
 				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
-		// TODOP: Add meta here.
+		case compiler::tsh::Kind::Meta: {
+			if (vm_value->type->getName() != base::StrID("opaque_ptr"))
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ReturnConversionFailed,
+					"Expected opaque pointer VM value but received type: "
+						+ vm_value->type->getName().str()
+				));
+			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
+			return CompileTimeValue{ *meta_ptr };
+		}
 		default: {
 			throw base::NotYetImplemented{ base::strConcat(
 				"VMValue to CTV conversion for type: ",
@@ -267,7 +279,6 @@ namespace {
 		// Insert all extern C functions for the the comptime VM instance (meta type operations).
 		for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
 
-		// TODOP: Insert extern C functions.
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		vm::code::CodeCollection code = m.build();
 
