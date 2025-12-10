@@ -3,20 +3,18 @@
 #include <base/except/exceptions.hpp>
 
 namespace tpc {
-	TokenStream& ParserState::tokens() { return stream_stack.back(); }
+	TokenStream& ParserState::tokens() { return current_stream.value(); }
 
-	const TokenStream& ParserState::ctokens() const { return stream_stack.back(); }
+	const TokenStream& ParserState::ctokens() const { return current_stream.value(); }
 
 	bool ParserState::empty() const { return ctokens().size() == 0; }
 
 	bool ParserState::notEmpty() const { return ctokens().size() > 0; }
 
-	bool ParserState::isSkipping() const {
-		return skip_till_fallback;
-	}
+	bool ParserState::isSkipping() const { return skip_till_fallback; }
 
 	bool ParserState::isEOF(i64 fwd) const {
-		return stream_stack.size() == 1 && ctokens().size() <= fwd;
+		return fallback_stack.empty() && ctokens().size() <= fwd;
 	}
 
 	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) const {
@@ -31,25 +29,49 @@ namespace tpc {
 		return { base, end };
 	}
 
-	void ParserState::goDown() { 
-		stream_stack.emplace_back(tokens().getRecursive()); 
-		fallback_types.push_back(SubStreamType::Recursive);
+	void ParserState::goDown() {
+		auto new_stream = ctokens().getRecursive();
+		fallback_stack.emplace_back(Fallback{
+			.type = Recursive, .saved_stream = std::move(current_stream.value()), .post_jump = 1 });
+		current_stream.emplace(std::move(new_stream));
 	}
 
 	void ParserState::goUp() {
-		CORE_ASSERT(fallback_types.size() && fallback_types.back() == SubStreamType::Recursive, "No recursive token stack to go up from");
-		fallback_types.pop_back();
-		stream_stack.pop_back();
+		CORE_ASSERT(
+			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
+			"No recursive token stream to go up from"
+		);
+		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		fallback_stack.pop_back();
 	}
 
 	void ParserState::goUpAndSkip() {
-		goUp();
-		tokens().skip();
+		CORE_ASSERT(
+			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
+			"No recursive token stream to go up from"
+		);
+		u64 fwd = fallback_stack.back().post_jump;
+		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		fallback_stack.pop_back();
+		tokens().skip(base::safeIntConv<i64>(fwd));
 	}
 
-	void ParserState::goDown() { 
-		stream_stack.emplace_back(tokens().getRecursive()); 
-		stack_types.push_back(SubStackType::Recursive);
+	void ParserState::setFallback(u64 length) {
+		auto new_stream = ctokens().getSubstream(length);
+		fallback_stack.emplace_back(Fallback{ .type         = NonRecursive,
+		                                      .saved_stream = std::move(current_stream.value()),
+		                                      .post_jump    = length });
+		current_stream.emplace(std::move(new_stream));
 	}
 
+	void ParserState::exitFallback() {
+		CORE_ASSERT(
+			fallback_stack.size() && fallback_stack.back().type == SubStreamType::NonRecursive,
+			"No fallback token stream to go up from"
+		);
+		u64 fwd = fallback_stack.back().post_jump;
+		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		fallback_stack.pop_back();
+		tokens().skip(base::safeIntConv<i64>(fwd));
+	}
 }

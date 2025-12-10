@@ -14,20 +14,29 @@ namespace tpc {
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
-
 		/**
 		 * @brief Types of substream:
 		 * - Recursive - Comes from the token structure.
 		 * - NonRecursive - Manually set fallback.
 		 */
-		enum SubStreamType {
-			Recursive,
-			NonRecursive
+		enum SubStreamType { Recursive, NonRecursive };
+
+		/**
+		 * @brief Data needed to handle restoring to a fallback
+		 */
+		struct Fallback {
+			SubStreamType type;
+			TokenStream   saved_stream;
+			/**
+			 * @brief Jump done after restoring a fallback.
+			 */
+			u64 post_jump;
 		};
 
-		std::vector<TokenStream> stream_stack;  ///< Internal storage of sub-stack strings
-		std::vector<SubStreamType> fallback_types; ///< Additional stream stack information that ensures maching entering and exiting
-		bool skip_till_fallback = false;
+		base::Optional<TokenStream> current_stream;
+
+		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
+		bool                  skip_till_fallback = false;
 
 	public:
 		/**
@@ -41,9 +50,10 @@ namespace tpc {
 		const TokenStream& ctokens() const;
 
 		/**
-		 * @brief Informs whether new errors and some parsing should be skipped till fallback is reached.
+		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
+		 * reached.
 		 */
-		[[nodiscard]] 
+		[[nodiscard]]
 		bool isSkipping() const;
 
 		// clang-format off
@@ -58,10 +68,10 @@ namespace tpc {
 		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
 
 		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
+			  current_stream(std::move(tokens)),
+			  fallback_stack(),
 			  err(err),
-			  int_err(int_err) {
-			stream_stack.emplace_back(std::move(tokens));
-		}
+			  int_err(int_err) {}
 
 		/**
 		 * @return true If no tokens left in current stream
@@ -89,11 +99,16 @@ namespace tpc {
 		 */
 		void goDown();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream. Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
+		 * @brief deletes current stream and makes last stream the current stream. Resets error
+		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUp();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream then skips one token(the recursive token that was the source of the deleted stream). Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
+		 * @brief deletes current stream and makes last stream the current stream then skips one
+		 * token(the recursive token that was the source of the deleted stream). Resets error
+		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUpAndSkip();
 
@@ -103,7 +118,9 @@ namespace tpc {
 		void setFallback(u64 length);
 
 		/**
-		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
+		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
+		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void exitFallback();
 

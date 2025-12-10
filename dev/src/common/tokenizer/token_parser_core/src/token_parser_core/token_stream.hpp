@@ -18,8 +18,8 @@ namespace tpc {
 	 */
 	class TokenStream {
 		const Tokens& tokens;          ///< Source list of tokens
-		usize         where = 0;       ///< current position
-		usize         to;              ///< end position
+		usize         where;           ///< current position
+		usize         from, to;        ///< end position
 		const Token&  sentinel_end;    ///< Token to return if out of bounds forward
 		const Token&  sentinel_begin;  ///< Token to return if out of bounds backwards
 
@@ -61,6 +61,13 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		TokenStream getRecursive() const;
+
+		/**
+		 * @brief Return a sub stream starting from this token of given length. Panics on too long
+		 * of a length.
+		 */
+		[[nodiscard]]
+		TokenStream getSubstream(u64 length) const;
 
 		/**
 		 * @brief Calculates the amount of tokens left including the current one

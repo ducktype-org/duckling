@@ -18,6 +18,7 @@ namespace tpc {
 	):
 		  tokens(tokens),
 		  where(from),
+		  from(from),
 		  to(to),
 		  sentinel_end(sentinel_end),
 		  sentinel_begin(sentinel_begin) {
@@ -28,6 +29,7 @@ namespace tpc {
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:
 		  tokens(stream.tokens),
 		  where(stream.where),
+		  from(stream.from),
 		  to(stream.to),
 		  sentinel_end(stream.sentinel_end),
 		  sentinel_begin(stream.sentinel_begin) {}
@@ -40,6 +42,16 @@ namespace tpc {
 			// @TODO
 			throw base::LogicError("get recursive on non-recursive token");
 		}
+	}
+
+	TokenStream TokenStream::getSubstream(u64 length) const {
+		CORE_ASSERT(size(), "Stream should be non-empty for substream creation");
+		CORE_ASSERT(to - where >= length, "Sub-stream should fit in parent stream");
+		return { tokens,
+			     peek(-1).asSentinel(),
+			     peek(base::safeIntConv<i64>(length)).asSentinel(),
+			     where,
+			     where + length };
 	}
 
 	const Token& TokenStream::next() { return (where >= to ? sentinel_end : tokens[where++]); }
