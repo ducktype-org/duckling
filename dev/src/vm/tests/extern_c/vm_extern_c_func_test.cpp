@@ -31,6 +31,24 @@ namespace cpp_vector {
 	}
 }
 
+namespace global_opaque {
+	std::vector<i64> vec;
+
+	DEF_VM_EXT_C_FUNC(
+		void,
+		"void",
+		vecPushBack,
+		(std::vector<i64>*, "opaque_ptr", vec),
+		(i64, "i64", value)
+	) {
+		vec->push_back(value);
+	}
+
+	DEF_VM_EXT_C_FUNC(u64, "i64", vecSize, (std::vector<i64>*, "opaque_ptr", vec)) {
+		return vec->size();
+	}
+}
+
 class VmExternCppTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmExternCppTest
@@ -119,14 +137,17 @@ private:
 		auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
 		ASSERT_TRUE(vm_value_response.has_value());
 		auto  vm_value   = std::move(vm_value_response->vm_value);
-		auto* vector_ptr = &cpp_vector::vec;
-		vm_value_response->vm_value->writeBytes(vector_ptr);
+		auto* vector_ptr = &global_opaque::vec;
+		vm_value->writeBytes(vector_ptr);
 
 		// Initialize the global vector pointer
-		vm::api::runFunction(pid, "initialize_vector", { vm_value.ref() });
+		ASSERT_TRUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }).has_value());
+		ASSERT_TRUE(vm::api::join(pid));
+		
+		vm_value->freeData();
 
 		runTestOnVm(pid, { "1 2 3" }, { "3" });
-		ASSERT_EQUAL_PRINT(cpp_vector::vec.size(), 3);
+		ASSERT_EQUAL_PRINT(cpp_vector::vec.size(), 4	);
 		ASSERT_EQUAL(cpp_vector::vec[0], 1);
 		ASSERT_EQUAL(cpp_vector::vec[1], 2);
 		ASSERT_EQUAL(cpp_vector::vec[2], 3);

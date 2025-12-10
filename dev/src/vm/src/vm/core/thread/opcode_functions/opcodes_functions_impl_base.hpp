@@ -675,8 +675,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
 		{
-			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg0);
+			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);

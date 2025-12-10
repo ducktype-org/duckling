@@ -92,7 +92,7 @@ DEF_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
 // Copies an opaque value
 DEF_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
 
-// Moves an opaque value between globals and locals
+// Copies an opaque value between globals and locals
 DEF_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
 DEF_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
 
