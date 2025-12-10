@@ -74,8 +74,6 @@
 
 #include <vm/utils/interpret.hpp>
 
-#include <type_traits>
-
 namespace vm::detail {
 	// Helper trait to safely get size of types including void (as 1)
 	template<typename T>
