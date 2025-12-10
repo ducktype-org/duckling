@@ -3,7 +3,10 @@
 #include <base/types/ints.hpp>
 
 namespace concurrent {
-	inline void nopWait(u64 repeat = 1) {
+    /**
+     * A simple nop wait implementation.
+     */
+	inline void nopWait(u64 repeat) {
 		for (u64 i = 0; i < repeat; i++) {
 			asm volatile(R"(
                 nop
@@ -25,5 +28,4 @@ namespace concurrent {
             )");
 		}
 	}
-
 }

@@ -3,9 +3,9 @@
 #include <iostream>
 #include <concurrent/workers/worker_data.hpp>
 
-constexpr int THREAD_COUNT = 1;
+constexpr int THREAD_COUNT = 16;
 
-u64 concurrent::AtomicFlagSpinlock::yield_count = 0;
+// u64 concurrent::AtomicFlagSpinlock::yield_count = 0;
 
 
 
@@ -34,7 +34,7 @@ int main() {
 
             for (u64 j = 0; j < 40'000'000; j++) {
                 if (j % 1'000'000 == 0) {
-                    std::cerr << "Thread " << std::this_thread::get_id() << " at iteration " << j << " yield_count: " << concurrent::AtomicFlagSpinlock::yield_count << "\n";
+                    std::cerr << "Thread " << std::this_thread::get_id() << " at iteration " << j  << "\n";
                 }
                 // work(map,  wd.at(u64(i)).refMut()); static_assert(THREAD_COUNT == 1);
                 cWork(cmap, wd.at(u64(i)).refMut());

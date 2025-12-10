@@ -17,7 +17,7 @@ void work(HashMap& map, concurrent::WDRef worker_data) {
 
 
 void cWork(CHashMap& map, concurrent::WDRef worker_data) {
-    u64 key = 123123 + (worker_data->rng() % 4096);
+    u64 key = 123123 + (worker_data->rng() % 123);
 
     map.tryPut(key, 0);
     auto new_val = map.getCopy(key) + 1;

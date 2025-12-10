@@ -4,13 +4,7 @@
 #include <concurrent/module_flags/worker_count.hpp>
 #include <concurrent/locks/atomic_flag_mutex.hpp>
 #include <concurrent/locks/atomic_flag_spinlock.hpp>
-#include <concurrent/locks/rw_spinlock.hpp>
 
-
-// remove this later:
-#include <semaphore>
-#include <mutex>
-#include <shared_mutex>
 
 namespace concurrent {
 
@@ -53,14 +47,11 @@ namespace concurrent {
             const HashMap& self;
 
             WithWriterLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
-                // self.shard_mutexes[shard_index].acquire();
-                self.shard_mutexes[shard_index].lock();
-                // self.shard_mutexes[shard_index].acquireWrite();
+                self.shard_mutexes[shard_index]->lock();
             }
 
             ~WithWriterLock() noexcept {
-                self.shard_mutexes[shard_index].unlock();
-                // self.shard_mutexes[shard_index].releaseWrite();
+                self.shard_mutexes[shard_index]->unlock();
             }
         };
 
@@ -72,26 +63,22 @@ namespace concurrent {
             const HashMap& self;
 
             WithReaderLock(const HashMap& self, u64 shard_index) noexcept: shard_index(shard_index), self(self) {
-                self.shard_mutexes[shard_index].lock();
-                // self.shard_mutexes[shard_index].acquire();
-                // self.shard_mutexes[shard_index].lock_shared();
-                // self.shard_mutexes[shard_index].lock_shared();
-                // self.shard_mutexes[shard_index].acquireRead();
+                self.shard_mutexes[shard_index]->lock();
             }
 
             ~WithReaderLock() noexcept {
-                self.shard_mutexes[shard_index].unlock();
-                // self.shard_mutexes[shard_index].unlock_shared();
-                // self.shard_mutexes[shard_index].release();
-                // self.shard_mutexes[shard_index].releaseRead();
+                self.shard_mutexes[shard_index]->unlock();
             }
         };
 
 
     public:
         HashMap():
-            shards(shard_counts),
-            shard_mutexes(shard_counts) {}
+            shards(shard_counts)  {
+            for (u64 i = 0; i < shard_counts; i++) {
+                shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
+            }
+        }
 
         HashMap(const HashMap&) = delete;
         HashMap(HashMap&&)      = delete;
@@ -171,7 +158,7 @@ namespace concurrent {
         const u64 shard_counts = 4096;
 
         std::vector<HashMapType> shards;
-        mutable std::vector<concurrent::AtomicFlagSpinlock> shard_mutexes;
+        mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
     };
 
 }
