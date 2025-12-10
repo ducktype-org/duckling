@@ -5,10 +5,10 @@ fun createBox(t: type) -> type = box t;
 fun createRef(t: type) -> type = ref t;
 # const B = createRef(i32);
 # 
-# fun createSmallVariant(a: type, b: type) -> type = a | b;
+fun createSmallVariant(a: type, b: type) -> type = a | b;
 # const C = createSmallVariant(i32, f64);
 # 
-# fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 # const D = createBigVariant(i16, i32, i64, i128);
 
 
@@ -20,9 +20,9 @@ fun fib(n: i64) -> i64 = {
 
 fun complexLogic(n: i64) -> type = {
     if (fib(n) < 15i64) {
-        return createBox(i32);
+        return createSmallVariant(createBox(i32), i16);
     } else {
-        return createRef(i64);
+        return createBigVariant(createRef(i64), f16, f128, i32);
     }
 }
 
