@@ -91,13 +91,10 @@ namespace concurrent {
             // auto shard = keyToShard(key);
             // WithLock lock(*this, 1);
 
-            static std::mutex mutex;
-            std::lock_guard<std::mutex> guard(mutex);
-
-            if (shards[1].contains(key)) {
+            if (shards.at(1).contains(key)) {
                 return;
             }
-            shards[1].put(key, value);
+            shards.at(1).put(key, value);
         }
 
         /**
@@ -138,8 +135,8 @@ namespace concurrent {
 		}
 
     private:
-        const u64 worker_count = concurrent::getWorkerCount();
-        const u64 shard_counts = worker_count * 4;
+        // const u64 worker_count = concurrent::getWorkerCount();
+        const u64 shard_counts = 4;
 
         std::vector<HashMapType> shards;
         mutable std::vector<std::mutex> shard_mutexes;
