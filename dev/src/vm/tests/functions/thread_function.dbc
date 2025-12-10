@@ -23,16 +23,16 @@ function main { i64, ptr_argv } -> i64 {
 	init_lany_type           thread_id, i64;
     call_builtinfunc 		 builtin_start_thread;
 
-	call_func				 func;		
+	call_func				 func;	
+
+	init_lany_type 			 join_id, i64;
+    mov_l64_l64 			 join_id, thread_id;
+    call_builtinfunc 		 builtin_join_thread;	
 
     init_lany_type 			 returned_size, i64;
     init_lany_type			 output_var, i64;
     mov_l64_g64 			 output_var, counter;
     call_builtinfunc 		 builtin_output_i64;
-
-    init_lany_type 			 join_id, i64;
-    mov_l64_l64 			 join_id, thread_id;
-    call_builtinfunc 		 builtin_join_thread;
 
     ret;
 }
