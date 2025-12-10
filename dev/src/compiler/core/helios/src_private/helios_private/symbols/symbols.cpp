@@ -56,6 +56,8 @@ namespace compiler::helios {
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
+	bool isAlias(SymID id) { return getSymRef(id)->common.is_alias; }
+
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
@@ -78,6 +80,7 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
+			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
 				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 

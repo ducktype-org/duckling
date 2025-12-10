@@ -31,13 +31,11 @@ namespace pst {
 
 		bool trailingSemicolon() override { return true; }
 
-		[[nodiscard]]
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
-		base::Optional<AccessLocked<ExprHolder>> getRet() const {
-			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
-		}
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getRet() const;
 
 		static MBox<FunDecl> parse(LangParserState& state);
 		void                 dprint(std::ostream& out) const final;

@@ -148,7 +148,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> type;
 
-		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
+		explicit HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
 		std::string debugPrint(query::Context& ctx) const;

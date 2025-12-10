@@ -1,6 +1,6 @@
 #include "comp_time.hpp"
 
-#include <backends/dvm/backend.hpp>
+#include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -555,7 +555,8 @@ namespace compiler::helios {
 				all_lir_functions.push_back(lir_func_result);
 			}
 
-			backend_vm::Module       m{ ctx, base::StrID("COMP_TIME"), all_lir_functions, {} };
+			backend_vm::Module m(base::StrID("COMP_TIME"));
+			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 			vm::code::CodeCollection code = m.build();
 
 			std::vector<CompileTimeValue> ctv_arguments;

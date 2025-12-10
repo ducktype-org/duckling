@@ -210,8 +210,7 @@ class FunctionValidator {
 	 * pointer type name like in normal function calls would simply don't work.
 	 */
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
-		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
-		// https://github.com/ducktype-org/duckling/issues/962
+		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better way.
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
@@ -324,6 +323,14 @@ class FunctionValidator {
 					auto             type  = tod_map.at(entry->type);
 					if (!std::holds_alternative<PointerType>(*type))
 						throw InvalidArgumentTypeError(*global);
+				}
+				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
+					if (!globals.contains(global_opq->global_data_name))
+						throw UnknownGlobalNameError(*global_opq);
+					CRef<GlobalData> entry = globals.at(global_opq->global_data_name);
+					auto             type  = tod_map.at(entry->type);
+					if (!std::holds_alternative<OpaqueType>(*type))
+						throw InvalidArgumentTypeError(*global_opq);
 				}
 
 				STACK_LOCAL_CASE(8);
@@ -451,6 +458,8 @@ class FunctionValidator {
 	void validateArgTypesNonTrivially(
 		const Instruction& instruction, const LocalStack& current_stack
 	) const {
+		PUSH_DIAGNOSTIC
+		UNHANDLED_ENUM
 		instr_match(instruction) {
 			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
 			instr_case(Op_alloc_lptr_type, instr) {
@@ -525,11 +534,9 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_l8_g8) {}
 			instr_case_novalue(Op_mov_lptr_gptr) {}
 			instr_case_novalue(Op_mov_lptr_lptr) {}
-			instr_case(Op_mov_lopq_lopq, instr) {
-				const auto& dst_type = std::get<OpaqueType>(*current_stack.at(instr.dst.var_name));
-				const auto& src_type = std::get<OpaqueType>(*current_stack.at(instr.src.var_name));
-				if (dst_type.name != src_type.name) throw OpaqueTypeMismatchError(instr);
-			}
+			instr_case_novalue(Op_mov_lopq_lopq) {}
+			instr_case_novalue(Op_mov_lopq_gopq) {}
+			instr_case_novalue(Op_mov_gopq_lopq) {}
 			instr_case_novalue(Op_setNull_lptr) {}
 			instr_case_novalue(Op_add_l64_l64) {}
 			instr_case_novalue(Op_add_l64_imm) {}
@@ -859,11 +866,9 @@ class FunctionValidator {
 			instr_case_novalue(Op_nop) {}
 			instr_case_novalue(Op_exit) {}
 			instr_case_novalue(Op_breakpoint) {}
-
-			instr_default {
-				CORE_PANIC("Unhandled instruction: ", instructionToString(instruction));
-			}
+			instr_case_novalue(Op_initFromVmValue) {}
 		}
+		POP_DIAGNOSTIC
 	}
 
 	/**

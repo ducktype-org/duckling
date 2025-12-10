@@ -92,6 +92,10 @@ DEF_INSTR(setNull_lptr, (vm::opargs::StackLocalPtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_lopq_lopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::StackLocalOpq, src))
 
+// Copies an opaque value between globals and locals
+DEF_INSTR(mov_gopq_lopq, (vm::opargs::GlobalOpq, dst), (vm::opargs::StackLocalOpq, src))
+DEF_INSTR(mov_lopq_gopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::GlobalOpq, src))
+
 
 // ========= ARITHMETIC OPERATIONS ========
 

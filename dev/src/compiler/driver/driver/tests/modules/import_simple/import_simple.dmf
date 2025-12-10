@@ -1,0 +1,6 @@
+import submodule as SM;
+
+fun main() = {
+    SM.foo();
+    return;
+}
