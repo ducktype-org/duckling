@@ -158,8 +158,7 @@ void FunctionLoweringContext::handleExtCall(
 ) {
 	const auto& extern_func_signature = program_context.getExternCFunction(func_name).signature;
 	CORE_ASSERT(
-		extern_func_signature.parameters.size(),
-		func_args.size(),
+		extern_func_signature.parameters.size() == func_args.size(),
 		"Argument count mismatch for extern C function call: ",
 		func_name
 	);
@@ -319,11 +318,11 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "variant_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_variant_builder_new"), { }, builder_value);
+		handleExtCall(base::StrID("__comptime_variant_builder_new"), {}, builder_value);
 
 		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
 			handleExtCall(
-				base::StrID("__comptime_variant_builder_push"), {  builder_value, args[i] }, {}
+				base::StrID("__comptime_variant_builder_push"), { builder_value, args[i] }, {}
 			);
 
 		handleExtCall(
@@ -340,15 +339,15 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "function_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_func_type_builder_new"), { }, builder_value);
+		handleExtCall(base::StrID("__comptime_func_type_builder_new"), {}, builder_value);
 
-		handleExtCall(base::StrID("__comptime_func_type_set_ret_type"), { builder_value, args[0] }, {});
+		handleExtCall(
+			base::StrID("__comptime_func_type_set_ret_type"), { builder_value, args[0] }, {}
+		);
 
 		for (usize i = 1; i < lir_instruction.arguments.size(); i++)
 			handleExtCall(
-				base::StrID("__comptime_func_type_builder_push_arg"),
-				{  builder_value, args[i] },
-				{}
+				base::StrID("__comptime_func_type_builder_push_arg"), { builder_value, args[i] }, {}
 			);
 
 		handleExtCall(

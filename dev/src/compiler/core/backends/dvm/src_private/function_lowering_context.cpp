@@ -79,6 +79,7 @@ namespace {
 			}
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
+
 				// TODOP: This should probably get removed?
 				// Representation of a meta type in DVM is a pointer to the symbol type.
 				return DVMImmediate{ std::bit_cast<u64>(&type_val) };

@@ -1,15 +1,44 @@
-fun createBox(t: type) -> type = box t;
-const A = createBox(i32);
-
-# fun foo(A: i64) -> i32 = {
-#     return 123;
-# }
-# const G = foo(123);
+# fun createBox(t: type) -> type = box t;
+# const A = createBox(i32);
+# const A_2 = createBox(i16);
+# 
 # fun createRef(t: type) -> type = ref t;
+# const B = createRef(i32);
+# 
 # fun createSmallVariant(a: type, b: type) -> type = a | b;
+# const C = createSmallVariant(i32, f64);
+# 
 # fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+# const D = createBigVariant(i16, i32, i64, i128);
+
+
+
+fun fib(n: i64) -> i64 = {
+   if (n < 2i64) { return n; }
+   return fib(n - 1i64) + fib(n - 2i64);
+}
+
+fun complexLogic(n: i64) -> type = {
+    if (fib(n) < 15i64) {
+        return i32;
+    } else {
+        return i64;
+    }
+}
+
+const FIRST = complexLogic(1);
+const SECOND = complexLogic(3);
+const THIRD = complexLogic(5);
+const FOURTH = complexLogic(10);
+
+
+
+# TODOP: This doesn't work since tuples are treated as tuples not meta types.
 # fun createSmallTuple(a: type, b: type) -> type = (a, b);
+# const G = createSmallTuple(i32, f64);
+
 # fun createBigTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
+# const H = createBigTuple(i16, i32, i64, i128);
 
 # TODOP: Add opt?
 #
@@ -20,10 +49,5 @@ const A = createBox(i32);
 
 # TODOP: More complex test
 
-# const B = createRef(i32);
 # const C = createOpt(i32);
 # const D = createConst(i32);
-# const E = createSmallVariant(i32, f64);
-# const F = createBigVariant(i16, i32, i64, i128);
-# const G = createSmallTuple(i32, f64);
-# const H = createBigTuple(i16, i32, i64, i128);

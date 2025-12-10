@@ -223,7 +223,7 @@ namespace compiler::mir {
 			noValueOutput(
 				current,
 				target_hole,
-				Instruction(Operation::MetaCreateVariant, {}, values, {}, expr_scope),
+				Instruction(Operation::MetaCreateTuple, {}, values, {}, expr_scope),
 				result_type
 			);
 			return;
