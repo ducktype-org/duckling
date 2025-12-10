@@ -11,6 +11,10 @@ namespace tpc {
 
 	bool ParserState::notEmpty() const { return ctokens().size() > 0; }
 
+	bool ParserState::isSkipping() const {
+		return skip_till_fallback;
+	}
+
 	bool ParserState::isEOF(i64 fwd) const {
 		return stream_stack.size() == 1 && ctokens().size() <= fwd;
 	}
@@ -27,16 +31,25 @@ namespace tpc {
 		return { base, end };
 	}
 
-	void ParserState::goDown() { stream_stack.emplace_back(tokens().getRecursive()); }
+	void ParserState::goDown() { 
+		stream_stack.emplace_back(tokens().getRecursive()); 
+		fallback_types.push_back(SubStreamType::Recursive);
+	}
 
 	void ParserState::goUp() {
-		CORE_ASSERT(stream_stack.size(), "No recursive token stack to unroll");
+		CORE_ASSERT(fallback_types.size() && fallback_types.back() == SubStreamType::Recursive, "No recursive token stack to go up from");
+		fallback_types.pop_back();
 		stream_stack.pop_back();
 	}
 
 	void ParserState::goUpAndSkip() {
 		goUp();
 		tokens().skip();
+	}
+
+	void ParserState::goDown() { 
+		stream_stack.emplace_back(tokens().getRecursive()); 
+		stack_types.push_back(SubStackType::Recursive);
 	}
 
 }

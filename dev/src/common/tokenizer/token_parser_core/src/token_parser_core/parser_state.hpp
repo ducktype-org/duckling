@@ -14,7 +14,20 @@ namespace tpc {
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
-		std::vector<TokenStream> stream_stack;  ///< Internal storage of recursive strings
+
+		/**
+		 * @brief Types of substream:
+		 * - Recursive - Comes from the token structure.
+		 * - NonRecursive - Manually set fallback.
+		 */
+		enum SubStreamType {
+			Recursive,
+			NonRecursive
+		};
+
+		std::vector<TokenStream> stream_stack;  ///< Internal storage of sub-stack strings
+		std::vector<SubStreamType> fallback_types; ///< Additional stream stack information that ensures maching entering and exiting
+		bool skip_till_fallback = false;
 
 	public:
 		/**
@@ -26,6 +39,12 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
+
+		/**
+		 * @brief Informs whether new errors and some parsing should be skipped till fallback is reached.
+		 */
+		[[nodiscard]] 
+		bool isSkipping() const;
 
 		// clang-format off
 		[[nodiscard]]
@@ -70,14 +89,23 @@ namespace tpc {
 		 */
 		void goDown();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream
+		 * @brief deletes current stream and makes last stream the current stream. Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUp();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token(the recursive token that was the source of the deleted stream)
+		 * @brief deletes current stream and makes last stream the current stream then skips one token(the recursive token that was the source of the deleted stream). Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUpAndSkip();
+
+		/**
+		 * @brief Creates a new sub-stream of given length starting in the current token.
+		 */
+		void setFallback(u64 length);
+
+		/**
+		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error bit(Additional errors are no longer ignored). This will produce an error if the whole sub-stream wasn't parsed and an error wasn't emitted.
+		 */
+		void exitFallback();
 
 		/**
 		 * @brief Logs an error relatively to the current token
