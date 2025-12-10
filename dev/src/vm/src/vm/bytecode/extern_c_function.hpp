@@ -74,48 +74,32 @@
 
 #include <vm/utils/interpret.hpp>
 
-#include <type_traits>
-
 namespace vm::detail {
-	// Helper trait to safely get size of types including void (as 0)
+	// Helper trait to safely get size of types including void (as 1)
+	// @TODO: #656 Change this when we have proper voids in the VM
 	template<typename T>
 	struct safe_sizeof {
-		static constexpr usize value = sizeof(T);
+		static constexpr usize VALUE = sizeof(T);
 	};
 
 	template<>
 	struct safe_sizeof<void> {
-		static constexpr usize value = 1;
+		static constexpr usize VALUE = 1;
 	};
 
-	// Helper to invoke a callable and write its result to storage, handling void returns.
-	// We use a template F here so the compiler defers type checking of the safeWriteBytes call
-	// until instantiation. This prevents errors when F returns void.
-	template<typename F>
-	void callAndWrite(std::byte* storage, F f) {
-		using ResultType = decltype(f());
-		if constexpr (std::is_void_v<ResultType>) {
-			f();
-		} else {
-			// Because f() is dependent on F, this branch is not semantically checked
-			// if ResultType is void, preventing the "passing void to function" error.
-			vm::safeWriteBytes(storage, f());
-		}
-	}
-}  // namespace vm::detail
+}
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
 #define VM_EXT_C_INTO_FIELDS(Type, VmType, Name)       Type Name;
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
 #define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
 
-// Modified validation to use safe_sizeof instead of sizeof to support void types
 #define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                                        \
 	auto tp_##Name = vm::api::getType(pid, VmType);                                          \
 	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                      \
-	if (tp_##Name->type->getSize() != vm::detail::safe_sizeof<Type>::value)                  \
+	if (tp_##Name->type->getSize() != vm::detail::safe_sizeof<Type>::VALUE)                  \
 		throw vm::ExtCArgumentSizeMismatch(                                                  \
-			#Type, vm::detail::safe_sizeof<Type>::value, #VmType, tp_##Name->type->getSize() \
+			#Type, vm::detail::safe_sizeof<Type>::VALUE, #VmType, tp_##Name->type->getSize() \
 		);                                                                                   \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
@@ -151,14 +135,24 @@ namespace vm::detail {
 		static ResCType       call([[maybe_unused]] u64 _                                               \
 		                               FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)); \
 		constexpr static void wrapper(std::byte* storage, std::byte* data) {                            \
-			[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                    \
-			/* Wrap the call in a lambda to pass to the templated helper */                             \
-			auto perform_call = [&] {                                                                   \
+			/* A templated helper, that calls the function and type checks correctly */                 \
+			[&](auto f) {                                                                               \
+				if constexpr (std::is_void_v<ResCType>) {                                               \
+					f();                                                                                \
+				} else {                                                                                \
+					/*                                                                                  \
+					 * Because f() is independent from FuncName::call, this branch is not               \
+					 * semantically checked if ResCType is void, preventing the "passing void to        \
+					 * function" error.                                                                 \
+					 */                                                                                 \
+					vm::safeWriteBytes(storage, f());                                                   \
+				}                                                                                       \
+			}([&] {                                                                                     \
+				[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                \
 				return FuncName::call(                                                                  \
 					0ULL FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_ARGS, __VA_ARGS__)                   \
 				);                                                                                      \
-			};                                                                                          \
-			vm::detail::callAndWrite(storage, perform_call);                                            \
+			});                                                                                         \
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
 			usize vm_arg_type_size_sum = 0;                                                             \
@@ -240,19 +234,9 @@ namespace vm {
 			const std::string& vm_type,
 			const usize        vm_type_size
 		):
-			  ExtCFuncError(
-				  base::strConcat(
-					  ERR_MSG,
-					  cpp_type,
-					  "(",
-					  cpp_type_size,
-					  ") vs. ",
-					  vm_type,
-					  "(",
-					  vm_type_size,
-					  ")"
-				  )
-			  ) {}
+			  ExtCFuncError(base::strConcat(
+				  ERR_MSG, cpp_type, "(", cpp_type_size, ") vs. ", vm_type, "(", vm_type_size, ")"
+			  )) {}
 	};
 
 	class ExtCVmTypeNotExists: public ExtCFuncError {

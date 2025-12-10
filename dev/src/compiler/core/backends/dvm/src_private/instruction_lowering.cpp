@@ -179,7 +179,8 @@ void FunctionLoweringContext::handleExtCall(
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
-	pushInstruction({ OpKind::call, DVMFunctionName{ .name=base::StrID(func_name) }.asArgument() });
+	pushInstruction({ OpKind::call, DVMFunctionName{ .name = base::StrID(func_name) }.asArgument() }
+	);
 
 	if (output) {
 		pushInstruction({
@@ -349,7 +350,7 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	if (isMetaTypeOperation(lir_instruction.operation)){
+	if (isMetaTypeOperation(lir_instruction.operation)) {
 		handleMetaOperation(lir_instruction);
 		return;
 	}

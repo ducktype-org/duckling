@@ -53,7 +53,7 @@ namespace compiler::backend_vm::internal {
 
 	struct DVMFunctionName {
 		base::StrID name;
-		bool is_extern_c = false;
+		bool        is_extern_c = false;
 
 		bool operator==(const DVMFunctionName& other) const = default;
 

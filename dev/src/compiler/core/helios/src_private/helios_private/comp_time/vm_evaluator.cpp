@@ -1,15 +1,16 @@
 #include "vm_evaluator.hpp"
 
-#include <typesystem/higher/types.hpp>
+#include "helios_private/comp_time/comptime_type_operations.hpp"
+#include "lir/lir_structure/lir_structure.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
+#include <typesystem/higher/types.hpp>
+
 #include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
-#include "helios_private/comp_time/comptime_type_operations.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
 
 #include <expected>
 
@@ -255,31 +256,33 @@ namespace {
 			)
 		};
 	}
-	
-	vm::code::CodeCollection produceCodeCollectionFromLIR(vm::PID pid, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions) {
-			compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
 
-			auto ext_c_functions = comptime_ops::getComptimeTypeOperations(pid);
+	vm::code::CodeCollection produceCodeCollectionFromLIR(
+		vm::PID pid, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+	) {
+		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
 
-			// Insert all extern C functions for the the comptime VM instance (meta type operations).
-			for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
+		auto ext_c_functions = comptime_ops::getComptimeTypeOperations(pid);
 
-			// TODOP: Insert extern C functions.
-			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
-			vm::code::CodeCollection code = m.build();
+		// Insert all extern C functions for the the comptime VM instance (meta type operations).
+		for (const auto& ext_func: ext_c_functions) m.insertExternCFunction(ext_func);
 
-			std::cout << "Produced DVM bytecode:\n";
-			vm::code::serialize(code, std::cout);
-			std::cout << "\n";
+		// TODOP: Insert extern C functions.
+		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
+		vm::code::CodeCollection code = m.build();
 
-			return code;
+		std::cout << "Produced DVM bytecode:\n";
+		vm::code::serialize(code, std::cout);
+		std::cout << "\n";
+
+		return code;
 	}
 }
 
 namespace compiler::helios {
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
 		const std::string&                        func_name,
-		const std::vector<CRef<lir::Function>>&		lir_functions,
+		const std::vector<CRef<lir::Function>>&   lir_functions,
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {

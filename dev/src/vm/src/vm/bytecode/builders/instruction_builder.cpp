@@ -17,7 +17,6 @@ namespace vm::code::builders {
 			out << std::visit([]<class T>(const T&) { return T::OP_SHORT; }, arg);
 		}
 
-		
 		/**
 		 * @brief Appends opcode kind as string to a to a stream.
 		 */
