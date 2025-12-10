@@ -24,6 +24,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -138,6 +139,60 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
+		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
+			query::Context& ctx;
+			SymID           original_symbol;
+
+			std::set<tsh::SymbolType<>> out;
+
+			ReturnTypeCollector(query::Context& ctx, SymID symbol):
+				  ctx(ctx),
+				  original_symbol(symbol) {}
+
+			template<class T>
+			void output(T&& value) {
+				this->out.emplace(std::forward<T>(value));
+			}
+
+			void visitFun(pst::Access<pst::Fun> stmt) final {
+				auto fun_body = stmt->getBody();
+
+				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					auto as_expr
+						= fun_body.unlock(ctx)->getStmt().unlock(ctx).dynamicCast<pst::ExprStmt>();
+					if (as_expr) {
+						auto expr = ctx.query<QueryHoutOfExpr>(
+										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
+						)
+						                .expect(
+											"Not handling errors here yet... (return type "
+											"collector: single expr function body)"
+										);
+						output(expr->expression_type.getSymbolType());
+					} else {
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							"Function body in single-statement function must be an expression "
+							"statement"
+						));
+						CORE_PANIC(
+							"Not handling errors here yet... (return type collector: single stmt "
+							"function body)"
+						);
+					}
+				}
+			}
+
+			void visitReturn(pst::Access<pst::Return> stmt) final {
+				if (auto val = stmt->getValue()) {
+					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
+					                .expect("Not handling errors here yet... (return collector)");
+					output(expr->expression_type.getSymbolType());
+				}
+			}
+		};
+
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -168,6 +223,29 @@ namespace compiler::helios {
 						return;
 					}
 					ret_type = ret_type_ctv.value().get<tsh::SymbolType<>>().value();
+				}
+				// Try to deduce return type if not provided.
+				else {
+					ReturnTypeCollector return_collector(ctx, original_symbol);
+					stmt(ctx, original_symbol).value()->acceptVisitor(return_collector);
+					std::cout << "Fonud " << return_collector.out.size()
+							  << " candidates for return type.\n";
+					switch (return_collector.out.size()) {
+					case 0:
+						// there are no returns to deduce the type
+						// we stick to the default unit type
+						break;
+					case 1:
+						// deduced type is conclusive
+						ret_type = *return_collector.out.begin();
+						break;
+					default:
+						// there are multiple candidates and deduction is inconclusive
+						CORE_PANIC(
+							"Function declared with no explicit return type and inconsistent "
+							"returns!"
+						);
+					}
 				}
 
 				// Parameters:
