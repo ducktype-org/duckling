@@ -1,7 +1,5 @@
 #include "helios_test_utils.hpp"
 
-#include "helios/utils/symbol_list.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
@@ -49,7 +47,7 @@ namespace compiler::helios::test_utils {
 			auto symbol_path = std::get_if<SymbolList>(&as_single);
 			if (!symbol_path) query::throwFailed();
 			for (auto&& elem: *symbol_path) {
-				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
+				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
 				result.appendList(dealiased);
 			}
 			first_symbol = false;

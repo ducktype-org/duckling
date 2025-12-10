@@ -298,6 +298,26 @@ namespace query {
 			return {};
 		}
 
+		constexpr const ResTp& valueOrPanic() const& {
+			if (hasError()) CORE_PANIC("Result is empty.");
+			return storage.value();
+		}
+
+		constexpr const ResTp&& valueOrPanic() const&& {
+			if (hasError()) CORE_PANIC("Result is empty.");
+			return std::move(storage.value());
+		}
+
+		constexpr ResTp& valueOrPanic() & {
+			if (hasError()) CORE_PANIC("Result is empty.");
+			return storage.value();
+		}
+
+		constexpr ResTp&& valueOrPanic() && {
+			if (hasError()) CORE_PANIC("Result is empty.");
+			return std::move(storage.value());
+		}
+
 		/**
 		 * @brief Access the value, throw on no value with a message.
 		 * Used when we always except a value to be present.

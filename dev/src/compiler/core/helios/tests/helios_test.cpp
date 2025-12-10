@@ -1696,7 +1696,7 @@ private:
 			try {
 				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
 				CORE_PANIC("Should throw for invalid ABI.");
-			} catch (query::Failed& err) {
+			} catch (query::QueryFailedException& err) {
 				// Expected failure for invalid ABI
 			}
 		});
@@ -1956,14 +1956,14 @@ private:
 		try {
 			getConstValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
@@ -1972,35 +1972,35 @@ private:
 		try {
 			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 	}
