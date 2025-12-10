@@ -1,5 +1,8 @@
 #include <vm_tester_utils.hpp>
 
+#include "tester/tester.hpp"
+
+#include "vm/api/data/api_error.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/extern_c_function.hpp>
 
@@ -36,23 +39,25 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simple);
 		TESTER_ADD_TEST(cppVectorInVm);
+		TESTER_ADD_TEST(globalOpaques);
 	}
 
 private:
 	void simple() {
 		auto get_ext_func_program = [this]() {
 			auto pid = initProcess();
-			ASSERT_TRUE(vm::api::loadCode(
-							pid,
-							{
-								.functions   = {},
-								.types       = {},
-								.global_data = {},
-								.external_c_functions
-								= { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
-							}
-			)
-			                .has_value());
+			ASSERT_TRUE(
+				vm::api::loadCode(
+					pid,
+					{
+						.functions            = {},
+						.types                = {},
+						.global_data          = {},
+						.external_c_functions = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
+					}
+				)
+					.has_value()
+			);
 			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
 			return pid;
 		};
@@ -85,6 +90,46 @@ private:
 		runTestOnVm(get_ext_func_program(), { "123" }, { "1" });
 		ASSERT_EQUAL_PRINT(cpp_vector::vec.size(), 1);
 		ASSERT_EQUAL(cpp_vector::vec[0], 123);
+	}
+
+	void globalOpaques() {
+		auto get_ext_func_program = [this]() {
+			auto pid = initProcess();
+			ASSERT_TRUE(
+				vm::api::loadCode(
+					pid,
+					{ .functions            = {},
+			          .types                = {},
+			          .global_data          = {},
+			          .external_c_functions = {
+						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, cpp_vector::vecPushBack, pid),
+						  VM_INSTANCE_EXT_C_FUNC(vecSize, cpp_vector::vecSize, pid),
+					  } }
+				).has_value()
+			);
+			ASSERT_TRUE(
+				vm::api::loadFiles(pid, { fs::File(path("global_opaque.dbc")) }).has_value()
+			);
+			return pid;
+		};
+
+		vm::PID pid = get_ext_func_program();
+
+		// Prepare the initializing argument.
+		auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
+		ASSERT_TRUE(vm_value_response.has_value());
+		auto  vm_value   = std::move(vm_value_response->vm_value);
+		auto* vector_ptr = &cpp_vector::vec;
+		vm_value_response->vm_value->writeBytes(vector_ptr);
+
+		// Initialize the global vector pointer
+		vm::api::runFunction(pid, "initialize_vector", { vm_value.ref() });
+
+		runTestOnVm(pid, { "1 2 3" }, { "3" });
+		ASSERT_EQUAL_PRINT(cpp_vector::vec.size(), 3);
+		ASSERT_EQUAL(cpp_vector::vec[0], 1);
+		ASSERT_EQUAL(cpp_vector::vec[1], 2);
+		ASSERT_EQUAL(cpp_vector::vec[2], 3);
 	}
 };
 

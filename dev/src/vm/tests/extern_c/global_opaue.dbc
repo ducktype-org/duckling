@@ -1,0 +1,44 @@
+// The global pointer vector is initialized by a separate function call 
+// to initialize_vector to mimic the behavior happening during comp time.
+
+global_data vector opaque_ptr {} // cpp vector pointer.
+
+function initialize_vector { opaque_ptr } -> void {
+    mov_gopq_lopq vector, arg0;
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+	// No voids supported, so alloc place for the return value.
+	init_lany_type dummy, opaque_ptr; 
+	init_lany_type vector_ptr, opaque_ptr;
+	mov_lopq_gopq vector_ptr vector;
+	init_lany_type val, i64;
+	input_l64 val;
+    call_cfunc vecPushBack;
+	deinit; // dummy	
+
+	init_lany_type dummy, opaque_ptr; 
+	init_lany_type vector_ptr, opaque_ptr;
+	mov_lopq_gopq vector_ptr vector;
+	init_lany_type val, i64;
+	input_l64 val;
+    call_cfunc vecPushBack;
+	deinit; // dummy	
+
+	init_lany_type dummy, opaque_ptr; 
+	init_lany_type vector_ptr, opaque_ptr;
+	mov_lopq_gopq vector_ptr vector;
+	init_lany_type val, i64;
+	input_l64 val;
+    call_cfunc vecPushBack;
+	deinit; // dummy	
+
+	init_lany_type vec_size, i64;
+	init_lany_type vector_ptr, opaque_ptr;
+	mov_lopq_gopq vector_ptr vector;
+	call_cfunc vecSize;
+	output_l64 vec_size; // 3
+
+	ret;
+}
