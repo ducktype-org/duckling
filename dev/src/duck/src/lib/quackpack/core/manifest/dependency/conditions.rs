@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::bail;
-
-use crate::{QuackResult, StrId, quackpack::core::FeatureName};
+use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 #[derive(Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
@@ -21,7 +19,7 @@ impl Conditions {
             if let Some(vec) = t
                 && vec.is_empty()
             {
-                bail!(
+                qp_bail!(
                     "the field `{name}` is present but empty, if you don't want to specify it, remove it from the manifest"
                 )
             }
