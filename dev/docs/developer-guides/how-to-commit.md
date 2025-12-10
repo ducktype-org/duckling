@@ -23,7 +23,15 @@ To do that you can use our bash script. From the `dev` directory run:
 ```bash
 ./scripts/formatting/format_repo_cpp.sh
 ```
+### Tests, linter, formatting and others
 
+Before creating the pull request you can make sure the code is properly formatted, passes the duck-linter, cpp-linter and passes our custom checks. We have a toolbox shortcut for that, which performs most of the checks that will happen on the Github workflows:
+
+~~~bash
+./toolbox.py pr-validate
+~~~
+
+It runs a couple of checks, each of them can be also run separately with toolbox.
 
 ## Create pull request
 
