@@ -30,6 +30,7 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(recordClassTest);
 	}
 
 protected:
@@ -64,19 +65,23 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @TODO: #1553 -- const ctors will probably be added here
-						fail(base::strConcat(
-							"We fail here, because constants don't work on DVM as expected, "
-							"remove "
-							"the fail after #1553. ",
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"We fail here, because constants don't work on DVM as expected, "
+								"remove "
+								"the fail after #1553. ",
+								"Global constant: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 				}
 			}
@@ -119,6 +124,8 @@ private:
 	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+
+	void recordClassTest() { runTest("modules/classes/records", {}, {}, {}, 0); }
 };
 
 

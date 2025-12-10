@@ -1,9 +1,11 @@
 #include "program_lowering_context.hpp"
 
 #include "function_lowering_context.hpp"
+#include "typesystem/lower/type_layout.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/bytecode.hpp>
 
 using namespace compiler::backend_vm::internal;
@@ -131,6 +133,19 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 			std::string name  = "f" + std::to_string(bits);
 
 			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+		}
+		variant_case(tsl::ClassTypeLayout, klass) {
+			u64 num_fields = klass.getNumFields();
+			std::vector<vm::code::TypeOfData> field_types;
+			field_types.reserve(num_fields);
+			for (u64 field_idx = 0; field_idx < num_fields; field_idx++) {
+				auto field_layout = klass.getFieldLayoutOfLayoutIndex(field_idx);
+				field_types.push_back(lowerAndKeepTslType(field_layout));
+			}
+			return vm::code::ClassType {
+				.name = klass.mangled_name,
+				.fields = std::move(field_types),
+			};
 		}
 		variant_default {
 			CORE_PANIC(base::strConcat("Type not handled yet: ", layout->toStringIdentification()));
