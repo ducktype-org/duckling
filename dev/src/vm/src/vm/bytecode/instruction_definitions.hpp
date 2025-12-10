@@ -259,8 +259,8 @@ DEF_INSTR(
 /**
  * @brief Sets `dst_ptr` to point at data of variant under `variant_ptr`. Expects the variant to
  * have `expected_type` set, and if it's not, `destination` becomes nullptr.
- * @note `expected_type` required to know which type is to be expected. There is no other way to obtain
- * type information in the implementation.
+ * @note `expected_type` required to know which type is to be expected. There is no other way to
+ * obtain type information in the implementation.
  */
 DEF_INSTR(
 	variantGetInner_lptr_lptr_type,

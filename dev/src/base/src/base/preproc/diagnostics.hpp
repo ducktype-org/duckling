@@ -21,13 +21,13 @@
 #if defined(__clang__)
 	#define PUSH_DIAGNOSTIC _Pragma("clang diagnostic push")
 	#define NO_SHADOW       _Pragma("clang diagnostic ignored \"-Wshadow-all\"")
-	#define UNHANDLED_ENUM       _Pragma("clang diagnostic error \"-Wswitch\"")
+	#define UNHANDLED_ENUM  _Pragma("clang diagnostic error \"-Wswitch\"")
 	#define POP_DIAGNOSTIC  _Pragma("clang diagnostic pop")
 #elif defined(__GNUC__)
 	#define PUSH_DIAGNOSTIC _Pragma("GCC diagnostic push")
 	#define NO_SHADOW                                        \
 		_Pragma("GCC diagnostic ignored \"-Wshadow=local\"") \
 			_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"")
-	#define UNHANDLED_ENUM       _Pragma("GCC diagnostic error \"-Wswitch\"")
+	#define UNHANDLED_ENUM _Pragma("GCC diagnostic error \"-Wswitch\"")
 	#define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
 #endif

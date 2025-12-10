@@ -18,7 +18,7 @@ namespace vm::loader::compiler::detail {
 	 * This class simply holds all the relevant context and defines some helper methods, which make
 	 * defining instruction lowering recipes clean and succint.
 	 * When adding a new instruction simply add a new switch branch in `MicroBytecodeBuilder::add`.
-     *
+	 *
 	 * Beside generating a vector of `MicroInstruction`s, this class also provides a map
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
