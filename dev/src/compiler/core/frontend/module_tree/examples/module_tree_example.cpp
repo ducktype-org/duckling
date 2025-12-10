@@ -1,12 +1,15 @@
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <init/init.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
 int main() {
 	init::InitObject _;
 
+	using compiler::frontend::getFileRef;
 	using compiler::frontend::ModuleTree;
 
 	// First argument is some kind of a path to a module we want to parse.
@@ -15,21 +18,39 @@ int main() {
 		fs::File("../tests/test_module"), "test_package_id"
 	);
 
-	// Print main source file's content.
-	if (module_tree->hasMainSourceFile())
-		std::cout << module_tree->getMainSourceFile()->getFile().getContent().view().stringView()
+	base::Optional<base::CRef<compiler::frontend::SourceFile>> main_source;
+	std::vector<base::CRef<compiler::frontend::SourceFile>>    other_sources;
+	std::vector<base::CRef<ModuleTree>>                        submodules;
+
+	// Use a query context so that unlock() can register SideInputs in the dependency graph.
+	query::utils::withContextDo([&](query::Context& ctx) {
+		if (module_tree->hasMainSourceFile()) {
+			const auto main_file_access = module_tree->getMainSourceFile().unlock(ctx);
+			main_source                 = getFileRef(main_file_access.getID());
+		}
+
+		// Record QueryFileSideInput dependencies for every additional source file.
+		for (const auto& file_locked: module_tree->getSourceFiles()) {
+			const auto file_access = file_locked.unlock(ctx);
+			other_sources.emplace_back(getFileRef(file_access.getID()));
+		}
+
+		// Each unlock(ctx) emits a QueryModuleSideInput edge so incremental rebuilds know what changed.
+		for (const auto& submodule_locked: module_tree->getSubmodules()) {
+			const auto submodule_access = submodule_locked.unlock(ctx);
+			submodules.emplace_back(getModuleRef(submodule_access.getID()));
+		}
+	});
+
+	// Outside of the query context we can safely inspect the unlocked resources.
+	if (main_source.has_value())
+		std::cout << main_source.value()->getFileIllegalAccess().getContent().view().stringView()
 				  << '\n';
 
-	// Print content of source files.
-	for (auto&& file: module_tree->getSourceFiles())
-		std::cout << file->getFile().getContent().view().stringView() << '\n';
+	for (const auto& file_ref: other_sources)
+		std::cout << file_ref->getFileIllegalAccess().getContent().view().stringView() << '\n';
 
-	// Print names of other modules.
-	//
-	// getSubmodules is an iterator:
-	// first  - name
-	// second - std::shared_ptr<ModuleTree>
-	for (const auto& submodule: module_tree->getSubmodules())
-		std::cout << submodule.first.strView() << " == " << submodule.second->getName().strView()
-				  << '\n';
+	for (const auto& submodule_ref: submodules)
+		std::cout << submodule_ref->getName().strView() << " has "
+				  << submodule_ref->getSourceFiles().size() << " source file(s)" << '\n';
 }

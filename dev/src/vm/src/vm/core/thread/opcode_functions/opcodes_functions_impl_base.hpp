@@ -76,10 +76,10 @@ namespace vm {
 	// call and may cause the stack to explode.
 
 	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
-	// macro. This means, every other will jump to the next instruction at the end of it with
+	// macro. This means, every other instruction will jump to the next at the end of it with
 	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
 	// use this opcode. It also requires different macro surrounding the function call in the
-	// computed goto's and switch case, because in those approaches we can't end execution from
+	// switch case because in this approach we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
