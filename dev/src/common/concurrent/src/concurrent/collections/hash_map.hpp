@@ -165,20 +165,20 @@ namespace concurrent {
 		}
 
 	private:
-        /** 
-         * Number of shards used in the map.
-         */
-		constexpr static u64 SHARD_COUNT = 1024;
+		/**
+		 * Number of shards used in the map.
+		 */
+		constexpr static u64 SHARD_COUNT = 1'024;
 
-        /**
-         * The shards of the map.
-         */
-		std::vector<HashMapType>                                 shards;
-		
-        /**
-         * The locks protecting each shard.
-         */
-        mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+		/**
+		 * The shards of the map.
+		 */
+		std::vector<HashMapType> shards;
+
+		/**
+		 * The locks protecting each shard.
+		 */
+		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
 	};
 
 }
