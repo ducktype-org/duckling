@@ -1,12 +1,11 @@
 use std::{collections::HashMap, path::Path};
 
-use anyhow::{Context, bail};
 use tracing::debug;
 
 use super::dependency;
 
 use crate::{
-    QpCtx, QuackResult, StrId,
+    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail,
     quackpack::{
         core::{
             CompilerSpecificOptions, Features, Manifest, PackageMetadata, Profiles, RootDescription,
@@ -25,13 +24,13 @@ pub(crate) fn parse(
     ctx: &QpCtx<'_>,
 ) -> QuackResult<Manifest> {
     let Some(ref metadata) = schema.metadata else {
-        bail!("missing the obligatory section `metadata`")
+        qp_bail!("missing the obligatory section `metadata`")
     };
     let Some(version) = metadata.version else {
-        bail!("missing the obligatory key `metadata.version`")
+        qp_bail!("missing the obligatory key `metadata.version`")
     };
     let Some(ref name) = metadata.name else {
-        bail!("missing the obligatory key `metadata.name`")
+        qp_bail!("missing the obligatory key `metadata.name`")
     };
     debug!("package name is `{name}`, version is `{version}`");
     let root_description = RootDescription::new(name.into(), version);

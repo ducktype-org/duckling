@@ -36,7 +36,7 @@ namespace compiler::driver {
 	}
 
 	base::Bit256 KeyOf_CompileModule::queryStablePerfectHash() const {
-		auto component_hash = compiler::frontend::ModuleTree::getComponentHash(module_id);
+		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
 		auto partial        = component_hash.partial;
 		hashing::addToHash(partial, std::to_underlying(backend_type));
 		return partial.finalize();
@@ -53,7 +53,7 @@ namespace compiler::driver {
 			std::string out;
 			if (getModuleRef(module_id)->getParentModule().has_value()) {
 				out += getModuleFullName(
-					getModuleRef(module_id)->getParentModule().value()->getModuleID()
+					getModuleRef(module_id)->getParentModule().value().illegalAccess().getID()
 				);
 				out += "/";
 			}
@@ -102,7 +102,7 @@ namespace compiler::driver {
 			auto module_name
 				= base::StrID(base::strConcat(
 								  "module_",
-								  compiler::frontend::ModuleTree::getComponentHash(key.module_id)
+								  compiler::frontend::ModuleTree::getPathComponentHash(key.module_id)
 									  .hash.toStringHex()
 				)
 			                      .c_str());
@@ -136,7 +136,7 @@ namespace compiler::driver {
 				break;
 			}
 			case BackendType::DVM: {
-				auto          dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
 				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
@@ -210,7 +210,7 @@ namespace compiler::driver {
 	) {
 		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
 		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
-		auto dvm_code_collection = compileLIRModuleToDVM(ctx, lir_data);
+		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};
 

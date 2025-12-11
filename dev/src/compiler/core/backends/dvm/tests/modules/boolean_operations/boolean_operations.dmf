@@ -1,4 +1,4 @@
-fun main() = {
+fun main() -> i64 = {
 	var a: bool = true;
     var b: bool = false;
     if (not a) return 0;

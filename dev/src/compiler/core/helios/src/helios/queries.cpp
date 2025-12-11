@@ -688,6 +688,7 @@ namespace compiler::helios {
 			}
 
 			void visitConst(pst::Access<pst::Const>) override {
+				// @TODO: #1666 Support const statements in function bodies.
 				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
 			}
 		};

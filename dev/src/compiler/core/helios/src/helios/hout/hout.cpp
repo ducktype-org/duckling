@@ -7,6 +7,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -117,20 +118,38 @@ namespace compiler::helios {
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 			  switch (data_type) {
-			  case HOUTGlobalDataType::Variable:
+			  case HOUTGlobalDataType::Variable: {
+				  // Get the initial value and type of the variable.
+				  const auto initial_value_pst = stmt(ctx, symbol)
+			                                         ->dynamicCast<pst::Variable>()
+			                                         .value()
+			                                         ->getValue()
+			                                         .value()
+			                                         .unlock(ctx)
+			                                         ->getExpr();
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+					  "Handling errors in HOUT is not supported yet 2a — " + name(symbol).str()
+				  );
+				  auto initial_value_hout
+					  = ctx.query<QueryHoutOfExpr>(initial_value_pst)
+			                .expect(
+								"Handling errors in HOUT is not supported yet 2b — "
+								+ name(symbol).str()
+							);
+
+				  // Apply necessary coercions.
+				  const auto coercion = canCoerce(
+					  ctx, initial_value_hout->expression_type.getSymbolType(), variable_type
+				  );
+				  const auto valid_coercion = coercion.expect(
+					  "Handling errors in HOUT is not supported yet 2c — " + name(symbol).str()
+				  );
+
+				  // Return the coerced value.
 				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
-					  std::move(ctx.query<QueryHoutOfExpr>(stmt(ctx, symbol)
-				                                               ->dynamicCast<pst::Variable>()
-				                                               .value()
-				                                               ->getValue()
-				                                               .value()
-				                                               .unlock(ctx)
-				                                               ->getExpr())
-				                    .expect(
-										"Handling errors in HOUT is not supported yet 2 — "
-										+ name(symbol).str()
-									))
+					  valid_coercion.coerce(ctx, std::move(initial_value_hout))
 				  ) };
+			  }
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
 					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
