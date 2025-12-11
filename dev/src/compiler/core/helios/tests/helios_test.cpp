@@ -69,6 +69,8 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
+		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -1231,6 +1233,28 @@ private:
 			builtin_output_decl->parameters.at(0).type.getType().getKind(),
 			compiler::tsh::Kind::Integral
 		);
+	}
+
+	void testFunctionReturnTypeDeduction() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_deduction")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions) {
+			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+		}
+	}
+
+	void testFunctionReturnTypeCheckAndCoercion() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_coercion")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions) {
+			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+		}
 	}
 
 	void testMangler() {
