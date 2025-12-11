@@ -73,5 +73,6 @@ namespace tpc {
 		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
+		skip_till_fallback = false;
 	}
 }

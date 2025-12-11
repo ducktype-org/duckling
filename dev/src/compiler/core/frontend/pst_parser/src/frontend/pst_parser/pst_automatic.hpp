@@ -24,6 +24,7 @@
 
 #include "access.hpp"
 #include "lang_parser_element.hpp"
+#include "elements/lang_state_unmethods.hpp"
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_state.hpp>
@@ -33,6 +34,9 @@ namespace pst {
 	using lang_def::NamedOperator;
 	using lang_def::Special;
 	using lexer::Operator;
+
+	class LangParserState;
+	using StateCondition = bool(const LangParserState&, i64);
 
 	/**
 	 * @brief Forces pass by value. Sometimes usefull in parse templates
@@ -456,6 +460,20 @@ namespace pst {
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());
 			skipNotSemicolon();
+			return *this;
+		}
+
+		template<StateCondition until>
+		PSTAutomatic& fallbackUntill() {
+			u64 length = 0;
+			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
+			state.setFallback(length);
+			return *this;
+		}
+
+		template<StateCondition until>
+		PSTAutomatic& exitFallback() {
+			state.exitFallback();
 			return *this;
 		}
 
