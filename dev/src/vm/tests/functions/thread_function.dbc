@@ -16,6 +16,9 @@ function func {} -> void {
 		# if i > 0 goto Loop1
 		cmpG_l64_imm         i, 0;
 		jmpIf_label      	 Loop1;
+
+	deinit;
+	deinit;
     ret;
 }
 
@@ -34,5 +37,9 @@ function main { i64, ptr_argv } -> i64 {
     mov_l64_g64 			 output_var, counter;
     call_builtinfunc 		 builtin_output_i64;
 
+	deinit;
+	deinit;
+	deinit;
+	deinit;
     ret;
 }
