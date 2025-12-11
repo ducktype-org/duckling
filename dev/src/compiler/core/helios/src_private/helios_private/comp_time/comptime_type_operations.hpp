@@ -74,6 +74,4 @@ namespace compiler::helios::comptime_ops {
 
 	// TODOP: Comment.
 	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid);
-
-
 }

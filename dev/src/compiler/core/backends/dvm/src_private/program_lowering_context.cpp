@@ -8,9 +8,7 @@
 #include "string_id/string_id.hpp"
 
 #include "vm/bytecode/builtin_types.hpp"
-#include "vm/bytecode/serializer/serializer.hpp"
 #include "vm/bytecode/type_of_data.hpp"
-#include "vm/core/process/builtin_functions.hpp"
 #include <vm/bytecode/bytecode.hpp>
 
 #include <ranges>
@@ -26,6 +24,26 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 		tsl_type_to_dvm.put(layout, dvm_type);
 		return tsl_type_to_dvm.at(layout);
 	}
+}
+
+namespace {
+	static u64 getByteSizeForType(base::StrID type_name) {
+		if (type_name == "i64" || type_name == "f64" || type_name == "u64" || type_name == "ptr"
+		    || type_name == "opaque_ptr")
+			return 8;
+		if (type_name == "i32" || type_name == "f32" || type_name == "u32") return 4;
+		if (type_name == "i16" || type_name == "u16") return 2;
+		if (type_name == "i8" || type_name == "u8" || type_name == "bool" || type_name == "void")
+			return 1;
+		CORE_PANIC("Unsupported VM type: ", type_name.strView());
+	}
+
+}
+
+vm::code::TypeOfData ProgramLoweringContext::getTypeFromName(base::StrID type_name) const {
+	if (type_name == "opaque_ptr")
+		return vm::code::OpaqueType{ type_name, getByteSizeForType(type_name) };
+	return vm::code::PrimitiveType(type_name, getByteSizeForType(type_name));
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
@@ -189,22 +207,6 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	);
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
-
-	// TODOP: remove
-	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
-	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
-
-	std::cout << "DVM Backend serialization before validation:\n";
-	std::cout << "================================\n";
-	vm::code::serialize(collection, std::cout);
-	std::cout << "================================\n";
-	std::cout << "TSL types\n";
-	for (const auto& type: tsl_type_to_dvm) {
-		std::cout << type.first->toStringIdentification() << " | "
-				  << vm::code::typeToString(type.second) << '\n';
-	}
-	std::cout << "================================\n";
-
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

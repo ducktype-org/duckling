@@ -282,14 +282,7 @@ namespace {
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 
-		// TODOP: Inline m.build() once debug prints are removed.
-		vm::code::CodeCollection code = m.build();
-
-		std::cout << "Produced DVM bytecode:\n";
-		vm::code::serialize(code, std::cout);
-		std::cout << "\n";
-
-		return code;
+		return m.build();
 	}
 }
 
@@ -313,6 +306,9 @@ namespace compiler::helios {
 		vm::PID pid = maybe_pid.value();
 
 		auto code = produceCodeCollectionFromLIR(pid, lir_functions);
+		std::cout << "Produced DVM bytecode:\n";
+		vm::code::serialize(code, std::cout);
+		std::cout << "\n";
 
 		// @note: Remove functions/types/globals etc. that already exist in this VM instance
 		// (from previous compile time evaluations). Inserting duplicate elements will cause the

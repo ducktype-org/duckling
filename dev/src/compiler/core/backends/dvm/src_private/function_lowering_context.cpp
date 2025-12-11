@@ -6,8 +6,11 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include "base/collections/optional.hpp"
+
 #include <string_id/string_id.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include "vm/bytecode/validator/errors.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -79,7 +82,6 @@ namespace {
 			}
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
-				// TODOP: This should probably get removed?
 				// Representation of a meta type in DVM is a pointer to the symbol type.
 				return DVMImmediate{ std::bit_cast<u64>(&type_val) };
 			}
@@ -207,4 +209,48 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 		vm::opargs::StackLocalAny(dvm_local.name),
 		vm::opargs::Type(typeName(dvm_local.type)),
 	});
+}
+
+FunctionCallInfo FunctionCallInfo::fromLirFunction(
+	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
+) {
+	base::Optional<vm::code::TypeOfData> called_result_type = {};
+	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
+		called_result_type = program_context.lowerAndKeepTslType(func_literal.return_type_layout);
+
+	std::vector<vm::code::TypeOfData> param_types
+		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
+			  return program_context.lowerAndKeepTslType(layout);
+		  })
+	    | std::ranges::to<std::vector>();
+
+	return FunctionCallInfo{
+		.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
+		.return_type = called_result_type,
+		.param_types = param_types,
+		.is_extern_c = false,
+	};
+}
+
+FunctionCallInfo FunctionCallInfo::fromExternCFunction(
+	const base::StrID& ext_func_name, ProgramLoweringContext& program_context
+) {
+	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
+
+	base::Optional<vm::code::TypeOfData> called_result_type = {};
+	if (ext_func.signature.result_type.str != base::StrID("void"))
+		called_result_type = program_context.getTypeFromName(ext_func.signature.result_type);
+
+	std::vector<vm::code::TypeOfData> param_types
+		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
+			  return program_context.getTypeFromName(type_name);
+		  })
+	    | std::ranges::to<std::vector>();
+
+	return FunctionCallInfo{
+		.call_target = DVMExternCFunctionName{ .name = ext_func_name },
+		.return_type = called_result_type,
+		.param_types = param_types,
+		.is_extern_c = true,
+	};
 }

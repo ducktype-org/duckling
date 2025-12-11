@@ -1,3 +1,22 @@
+/**
+ * @file comptime_type_operations.cpp
+ * @brief Implementation of Native/External functions for Compile-Time-Evaluations of meta types.
+ *
+ * This file defines the interface that allows the DVM to interact directly with the compiler.
+ * Performing calls to the type system etc.
+ *
+ * Some key concepts:
+ * 1. Type Construction: Provides primitives to create modified types (Box, Ref, Const)
+ *    and composite types (Tuples, Variants, Functions) during CTE.
+ * 2. Builder Patterns: Due to the VM's limitations or supporting variadic type arguments, composite
+ * 	  types are constructed using stateful "Builder" objects via a sequence of calls (New -> Push ->
+ *    ... -> Finalize).
+ * 3. Opaque Pointers: Manages the passing of raw C++ pointers (`tsh::SymbolType*`, builders)
+ *    through the VM as `opaque_ptr` types.
+ *
+ * @note These functions are prefixed with `__comptime_` to avoid namespace collisions
+ *       with user-defined functions within the VM context.
+ */
 #include "comptime_type_operations.hpp"
 
 #include "typesystem/higher/mutability.hpp"
@@ -12,16 +31,12 @@
 #include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/extern_c_function.hpp"
 #include "vm/bytecode/instructions.hpp"
-#include "vm/bytecode/opcode_args.hpp"
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/utils/interpret.hpp"
 
-// TODOP: Comments in this file.
 namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_box,
+		__comptime_create_box,  // NOLINT(readability-identifier-naming)
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Box);
@@ -33,7 +48,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_ref,
+		__comptime_create_ref,  // NOLINT(readability-identifier-naming)
+
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Ref);
@@ -45,7 +61,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_const,
+		__comptime_create_const,  // NOLINT(readability-identifier-naming)
+
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
@@ -66,7 +83,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		i64,
 		"i64",
-		__comptime_get_size,
+		__comptime_get_size,  // NOLINT(readability-identifier-naming)
+
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -74,7 +92,11 @@ namespace compiler::helios::comptime_ops {
 		return static_cast<i64>(layout->getSize());
 	}
 
-	DEF_VM_EXT_C_FUNC(TupleTypeBuilder*, "opaque_ptr", __comptime_tuple_builder_new) {
+	DEF_VM_EXT_C_FUNC(
+		TupleTypeBuilder*,
+		"opaque_ptr",
+		__comptime_tuple_builder_new  // NOLINT(readability-identifier-naming)
+	) {
 		auto* builder = new TupleTypeBuilder();
 		return builder;
 	}
@@ -82,7 +104,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_tuple_builder_push,
+		__comptime_tuple_builder_push,  // NOLINT(readability-identifier-naming)
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -92,7 +114,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_tuple_builder_finalize,
+		__comptime_tuple_builder_finalize,  // NOLINT(readability-identifier-naming)
+
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
@@ -102,7 +125,12 @@ namespace compiler::helios::comptime_ops {
 		return result;
 	}
 
-	DEF_VM_EXT_C_FUNC(VariantTypeBuilder*, "opaque_ptr", __comptime_variant_builder_new) {
+	DEF_VM_EXT_C_FUNC(
+		VariantTypeBuilder*,
+		"opaque_ptr",
+		__comptime_variant_builder_new  // NOLINT(readability-identifier-naming)
+
+	) {
 		auto* builder = new VariantTypeBuilder();
 		return builder;
 	}
@@ -110,7 +138,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_variant_builder_push,
+		__comptime_variant_builder_push,  // NOLINT(readability-identifier-naming)
+
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -120,7 +149,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_variant_builder_finalize,
+		__comptime_variant_builder_finalize,  // NOLINT(readability-identifier-naming)
+
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
@@ -130,7 +160,12 @@ namespace compiler::helios::comptime_ops {
 		return result;
 	}
 
-	DEF_VM_EXT_C_FUNC(FunctionTypeBuilder*, "opaque_ptr", __comptime_func_type_builder_new) {
+	DEF_VM_EXT_C_FUNC(
+		FunctionTypeBuilder*,
+		"opaque_ptr",
+		__comptime_func_type_builder_new  // NOLINT(readability-identifier-naming)
+
+	) {
 		auto* builder = new FunctionTypeBuilder();
 		return builder;
 	}
@@ -138,7 +173,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_func_type_builder_set_ret_type,
+		__comptime_func_type_builder_set_ret_type,  // NOLINT(readability-identifier-naming)
+
 		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -149,7 +185,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_func_type_builder_push_arg,
+		__comptime_func_type_builder_push_arg,  // NOLINT(readability-identifier-naming)
+
 		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -159,7 +196,8 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_func_type_builder_finalize,
+		__comptime_func_type_builder_finalize,  // NOLINT(readability-identifier-naming)
+
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {

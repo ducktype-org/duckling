@@ -6,6 +6,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <utility>
+#include <variant>
 
 namespace compiler::backend_vm::internal {
 	struct DVMLocal {
@@ -53,16 +54,29 @@ namespace compiler::backend_vm::internal {
 
 	struct DVMFunctionName {
 		base::StrID name;
-		bool        is_extern_c = false;
 
 		bool operator==(const DVMFunctionName& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
+	struct DVMExternCFunctionName {
+		base::StrID name;
+		bool        operator==(const DVMExternCFunctionName& other) const = default;
+
+		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+	};
+
+	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName>;
+
 	class DVMValue {
-		using StoredValueVariant
-			= std::variant<DVMLocal, DVMGlobal, DVMImmediate, DVMLabel, DVMFunctionName>;
+		using StoredValueVariant = std::variant<
+			DVMLocal,
+			DVMGlobal,
+			DVMImmediate,
+			DVMLabel,
+			DVMFunctionName,
+			DVMExternCFunctionName>;
 
 		StoredValueVariant stored_value;
 

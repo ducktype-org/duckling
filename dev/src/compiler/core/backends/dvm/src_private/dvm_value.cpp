@@ -5,8 +5,6 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <iostream>
-
 using namespace compiler::backend_vm::internal;
 
 [[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMLocal::asArgument() const {
@@ -18,10 +16,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::StackLocalPtr(name); }
-		variant_case(vm::code::OpaqueType, opaque) {
-			std::cout << "Hello?\n";
-			return vm::opargs::StackLocalOpq(name);
-		}
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::StackLocalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
 		}
@@ -89,13 +84,14 @@ DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
 }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMFunctionName::asArgument() const {
-	// TODOP: Separate structure for externs?
-	if (is_extern_c)
-		return vm::opargs::ExtCFunctionName{ name };
-	else if (vm::builtins::isBuiltinFunction(name))
+	if (vm::builtins::isBuiltinFunction(name))
 		return vm::opargs::BuiltinFunctionName{ name };
 	else
 		return vm::opargs::FunctionName{ name };
+}
+
+[[nodiscard]] vm::opargs::OpCodeArg DVMExternCFunctionName::asArgument() const {
+	return vm::opargs::ExtCFunctionName{ name };
 }
 
 DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }

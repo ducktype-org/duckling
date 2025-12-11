@@ -1,3 +1,4 @@
+#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
@@ -6,6 +7,7 @@
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
+#include "base/extend_cpp/variant_match.hpp"
 
 #include "string_id/string_id.hpp"
 #include <logger/logger.hpp>
@@ -22,96 +24,6 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 namespace {
-	vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
-		switch (operation) {
-		/// Integer operations ///
-		case lir::Operation::IntegerAdd:
-			return OpKind::add;
-		case lir::Operation::IntegerSub:
-			return OpKind::sub;
-		case lir::Operation::IntegerNeg:
-			return OpKind::neg;
-		case lir::Operation::IntegerMul:
-			return OpKind::mul;
-		case lir::Operation::IntegerSDiv:
-			return OpKind::div;
-		case lir::Operation::IntegerSMod:
-			return OpKind::mod;
-		case lir::Operation::IntegerUDiv:
-			return OpKind::udiv;
-		case lir::Operation::IntegerUMod:
-			return OpKind::umod;
-
-		/// Floating point operations ///
-		case lir::Operation::FloatAdd:
-			return OpKind::fadd;
-		case lir::Operation::FloatSub:
-			return OpKind::fsub;
-		case lir::Operation::FloatMul:
-			return OpKind::fmul;
-		case lir::Operation::FloatDiv:
-			return OpKind::fdiv;
-		case lir::Operation::FloatNeg:
-			return OpKind::fneg;
-
-		/// Signed integer comparisons ///
-		case lir::Operation::IntegerEq:
-			return OpKind::cmpEq;
-		case lir::Operation::IntegerNeq:
-			return OpKind::cmpNeq;
-		case lir::Operation::IntegerSLt:
-			return OpKind::cmpL;
-		case lir::Operation::IntegerSLteq:
-			return OpKind::cmpLe;
-		case lir::Operation::IntegerSGt:
-			return OpKind::cmpG;
-		case lir::Operation::IntegerSGteq:
-			return OpKind::cmpGe;
-
-		/// Unsigned integer comparisons ///
-		case lir::Operation::IntegerULt:
-			return OpKind::ucmpL;
-		case lir::Operation::IntegerULteq:
-			return OpKind::ucmpLe;
-		case lir::Operation::IntegerUGt:
-			return OpKind::ucmpG;
-		case lir::Operation::IntegerUGteq:
-			return OpKind::ucmpGe;
-
-		/// Floating point comparisons ///
-		case lir::Operation::FloatLt:
-			return OpKind::fcmpL;
-		case lir::Operation::FloatGt:
-			return OpKind::fcmpG;
-		case lir::Operation::FloatLteq:
-			return OpKind::fcmpLe;
-		case lir::Operation::FloatGteq:
-			return OpKind::fcmpGe;
-		case lir::Operation::FloatEq:
-			return OpKind::fcmpEq;
-		case lir::Operation::FloatNeq:
-			return OpKind::fcmpNeq;
-
-		/// Logical operations ///
-		case lir::Operation::BooleanAnd:
-			return OpKind::log_and;
-		case lir::Operation::BooleanOr:
-			return OpKind::log_or;
-		case lir::Operation::BooleanNot:
-			return OpKind::log_not;
-
-		/// Other ///
-		case lir::Operation::Assign:
-			return OpKind::mov;
-		case lir::Operation::Call:
-			return OpKind::call;
-
-		default:
-			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
-		}
-		CORE_UNREACHABLE();
-	}
-
 	bool isComparison(OpKind op) {
 		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpL
 		    || op == OpKind::cmpLe || op == OpKind::cmpG || op == OpKind::cmpGe
@@ -124,128 +36,43 @@ namespace {
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
 	}
-
-	bool isMetaTypeOperation(compiler::lir::Operation op) {
-		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateOptional
-		    || op == lir::Operation::MetaCreateTuple || op == lir::Operation::MetaCreateVariant
-		    || op == lir::Operation::MetaCreateFuncType || op == lir::Operation::MetaGetSize;
-	}
-
-	static u64 getByteSizeForType(base::StrID type_name) {
-		if (type_name == "i64" || type_name == "f64" || type_name == "u64" || type_name == "ptr"
-		    || type_name == "opaque_ptr")
-			return 8;
-		if (type_name == "i32" || type_name == "f32" || type_name == "u32") return 4;
-		if (type_name == "i16" || type_name == "u16") return 2;
-		if (type_name == "i8" || type_name == "u8" || type_name == "bool") return 1;
-		CORE_PANIC("Unsupported VM type");
-	}
-
-	vm::code::TypeOfData getTypeFromSignatureName(base::StrID type_name) {
-		if (type_name == "opaque_ptr")
-			return vm::code::OpaqueType{ type_name, getByteSizeForType(type_name) };
-		return vm::code::PrimitiveType(type_name, getByteSizeForType(type_name));
-	}
 }
 
-// TODOP: Unify handleCall and handleExtCall
-void FunctionLoweringContext::handleExtCall(
-	const base::StrID&          func_name,
+void FunctionLoweringContext::handleCall(
+	const FunctionCallInfo&     call_info,
 	const std::deque<DVMValue>& func_args,
 	base::Optional<DVMValue>    output
-
 ) {
-	const auto& extern_func_signature = program_context.getExternCFunction(func_name).signature;
 	CORE_ASSERT(
-		extern_func_signature.parameters.size() == func_args.size(),
+		call_info.param_types.size() == func_args.size(),
 		"Argument count mismatch for extern C function call: ",
-		func_name
+		VISIT(call_info.call_target, callable, return callable.name)
 	);
 
 	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		auto result_type_name = extern_func_signature.result_type.str;
-		if (result_type_name != "void") {
-			// TODOP: Would be nice for extern functions to store TypeOfData instead of identifiers
-			auto arg_type = getTypeFromSignatureName(result_type_name);
-			return pushTempLocal(arg_type, "call_result");
-		} else
+		if (call_info.return_type)
+			return pushTempLocal(call_info.return_type.value(), "call_result");
+		else
 			return {};
 	}();
 
-	for (const auto& [arg_id, func_arg, type_name]:
-	     std::views::zip(std::views::iota(0), func_args, extern_func_signature.parameters)) {
-		auto arg_type = getTypeFromSignatureName(type_name.str);
-
+	for (const auto& [arg_idx, func_arg, arg_type]:
+	     std::views::zip(std::views::iota(0), func_args, call_info.param_types)) {
 		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
-		auto arg_name = base::strConcat("ext_call", "_arg", arg_id, "_");
-		std::cout << "Arg type in handleExtCall: " << typeName(arg_type).strView() << '\n';
+
+		auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
 		auto temp_arg = pushTempLocal(arg_type, arg_name.c_str());
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
-	pushInstruction(
-		{ OpKind::call,
-	      DVMFunctionName{ .name = base::StrID(func_name), .is_extern_c = true }.asArgument() }
-	);
+	pushInstruction({ OpKind::call,
+	                  VISIT(call_info.call_target, callable, return callable.asArgument()) });
 
 	if (output) {
 		pushInstruction({
 			OpKind::mov,
 			output.value(),
 			call_result_storage->asArgument(),
-		});
-	}
-
-	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
-}
-
-void FunctionLoweringContext::handleFunctionCall(
-	const lir::FunctionLiteral& called_function,
-	const DVMValue&             called_func_name,
-	const std::deque<DVMValue>& func_args,
-	base::Optional<DVMValue>    output
-) {
-	CORE_ASSERT(
-		func_args.size() == called_function.parameter_layouts->size(),
-		"Function call argument count does not match function parameter count."
-	);
-
-	vm::code::TypeOfData called_result_type
-		= program_context.lowerAndKeepTslType(called_function.return_type_layout);
-	std::vector<vm::code::TypeOfData> param_types
-		= *called_function.parameter_layouts | std::views::transform([&](const auto& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
-		  })
-	    | std::ranges::to<std::vector>();
-
-
-	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		if (typeName(called_result_type) != "void")
-			return pushTempLocal(called_result_type, "call_result");
-		else
-			return {};
-	}();
-
-	// Instantiate function parameters on the stack.
-	for (const auto& [arg_id, func_arg, param_type]:
-	     std::views::zip(std::views::iota(0), func_args, param_types)) {
-		CORE_DEV_LOG(Backend, "Initializing: ", typeName(param_type), '\n');
-
-		auto arg_name = base::strConcat("call", "_arg", arg_id, "_");
-
-		auto temp_arg = pushTempLocal(param_type, arg_name.c_str());
-
-		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
-	}
-
-	pushInstruction({ OpKind::call, called_func_name });
-
-	if (output) {
-		pushInstruction({
-			OpKind::mov,
-			output.value(),
-			call_result_storage.value().asArgument(),
 		});
 	}
 
@@ -272,36 +99,79 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 	// TODOP: Make those function names not hardcoded?
 	switch (lir_instruction.operation) {
 	case Operation::MetaCreateBox:
-		std::cout << "Meta create box\n";
-		handleExtCall(base::StrID("__comptime_create_box"), { args[0] }, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_create_box"), program_context
+			),
+			{ args[0] },
+			maybe_output
+		);
 		break;
 	case Operation::MetaCreateRef:
-		handleExtCall(base::StrID("__comptime_create_ref"), { args[0] }, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_create_ref"), program_context
+			),
+			{ args[0] },
+			maybe_output
+		);
 		break;
 	case Operation::MetaCreateOptional:
-		handleExtCall(base::StrID("__comptime_create_optional"), { args[0] }, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_create_optional"), program_context
+			),
+			{ args[0] },
+			maybe_output
+		);
 		break;
 	case Operation::MetaCreateConst:
-		handleExtCall(base::StrID("__comptime_create_const"), { args[0] }, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_create_const"), program_context
+			),
+			{ args[0] },
+			maybe_output
+		);
 		break;
 	case Operation::MetaGetSize:
-		handleExtCall(base::StrID("__comptime_get_size"), { ctx, args[0] }, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_get_size"), program_context
+			),
+			{ args[0] },
+			maybe_output
+		);
 		break;
 	case Operation::MetaCreateTuple: {
 		auto builder
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "tuple_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_tuple_builder_new"), {}, builder_value);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_tuple_builder_new"), program_context
+			),
+			{},
+			builder_value
+		);
 
 		for (usize i = 0; i < lir_instruction.arguments.size(); i++) {
-			handleExtCall(
-				base::StrID("__comptime_tuple_builder_push"), { builder_value, args[i] }, {}
+			handleCall(
+				FunctionCallInfo::fromExternCFunction(
+					base::StrID("__comptime_tuple_builder_push"), program_context
+				),
+				{ builder_value, args[i] },
+				{}
 			);
 		}
 
-		handleExtCall(
-			base::StrID("__comptime_tuple_builder_finalize"), { ctx, builder_value }, maybe_output
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_tuple_builder_finalize"), program_context
+			),
+			{ ctx, builder_value },
+			maybe_output
 		);
 
 		// TODOP: Deinit builder?
@@ -312,16 +182,32 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "variant_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 
-		handleExtCall(base::StrID("__comptime_variant_builder_new"), {}, builder_value);
-
-		for (usize i = 0; i < lir_instruction.arguments.size(); i++)
-			handleExtCall(
-				base::StrID("__comptime_variant_builder_push"), { builder_value, args[i] }, {}
-			);
-
-		handleExtCall(
-			base::StrID("__comptime_variant_builder_finalize"), { ctx, builder_value }, maybe_output
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_variant_builder_new"), program_context
+			),
+			{},
+			builder_value
 		);
+
+		for (usize i = 0; i < lir_instruction.arguments.size(); i++) {
+			handleCall(
+				FunctionCallInfo::fromExternCFunction(
+					base::StrID("__comptime_variant_builder_push"), program_context
+				),
+				{ builder_value, args[i] },
+				{}
+			);
+		}
+
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_variant_builder_finalize"), program_context
+			),
+			{ ctx, builder_value },
+			maybe_output
+		);
+
 
 		// TODOP: Deinit builder?
 		break;
@@ -332,20 +218,37 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 		auto builder
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "function_builder");
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
+		// TODOP: finish here
 
-		handleExtCall(base::StrID("__comptime_func_type_builder_new"), {}, builder_value);
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_func_type_builder_new"), program_context
+			),
+			{},
+			builder_value
+		);
 
-		handleExtCall(
-			base::StrID("__comptime_func_type_set_ret_type"), { builder_value, args[0] }, {}
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_func_type_builder_set_ret_type"), program_context
+			),
+			{ builder_value, args[0] },
+			{}
 		);
 
 		for (usize i = 1; i < lir_instruction.arguments.size(); i++)
-			handleExtCall(
-				base::StrID("__comptime_func_type_builder_push_arg"), { builder_value, args[i] }, {}
+			handleCall(
+				FunctionCallInfo::fromExternCFunction(
+					base::StrID("__comptime_func_type_builder_push_arg"), program_context
+				),
+				{ builder_value, args[i] },
+				{}
 			);
 
-		handleExtCall(
-			base::StrID("__comptime_func_type_builder_finalize"),
+		handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID("__comptime_func_type_builder_finalize"), program_context
+			),
 			{ ctx, builder_value },
 			maybe_output
 		);
@@ -359,21 +262,24 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 }
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	if (isMetaTypeOperation(lir_instruction.operation)) {
-		handleMetaOperation(lir_instruction);
-		return;
-	}
-
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
 	    | std::ranges::to<std::deque>();
-
-	// TODOP: Integrate with meta ops so this returns a variant.
-	const auto operation = lirOpToOpKind(lir_instruction.operation);
-
 	const auto maybe_output
 		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
+
+	// TODOP: Integrate with meta ops so this returns a variant.
+	const auto dvm_operation = lirOpToDVMOperation(lir_instruction.operation);
+
+	variant_match(dvm_operation) {
+		variant_case(MetaOperation, operation) {
+			handleMetaOperation(lir_instruction);
+			return;
+		}
+	}
+	const auto operation = std::get<SimpleOperation>(dvm_operation).op;
+
 
 	if (isComparison(operation)) {
 		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
@@ -381,13 +287,15 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		// by splitting it into two instructions:
 		// a CMP b;
 		// cmov x, 1;
-		pushInstruction({ lirOpToOpKind(lir_instruction.operation), args[0], args[1] });
+		pushInstruction({ operation, args[0], args[1] });
 		pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		auto called_func_name = args.front();
 		args.pop_front();
-		handleFunctionCall(called_function, called_func_name, args, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
+		);
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
 		auto output = maybe_output.value();
