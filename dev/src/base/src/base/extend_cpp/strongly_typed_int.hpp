@@ -77,7 +77,7 @@
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
 		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
 		/* Here it's 0-value to dodge potential promotions like from i8int to i32int */            \
-		inline constexpr NAME  operator-() const noexcept { return NAME(0 - value); }              \
+		inline constexpr NAME  operator-() const noexcept { return NAME(static_cast<BASE_T>(-value)); }              \
 		inline constexpr NAME& operator++() noexcept {                                             \
 			value++;                                                                               \
 			return *this;                                                                          \

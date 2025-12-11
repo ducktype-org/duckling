@@ -15,4 +15,8 @@ namespace pst::internal {
 	bool isSentinel(LangParserState& state, i64 fwd) {
 		return state[fwd].is(lexer::Token::Type::Sentinel);
 	}
+
+	u64 streamSize(LangParserState& state) {
+		return state.ctokens().size();
+	}
 }

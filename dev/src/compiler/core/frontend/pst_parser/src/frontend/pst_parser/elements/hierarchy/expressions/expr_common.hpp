@@ -4,7 +4,7 @@
 #include "../meta.hpp"                         // IWYU pragma: export
 #include "../not_statements/expr_element.hpp"  // IWYU pragma: export
 
-#define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
+#define CONDITION(name) static bool name(const TokenStream& state, i64 fwd = 0)
 
 namespace pst {
 	/**
@@ -26,11 +26,10 @@ namespace pst {
 		 * @brief General parseUntil that allows to parse an expression element with a condition for
 		 * expression end.
 		 */
-		template<std::derived_from<ExprElement> T, StateCondition until>
-		MBox<ExprElement> parseUntil(LangParserState& state) {
-			i64 length = 0;
-			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
-			return T::parse(state, length);
+		template<std::derived_from<ExprElement> T>
+		MBox<ExprElement> parseUntilEnd(LangParserState& state) {
+			u64 length = internal::streamSize(state);
+			auto res = T::parse(state, length);
 		}
 	}
 }

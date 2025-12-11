@@ -136,6 +136,14 @@ namespace tpc {
 		 */
 		void log(Box<dia::Message> message) { err->log(std::move(message)); }
 
+		template <TokenStreamCondition until>
+		[[nodiscard]]
+		u64 countUntil() const {
+			u64 length = 0;
+			while (!ctokens().peek(base::safeIntConv<i64>(length)).is(Token::Type::Sentinel) && !until(ctokens(), base::safeIntConv<i64>(length))) length++;
+			return length;
+		}
+
 		/**
 		 * @brief Get position relative to the current token.
 		 */

@@ -16,5 +16,6 @@ namespace pst {
 		dia::SourcePosition getPosition(LangParserState& state);
 		void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun);
 		bool isSentinel(LangParserState& state, i64 fwd);
+		u64 streamSize(LangParserState& state);
 	}
 }

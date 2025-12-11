@@ -53,28 +53,29 @@ namespace pst {
 	}
 
 	namespace {
-		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
+		bool universalEnd(const TokenStream& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
 			    || ExprClassify::isAssignment(state, fwd)
 			    || internal::Conditions::isBlockGroup(state, fwd);
 		}
 
-		bool universalAllowBlockEnd(const LangParserState& state, i64 fwd = 0) {
+		bool universalAllowBlockEnd(const TokenStream& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
 			    || ExprClassify::isAssignment(state, fwd);
 		}
 
-		bool universalEndAllowComma(const LangParserState& state, i64 fwd = 0) {
+		bool universalEndAllowComma(const TokenStream& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
 			    || internal::Conditions::isBlockGroup(state, fwd);
 		}
 
-		bool assignmentEnd(const LangParserState& state, i64 fwd = 0) {
+		bool assignmentEnd(const TokenStream& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon);
 		}
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseUniversal(LangParserState& state) {
+		state.parse()
 		return expr::parseUntil<expr::MatchExpr, universalEnd>(state);
 	}
 

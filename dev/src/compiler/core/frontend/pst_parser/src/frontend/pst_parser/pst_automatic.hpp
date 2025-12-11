@@ -36,7 +36,7 @@ namespace pst {
 	using lexer::Operator;
 
 	class LangParserState;
-	using StateCondition = bool(const LangParserState&, i64);
+	using TokenStreamCondition = bool(const TokenStream&, i64);
 
 	/**
 	 * @brief Forces pass by value. Sometimes usefull in parse templates
@@ -51,11 +51,18 @@ namespace pst {
 	protected:
 		State&                state;
 		Ref<pst::LangElement> el;
+		bool active_fallback = false;
 
 	public:
 		PSTAutomatic(State& state, Ref<pst::LangElement> caller): state(state), el(caller) {}
 
 		PSTAutomatic(const PSTAutomatic&) = delete;
+
+		~PSTAutomatic() {
+			if (active_fallback) {
+				state.exitFallback();
+			}
+		}
 
 		// Useful for debugging:
 		//
@@ -463,15 +470,37 @@ namespace pst {
 			return *this;
 		}
 
-		template<StateCondition until>
-		PSTAutomatic& fallbackUntill() {
+		/**
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when PSTAutomatic is destructed at the end of the expression. 
+		 *
+		 * Intended usage:
+		 * state.parse(el).autoFallbackUntil<condition>().parseOne(...);
+		 */
+		template<TokenStreamCondition until>
+		PSTAutomatic& autoFallbackUntil() {
+			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
+			u64 length = 0;
+			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
+			state.setFallback(length);
+			active_fallback = true;
+			return *this;
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
+		 */
+		template<TokenStreamCondition until>
+		PSTAutomatic& fallbackUntil() {
 			u64 length = 0;
 			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
 			state.setFallback(length);
 			return *this;
 		}
 
-		template<StateCondition until>
+		/**
+		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when exited.
+		 */
+		template<TokenStreamCondition until>
 		PSTAutomatic& exitFallback() {
 			state.exitFallback();
 			return *this;

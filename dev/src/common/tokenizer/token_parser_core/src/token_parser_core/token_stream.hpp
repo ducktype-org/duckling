@@ -36,6 +36,11 @@ namespace tpc {
 			usize         to
 		);
 
+		[[nodiscard]]
+		const Token& operator[](i64 fwd) const {
+			return peek(fwd);
+		}
+
 		/**
 		 * @brief Returns token at current position then increases the current position
 		 */
@@ -76,4 +81,5 @@ namespace tpc {
 		usize size() const;
 	};
 
+	using TokenStreamCondition = bool(const TokenStream&, i64);
 }

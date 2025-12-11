@@ -121,8 +121,8 @@ namespace pst {
 			typename Self,
 			bool                      NON_EMPTY,
 			lexer::Token::BracketType BRACKETS,
-			StateCondition            isSeparator,
-			StateCondition            isEnding,
+			TokenStreamCondition            isSeparator,
+			TokenStreamCondition            isEnding,
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
@@ -142,7 +142,7 @@ namespace pst {
 			}
 
 			usize expr_length{};
-			if (state.empty() || isEnding(state, 0)) {
+			if (state.empty() || isEnding(state.ctokens(), 0)) {
 				// Handle empty expression
 				if constexpr (NON_EMPTY)
 					state.log(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
@@ -152,13 +152,13 @@ namespace pst {
 
 					// Find next separator or end
 					while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
-					       && !isSeparator(state, (i64) expr_length)
-					       && !isEnding(state, (i64) expr_length)) {
+					       && !isSeparator(state.ctokens(), (i64) expr_length)
+					       && !isEnding(state.ctokens(), (i64) expr_length)) {
 						expr_length++;
 					}
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
-						if (state.empty() || isEnding(state, 0)) {
+						if (state.empty() || isEnding(state.ctokens(), 0)) {
 							auto pos = state.getPosition(-1);
 							if (!state.isEOF()) {
 								auto other = state.getPosition();
@@ -180,8 +180,8 @@ namespace pst {
 						state.parse(out).assign(&out->elements.back(), std::move(box));
 					}
 
-					if (isEnding(state, 0)) break;
-					if (isSeparator(state, 0))
+					if (isEnding(state.ctokens(), 0)) break;
+					if (isSeparator(state.ctokens(), 0))
 						state.parse(out).eatOne();
 					else
 						state.log(makeBox<NoSeparatorError<getName>>(state.getPosition()));
