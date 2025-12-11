@@ -519,7 +519,9 @@ namespace compiler::helios {
 		 * pst::CodeBlockOrStmt Might be changed into query in the future
 		 */
 		template<class Container>
-		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container, tsh::SymbolType<> return_type) {
+		static auto queryCodeOfCodeBlock(
+			query::Context& ctx, const Container& container, tsh::SymbolType<> return_type
+		) {
 			code::CodeBlock block({});
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
@@ -536,7 +538,9 @@ namespace compiler::helios {
 		 * Should only be used for the whole function body.
 		 */
 		static code::CodeBlock queryCodeOfSingleStmtFunctionBody(
-			query::Context& ctx, pst::Access<pst::CodeBlockOrStmt> body, tsh::SymbolType<> return_type
+			query::Context&                   ctx,
+			pst::Access<pst::CodeBlockOrStmt> body,
+			tsh::SymbolType<>                 return_type
 		) {
 			CORE_ASSERT(body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt, "Bad body type!");
 
@@ -548,7 +552,7 @@ namespace compiler::helios {
 				auto expr
 					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (single expr function body)");
-				
+
 				// handle type check and coercion
 				auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
 				if (coercion.hasError()) {
@@ -582,12 +586,14 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-			query::Context&                 ctx;
-			tsh::SymbolType<>				return_type;
+			query::Context&   ctx;
+			tsh::SymbolType<> return_type;
 
 			base::Optional<Box<code::Stmt>> out;
 
-			HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type): ctx(ctx), return_type(return_type) {}
+			HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
+				  ctx(ctx),
+				  return_type(return_type) {}
 
 			// @TODO: visits for all valid stmt-s
 
@@ -607,20 +613,20 @@ namespace compiler::helios {
 					                .expect("Not handling errors here yet... (return expr)");
 
 					// handle type check and coercion
-					auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
+					auto coercion
+						= canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
 					if (coercion.hasError()) {
-						ctx.log(
-							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-								stmt->getSourcePosition(),
-								base::strConcat(
-									"Bad return type\n",
-									expr->expression_type.getSymbolType().toString(),
-									"can not be coerced to ",
-									return_type.toString(),
-									"\n"
-								)
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							base::strConcat(
+								"Bad return type\n",
+								expr->expression_type.getSymbolType().toString(),
+								"can not be coerced to ",
+								return_type.toString(),
+								"\n"
 							)
-						);
+						));
 						CORE_PANIC("Return expression of invalid type");
 					}
 					auto coerced_expr = coercion.value().coerce(ctx, std::move(expr));
@@ -865,15 +871,17 @@ namespace compiler::helios {
 				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
 					// The `fun abc() = expr;` case.
 
-					code::CodeBlock function_body
-						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx), decl->return_type);
+					code::CodeBlock function_body = queryCodeOfSingleStmtFunctionBody(
+						ctx, fun_body.unlock(ctx), decl->return_type
+					);
 					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
-					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, decl->return_type);
+					code::CodeBlock function_body
+						= queryCodeOfCodeBlock(ctx, fun_body, decl->return_type);
 					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
