@@ -8,16 +8,31 @@ namespace concurrent {
 
 	WorkerData::WorkerData(u64 id, std::mt19937_64 rng)
 		: id(id), rng(rng) {}
-	
-	Box<WorkerData> WorkerData::make() {
-		static AtomicU64 next_id{0};
 
-		u64 id = next_id.inc();
-		std::mt19937_64 rng_engine(id * 123456);
+		
+	CRef<std::vector<WDRef>> WorkerData::generateWorkerData() {
+		static std::vector<Box<WorkerData>> worker_data_instances;
+		static std::vector<WDRef> worker_data_references;
 
-		CORE_ASSERT(id < concurrent::getWorkerCount(), "Worker id exceeds worker count");
+		u64 worker_count = concurrent::getWorkerCount();
+		worker_data_instances.reserve(worker_count);
+		worker_data_references.reserve(worker_count);
+		
+		for (u64 i = 0; i < worker_count; i++) {
+			Box<WorkerData> worker_data = makeBox<WorkerData>(i, std::mt19937_64(i * 123456));
 
-		return makeBox<WorkerData>(id, rng_engine);
+			worker_data_instances.emplace_back(std::move(worker_data));
+			worker_data_references.emplace_back(worker_data_instances.back().ref());
+		}
+
+		return &worker_data_references;
+	}
+
+	CRef<std::vector<WDRef>> WorkerData::getWorkerData() {
+		// wrapping this call in static ensures thread-safe one-time initialization:
+		static CRef<std::vector<WDRef>> worker_data = generateWorkerData();
+
+		return worker_data;
 	}
 
 }
