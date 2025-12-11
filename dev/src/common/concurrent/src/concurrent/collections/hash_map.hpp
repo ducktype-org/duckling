@@ -15,7 +15,7 @@ namespace concurrent {
 	 *
 	 * Concurrency:
 	 * - Methods of this class are thread-safe.
-	 * - Execution sequential consistency is guaranteed only per key.
+	 * - Sequential consistency is guaranteed only per key.
 	 * - Internally the map is sharded into multiple sub-maps, each protected by
 	 *    its own AtomicFlagSpinlock.
 	 */

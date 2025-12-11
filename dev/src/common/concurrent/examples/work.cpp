@@ -1,6 +1,7 @@
 #include "work.hpp"
 
 #include <concurrent/workers/worker_data.hpp>
+#include <concurrent/utils/nop_wait.hpp>
 
 void work(HashMap& map, concurrent::WDRef worker_data) {
 	u64 key = 123'123 + (worker_data->randomU64() % 1'024);
@@ -12,6 +13,9 @@ void work(HashMap& map, concurrent::WDRef worker_data) {
 
 void cWork(CHashMap& map, concurrent::WDRef worker_data) {
 	u64 key = 123'123 + (worker_data->randomU64() % 12);
+
+	// emulate some work:
+	concurrent::nopWait(16 * 12);
 
 
 	// map.tryPut(key, 0);

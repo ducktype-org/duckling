@@ -5,7 +5,7 @@
 #include <iostream>
 #include <thread>
 
-constexpr int THREAD_COUNT = 8;
+constexpr int THREAD_COUNT = 1;
 
 // u64 concurrent::AtomicFlagSpinlock::yield_count = 0;
 
