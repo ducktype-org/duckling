@@ -19,7 +19,7 @@ public:
 	DuckVMDebug(const DuckVMDebug&)            = delete;
 	DuckVMDebug& operator=(const DuckVMDebug&) = delete;
 
-	void run() const;
+	void run();
 
 private:
 	struct CallInfo {
@@ -35,9 +35,12 @@ private:
 	DuckVMDebug();
 	DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args = {});
 
-	void runVm() const;
-	void runFun(const std::string& string) const;
-	void getExitValue() const;
+	bool joined = false;
+	bool auto_retrieve_exit_value = false;
+
+	void runVm();
+	void runFun(const std::string& string);
+	void getExitValue();
 	void getStatus() const;
 	void step() const;
 	void resume() const;

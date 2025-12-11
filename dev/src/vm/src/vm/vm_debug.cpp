@@ -40,7 +40,7 @@ namespace {
 	}
 }
 
-void DuckVMDebug::run() const {
+void DuckVMDebug::run() {
 	std::cout << "++++++++++++++++++++++++\n"
 			     "+ BeRD has started +\n"
 				 "++++++++++++++++++++++++\n";
@@ -68,15 +68,23 @@ void DuckVMDebug::run() const {
 			runVm();
 		} else if (stripped_line.starts_with("run ")) {
 			runFun(lstrip(lstrip(line).substr(3)));
-		} else if (stripped_line == "resume") {
+		} else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c") {
 			resume();
 		} else if (stripped_line == "pause") {
 			pause();
+		} else if (stripped_line == "stop") {
+			stop();
 		} else if (stripped_line == "print") {
 			// print();
 			throw base::NotYetImplemented("Printing not implemented yet.");
 		} else if (stripped_line == "exitval" || stripped_line == "g" || stripped_line == "getexitval") {
 			getExitValue();
+		} else if (stripped_line == "autoexitval on") {
+			auto_retrieve_exit_value = true;
+			std::cout << "Auto exit value retrieval enabled.\n";
+		} else if (stripped_line == "autoexitval off") {
+			auto_retrieve_exit_value = false;
+			std::cout << "Auto exit value retrieval disabled.\n";
 		} else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
 			help();
 		} else {
@@ -103,7 +111,7 @@ DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string
 	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-void DuckVMDebug::runVm() const {
+void DuckVMDebug::runVm() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && 
 		(!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
@@ -112,14 +120,21 @@ void DuckVMDebug::runVm() const {
 		getStatus();
 		return;
 	}
-	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value()) && joined == false) {
 		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		joined = true;
 	}	
 	if (!vm::api::run(pid, debug_args)) throw std::runtime_error("Failed to run VM");
-	// getExitValue();
+	joined = false;
+	
+	if (auto_retrieve_exit_value) {
+		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		joined = true;
+		getExitValue();
+	}
 }
 
-void DuckVMDebug::runFun(const std::string& string) const {
+void DuckVMDebug::runFun(const std::string& string) {
 	const u64 paren_open  = string.find('(');
 	const u64 paren_close = string.rfind(')');
 
@@ -168,23 +183,32 @@ void DuckVMDebug::runFun(const std::string& string) const {
 		getStatus();
 		return;
 	}
-	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value()) && joined == false) {
 		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		joined = true;
 	}	
 	if (!vm::api::runFunction(pid, function_name, createArgumentList(arguments)))
 		throw BeRDFailedToRunCodeException();
-	// getExitValue();
-	// freeArguments(arguments);
+	joined = false;
+	if (auto_retrieve_exit_value) {
+		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		joined = true;
+		getExitValue();
+		freeArguments(arguments);
+	}
 }
 
-void DuckVMDebug::getExitValue() const {
+void DuckVMDebug::getExitValue() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
 		std::cout << "No execution finished\n";
 		getStatus();
 		return;
 	}
-	// if (!vm::api::join(pid).has_value()) throw BeRDFailedToJoinProcessException();
+	if (!joined) {
+		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		joined = true;
+	}
 	const auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw BeRDEmptyExitCodeException();
 
@@ -249,14 +273,15 @@ void DuckVMDebug::stop() const {
 
 void DuckVMDebug::help() const {
 	std::cout << "BeRD Debugger Commands:\n"
-			     "  s, step              	- Execute one step in the VM\n"
-			     "  run                  	- Run the VM until completion\n"
-			     "  run <func([args])>   	- Run a specific function with arguments\n"
-			     "  resume               	- Resume execution of the VM\n"
-			     "  pause               	- Pause execution of the VM\n"
-			     "  status              	- Get the current status of the VM\n"
-			     "  print <var>         	- Print the value of a variable (not implemented yet)\n"
-			     "  exit, q, quit       	- Exit the debugger\n"
-			     "  exitval, g, getexitval  - Get the exit value of the function run in VM\n"
-				 "  help, h, ?          	- Show this help message\n";
+			     "  s, step              		- Execute one step in the VM\n"
+			     "  run                  		- Run the VM until completion\n"
+			     "  run <func([args])>   		- Run a specific function with arguments\n"
+			     "  resume, continue, c		- Resume execution of the VM\n"
+			     "  pause               		- Pause execution of the VM\n"
+			     "  status              		- Get the current status of the VM\n"
+			     "  print <var>         		- Print the value of a variable (not implemented yet)\n"
+			     "  exit, q, quit       		- Exit the debugger\n"
+			     "  exitval, g, getexitval  	- Get the exit value of the function run in VM\n"
+				 "  autoexitval [on/off]       	- Enable or disable automatic retrieval of exit value after run\n"
+			     "  help, h, ?          		- Show this help message\n";
 }
