@@ -138,7 +138,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
-	struct IMPLEMENT_QUERY(QueryFuncReturnTypeDeduction, tsh::SymbolType<>) {
+	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, tsh::SymbolType<>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -241,7 +241,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFuncReturnTypeDeduction);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, HOUTFunctionDeclaration) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
@@ -277,7 +277,7 @@ namespace compiler::helios {
 				}
 				// Deduce return type if not provided.
 				else {
-					ret_type = *ctx.query<QueryFuncReturnTypeDeduction>(original_symbol).toMRef();
+					ret_type = *ctx.query<QueryReturnTypeDeduction>(original_symbol).toMRef();
 				}
 
 				// Parameters:
@@ -519,10 +519,10 @@ namespace compiler::helios {
 		 * pst::CodeBlockOrStmt Might be changed into query in the future
 		 */
 		template<class Container>
-		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
+		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container, tsh::SymbolType<> return_type) {
 			code::CodeBlock block({});
 			for (const auto& stmt: *container.unlock(ctx)) {
-				HoutStmtMaker stmt_maker(ctx);
+				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 				if (stmt_maker.out.has_value())
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
@@ -536,7 +536,7 @@ namespace compiler::helios {
 		 * Should only be used for the whole function body.
 		 */
 		static code::CodeBlock queryCodeOfSingleStmtFunctionBody(
-			query::Context& ctx, pst::Access<pst::CodeBlockOrStmt> body
+			query::Context& ctx, pst::Access<pst::CodeBlockOrStmt> body, tsh::SymbolType<> return_type
 		) {
 			CORE_ASSERT(body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt, "Bad body type!");
 
@@ -548,8 +548,27 @@ namespace compiler::helios {
 				auto expr
 					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (single expr function body)");
-				// @TODO #1291 coerce expr to function return type
-				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr)));
+				
+				// handle type check and coercion
+				auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
+				if (coercion.hasError()) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							base::strConcat(
+								"Bad return type\n",
+								expr->expression_type.getSymbolType().toString(),
+								"can not be coerced to ",
+								return_type.toString(),
+								"\n"
+							)
+						)
+					);
+					CORE_PANIC("Return expression of invalid type");
+				}
+				auto coerced_expr = coercion.value().coerce(ctx, std::move(expr));
+
+				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(coerced_expr)));
 				return block;
 			} else {
 				ctx.log(
@@ -564,9 +583,11 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&                 ctx;
+			tsh::SymbolType<>				return_type;
+
 			base::Optional<Box<code::Stmt>> out;
 
-			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
+			HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type): ctx(ctx), return_type(return_type) {}
 
 			// @TODO: visits for all valid stmt-s
 
@@ -585,8 +606,26 @@ namespace compiler::helios {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
 					                .expect("Not handling errors here yet... (return expr)");
 
-					// @TODO #1291 coerce expr to function return type
-					output(code::ReturnStmt(std::move(expr)));
+					// handle type check and coercion
+					auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
+					if (coercion.hasError()) {
+						ctx.log(
+							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+								stmt->getSourcePosition(),
+								base::strConcat(
+									"Bad return type\n",
+									expr->expression_type.getSymbolType().toString(),
+									"can not be coerced to ",
+									return_type.toString(),
+									"\n"
+								)
+							)
+						);
+						CORE_PANIC("Return expression of invalid type");
+					}
+					auto coerced_expr = coercion.value().coerce(ctx, std::move(expr));
+
+					output(code::ReturnStmt(std::move(coerced_expr)));
 				} else {
 					output(code::VoidReturnStmt());
 				}
@@ -709,14 +748,14 @@ namespace compiler::helios {
 					condition = coercion.value().coerce(ctx, std::move(condition));
 				}
 
-				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody());
+				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody(), return_type);
 
 				match_optional(stmt->getElseBody()) {
 					opt_some(else_body) {
 						output(code::IfStmt(
 							std::move(condition),
 							std::move(then_body),
-							queryCodeOfCodeBlock(ctx, else_body)
+							queryCodeOfCodeBlock(ctx, else_body, return_type)
 						));
 					}
 					opt_none { output(code::IfStmt(std::move(condition), std::move(then_body))); }
@@ -728,7 +767,7 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (While)");
 
-				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
+				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody(), return_type);
 
 				output(code::WhileStmt(std::move(condition), std::move(body)));
 			}
@@ -827,14 +866,14 @@ namespace compiler::helios {
 					// The `fun abc() = expr;` case.
 
 					code::CodeBlock function_body
-						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx));
+						= queryCodeOfSingleStmtFunctionBody(ctx, fun_body.unlock(ctx), decl->return_type);
 					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				} else {
 					CORE_ASSERT(
 						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
-					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
+					code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, decl->return_type);
 					output_body = std::make_shared<const code::CodeBlock>(std::move(function_body));
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
