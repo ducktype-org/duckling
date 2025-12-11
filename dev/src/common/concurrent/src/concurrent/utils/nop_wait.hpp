@@ -4,7 +4,8 @@
 
 namespace concurrent {
     /**
-     * A simple nop wait implementation.
+     * A simple busy wait implementation.
+     * Used by some lock primitives.
      */
 	inline void nopWait(u64 repeat) {
 		for (u64 i = 0; i < repeat; i++) {
