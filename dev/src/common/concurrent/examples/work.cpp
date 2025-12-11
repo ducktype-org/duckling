@@ -2,13 +2,10 @@
 
 #include <concurrent/workers/worker_data.hpp>
 
-#include <random>
-
-// #include <mutex>
 
 
 void work(HashMap& map, concurrent::WDRef worker_data) {
-	u64 key = 123'123 + (worker_data->rng() % 1'024);
+	u64 key = 123'123 + (worker_data->randomU64() % 1'024);
 
 	map.maybePut(key, 0);
 	auto new_val = map[key] + 1;
@@ -16,7 +13,7 @@ void work(HashMap& map, concurrent::WDRef worker_data) {
 }
 
 void cWork(CHashMap& map, concurrent::WDRef worker_data) {
-	u64 key = 123'123 + (worker_data->rng() % 12);
+	u64 key = 123'123 + (worker_data->randomU64() % 12);
 
 
 	// map.tryPut(key, 0);

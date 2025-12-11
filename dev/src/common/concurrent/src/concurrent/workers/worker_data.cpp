@@ -20,7 +20,7 @@ namespace concurrent {
 			Box<WorkerData> worker_data = makeBox<WorkerData>(i, std::mt19937_64(i * 123'456));
 
 			worker_data_instances.emplace_back(std::move(worker_data));
-			worker_data_references.emplace_back(worker_data_instances.back().ref());
+			worker_data_references.emplace_back(worker_data_instances.back().refMut());
 		}
 
 		return &worker_data_references;

@@ -35,13 +35,13 @@ namespace concurrent {
 			u64 hash = HASH_T{}(key);
 
 			CORE_ASSERT(
-				shard_counts == shard_mutexes.size() and shard_counts == shards.size(),
+				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
 				"Shard count mismatch"
 			);
-			CORE_ASSERT(shard_counts > 0, "Shard count must be greater than zero");
+			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
 
-			u64 result = hash % shard_counts;
-			CORE_ASSERT(result < shard_counts, "Shard index out of bounds");
+			u64 result = hash % SHARD_COUNT;
+			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
 
 			return result;
 		}
@@ -82,8 +82,8 @@ namespace concurrent {
 
 
 	public:
-		HashMap(): shards(shard_counts) {
-			for (u64 i = 0; i < shard_counts; i++)
+		HashMap(): shards(SHARD_COUNT) {
+			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
 		}
 
@@ -165,12 +165,20 @@ namespace concurrent {
 		}
 
 	private:
-		// const u64 worker_count = concurrent::getWorkerCount();
-		// const u64 shard_counts = 4 * worker_count;
-		const u64 shard_counts = 4'096;
+        /** 
+         * Number of shards used in the map.
+         */
+		constexpr static u64 SHARD_COUNT = 1024;
 
+        /**
+         * The shards of the map.
+         */
 		std::vector<HashMapType>                                 shards;
-		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+		
+        /**
+         * The locks protecting each shard.
+         */
+        mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
 	};
 
 }

@@ -22,10 +22,10 @@ int main() {
 
 	concurrent::setWorkerCount(THREAD_COUNT);
 
-	for (int i = 0; i < THREAD_COUNT; i++) wd.emplace_back(concurrent::WorkerData::make());
+	auto worker_data = concurrent::WorkerData::getWorkerData();
 
 	for (int i = 0; i < THREAD_COUNT; i++) {
-		threads.emplace_back([i, &map, &cmap, &wd]() mutable {
+		threads.emplace_back([&map, &cmap, wd = worker_data->at(u64(i))]() mutable {
 			(void) map;
 			(void) cmap;
 
@@ -35,7 +35,7 @@ int main() {
 							  << "\n";
 				}
 				// work(map,  wd.at(u64(i)).refMut()); static_assert(THREAD_COUNT == 1);
-				cWork(cmap, wd.at(u64(i)).refMut());
+				cWork(cmap, wd);
 			}
 		});
 	}
