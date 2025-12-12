@@ -159,7 +159,8 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(
+			const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -193,13 +194,17 @@ namespace compiler::mir {
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-			});
+			condition_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ lowered_condition.getResult(function),
+			          then_block->getID(),
+			          else_block->getID() },
+					{},
+					expr_scope,
+				}
+			);
 
 			// Return (always value).
 			valueOutput(lowered_condition.begin, target_location);
@@ -328,8 +333,9 @@ namespace compiler::mir {
 			auto prev_cmp_hole         = last_comparison_block->addHole();
 
 			// After the last comparison, continue regardless of the result.
-			last_comparison_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+			last_comparison_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
@@ -351,21 +357,24 @@ namespace compiler::mir {
 				// Place for the next comparison.
 				BlockBuilderRef new_comparison_block = function.newBlock();
 				auto            new_cmp_hole         = new_comparison_block->addHole();
-				new_comparison_block->setTerminator(Instruction{
-					Operation::Branch,
-					{},
-					{ boolean_output, prev_block->getID(), continuation->getID() },
-					{},
-					expr_scope });  // We evaluate prev_value only after this comparison is true, as
-				                    // prev_cmp will be the first comparison it is a part of.
+				new_comparison_block->setTerminator(
+					Instruction{ Operation::Branch,
+				                 {},
+				                 { boolean_output, prev_block->getID(), continuation->getID() },
+				                 {},
+				                 expr_scope }
+				);  // We evaluate prev_value only after this comparison is true, as
+				    // prev_cmp will be the first comparison it is a part of.
 
 				// Next expression (completes the prev_cmp).
 				auto [new_block, new_value]
 					= lower_subexpr_with_result(expr.ref(), new_comparison_block);
 
 				// We create the prev_cmp, as we only now have both expressions.
-				prev_cmp_hole.fill(Instruction{
-					comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope });
+				prev_cmp_hole.fill(
+					Instruction{
+						comp, { boolean_output }, { new_value, prev_value }, {}, expr_scope }
+				);
 
 				prev_block    = new_block;
 				prev_cmp_hole = new_cmp_hole;
@@ -379,11 +388,13 @@ namespace compiler::mir {
 				= lower_subexpr_with_result(chain_expr.expressions.front().ref(), prev_block);
 
 			// The first comparison to be performed.
-			prev_cmp_hole.fill(Instruction{ mir_operators.front(),
-			                                { boolean_output },
-			                                { first_value, prev_value },
-			                                { flagConstruct(boolean_output) },
-			                                expr_scope });
+			prev_cmp_hole.fill(
+				Instruction{ mir_operators.front(),
+			                 { boolean_output },
+			                 { first_value, prev_value },
+			                 { flagConstruct(boolean_output) },
+			                 expr_scope }
+			);
 
 			valueOutput(first_block, boolean_output);
 		}
@@ -454,10 +465,14 @@ namespace compiler::mir {
 
 
 	private:
+		/**
+		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in LiftToTypeExpr.
+		 * Handles specific HOUT nodes that construct meta-types (Tuple, Variant, Unit).
+		 * Other nodes are delegated back to the standard expression lowerer.
+		 */
 		ExprLowerRes lowerAndLiftToTypeRecursively(
 			const hc::Expr& expr, BlockBuilderRef continuation
 		) {
-			// TODOP: Make this a visitor.
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
 					function.getContext().query<tsh::QueryUnitType>({}),
@@ -466,10 +481,7 @@ namespace compiler::mir {
 				};
 
 				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
-			}
-			if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
-				std::cout << "Lower Recursive tuple\n";
-
+			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
 				auto                  hole    = continuation->addHole();
 				BlockBuilderRef       current = continuation;
 				std::vector<MIRValue> element_types;
@@ -494,9 +506,8 @@ namespace compiler::mir {
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
 						.type = result_type }
 				);
-			}
-			if (const auto* variant_expr
-			    = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
+			} else if (const auto* variant_expr
+			           = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
 				auto hole = continuation->addHole();
 
 				BlockBuilderRef       current = continuation;
@@ -523,9 +534,7 @@ namespace compiler::mir {
 						),
 						.type = result_type }
 				);
-			}
-
-			if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
 
 			return lowerSubExpr(expr, continuation);
@@ -695,13 +704,15 @@ namespace compiler::mir {
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
-				hole.fill(Instruction{
-					Operation::Assign,
-					target,
-					{ val },
-					flags,
-					scope,
-				});
+				hole.fill(
+					Instruction{
+						Operation::Assign,
+						target,
+						{ val },
+						flags,
+						scope,
+					}
+				);
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
