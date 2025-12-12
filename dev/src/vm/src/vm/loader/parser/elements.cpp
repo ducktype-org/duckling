@@ -310,7 +310,7 @@ namespace vm::loader::parser {
 
 		template<typename ArgsHead = void, typename... ArgsTail>
 		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// Seperate case for no args passed (first arg defaulted)
+			// Separate case for no args passed (first arg defaulted)
 			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {
 				return {};

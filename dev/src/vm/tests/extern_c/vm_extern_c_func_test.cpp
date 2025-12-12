@@ -44,6 +44,20 @@ namespace cpp_vector {
 	}
 }
 
+namespace global_opaque {
+	std::vector<i64> vec;
+
+	DEF_VM_EXT_C_FUNC(
+		void, "void", vecPushBack, (std::vector<i64>*, "opaque_ptr", vec), (i64, "i64", value)
+	) {
+		vec->push_back(value);
+	}
+
+	DEF_VM_EXT_C_FUNC(u64, "i64", vecSize, (std::vector<i64>*, "opaque_ptr", vec)) {
+		return vec->size();
+	}
+}
+
 class VmExternCppTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmExternCppTest
@@ -52,6 +66,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simple);
 		TESTER_ADD_TEST(cppVectorInVm);
+		TESTER_ADD_TEST(globalOpaques);
 		TESTER_ADD_TEST(voidTest);
 		TESTER_ADD_TEST(voidNoArgsTest);
 	}
@@ -103,6 +118,49 @@ private:
 		runTestOnVm(get_ext_func_program(), { "123" }, { "1" });
 		ASSERT_EQUAL_PRINT(cpp_vector::vec.size(), 1);
 		ASSERT_EQUAL(cpp_vector::vec[0], 123);
+	}
+
+	void globalOpaques() {
+		auto get_ext_func_program = [this]() {
+			auto pid = initProcess();
+			ASSERT_TRUE(
+				vm::api::loadCode(
+					pid,
+					{ .functions            = {},
+			          .types                = {},
+			          .global_data          = {},
+			          .external_c_functions = {
+						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, global_opaque::vecPushBack, pid),
+						  VM_INSTANCE_EXT_C_FUNC(vecSize, global_opaque::vecSize, pid),
+					  } }
+				).has_value()
+			);
+			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("global_opaque.dbc")) }).has_value()
+			);
+			return pid;
+		};
+
+		vm::PID pid = get_ext_func_program();
+
+		// Prepare the initializing argument.
+		auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
+		ASSERT_TRUE(vm_value_response.has_value());
+		auto  vm_value   = std::move(vm_value_response->vm_value);
+		auto* vector_ptr = &global_opaque::vec;
+		vm_value->writeBytes(vector_ptr);
+
+		// Initialize the global vector pointer
+		ASSERT_TRUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }).has_value()
+		);
+		ASSERT_TRUE(vm::api::join(pid).has_value());
+
+		vm_value->freeData();
+
+		runTestOnVm(pid, { "1 2 3" }, { "3" });
+		ASSERT_EQUAL_PRINT(global_opaque::vec.size(), 3);
+		ASSERT_EQUAL(global_opaque::vec[0], 1);
+		ASSERT_EQUAL(global_opaque::vec[1], 2);
+		ASSERT_EQUAL(global_opaque::vec[2], 3);
 	}
 
 	void voidTest() {
