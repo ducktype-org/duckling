@@ -38,6 +38,7 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 
 using namespace compiler::helios::test_utils;
 
@@ -1192,10 +1193,10 @@ private:
 				ASSERT_EQUAL(1, function.body->statements.size());
 				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
-				Ref  ret_expr    = stmt_casted->value.ref();
-				Ref  ret_expr_casted
-					= dynamic_cast<const compiler::helios::code::LiteralNumericExpr*>(&*ret_expr);
-				ASSERT_EQUAL(1, ret_expr_casted->value.coerceTo<i64>());
+				auto  ret_expr    = stmt_casted->value.get();
+				auto ctv = query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ret_expr});
+				ASSERT_TRUE(ctv.hasValue());
+				ASSERT_EQUAL(1, ctv.value().get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
 		}
 	}
