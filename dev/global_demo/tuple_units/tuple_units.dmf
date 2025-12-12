@@ -6,4 +6,4 @@ let c: (type, type) = (i32, f64);
 
 let d = (1, 2, 3, 4, 5);
 
-let e = (f64, bool, i32);
+let e: type = (f64, bool, i32);

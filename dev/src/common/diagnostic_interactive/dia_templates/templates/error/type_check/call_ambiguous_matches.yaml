@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "Call failed due to ambiguous overload resolution."
+  - "Call failed due to ambiguous overload resolution"
 
 description:
   - codeblock:

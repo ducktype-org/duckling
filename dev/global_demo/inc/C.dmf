@@ -1,7 +1,7 @@
 
 fun boo() -> i64 = 0i64;
 
-fun foo() -> i64 = 10i64;
+fun foo() -> i64 = 10i64 + 10i64;
 
 fun sum_up_to(n: i64 = N.default_n) -> i64 = {
     var result = 0i64;
@@ -9,11 +9,12 @@ fun sum_up_to(n: i64 = N.default_n) -> i64 = {
         n = n - 1i64;
         result = result + n;
     }
+    if (n == 123132) return i64(-1);
     return result;
 }
 
 namespace N {
-    var default_n: i64 = 1;
+    var default_n = 1i64 + 1i64 + 1i64;
     var g = 0;
 }
 

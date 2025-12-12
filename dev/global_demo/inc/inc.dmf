@@ -1,7 +1,6 @@
 
 import C as C;
 
-const is_zero = C.foo() == 0;
 
 fun main() -> i64 = {
     builtin_output_i64(C.foo());
@@ -11,3 +10,6 @@ fun main() -> i64 = {
 
     return 0i64;
 }
+
+# @brief Check if C.foo() returns zero
+const is_zero = C.foo() == 0;

@@ -6,9 +6,9 @@ fun fib(n: i64) -> i64 = {
 const FIB_10 = fib(10); # 55
 const BOOL   = true and false;
 
-# const FIB_20 = fib(20);
+const FIB_26 = fib(26);
 
 fun main() -> i64 = {
     builtin_output_i64(FIB_10);
-    return 0;
+    return 0i64;
 }

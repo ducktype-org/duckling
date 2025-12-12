@@ -1,21 +1,21 @@
 class Point {
-    x: i64 = 0;
-    y: i64 = 0;
+    x: i64;
+    y: i64 = -1;
 }
 
-fun addPoints(p1: Point, p2: Point) -> Point = Point(
+fun addPoints(p1: Point, p2: Point) = Point(
     x = p1.x + p2.x,
     y = p1.y + p2.y
 );
 
 class PointInPoint {
-    x: Point = Point();
-    y: Point = Point();
+    x: Point = Point(x = 0);
+    y: Point = Point(x = 0);
 }
 
 
-fun main() = {
-    var p1 = Point(x = 10, y = 20);
+fun main() -> i64 = {
+    var p1 = Point(20, y = 123);
     var p2 = Point(x = 30, y = 20);
 
     var p3 = addPoints(p1, p2);
@@ -23,12 +23,14 @@ fun main() = {
 
     printPoint(p3);
 
-    var zero_point = Point();
+    var zero_point = Point(x = 0);
     printPoint(zero_point);
 
     var point_in_point = PointInPoint(x = p1);
     printPoint(point_in_point.x);
     printPoint(point_in_point.y);
+
+    return i64(123);
 }
 
 
