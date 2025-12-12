@@ -2,12 +2,6 @@
  * @file mir_tests.cpp
  */
 
-#include "helios/hout/hout.hpp"
-#include "mir/mir_structure/mir_local_ref.hpp"
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
@@ -17,13 +11,9 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include "base/collections/maps.hpp"
-
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include <string>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -467,7 +457,8 @@ private:
 			ASSERT_EQUAL(functions.at(2).declaration->original_name, base::StrID("unreachable_end"));
 			ASSERT_EQUAL(functions.at(3).declaration->original_name, base::StrID("empty"));
 
-			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
+			ASSERT_TRUE(
+				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
 			);
 
 			auto& should_add_retvoid_fun

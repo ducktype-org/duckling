@@ -4,9 +4,6 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include "lir/lir_structure/lir_structure.hpp"
-#include "typesystem/lower/type_layout.hpp"
-
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -122,10 +119,12 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 				}
 			}

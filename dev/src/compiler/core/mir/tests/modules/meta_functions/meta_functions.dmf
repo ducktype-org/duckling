@@ -11,6 +11,6 @@ fun megaType(a: type) -> type = {
     return c;
 }
 
-# fun createOpt(t: type) -> type = ?t;
+fun createOpt(t: type) -> type = ?t;
 # fun createConst(t: type) -> type = const t;
 # fun getTypeSize(a: type) -> i64 = a::size;
