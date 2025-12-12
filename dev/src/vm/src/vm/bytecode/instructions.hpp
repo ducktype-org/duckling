@@ -4,7 +4,7 @@
  * `Instruction` is a handmade variant of sorts grouping all concrete `Op_{foo}` instructions.
  * Not using `std::variant` is a very deliberate choice, as when working with 200+ alternatives
  * compilation times and artifact sizes get very unpleasant.
- * (For connoisseurs: getting to the n-th alternative of a variant
+ * (For connoisseurs: getting to the n-th alternative of a std::variant
  * is fast at runtime, but at compile time requires instantiating O(n) templates.
  * Furhtermore, each alternative does not share the template instances with the other alternatives
  * resulting in a quadratic number of templates getting instantiated when e.g. visiting a variant.)
@@ -44,7 +44,7 @@ namespace vm::code {
 	};
 
 	namespace detail {
-		// This struct is to that we can easily define the `IsInstruction` context.
+		// This structure allows us to easily define the `IsInstruction` concept.
 		struct InstructionBase: ElementBase {};
 
 		// Helper useful for getting rid of the leading comma resulting from `FOR_EACH`.
@@ -153,7 +153,7 @@ namespace vm::code {
 		Instruction& operator=(const Instruction&) = default;
 		Instruction& operator=(Instruction&&)      = default;
 
-		// copy constructors from concrete instructions
+		// Constructors from concrete instructions
 #define HANDLE_INSTR_ARGS(name, ...)                        \
 	Instruction(const VM_INSTR_FROM_NAME(name) & concrete): \
 		  instr_kind{ VM_INSTR_KIND_FROM_NAME(name) },      \

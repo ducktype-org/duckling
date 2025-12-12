@@ -311,7 +311,7 @@ namespace vm::loader::parser {
 		// Dummy parameter to help with leading commas from macros.
 		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
 		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// Seperate case for no (nondummy) args passed (first arg defaulted)
+			// Separate case for no (non-dummy) args passed (first arg defaulted)
 			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {
 				return {};

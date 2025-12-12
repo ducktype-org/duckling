@@ -207,7 +207,7 @@ namespace base {
 	}
 
 	template<typename T>
-	struct Ref;
+	class Ref;
 
 	namespace internal {
 		template<typename T>
