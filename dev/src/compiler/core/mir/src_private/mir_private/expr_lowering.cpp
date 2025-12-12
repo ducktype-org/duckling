@@ -1,5 +1,6 @@
 #include "expr_lowering.hpp"
 
+#include "mir/mir_structure/mir_lifetime_scope.hpp"
 #include "mir_private/mir_builders.hpp"
 #include "typesystem/higher/kind.hpp"
 
@@ -14,6 +15,7 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include <algorithm>
 #include <ranges>
 #include <variant>
 #include <vector>
@@ -414,8 +416,54 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitLiftToTypeExpr(const helios::code::LiftToTypeExpr&) override {
-			throw base::NotYetImplemented("lift to type expr lowering");
+		std::pair<BlockBuilderRef, MIRValue> lowerAndLiftToTypeRecursively(
+			const hc::Expr&  expr,
+			BlockBuilderRef  continuation,
+			FunctionBuilder& function,
+			ScopeRef         expr_scope
+		) {
+			if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
+				std::cout << "Lower Recursive tuple\n";
+				BlockBuilderRef       current = continuation;
+				std::vector<MIRValue> element_types;
+				element_types.reserve(tuple_expr->elements.size());
+
+				for (const auto& element: tuple_expr->elements | std::views::reverse) {
+					auto [next_block, type_value]
+						= lowerAndLiftToTypeRecursively(*element, current, function, expr_scope);
+					element_types.push_back(type_value);
+					current = next_block;
+				}
+				std::ranges::reverse(element_types);
+
+				auto hole        = continuation->addHole();
+				auto result_type = expr.expression_type.getSymbolType();
+				std::cout << "LOWER REC: " << result_type.toString() << '\n';
+				auto result_place = function.addTmp(result_type, expr_scope);
+
+				hole.fill(Instruction(
+					Operation::MetaCreateTuple,
+					{ result_place },
+					element_types,
+					{ flagConstruct(result_place) },
+					expr_scope
+				));
+
+				return { current, result_place };
+
+			} else {
+				std::cout << "Lower recursive expr\n";
+				auto lowered = lowerExpr(expr, continuation, function, expr_scope);
+				return { lowered.begin, lowered.getResult(function) };
+			}
+		}
+
+		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
+			std::cout << "Lift type eval\n";
+			auto [begin_block, result_value] = lowerAndLiftToTypeRecursively(
+				*expr.value_expr, continuation, function, expr_scope
+			);
+			valueOutput(begin_block, result_value);
 		}
 
 

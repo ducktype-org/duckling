@@ -1,41 +1,57 @@
-fun createBox(t: type) -> type = box t;
+# fun createBox(t: type) -> type = box t;
 # const A = createBox(i32);
 # const A_2 = createBox(i16);
 # 
-fun createRef(t: type) -> type = ref t;
+#fun createRef(t: type) -> type = ref t;
 # const B = createRef(i32);
 # 
-fun createSmallVariant(a: type, b: type) -> type = a | b;
+#fun createSmallVariant(a: type, b: type) -> type = a | b;
 # const C = createSmallVariant(i32, f64);
 # 
-fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+#fun createBigVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 # const D = createBigVariant(i16, i32, i64, i128);
 
 
+# 
+# fun fib(n: i64) -> i64 = {
+#    if (n < 2i64) { return n; }
+#    return fib(n - 1i64) + fib(n - 2i64);
+# }
+# 
+# fun complexLogic(n: i64) -> type = {
+#     if (fib(n) < 15i64) {
+#         return createSmallVariant(createBox(i32), i16);
+#     } else {
+#         return createBigVariant(createRef(i64), f16, f128, i32);
+#     }
+# }
+# 
+# const FIRST = complexLogic(1);
+# const SECOND = complexLogic(3);
+# const THIRD = complexLogic(5);
+# const FOURTH = complexLogic(10);
 
-fun fib(n: i64) -> i64 = {
-   if (n < 2i64) { return n; }
-   return fib(n - 1i64) + fib(n - 2i64);
+
+
+# fun createTuple(a: type) -> type = {
+#     var c: type = ((), a, i32, (i16, f16), 1);
+#     return c;
+# }
+
+fun megaType(a: type) -> type = {
+    var c: type = ((), a, i32, (i16, f16), i64 | (f64, f128));
+    return c;
 }
 
-fun complexLogic(n: i64) -> type = {
-    if (fib(n) < 15i64) {
-        return createSmallVariant(createBox(i32), i16);
-    } else {
-        return createBigVariant(createRef(i64), f16, f128, i32);
-    }
-}
-
-const FIRST = complexLogic(1);
-const SECOND = complexLogic(3);
-const THIRD = complexLogic(5);
-const FOURTH = complexLogic(10);
 
 
+# fun createSmallTuple(a: type, b: type) -> type = {
+#     var c: type = (a, b);
+#     return c;
+# }
+# const G: type = createSmallTuple(i32, f64);
 
-# TODOP: This doesn't work since tuples are treated as tuples not meta types.
-# fun createSmallTuple(a: type, b: type) -> type = (a, b);
-# const G = createSmallTuple(i32, f64);
+# TODOP: Make use of units
 
 # fun createBigTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 # const H = createBigTuple(i16, i32, i64, i128);

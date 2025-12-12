@@ -347,6 +347,7 @@ namespace compiler::helios {
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
 			));
+		ctx_vm_value->freeData();
 
 
 		std::vector<Box<vm::VmValue>> owned_arguments;
