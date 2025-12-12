@@ -2,6 +2,12 @@
  * @file mir_tests.cpp
  */
 
+#include "helios/hout/hout.hpp"
+#include "mir/mir_structure/mir_local_ref.hpp"
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/queries/types.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
@@ -11,9 +17,13 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
+#include "base/collections/maps.hpp"
+
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <string>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -35,6 +45,7 @@ public:
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -479,6 +490,102 @@ private:
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->value();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
+		});
+	}
+
+	void metaFunctionsTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/meta_functions")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit->functions;
+
+			compiler::tsh::SymbolType<> meta_type{
+				ctx.query<QueryMetaType>({}),
+				compiler::tsh::ReferenceKind::Direct,
+				compiler::tsh::Mutability::Mutable,
+			};
+
+			using enum compiler::mir::Operation;
+
+			for (const compiler::helios::HOUTFunction& fun: functions) {
+				if (fun.declaration->original_name.str() == "createBox") {
+					auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateBox);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+
+				} else if (fun.declaration->original_name.str() == "createRef") {
+					auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateRef);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createVariant") {
+					auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateVariant);
+					ASSERT_EQUAL(instr.arguments.size(), 4);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createTuple") {
+					auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateTuple);
+					ASSERT_EQUAL(instr.arguments.size(), 4);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "megaType") {
+					auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+
+					int  create_variant_count     = 0;
+					int  create_tuple_count       = 0;
+					bool create_tuple_5_arg_found = false;
+					bool call_found               = false;
+					for (const auto& instr: block.instructions) {
+						if (instr.operation == MetaCreateTuple) {
+							if (instr.arguments.size() == 5) {
+								// When a big tuple instruction is found, it should be preceeded
+								// with two inner tuple create instructions and one inner variant
+								// create instruction.
+								ASSERT_TRUE(create_tuple_count == 2);
+								ASSERT_TRUE(create_variant_count == 1);
+								create_tuple_5_arg_found = true;
+							}
+							create_tuple_count++;
+						} else if (instr.operation == MetaCreateVariant) {
+							// If variant is created, two preceding tuple creating instructions
+							// should exist.
+							ASSERT_TRUE(create_tuple_count == 2);
+							create_variant_count++;
+
+						} else if (instr.operation == Call) {
+							call_found = true;
+						}
+					}
+
+					ASSERT_EQUAL(create_variant_count, 1);
+					ASSERT_EQUAL(create_tuple_count, 3);
+					ASSERT_TRUE(create_tuple_5_arg_found);
+					ASSERT_TRUE(call_found);
+				}
+			}
 		});
 	}
 

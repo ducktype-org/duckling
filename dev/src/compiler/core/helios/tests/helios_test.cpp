@@ -52,7 +52,6 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
-		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
@@ -144,47 +143,6 @@ private:
 		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
-	}
-
-	void testMetaCompTime() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
-
-		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
-		auto f64_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-
-		auto a_type = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
-		ASSERT_EQUAL(st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box), a_type);
-
-		auto b_type = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
-		ASSERT_EQUAL(st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref), b_type);
-
-		auto d_type = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-		ASSERT_EQUAL(st(i32_type).withMutability(Immutable), d_type);
-
-		auto e_type = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
-		auto expected_e
-			= query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type), st(f64_type) } });
-		ASSERT_EQUAL(st(expected_e), e_type);
-
-		auto f_type     = getConstValueAs<compiler::tsh::SymbolType<>>("F", root_scope);
-		auto expected_f = query::entryPoint<compiler::tsh::QueryVariantType>(
-			{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
-		);
-		ASSERT_EQUAL(st(expected_f), f_type);
-
-		auto g_type = getConstValueAs<compiler::tsh::SymbolType<>>("G", root_scope);
-		auto expected_g
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(f64_type) } });
-		ASSERT_EQUAL(st(expected_g), g_type);
-
-		auto h_type     = getConstValueAs<compiler::tsh::SymbolType<>>("H", root_scope);
-		auto expected_h = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
-		);
-		ASSERT_EQUAL(st(expected_h), h_type);
 	}
 
 	void testNumericLiterals() {
