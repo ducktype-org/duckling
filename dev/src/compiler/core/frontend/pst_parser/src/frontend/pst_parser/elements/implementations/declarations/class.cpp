@@ -1,6 +1,6 @@
 #include "../../hierarchy/declarations/class.hpp"
 
-#include "../../hierarchy/expressions/chain_expr.hpp"
+#include "../../hierarchy/expressions/ternary.hpp"
 #include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
@@ -8,7 +8,7 @@ namespace pst {
 	/**
 	 * @brief Expr parser for the extends class expression.
 	 */
-	class ClassExtendsExpr: public NotStmt {
+	class ClassExtendsExpr {
 	public:
 		static bool end(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
@@ -16,7 +16,7 @@ namespace pst {
 		}
 
 		static MBox<ExprElement> parse(LangParserState& state) {
-			return expr::parseUntil<expr::ChainExpr, end>(state);
+			return expr::parseUntil<expr::Ternary, end>(state);
 		}
 
 		ClassExtendsExpr() = delete;

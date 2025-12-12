@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -27,8 +28,10 @@ namespace compiler::frontend {
 		base::Optional<pst::PST<>> parse_tree;
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
-		base::Optional<hashing::ComponentHash>
+		mutable base::Optional<hashing::ComponentHash>
 			component_hash;  //< Logical path hash for this file (module path + file name)
+		//< Any functions that actually modifies it like invalidateComponentHash should not be
+		// marked const
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
@@ -93,13 +96,16 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Returns the file system file associated with this SourceFile.
+		 * You can use it only outside the query.
 		 */
-		[[nodiscard]] fs::File getFile() const { return file; }
+		[[nodiscard]] fs::File getFileIllegalAccess() const { return file; }
 
 		/**
 		 * @brief Returns the module this SourceFile is linked to.
 		 */
-		[[nodiscard]] ModuleID getModule() const { return linked_module; }
+		[[nodiscard]] ModuleAccessLocked getModule() const {
+			return ModuleAccessLocked(linked_module);
+		}
 
 		/**
 		 * @brief Returns the language-level file name (stem).
@@ -120,9 +126,9 @@ namespace compiler::frontend {
 		 * @return Cached base::SharedView for this SourceFile.
 		 * @throws Panics if the content is not found in the cache.
 		 */
-		[[nodiscard]] base::SharedView getCachedContent();
+		[[nodiscard]] base::SharedView getCachedContentIllegalAcess();
 
-		[[nodiscard]] const hashing::ComponentHash& getComponentHash();
+		[[nodiscard]] const hashing::ComponentHash& getComponentHash() const;
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;

@@ -37,9 +37,10 @@ private:
 
 		// Test basic properties
 		ASSERT_EQUAL(
-			temp_file.getFilePath().native(), source_file->getFile().getFilePath().native()
+			temp_file.getFilePath().native(),
+			source_file->getFileIllegalAccess().getFilePath().native()
 		);
-		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule());
+		ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID());
 		// Cleanup
 		fs::FileManager::deleteFile(temp_file);
 	}
@@ -53,9 +54,14 @@ private:
 		auto source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Test file properties
-		assertTrue(source_file->getFile().isFile(), "Should be recognized as file");
-		assertTrue(!source_file->getFile().isDirectory(), "Should not be recognized as directory");
-		ASSERT_EQUAL(test_content, source_file->getFile().getContent().view().stringView());
+		assertTrue(source_file->getFileIllegalAccess().isFile(), "Should be recognized as file");
+		assertTrue(
+			!source_file->getFileIllegalAccess().isDirectory(),
+			"Should not be recognized as directory"
+		);
+		ASSERT_EQUAL(
+			test_content, source_file->getFileIllegalAccess().getContent().view().stringView()
+		);
 
 		// Test FileID uniqueness
 		auto another_source_file = SourceFile::create(temp_file, dummy_module->getModuleID());
@@ -98,20 +104,20 @@ private:
 			auto source_file1 = SourceFile::create(temp_file1, dummy_module->getModuleID());
 			auto source_file2 = SourceFile::create(temp_file2, dummy_module->getModuleID());
 
-			// Test getCachedContent on SourceFile objects
-			auto cached_content1 = source_file1->getCachedContent();
-			auto cached_content2 = source_file2->getCachedContent();
+			// Test getCachedContentIllegalAcess() on SourceFile objects
+			auto cached_content1 = source_file1->getCachedContentIllegalAcess();
+			auto cached_content2 = source_file2->getCachedContentIllegalAcess();
 
 			ASSERT_EQUAL(content1, cached_content1.view().stringView());
 			ASSERT_EQUAL(content2, cached_content2.view().stringView());
 
 			// Test that content is actually cached (call again)
-			auto cached_content1_again = source_file1->getCachedContent();
+			auto cached_content1_again = source_file1->getCachedContentIllegalAcess();
 			ASSERT_EQUAL(content1, cached_content1_again.view().stringView());
 
 			// Test with same file path - create new SourceFile with same path
 			auto same_file_source    = SourceFile::create(temp_file1, dummy_module->getModuleID());
-			auto cached_content_same = same_file_source->getCachedContent();
+			auto cached_content_same = same_file_source->getCachedContentIllegalAcess();
 			ASSERT_EQUAL(content1, cached_content_same.view().stringView());
 
 		} catch (const std::exception& e) {
@@ -182,7 +188,9 @@ private:
 
 		// Test that all files belong to the same module
 		for (const auto& source_file: source_files)
-			ASSERT_EQUAL(dummy_module->getModuleID(), source_file->getModule());
+			ASSERT_EQUAL(
+				dummy_module->getModuleID(), source_file->getModule().illegalAccess().getID()
+			);
 
 		// Test PST generation for all files
 		for (auto& source_file: source_files) source_file->getPST();
@@ -215,10 +223,15 @@ private:
 		);
 
 		// Should belong to different modules
-		ASSERT_EQUAL(dummy_module1->getModuleID(), source_file1->getModule());
-		ASSERT_EQUAL(dummy_module2->getModuleID(), source_file2->getModule());
+		ASSERT_EQUAL(
+			dummy_module1->getModuleID(), source_file1->getModule().illegalAccess().getID()
+		);
+		ASSERT_EQUAL(
+			dummy_module2->getModuleID(), source_file2->getModule().illegalAccess().getID()
+		);
 		assertTrue(
-			source_file1->getModule() != source_file2->getModule(),
+			source_file1->getModule().illegalAccess().getID()
+				!= source_file2->getModule().illegalAccess().getID(),
 			"Should belong to different modules"
 		);
 
@@ -238,7 +251,9 @@ private:
 		auto source_file  = SourceFile::create(temp_file, dummy_module->getModuleID());
 
 		// Check initial cached content
-		ASSERT_EQUAL("original content", source_file->getCachedContent().view().stringView());
+		ASSERT_EQUAL(
+			"original content", source_file->getCachedContentIllegalAcess().view().stringView()
+		);
 
 		// Modify file content
 		temp_file.writeToFile("new content");
@@ -248,9 +263,9 @@ private:
 		std::cerr << "After modification, temp_file content: "
 				  << temp_file.getContent().view().stringView() << '\n';
 		std::cerr << "After modification, sourcefile content: "
-				  << source_file->getCachedContent().view().stringView() << '\n';
+				  << source_file->getCachedContentIllegalAcess().view().stringView() << '\n';
 		// SourceFile should have updated cached content
-		ASSERT_EQUAL("new content", source_file->getCachedContent().view().stringView());
+		ASSERT_EQUAL("new content", source_file->getCachedContentIllegalAcess().view().stringView());
 
 		fs::FileManager::deleteFile(temp_file);
 	}
@@ -303,7 +318,7 @@ private:
 		// and adding the language-level file name. Do NOT construct ComponentHash manually here.
 		{
 			// start from module partial hasher
-			auto parent_partial = ModuleTree::getComponentHash(mod_a->getModuleID()).partial;
+			auto parent_partial = ModuleTree::getPathComponentHash(mod_a->getModuleID()).partial;
 			auto hasher1        = parent_partial;
 			hashing::addToHash(hasher1, sf_1->getLangFileName());
 			auto final_a_1 = hasher1.finalize();
@@ -323,7 +338,7 @@ private:
 			ASSERT_TRUE(final_a_1 != final_a_other);
 
 			// Same file stem but different module -> different hash
-			auto parent_b_partial = ModuleTree::getComponentHash(mod_b->getModuleID()).partial;
+			auto parent_b_partial = ModuleTree::getPathComponentHash(mod_b->getModuleID()).partial;
 			auto hasher_b         = parent_b_partial;
 			hashing::addToHash(hasher_b, sf_1->getLangFileName());
 			auto final_b_same = hasher_b.finalize();

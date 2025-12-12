@@ -52,6 +52,7 @@ namespace pst {
 		static MBox<ExprElement> parseComma(LangParserState& state);
 		static MBox<ExprElement> parseAssignment(LangParserState& state);
 		static MBox<ExprElement> parseForType(LangParserState& state);
+		static MBox<ExprElement> parseImplementsList(LangParserState& state);
 	};
 
 	/**
@@ -138,5 +139,18 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for Implements list.
+	 */
+	class ImplementsListExprHolder final:
+		  public ExprHolderTemplate<
+			  ImplementsListExprHolder,
+			  ExprParserHelper::parseImplementsList,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ImplementsListExprHolder() final = default;
 	};
 }

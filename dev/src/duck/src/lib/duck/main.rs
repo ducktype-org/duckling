@@ -1,5 +1,7 @@
 use crate::duck::util::indent::indent;
-use crate::{DuckCtx, InternalError, duck::util::terminal::Terminal};
+use crate::util_common::error::{DisplayPlace, QpErrorType};
+use crate::{DuckCtx, duck::util::terminal::Terminal};
+use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
 
 pub fn main() {
@@ -24,9 +26,7 @@ fn setup_logger() {
         prelude::*,
         registry,
     };
-    // @TODO: #1353 Something like `DUCK_DEBUG`? On the other hand it also affects loggers in the quackpack (the library),
-    //        but the cli tool is called duck...
-    let subscriber = EnvFilter::from_env("QP_DEBUG");
+    let subscriber = EnvFilter::from_env("DUCK_DEBUG");
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
@@ -36,86 +36,82 @@ fn setup_logger() {
     debug!("start = {:#?}", std::time::SystemTime::now());
 }
 
-fn print_error_and_exit(error: anyhow::Error, stdout: &Terminal, stderr: &Terminal) -> ! {
-    if let Some(clap_err) = error.downcast_ref::<clap::Error>() {
-        let error_msg = clap_err.render();
-        let term = if clap_err.use_stderr() {
-            stderr
-        } else {
-            stdout
-        };
-        term.print_no_nl(error_msg.ansi());
-
-        let code = if matches!(clap_err.kind(), clap::error::ErrorKind::DisplayHelp) {
-            0
-        } else {
-            1
-        };
-        std::process::exit(code)
+fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
+    if matches!(error.display_place(), DisplayPlace::StdOut) {
+        if let Err(e) = print_message(&error, stdout) {
+            print_error_and_exit(e, stdout, stderr)
+        }
+    } else {
+        print_error(&error, stderr);
     }
-    print_error(error, stderr);
-    let code = 1;
-    std::process::exit(code)
+    std::process::exit(error.exit_code())
 }
 
-fn print_error(error: anyhow::Error, term: &Terminal) {
-    for (i, e) in error.chain().enumerate() {
+fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
+    for (i, msg) in msgs.stack().enumerate() {
+        if i > 0 {
+            term.print("");
+        }
+        match msg {
+            QpErrorType::Hint(hint) => {
+                term.hint(hint.as_ref().as_ref());
+            }
+            QpErrorType::Note(note) => {
+                term.note(note.as_ref().as_ref());
+            }
+            QpErrorType::BareMessage(msg) => {
+                term.print(msg.as_ref().as_ref());
+            }
+            _ => qp_bail_internal!("Errors and internal errors should not be printed on stdout"),
+        }
+    }
+    Ok(())
+}
+
+fn print_error(error: &QuackError, term: &Terminal) {
+    print_errors_stack(error, term);
+    print_internals(error, term);
+}
+
+fn print_errors_stack(error: &QuackError, term: &Terminal) {
+    for (i, e) in error.stack().enumerate() {
         if i == 0 {
             term.error(e);
         } else {
             term.print("");
-            term.print(indent("Caused by:", 2));
-            term.print(indent(&e.to_string(), 4));
-        }
-    }
-
-    // NOTE: This is tricky with contexts. Effectively they get some special type so even doing
-    // `.with_context(|| InternalError::from(...))` won't show them here.
-    // I see two solutions:
-    //  1. (current): get the highest `InternalError` (remember that the original error is at the bottom of the stack,
-    //     and at the top is the last context). This works even with `InternalError` in the context.
-    //  2. use `.downcast_ref::<InternalError>()` with `.flat_map()` to get all the `InternalError`s.
-    //     This is tricky, because contexts get some weird type and can't be downcasted, therefore this doesn't
-    //     catch the contexts.
-    //
-    // Tested on the following snippet:
-    // ```rust
-    // let x: QuackResult<()> = Err(InternalError::from(anyhow!("error")).into());
-    // x.context("b").context("a")?;
-    // ```
-    // With some playing with an error and context types to see what gets printed.
-    //
-    // Note that both options show at most one `InternalError`, but the first one always shows one,
-    // whereas the second option shows it only if it is at the bottom of the stack.
-    //
-    // Docs: https://docs.rs/anyhow/latest/anyhow/trait.Context.html#effect-on-downcasting
-    if let Some(e) = error.downcast_ref::<InternalError>() {
-        // Add a newline between backtrace and a critical error.
-        term.print("");
-        term.critical(format!("got the internal error: {e}"));
-        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
-    }
-
-    // Second approach.
-    #[cfg(false)]
-    {
-        let mut has_internal_errors = false;
-        for (i, e) in error
-            .chain()
-            .flat_map(|e| e.downcast_ref::<InternalError>())
-            .enumerate()
-        {
-            has_internal_errors = true;
-            // Add a newline between backtrace and a critical errors.
-            if i == 0 {
-                term.print("");
+            match e {
+                QpErrorType::Hint(hint) => {
+                    term.hint(hint.as_ref().as_ref());
+                }
+                QpErrorType::Note(note) => {
+                    term.note(note.as_ref().as_ref());
+                }
+                QpErrorType::BareMessage(msg) => {
+                    term.print(msg.as_ref().as_ref());
+                }
+                QpErrorType::Error(e) => {
+                    term.print(indent("Caused by:", 2));
+                    term.print(indent(e.as_ref().as_ref(), 4));
+                }
+                QpErrorType::Internal(e) => {
+                    term.print(indent("Caused by:", 2));
+                    term.print(indent(e.as_ref().as_ref(), 4));
+                }
             }
-            term.critical(format!("got the internal error: {e}"));
         }
-        if has_internal_errors {
-            term.note(
-                "Please file a bug report at: https://github.com/ducktype-org/duckling/issues/",
-            );
+    }
+}
+
+fn print_internals(error: &QuackError, term: &Terminal) {
+    let mut internal_errors = false;
+    for e in error.stack() {
+        if let QpErrorType::Internal(e) = e {
+            internal_errors = true;
+            term.print("");
+            term.critical(format!("got the internal error: {}", e.as_ref().as_ref()));
         }
+    }
+    if internal_errors {
+        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
     }
 }

@@ -1,11 +1,10 @@
-use crate::{QuackResult, StrId, quackpack::core::FeatureName};
+use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 mod conditions;
 mod dependency_description;
 pub use dependency_description::*;
 mod dependencies;
 mod dependency_feature;
-use anyhow::bail;
 pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
@@ -39,10 +38,10 @@ impl Dependency {
         real_name: StrId,
     ) -> QuackResult<Self> {
         if is_pinned && !desc.source().is_registry() {
-            bail!("only registry sources can be pinned")
+            qp_bail!("only registry sources can be pinned")
         }
         if is_pinned && desc.versions().len() != 1 {
-            bail!("pinned dependencies must specify exactly one version")
+            qp_bail!("pinned dependencies must specify exactly one version")
         }
         Ok(Self {
             desc,
