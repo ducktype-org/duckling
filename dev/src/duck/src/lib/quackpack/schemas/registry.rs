@@ -1,4 +1,4 @@
-use crate::quackpack::core::Version;
+use crate::quackpack::{core::Version, schemas::OneEntryMap};
 use std::collections::BTreeMap;
 
 use serde::Serialize;
@@ -59,7 +59,7 @@ pub enum SourceInner {
 #[serde(untagged)]
 pub enum DependencyFeature {
     Simple(String),
-    Detailed(BTreeMap<String, DependencyCondition>),
+    Detailed(OneEntryMap<String, DependencyCondition>),
 }
 
 #[derive(Debug, Serialize)]

@@ -1,4 +1,5 @@
 use crate::quackpack::core::Version;
+use crate::quackpack::schemas::OneEntryMap;
 use paste::item;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
@@ -190,7 +191,7 @@ pub struct DependencyCondition {
 
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
-pub struct DetailedFeature(pub HashMap<String, DependencyCondition>);
+pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
 #[derive(Debug)]
 pub enum DependencyFeature {
