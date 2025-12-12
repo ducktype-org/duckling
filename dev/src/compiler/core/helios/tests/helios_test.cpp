@@ -18,6 +18,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -38,7 +39,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 
 using namespace compiler::helios::test_utils;
 
@@ -1193,10 +1193,13 @@ private:
 				ASSERT_EQUAL(1, function.body->statements.size());
 				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
-				auto  ret_expr    = stmt_casted->value.get();
-				auto ctv = query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ret_expr});
+				auto ret_expr    = stmt_casted->value.get();
+				auto ctv
+					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr });
 				ASSERT_TRUE(ctv.hasValue());
-				ASSERT_EQUAL(1, ctv.value().get<compiler::numeric_value::NumericValue>()->get<i64>());
+				ASSERT_EQUAL(
+					1, ctv.value().get<compiler::numeric_value::NumericValue>()->get<i64>()
+				);
 			}
 		}
 	}
@@ -1242,9 +1245,8 @@ private:
 
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
-		for (auto& function: hout->functions) {
+		for (auto& function: hout->functions)
 			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
-		}
 	}
 
 	void testFunctionReturnTypeCheckAndCoercion() {
@@ -1253,9 +1255,8 @@ private:
 
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
-		for (auto& function: hout->functions) {
+		for (auto& function: hout->functions)
 			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
-		}
 	}
 
 	void testMangler() {

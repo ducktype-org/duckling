@@ -216,7 +216,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			ReturnTypeCollector return_collector(ctx, key);
-			auto fun = stmt(ctx, key).value();
+			auto                fun = stmt(ctx, key).value();
 			fun->acceptVisitor(return_collector);
 			switch (return_collector.out.size()) {
 			case 0:
@@ -232,12 +232,13 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.log(makeBox<
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-					fun->getSourcePosition(),
-					"Function declared with no explicit return type and inconsistent "
-					"returns"
-				));
+				ctx.log(
+					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+						fun->getSourcePosition(),
+						"Function declared with no explicit return type and inconsistent "
+						"returns"
+					)
+				);
 				CORE_PANIC(
 					"Function declared with no explicit return type and inconsistent "
 					"returns"
