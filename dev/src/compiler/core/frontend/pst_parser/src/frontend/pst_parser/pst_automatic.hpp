@@ -60,7 +60,7 @@ namespace pst {
 
 		~PSTAutomatic() {
 			if (active_fallback) {
-				state.exitFallback();
+				exitFallback();
 			}
 		}
 
@@ -474,13 +474,27 @@ namespace pst {
 		 * @brief Setup a fallback for parsing. The fallback is automatically exited when PSTAutomatic is destructed at the end of the expression. 
 		 *
 		 * Intended usage:
+		 * state.parse(el).autoFallbackLen(length).parseOne(...);
+		 *
+		 * @note Needed when the condition has to be calculated in an hpp file because of templates. Normally in cpp files the until version should be used
+		 */
+		PSTAutomatic& autoFallbackLen(u64 length) {
+			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
+			state.setFallback(length);
+			active_fallback = true;
+			return *this;
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when PSTAutomatic is destructed at the end of the expression. 
+		 *
+		 * Intended usage:
 		 * state.parse(el).autoFallbackUntil<condition>().parseOne(...);
 		 */
 		template<TokenStreamCondition until>
 		PSTAutomatic& autoFallbackUntil() {
 			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
-			u64 length = 0;
-			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
+			u64 length = state.template countUntil<until>();
 			state.setFallback(length);
 			active_fallback = true;
 			return *this;
@@ -491,8 +505,7 @@ namespace pst {
 		 */
 		template<TokenStreamCondition until>
 		PSTAutomatic& fallbackUntil() {
-			u64 length = 0;
-			while (!internal::isSentinel(state, length) && !until(state, length)) length++;
+			u64 length = state.template countUntil<until>();
 			state.setFallback(length);
 			return *this;
 		}
@@ -500,7 +513,6 @@ namespace pst {
 		/**
 		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when exited.
 		 */
-		template<TokenStreamCondition until>
 		PSTAutomatic& exitFallback() {
 			state.exitFallback();
 			return *this;

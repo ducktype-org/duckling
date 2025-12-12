@@ -33,10 +33,13 @@ namespace tpc {
 			u64 post_jump;
 		};
 
-		base::Optional<TokenStream> current_stream;
+		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
 		bool                  skip_till_fallback = false;
+		bool finalized = false;
+
+		void checkAllParsed();
 
 	public:
 		/**
@@ -56,6 +59,12 @@ namespace tpc {
 		[[nodiscard]]
 		bool isSkipping() const;
 
+		/**
+		 * @brief Informs whether the state is finalized
+		 */
+		[[nodiscard]]
+		bool isFinalized() const;
+
 		// clang-format off
 		[[nodiscard]]
 		const Token& operator[](i64 fwd) const {
@@ -68,7 +77,7 @@ namespace tpc {
 		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
 
 		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
-			  current_stream(std::move(tokens)),
+			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  err(err),
 			  int_err(int_err) {}
@@ -125,23 +134,31 @@ namespace tpc {
 		void exitFallback();
 
 		/**
+		 * @brief Do final checks that everything is parsed.
+		 */
+		void finalize();
+
+		/**
 		 * @brief Logs an error relatively to the current token
 		 */
 		void fail(i64 rel_pos, const std::string& message) {
 			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
+			skip_till_fallback = true;
 		}
 
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void log(Box<dia::Message> message) { err->log(std::move(message)); }
+		void log(Box<dia::Message> message) { 
+			if (message->getSeverity() == dia::Message::Severity::Error)
+				skip_till_fallback = true;
+			err->log(std::move(message)); 
+		}
 
 		template <TokenStreamCondition until>
 		[[nodiscard]]
 		u64 countUntil() const {
-			u64 length = 0;
-			while (!ctokens().peek(base::safeIntConv<i64>(length)).is(Token::Type::Sentinel) && !until(ctokens(), base::safeIntConv<i64>(length))) length++;
-			return length;
+			return current_stream->countUntil<until>();
 		}
 
 		/**

@@ -2,7 +2,7 @@
 
 #include "../../hierarchy/expressions/assignment.hpp"
 #include "../../hierarchy/expressions/comma.hpp"
-#include "../../hierarchy/expressions/match_expr.hpp"
+#include "../../hierarchy/expressions/ternary.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
@@ -52,42 +52,35 @@ namespace pst {
 		return partial_hash;
 	}
 
-	namespace {
-		bool universalEnd(const TokenStream& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
-			    || ExprClassify::isAssignment(state, fwd)
-			    || internal::Conditions::isBlockGroup(state, fwd);
-		}
-
-		bool universalAllowBlockEnd(const TokenStream& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
-			    || ExprClassify::isAssignment(state, fwd);
-		}
-
-		bool universalEndAllowComma(const TokenStream& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
-			    || internal::Conditions::isBlockGroup(state, fwd);
-		}
-
-		bool assignmentEnd(const TokenStream& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon);
-		}
+	bool ExprParserHelper::untilUniversalEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
+			|| ExprClassify::isAssignment(state, fwd)
+			|| internal::Conditions::isBlockGroup(state, fwd);
 	}
 
-	MBox<ExprElement> ExprParserHelper::parseUniversal(LangParserState& state) {
-		state.parse()
-		return expr::parseUntil<expr::MatchExpr, universalEnd>(state);
+	bool ExprParserHelper::untilUniversalAllowBlockEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
+			|| ExprClassify::isAssignment(state, fwd);
 	}
 
-	MBox<ExprElement> ExprParserHelper::parseUniversalAllowBlock(LangParserState& state) {
-		return expr::parseUntil<expr::MatchExpr, universalAllowBlockEnd>(state);
+	bool ExprParserHelper::untilUniversalAllowCommaEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
+			|| internal::Conditions::isBlockGroup(state, fwd);
 	}
 
-	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
-		return expr::parseUntil<expr::Comma, universalEndAllowComma>(state);
+	bool ExprParserHelper::untilSemicolon(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon);
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseAssignment(LangParserState& state) {
-		return expr::parseUntil<expr::Assignment, assignmentEnd>(state);
+		return expr::Assignment::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
 	}
+
+	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
+		return expr::Comma::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+	}
+	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
+		return expr::Ternary::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
+	}
+
 }

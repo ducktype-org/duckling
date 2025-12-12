@@ -110,6 +110,6 @@ namespace pst {
 	class CommaExprHolder;
 	class AssignmentExprHolder;
 	class ValuePatternExprHolder;
-	class ImplementsListExprHolder;
+	class ImplementsElementExprHolder;
 	class ForTypeExprHolder;
 }

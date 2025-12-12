@@ -15,7 +15,7 @@
 
 namespace pst {
 
-	using TokenStreamCondition = bool(const TokenStream&, i64);
+	using TokenStreamCondition = bool(const tpc::TokenStream&, i64);
 
 	using GetName = std::string (*)();
 

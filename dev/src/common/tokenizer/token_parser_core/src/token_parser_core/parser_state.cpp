@@ -3,9 +3,9 @@
 #include <base/except/exceptions.hpp>
 
 namespace tpc {
-	TokenStream& ParserState::tokens() { return current_stream.value(); }
+	TokenStream& ParserState::tokens() { return *current_stream; }
 
-	const TokenStream& ParserState::ctokens() const { return current_stream.value(); }
+	const TokenStream& ParserState::ctokens() const { return *current_stream; }
 
 	bool ParserState::empty() const { return ctokens().size() == 0; }
 
@@ -32,8 +32,8 @@ namespace tpc {
 	void ParserState::goDown() {
 		auto new_stream = ctokens().getRecursive();
 		fallback_stack.emplace_back(Fallback{
-			.type = Recursive, .saved_stream = std::move(current_stream.value()), .post_jump = 1 });
-		current_stream.emplace(std::move(new_stream));
+			.type = Recursive, .saved_stream = std::move(*current_stream), .post_jump = 1 });
+		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
 
 	void ParserState::goUp() {
@@ -41,7 +41,8 @@ namespace tpc {
 			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		checkAllParsed();
+		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 	}
 
@@ -50,8 +51,9 @@ namespace tpc {
 			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
+		checkAllParsed();
 		u64 fwd = fallback_stack.back().post_jump;
-		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 	}
@@ -59,9 +61,9 @@ namespace tpc {
 	void ParserState::setFallback(u64 length) {
 		auto new_stream = ctokens().getSubstream(length);
 		fallback_stack.emplace_back(Fallback{ .type         = NonRecursive,
-		                                      .saved_stream = std::move(current_stream.value()),
+		                                      .saved_stream = std::move(*current_stream),
 		                                      .post_jump    = length });
-		current_stream.emplace(std::move(new_stream));
+		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
 
 	void ParserState::exitFallback() {
@@ -69,10 +71,46 @@ namespace tpc {
 			fallback_stack.size() && fallback_stack.back().type == SubStreamType::NonRecursive,
 			"No fallback token stream to go up from"
 		);
+		checkAllParsed();
 		u64 fwd = fallback_stack.back().post_jump;
-		current_stream.emplace(std::move(fallback_stack.back().saved_stream));
+		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 		skip_till_fallback = false;
 	}
+
+	void ParserState::finalize() {
+		finalized = true;
+		checkAllParsed();
+	}
+
+	bool ParserState::isFinalized() const {
+		return finalized;
+	}
+
+	class NotAllParsedError;
+	void ParserState::checkAllParsed() {
+		if (!isSkipping() && !empty()) {
+			log(base::makeBox<NotAllParsedError>(dia::SourcePosition{
+				getPosition(), 
+				ctokens()[base::safeIntConv<i64>(ctokens().size()) - 1].getPosition().getEnd()
+			}));
+		}
+	}
+
+	class NotAllParsedError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected additional tokens during parsing.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NotAllParsedError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
 }

@@ -38,6 +38,7 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		auto extractState() && -> std::vector<ImportType> {
+			CORE_ASSERT(isFinalized(), "Parsing was not finalized before extracting imports");
 			return std::move(imports);
 		}
 

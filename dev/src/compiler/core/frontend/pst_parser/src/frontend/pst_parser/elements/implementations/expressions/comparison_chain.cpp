@@ -6,7 +6,7 @@
 namespace pst::expr {
 	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
-		while (fwd < length && !ExprClassify::isComparison(state, fwd)) fwd++;
+		while (fwd < length && !ExprClassify::isComparison(state.ctokens(), fwd)) fwd++;
 		return fwd;
 	}
 

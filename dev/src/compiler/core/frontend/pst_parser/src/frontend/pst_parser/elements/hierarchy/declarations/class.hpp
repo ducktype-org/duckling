@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../lists/implements_list.hpp"
+#include "../expr_holders.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -10,7 +11,7 @@ namespace pst {
 	class Class final: public Decl {
 	private:
 		tpc::Identifier name;
-		NAMED_CHILD(base, ExprElement);
+		NAMED_CHILD(base, ExtendsExprHolder);
 		NAMED_CHILD(implements, ImplementsList);
 		NAMED_CHILD(body, ClassBlock);
 
@@ -31,7 +32,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprElement> getBase() const {
+		AccessLocked<ExtendsExprHolder> getBase() const {
 			return base.give();
 		}
 

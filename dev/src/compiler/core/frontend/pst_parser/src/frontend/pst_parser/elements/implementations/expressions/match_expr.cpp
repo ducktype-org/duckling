@@ -68,12 +68,13 @@ namespace pst::expr {
 			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
+
 		state.goDown();
 		state.parse(out).one(&out->value_to_match);
 		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
+			state.log(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
 		state.parse(out).goDown();

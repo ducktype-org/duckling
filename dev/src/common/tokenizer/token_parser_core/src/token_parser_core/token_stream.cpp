@@ -45,7 +45,6 @@ namespace tpc {
 	}
 
 	TokenStream TokenStream::getSubstream(u64 length) const {
-		CORE_ASSERT(size(), "Stream should be non-empty for substream creation");
 		CORE_ASSERT(to - where >= length, "Sub-stream should fit in parent stream");
 		return { tokens,
 			     peek(-1).asSentinel(),
@@ -57,14 +56,14 @@ namespace tpc {
 	const Token& TokenStream::next() { return (where >= to ? sentinel_end : tokens[where++]); }
 
 	const Token& TokenStream::peek(i64 fwd) const {
-		if (std::max(-fwd, (i64) 0) > where) return sentinel_begin;
+		if (base::safeIntConv<i64>(where) + fwd < base::safeIntConv<i64>(from)) return sentinel_begin;
 		return (
-			base::safeIntConv<i64>(where) + fwd >= to ? sentinel_end : tokens[where + (usize) fwd]
+			base::safeIntConv<i64>(where) + fwd >= to ? sentinel_end : tokens[base::safeIntConv<i64>(where) + fwd]
 		);
 	}
 
 	void TokenStream::skip(i64 n) {
-		where = base::safeIntConv<usize>(std::max(base::safeIntConv<i64>(where) + n, (i64) 0));
+		where = base::safeIntConv<usize>(std::max(base::safeIntConv<i64>(where) + n, base::safeIntConv<i64>(from)));
 	}
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
