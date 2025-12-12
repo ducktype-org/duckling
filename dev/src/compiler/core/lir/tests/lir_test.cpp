@@ -19,6 +19,8 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <iostream>
+
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;

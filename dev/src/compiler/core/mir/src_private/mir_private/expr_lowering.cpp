@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <ranges>
 #include <variant>
-#include <vector>
 
 namespace compiler::mir {
 
@@ -263,7 +262,6 @@ namespace compiler::mir {
 			auto       sub_result = lowerSubExpr(*expr.base, continuation);
 			const auto sub_begin  = sub_result.begin;
 			auto       sub_value  = sub_result.getResult(function);
-			// TODOP: Reflection operator issue.
 
 			variant_match(std::move(sub_value.getVariant())) {
 				variant_case(MIRPlace, place) {
@@ -422,7 +420,6 @@ namespace compiler::mir {
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
-			std::cout << "Lift type eval\n";
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
 		}
