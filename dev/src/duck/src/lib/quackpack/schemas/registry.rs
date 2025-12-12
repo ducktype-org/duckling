@@ -3,11 +3,13 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
+pub type Dependencies = HashMap<String, Dependency>;
+
 #[derive(Debug, Serialize)]
 pub struct Manifest {
     pub metadata: Metadata,
-    pub dependencies: HashMap<String, Dependency>,
-    pub dev_dependencies: HashMap<String, Dependency>,
+    pub dependencies: Dependencies,
+    pub dev_dependencies: Dependencies,
     pub features: HashMap<String, Vec<String>>,
     pub profiles: HashMap<String, CompilerOptions>,
 }
