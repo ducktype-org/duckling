@@ -1,15 +1,15 @@
 use crate::quackpack::{core::Version, schemas::OneEntryMap};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct Manifest {
     pub metadata: Metadata,
-    pub dependencies: BTreeMap<String, Dependency>,
-    pub dev_dependencies: BTreeMap<String, Dependency>,
-    pub features: BTreeMap<String, Vec<String>>,
-    pub profiles: BTreeMap<String, CompilerOptions>,
+    pub dependencies: HashMap<String, Dependency>,
+    pub dev_dependencies: HashMap<String, Dependency>,
+    pub features: HashMap<String, Vec<String>>,
+    pub profiles: HashMap<String, CompilerOptions>,
 }
 
 #[derive(Debug, Serialize)]
