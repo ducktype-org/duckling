@@ -28,7 +28,6 @@ pub struct Metadata {
     pub license: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub language: Option<Version>,
 }
 
 #[derive(Debug, Deserialize)]
