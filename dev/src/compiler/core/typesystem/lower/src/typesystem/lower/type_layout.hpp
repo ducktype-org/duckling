@@ -124,6 +124,26 @@ namespace compiler::tsl {
 	};
 
 	/**
+	 * @brief Layout for the MetaType.
+	 * Represents a runtime handle/ID to type metadata.
+	 *
+	 * Acts as a handle (pointer-sized integer) that references
+	 * the type information stored in the static memory (RTTI).
+	 */
+	class MetaTypeLayout final: public TypeLayoutABC {
+		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type):
+			  TypeLayoutABC(META_SIZE, meta_type) {}
+
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
+			return getIndent(indent) + "meta type :" + base::toString(getSize());
+		}
+	};
+
+	/**
 	 * @brief Layout of a type that has integral-like low level behaviour.
 	 *
 	 * Valid candidates include, of course, integers, but also bytes, bools, and characters.
@@ -626,6 +646,7 @@ namespace compiler::tsl {
 
 	using TypeLayoutDirectVariant = std::variant<
 		EmptyTypeLayout,
+		MetaTypeLayout,
 		IntegralTypeLayout,
 		FloatTypeLayout,
 		VariantTypeLayout,

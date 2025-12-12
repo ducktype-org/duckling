@@ -71,6 +71,19 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
+	
+
+	/** Operations on meta types for compile time function evaluation */
+	MetaCreateBox,
+	MetaCreateRef,
+	MetaCreateOptional,
+	MetaCreateConst,
+	MetaCreateTuple, // N arguments, types to create the tuple type from
+	MetaCreateVariant, // N arguments, types to create the variant type from
+	MetaCreateFuncType, // 1 argument for the return type, N arguments for the argument types.
+	
+	// Reflection operators. TODOP, more generic way to handle reflection operators?
+	MetaGetSize, // T::size
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,

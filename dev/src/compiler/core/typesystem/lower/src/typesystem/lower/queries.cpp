@@ -1,5 +1,8 @@
 #include "queries.hpp"
 
+#include "typesystem/higher/types.hpp"
+#include "typesystem/lower/type_layout.hpp"
+
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::tsl {
@@ -9,6 +12,8 @@ namespace compiler::tsl {
 			switch (key.getKind()) {
 			case Unit:
 				return EmptyTypeLayout(key);
+			case Meta:
+				return MetaTypeLayout(tsh::MetaAbstractType(key));
 			case Byte:
 				return IntegralTypeLayout(tsh::ByteAbstractType(key));
 			case Bool:

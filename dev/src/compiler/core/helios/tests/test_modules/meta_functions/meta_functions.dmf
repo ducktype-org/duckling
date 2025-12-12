@@ -1,0 +1,30 @@
+fun createBox(t: type) -> type = box t;
+fun createRef(t: type) -> type = ref t;
+fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+
+fun fib(n: i64) -> i64 = {
+   if (n < 2i64) { return n; }
+   return fib(n - 1i64) + fib(n - 2i64);
+}
+
+fun complexLogic(n: i64) -> type = {
+    if (fib(n) < 15i64) {
+        return createSmallVariant(createBox(i32), i16);
+    } else {
+        return createBigVariant(createRef(i64), f16, f128, i32);
+    }
+}
+
+fun createMegaType(a: type) -> type = {
+    var c: type = ((), a, i32, (i16, f16), i64 | (f64, f128));
+    return c;
+}
+
+fun megaMegaType(a: type) -> type = {
+    var c: type = ((), a, createBox(i32), (i16, f16), i64 | (f64, f128));
+    return c;
+}
+
+# fun createOpt(t: type) -> type = ?t;
+# fun createConst(t: type) -> type = const t;
+# fun getTypeSize(a: type) -> i64 = a::size;
