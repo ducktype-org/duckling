@@ -215,33 +215,12 @@ namespace compiler::mir {
 		}
 
 		void visitTupleExpr(const hc::TupleExpr& expr) override {
-			std::cout << "=======================\n";
-			expr.debugPrint(std::cout);
-			std::cout << "=======================\n";
-
 			auto result_type = expr.expression_type.getSymbolType();
-			std::cout << "Result type: " << result_type.toString() << '\n';
-
-			for (const auto& sub_type: expr.elements) {
-				std::cout << "-----------\n";
-				sub_type->debugPrint(std::cout);
-				std::cout << "\n";
-
-				std::cout << "Is type: "
-						  << ((sub_type->expression_type.getSymbolType().getType().getKind()
-				               == tsh::Kind::Meta)
-				                  ? "yes"
-				                  : "no");
-				std::cout << "-----------\n";
-			}
-
 
 			// First check if we're creating a meta tuple type.
 			bool is_meta_tuple = std::ranges::all_of(expr.elements, [](const auto& elem) {
 				return elem->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta;
 			});
-			
-			// TODOP: Meta should be handled in lift?
 			if (is_meta_tuple) {
 				BlockBuilderRef       current = continuation;
 				std::vector<MIRValue> values;
@@ -458,17 +437,23 @@ namespace compiler::mir {
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
-			std::cout << "Lift type eval\n";
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
 		}
 
 
 	private:
+		/**
+		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
+		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
+		 * Unit). Other nodes are delegated back to the standard expression lowerer.
+		 * @TODO: #1693 This is a temporary approach since tuples are not supported in DVM, so
+		 * casting from them is impossible. This should probably get removed and liftToType should
+		 * be handled in MIR, LIR and DVM
+		 */
 		ExprLowerRes lowerAndLiftToTypeRecursively(
 			const hc::Expr& expr, BlockBuilderRef continuation
 		) {
-			// TODOP: Make this a visitor.
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
 					function.getContext().query<tsh::QueryUnitType>({}),
@@ -477,11 +462,8 @@ namespace compiler::mir {
 				};
 
 				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
-			}
-			if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
-				std::cout << "Lower Recursive tuple\n";
-
-				auto hole = continuation->addHole();
+			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
+				auto                  hole    = continuation->addHole();
 				BlockBuilderRef       current = continuation;
 				std::vector<MIRValue> element_types;
 				element_types.reserve(tuple_expr->elements.size());
@@ -493,11 +475,9 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{
-					function.getContext().query<tsh::QueryMetaType>({}),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable
-				};
+				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
+					                           tsh::ReferenceKind::Direct,
+					                           tsh::Mutability::Mutable };
 
 				return ExprLowerRes(
 					current,
@@ -507,9 +487,8 @@ namespace compiler::mir {
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
 						.type = result_type }
 				);
-			}
-			if (const auto* variant_expr
-			    = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
+			} else if (const auto* variant_expr
+			           = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
 				auto hole = continuation->addHole();
 
 				BlockBuilderRef       current = continuation;
@@ -523,11 +502,9 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(subtype_values);
 
-				tsh::SymbolType<> result_type{
-					function.getContext().query<tsh::QueryMetaType>({}),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable
-				};
+				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
+					                           tsh::ReferenceKind::Direct,
+					                           tsh::Mutability::Mutable };
 
 				return ExprLowerRes(
 					current,
@@ -538,9 +515,7 @@ namespace compiler::mir {
 						),
 						.type = result_type }
 				);
-			}
-
-			if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
 
 			return lowerSubExpr(expr, continuation);
@@ -627,9 +602,6 @@ namespace compiler::mir {
 				return Operation::MetaCreateBox;
 			case Ref:
 				return Operation::MetaCreateRef;
-			case Const:
-				return Operation::MetaCreateConst;
-			// TODOP: Issue for Optional support.
 			default:
 				CORE_UNREACHABLE();
 			}

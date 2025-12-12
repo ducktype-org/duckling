@@ -116,33 +116,6 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 			maybe_output
 		);
 		break;
-	case Operation::MetaCreateOptional:
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_create_optional"), program_context
-			),
-			{ args[0] },
-			maybe_output
-		);
-		break;
-	case Operation::MetaCreateConst:
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_create_const"), program_context
-			),
-			{ args[0] },
-			maybe_output
-		);
-		break;
-	case Operation::MetaGetSize:
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_get_size"), program_context
-			),
-			{ args[0] },
-			maybe_output
-		);
-		break;
 	case Operation::MetaCreateTuple: {
 		auto builder
 			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "tuple_builder");
@@ -208,50 +181,6 @@ void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_in
 			maybe_output
 		);
 
-
-		// TODOP: Deinit builder?
-		break;
-	}
-	case Operation::MetaCreateFuncType: {
-		CORE_ASSERT(!lir_instruction.arguments.empty(), "FuncType must have at least a return type");
-
-		auto builder
-			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "function_builder");
-		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
-		// TODOP: finish here
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_func_type_builder_new"), program_context
-			),
-			{},
-			builder_value
-		);
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_func_type_builder_set_ret_type"), program_context
-			),
-			{ builder_value, args[0] },
-			{}
-		);
-
-		for (usize i = 1; i < lir_instruction.arguments.size(); i++)
-			handleCall(
-				FunctionCallInfo::fromExternCFunction(
-					base::StrID("__comptime_func_type_builder_push_arg"), program_context
-				),
-				{ builder_value, args[i] },
-				{}
-			);
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_func_type_builder_finalize"), program_context
-			),
-			{ ctx, builder_value },
-			maybe_output
-		);
 
 		// TODOP: Deinit builder?
 		break;

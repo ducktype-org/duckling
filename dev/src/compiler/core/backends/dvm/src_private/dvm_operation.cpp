@@ -7,9 +7,7 @@ namespace {
 
 	bool isMetaTypeOperation(lir::Operation op) {
 		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateOptional
-		    || op == lir::Operation::MetaCreateTuple || op == lir::Operation::MetaCreateVariant
-		    || op == lir::Operation::MetaCreateFuncType || op == lir::Operation::MetaGetSize;
+		    || op == lir::Operation::MetaCreateTuple || op == lir::Operation::MetaCreateVariant;
 	}
 }
 
