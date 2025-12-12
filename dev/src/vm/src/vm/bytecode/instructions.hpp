@@ -204,12 +204,14 @@ namespace vm::code {
 			switch (self.instr_kind) {
 #define HANDLE_INSTR(name)              \
 	case VM_INSTR_KIND_FROM_NAME(name): \
-		return std::forward<V>(visitor)(self.template get<VM_INSTR_FROM_NAME(name)>());
+		return std::invoke(std::forward<V>(visitor), self.template get<VM_INSTR_FROM_NAME(name)>());
 				break;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
 			case InstructionKind::Comment:
-				return std::forward<V>(visitor)(self.template get<instructions::Comment>());
+				return std::invoke(
+					std::forward<V>(visitor), self.template get<instructions::Comment>()
+				);
 				break;
 			}
 			CORE_UNREACHABLE();
