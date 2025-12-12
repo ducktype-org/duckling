@@ -1,4 +1,4 @@
-# fun createBox(t: type) -> type = box t;
+fun createBox(t: type) -> type = box t;
 # const A = createBox(i32);
 # const A_2 = createBox(i16);
 # 
@@ -42,6 +42,14 @@ fun megaType(a: type) -> type = {
     var c: type = ((), a, i32, (i16, f16), i64 | (f64, f128));
     return c;
 }
+const megaGigaType = megaType(i128);
+
+# # TODOP: This doesn't work since we don't look for tuples
+# fun megaMegaType(a: type) -> type = {
+#     var c: type = ((), a, createBox(i32), (i16, f16), i64 | (f64, f128));
+#     return c;
+# }
+# const megaMegaGigaType = megaMegaType(i128);
 
 
 
