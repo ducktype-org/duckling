@@ -85,6 +85,7 @@ public:
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -2041,6 +2042,24 @@ private:
 			assertThrows<std::exception>(
 				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
 				"Expected ambiguous callable candidates error"
+			);
+
+			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+			std::stringstream non_detailed_log;
+			ctx.logger.dumpLog(false, non_detailed_log);
+			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testErrorAmbiguousReturnType() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_return_type")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertThrows<std::exception>(
+				[&] { query::entryPoint<compiler::helios::QueryTopLevelEntities>(module_id); },
+				"Expected ambiguous return type error"
 			);
 
 			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
