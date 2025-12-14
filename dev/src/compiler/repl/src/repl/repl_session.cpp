@@ -5,6 +5,7 @@
 
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
@@ -193,27 +194,35 @@ namespace compiler::repl {
 		base::Optional<helios::HOUTFunction> expr_wrapper;
 		std::string                          wrapper_func_name;
 
+		std::cout << "[DEBUG] Starting handleExpression\n";
+
 		query::utils::withContextDo([&](query::Context& ctx) {
+			std::cout << "[DEBUG] Querying QueryReplExpressionWrapper\n";
 			expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
 			                                                       .counter   = m_line_counter });
 
+			std::cout << "[DEBUG] Getting mangled name\n";
 			auto mangled_name = helios::mangler::getSimpleMangledName(
 				ctx, expr_wrapper->declaration->original_symbol
 			);
 			wrapper_func_name = mangled_name.strView();
+			std::cout << "[DEBUG] Wrapper function name: " << wrapper_func_name << "\n";
 		});
 
+		std::cout << "[DEBUG] Creating HOUT unit\n";
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.push_back(std::move(expr_wrapper.value()));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			if (m_config.show_hout_debug) {
+				std::cout << "[DEBUG] Printing HOUT debug\n";
 				auto hout_debug = hout_unit.debugPrint(ctx);
 				std::cout << hout_debug << "\n";
 				output_message = hout_debug;
 			}
 
 			if (m_config.run_dvm) {
+				std::cout << "[DEBUG] Compiling and loading to DVM\n";
 				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
@@ -227,9 +236,12 @@ namespace compiler::repl {
 				auto return_type = hout_unit.functions[0].declaration->return_type;
 				auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
-					std::cout << "Result: " << run_result.value().result_string << "\n";
+					if (return_type.toString() == "void")
+						std::cout << "Function executed.\n";
+					else
+						std::cout << "=> " << run_result.value().result_string << "\n";
 				} else {
-					error_message = "DVM run error: " + run_result.error();
+					error_message = "Runtime error: " + run_result.error();
 					std::cerr << error_message << "\n";
 					had_error = true;
 					return;
@@ -265,7 +277,7 @@ namespace compiler::repl {
 					return;
 				}
 
-				std::cout << "[Definitions loaded to DVM]\n";
+				std::cout << "Definitions loaded.\n";
 			}
 		});
 
@@ -278,40 +290,52 @@ namespace compiler::repl {
 		if (input.empty()) return ReplResult::success();
 
 		try {
-			auto context_hash = hashing::ComponentHash(base::StrID("repl"));
+			std::cout << "[DEBUG] Starting executeInput\n";
 
-			auto pst = pst::PST<>::fromContents(input, context_hash);
-			pst.dprint(std::cout);
-			std::cout << "\n\n";
-
-			if (pst.getLogger()->bad()) {
-				std::cerr << "Parse errors:\n";
-				pst.getLogger()->dumpLog(false, std::cerr);
-				return ReplResult::error("Parse error");
-			}
-
+			std::cout << "[DEBUG] Creating module\n";
 			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(input);
 			auto module_id  = module_ref->getModuleID();
 
 			m_history.emplace_back(input, module_ref);
 			++m_line_counter;
 
+			std::cout << "[DEBUG] Extracting expression\n";
 			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto root     = pst.getRootElement();
+				auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+				auto pst       = ctx.query<frontend::QueryFilePST>(main_file);
+
+				pst->dprint(std::cout);
+				std::cout << "\n\n";
+
+				if (pst->getLogger()->bad()) {
+					std::cerr << "Parse errors:\n";
+					pst->getLogger()->dumpLog(false, std::cerr);
+					return;
+				}
+
+				auto root     = pst->getRootElement();
 				expr_stmt_opt = extractSingleExpression(ctx, root);
 			});
 
-			if (expr_stmt_opt.has_value())
+			if (expr_stmt_opt.has_value()) {
+				std::cout << "[DEBUG] Processing as expression\n";
 				return handleExpression(expr_stmt_opt.value());
-			else
+			} else {
+				std::cout << "[DEBUG] Processing as definition\n";
 				return handleDefinition(module_id);
+			}
+		} catch (const std::out_of_range& e) {
+			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
+			std::cerr << error_msg << "\n";
+			std::cerr << "[DEBUG] This typically means a lookup in a map/vector failed\n";
+			return ReplResult::error(error_msg);
 		} catch (const std::exception& e) {
-			std::string error_msg = std::string("REPL processing exception: ") + e.what();
+			std::string error_msg = std::string("Error: ") + e.what();
 			std::cerr << error_msg << "\n";
 			return ReplResult::error(error_msg);
 		} catch (...) {
-			std::string error_msg = "Unknown REPL processing error";
+			std::string error_msg = "Unknown error occurred";
 			std::cerr << error_msg << "\n";
 			return ReplResult::error(error_msg);
 		}

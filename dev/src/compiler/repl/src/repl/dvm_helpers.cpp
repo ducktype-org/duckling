@@ -20,14 +20,26 @@ namespace compiler::repl {
 	std::expected<ExpressionResult, std::string> executeExpression(
 		vm::PID pid, const std::string& func_name, const tsh::SymbolType<>& return_type
 	) {
+		auto type_str = return_type.toString();
+
+		if (type_str == "void") {
+			auto run_result = vm::api::runFunction(pid, func_name, {})
+			                      .and_then([&] { return vm::api::join(pid); })
+			                      .transform_error(vm::api::errorToString);
+
+			if (run_result.has_value())
+				return ExpressionResult{ .result_string = "" };
+			else
+				return std::unexpected(run_result.error());
+		}
+
 		return vm::api::runFunction(pid, func_name, {})
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[&return_type](Ref<vm::VmValue> exit_value
+				[&type_str](Ref<vm::VmValue> exit_value
 		        ) -> std::expected<ExpressionResult, std::string> {
-					auto        type_str = return_type.toString();
 					std::string result_str;
 
 					if (type_str == "i32")
