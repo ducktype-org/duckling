@@ -8,7 +8,7 @@ use serde::de;
 use serde::ser;
 use serde::ser::SerializeMap;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
 pub struct OneEntryMap<K, V> {
     pub key: K,
     pub value: V,

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub type Dependencies = HashMap<String, Dependency>;
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Manifest {
     pub metadata: Metadata,
     pub dependencies: Dependencies,
@@ -15,6 +16,7 @@ pub struct Manifest {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Metadata {
     pub version: Version,
     pub authors: Vec<String>,
@@ -24,6 +26,7 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Dependency {
     pub version: Vec<Version>,
     pub source: DependencySource,
@@ -34,13 +37,15 @@ pub struct Dependency {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencySource {
     pub inner: SourceInner,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(tag = "type")]
-#[serde(rename = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum SourceInner {
     Registry {
         registry_url: String,
@@ -58,6 +63,7 @@ pub enum SourceInner {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(untagged)]
 pub enum DependencyFeature {
     Simple(String),
@@ -65,11 +71,13 @@ pub enum DependencyFeature {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct CompilerOptions {
     pub compiler_flags: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
