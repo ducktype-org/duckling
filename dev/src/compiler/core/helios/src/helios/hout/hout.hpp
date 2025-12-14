@@ -34,6 +34,13 @@ namespace compiler::helios {
 		struct CodeBlock;
 		struct Parameter;
 	}
+}
+
+namespace compiler::repl {
+	struct ImplementationOf_QueryReplExpressionWrapper;
+}
+
+namespace compiler::helios {
 
 	/**
 	 * @brief Storage of information coming from function declaration without processing its body.
@@ -72,6 +79,7 @@ namespace compiler::helios {
 			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
+		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 	};
 
 	/**
@@ -85,6 +93,7 @@ namespace compiler::helios {
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 
 	public:
 		HOUTFunction() = delete;

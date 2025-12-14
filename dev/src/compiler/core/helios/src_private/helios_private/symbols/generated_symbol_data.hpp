@@ -51,15 +51,26 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, Parameter, Variable> data;
+		/**
+		 * Represents a compiler-generated function wrapper for REPL expressions.
+		 * This is used to wrap single REPL expressions in a synthetic function.
+		 */
+		struct ReplExpressionWrapper final {
+			u64 counter;  // A unique counter to distinguish different REPL expression wrappers.
+			tsh::SymbolType<> return_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper> data;
 
 		explicit GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable>& data
+			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
 		);
 
 		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-
+		base::Bit256      queryUnstablePerfectHash() const;
 		tsh::SymbolType<> getType(query::Context& ctx) const;
 	};
 }

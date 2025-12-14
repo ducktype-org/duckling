@@ -6,10 +6,15 @@ either in the scheme or it's implementation, they should be reflected here.
 ```rust
 
 <mangled-symbol-name> ::= <language-prefix> <scheme-version> <encoding> <opt-metadata>
+                       | <repl-expression-wrapper>
 
 // note: global identifiers starting with underscore and a capital letter are reserved in C
 // Q seems to be free and stands for both query and quack
 <language-prefix> ::= "_Q"
+
+// REPL expression wrappers use simplified mangling for now. TODO: decide
+// if it's correct.
+<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
 
 <scheme-version> ::= <compact-number>                       // version of the mangling scheme
 

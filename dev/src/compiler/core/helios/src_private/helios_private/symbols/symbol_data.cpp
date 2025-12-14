@@ -18,8 +18,12 @@ namespace compiler::helios {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
+		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
+			return { counter };
+		}
+
 		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable>& data
+			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
 		):
 			  data(data) {}
 
@@ -73,6 +77,17 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(Variable, var) { return var.type; }
+				variant_case(ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -112,6 +127,9 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

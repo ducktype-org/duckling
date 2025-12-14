@@ -8,21 +8,15 @@
 
 #pragma once
 
-#include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/pst.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
-#include <filesystem/file.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <vm/core/process/interface_types.hpp>
 
 #include <string>
 #include <vector>
@@ -49,29 +43,31 @@ namespace compiler::repl {
 		bool        run_dvm         = true;
 	};
 
+	/**
+	 * @brief Result of processing a REPL input
+	 *
+	 * Contains the status of the operation and an optional message.
+	 */
 	struct ReplResult {
 		enum class Status { Success, Error, Exit, IncompleteInput };
 
 		Status      status;
 		std::string message;
-		i32         exit_code = 0;
 
-		static ReplResult success(std::string msg = "", i32 code = 0) {
-			return ReplResult{ .status    = Status::Success,
-				               .message   = std::move(msg),
-				               .exit_code = code };
+		static ReplResult success(std::string msg = "") {
+			return ReplResult{ .status = Status::Success, .message = std::move(msg) };
 		}
 
 		static ReplResult error(std::string msg) {
-			return ReplResult{ .status = Status::Error, .message = std::move(msg), .exit_code = 0 };
+			return ReplResult{ .status = Status::Error, .message = std::move(msg) };
 		}
 
 		static ReplResult exit() {
-			return ReplResult{ .status = Status::Exit, .message = "Goodbye!", .exit_code = 0 };
+			return ReplResult{ .status = Status::Exit, .message = "Goodbye!" };
 		}
 
 		static ReplResult incomplete() {
-			return ReplResult{ .status = Status::IncompleteInput, .message = "", .exit_code = 0 };
+			return ReplResult{ .status = Status::IncompleteInput, .message = "" };
 		}
 	};
 
@@ -107,8 +103,6 @@ namespace compiler::repl {
 			return m_config;
 		}
 
-		void clearAccumulated() { m_accumulated_input.clear(); }
-
 		[[nodiscard]]
 		bool shouldExit() const {
 			return m_should_exit;
@@ -124,16 +118,20 @@ namespace compiler::repl {
 		bool               handleCommand(const std::string& line);
 		void               printPrompt() const;
 
-		[[nodiscard]] bool isExpression(
+		[[nodiscard]] base::Optional<pst::AccessLocked<pst::ExprStmt>> extractSingleExpression(
 			query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
 		) const;
-		[[nodiscard]] std::string wrapExprAsFunction(const std::string& expr, u32 counter) const;
 
+		ReplResult handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt);
+		ReplResult handleDefinition(frontend::ModuleID module_id);
+
+		void                       initDVM();
 		ReplConfig                 m_config;
 		std::vector<ReplStatement> m_history;
-		std::string                m_accumulated_input;
 		bool                       m_should_exit;
 		u32                        m_line_counter;
+
+		vm::PID m_dvm_pid;
 	};
 
 }  // namespace compiler::repl

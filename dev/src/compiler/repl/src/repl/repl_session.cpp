@@ -1,12 +1,12 @@
-/**
- * @file repl_session.cpp
- * @brief Implementation of REPL session management for Duckling compiler.
- */
-
 #include "repl_session.hpp"
+
+#include "dvm_helpers.hpp"
+#include "repl_queries.hpp"
 
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -14,22 +14,37 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
+#include <vm/api/vm.hpp>
+
 #include <iostream>
-#include <sstream>
 
 namespace compiler::repl {
+	// TODO: decide if we want to do it here or in the main.cpp.
+	void ReplSession::initDVM() {
+		auto spawn_result = vm::api::spawn();
+		if (!spawn_result.has_value())
+			throw base::Panic("ReplSession::initDVM", "Failed to spawn DVM process");
 
-	ReplSession::ReplSession():
-		  m_config(),
-		  m_accumulated_input(),
-		  m_should_exit(false),
-		  m_line_counter(0) {}
+		m_dvm_pid = spawn_result->pid;
+
+		auto attach_result = vm::api::attach(m_dvm_pid, std::cin, std::cout);
+		if (!attach_result.has_value())
+			throw base::Panic("ReplSession::initDVM", "Failed to attach I/O to DVM process");
+
+		std::cout << "[DVM initialized with PID " << m_dvm_pid << "]\n";
+	}
+
+	ReplSession::ReplSession(): m_config(), m_should_exit(false), m_line_counter(0), m_dvm_pid(0) {
+		initDVM();
+	}
 
 	ReplSession::ReplSession(ReplConfig config):
 		  m_config(std::move(config)),
-		  m_accumulated_input(),
 		  m_should_exit(false),
-		  m_line_counter(0) {}
+		  m_line_counter(0),
+		  m_dvm_pid(0) {
+		initDVM();
+	}
 
 	void ReplSession::printWelcome() const {
 		std::cout << "Duckling REPL\n";
@@ -38,10 +53,7 @@ namespace compiler::repl {
 	}
 
 	void ReplSession::printPrompt() const {
-		if (m_accumulated_input.empty())
-			std::cout << m_config.prompt;
-		else
-			std::cout << m_config.continuation;
+		std::cout << m_config.prompt;
 		std::cout.flush();
 	}
 
@@ -50,35 +62,22 @@ namespace compiler::repl {
 	}
 
 	// It doesn't belong here, should probably be moved to frontend later.
-	bool ReplSession::isExpression(
+	base::Optional<pst::AccessLocked<pst::ExprStmt>> ReplSession::extractSingleExpression(
 		query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
 	) const {
 		auto root_elem = root.unlock(ctx);
 		auto children  = root_elem->viewChildren();
 
-		size_t child_count  = 0;
-		bool   is_expr_stmt = false;
+		auto it = children.begin();
+		if (it == children.end()) return {};
 
-		for (const auto& child: children) {
-			auto child_elem = child.unlock(ctx);
+		auto first_child = (*it).unlock(ctx);
+		++it;
 
-			if (child_count == 0)
-				is_expr_stmt = (child_elem->getElementKind() == pst::ElementKind::ExprStmt);
+		if (it == children.end() && first_child->getElementKind() == pst::ElementKind::ExprStmt)
+			return (*children.begin()).template dynamicCast<pst::ExprStmt>();
 
-			child_count++;
-
-			if (child_count > 1) return false;
-		}
-
-		return child_count == 1 && is_expr_stmt;
-	}
-
-	std::string ReplSession::wrapExprAsFunction(const std::string& expr, u32 counter) const {
-		std::ostringstream wrapped;
-		wrapped << "fun __repl_expr_" << counter << "() = {\n";
-		wrapped << "    return " << expr << "\n";
-		wrapped << "}\n";
-		return wrapped.str();
+		return {};
 	}
 
 	bool ReplSession::handleCommand(const std::string& line) {
@@ -172,7 +171,7 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::processLine(const std::string& line) {
-		if (m_accumulated_input.empty() && isCommand(line)) {
+		if (isCommand(line)) {
 			handleCommand(line);
 			if (m_should_exit) return ReplResult::exit();
 			return ReplResult::success();
@@ -180,21 +179,99 @@ namespace compiler::repl {
 
 		if (line == m_config.multiline_start) {
 			std::string multiline_content = handleMultilineInput();
-
-			if (!m_accumulated_input.empty()) m_accumulated_input += "\n";
-			m_accumulated_input += multiline_content;
-
-			auto result = executeInput(m_accumulated_input);
-			m_accumulated_input.clear();
-			return result;
+			return executeInput(multiline_content);
 		}
 
-		if (!m_accumulated_input.empty()) m_accumulated_input += "\n";
-		m_accumulated_input += line;
+		return executeInput(line);
+	}
 
-		auto result = executeInput(m_accumulated_input);
-		m_accumulated_input.clear();
-		return result;
+	ReplResult ReplSession::handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt) {
+		std::string output_message;
+		std::string error_message;
+		bool        had_error = false;
+
+		base::Optional<helios::HOUTFunction> expr_wrapper;
+		std::string                          wrapper_func_name;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
+			                                                       .counter   = m_line_counter });
+
+			auto mangled_name = helios::mangler::getSimpleMangledName(
+				ctx, expr_wrapper->declaration->original_symbol
+			);
+			wrapper_func_name = mangled_name.strView();
+		});
+
+		helios::HOUTUnit hout_unit;
+		hout_unit.functions.push_back(std::move(expr_wrapper.value()));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			if (m_config.show_hout_debug) {
+				auto hout_debug = hout_unit.debugPrint(ctx);
+				std::cout << hout_debug << "\n";
+				output_message = hout_debug;
+			}
+
+			if (m_config.run_dvm) {
+				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				std::cout << "[Expression compiled and loaded to DVM]\n";
+
+				auto return_type = hout_unit.functions[0].declaration->return_type;
+				auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
+				if (run_result.has_value()) {
+					std::cout << "Result: " << run_result.value().result_string << "\n";
+				} else {
+					error_message = "DVM run error: " + run_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+			}
+		});
+
+		if (had_error) return ReplResult::error(error_message);
+
+		return ReplResult::success(output_message);
+	}
+
+	ReplResult ReplSession::handleDefinition(frontend::ModuleID module_id) {
+		std::string output_message;
+		std::string error_message;
+		bool        had_error = false;
+
+		auto hout_unit = query::entryPoint<repl::QueryReplModuleHOUT>(module_id);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			if (m_config.show_hout_debug) {
+				auto hout_debug = hout_unit.debugPrint(ctx);
+				std::cout << hout_debug << "\n";
+				output_message = hout_debug;
+			}
+
+			if (m_config.run_dvm) {
+				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+				if (!load_result.has_value()) {
+					error_message = "DVM load error: " + load_result.error();
+					std::cerr << error_message << "\n";
+					had_error = true;
+					return;
+				}
+
+				std::cout << "[Definitions loaded to DVM]\n";
+			}
+		});
+
+		if (had_error) return ReplResult::error(error_message);
+
+		return ReplResult::success(output_message);
 	}
 
 	ReplResult ReplSession::executeInput(const std::string& input) {
@@ -205,6 +282,7 @@ namespace compiler::repl {
 
 			auto pst = pst::PST<>::fromContents(input, context_hash);
 			pst.dprint(std::cout);
+			std::cout << "\n\n";
 
 			if (pst.getLogger()->bad()) {
 				std::cerr << "Parse errors:\n";
@@ -212,56 +290,22 @@ namespace compiler::repl {
 				return ReplResult::error("Parse error");
 			}
 
-			// Check if input is a single expression and wrap it if needed
-			bool is_expression = false;
-			query::utils::withContextDo([&](query::Context& ctx) {
-				is_expression = isExpression(ctx, pst.getRootElement());
-			});
-
-			std::string source_to_compile = input;
-			if (is_expression) source_to_compile = wrapExprAsFunction(input, m_line_counter);
-
-			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(source_to_compile);
+			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(input);
 			auto module_id  = module_ref->getModuleID();
 
 			m_history.emplace_back(input, module_ref);
 			++m_line_counter;
 
-			auto hout_unit = query::entryPoint<helios::QueryReplStatementTo>(module_id);
+			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto root     = pst.getRootElement();
+				expr_stmt_opt = extractSingleExpression(ctx, root);
+			});
 
-			std::string output_message;
-			i32         dvm_exit_code = 0;
-
-			query::utils::withContextDo(
-				[&](query::Context& ctx) {
-					if (m_config.show_hout_debug) {
-						auto hout_debug = hout_unit.debugPrint(ctx);
-						std::cout << hout_debug << "\n";
-						output_message = hout_debug;
-					}
-
-					if (m_config.run_dvm) {
-						std::string hout_debug = hout_unit.debugPrint(ctx);
-
-						if (hout_debug.find("fun main") == std::string::npos) {
-							std::cout
-								<< "No 'main' function found in module; skipping DVM execution.\n";
-						} else {
-							auto run_result = driver::runModuleOnDVM(ctx, module_id);
-							if (run_result.has_value()) {
-								dvm_exit_code = run_result.value().exit_code;
-								std::cout << "DVM run exit code: " << dvm_exit_code << "\n";
-							} else {
-								std::cerr << "DVM run error: " << run_result.error() << "\n";
-								return;
-							}
-						}
-					}
-				}
-			);
-
-			return ReplResult::success(output_message, dvm_exit_code);
-
+			if (expr_stmt_opt.has_value())
+				return handleExpression(expr_stmt_opt.value());
+			else
+				return handleDefinition(module_id);
 		} catch (const std::exception& e) {
 			std::string error_msg = std::string("REPL processing exception: ") + e.what();
 			std::cerr << error_msg << "\n";
