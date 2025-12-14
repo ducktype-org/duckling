@@ -1,11 +1,11 @@
 use crate::quackpack::{core::Version, schemas::OneEntryMap};
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub type Dependencies = HashMap<String, Dependency>;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Manifest {
     pub metadata: Metadata,
     pub dependencies: Dependencies,
@@ -14,7 +14,7 @@ pub struct Manifest {
     pub profiles: HashMap<String, CompilerOptions>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Metadata {
     pub version: Version,
     pub authors: Vec<String>,
@@ -23,7 +23,7 @@ pub struct Metadata {
     pub description: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Dependency {
     pub version: Vec<Version>,
     pub source: DependencySource,
@@ -33,12 +33,12 @@ pub struct Dependency {
     pub is_alias_for: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct DependencySource {
     pub inner: SourceInner,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename = "snake_case")]
 pub enum SourceInner {
@@ -57,19 +57,19 @@ pub enum SourceInner {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum DependencyFeature {
     Simple(String),
     Detailed(OneEntryMap<String, DependencyCondition>),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct CompilerOptions {
     pub compiler_flags: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
