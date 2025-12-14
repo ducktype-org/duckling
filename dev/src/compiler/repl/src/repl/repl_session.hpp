@@ -10,6 +10,9 @@
 
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/pst.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 
@@ -116,10 +119,16 @@ namespace compiler::repl {
 		void clearHistory();
 
 	private:
-		std::string                handleMultilineInput();
-		[[nodiscard]] bool         isCommand(const std::string& line) const;
-		bool                       handleCommand(const std::string& line);
-		void                       printPrompt() const;
+		std::string        handleMultilineInput();
+		[[nodiscard]] bool isCommand(const std::string& line) const;
+		bool               handleCommand(const std::string& line);
+		void               printPrompt() const;
+
+		[[nodiscard]] bool isExpression(
+			query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
+		) const;
+		[[nodiscard]] std::string wrapExprAsFunction(const std::string& expr, u32 counter) const;
+
 		ReplConfig                 m_config;
 		std::vector<ReplStatement> m_history;
 		std::string                m_accumulated_input;

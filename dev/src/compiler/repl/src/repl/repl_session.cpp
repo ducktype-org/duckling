@@ -15,6 +15,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
+#include <sstream>
 
 namespace compiler::repl {
 
@@ -46,6 +47,38 @@ namespace compiler::repl {
 
 	bool ReplSession::isCommand(const std::string& line) const {
 		return !line.empty() && line[0] == '/';
+	}
+
+	// It doesn't belong here, should probably be moved to frontend later.
+	bool ReplSession::isExpression(
+		query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
+	) const {
+		auto root_elem = root.unlock(ctx);
+		auto children  = root_elem->viewChildren();
+
+		size_t child_count  = 0;
+		bool   is_expr_stmt = false;
+
+		for (const auto& child: children) {
+			auto child_elem = child.unlock(ctx);
+
+			if (child_count == 0)
+				is_expr_stmt = (child_elem->getElementKind() == pst::ElementKind::ExprStmt);
+
+			child_count++;
+
+			if (child_count > 1) return false;
+		}
+
+		return child_count == 1 && is_expr_stmt;
+	}
+
+	std::string ReplSession::wrapExprAsFunction(const std::string& expr, u32 counter) const {
+		std::ostringstream wrapped;
+		wrapped << "fun __repl_expr_" << counter << "() = {\n";
+		wrapped << "    return " << expr << "\n";
+		wrapped << "}\n";
+		return wrapped.str();
 	}
 
 	bool ReplSession::handleCommand(const std::string& line) {
@@ -165,8 +198,30 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::executeInput(const std::string& input) {
+		if (input.empty()) return ReplResult::success();
+
 		try {
-			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(input);
+			auto context_hash = hashing::ComponentHash(base::StrID("repl"));
+
+			auto pst = pst::PST<>::fromContents(input, context_hash);
+			pst.dprint(std::cout);
+
+			if (pst.getLogger()->bad()) {
+				std::cerr << "Parse errors:\n";
+				pst.getLogger()->dumpLog(false, std::cerr);
+				return ReplResult::error("Parse error");
+			}
+
+			// Check if input is a single expression and wrap it if needed
+			bool is_expression = false;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				is_expression = isExpression(ctx, pst.getRootElement());
+			});
+
+			std::string source_to_compile = input;
+			if (is_expression) source_to_compile = wrapExprAsFunction(input, m_line_counter);
+
+			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(source_to_compile);
 			auto module_id  = module_ref->getModuleID();
 
 			m_history.emplace_back(input, module_ref);
