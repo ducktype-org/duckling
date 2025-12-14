@@ -16,7 +16,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
+#include <repl/repl_session.hpp>
 #include <time_stats/time_stats.hpp>
+#include <timer/timer.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
@@ -442,57 +444,12 @@ clah::Clah getClahForMain() {
 							.artifacts_path = fs::FilePath("./duck_repl_build/"),
 						},
 						.debug_options = getDebugOptionsFromClap(options),
-						.incremental = {.enabled = true },
+						.incremental   = { .enabled = true },
 					}
-					);
+				);
 
-							   std::cout << "Duckling REPL\n";
-							   std::cout << "Enter your code and finish with ';' on a new line\n";
-							   std::cout << "Type 'exit' or 'quit' to exit the REPL\n\n";
-
-							   std::string line;
-							   std::string accumulated_input;
-
-							   while (true) {
-								   std::cout
-									   << (accumulated_input.empty() ? "duckling> " : "      ... ");
-
-								   if (!std::getline(std::cin, line)) break;
-
-								   if (accumulated_input.empty()
-			                           && (line == "exit" || line == "quit")) {
-									   std::cout << "Goodbye!\n";
-									   break;
-								   }
-
-								   if (!accumulated_input.empty()) accumulated_input += "\n";
-								   accumulated_input += line;
-
-								   // Attempt parse when line ends with ';'
-								   if (!line.empty() && line.back() == ';') {
-									   try {
-										   // Treat the accumulated input as a single virtual file
-					                       // and parse it
-										   auto pst = pst::PST<>::fromContents(accumulated_input);
-
-										   if (pst.getLogger()->messageCount() != 0) {
-											   std::cout << "Errors and messages:\n";
-											   pst.getLogger()->dumpLog(true, std::cout);
-											   std::cout << "\n\n";
-										   }
-
-										   std::cout << "Parsed tree:\n";
-										   pst.dprint(std::cout);
-										   std::cout << "\n\n";
-									   } catch (const std::exception& e) {
-										   std::cerr << "Parsing exception: " << e.what() << "\n";
-									   } catch (...) { std::cerr << "Unknown parsing error\n"; }
-
-									   accumulated_input.clear();
-								   }
-							   }
-
-							   return 0;
+							   compiler::repl::ReplSession session;
+							   return session.run();
 						   }))
 	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

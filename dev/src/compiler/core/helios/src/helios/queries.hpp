@@ -40,7 +40,7 @@ namespace compiler::helios {
 	 * @brief Query REPL statement/module to HOUTUnit. For REPL sessions we treat the
 	 * provided in-memory module/sourcefile similarly to a module and produce HOUTUnit.
 	 */
-	DECLARE_QUERY(QueryReplStatementTo, frontend::ModuleID, HOUTUnit)
+	DECLARE_QUERY(QueryReplStatementTo, frontend::ModuleID, HOUTUnit, ({}))
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.
