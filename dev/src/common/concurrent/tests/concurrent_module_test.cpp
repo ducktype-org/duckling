@@ -22,7 +22,6 @@ struct std::hash<BigObject<N>> {
 	size_t operator()(const BigObject<N>& obj) const noexcept { return obj.data[0]; }
 };
 
-
 class ConcurrentTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ConcurrentTest
@@ -90,7 +89,7 @@ private:
 	 */
 	template<u64 count>
 	void singleThreadedRandomTest() {
-		u64 base_result     = 0;
+		u64 base_result = 0;
 		{
 			std::minstd_rand rng(42);
 
@@ -119,7 +118,7 @@ private:
 			}
 		}
 
-		u64 std_result     = 0;
+		u64 std_result = 0;
 		{
 			std::minstd_rand rng(42);
 
