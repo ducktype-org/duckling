@@ -38,8 +38,7 @@ namespace compiler::backend_vm {
 		);
 
 		/**
-		 * @brief Insert raw bytecode into a module. Currently used by compile time evaluations to
-		 * insert functions needed for CTE.
+		 * @brief Insert raw bytecode into a module. 
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
