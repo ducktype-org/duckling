@@ -3,7 +3,7 @@
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/query_errors.hpp"
+#include <query_framework/query_errors.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
