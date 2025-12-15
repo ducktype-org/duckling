@@ -26,9 +26,8 @@ namespace {
 	// Helpers
 	using namespace instructions;
 
-	constexpr std::array VALID_LAST_INSTRUCTION_KINDS = { InstructionKind::Op_ret,
-		                                                  InstructionKind::Op_ret_tailcall_func,
-		                                                  InstructionKind::Op_jmp_label };
+	constexpr std::array VALID_LAST_OPCODES
+		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
 	using DeinitializingInstructions = std::tuple<
 		Op_deinit,
@@ -910,8 +909,7 @@ class FunctionValidator {
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
-		        && !std::ranges::contains(VALID_LAST_INSTRUCTION_KINDS, function.body.back().kind())
-		    )) {
+		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
 			throw PathWithoutEndError(function.name);
 		}
 	}

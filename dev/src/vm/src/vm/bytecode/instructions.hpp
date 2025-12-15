@@ -12,7 +12,7 @@
  * This code uses a lot of X-macros, making it somewhat unwieldy, but strives to provide a usable
  * interface so that `Instruction` can be manipulated with plain C++ without having to use too many
  * macros outside this file. In particular it offers:
- * - `Instruction::kind() -> InstructionKind`
+ * - `Instruction::opcode() -> OpCode`
  * - `Instruction::name() -> StrID`
  * - `Instruction::get<ConcreteInstructionType>() -> ConcreteInstructionType`
  * - `Instruction::getMaybe<ConcreteInstructionType>() -> Optional<ConcreteInstructionType>`
@@ -32,12 +32,12 @@
 #include <vm/bytecode/opcode_args.hpp>
 
 // Useful for turning a name to a properly qualified type name in X-macros.
-#define VM_INSTR_FROM_NAME(name)      vm::code::instructions::Op_##name
-#define VM_INSTR_KIND_FROM_NAME(name) vm::code::InstructionKind::Op_##name
+#define VM_INSTR_FROM_NAME(name)  vm::code::instructions::Op_##name
+#define VM_OPCODE_FROM_NAME(name) vm::code::OpCode::Op_##name
 
 namespace vm::code {
 
-	enum class InstructionKind : u64 {
+	enum class OpCode : u64 {
 #define HANDLE_INSTR(name) Op_##name,
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
@@ -79,8 +79,8 @@ namespace vm::code {
 #define HANDLE_INSTR_ARGS(name, ...)                                                                \
 	struct Op_##name final: detail::InstructionBase {                                               \
 		/* Aliases useful in templates */                                                           \
-		constexpr static std::string_view NAME = #name;                                             \
-		constexpr static InstructionKind  KIND = VM_INSTR_KIND_FROM_NAME(name);                     \
+		constexpr static std::string_view NAME   = #name;                                           \
+		constexpr static OpCode           OPCODE = VM_OPCODE_FROM_NAME(name);                       \
 		using ArgTypes = detail::TailTuple<void FOR_EACH(ARG_TYPE_LIST EXPAND, __VA_ARGS__)>;       \
                                                                                                     \
 		/* Each argument is held directly as a member and is named as in the definition file */     \
@@ -112,10 +112,10 @@ namespace vm::code {
 		 * It is however useful for debugging the compiler backend.
 		 */
 		struct Comment final: detail::InstructionBase {
-			Comment()                              = default;
-			constexpr static std::string_view NAME = "Comment";
-			constexpr static InstructionKind  KIND = InstructionKind::Comment;
-			using ArgTypes                         = std::tuple<>;
+			Comment()                                = default;
+			constexpr static std::string_view NAME   = "Comment";
+			constexpr static OpCode           OPCODE = OpCode::Comment;
+			using ArgTypes                           = std::tuple<>;
 
 			Comment(base::StrID comment): comment(comment) {}
 
@@ -159,16 +159,16 @@ namespace vm::code {
 		// Constructors from concrete instructions
 #define HANDLE_INSTR_ARGS(name, ...)                        \
 	Instruction(const VM_INSTR_FROM_NAME(name) & concrete): \
-		  instr_kind{ VM_INSTR_KIND_FROM_NAME(name) },      \
+		  code{ VM_OPCODE_FROM_NAME(name) },                \
 		  alts{ .op_##name = concrete } {}
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR_ARGS
 
 		Instruction(const instructions::Comment& concrete):
-			  instr_kind{ InstructionKind::Comment },
+			  code{ OpCode::Comment },
 			  alts{ .comment = concrete } {}
 
-		[[nodiscard]] InstructionKind kind() const { return instr_kind; }
+		[[nodiscard]] OpCode opcode() const { return code; }
 
 		[[nodiscard]] base::StrID name() const {
 			static std::array map = {
@@ -177,7 +177,7 @@ namespace vm::code {
 #undef HANDLE_INSTR
 				base::StrID("[comment]")
 			};
-			return map.at(std::to_underlying(instr_kind));
+			return map.at(std::to_underlying(opcode()));
 		}
 
 		// Specialisations are outside the class, as required by gcc
@@ -199,14 +199,14 @@ namespace vm::code {
 
 		template<typename V>
 		decltype(auto) visit(this auto&& self, V&& visitor) {
-			switch (self.instr_kind) {
-#define HANDLE_INSTR(name)              \
-	case VM_INSTR_KIND_FROM_NAME(name): \
+			switch (self.opcode()) {
+#define HANDLE_INSTR(name)          \
+	case VM_OPCODE_FROM_NAME(name): \
 		return std::invoke(std::forward<V>(visitor), self.template get<VM_INSTR_FROM_NAME(name)>());
 				break;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
-			case InstructionKind::Comment:
+			case OpCode::Comment:
 				return std::invoke(
 					std::forward<V>(visitor), self.template get<instructions::Comment>()
 				);
@@ -217,14 +217,14 @@ namespace vm::code {
 
 		/// View of instruction arguments for generic operations.
 		[[nodiscard]] std::vector<opargs::OpCodeArgCRef> args() const {
-			switch (instr_kind) {
+			switch (opcode()) {
 #define HANDLE_INSTR_ARGS(name, ...)                           \
-	case VM_INSTR_KIND_FROM_NAME(name):                        \
+	case VM_OPCODE_FROM_NAME(name):                            \
 		return { FOR_EACH_ARG(ARG_ALIAS, name, __VA_ARGS__) }; \
 		break;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR_ARGS
-			case InstructionKind::Comment:
+			case OpCode::Comment:
 				return {};
 				break;
 			}
@@ -233,7 +233,7 @@ namespace vm::code {
 
 
 	private:
-		InstructionKind instr_kind;
+		OpCode code;
 
 		union Alts {
 #define HANDLE_INSTR(name) VM_INSTR_FROM_NAME(name) op_##name;
@@ -246,7 +246,7 @@ namespace vm::code {
 #define HANDLE_INSTR(name)                                                                       \
 	template<>                                                                                   \
 	[[nodiscard]] inline base::Optional<Ref<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe() { \
-		if (instr_kind == VM_INSTR_KIND_FROM_NAME(name)) {                                       \
+		if (opcode() == VM_OPCODE_FROM_NAME(name)) {                                             \
 			return &alts.op_##name;                                                              \
 		} else {                                                                                 \
 			return std::nullopt;                                                                 \
@@ -255,7 +255,7 @@ namespace vm::code {
 	template<>                                                                                   \
 	[[nodiscard]] inline base::Optional<CRef<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe()  \
 		const {                                                                                  \
-		if (instr_kind == VM_INSTR_KIND_FROM_NAME(name)) {                                       \
+		if (opcode() == VM_OPCODE_FROM_NAME(name)) {                                             \
 			return &alts.op_##name;                                                              \
 		} else {                                                                                 \
 			return std::nullopt;                                                                 \
@@ -266,7 +266,7 @@ namespace vm::code {
 
 	template<>
 	[[nodiscard]] inline base::Optional<Ref<instructions::Comment>> Instruction::getMaybe() {
-		if (instr_kind == InstructionKind::Comment)
+		if (opcode() == OpCode::Comment)
 			return &alts.comment;
 		else
 			return std::nullopt;
@@ -274,23 +274,23 @@ namespace vm::code {
 
 	template<>
 	[[nodiscard]] inline base::Optional<CRef<instructions::Comment>> Instruction::getMaybe() const {
-		if (instr_kind == InstructionKind::Comment)
+		if (opcode() == OpCode::Comment)
 			return &alts.comment;
 		else
 			return std::nullopt;
 	}
 
 	constexpr bool operator==(const Instruction& a, const Instruction& b) {
-		if (a.kind() != b.kind()) return false;
+		if (a.opcode() != b.opcode()) return false;
 
-		switch (a.kind()) {
-#define HANDLE_INSTR(name)              \
-	case VM_INSTR_KIND_FROM_NAME(name): \
+		switch (a.opcode()) {
+#define HANDLE_INSTR(name)          \
+	case VM_OPCODE_FROM_NAME(name): \
 		return a.get<VM_INSTR_FROM_NAME(name)>() == b.get<VM_INSTR_FROM_NAME(name)>();
 			break;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
-		case InstructionKind::Comment:
+		case OpCode::Comment:
 			return a.get<instructions::Comment>() == b.get<instructions::Comment>();
 			break;
 		}
@@ -308,16 +308,16 @@ namespace vm::code {
 }
 
 // The following macros are almost copied from <base/extend_cpp/variant_match.hpp>.
-#define instr_match(value)                                                              \
-	PUSH_DIAGNOSTIC                                                                     \
-	NO_SHADOW if (bool instr_match_stop                                                 \
-	              = true) for (auto&& internal_value = (value); instr_match_stop;       \
-	                           instr_match_stop      = false) switch (internal_value.kind()) \
+#define instr_match(value)                                                                \
+	PUSH_DIAGNOSTIC                                                                       \
+	NO_SHADOW if (bool instr_match_stop                                                   \
+	              = true) for (auto&& internal_value = (value); instr_match_stop;         \
+	                           instr_match_stop      = false) switch (internal_value.opcode()) \
 		POP_DIAGNOSTIC
 
 #define instr_case(type, name)                                                               \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                         \
-	case (type::KIND):                                                                       \
+	case (type::OPCODE):                                                                     \
 		if (bool instr_case_stop = true)                                                     \
 			for ([[maybe_unused]] auto&& name = internal_value.get<type>(); instr_case_stop; \
 			     instr_case_stop              = false)                                       \
@@ -325,7 +325,7 @@ namespace vm::code {
 
 #define instr_case_novalue(type) \
 	break;                       \
-	case (type::KIND):           \
+	case (type::OPCODE):         \
 		if (true)
 
 #define instr_default \
