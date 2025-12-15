@@ -2,6 +2,8 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
+#include "query_errors.hpp"
+
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
@@ -202,6 +204,8 @@ namespace query {
 		 */
 		using ErrorType = ErrorTypeStruct::type;
 
+		using ResultType = ResTp;
+
 		/**
 		 * @brief Constructor from QError<T>, where T is not a variant
 		 */
@@ -240,7 +244,7 @@ namespace query {
 		requires std::is_constructible_v<ResTp, T> constexpr QResult(const QResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
-			if (oth.hasValue()) storage = oth.value();
+			if (oth.hasValue()) storage = oth.valueOrThrow();
 
 			if (oth.hasError()) {
 				if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
@@ -279,17 +283,6 @@ namespace query {
 		explicit constexpr operator bool() const { return hasValue(); }
 
 		/**
-		 * @brief Access the value, throw on no value.
-		 */
-		constexpr const ResTp& value() const& { return expect("Result is empty!"); }
-
-		constexpr const ResTp&& value() const&& { return std::move(expect("Result is empty!")); }
-
-		constexpr ResTp& value() & { return expect("Result is empty!"); }
-
-		constexpr ResTp&& value() && { return std::move(expect("Result is empty!")); }
-
-		/**
 		 * @brief Access the value as an optional.
 		 */
 		constexpr base::Optional<base::Ref<ResTp>> optValue() {
@@ -308,25 +301,49 @@ namespace query {
 		}
 
 		/**
-		 * @brief Access the value, throw on no value with a message.
+		 * @brief Access the value, panic on no value.
 		 */
-		constexpr const ResTp& expect(std::string_view message) const& {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr const ResTp& valueOrPanic() const& {
+			if (hasError()) CORE_PANIC("Result is empty.");
 			return storage.value();
 		}
 
-		constexpr const ResTp&& expect(std::string_view message) const&& {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr const ResTp&& valueOrPanic() const&& {
+			if (hasError()) CORE_PANIC("Result is empty.");
 			return std::move(storage.value());
 		}
 
-		constexpr ResTp& expect(std::string_view message) & {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr ResTp& valueOrPanic() & {
+			if (hasError()) CORE_PANIC("Result is empty.");
 			return storage.value();
 		}
 
-		constexpr ResTp&& expect(std::string_view message) && {
-			if (!storage.has_value()) CORE_PANIC(std::string(message));
+		constexpr ResTp&& valueOrPanic() && {
+			if (hasError()) CORE_PANIC("Result is empty.");
+			return std::move(storage.value());
+		}
+
+		/**
+		 * @brief Access the value, throw on no value with a message.
+		 * Used when we always except a value to be present.
+		 */
+		constexpr const ResTp& throwOnFail(std::string_view message) const& {
+			if (!storage.has_value()) throw query::QueryFailedException(message);
+			return storage.value();
+		}
+
+		constexpr const ResTp&& throwOnFail(std::string_view message) const&& {
+			if (!storage.has_value()) throw query::QueryFailedException(message);
+			return std::move(storage.value());
+		}
+
+		constexpr ResTp& throwOnFail(std::string_view message) & {
+			if (!storage.has_value()) throw query::QueryFailedException(message);
+			return storage.value();
+		}
+
+		constexpr ResTp&& throwOnFail(std::string_view message) && {
+			if (!storage.has_value()) throw query::QueryFailedException(message);
 			return std::move(storage.value());
 		}
 
@@ -342,25 +359,27 @@ namespace query {
 		constexpr ErrorType&& error() && { return storage.error(); }
 
 		/**
-		 * @brief Access the value, throw the error if no value.
+		 * @brief Access the value, throw the query failed exception if no value.
+		 * This kind of exception can be cought by the query framework.
+		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
 		constexpr const ResTp& valueOrThrow() const& {
-			if (hasError()) throw error();
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr const ResTp&& valueOrThrow() const&& {
-			if (hasError()) throw error();
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return std::move(storage.value());
 		}
 
 		constexpr ResTp& valueOrThrow() & {
-			if (hasError()) throw error();
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return storage.value();
 		}
 
 		constexpr ResTp&& valueOrThrow() && {
-			if (hasError()) throw error();
+			if (hasError()) throw query::QueryFailedException("Result is empty.");
 			return std::move(storage.value());
 		}
 
@@ -368,6 +387,20 @@ namespace query {
 	private:
 		std::expected<ResTp, ErrorType> storage;
 	};
+
+	template<typename T>
+	struct IsQResult: std::false_type {};
+
+	template<typename... Args>
+	struct IsQResult<query::QResult<Args...>>: std::true_type {};
+
+	template<typename T>
+	struct HasFailedInQResult: std::false_type {};
+
+	template<typename... Args>
+	struct HasFailedInQResult<query::QResult<Args...>>:
+		  std::bool_constant<
+			  std::is_same_v<typename query::QResult<Args...>::ErrorType, query::Failed>> {};
 }
 
 /**
@@ -387,9 +420,9 @@ namespace query {
 #define UNPACK_RESULT(var, new_value)                                         \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
-	var RES_VAR_NAME.value()
+	var RES_VAR_NAME.valueOrThrow()
 
 #define UNPACK_RESULT_MOVE(var, new_value)                                    \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (!RES_VAR_NAME.hasValue()) return query::QError(RES_VAR_NAME.error()); \
-	var std::move(RES_VAR_NAME).value()
+	var std::move(RES_VAR_NAME).valueOrThrow()

@@ -49,6 +49,18 @@ namespace query {
 			 * function.
 			 */
 			bool can_be_loaded_from_disk = false;
+
+			/**
+			 * Whether query uses the failable QResult type as the result type.
+			 */
+			bool uses_qresult = true;
+
+			/**
+			 * Whether the query implementation should catch  QueryFailedException exception
+			 * thrown from provide() function, and convert it into QResult::Failed() value.
+			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
+			 */
+			bool catch_exceptions_if_using_qresult = true;
 		};
 
 		/**

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -9,7 +9,7 @@
 
 namespace compiler::helios {
 
-	using QuerySymbolType_Result = query::QResult<tsh::SymbolType<>, errors::Failed>;
+	using QuerySymbolType_Result = query::QResult<tsh::SymbolType<>, query::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
