@@ -207,7 +207,12 @@ namespace compiler::lir {
 		case mir::Operation::MetaCreateVariant:
 			return Operation::MetaCreateVariant;
 
-			// Logic
+		/// Logic ///
+		case mir::Operation::BooleanAnd:
+			return Operation::BooleanAnd;
+		case mir::Operation::BooleanOr:
+			return Operation::BooleanOr;
+		case mir::Operation::BooleanNot:
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
