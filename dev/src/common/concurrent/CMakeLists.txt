@@ -5,8 +5,5 @@ add_library(Concurrent
 
 make_module(Concurrent USES Base)
 
-add_example(map_perf_test examples/map_test.cpp
-        USES Base Concurrent)
+duck_add_test(common concurrent_module tests/concurrent_module_test.cpp USES Concurrent Base)
 
-target_sources(map_perf_test PRIVATE
-        examples/work.cpp)
