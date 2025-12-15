@@ -6,6 +6,7 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_errors.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
 #include <query_framework/query_input_impl.hpp>
@@ -37,8 +38,8 @@ struct Key2 {
 	}
 };
 
-DECLARE_QUERY(Fibonacci, Key1, u64, ({}));
-DECLARE_QUERY(FibonacciSum, Key2, u64, ({}));
+DECLARE_QUERY(Fibonacci, Key1, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(FibonacciSum, Key2, u64, ({ .uses_qresult = false }));
 
 /* * * *
  * Q1: *
@@ -72,7 +73,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
-DECLARE_QUERY(FibonacciStringAutoCache, query::U64Key, std::string, ({}));
+DECLARE_QUERY(FibonacciStringAutoCache, query::U64Key, std::string, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -105,7 +106,7 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 
-DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({}));
+DECLARE_QUERY(CallingEntryPoint, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 	static auto provide(Context&, QKey key) -> PResult {
@@ -119,7 +120,7 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
 
-DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({}));
+DECLARE_QUERY(ReferenceQuery, query::U64Key, CRef<u64>, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -130,7 +131,9 @@ struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(ReferenceQuery);
 
 
-DECLARE_QUERY(VectorReferenceQuery, query::U64Key, CRef<std::vector<u64>>, ({}));
+DECLARE_QUERY(
+	VectorReferenceQuery, query::U64Key, CRef<std::vector<u64>>, ({ .uses_qresult = false })
+);
 
 struct IMPLEMENT_QUERY(VectorReferenceQuery, std::vector<u64>) {
 	static auto provide(Context&, QKey key) -> PResult { return { 1, 2, key.value }; }
@@ -171,7 +174,7 @@ struct Result {
 	}
 };
 
-DECLARE_QUERY(LifeTimeQueryStable, query::U64Key, Result, ({}));
+DECLARE_QUERY(LifeTimeQueryStable, query::U64Key, Result, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -181,7 +184,7 @@ struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryStable);
 
-DECLARE_QUERY(LifeTimeQueryUnstable, query::U64Key, Result, ({}));
+DECLARE_QUERY(LifeTimeQueryUnstable, query::U64Key, Result, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
@@ -192,8 +195,8 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
 
-DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({}));
-DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({}));
+DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CyclicQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult { return ctx.query<CyclicQuery2>(key); }
@@ -221,7 +224,7 @@ struct ConstructTo {
 	ConstructTo(ConstructFrom from): v(from.v) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructCacheTest, query::U64Key, ConstructTo, ({}));
+DECLARE_QUERY(ConstructCacheTest, query::U64Key, ConstructTo, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
@@ -238,7 +241,9 @@ struct ConstructToViaCRef {
 	ConstructToViaCRef(CRef<ConstructFrom> from): v(from) { construct_count++; }
 };
 
-DECLARE_QUERY(ConstructFromCRefCacheTest, query::U64Key, ConstructToViaCRef, ({}));
+DECLARE_QUERY(
+	ConstructFromCRefCacheTest, query::U64Key, ConstructToViaCRef, ({ .uses_qresult = false })
+);
 
 struct IMPLEMENT_QUERY(ConstructFromCRefCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
@@ -256,9 +261,9 @@ namespace context_leak {
 	// assertions did not prevent it
 	bool use_leaked_query_happened = false;
 
-	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({}));
-	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({}));
-	DECLARE_QUERY(UseLeakedContext, query::U64Key, u64, ({}));
+	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({ .uses_qresult = false }));
+	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({ .uses_qresult = false }));
+	DECLARE_QUERY(UseLeakedContext, query::U64Key, u64, ({ .uses_qresult = false }));
 
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
 		static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -312,7 +317,7 @@ struct KeyOf_SideInput {
 DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
-DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({}));
+DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
@@ -322,7 +327,7 @@ struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
 
-DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({}));
+DECLARE_QUERY(CallEmptyQueryNTimes, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -335,7 +340,7 @@ struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
 
-DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({}));
+DECLARE_QUERY(CallSideInputNTimes, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -372,7 +377,7 @@ private:
 	NoctrKey& operator=(NoctrKey&&) & noexcept      = default;
 };
 
-DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32, ({}));
+DECLARE_QUERY(DoNotCopyKeys, NoctrKey, u32, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(DoNotCopyKeys, u32) {
 	static auto provide(Context& context, const QKey& key) -> PResult {
@@ -407,7 +412,15 @@ struct KeyStable final {
 	}
 };
 
-DECLARE_QUERY(StableHashTest, KeyStable, u64, ({ .used_hashes = query::UsedHashes::StableHash }));
+DECLARE_QUERY(
+	StableHashTest,
+	KeyStable,
+	u64,
+	({
+		.used_hashes  = query::UsedHashes::StableHash,
+		.uses_qresult = false,
+	})
+);
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
 	// record the hash value passed to load()
@@ -426,6 +439,74 @@ struct IMPLEMENT_QUERY(StableHashTest, u64) {
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);
+
+
+using UsesQResult_Result        = query::QResult<u64, query::Failed>;
+using UsesQResultNoCatch_Result = query::QResult<u64, query::Failed>;
+using NoQResult_Result          = u64;
+
+DECLARE_QUERY(
+	UsesQResultTest,
+	query::U64Key,
+	UsesQResult_Result,
+	({
+		.uses_qresult                      = true,
+		.catch_exceptions_if_using_qresult = true,
+	})
+);
+
+struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultTest);
+
+DECLARE_QUERY(
+	UsesQResultNoCatchTest,
+	query::U64Key,
+	UsesQResultNoCatch_Result,
+	({
+		.uses_qresult                      = true,
+		.catch_exceptions_if_using_qresult = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultNoCatchTest);
+
+DECLARE_QUERY(
+	NoQResultTest,
+	query::U64Key,
+	NoQResult_Result,
+	({
+		.uses_qresult                      = false,
+		.catch_exceptions_if_using_qresult = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(NoQResultTest);
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -453,6 +534,7 @@ public:
 		TESTER_ADD_TEST(testQueryResult);
 		TESTER_ADD_TEST(testNoKeyCopy);
 		TESTER_ADD_TEST(stableHashTest);
+		TESTER_ADD_TEST(testQueryResultExceptionsHandling);
 	}
 
 private:
@@ -758,9 +840,9 @@ private:
 		ASSERT_TRUE(hr1.hasValue());
 		ASSERT_TRUE(bool(hr1));
 		ASSERT_TRUE(!hr1.hasError());
-		ASSERT_EQUAL(1, hr1.value());
+		ASSERT_EQUAL(1, hr1.valueOrPanic());
 
-		int                      temp_val = hr1.value();
+		int                      temp_val = hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
@@ -820,6 +902,37 @@ private:
 		std::cout << "Unexpected: " << key.unstable << "\n";
 
 		ASSERT_TRUE(ImplementationOf_StableHashTest::last_hash == key.stable);
+	}
+
+	void testQueryResultExceptionsHandling() {
+		auto result = query::entryPoint<UsesQResultTest>({ 1 });
+		assertTrue(result.hasError(), "Expected error in UsesQResultTest");
+
+		assertThrows<base::Panic>(
+			[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<base::Panic>(
+			[] { query::entryPoint<NoQResultTest>({ 1 }); },
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<query::QueryFailedException>(
+			[] {
+				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				res.valueOrThrow();
+			},
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<base::Panic>(
+			[] {
+				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				res.valueOrPanic();
+			},
+			"Panic not thrown as expected"
+		);
 	}
 };
 

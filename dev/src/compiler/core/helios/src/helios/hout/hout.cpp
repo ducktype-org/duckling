@@ -127,12 +127,12 @@ namespace compiler::helios {
 			                                         .value()
 			                                         .unlock(ctx)
 			                                         ->getExpr();
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
 					  "Handling errors in HOUT is not supported yet 2a — " + name(symbol).str()
 				  );
 				  auto initial_value_hout
 					  = ctx.query<QueryHoutOfExpr>(initial_value_pst)
-			                .expect(
+			                .throwOnFail(
 								"Handling errors in HOUT is not supported yet 2b — "
 								+ name(symbol).str()
 							);
@@ -141,7 +141,7 @@ namespace compiler::helios {
 				  const auto coercion = canCoerce(
 					  ctx, initial_value_hout->expression_type.getSymbolType(), variable_type
 				  );
-				  const auto valid_coercion = coercion.expect(
+				  const auto valid_coercion = coercion.throwOnFail(
 					  "Handling errors in HOUT is not supported yet 2c — " + name(symbol).str()
 				  );
 
@@ -151,14 +151,14 @@ namespace compiler::helios {
 				  ) };
 			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(
 					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
 			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
 		  )) {}
 }
