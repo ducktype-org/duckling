@@ -111,18 +111,6 @@ namespace compiler::helios::comptime_ops {
 	}
 
 	DEF_VM_EXT_C_FUNC(
-		i64,
-		"i64",
-		__comptime_get_size,  // NOLINT(readability-identifier-naming)
-
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto layout = ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr);
-		return static_cast<i64>(layout->getSize());
-	}
-
-	DEF_VM_EXT_C_FUNC(
 		TupleTypeBuilder*,
 		"opaque_ptr",
 		__comptime_tuple_builder_new  // NOLINT(readability-identifier-naming)

@@ -59,7 +59,7 @@ namespace {
 		else if constexpr (sizeof(T) == 2)
 			return vm::safeReadBytes<u16>(value);
 		else if constexpr (sizeof(T) == 1)
-			return static_cast<u64>(vm::safeReadBytes<u8>(value));
+			return vm::safeReadBytes<std::uint8_t>(value);
 		else
 			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
 	}
