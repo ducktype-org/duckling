@@ -246,6 +246,7 @@ namespace compiler::mir {
 				values.push_back(elem_lowered.getResult(function));
 				current = elem_lowered.begin;
 			}
+			std::ranges::reverse(values);
 
 			auto target_hole = continuation->addHole();
 
