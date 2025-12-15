@@ -206,7 +206,7 @@ namespace compiler::lir {
 		case mir::Operation::MetaCreateVariant:
 			return Operation::MetaCreateVariant;
 
-		// Logic
+			// Logic
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
