@@ -211,7 +211,6 @@ namespace {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
 				if (!initializeCompTimeOps()) pid.reset();
-				if (!setQueryContext(ctx)) pid.reset();
 			}
 		}
 
@@ -248,20 +247,6 @@ namespace {
 				return true;
 			}
 			return false;
-		}
-
-		bool setQueryContext(query::Context& ctx) {
-			// Pass the query context into DVM.
-			auto response = vm::api::getVmValue(*pid, "opaque_ptr");
-			if (!response.has_value()) return false;
-			auto ctx_vm_value = std::move(response->vm_value);
-			ctx_vm_value->writeBytes(&ctx);
-
-			if (!vm::api::runFunction(*pid, "__comptime_set_ctx", { ctx_vm_value.refMut() }))
-				return false;
-			if (!vm::api::join(*pid)) return false;
-			ctx_vm_value->freeData();
-			return true;
 		}
 
 		void markAsLoaded(vm::code::CodeCollection& loaded) {
@@ -322,6 +307,33 @@ namespace {
 		return owned_arguments;
 	}
 
+	std::expected<void, VmEvaluationError> setQueryContext(
+		CompTimeDVM& comptime_dvm, query::Context& ctx
+	) {
+		vm::PID pid = *comptime_dvm.getPID();
+		// Pass the query context into DVM.
+		auto response = vm::api::getVmValue(pid, "opaque_ptr");
+		if (!response.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgConversionFailed,
+				"Failed to fetch an opaque pointer when evaluating on DVM."
+			));
+		auto ctx_vm_value = std::move(response->vm_value);
+		ctx_vm_value->writeBytes(&ctx);
+
+		if (!vm::api::runFunction(pid, "__comptime_set_ctx", { ctx_vm_value.refMut() }))
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				"Failed to initialize the global context on DVM."
+			));
+		if (!vm::api::join(pid))
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
+			));
+		ctx_vm_value->freeData();
+		return {};
+	}
+
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
 		CompTimeDVM&                         manager,
 		const std::string&                   func_name,
@@ -357,7 +369,6 @@ namespace {
 
 		return vmValueToCtv(return_type, exit_value.value());
 	}
-
 }
 
 namespace compiler::helios {
@@ -379,6 +390,9 @@ namespace compiler::helios {
 			));
 
 		if (auto res = loadLirFunctions(comptime_dvm, lir_functions); !res)
+			return std::unexpected(res.error());
+
+		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
 			return std::unexpected(res.error());
 
 		auto owned_args = prepareArguments(comptime_dvm, args);

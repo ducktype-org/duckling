@@ -1,11 +1,14 @@
-fun createUnit(t: type) -> type = ();
-# const A = createUnit(i32);
+fun createUnit() -> type = {
+    var a: type = ();
+    return a;
+}
+const A = createUnit();
 
 fun createBox(t: type) -> type = box t;
-# const B = createBox(i32);
+const B = createBox(i32);
 
 fun createRef(t: type) -> type = ref t;
-# const C = createRef(i32);
+const C = createRef(i32);
 
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 const D = createVariant(i16, i32, i64, i128);
@@ -14,13 +17,13 @@ fun createTuple(a: type, b: type, c: type, d: type) -> type = {
     var e: type = (a, b, c, d);
     return e;
 }
-# const E = createTuple(i16, i32, i64, i128);
+const E = createTuple(i16, i32, i64, i128);
 
-# fun megaType(a: type) -> type = {
-#     var c: type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
-#     return c;
-# }
-# const megaGigaType = megaType(i128);
+fun megaType(a: type) -> type = {
+    var c: type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
+    return c;
+}
+const megaGigaType = megaType(i128);
 
 
 # fun fib(n: i64) -> i64 = {

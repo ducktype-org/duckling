@@ -64,10 +64,10 @@ namespace compiler::backend_vm::internal {
 		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
 	) {
 		lowerBuilderPattern(
-			BuilderSequence{ .new_func  = base::StrID(comptime_func_names::VARIANT_BUILDER_NEW),
-		                     .push_func = base::StrID(comptime_func_names::VARIANT_BUILDER_PUSH),
+			BuilderSequence{ .new_func  = base::StrID(comptime_func_names::TUPLE_BUILDER_NEW),
+		                     .push_func = base::StrID(comptime_func_names::TUPLE_BUILDER_PUSH),
 		                     .finalize_func
-		                     = base::StrID(comptime_func_names::VARIANT_BUILDER_FINALIZE) },
+		                     = base::StrID(comptime_func_names::TUPLE_BUILDER_FINALIZE) },
 			type_args,
 			output
 		);
