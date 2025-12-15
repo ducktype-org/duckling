@@ -28,6 +28,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <string_id/string_id.hpp>
+#include "helios/hout/elements/expr.hpp"
 
 #include <functional>
 #include <unordered_set>
@@ -838,6 +839,11 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr
+			) override {
+				expr.value_expr->acceptVisitor(*this);
 			}
 		};
 

@@ -39,7 +39,7 @@ fun createBox(t: type) -> type = box t;
 # }
 
 fun megaType(a: type) -> type = {
-    var c: type = ((), a, i32, (i16, f16), i64 | (f64, f128));
+    var c: type = ((), createBox(a), i32, (i16, f16), i64 | (f64, f128));
     return c;
 }
 const megaGigaType = megaType(i128);
