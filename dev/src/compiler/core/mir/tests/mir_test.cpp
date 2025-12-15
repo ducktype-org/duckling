@@ -616,9 +616,6 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					mir_rep_good2.debugPrint(std::cout);
-
-
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[2]);
 					compiler::mir::Instruction&   assignment
 						= mir_rep_good2.blocks[mir_rep_good2.block_order[2]].instructions[0];
