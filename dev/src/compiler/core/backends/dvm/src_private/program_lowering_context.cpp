@@ -38,7 +38,6 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	// Register the global variable itself before inserting ctor/dtor to handle
 	// recursive references.
-	std::cerr << "Registering global: " << lir_global.mangled_name.strView() << "\n";
 	lir_global_to_dvm.put(
 		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
 	);
@@ -148,9 +147,6 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
-
-	for (auto& type: collection.types) vm::code::serialize(type, std::cerr);
-	for (auto& func: collection.functions) vm::code::serialize(func, std::cerr);
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();
