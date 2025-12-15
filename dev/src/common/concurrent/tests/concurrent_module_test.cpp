@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <concurrent/collections/hash_map.hpp>
+
+#include <tester/tester.hpp>
 
 class ConcurrentTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -14,12 +15,12 @@ public:
 	}
 
 private:
-	/** 
+	/**
 	 * Simple single-threaded test of concurrent::HashMap.
 	 */
 	void hashMapSingleThreadTest1() {
 		concurrent::HashMap<int, int> map;
-		
+
 		map.put(1, 10);
 		map.put(2, 20);
 		map.put(3, 30);
@@ -41,18 +42,14 @@ private:
 		ASSERT_TRUE(map.getCopy(2) == 25);
 
 		auto val_ref = map.atMaybe(3).value();
-		*val_ref = 35;
+		*val_ref     = 35;
 		ASSERT_TRUE(map.getCopy(3) == 35);
 		ASSERT_TRUE(*map.atMaybe(3).value() == 35);
 
 
-		map.tryPutAndUpdate(4, 40, [](int& v) {
-			v += 5;
-		});
+		map.tryPutAndUpdate(4, 40, [](int& v) { v += 5; });
 		ASSERT_TRUE(map.getCopy(4) == 45);
-		map.tryPutAndUpdate(1, 100, [](int& v) {
-			v += 5;
-		});
+		map.tryPutAndUpdate(1, 100, [](int& v) { v += 5; });
 		ASSERT_TRUE(map.getCopy(1) == 15);
 
 		map.tryPut(5, 50);

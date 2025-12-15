@@ -140,14 +140,14 @@ namespace concurrent {
 
 		/**
 		 * Atomically retrieves a reference to the value associated with the given key.
-		 * 
+		 *
 		 * @important Usage of the reference must be synchronized externally.
-		 * For example `map.at(key) = ...` may lead to data races on `=` operator. 
+		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
 		 */
 		[[nodiscard]]
 		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
-		    WithReaderLock lock(*this, keyToShard(key));
-		    return shards[lock.shard_index].atMaybe(key);
+			WithReaderLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].atMaybe(key);
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
