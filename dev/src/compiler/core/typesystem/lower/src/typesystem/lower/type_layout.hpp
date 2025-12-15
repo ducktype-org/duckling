@@ -127,7 +127,7 @@ namespace compiler::tsl {
 	 * @brief Layout for the MetaType.
 	 * Represents a runtime handle/ID to type metadata.
 	 *
-	 * Acts as a handle that references the type information stored in the static memory (RTTI).
+	 * Acts as a handle that references the type information stored in the static memory.
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
 		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type):
