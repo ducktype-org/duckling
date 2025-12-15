@@ -10,14 +10,20 @@
 #include <typesystem/higher/types.hpp>
 
 #include "query_framework/context.hpp"
+#include "string_id/string_id.hpp"
 
 #include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
+#include "vm/bytecode/type_of_data.hpp"
+#include "vm/core/process/interface_types.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
+#include <cmath>
 #include <expected>
+#include <unordered_set>
+#include <vector>
 
 namespace {
 	using namespace compiler::helios;
@@ -30,6 +36,17 @@ namespace {
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
 		vm::PID pid, const CompileTimeValue& ctv
 	) {
+		auto get_vm_value
+			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+			auto vm_value_response = vm::api::getVmValue(pid, type_name.str());
+			if (!vm_value_response.has_value())
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::ArgConversionFailed,
+					base::strConcat("Failed to get VM value for '", type_name.strView(), "' type.")
+				));
+			return std::move(vm_value_response->vm_value);
+		};
+
 		variant_match(ctv.getStorage()) {
 			variant_case(NumericValue, val) {
 				return std::visit(
@@ -52,47 +69,25 @@ namespace {
 							);
 						}
 
-						auto vm_value_response = vm::api::getVmValue(pid, dvm_type_name.str());
-						if (!vm_value_response.has_value())
-							return std::unexpected(VmEvaluationError(
-								VmEvaluationError::Kind::ArgConversionFailed,
-								base::strConcat(
-									"Failed to get VM value for '",
-									dvm_type_name.strView(),
-									"' type."
-								)
-							));
-						auto res = std::move(vm_value_response->vm_value);
-						res->writeBytes<NumT>(num_val);
-						return res;
+						auto maybe_vm_value = get_vm_value(dvm_type_name);
+						if (!maybe_vm_value) return maybe_vm_value;
+						(*maybe_vm_value)->writeBytes<NumT>(num_val);
+						return maybe_vm_value;
 					},
 					val.getStorage()
 				);
 			}
 			variant_case(bool, val) {
-				auto vm_value_response = vm::api::getVmValue(pid, "byte");
-				if (!vm_value_response.has_value())
-					return std::unexpected(VmEvaluationError(
-						VmEvaluationError::Kind::ArgConversionFailed,
-						"Failed to get VM value for 'byte'(bool) type."
-					));
-
-				auto res = std::move(vm_value_response->vm_value);
-				res->writeBytes<bool>(val);
-				return res;
+				auto maybe_vm_value = get_vm_value(base::StrID("byte"));
+				if (!maybe_vm_value) return maybe_vm_value;
+				(*maybe_vm_value)->writeBytes<bool>(val);
+				return maybe_vm_value;
 			}
 			variant_case(compiler::tsh::SymbolType<>, type) {
-				auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
-				if (!vm_value_response.has_value())
-					return std::unexpected(VmEvaluationError(
-						VmEvaluationError::Kind::ArgConversionFailed,
-						"Failed to get VM value for 'opaque_ptr' type."
-					));
-
-				auto                               res = std::move(vm_value_response->vm_value);
-				const compiler::tsh::SymbolType<>* type_ptr = &type;
-				res->writeBytes<const compiler::tsh::SymbolType<>*>(type_ptr);
-				return res;
+				auto maybe_vm_value = get_vm_value(base::StrID("opaque_ptr"));
+				if (!maybe_vm_value) return maybe_vm_value;
+				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
+				return maybe_vm_value;
 			}
 			variant_default {
 				throw base::NotYetImplemented(
@@ -189,101 +184,174 @@ namespace {
 	}
 
 	/**
-	 * @brief A helper class that manages the lifetime of the compile-time VM process.
-	 * Spawns a new process when first used and kills it when compilation ends.
+	 * @brief A class representing a compile time DVM instance. Spawns a VMProcess when
+	 * constructed and loads all the needed context for compile time evaluations into the process.
+	 * This includes initializing the global query context pointer, injecting all extern C functions
+	 * operating on meta types.
+	 *
+	 * Handles the deduplication of the code being loaded into the VM.
+	 * Kills the VMProcess when compilation ends.
 	 */
-	class VmManager {
+	class CompTimeVM {
 		base::Optional<vm::PID> pid{};
-		// Code already added into this VMs process.
-		vm::code::CodeCollection loaded_code;
+		/**
+		 * @brief Code already loaded into this VMs process.
+		 * @note This set operates on mangled names, thus theres no need to distinguish between
+		 * functions, types, globals, etc.
+		 */
+		std::unordered_set<base::StrID> loaded_symbols;
 
 	public:
-		VmManager() {
-			auto spawn_result = vm::api::spawn();
-			if (spawn_result) pid = spawn_result->pid;
+		/**
+		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
+		 * evaluations and initializes the global context pointer needed for meta type compile time
+		 * evaluations.
+		 */
+		CompTimeVM(query::Context& ctx) {
+			if (auto res = vm::api::spawn()) {
+				pid = res->pid;
+				if (!initializeCompTimeOps()) pid.reset();
+				if (!setQueryContext(ctx)) pid.reset();
+			}
 		}
+
+		CompTimeVM(const CompTimeVM&)            = delete;
+		CompTimeVM& operator=(const CompTimeVM&) = delete;
 
 		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
 		// This should happen after #1222.
-		~VmManager() = default;
+		~CompTimeVM() = default;
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
 
-		vm::code::CodeCollection& getLoadedCode() { return loaded_code; }
+		[[nodiscard]] bool isAlive() const { return pid.has_value(); }
 
-		void expandLoadedCode(vm::code::CodeCollection& new_code) {
-			loaded_code.functions.insert(
-				loaded_code.functions.end(), new_code.functions.begin(), new_code.functions.end()
-			);
-			loaded_code.types.insert(
-				loaded_code.types.end(), new_code.types.begin(), new_code.types.end()
-			);
-			loaded_code.global_data.insert(
-				loaded_code.global_data.end(),
-				new_code.global_data.begin(),
-				new_code.global_data.end()
-			);
-			loaded_code.external_c_functions.insert(
-				loaded_code.external_c_functions.end(),
-				new_code.external_c_functions.begin(),
-				new_code.external_c_functions.end()
-			);
+		/**
+		 * @brief Loads the bytecode into the VM. Skips duplicated symbols.
+		 */
+		std::expected<void, VmEvaluationError> loadCode(const vm::code::CodeCollection& code) {
+			auto new_code = filterOutLoaded(code);
+			if (!vm::api::loadCode(*pid, new_code)) {
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+				));
+			}
+			markAsLoaded(new_code);
+			return {};
 		}
 
-		VmManager(const VmManager&)            = delete;
-		VmManager& operator=(const VmManager&) = delete;
+	private:
+		bool initializeCompTimeOps() {
+			auto code = comptime_ops::getComptimeTypeOperations(*pid);
+			if (vm::api::loadCode(*pid, code)) {
+				markAsLoaded(code);
+				return true;
+			}
+			return false;
+		}
+
+		bool setQueryContext(query::Context& ctx) {
+			// Pass the query context into DVM.
+			auto response = vm::api::getVmValue(*pid, "opaque_ptr");
+			if (!response.has_value()) return false;
+			auto ctx_vm_value = std::move(response->vm_value);
+			ctx_vm_value->writeBytes(&ctx);
+
+			if (!vm::api::runFunction(*pid, "__comptime_set_ctx", { ctx_vm_value.refMut() }))
+				return false;
+			if (vm::api::join(*pid)) return false;
+			ctx_vm_value->freeData();
+			return {};
+		}
+
+		void markAsLoaded(vm::code::CodeCollection& loaded) {
+			for (const auto& f: loaded.functions) loaded_symbols.insert(f.name);
+			for (const auto& t: loaded.types) loaded_symbols.insert(vm::code::typeName(t));
+			for (const auto& g: loaded.global_data) loaded_symbols.insert(g.name);
+			for (const auto& e: loaded.external_c_functions) loaded_symbols.insert(e.name);
+		}
+
+		vm::code::CodeCollection filterOutLoaded(const vm::code::CodeCollection& code) {
+			vm::code::CodeCollection filtered;
+			auto                     by_name = [](const auto& item) -> base::StrID {
+                using T = std::decay_t<decltype(item)>;
+                if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
+                    return vm::code::typeName(item);
+                else
+                    return item.name;
+			};
+
+			auto insert_if_new = [&](const auto& source, auto& destination, auto name_getter) {
+				for (const auto& item: source)
+					if (!loaded_symbols.contains(name_getter(item))) destination.push_back(item);
+			};
+
+			insert_if_new(code.functions, filtered.functions, by_name);
+			insert_if_new(code.types, filtered.types, by_name);
+			insert_if_new(code.global_data, filtered.global_data, by_name);
+			insert_if_new(code.external_c_functions, filtered.external_c_functions, by_name);
+			return filtered;
+		}
 	};
 
-	template<typename T, typename KeyExtractor>
-	std::vector<T> filterOutExisting(
-		const std::vector<T>& source, const std::vector<T>& existing_items, KeyExtractor extractor
-	) {
-		auto existing_keys_view = existing_items | std::views::transform(extractor);
-		std::unordered_set<base::StrID> existing_keys(
-			existing_keys_view.begin(), existing_keys_view.end()
-		);
-		auto new_items_view = source | std::views::filter([&](const T& item) {
-								  return !existing_keys.contains(extractor(item));
-							  });
-		return new_items_view | std::ranges::to<std::vector<T>>();
-	}
-
-	vm::code::CodeCollection filterCodeCollection(
-		const vm::code::CodeCollection& code_to_load, const vm::code::CodeCollection& already_loaded
-	) {
-		auto by_name = [](const auto& item) -> base::StrID {
-			using T = std::decay_t<decltype(item)>;
-			if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
-				return vm::code::typeName(item);
-			else
-				return item.name;
-		};
-
-		return vm::code::CodeCollection{
-			.functions
-			= filterOutExisting(code_to_load.functions, already_loaded.functions, by_name),
-			.types = filterOutExisting(code_to_load.types, already_loaded.types, by_name),
-			.global_data
-			= filterOutExisting(code_to_load.global_data, already_loaded.global_data, by_name),
-			.external_c_functions = filterOutExisting(
-				code_to_load.external_c_functions, already_loaded.external_c_functions, by_name
-			)
-		};
-	}
-
-	vm::code::CodeCollection produceCodeCollectionFromLIR(
-		vm::PID pid, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+	std::expected<void, VmEvaluationError> loadLirFunctions(
+		CompTimeVM& manager, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
 	) {
 		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
-
-		// TODOP: Move comptime func loading to constructor?
-		auto comptime_definitions = comptime_ops::getComptimeTypeOperations(pid);
-		m.insertRawBytecodeDefinitions(comptime_definitions);
-
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
-
-		return m.build();
+		auto bytecode = m.build();
+		return manager.loadCode(bytecode);
 	}
+
+	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
+		CompTimeVM& manager, const std::vector<compiler::ctv::CompileTimeValue>& args
+	) {
+		std::vector<Box<vm::VmValue>> owned_arguments;
+		owned_arguments.reserve(args.size());
+		for (const auto& ctv_arg: args) {
+			auto res = ctvToVmValue(*manager.getPID(), ctv_arg);
+			if (!res) return std::unexpected(res.error());
+			owned_arguments.push_back(std::move(*res));
+		}
+		return owned_arguments;
+	}
+
+	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
+		CompTimeVM&                          manager,
+		const std::string&                   func_name,
+		const std::vector<Box<vm::VmValue>>& owned_args,
+		const compiler::tsh::SymbolType<>    return_type
+	) {
+		vm::PID pid = *manager.getPID();
+
+		vm::FunctionRunArguments args
+			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
+		    | std::ranges::to<vm::FunctionRunArguments>();
+
+		if (!vm::api::runFunction(pid, func_name, args))
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				"Failed to run a function '" + func_name + "' on VM."
+			));
+
+		if (!vm::api::join(pid))
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
+			));
+
+		// Free the owned arguments.
+		for (const auto& arg: owned_args) arg->freeData();
+
+		auto exit_value = vm::api::getExitValue(pid);
+		if (!exit_value)
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::GetExitValueFailed,
+				"Failed to get exit value from VM after function execution."
+			));
+
+		return vmValueToCtv(return_type, exit_value.value());
+	}
+
 }
 
 namespace compiler::helios {
@@ -294,94 +362,22 @@ namespace compiler::helios {
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
-		// @note: vm_manager is initialized (spawns the DVM compile-time evaluation process)
-		// once upon the first call to executeInVm and its lifetime extends for the duration of
-		// the program. When deinitialized, it kills the spawned process.
-		static VmManager vm_manager;
-		auto             maybe_pid = vm_manager.getPID();
-		if (!maybe_pid)
+		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
+		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
+		// duration of the program. When deinitialized, it kills the spawned process.
+		static CompTimeVM comptime_dvm(ctx);
+		if (!comptime_dvm.isAlive())
 			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ProcessSpawnFailed, "Failed to spawn VM process."
-			));
-		vm::PID pid = maybe_pid.value();
-
-		auto code = produceCodeCollectionFromLIR(pid, lir_functions);
-		std::cout << "Produced DVM bytecode:\n";
-		vm::code::serialize(code, std::cout);
-		std::cout << "\n";
-
-		// @note: Remove functions/types/globals etc. that already exist in this VM instance
-		// (from previous compile time evaluations). Inserting duplicate elements will cause the
-		// whole code collection to be rejected.
-		auto filtered_code = filterCodeCollection(code, vm_manager.getLoadedCode());
-		auto load_result   = vm::api::loadCode(pid, { filtered_code });
-		if (!load_result) {
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
-			));
-		}
-
-		// If the code load succeeded, we expand the VMs manger context. If any of the functions
-		// was rejected the internal VMs state won't be changed.
-		vm_manager.expandLoadedCode(filtered_code);
-
-		// TODOP: Split this. Probablby move to VMManager.
-		// Pass the query context into DVM.
-		auto response = vm::api::getVmValue(pid, "opaque_ptr");
-		if (!response.has_value())
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ArgConversionFailed,
-				"Failed to fetch an opaque pointer when evaluating '" + func_name + "' on DVM."
-			));
-		auto  ctx_vm_value      = std::move(response->vm_value);
-		auto* query_context_ptr = &ctx;
-		ctx_vm_value->writeBytes(query_context_ptr);
-
-		if (auto res = vm::api::runFunction(pid, "__comptime_set_ctx", { ctx_vm_value.refMut() });
-		    !res)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::FunctionRunFailed,
-				"Failed to initialize the global context on DVM."
-			));
-		if (auto res = vm::api::join(pid); !res)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
-			));
-		ctx_vm_value->freeData();
-
-
-		std::vector<Box<vm::VmValue>> owned_arguments;
-		owned_arguments.reserve(args.size());
-		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(pid, ctv_arg);
-			if (!res) return std::unexpected(res.error());
-			owned_arguments.push_back(std::move(*res));
-		}
-
-		vm::FunctionRunArguments vm_args
-			= owned_arguments | std::views::transform([](auto& value) { return value.refMut(); })
-		    | std::ranges::to<vm::FunctionRunArguments>();
-
-		if (auto res = vm::api::runFunction(pid, func_name, vm_args); !res)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::FunctionRunFailed,
-				"Failed to run a function '" + func_name + "' on VM."
-			));
-		if (auto res = vm::api::join(pid); !res)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::VmJoinFailed, "Failed to join VM process."
+				VmEvaluationError::Kind::VmInitializationFailed,
+				"Failed to initialize the comptime DVM process."
 			));
 
-		// Free the owned arguments.
-		for (const auto& arg: owned_arguments) arg->freeData();
+		if (auto res = loadLirFunctions(comptime_dvm, lir_functions); !res)
+			return std::unexpected(res.error());
 
-		auto exit_value = vm::api::getExitValue(pid);
-		if (!exit_value)
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::GetExitValueFailed,
-				"Failed to get exit value from VM after function execution."
-			));
+		auto owned_args = prepareArguments(comptime_dvm, args);
+		if (!owned_args) return std::unexpected(owned_args.error());
 
-		return vmValueToCtv(return_type, exit_value.value());
+		return runAndGetResult(comptime_dvm, func_name, *owned_args, return_type);
 	}
 }

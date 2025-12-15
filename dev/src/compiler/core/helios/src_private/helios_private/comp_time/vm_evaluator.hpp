@@ -14,7 +14,7 @@
 namespace compiler::helios {
 	struct VmEvaluationError final {
 		enum class Kind {
-			ProcessSpawnFailed,
+			VmInitializationFailed,
 			CodeLoadFailed,
 			ArgConversionFailed,
 			FunctionRunFailed,
@@ -35,10 +35,13 @@ namespace compiler::helios {
 	 * this function and is reused for subsequent evaluations. This is done by a static instance of
 	 * VmManager, which spawns the process when first used and kills on exit.
 	 *
+	 * @param ctx query context needed to perform compile time type operations.
 	 * @param func_name The name of the function to call.
-	 * @param code The bytecode containing the function to execute.
+	 * @param lir_functions List of LIR functions to be passed to the VM. Includes the actual
+	 * function to call as well as all others called by it.
 	 * @param args A vector of CTVs to be passed as arguments.
-	 * @param return_type The expected return type of the function.
+	 * @param return_type The expected return type of the function, needed to cast the VMs return
+	 * value back to the expected "compiler type"
 	 * @return The resulting CTV on success, or a VmEvaluationError.
 	 */
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(

@@ -20,10 +20,6 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include "vm/api/data/process_info.hpp"
-#include "vm/bytecode/serializer/serializer.hpp"
-#include <vm/bytecode/bytecode.hpp>
-
 #include <cmath>
 #include <ranges>
 #include <type_traits>
