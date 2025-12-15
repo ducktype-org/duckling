@@ -30,6 +30,9 @@ class ConcurrentTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		concurrent::setWorkerCount(4);
+
+		TESTER_ADD_TEST(hashMapSingleThreadTest1);
+
 		TESTER_ADD_TEST(singleThreadedRandomTest<0>);
 		TESTER_ADD_TEST(singleThreadedRandomTest<2>);
 		TESTER_ADD_TEST(singleThreadedRandomTest<10>);
@@ -37,7 +40,17 @@ public:
 		TESTER_ADD_TEST(singleThreadedRandomTest<10'000>);
 		TESTER_ADD_TEST(singleThreadedRandomTest<100'000>);
 
-		TESTER_ADD_TEST(hashMapSingleThreadTest1);
+		TESTER_ADD_TEST(multiThreadedSimpleTest1<1>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest1<2>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest1<4>);
+
+		TESTER_ADD_TEST(multiThreadedSimpleTest2<1>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest2<2>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest2<4>);
+
+		TESTER_ADD_TEST(multiThreadedSimpleTest3<1>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest3<2>);
+		TESTER_ADD_TEST(multiThreadedSimpleTest3<4>);
 	}
 
 private:
@@ -139,6 +152,90 @@ private:
 		}
 
 		ASSERT_EQUAL(base_result, std_result);
+	}
+
+	/**
+	 * Tests multi-threaded writes to the concurrent::HashMap on different keys.
+	 */
+	template<u64 thread_count>
+	void multiThreadedSimpleTest1() {
+		constexpr u64 LOOK_OPS_PER_THREAD = 10'000;
+
+		concurrent::HashMap<u64, u64> map;
+
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+
+		for (u64 i = 0; i < thread_count; i++) {
+			threads.emplace_back([&map, i]() {
+				for (u64 j = 0; j < LOOK_OPS_PER_THREAD; j++) {
+					u64 key = j * thread_count + i;
+					map.put(key, key * 10);
+				}
+			});
+		}
+
+		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
+
+		for (u64 i = 0; i < thread_count; i++) {
+			for (u64 j = 0; j < LOOK_OPS_PER_THREAD; j++) {
+				u64 key = j * thread_count + i;
+				ASSERT_TRUE(map.contains(key));
+				ASSERT_EQUAL(map.getCopy(key), key * 10);
+			}
+		}
+	}
+
+	/**
+	 * Tests multi-threaded writes to the concurrent::HashMap on the same key using maybePutAndUpdate.
+	 */
+	template<u64 thread_count>
+	void multiThreadedSimpleTest2() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+
+		concurrent::HashMap<u64, u64> map;
+
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+
+		for (u64 i = 0; i < thread_count; i++) {
+			threads.emplace_back([&map]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++)
+					map.maybePutAndUpdate(1, 0, [](u64& v) { v += 10; });
+			});
+		}
+
+		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
+
+		ASSERT_TRUE(map.contains(1));
+		ASSERT_EQUAL(map.getCopy(1), thread_count * OPS_PER_THREAD * 10);
+	}
+
+	/**
+	 * Tests multi-threaded writes to the concurrent::HashMap on the same key using update method.
+	 */
+	template<u64 thread_count>
+	void multiThreadedSimpleTest3() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+
+		concurrent::HashMap<u64, u64> map;
+		map.put(u64(1), u64(0));
+
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+
+		for (u64 i = 0; i < thread_count; i++) {
+			threads.emplace_back([&map, i]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(1, j * thread_count + i);
+			});
+		}
+
+		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
+
+		ASSERT_TRUE(map.contains(1));
+
+		// we should have the last update from one of the threads:
+		ASSERT_TRUE(map.getCopy(1) >= (OPS_PER_THREAD - 1) * thread_count);
 	}
 };
 
