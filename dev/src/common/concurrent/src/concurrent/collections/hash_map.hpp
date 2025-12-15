@@ -138,19 +138,17 @@ namespace concurrent {
 			return value;
 		}
 
-		// PR: this does not work well with concurrent map, since
-		// there can be races on reference returned.
-		// [[nodiscard]]
-		// auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
-		//     WithLock lock(*this, keyToShard(key));
-		//     return shards[lock.shard_index].atMaybe(key);
-		// }
-
-
-		// operators[] don't work well with concurrent map, since
-		// DATA_T& operator[](const KEY_T& key) {
-		// }
-		// const DATA_T& operator[](const KEY_T& key) const { return **atMaybe(key); }
+		/**
+		 * Atomically retrieves a reference to the value associated with the given key.
+		 * 
+		 * @important Usage of the reference must be synchronized externally.
+		 * For example `map.at(key) = ...` may lead to data races on `=` operator. 
+		 */
+		[[nodiscard]]
+		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		    WithReaderLock lock(*this, keyToShard(key));
+		    return shards[lock.shard_index].atMaybe(key);
+		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {

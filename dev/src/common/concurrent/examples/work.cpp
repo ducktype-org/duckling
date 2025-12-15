@@ -12,10 +12,10 @@ void work(HashMap& map, concurrent::WDRef worker_data) {
 }
 
 void cWork(CHashMap& map, concurrent::WDRef worker_data) {
-	u64 key = 123'123 + (worker_data->randomU64() % 12);
+	u64 key = 123'123 + (worker_data->randomU64() % 3);
 
 	// emulate some work:
-	concurrent::nopWait(16 * 12);
+	// concurrent::nopWait(16 * 12);
 
 
 	// map.tryPut(key, 0);
