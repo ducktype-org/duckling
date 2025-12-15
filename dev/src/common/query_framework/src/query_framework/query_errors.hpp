@@ -11,7 +11,7 @@ namespace query {
 	class Failed final {};
 
 	/**
-	 * @brief Exception that can be thrown when accessing a query that has failed.
+	 * @brief Exception that can be thrown when accessing a result of a query that has failed.
 	 * It can be caught by the enclosing query from query framework.
 	 */
 	class QueryFailedException final: public base::Exception {
@@ -24,7 +24,7 @@ namespace query {
 
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
-				what_str += base::getCurrentStackTrace();
+				what_str += base::getCurrentStackTrace(5);
 			});
 		}
 
