@@ -50,34 +50,21 @@ namespace concurrent {
 
 		/**
 		 * RAII lock for a given shard.
+		 *
+		 * @note This can be changed to a reader-writer lock if needed in the future.
+		 * Each method must then specify whether it needs a read or write lock.
 		 */
-		struct WithWriterLock final {
+		struct WithShardLock final {
 			u64            shard_index;
 			const HashMap& self;
 
-			WithWriterLock(const HashMap& self, u64 shard_index) noexcept:
+			WithShardLock(const HashMap& self, u64 shard_index) noexcept:
 				  shard_index(shard_index),
 				  self(self) {
 				self.shard_mutexes[shard_index]->lock();
 			}
 
-			~WithWriterLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
-		};
-
-		/**
-		 * RAII lock for a given shard.
-		 */
-		struct WithReaderLock final {
-			u64            shard_index;
-			const HashMap& self;
-
-			WithReaderLock(const HashMap& self, u64 shard_index) noexcept:
-				  shard_index(shard_index),
-				  self(self) {
-				self.shard_mutexes[shard_index]->lock();
-			}
-
-			~WithReaderLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
 		};
 
 
@@ -101,7 +88,7 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
-			WithWriterLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
 		}
 
@@ -115,7 +102,7 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(const K& key, D&& value) RELEASE_NOEXCEPT {
-			WithWriterLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 
 			return shards.at(lock.shard_index).maybePut(key, std::forward<D>(value));
 		}
@@ -127,7 +114,7 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
 		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
-			WithWriterLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 
 			shards[lock.shard_index].maybePut(key, value);
 			f(shards[lock.shard_index][key]);
@@ -138,7 +125,7 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithReaderLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 			DATA_T         value = shards[lock.shard_index][key];
 			return value;
 		}
@@ -151,19 +138,19 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
-			WithReaderLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
-			WithWriterLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 			shards[lock.shard_index][key] = value;
 		}
 
 		[[nodiscard]]
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-			WithReaderLock lock(*this, keyToShard(key));
+			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
 		}
 

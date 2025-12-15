@@ -9,6 +9,10 @@
 namespace concurrent {
 
 	struct WorkerData;
+
+	/**
+	 * Utility alias for a reference to WorkerData.
+	 */
 	using WDRef = Ref<WorkerData>;
 
 	/**
