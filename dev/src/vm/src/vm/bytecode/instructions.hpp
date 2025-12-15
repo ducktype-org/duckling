@@ -182,24 +182,19 @@ namespace vm::code {
 
 		// Specialisations are outside the class, as required by gcc
 		template<IsInstruction T>
-		[[nodiscard]] T& get();
-		template<IsInstruction T>
-		[[nodiscard]] const T& get() const;
+		[[nodiscard]] base::Optional<Ref<T>> getMaybe();
 
 		template<IsInstruction T>
-		[[nodiscard]] base::Optional<Ref<T>> getMaybe() {
-			if (instr_kind == T::KIND)
-				return &get<T>();
-			else
-				return std::nullopt;
+		[[nodiscard]] base::Optional<CRef<T>> getMaybe() const;
+
+		template<IsInstruction T>
+		[[nodiscard]] T& get() {
+			return *getMaybe<T>().expect("Invalid opcode.");
 		}
 
 		template<IsInstruction T>
-		[[nodiscard]] base::Optional<CRef<T>> getMaybe() const {
-			if (instr_kind == T::KIND)
-				return &get<T>();
-			else
-				return std::nullopt;
+		[[nodiscard]] const T& get() const {
+			return *getMaybe<T>().expect("Invalid opcode.");
 		}
 
 		template<typename V>
@@ -248,30 +243,41 @@ namespace vm::code {
 		} alts;
 	};
 
-#define HANDLE_INSTR(name)                                                                     \
-	template<>                                                                                 \
-		[[nodiscard]] inline const VM_INSTR_FROM_NAME(name) & Instruction::get() const {       \
-		CORE_ASSERT(instr_kind == VM_INSTR_KIND_FROM_NAME(name), "Invalid instruction kind."); \
-		return alts.op_##name;                                                                 \
-	}                                                                                          \
-	template<>                                                                                 \
-		[[nodiscard]] inline VM_INSTR_FROM_NAME(name) & Instruction::get() {                   \
-		CORE_ASSERT(instr_kind == VM_INSTR_KIND_FROM_NAME(name), "Invalid instruction kind."); \
-		return alts.op_##name;                                                                 \
+#define HANDLE_INSTR(name)                                                                       \
+	template<>                                                                                   \
+	[[nodiscard]] inline base::Optional<Ref<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe() { \
+		if (instr_kind == VM_INSTR_KIND_FROM_NAME(name)) {                                       \
+			return &alts.op_##name;                                                              \
+		} else {                                                                                 \
+			return std::nullopt;                                                                 \
+		}                                                                                        \
+	}                                                                                            \
+	template<>                                                                                   \
+	[[nodiscard]] inline base::Optional<CRef<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe()  \
+		const {                                                                                  \
+		if (instr_kind == VM_INSTR_KIND_FROM_NAME(name)) {                                       \
+			return &alts.op_##name;                                                              \
+		} else {                                                                                 \
+			return std::nullopt;                                                                 \
+		}                                                                                        \
 	}
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
 
 	template<>
-	[[nodiscard]] inline const instructions::Comment& Instruction::get() const {
-		CORE_ASSERT(instr_kind == InstructionKind::Comment, "Invalid instruction kind.");
-		return alts.comment;
+	[[nodiscard]] inline base::Optional<Ref<instructions::Comment>> Instruction::getMaybe() {
+		if (instr_kind == InstructionKind::Comment)
+			return &alts.comment;
+		else
+			return std::nullopt;
 	}
 
 	template<>
-	[[nodiscard]] inline instructions::Comment& Instruction::get() {
-		CORE_ASSERT(instr_kind == InstructionKind::Comment, "Invalid instruction kind.");
-		return alts.comment;
+	[[nodiscard]] inline base::Optional<CRef<instructions::Comment>> Instruction::getMaybe() const {
+		if (instr_kind == InstructionKind::Comment)
+			return &alts.comment;
+		else
+			return std::nullopt;
 	}
 
 	constexpr bool operator==(const Instruction& a, const Instruction& b) {
