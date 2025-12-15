@@ -43,7 +43,7 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			auto symbol_path   = symbol->getAsSingle().valueOrThrow();
+			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
 				result.appendList(dealiased);

@@ -390,11 +390,12 @@ namespace query {
 	struct IsQResult<query::QResult<Args...>>: std::true_type {};
 
 	template<typename T>
-	struct HasFailedInQResult : std::false_type {};
+	struct HasFailedInQResult: std::false_type {};
 
 	template<typename... Args>
-	struct HasFailedInQResult<query::QResult<Args...>>
-		: std::bool_constant<std::is_same_v<typename query::QResult<Args...>::ErrorType, query::Failed>> {};
+	struct HasFailedInQResult<query::QResult<Args...>>:
+		  std::bool_constant<
+			  std::is_same_v<typename query::QResult<Args...>::ErrorType, query::Failed>> {};
 }
 
 /**

@@ -8,7 +8,6 @@
 
 #include <ctv/ctv.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 

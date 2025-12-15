@@ -82,7 +82,10 @@ namespace compiler::helios {
 		QueryPrimaryCodeScopeFor,
 		pst::GenericPSTQueryKey<>,
 		ScopeID,
-		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
+		({
+			.used_hashes  = query::UsedHashes::StableHash,
+			.uses_qresult = false,
+		})
 	);
 
 	/**
@@ -153,7 +156,10 @@ namespace compiler::helios {
 		QueryMacroExpansion,
 		pst::GenericPSTQueryKey<pst::Expand>,
 		ExpansionResult<pst::Stmt>,
-		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
+		({
+			.used_hashes  = query::UsedHashes::StableHash,
+			.uses_qresult = false,
+		})
 	)
 
 	/**

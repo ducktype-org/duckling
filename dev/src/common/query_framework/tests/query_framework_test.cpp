@@ -3,6 +3,7 @@
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -415,7 +416,10 @@ DECLARE_QUERY(
 	StableHashTest,
 	KeyStable,
 	u64,
-	({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
+	({
+		.used_hashes  = query::UsedHashes::StableHash,
+		.uses_qresult = false,
+	})
 );
 
 struct IMPLEMENT_QUERY(StableHashTest, u64) {
@@ -435,6 +439,74 @@ struct IMPLEMENT_QUERY(StableHashTest, u64) {
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);
+
+
+using UsesQResult_Result        = query::QResult<u64, query::Failed>;
+using UsesQResultNoCatch_Result = query::QResult<u64, query::Failed>;
+using NoQResult_Result          = u64;
+
+DECLARE_QUERY(
+	UsesQResultTest,
+	query::U64Key,
+	UsesQResult_Result,
+	({
+		.uses_qresult                      = true,
+		.catch_exceptions_if_using_qresult = true,
+	})
+);
+
+struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultTest);
+
+DECLARE_QUERY(
+	UsesQResultNoCatchTest,
+	query::U64Key,
+	UsesQResultNoCatch_Result,
+	({
+		.uses_qresult                      = true,
+		.catch_exceptions_if_using_qresult = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultNoCatchTest);
+
+DECLARE_QUERY(
+	NoQResultTest,
+	query::U64Key,
+	NoQResult_Result,
+	({
+		.uses_qresult                      = false,
+		.catch_exceptions_if_using_qresult = false,
+	})
+);
+
+struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
+	static auto provide(Context&, QKey) -> PResult {
+		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		return res.valueOrThrow();
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(NoQResultTest);
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -462,6 +534,7 @@ public:
 		TESTER_ADD_TEST(testQueryResult);
 		TESTER_ADD_TEST(testNoKeyCopy);
 		TESTER_ADD_TEST(stableHashTest);
+		TESTER_ADD_TEST(testQueryResultExceptionsHandling);
 	}
 
 private:
@@ -829,6 +902,37 @@ private:
 		std::cout << "Unexpected: " << key.unstable << "\n";
 
 		ASSERT_TRUE(ImplementationOf_StableHashTest::last_hash == key.stable);
+	}
+
+	void testQueryResultExceptionsHandling() {
+		auto result = query::entryPoint<UsesQResultTest>({ 1 });
+		assertTrue(result.hasError(), "Expected error in UsesQResultTest");
+
+		assertThrows<base::Panic>(
+			[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<base::Panic>(
+			[] { query::entryPoint<NoQResultTest>({ 1 }); },
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<query::QueryFailedException>(
+			[] {
+				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				res.valueOrThrow();
+			},
+			"QueryFailedException not thrown as expected"
+		);
+
+		assertThrows<base::Panic>(
+			[] {
+				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				res.valueOrPanic();
+			},
+			"Panic not thrown as expected"
+		);
 	}
 };
 

@@ -1,7 +1,5 @@
 #include "lookup_result.hpp"
 
-
-
 #include <base/except/exceptions.hpp>
 
 namespace compiler::helios {
@@ -29,8 +27,8 @@ namespace compiler::helios {
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
 		auto&& [node_id, inner] = children.at(0);
-		auto child_path         = inner.getAsSingle();
-		auto& sym_list = child_path.valueOrThrow();
+		auto  child_path        = inner.getAsSingle();
+		auto& sym_list          = child_path.valueOrThrow();
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
 		SymbolList result;
