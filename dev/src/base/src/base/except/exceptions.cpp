@@ -25,8 +25,6 @@ namespace base {
 		  position(position),
 		  reason(reason) {
 		makeWhatStr();
-
-		std::cerr << "[EARLY PANIC] " << what_str << "\n";
 	}
 
 	void Panic::makeWhatStr() {
