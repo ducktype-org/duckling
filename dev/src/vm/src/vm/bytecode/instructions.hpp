@@ -10,7 +10,7 @@
  * resulting in a quadratic number of templates getting instantiated when e.g. visiting a variant.)
  *
  * This code uses a lot of X-macros, making it somewhat unwieldy, but strives to provide a usable
- * interface so that the users of `Instruction` can hopefully be macro-free. In particular it offers:
+ * interface so that `Instruction` can be manipulated with plain C++ without having to use too many macros outside this file. In particular it offers:
  * - `Instruction::kind() -> InstructionKind`
  * - `Instruction::name() -> StrID`
  * - `Instruction::get<ConcreteInstructionType>() -> ConcreteInstructionType`
@@ -105,8 +105,8 @@ namespace vm::code {
 		/**
 		 * @brief An extra instruction that represents a comment.
 		 * @note It also helps with macros, as it often goes after an othewise trailing comma.
-		 * It's treated seperately and while useful for debugging
-		 * the compiler backend, the parser does not generate them.
+		 * It's treated seperately, e.g. the parser does not generate it.
+		 * It is however useful for debugging the compiler backend.
 		 */
 		struct Comment final: detail::InstructionBase {
 			Comment()                              = default;
