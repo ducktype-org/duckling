@@ -126,7 +126,7 @@ namespace concurrent {
 		[[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
-			DATA_T         value = shards[lock.shard_index][key];
+			DATA_T        value = shards[lock.shard_index][key];
 			return value;
 		}
 
