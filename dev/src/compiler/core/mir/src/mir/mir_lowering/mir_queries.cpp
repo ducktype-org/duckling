@@ -4,7 +4,7 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>

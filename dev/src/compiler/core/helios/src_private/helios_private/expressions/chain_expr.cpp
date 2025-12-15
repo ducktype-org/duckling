@@ -455,13 +455,13 @@ namespace compiler::helios::code {
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
 
-			if (not std::holds_alternative<SymbolList>(looked_up_symbols)) {
+			if (not looked_up_symbols.hasValue()) {
 				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
 				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
 				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::QError(query::Failed());
 			}
-			auto sym = std::get_if<SymbolList>(&looked_up_symbols)->back();
+			auto sym = looked_up_symbols.valueOrThrow().back();
 
 			// const auto sym = looked_up_symbols.valueOrThrow().back();
 			if (kind(sym) == SymbolKind::Field) {

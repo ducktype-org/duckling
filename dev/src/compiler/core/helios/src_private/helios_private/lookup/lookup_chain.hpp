@@ -2,7 +2,7 @@
 
 #include "interface.hpp"
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 

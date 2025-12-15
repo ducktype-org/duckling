@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 

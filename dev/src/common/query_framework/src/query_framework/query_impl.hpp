@@ -115,25 +115,22 @@ namespace query::internal {
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
-			if constexpr (QueryImplType::USES_QRESULT
-			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-				try {
-					return QueryImplType::store(
-						perfect_hash, QueryImplType::provide(context, key), acd
-					);
-				} catch (const QueryFailedException& qfe) {
-					CORE_DEV_LOG(
-						Query,
-						"[QUERY \"",
-						QueryIntType::QUERY_DATA.name,
-						"\"]: Caught failed exception.\n"
-					);
-					return QueryImplType::store(perfect_hash, query::QError(Failed()), acd);
-				}
-			} else {
-				// This is all at the end, with defer above,
-				// to guarantee copy elision with "prvalue semantics".
+			try {
 				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			} catch (const QueryFailedException& qfe) {
+				CORE_DEV_LOG(
+					Query,
+					"[QUERY \"",
+					QueryIntType::QUERY_DATA.name,
+					"\"]: Caught failed exception.\n"
+				);
+
+				if constexpr (QueryImplType::USES_QRESULT
+				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+					return QueryImplType::store(perfect_hash, query::QError(Failed()), acd);
+				} else {
+					CORE_PANIC(qfe.what());
+				}
 			}
 		}
 	}
@@ -194,7 +191,6 @@ namespace query::internal {
 	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
 		{ Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
 	};
-
 }
 
 /**
@@ -264,6 +260,13 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
 			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
+		),                                                                                                                             \
+		"PResult must be a QResult if uses_qresult is true"                                                                            \
+	);                                                                                                                                 \
+	static_assert(                                                                                                                     \
+		LAZY_IMPLIES(                                                                                                                  \
+			type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                             \
+			::query::HasFailedInQResult<type::PResult>::value                                                                          \
 		),                                                                                                                             \
 		"PResult must be a QResult if uses_qresult is true"                                                                            \
 	);                                                                                                                                 \

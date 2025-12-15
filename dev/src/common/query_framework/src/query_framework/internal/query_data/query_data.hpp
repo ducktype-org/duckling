@@ -56,9 +56,9 @@ namespace query {
 			bool uses_qresult = true;
 
 			/**
-			 * Whether the query implementation should catch exceptions thrown from provide()
-			 * function, and convert them into QResult::Failed() value. Relevant only if
-			 * uses_qresult is true.
+			 * Whether the query implementation should catch  QueryFailedException exception 
+			 * thrown from provide() function, and convert it into QResult::Failed() value. 
+			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
 		};

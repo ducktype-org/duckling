@@ -204,6 +204,8 @@ namespace query {
 		 */
 		using ErrorType = ErrorTypeStruct::type;
 
+		using ResultType = ResTp;
+
 		/**
 		 * @brief Constructor from QError<T>, where T is not a variant
 		 */
@@ -386,6 +388,13 @@ namespace query {
 
 	template<typename... Args>
 	struct IsQResult<query::QResult<Args...>>: std::true_type {};
+
+	template<typename T>
+	struct HasFailedInQResult : std::false_type {};
+
+	template<typename... Args>
+	struct HasFailedInQResult<query::QResult<Args...>>
+		: std::bool_constant<std::is_same_v<typename query::QResult<Args...>::ErrorType, query::Failed>> {};
 }
 
 /**

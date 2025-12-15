@@ -1,5 +1,5 @@
 fun main() -> i64 = {
     var a: i64 = 123;
 
-    return a + b;
+    return a + 3;
 }

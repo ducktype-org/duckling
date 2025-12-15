@@ -1,6 +1,6 @@
 #include "lookup_result.hpp"
 
-#include <helios/helios_errors.hpp>
+
 
 #include <base/except/exceptions.hpp>
 
@@ -19,10 +19,10 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
+	query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
 	) const {
-		if (isEmpty()) return errors::SymbolNotFound();
-		if (!isSingle()) return errors::Ambiguity();
+		if (isEmpty()) return query::QError(errors::SymbolNotFound());
+		if (!isSingle()) return query::QError(errors::Ambiguity());
 
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 
@@ -30,16 +30,13 @@ namespace compiler::helios {
 
 		auto&& [node_id, inner] = children.at(0);
 		auto child_path         = inner.getAsSingle();
-		if (auto sym_list = std::get_if<SymbolList>(&child_path)) {
-			CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
+		auto& sym_list = child_path.valueOrThrow();
+		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
-			SymbolList result;
-			result.pushBack(node_id);
-			result.appendList(*sym_list);
-			return result;
-		} else {
-			return child_path;
-		}
+		SymbolList result;
+		result.pushBack(node_id);
+		result.appendList(sym_list);
+		return result;
 	}
 
 	u64 LookupResult::symbolCount() const {
