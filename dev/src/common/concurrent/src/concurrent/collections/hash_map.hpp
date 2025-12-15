@@ -110,18 +110,23 @@ namespace concurrent {
 		 * Does nothing if key already exists.
 		 * @param key Data key
 		 * @param value The data
-		 * @returns A reference to the inserted key-value pair.
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		void tryPut(const K& key, const D& value) RELEASE_NOEXCEPT {
+		MRef<KeyValuePair> maybePut(const K& key, D&& value) RELEASE_NOEXCEPT {
 			WithWriterLock lock(*this, keyToShard(key));
 
-			if (shards.at(lock.shard_index).contains(key)) return;
-			shards.at(lock.shard_index).put(key, value);
+			return shards.at(lock.shard_index).maybePut(key, std::forward<D>(value));
 		}
 
+		/**
+		 * Performs atomically a following sequence:
+		 * 1. Inserts key->value into the container if key does not exist.
+		 * 2. Calls f with reference to the value associated with the key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void tryPutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
+		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
 			WithWriterLock lock(*this, keyToShard(key));
 
 			shards[lock.shard_index].maybePut(key, value);
