@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -838,6 +840,10 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
+				expr.value_expr->acceptVisitor(*this);
 			}
 		};
 
