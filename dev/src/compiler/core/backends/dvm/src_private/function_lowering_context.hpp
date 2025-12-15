@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dvm_value.hpp"
+#include "meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -47,6 +48,7 @@ namespace compiler::backend_vm::internal {
 
 	class FunctionLoweringContext {
 	public:
+		friend class MetaOperationLowerer;
 		FunctionLoweringContext(
 			ProgramLoweringContext&                   program_context,
 			base::StrID                               name,
@@ -79,6 +81,8 @@ namespace compiler::backend_vm::internal {
 
 		DVMLocal getFunctionReturnValueLocal();
 
+		ProgramLoweringContext& getProgramContext();
+
 		vm::code::Function finish() &&;
 
 	private:
@@ -95,8 +99,6 @@ namespace compiler::backend_vm::internal {
 		void pushInstruction(const vm::code::Instruction& instruction);
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
-
-		void handleMetaOperation(const lir::Instruction& instruction);
 
 		void handleCall(
 			const FunctionCallInfo&     call_info,

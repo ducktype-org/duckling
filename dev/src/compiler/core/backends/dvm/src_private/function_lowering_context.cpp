@@ -211,6 +211,10 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	});
 }
 
+ProgramLoweringContext& compiler::backend_vm::internal::FunctionLoweringContext::getProgramContext() {
+	return program_context;
+}
+
 FunctionCallInfo FunctionCallInfo::fromLirFunction(
 	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 ) {

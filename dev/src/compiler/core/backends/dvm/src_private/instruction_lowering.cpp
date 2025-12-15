@@ -1,7 +1,7 @@
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "program_lowering_context.hpp"
+#include "meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -79,117 +79,6 @@ void FunctionLoweringContext::handleCall(
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
-void FunctionLoweringContext::handleMetaOperation(const lir::Instruction& lir_instruction) {
-	using namespace compiler::lir;
-
-	std::deque<DVMValue> args
-		= lir_instruction.arguments
-	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
-	    | std::ranges::to<std::deque>();
-
-	const auto maybe_output
-		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
-
-	// TODOP: Figure out what to do with the context.
-	auto ctx_local = pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "ctx");
-	pushInstruction({ OpKind::mov,
-	                  ctx_local.asArgument(),
-	                  vm::opargs::GlobalOpq(base::StrID("__comptime_query_ctx")) });
-	DVMValue ctx = { ctx_local };
-	// TODOP: Make those function names not hardcoded?
-	switch (lir_instruction.operation) {
-	case Operation::MetaCreateBox:
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_create_box"), program_context
-			),
-			{ args[0] },
-			maybe_output
-		);
-		break;
-	case Operation::MetaCreateRef:
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_create_ref"), program_context
-			),
-			{ args[0] },
-			maybe_output
-		);
-		break;
-	case Operation::MetaCreateTuple: {
-		auto builder
-			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "tuple_builder");
-		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_tuple_builder_new"), program_context
-			),
-			{},
-			builder_value
-		);
-
-		for (usize i = 0; i < lir_instruction.arguments.size(); i++) {
-			handleCall(
-				FunctionCallInfo::fromExternCFunction(
-					base::StrID("__comptime_tuple_builder_push"), program_context
-				),
-				{ builder_value, args[i] },
-				{}
-			);
-		}
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_tuple_builder_finalize"), program_context
-			),
-			{ ctx, builder_value },
-			maybe_output
-		);
-
-		// TODOP: Deinit builder?
-		break;
-	}
-	case Operation::MetaCreateVariant: {
-		auto builder
-			= pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "variant_builder");
-		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_variant_builder_new"), program_context
-			),
-			{},
-			builder_value
-		);
-
-		for (usize i = 0; i < lir_instruction.arguments.size(); i++) {
-			handleCall(
-				FunctionCallInfo::fromExternCFunction(
-					base::StrID("__comptime_variant_builder_push"), program_context
-				),
-				{ builder_value, args[i] },
-				{}
-			);
-		}
-
-		handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID("__comptime_variant_builder_finalize"), program_context
-			),
-			{ ctx, builder_value },
-			maybe_output
-		);
-
-
-		// TODOP: Deinit builder?
-		break;
-	}
-	default:
-		CORE_PANIC("Unknown meta operation");
-	}
-}
-
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
@@ -198,12 +87,12 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	const auto maybe_output
 		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
 
-	// TODOP: Integrate with meta ops so this returns a variant.
 	const auto dvm_operation = lirOpToDVMOperation(lir_instruction.operation);
 
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
-			handleMetaOperation(lir_instruction);
+			MetaOperationLowerer lowerer(*this);
+			lowerer.lower(operation, args, maybe_output);
 			return;
 		}
 	}

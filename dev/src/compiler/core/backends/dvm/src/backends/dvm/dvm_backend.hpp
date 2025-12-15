@@ -38,7 +38,7 @@ namespace compiler::backend_vm {
 		);
 
 		/**
-		 * @brief Insert raw bytecode into a module. 
+		 * @brief Insert raw bytecode into a module.
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
