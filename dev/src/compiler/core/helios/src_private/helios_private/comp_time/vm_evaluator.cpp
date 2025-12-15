@@ -192,7 +192,7 @@ namespace {
 	 * Handles the deduplication of the code being loaded into the VM.
 	 * Kills the VMProcess when compilation ends.
 	 */
-	class CompTimeVM {
+	class CompTimeDVM {
 		base::Optional<vm::PID> pid{};
 		/**
 		 * @brief Code already loaded into this VMs process.
@@ -207,7 +207,7 @@ namespace {
 		 * evaluations and initializes the global context pointer needed for meta type compile time
 		 * evaluations.
 		 */
-		CompTimeVM(query::Context& ctx) {
+		CompTimeDVM(query::Context& ctx) {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
 				if (!initializeCompTimeOps()) pid.reset();
@@ -215,12 +215,12 @@ namespace {
 			}
 		}
 
-		CompTimeVM(const CompTimeVM&)            = delete;
-		CompTimeVM& operator=(const CompTimeVM&) = delete;
+		CompTimeDVM(const CompTimeDVM&)            = delete;
+		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
 
 		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
 		// This should happen after #1222.
-		~CompTimeVM() = default;
+		~CompTimeDVM() = default;
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
 
@@ -259,9 +259,9 @@ namespace {
 
 			if (!vm::api::runFunction(*pid, "__comptime_set_ctx", { ctx_vm_value.refMut() }))
 				return false;
-			if (vm::api::join(*pid)) return false;
+			if (!vm::api::join(*pid)) return false;
 			ctx_vm_value->freeData();
-			return {};
+			return true;
 		}
 
 		void markAsLoaded(vm::code::CodeCollection& loaded) {
@@ -295,16 +295,22 @@ namespace {
 	};
 
 	std::expected<void, VmEvaluationError> loadLirFunctions(
-		CompTimeVM& manager, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+		CompTimeDVM& manager, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
 	) {
 		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
+
+		// Insert comptime context intto the module, for the module to pass the validation. This code
+		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
+		auto comptime_code = comptime_ops::getComptimeTypeOperations(*manager.getPID());
+		m.insertRawBytecodeDefinitions(comptime_code);
+
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
 		return manager.loadCode(bytecode);
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
-		CompTimeVM& manager, const std::vector<compiler::ctv::CompileTimeValue>& args
+		CompTimeDVM& manager, const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
@@ -317,7 +323,7 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		CompTimeVM&                          manager,
+		CompTimeDVM&                         manager,
 		const std::string&                   func_name,
 		const std::vector<Box<vm::VmValue>>& owned_args,
 		const compiler::tsh::SymbolType<>    return_type
@@ -365,7 +371,7 @@ namespace compiler::helios {
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
-		static CompTimeVM comptime_dvm(ctx);
+		static CompTimeDVM comptime_dvm(ctx);
 		if (!comptime_dvm.isAlive())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::VmInitializationFailed,
