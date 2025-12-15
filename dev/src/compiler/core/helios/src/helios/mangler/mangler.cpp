@@ -205,8 +205,9 @@ namespace compiler::helios::mangler {
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
-				ret       = "F";
-				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+				ret = "F";
+				auto type
+					= ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->valueOrThrow().getType();
 				auto fun_type = tsh::FunctionAbstractType(type);
 
 				auto ret_type = fun_type.getResultType();
@@ -245,7 +246,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();  // "META" ?
@@ -277,7 +278,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();
@@ -436,7 +437,7 @@ namespace compiler::helios::mangler {
 				}
 
 				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-					variant_match(abi->value()) {
+					variant_match(abi->valueOrThrow()) {
 						variant_case_novalue(CAbi) { return name(sym_id); }
 						variant_case_novalue(DefaultAbi) { /* Handled below */ }
 						variant_default { CORE_UNREACHABLE(); }

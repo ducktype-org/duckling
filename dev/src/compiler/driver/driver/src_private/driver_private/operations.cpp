@@ -26,7 +26,7 @@ namespace compiler::driver {
 			variant_match(hout_global.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_function
-						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->value();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->valueOrThrow();
 					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 					globals.emplace_back(LIRModuleGlobal{
 						.lir_global = lir_global,
@@ -59,7 +59,8 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
-			CRef mir_function = &ctx.query<mir::LowerToMIRFunction>({ hout_function })->value();
+			CRef mir_function
+				= &ctx.query<mir::LowerToMIRFunction>({ hout_function })->valueOrThrow();
 			auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
 			functions.push_back(lir_function);
 		}

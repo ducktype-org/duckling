@@ -52,8 +52,8 @@ private:
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
+						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						m.insertLirGlobal(
 							lir_glob,
@@ -83,7 +83,7 @@ private:
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					{ &mir_fun->expect("Couldn\'t compile") }
+					{ &mir_fun->throwOnFail("Couldn\'t compile") }
 				);
 				m.insertLirFunction(lir_fun);
 			}

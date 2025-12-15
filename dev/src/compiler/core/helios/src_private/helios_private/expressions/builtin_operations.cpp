@@ -33,7 +33,7 @@ namespace {
 		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
 		if (lhs_to_rhs.hasValue()) {
 			return std::make_tuple(
-				rhs_type, std::move(lhs_to_rhs.value()), Coercion::emptyCoercion(rhs_type)
+				rhs_type, std::move(lhs_to_rhs.valueOrThrow()), Coercion::emptyCoercion(rhs_type)
 			);
 		}
 
@@ -41,7 +41,7 @@ namespace {
 		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
 		if (rhs_to_lhs.hasValue()) {
 			return std::make_tuple(
-				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.value())
+				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.valueOrThrow())
 			);
 		}
 

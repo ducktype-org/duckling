@@ -60,6 +60,7 @@ namespace compiler::driver {
 		({
 			.used_hashes             = query::UsedHashes::StableHash,
 			.can_be_loaded_from_disk = true,
+			.uses_qresult            = false,
 		})
 	);
 }
