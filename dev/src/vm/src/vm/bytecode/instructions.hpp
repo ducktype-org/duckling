@@ -10,7 +10,8 @@
  * resulting in a quadratic number of templates getting instantiated when e.g. visiting a variant.)
  *
  * This code uses a lot of X-macros, making it somewhat unwieldy, but strives to provide a usable
- * interface so that `Instruction` can be manipulated with plain C++ without having to use too many macros outside this file. In particular it offers:
+ * interface so that `Instruction` can be manipulated with plain C++ without having to use too many
+ * macros outside this file. In particular it offers:
  * - `Instruction::kind() -> InstructionKind`
  * - `Instruction::name() -> StrID`
  * - `Instruction::get<ConcreteInstructionType>() -> ConcreteInstructionType`
@@ -73,6 +74,8 @@ namespace vm::code {
 #define ARG_TYPE_LIST(type, name)            , type
 
 		// Concrete instruction type
+		// Be careful when editing: notice that many things have to be seperately defined
+		// for `Comment` as it's not an instruction defined in the definition file.
 #define HANDLE_INSTR_ARGS(name, ...)                                                                \
 	struct Op_##name final: detail::InstructionBase {                                               \
 		/* Aliases useful in templates */                                                           \
