@@ -3,6 +3,7 @@
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
+
 #include "base/collections/optional.hpp"
 
 #include "string_id/string_id.hpp"
@@ -11,6 +12,7 @@
 
 namespace compiler::backend_vm::internal {
 	class FunctionLoweringContext;
+
 	/**
 	 * @brief Names of comptime type operation functions in DVM.
 	 */
@@ -33,9 +35,8 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a meta operation instruction to DVM bytecode.
 		 */
-        // TODOP: this could take in only the MetaOperation
 		void lower(
-			const MetaOperation&         lir_instruction,
+			const MetaOperation&            lir_instruction,
 			const std::deque<DVMValue>&     args,
 			const base::Optional<DVMValue>& output
 		);

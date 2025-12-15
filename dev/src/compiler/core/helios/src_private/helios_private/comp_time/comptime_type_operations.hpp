@@ -14,64 +14,22 @@
 
 namespace compiler::helios::comptime_ops {
 	/**
-	 * @brief Builder for constructing variant types.
+	 * @brief Generates the collection of VM code and external bindings required for compile-time
+	 * type operations.
+	 *
+	 * It constructs a code collection that includes:
+	 * 1. **Global Data**: specifically `__comptime_query_ctx`, which holds the opaque pointer to
+	 * the compiler's `query::Context`, used to call the Type System
+	 * 2. **Initialization Functions**: `__comptime_set_ctx`, used to inject the C++ query context
+	 *    into DVMs memory.
+	 * 3. **External C Functions**: A set of external C++ function available for calling from the VM.
+	 *
+	 *
+	 * @param pid The Process ID (PID) of the target VM instance. This is required to associate
+	 *            the external C functions with the correct VM memory/process context.
+	 *
+	 * @return vm::code::CodeCollection containing the necessary globals, functions, and external
+	 * function definitions ready to be loaded into the VM.
 	 */
-	struct VariantTypeBuilder {
-		std::vector<tsh::SymbolType<>> subtypes;
-
-		tsh::SymbolType<> produce(query::Context& ctx) {
-			return tsh::SymbolType<>{
-				ctx.query<tsh::QueryVariantType>({ subtypes }),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-		}
-	};
-
-	/**
-	 * @brief Builder for constructing tuple types.
-	 */
-	struct TupleTypeBuilder {
-		std::vector<tsh::SymbolType<>> subtypes;
-
-		tsh::SymbolType<> produce(query::Context& ctx) {
-			return tsh::SymbolType<>{
-				ctx.query<tsh::QueryTupleType>({ subtypes }),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-		}
-	};
-
-	/**
-	 * @brief Builder for constructing function types.
-	 */
-	struct FunctionTypeBuilder {
-		base::Optional<tsh::SymbolType<>> return_type;
-		std::vector<tsh::SymbolType<>>    arg_types;
-
-		tsh::SymbolType<> produce(query::Context& ctx) {
-			return tsh::SymbolType<>{
-				ctx.query<tsh::QueryFunctionType>({ arg_types, return_type.value() }),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
-		}
-	};
-
-	/**
-	 * @brief Builder for constructing struct types.
-	 * TODOP: Maybe remove in this PR
-	 */
-	struct StructTypeBuilder {
-		struct Field {
-			base::StrID       name;
-			tsh::SymbolType<> type;
-		};
-
-		std::vector<Field> fields;
-	};
-
-	// TODOP: Comment.
 	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid);
 }

@@ -267,7 +267,6 @@ namespace compiler::mir {
 			auto       sub_result = lowerSubExpr(*expr.base, continuation);
 			const auto sub_begin  = sub_result.begin;
 			auto       sub_value  = sub_result.getResult(function);
-			// TODOP: Reflection operator issue.
 
 			variant_match(std::move(sub_value.getVariant())) {
 				variant_case(MIRPlace, place) {

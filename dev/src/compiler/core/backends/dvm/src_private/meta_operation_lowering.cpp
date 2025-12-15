@@ -121,7 +121,6 @@ namespace compiler::backend_vm::internal {
 			{ ctx, builder_value },
 			output
 		);
-		// TODOP: Deinit builders?
 	}
 
 	DVMValue MetaOperationLowerer::getQueryContext() {

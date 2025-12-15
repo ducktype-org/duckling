@@ -44,7 +44,6 @@ fun megaType(a: type) -> type = {
 }
 const megaGigaType = megaType(i128);
 
-# # TODOP: This doesn't work since we don't look for tuples
 # fun megaMegaType(a: type) -> type = {
 #     var c: type = ((), a, createBox(i32), (i16, f16), i64 | (f64, f128));
 #     return c;

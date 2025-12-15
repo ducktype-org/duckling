@@ -33,6 +33,45 @@
 #include "vm/bytecode/instructions.hpp"
 
 namespace compiler::helios::comptime_ops {
+	namespace {
+		/**
+		 * @brief Builders for constructing types with a variadic number of subtypes.
+		 * Since DVM doesn't support functions taking a variadic number of arguments, complex types
+		 * (with an arbitrary number of arguments) are built with help of builders.
+		 * They are used as follows:
+		 *	```
+		 *	builder_ptr = __comptime_X_builder_new()
+		 *	__comptime_X_builder_push(type_ptr)
+		 *	(...)
+		 *	__comptime_X_builder_push(type_ptr)
+		 *	new_type_ptr = __comptime_X_builder_finalize
+		 *	```
+		 */
+		struct VariantTypeBuilder {
+			std::vector<tsh::SymbolType<>> subtypes;
+
+			tsh::SymbolType<> produce(query::Context& ctx) {
+				return tsh::SymbolType<>{
+					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
+		};
+
+		struct TupleTypeBuilder {
+			std::vector<tsh::SymbolType<>> subtypes;
+
+			tsh::SymbolType<> produce(query::Context& ctx) {
+				return tsh::SymbolType<>{
+					ctx.query<tsh::QueryTupleType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
+		};
+	}
+
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
@@ -70,15 +109,6 @@ namespace compiler::helios::comptime_ops {
 		auto* result = new tsh::SymbolType<>(new_type);
 		return result;
 	}
-
-	// TODOP: Optionals
-	// DEF_VM_EXT_C_FUNC(
-	// 	tsh::SymbolType<>*,
-	// 	"opaque_ptr",
-	// 	__comptime_create_optional,
-	// 	(query::Context*, "opaque_ptr", ctx_ptr),
-	// 	(tsh::SymbolType<>*, "opaque_ptr", type_ptr),
-	// ) {}
 
 	DEF_VM_EXT_C_FUNC(
 		i64,
@@ -160,62 +190,11 @@ namespace compiler::helios::comptime_ops {
 		return result;
 	}
 
-	DEF_VM_EXT_C_FUNC(
-		FunctionTypeBuilder*,
-		"opaque_ptr",
-		__comptime_func_type_builder_new  // NOLINT(readability-identifier-naming)
-
-	) {
-		auto* builder = new FunctionTypeBuilder();
-		return builder;
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		void,
-		"void",
-		__comptime_func_type_builder_set_ret_type,  // NOLINT(readability-identifier-naming)
-
-		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
-		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
-	) {
-		CORE_ASSERT(!builder_ptr->return_type, "Return type set twice");
-		builder_ptr->return_type = *type_ptr;
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		void,
-		"void",
-		__comptime_func_type_builder_push_arg,  // NOLINT(readability-identifier-naming)
-
-		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr),
-		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
-	) {
-		builder_ptr->arg_types.push_back(*type_ptr);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::SymbolType<>*,
-		"opaque_ptr",
-		__comptime_func_type_builder_finalize,  // NOLINT(readability-identifier-naming)
-
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(FunctionTypeBuilder*, "opaque_ptr", builder_ptr)
-	) {
-		CORE_ASSERT(builder_ptr->return_type, "Return type not set");
-		auto  func_type = builder_ptr->produce(*ctx_ptr);
-		auto* result    = new tsh::SymbolType<>(func_type);
-		delete builder_ptr;
-		return result;
-	}
-
 	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
 		return {
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_box, __comptime_create_box, pid),
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_ref, __comptime_create_ref, pid),
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_const, __comptime_create_const, pid),
-			// TODOP: Optionals now?
-			// VM_INSTANCE_EXT_C_FUNC(__comptime_create_optional, __comptime_create_optional, pid),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_get_size, __comptime_get_size, pid),
 			VM_INSTANCE_EXT_C_FUNC(__comptime_tuple_builder_new, __comptime_tuple_builder_new, pid),
 			VM_INSTANCE_EXT_C_FUNC(
 				__comptime_tuple_builder_push, __comptime_tuple_builder_push, pid
@@ -231,20 +210,6 @@ namespace compiler::helios::comptime_ops {
 			),
 			VM_INSTANCE_EXT_C_FUNC(
 				__comptime_variant_builder_finalize, __comptime_variant_builder_finalize, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_func_type_builder_new, __comptime_func_type_builder_new, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_func_type_builder_set_ret_type,
-				__comptime_func_type_builder_set_ret_type,
-				pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_func_type_builder_push_arg, __comptime_func_type_builder_push_arg, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_func_type_builder_finalize, __comptime_func_type_builder_finalize, pid
 			),
 		};
 	}
