@@ -300,6 +300,9 @@ namespace query {
 			return {};
 		}
 
+		/**
+		 * @brief Access the value, panic on no value.
+		 */
 		constexpr const ResTp& valueOrPanic() const& {
 			if (hasError()) CORE_PANIC("Result is empty.");
 			return storage.value();
@@ -356,7 +359,9 @@ namespace query {
 		constexpr ErrorType&& error() && { return storage.error(); }
 
 		/**
-		 * @brief Access the value, throw the error if no value.
+		 * @brief Access the value, throw the query failed exception if no value.
+		 * This kind of exception can be cought by the query framework.
+		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
 		constexpr const ResTp& valueOrThrow() const& {
 			if (hasError()) throw query::QueryFailedException("Result is empty.");

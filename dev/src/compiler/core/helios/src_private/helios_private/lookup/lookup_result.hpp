@@ -16,6 +16,9 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Possible errors during lookupExpectUnique.
+	 */
 	namespace errors {
 		class Ambiguity final {};
 
