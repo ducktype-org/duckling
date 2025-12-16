@@ -34,52 +34,43 @@ namespace query {
 	 * which semantically represent opaque failure of a query.
 	 * Query framework is aware of this type and can handle/use it specially.
 	 */
-	template<class MainValue, class... ErrorValues>
-	requires(!std::is_reference_v<MainValue>) class QResult final {
+	template<class PrimaryValue, class... SecondaryValues>
+	class QResult final {
 	private:
 
 		static_assert(
-			(... && (!std::is_reference_v<ErrorValues>)),
+			(!std::is_reference_v<PrimaryValue>) && 
+			(... && (!std::is_reference_v<SecondaryValues>)),
 			"ErrorValues types should not be references (use CRef instead)"
 		);
 
 		static_assert(
-			(... && (!std::is_same_v<ErrorValues, query::Failed>)),
+			(!std::is_same_v<PrimaryValue, query::Failed>) && 
+			(... && (!std::is_same_v<SecondaryValues, query::Failed>)),
 			"query::Failed should not be used as an ErrorValue type, it is implicitly represented separately"
 		);
 
-		/**
-		 * This type is only used to fill the variant when there are no ErrorValues.
+		constexpr static bool USES_VARIANT = sizeof...(SecondaryValues) > 0;
+
+		/** 
+		 * Main value type of QResult.
 		 */
-		struct DummyType final {};
+		using ValueType = std::conditional_t<
+			USES_VARIANT,
+			PrimaryValue,
+			std::variant<PrimaryValue, SecondaryValues...>
+		>;
 
-	    /**
-		 * @note This could be made a simple type when sizeof...(ErrorValues) == 0 or == 1,
-		 * but for uniformity of the code we always use the variant-based implementation.
-		 */
-		using ErrorVariantType = std::variant<ErrorValues..., DummyType>;
-
-		using ResultType = MainValue;
-
-		struct MainResultHolder final {
-			MainValue value;
-		};
-
-		struct ErrorResultHolder final {
-			ErrorVariantType error;
-		};
-
-
+	
 	public:
-
 		
 		/**
 		 * @brief MainValue state constructor.
 		 */
 		template<class... Args>
-		requires std::is_constructible_v<MainValue, Args...>
+		requires std::is_constructible_v<ValueType, Args...>
 		QResult(Args&&... args):
-			storage(std::in_place_type_t<MainResultHolder>(), std::forward<Args>(args)...) {}
+			storage(std::in_place, std::forward<Args>(args)...) {}
 
 
 		/**
@@ -280,7 +271,7 @@ namespace query {
 
 	private:
 
-		std::variant<MainResultHolder, ErrorResultHolder, query::Failed> storage;
+		std::variant<ValueType, query::Failed> storage;
 	};
 
 	template<typename T>
