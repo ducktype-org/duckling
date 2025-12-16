@@ -17,7 +17,7 @@ namespace compiler::mir {
 		u64 queryUnstablePerfectHash() const;
 	};
 
-	using LowerToMIRFunctionResult = query::QResult<Function, query::Failed>;
+	using LowerToMIRFunctionResult = query::QResult<Function>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
@@ -33,7 +33,7 @@ namespace compiler::mir {
 		u64 queryUnstablePerfectHash() const;
 	};
 
-	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function, query::Failed>;
+	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function>;
 
 	/**
 	 * @brief Creates a ctor function for a global data.

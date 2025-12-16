@@ -37,6 +37,17 @@ namespace query {
 	template<class MainValue, class... ErrorValues>
 	requires(!std::is_reference_v<MainValue>) class QResult final {
 	private:
+
+		static_assert(
+			(... && (!std::is_reference_v<ErrorValues>)),
+			"ErrorValues types should not be references (use CRef instead)"
+		);
+
+		static_assert(
+			(... && (!std::is_same_v<ErrorValues, query::Failed>)),
+			"query::Failed should not be used as an ErrorValue type, it is implicitly represented separately"
+		);
+
 		/**
 		 * This type is only used to fill the variant when there are no ErrorValues.
 		 */
@@ -150,7 +161,7 @@ namespace query {
 		 * @brief Checks if QResult is in Failed state.
 		 */
 		[[nodiscard]]
-		constexpr bool isFailed() const {
+		constexpr bool hasFailed() const {
 			return std::holds_alternative<query::Failed>(storage);
 		}
 

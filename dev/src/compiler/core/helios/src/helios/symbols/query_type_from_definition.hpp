@@ -9,7 +9,7 @@
 
 namespace compiler::helios {
 
-	using QueryTypeFromDefinition_Result = query::QResult<tsh::SymbolType<>, query::Failed>;
+	using QueryTypeFromDefinition_Result = query::QResult<tsh::SymbolType<>>;
 
 	/**
 	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).

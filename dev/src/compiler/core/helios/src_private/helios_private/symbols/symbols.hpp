@@ -65,14 +65,14 @@ namespace compiler::helios {
 		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
 	);
 
-	using QueryDealias_Result = query::QResult<SymbolList, query::Failed>;
+	using QueryDealias_Result = query::QResult<SymbolList>;
 
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
-	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue, query::Failed>;
+	using QueryConstValueOf_Result = query::QResult<ctv::CompileTimeValue>;
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

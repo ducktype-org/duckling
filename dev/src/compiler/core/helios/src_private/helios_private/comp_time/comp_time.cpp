@@ -33,7 +33,7 @@ namespace compiler::helios {
 		 */
 		struct CouldNotShortPath {};
 
-		using TreeEvalResult = query::QResult<CompileTimeValue, CouldNotShortPath, query::Failed>;
+		using TreeEvalResult = query::QResult<CompileTimeValue, CouldNotShortPath>;
 
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
@@ -408,11 +408,11 @@ namespace compiler::helios {
 
 				for (auto& sub_expr: expr.elements) {
 					const auto ctv_element_result = evalHoutExpr(ctx, sub_expr.ref());
-					if (ctv_element_result.hasError()) {
-						result = query::QError(query::Failed(ctv_element_result.error()));
+					if (ctv_element_result.hasFailed()) {
+						result = query::Failed();
 						return;
 					}
-					ctv_elements.emplace_back(ctv_element_result.valueOrThrow());
+					ctv_elements.emplace_back(ctv_element_result.valueOrPanic());
 				}
 
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
