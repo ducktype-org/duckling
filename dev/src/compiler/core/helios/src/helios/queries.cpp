@@ -169,11 +169,12 @@ namespace compiler::helios {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
 						)
+						                .optValue()
 						                .expect(
 											"Not handling errors here yet... (return type "
 											"collector: single expr function body)"
 										);
-						output(expr->expression_type.getSymbolType());
+						output(expr->get()->expression_type.getSymbolType());
 					} else {
 						ctx.log(makeBox<
 								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
@@ -200,8 +201,9 @@ namespace compiler::helios {
 			void visitReturn(pst::Access<pst::Return> stmt) final {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
+					                .optValue()
 					                .expect("Not handling errors here yet... (return collector)");
-					output(expr->expression_type.getSymbolType());
+					output(expr->get()->expression_type.getSymbolType());
 				}
 			}
 
@@ -579,7 +581,7 @@ namespace compiler::helios {
 					);
 					CORE_PANIC("Return expression of invalid type");
 				}
-				auto coerced_expr = coercion.value().coerce(ctx, std::move(expr));
+				auto coerced_expr = coercion.optValue().value()->coerce(ctx, std::move(expr));
 
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(coerced_expr)));
 				return block;
@@ -638,7 +640,7 @@ namespace compiler::helios {
 						));
 						CORE_PANIC("Return expression of invalid type");
 					}
-					auto coerced_expr = coercion.value().coerce(ctx, std::move(expr));
+					auto coerced_expr = coercion.optValue().value()->coerce(ctx, std::move(expr));
 
 					output(code::ReturnStmt(std::move(coerced_expr)));
 				} else {

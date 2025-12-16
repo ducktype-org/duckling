@@ -43,7 +43,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Query function return type, deduced based on return statements in its body.
 	 */
-	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<tsh::SymbolType<>>, ({}))
+	DECLARE_QUERY(
+		QueryReturnTypeDeduction, SymID, CRef<tsh::SymbolType<>>, ({ .uses_qresult = false })
+	)
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.

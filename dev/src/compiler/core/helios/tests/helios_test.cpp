@@ -1195,11 +1195,9 @@ private:
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
 				auto ret_expr    = stmt_casted->value.get();
 				auto ctv
-					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr });
-				ASSERT_TRUE(ctv.hasValue());
-				ASSERT_EQUAL(
-					1, ctv.value().get<compiler::numeric_value::NumericValue>()->get<i64>()
-				);
+					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr })
+				          .valueOrThrow();
+				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
 		}
 	}
