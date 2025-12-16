@@ -84,7 +84,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<SymbolList, query::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,

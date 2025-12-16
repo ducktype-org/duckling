@@ -282,7 +282,7 @@ namespace compiler::helios::code {
 	 * @return QError if validation fails (duplicate names, positional after named, or expression
 	 * error)
 	 */
-	query::QResult<std::monostate, PositionalAfterNamedArgument, query::Failed> fillCallArgs(
+	query::QResult<std::monostate, PositionalAfterNamedArgument> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -416,7 +416,7 @@ namespace compiler::helios::code {
 			main_msg->attachMessage(std::move(first_candidate_msg).value());
 	}
 
-	query::QResult<Box<CallExpr>, query::Failed> processFunctionCall(
+	query::QResult<Box<CallExpr>> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr

@@ -233,7 +233,7 @@ namespace compiler::helios::code {
 		 * @return Candidates after resolution of functions vs call operators.
 		 */
 		[[nodiscard]]
-		query::QResult<std::vector<SymID>, query::Failed> getCallableCandidates(
+		query::QResult<std::vector<SymID>> getCallableCandidates(
 			const std::vector<SymID>& looked_up_callees
 		) const {
 			// If all candidates are functions, return them as is.
@@ -288,7 +288,7 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ChainState, query::Failed> {
+		) -> query::QResult<ChainState> {
 			if (call_expr->getType() != lexer::Token::Round) {
 				throw base::NotYetImplemented(base::strConcat(
 					"HOUT call with invalid bracket type: ", char(call_expr->getType())
@@ -325,7 +325,7 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
-		) -> query::QResult<ChainState, query::Failed> {
+		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
 			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			if (hout_expr.hasError()) return query::Failed();
@@ -369,7 +369,7 @@ namespace compiler::helios::code {
 		 * like "foo.bar.c".
 		 */
 		auto processPSTExpr(pst::Access<pst::expr::IdentifierLiteral> ident)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
@@ -398,7 +398,7 @@ namespace compiler::helios::code {
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			if (expr.hasError()) return query::Failed();
 			auto hout_expr = std::move(expr).valueOrThrow();
@@ -412,7 +412,7 @@ namespace compiler::helios::code {
 		 * for example we have two call expr like a[i]() or b()()
 		 */
 		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			// @note this function is not run yet.
 
 			// @note: previous mock-implementation of this function
@@ -431,7 +431,7 @@ namespace compiler::helios::code {
 		 * Call on the namespace, for example Namespace()
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			(void) namespace_like_symbol;
 			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
 				call_expr->getSourcePosition(), base::strConcat("Namespace is not callable")
@@ -445,7 +445,7 @@ namespace compiler::helios::code {
 		 * Should check if accessed field is a namespace or not.
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
@@ -484,7 +484,7 @@ namespace compiler::helios::code {
 		 * like "(...).NS.value"
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			const auto& lookup_result
 				= HInterface::ofSymbol(namespace_like_symbol)
 			          .lookupExpectUnique(
@@ -511,7 +511,7 @@ namespace compiler::helios::code {
 		 * parameter overload is possible.
 		 */
 		auto processPSTExpr(base::Box<Expr>, pst::Access<pst::expr::Access>, pst::Access<pst::expr::Call>)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			throw base::NotYetImplemented(
 				"Helios chain expr: call on access expr not implemented yet"
 			);
@@ -527,7 +527,7 @@ namespace compiler::helios::code {
 			SymID                          namespace_like_symbol,
 			pst::Access<pst::expr::Access> expr_access,
 			pst::Access<pst::expr::Call>   call_expr
-		) -> query::QResult<ChainState, query::Failed> {
+		) -> query::QResult<ChainState> {
 			auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
@@ -558,7 +558,7 @@ namespace compiler::helios::code {
 		 * lookup result of the name.
 		 */
 		auto processNamespaceOrValue(const SymID& symbol)
-			-> query::QResult<ChainState, query::Failed> {
+			-> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
@@ -586,7 +586,7 @@ namespace compiler::helios::code {
 		base::Optional<query::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
-			auto res = [&]() -> query::QResult<ChainState, query::Failed> {
+			auto res = [&]() -> query::QResult<ChainState> {
 				if (this->current_state.isExpr()) {
 					auto expr = this->current_state.getExpr();
 					return processPSTExpr(std::move(expr), current_element_value);
@@ -609,7 +609,7 @@ namespace compiler::helios::code {
 		base::Optional<query::Failed> step() {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
-			auto res                   = [&]() -> query::QResult<ChainState, query::Failed> {
+			auto res                   = [&]() -> query::QResult<ChainState> {
                 if (this->current_state.isExpr()) {
                     auto expr = this->current_state.getExpr();
                     return processPSTExpr(
@@ -674,7 +674,7 @@ namespace compiler::helios::code {
 		 * Main function of the ChainExprConstruction with the loop.
 		 * Performs the construction of the chain expression from the chain elements.
 		 */
-		query::QResult<base::Box<Expr>, query::Failed> run() {
+		query::QResult<base::Box<Expr>> run() {
 			base::Optional<query::Failed> error{};
 			this->index = 0;
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()

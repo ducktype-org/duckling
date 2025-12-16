@@ -478,7 +478,7 @@ DECLARE_QUERY(
 
 struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
 	static auto provide(Context&, QKey) -> PResult {
-		query::QResult<u64, query::Failed> res = query::Failed();
+		query::QResult<u64> res = query::Failed();
 		return res.valueOrThrow();
 	}
 
@@ -499,7 +499,7 @@ DECLARE_QUERY(
 
 struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
 	static auto provide(Context&, QKey) -> PResult {
-		query::QResult<u64, query::Failed> res = query::Failed();
+		query::QResult<u64> res = query::Failed();
 		return res.valueOrThrow();
 	}
 
@@ -855,7 +855,7 @@ private:
 
 		assertThrows<query::QueryFailedException>(
 			[] {
-				query::QResult<u64, query::Failed> res = query::Failed();
+				query::QResult<u64> res = query::Failed();
 				res.valueOrThrow();
 			},
 			"QueryFailedException not thrown as expected"
@@ -863,7 +863,7 @@ private:
 
 		assertThrows<base::Panic>(
 			[] {
-				query::QResult<u64, query::Failed> res = query::Failed();
+				query::QResult<u64> res = query::Failed();
 				res.valueOrPanic();
 			},
 			"Panic not thrown as expected"

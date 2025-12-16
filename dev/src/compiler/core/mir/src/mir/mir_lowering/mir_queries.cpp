@@ -174,7 +174,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::QResult<Function, query::Failed> finalizeFunctionEnd(query::Context&, Function function) {
+	query::QResult<Function> finalizeFunctionEnd(query::Context&, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
