@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vm/api/data/process_info.hpp"
-#include "vm/bytecode/bytecode.hpp"
+#include <vm/api/data/process_info.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::helios::comptime_ops {
 	/**
