@@ -21,17 +21,24 @@ namespace compiler::helios {
 	/**
 	 * @brief Query FULL HOUTUnit of single module
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, HOUTUnit, ({}))
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, HOUTUnit, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
 	 */
-	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleID, std::vector<HOUTUnit>, ({}))
+	DECLARE_QUERY(
+		QueryModuleHOUTRecursively,
+		frontend::ModuleID,
+		std::vector<HOUTUnit>,
+		({ .uses_qresult = false })
+	)
 
 	/**
 	 * @brief Debug/testing query for extracting top-level functions and constants from module
 	 */
-	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<HOUTUnit>, ({}))
+	DECLARE_QUERY(
+		QueryTopLevelEntities, frontend::ModuleID, CRef<HOUTUnit>, ({ .uses_qresult = false })
+	)
 
 	/**
 	 * @brief Query function return type, deduced based on return statements in its body.
@@ -43,11 +50,11 @@ namespace compiler::helios {
 	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
 	 * be it user-defined, extern, built-in, or generated.
 	 */
-	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<HOUTFunctionDeclaration>, ({}));
+	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<HOUTFunctionDeclaration>, ({ .uses_qresult = false }));
 
 	/**
 	 * @brief Query code of a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 */
-	DECLARE_QUERY(QueryCodeOfFun, SymID, HOUTFunction, ({}));
+	DECLARE_QUERY(QueryCodeOfFun, SymID, HOUTFunction, ({ .uses_qresult = false }));
 }

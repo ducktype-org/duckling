@@ -25,7 +25,7 @@ namespace base {
 	 * Generates a stack trace, in the form of string.
 	 * Currently used only in Panic, but can be usefull for debug.
 	 */
-	std::string getCurrentStackTrace();
+	std::string getCurrentStackTrace(u16 max_depth = 0);
 
 	/**
 	 * @brief Exception intended to replace c++ assert errors for additional functionalities.

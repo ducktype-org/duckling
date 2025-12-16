@@ -207,7 +207,7 @@ namespace compiler::mir {
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
 		result.access_chain.push_back(field);
-		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
+		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
 

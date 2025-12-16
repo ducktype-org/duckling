@@ -25,7 +25,7 @@ namespace compiler::helios {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
-			void setError(const errors::Failed& error) {
+			void setError(const query::Failed& error) {
 				symbol_type_qresult = query::QError(error);
 			}
 
@@ -52,7 +52,7 @@ namespace compiler::helios {
 				if (type_ctv.hasError()) {
 					setError(type_ctv.error());
 				} else {
-					setTypeOfSymbol(type_ctv.value().get<tsh::SymbolType<>>()->withMutability(
+					setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>()->withMutability(
 						expected_mutability
 					));
 				}
@@ -61,8 +61,8 @@ namespace compiler::helios {
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			query::QResult<tsh::SymbolType<>, errors::Failed> symbol_type_qresult
-				= query::QError(errors::Failed());
+			query::QResult<tsh::SymbolType<>, query::Failed> symbol_type_qresult
+				= query::QError(query::Failed());
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {
@@ -75,10 +75,10 @@ namespace compiler::helios {
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
 					if (parsed.hasError()) {
-						setError(errors::Failed());
+						setError(query::Failed());
 						return;
 					}
-					const auto& expr_type = parsed.value()->expression_type;
+					const auto& expr_type = parsed.valueOrThrow()->expression_type;
 					setTypeOfSymbol(
 						expr_type.getSymbolType().withMutability(tsh::Mutability::Immutable)
 					);
@@ -102,7 +102,7 @@ namespace compiler::helios {
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
 					if (parsed.hasValue()) {
-						const auto& expr_type = parsed.value()->expression_type;
+						const auto& expr_type = parsed.valueOrThrow()->expression_type;
 						setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
 					} else
 						throw base::NotYetImplemented(

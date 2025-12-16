@@ -94,8 +94,8 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
 
-			auto& c_ctor
-				= ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })->value();
+			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
+			                   ->valueOrThrow();
 			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
@@ -210,7 +210,7 @@ private:
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
@@ -255,7 +255,7 @@ private:
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
@@ -271,7 +271,7 @@ private:
 			ASSERT_EQUAL(2, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// note: it might change where those branch operations are placed:
@@ -287,7 +287,7 @@ private:
 
 			// Don't go into details of the second function. Just validate block IDs.
 			auto& goo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
 			ASSERT_TRUE(goo_mir.validateBlockIDs().isOk());
 		});
 	}
@@ -301,7 +301,7 @@ private:
 			ASSERT_EQUAL(3, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
@@ -336,7 +336,8 @@ private:
 			auto  unit     = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& main_fun = unit->functions.at(0);
 			ASSERT_EQUAL(main_fun.declaration->original_name, base::StrID("main"));
-			auto& main_mir = ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->value();
+			auto& main_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->valueOrThrow();
 
 			auto        entry_block_id = main_mir.block_order.front();
 			const auto& entry_block    = main_mir.blocks[entry_block_id];
@@ -385,7 +386,7 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 
 			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			auto i16_type = ctx.query<QueryIntegralType>(16);
@@ -460,7 +461,7 @@ private:
 			);
 
 			auto& should_add_retvoid_fun
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
 			should_add_retvoid_fun.validateBlockIDs();
 			std::stringstream foo_str;
 			should_add_retvoid_fun.debugPrint(foo_str);
@@ -471,13 +472,13 @@ private:
 
 
 			auto& unreachable_end_fun
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			unreachable_end_fun.validateBlockIDs();
 			unreachable_end_fun.debugPrint(foo_str);
 			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
 
 			auto& empty
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->value();
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
 		});
 	}
@@ -496,7 +497,7 @@ private:
 				if (fun.declaration->original_name.str() == "good1") {
 					auto& mir_rep_good1 = (compiler::mir::Function&) ctx
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->value();
+					                          ->valueOrThrow();
 
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good1.local_list[2]);
@@ -511,7 +512,7 @@ private:
 				if (fun.declaration->original_name.str() == "good2") {
 					auto& mir_rep_good2 = (compiler::mir::Function&) ctx
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->value();
+					                          ->valueOrThrow();
 
 					mir_rep_good2.debugPrint(std::cout);
 
@@ -539,7 +540,7 @@ private:
 				if (fun.declaration->original_name.str() == "good3") {
 					auto& mir_rep_good3 = (compiler::mir::Function&) ctx
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->value();
+					                          ->valueOrThrow();
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
 
@@ -553,7 +554,7 @@ private:
 				if (fun.declaration->original_name.str() == "good4") {
 					auto& mir_rep_good4 = (compiler::mir::Function&) ctx
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->value();
+					                          ->valueOrThrow();
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good4.local_list[2]);
 
@@ -567,7 +568,7 @@ private:
 				if (fun.declaration->original_name.str() == "bad1") {
 					auto& mir_rep_bad1 = (compiler::mir::Function&) ctx
 					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->value();
+					                         ->valueOrThrow();
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad1.local_list[2]);
 
@@ -581,7 +582,7 @@ private:
 				if (fun.declaration->original_name.str() == "bad2") {
 					auto& mir_rep_bad2 = (compiler::mir::Function&) ctx
 					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->value();
+					                         ->valueOrThrow();
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad2.local_list[2]);
 					mir_rep_bad2.blocks[mir_rep_bad2.block_order[1]]
@@ -594,7 +595,7 @@ private:
 				if (fun.declaration->original_name.str() == "bad3") {
 					auto& mir_rep_bad3 = (compiler::mir::Function&) ctx
 					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->value();
+					                         ->valueOrThrow();
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad3.local_list[2]);
 					mir_rep_bad3.blocks[mir_rep_bad3.block_order[1]]

@@ -76,7 +76,7 @@ namespace compiler::helios {
 
 			const auto class_type
 				= ctx.query<QueryTypeFromDefinition>(class_sym)
-			          ->expect("Not handling errors here yet... (generating class constructor)")
+			          ->throwOnFail("Not handling errors here yet... (generating class constructor)")
 			          .getType()
 			          .as<tsh::ClassAbstractType>();
 			const auto implicit_ctor
@@ -281,7 +281,7 @@ namespace compiler::helios {
 						// we just fail here, because we can't continue without type
 						return;
 					}
-					ret_type = ret_type_ctv.value().get<tsh::SymbolType<>>().value();
+					ret_type = ret_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 				}
 				// Deduce return type if not provided.
 				else {
@@ -304,7 +304,7 @@ namespace compiler::helios {
 
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name, param_type->value(), std::nullopt, param_symbol
+							param_name, param_type->valueOrThrow(), std::nullopt, param_symbol
 						);
 					} else {
 						auto initial_value
@@ -318,8 +318,8 @@ namespace compiler::helios {
 
 						parameters.emplace_back(
 							param_name,
-							param_type->value(),
-							std::move(initial_value.value()),
+							param_type->valueOrThrow(),
+							std::move(initial_value.valueOrThrow()),
 							param_symbol
 						);
 					}
@@ -353,7 +353,7 @@ namespace compiler::helios {
 
 			// Get class data
 			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-			                            ->expect(
+			                            ->throwOnFail(
 											"Not handling errors here yet... (getting "
 											"declaration of generated constructor symbol)"
 										)
@@ -396,7 +396,7 @@ namespace compiler::helios {
 					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
 						return ctx
 					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
-					        .expect(
+					        .throwOnFail(
 								"Not handling errors here yet..."
 								"(getting field init expr for implicit ctor)"
 							);
@@ -409,7 +409,7 @@ namespace compiler::helios {
 						  const auto coercion
 							  = canCoerce(ctx, init_expr_type, field_type)
 					                // @TODO: #1620 report error here when HOUT exposes position.
-					                .expect(base::strConcat(
+					                .throwOnFail(base::strConcat(
 										"Cannot coerce default field value of type ",
 										init_expr_type.toString(),
 										" to the field's expected type ",
@@ -431,7 +431,7 @@ namespace compiler::helios {
 
 			// Check that this logic did not diverge from `GeneratedSymbolData::getType()`.
 			const auto expected_function_type = ctx.query<QueryTypeOfSymbol>({ ctor_symbol })
-			                                        ->value()
+			                                        ->valueOrThrow()
 			                                        .getType()
 			                                        .as<tsh::FunctionAbstractType>();
 			CORE_ASSERT(
@@ -483,7 +483,7 @@ namespace compiler::helios {
 			}
 			case SymbolKind::BuiltinFunction: {
 				const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
-				                              ->expect(
+				                              ->throwOnFail(
 												  "Not handling errors here yet... (getting "
 												  "declaration of builtin function)"
 											  )
@@ -559,7 +559,8 @@ namespace compiler::helios {
 			if (as_expr) {
 				auto expr
 					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet... (single expr function body)");
+				          .throwOnFail("Not handling errors here yet... (single expr function body)"
+				          );
 
 				// handle type check and coercion
 				auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
@@ -618,7 +619,7 @@ namespace compiler::helios {
 			void visitReturn(pst::Access<pst::Return> stmt) override {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
-					                .expect("Not handling errors here yet... (return expr)");
+					                .throwOnFail("Not handling errors here yet... (return expr)");
 
 					// handle type check and coercion
 					auto coercion
@@ -658,10 +659,10 @@ namespace compiler::helios {
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();
 
-				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).expect(
+				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).throwOnFail(
 					"Not handling errors here yet... (lhs)"
 				);
-				auto new_value_expr = ctx.query<QueryHoutOfExpr>({ val }).expect(
+				auto new_value_expr = ctx.query<QueryHoutOfExpr>({ val }).throwOnFail(
 					"Not handling errors here yet... (rhs)"
 				);
 
@@ -721,7 +722,8 @@ namespace compiler::helios {
 					);
 					return;  // fail
 				}
-				auto new_value_coerced = coercion.value().coerce(ctx, std::move(new_value_expr));
+				auto new_value_coerced
+					= coercion.valueOrThrow().coerce(ctx, std::move(new_value_expr));
 
 				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_coerced)));
 			}
@@ -740,7 +742,7 @@ namespace compiler::helios {
 				// else just create an expression statement:
 
 				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr });
-				if (expr.hasValue()) output(code::ExprStmt(std::move(expr).value()));
+				if (expr.hasValue()) output(code::ExprStmt(std::move(expr).valueOrThrow()));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
@@ -748,7 +750,7 @@ namespace compiler::helios {
 				// for example: `if (let a = ...) {}`.
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet... (If)");
+				          .throwOnFail("Not handling errors here yet... (If)");
 				if (condition->expression_type.getType().getKind() != tsh::Kind::Bool) {
 					auto coercion = canCoerce(
 						ctx,
@@ -759,7 +761,7 @@ namespace compiler::helios {
 					);
 					if (coercion.hasError())
 						CORE_PANIC("Not handling errors here yet... (If condition coercion)");
-					condition = coercion.value().coerce(ctx, std::move(condition));
+					condition = coercion.valueOrThrow().coerce(ctx, std::move(condition));
 				}
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody(), return_type);
@@ -779,7 +781,7 @@ namespace compiler::helios {
 			void visitWhile(pst::Access<pst::While> stmt) override {
 				auto condition
 					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet... (While)");
+				          .throwOnFail("Not handling errors here yet... (While)");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody(), return_type);
 
@@ -789,7 +791,7 @@ namespace compiler::helios {
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
 				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
-				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
 					"Handling errors is not supported in HOUT yet"
 				);
 
@@ -816,7 +818,9 @@ namespace compiler::helios {
 				} else {
 					auto initial_value
 						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
-					          .expect("Not handling errors here yet... (variable initial value)");
+					          .throwOnFail(
+								  "Not handling errors here yet... (variable initial value)"
+							  );
 					// used for error reporting:
 					auto initial_value_type = initial_value->expression_type.getSymbolType();
 					auto coercion           = canCoerce(ctx, initial_value_type, symbol_type);
@@ -845,7 +849,9 @@ namespace compiler::helios {
 					}
 
 					output(code::VariableStmt(
-						coercion.value().coerce(ctx, std::move(initial_value)), symbol_type, symbol
+						coercion.valueOrThrow().coerce(ctx, std::move(initial_value)),
+						symbol_type,
+						symbol
 					));
 				}
 			}
