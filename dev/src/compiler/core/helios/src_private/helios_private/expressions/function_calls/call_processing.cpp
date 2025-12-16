@@ -292,15 +292,14 @@ namespace compiler::helios::code {
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasError()) return query::QError(arg_expr.error());
+			if (arg_expr.hasFailed()) return query::Failed();
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
 			} else {
 				if (!named_arguments.empty())
-					return query::QError(PositionalAfterNamedArgument{ arg_index }
-					);  // Normal argument after named one.
+					return PositionalAfterNamedArgument{ arg_index };  // Normal argument after named one.
 
 				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
 			}
