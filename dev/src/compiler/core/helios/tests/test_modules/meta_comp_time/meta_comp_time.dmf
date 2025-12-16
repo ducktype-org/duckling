@@ -25,21 +25,18 @@ fun megaType(a: type) -> type = {
 }
 const megaGigaType = megaType(i128);
 
+fun fib(n: i64) -> i64 = {
+   if (n < 2i64) { return n; }
+   return fib(n - 1i64) + fib(n - 2i64);
+}
 
-# fun fib(n: i64) -> i64 = {
-#    if (n < 2) { return n; }
-#    return fib(n - 1) + fib(n - 2);
-# }
+fun complexLogic(n: i64) -> type = {
+    if (fib(n) < 15i64) {
+        return createBox(i16);
+    } else {
+        return createRef(i64);
+    }
+}
 
-# fun complexLogic(n: i64) -> type = {
-#     if (fib(n) < 15) {
-#         return createSmallVariant(createBox(i32), i16);
-#     } else {
-#         return createBigVariant(createRef(i64), f16, f128, i32);
-#     }
-# }
-
-# const FIRST = complexLogic(1);
-# const SECOND = complexLogic(3);
-# const THIRD = complexLogic(5);
-# const FOURTH = complexLogic(10);
+const FIRST = complexLogic(5);
+const SECOND = complexLogic(10);
