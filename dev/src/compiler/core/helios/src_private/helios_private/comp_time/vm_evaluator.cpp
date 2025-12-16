@@ -1,7 +1,5 @@
 #include "vm_evaluator.hpp"
 
-#include "helios_private/comp_time/meta_type_memory_manager.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <typesystem/higher/types.hpp>

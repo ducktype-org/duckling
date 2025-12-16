@@ -1,9 +1,5 @@
 #include "comp_time.hpp"
 
-#include "helios/hout/elements/expr.hpp"
-#include "helios/scope_symbol_id.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -19,10 +15,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/collections/optional.hpp"
-
-#include "query_framework/query_errors.hpp"
-#include "query_framework/query_result.hpp"
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
