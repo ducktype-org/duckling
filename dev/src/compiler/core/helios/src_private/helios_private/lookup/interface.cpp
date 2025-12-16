@@ -107,7 +107,7 @@ namespace compiler::helios {
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 
 		const auto& symbols = get_as_single.valueOrThrow();

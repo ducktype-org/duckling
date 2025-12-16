@@ -255,7 +255,7 @@ namespace compiler::helios::code {
 					));
 				}
 				query_ctx.log(std::move(error));
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
@@ -312,7 +312,7 @@ namespace compiler::helios::code {
 						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
 					)
 				);
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 			return ChainState::ofExpr(std::move(res.valueOrThrow()));
 		}
@@ -328,7 +328,7 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState, query::Failed> {
 			//  @TODO: #1530 This is a temporary mock implementation
 			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			if (hout_expr.hasError()) return query::QError(query::Failed());
+			if (hout_expr.hasError()) return query::Failed();
 
 			if (auto literal_type_expr
 			    = dynamic_cast<LiteralTypeExpr*>(hout_expr.valueOrThrow().get())) {
@@ -339,7 +339,7 @@ namespace compiler::helios::code {
 							call_expr->getSourcePosition(), "Type cast expects a single argument"
 						)
 					);
-					return query::QError(query::Failed());
+					return query::Failed();
 				}
 				// Iterating over a single argument list, because the pst arguments
 				// have only iterator accessor.
@@ -347,7 +347,7 @@ namespace compiler::helios::code {
 					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
 						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
 					);
-					if (arg_expr.hasError()) return query::QError(query::Failed());
+					if (arg_expr.hasError()) return query::Failed();
 
 					auto cast_expr = makeBox<CastExpr>(
 						query_ctx, std::move(arg_expr.valueOrThrow()), literal_type_expr->value_type
@@ -359,7 +359,7 @@ namespace compiler::helios::code {
 			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 				keyword->getSourcePosition(), "Unsupported keyword literal in call expression"
 			));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 
 		/**
@@ -383,7 +383,7 @@ namespace compiler::helios::code {
 						base::strConcat("Value '", ident->getName().value, "' not found")
 					)
 				);
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.valueOrThrow().back();
@@ -400,7 +400,7 @@ namespace compiler::helios::code {
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
 			-> query::QResult<ChainState, query::Failed> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			if (expr.hasError()) return query::QError(query::Failed());
+			if (expr.hasError()) return query::Failed();
 			auto hout_expr = std::move(expr).valueOrThrow();
 			auto symbol    = getIdentifierExprSymID(hout_expr.ref());
 			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
@@ -423,7 +423,7 @@ namespace compiler::helios::code {
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
-			if (res.hasError()) return query::QError(query::Failed());
+			if (res.hasError()) return query::Failed();
 			return ChainState::ofExpr(std::move(res.valueOrThrow()));
 		}
 
@@ -436,7 +436,7 @@ namespace compiler::helios::code {
 			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
 				call_expr->getSourcePosition(), base::strConcat("Namespace is not callable")
 			));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 
 		/**
@@ -459,7 +459,7 @@ namespace compiler::helios::code {
 				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
 				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
 				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 			auto sym = looked_up_symbols.valueOrThrow().back();
 
@@ -476,7 +476,7 @@ namespace compiler::helios::code {
 				);
 			}
 			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 
 		/**
@@ -497,7 +497,7 @@ namespace compiler::helios::code {
 						base::strConcat("Value '", expr_access->getName().value, "' not found")
 					)
 				);
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.valueOrThrow().back();
@@ -515,7 +515,7 @@ namespace compiler::helios::code {
 			throw base::NotYetImplemented(
 				"Helios chain expr: call on access expr not implemented yet"
 			);
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 
 		/**
@@ -545,7 +545,7 @@ namespace compiler::helios::code {
 						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
 					)
 				);
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 			return ChainState::ofExpr(std::move(res.valueOrThrow()));
 		}
@@ -572,7 +572,7 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 		}
 
@@ -711,7 +711,7 @@ namespace compiler::helios::code {
 							"Expected access or call expression in chain expression"
 						)
 					);
-					return query::QError(query::Failed());
+					return query::Failed();
 				}
 			}
 			if (error.has_value()) return query::QError(error.value());
@@ -731,7 +731,7 @@ namespace compiler::helios::code {
 						"Chain expression is empty"
 					)
 				);
-				return query::QError(query::Failed());
+				return query::Failed();
 			}
 
 			if (result_sequence.size() == 1) return std::move(result_sequence[0]);

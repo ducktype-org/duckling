@@ -635,12 +635,12 @@ namespace compiler::helios {
 			const auto hout_qresult = getHoutOfExprWithExpectedType(
 				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
 			);
-			if (hout_qresult.hasError()) return query::QError(query::Failed());
+			if (hout_qresult.hasError()) return query::Failed();
 
 			// Evaluate the HOUT expression at compile-time
 			auto ctv
 				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
-			if (ctv.hasError()) return query::QError(query::Failed());
+			if (ctv.hasError()) return query::Failed();
 			return ctv.valueOrThrow();
 		}
 

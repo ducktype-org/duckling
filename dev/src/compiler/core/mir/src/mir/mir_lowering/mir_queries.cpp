@@ -194,7 +194,7 @@ namespace compiler::mir {
 		} else {
 			// @todo there should be logging here of missing return value / control reaches the
 			// end of non-void function
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 	}
 
@@ -256,7 +256,7 @@ namespace compiler::mir {
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
-			if (validateFunction(function_reachable).isBad()) return query::QError(query::Failed());
+			if (validateFunction(function_reachable).isBad()) return query::Failed();
 
 			return function_reachable;
 		}

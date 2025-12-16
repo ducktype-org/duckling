@@ -455,7 +455,7 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 	}
 }
@@ -501,7 +501,7 @@ namespace compiler::helios {
 				expr_hout->expression_type.getSymbolType(),
 				expected_type
 			));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 		return coercion_qresult.valueOrThrow().coerce(ctx, std::move(expr_hout));
 	}

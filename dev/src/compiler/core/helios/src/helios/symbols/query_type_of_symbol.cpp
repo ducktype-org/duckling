@@ -62,7 +62,7 @@ namespace compiler::helios {
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
 			query::QResult<tsh::SymbolType<>, query::Failed> symbol_type_qresult
-				= query::QError(query::Failed());
+				= query::Failed();
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {

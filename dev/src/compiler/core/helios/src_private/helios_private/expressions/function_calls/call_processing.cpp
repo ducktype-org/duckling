@@ -452,7 +452,7 @@ namespace compiler::helios::code {
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
 			ctx.logInt(std::move(main_msg));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
 			return constructCallExpr(
@@ -470,7 +470,7 @@ namespace compiler::helios::code {
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
 			ctx.logInt(std::move(main_msg));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
 			return constructCallExpr(
@@ -494,6 +494,6 @@ namespace compiler::helios::code {
 		}
 
 		// ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
-		return query::QError(query::Failed());
+		return query::Failed();
 	}
 }

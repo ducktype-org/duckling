@@ -21,9 +21,9 @@ namespace query {
 	 */
 	template<class T>
 	struct QError final {
-		explicit constexpr QError(T&& t): value(std::move(t)) {}
 		T value;
 	};
+
 
 	/**
 	 * @brief QResult is a special type used to represent the typical result of a query or a helper function working within the query framework.
@@ -37,7 +37,17 @@ namespace query {
 	template<class MainValue, class... ErrorValues>
 	requires(!std::is_reference_v<MainValue>) class QResult final {
 	private:
-		using ErrorVariantType = std::variant<ErrorValues...>;
+		/**
+		 * This type is only used to fill the variant when there are no ErrorValues.
+		 */
+		struct DummyType final {};
+
+	    /**
+		 * @note This could be made a simple type when sizeof...(ErrorValues) == 0 or == 1,
+		 * but for uniformity of the code we always use the variant-based implementation.
+		 */
+		using ErrorVariantType = std::variant<ErrorValues..., DummyType>;
+
 		using ResultType = MainValue;
 
 		struct MainResultHolder final {
@@ -57,7 +67,8 @@ namespace query {
 		 */
 		template<class... Args>
 		requires std::is_constructible_v<MainValue, Args...>
-		QResult(Args&&... args): storage(std::in_place, std::forward<Args>(args)...) {}
+		QResult(Args&&... args):
+			storage(std::in_place_type_t<MainResultHolder>(), std::forward<Args>(args)...) {}
 
 
 		/**
@@ -66,7 +77,8 @@ namespace query {
 		 */
 		template<class T>
 		requires(std::is_constructible_v<ErrorVariantType, T>)
-		constexpr QResult(const QError<T>& err): storage(ErrorResultHolder{err.value}) {}
+		constexpr QResult(const QError<T>& err):
+			storage(std::in_place_type_t<ErrorResultHolder>(), err.value) {}
 
 		/**
 		 * @brief Constructor from QError<T>, where T is a variant
@@ -223,6 +235,11 @@ namespace query {
 		constexpr ErrorVariantType& error() & { return std::get<ErrorResultHolder>(storage).error; }
 
 		constexpr ErrorVariantType&& error() && { return std::move(std::get<ErrorResultHolder>(storage).error); }
+
+		template<typename T>
+		constexpr auto getErrorByType() const -> decltype(auto) {
+			return std::get<T>(std::get<ErrorResultHolder>(storage).error);
+		}
 
 		/**
 		 * @brief Access the value, throw the query failed exception if no value.
