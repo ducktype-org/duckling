@@ -2057,7 +2057,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertThrows<std::exception>(
-				[&] { query::entryPoint<compiler::helios::QueryTopLevelEntities>(module_id); },
+				[&] { ctx.query<compiler::helios::QueryTopLevelEntities>(module_id); },
 				"Expected ambiguous return type error"
 			);
 
