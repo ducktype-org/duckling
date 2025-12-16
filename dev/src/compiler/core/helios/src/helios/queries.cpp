@@ -199,8 +199,9 @@ namespace compiler::helios {
 
 			void visitReturn(pst::Access<pst::Return> stmt) final {
 				if (auto val = stmt->getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
-					                .throwOnFail("Not handling errors here yet... (return collector)");
+					auto expr
+						= ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
+					          .throwOnFail("Not handling errors here yet... (return collector)");
 					output(expr->expression_type.getSymbolType());
 				}
 			}
