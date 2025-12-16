@@ -425,6 +425,8 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                          positional_arguments;
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
+		
+		// PR: fix this:
 		if (verify_result.hasError()) return query::QError(query::Failed{});
 
 		std::vector<ExactMatch>    exact_match;

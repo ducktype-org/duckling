@@ -791,11 +791,11 @@ private:
 		ASSERT_EQUAL("Value", stolen_opt);
 
 		std::string                           info  = "Hello";
-		query::QResult<int, std::string_view> whoa2 = query::QError(std::string_view(info));
+		query::QResult<int, std::string_view> whoa2 = std::string_view(info);
 		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
 		ASSERT_TRUE(!bool(whoa2));
-		ASSERT_EQUAL(whoa2.getErrorByType<std::string_view>(), "Hello");
+		ASSERT_EQUAL(whoa2.getValueByTypeOrPanic<std::string_view>(), "Hello");
 
 		struct Err1 {};
 
@@ -805,7 +805,7 @@ private:
 
 		struct Err4 {};
 
-		query::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
+		query::QResult<int, Err2, Err4> sub_result = Err2();
 
 		// bool entered2 = false;
 		// ASSERT_TRUE(!result.hasValue());

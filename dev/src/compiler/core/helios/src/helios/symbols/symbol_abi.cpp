@@ -51,12 +51,12 @@ namespace compiler::helios {
 		if (args.empty()) return query::Failed();
 
 		auto first_arg_result = getStrFromExternCallArg(ctx, args[0]);
-		if (first_arg_result.hasError()) return query::QError(first_arg_result.error());
+		if (first_arg_result.hasFailed()) return query::Failed();
 
 		if (first_arg_result.valueOrThrow() == base::StrID("C")) {
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
 				auto lib_str_lit_opt = getStrFromExternCallArg(ctx, args[1]);
-				if (lib_str_lit_opt.hasError()) return query::QError(lib_str_lit_opt.error());
+				if (lib_str_lit_opt.hasFailed()) return query::Failed();
 
 				return CAbi{ .library = lib_str_lit_opt.valueOrThrow() };
 			}

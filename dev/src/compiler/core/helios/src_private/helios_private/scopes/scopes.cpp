@@ -603,9 +603,8 @@ namespace compiler::helios {
 			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
-				return query::QError(
-					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
-				);
+				return 
+					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger());
 			}
 		}
 

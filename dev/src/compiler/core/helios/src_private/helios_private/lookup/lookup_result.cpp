@@ -19,8 +19,8 @@ namespace compiler::helios {
 
 	query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
 	) const {
-		if (isEmpty()) return query::QError(errors::SymbolNotFound());
-		if (!isSingle()) return query::QError(errors::Ambiguity());
+		if (isEmpty()) return errors::SymbolNotFound();
+		if (!isSingle()) return errors::Ambiguity();
 
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 

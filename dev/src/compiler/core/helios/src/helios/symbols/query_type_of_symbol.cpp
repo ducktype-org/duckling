@@ -25,8 +25,8 @@ namespace compiler::helios {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
-			void setError(const query::Failed& error) {
-				symbol_type_qresult = query::QError(error);
+			void setFailed() {
+				symbol_type_qresult = query::Failed();
 			}
 
 			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
@@ -49,8 +49,8 @@ namespace compiler::helios {
 				const pst::Access<pst::ExprElement> expr, const tsh::Mutability expected_mutability
 			) {
 				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
-				if (type_ctv.hasError()) {
-					setError(type_ctv.error());
+				if (type_ctv.hasFailed()) {
+					setFailed();
 				} else {
 					setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>()->withMutability(
 						expected_mutability
@@ -74,8 +74,8 @@ namespace compiler::helios {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
-					if (parsed.hasError()) {
-						setError(query::Failed());
+					if (parsed.hasFailed()) {
+						setFailed();
 						return;
 					}
 					const auto& expr_type = parsed.valueOrThrow()->expression_type;

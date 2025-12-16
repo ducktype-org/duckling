@@ -56,7 +56,7 @@ namespace compiler::helios {
 	) {
 		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
-		return query::QError{ InvalidCoercion{} };
+		return InvalidCoercion{};
 	}
 
 	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(

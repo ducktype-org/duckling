@@ -325,7 +325,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
 					auto res = fromPST(ctx, ex);
-					if (res.hasError()) {
+					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
 					}
@@ -345,7 +345,7 @@ namespace compiler::helios::code {
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
 				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasError()) return;  // failed
+				if (inner.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -374,7 +374,7 @@ namespace compiler::helios::code {
 				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
 				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
 
-				if (condition_res.hasError() or if_true_res.hasError() or if_false_res.hasError())
+				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
 
 				auto condition = std::move(condition_res).valueOrThrow();
@@ -397,7 +397,7 @@ namespace compiler::helios::code {
 				result_exprs.reserve(expr_count);
 				for (size_t i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
-					if (result.hasError())
+					if (result.hasFailed())
 						return;
 					else
 						result_exprs.push_back(std::move(result.valueOrThrow()));
@@ -490,11 +490,15 @@ namespace compiler::helios {
 		const tsh::SymbolType<>                          expected_type
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
-		if (expr_hout_qresult.hasError()) return query::QError(expr_hout_qresult.error());
+		
+		if (expr_hout_qresult.hasFailed()) return query::Failed();
+
 		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		
+		// @TODO: fix error handling here:
 		if (coercion_qresult.hasError()) {
 			ctx.log(makeBox<CannotCoerceError>(
 				pst_expr.element.unlock(ctx)->getSourcePosition(),

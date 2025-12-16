@@ -70,11 +70,11 @@ namespace compiler::helios {
 			}
 
 			void visitCallExpr(const code::CallExpr&) final {
-				result = query::QError(CouldNotShortPath{});
+				result = CouldNotShortPath{};
 			}
 
 			void visitAccessExpr(const code::AccessExpr&) final {
-				result = query::QError(CouldNotShortPath{});
+				result = CouldNotShortPath{};
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
@@ -546,7 +546,10 @@ namespace compiler::helios {
 			for (const SymID& func_id: *dependencies) {
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
 				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
-				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
+				
+				
+				if (mir_func_result->hasFailed()) return query::Failed();
+
 				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
 				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 

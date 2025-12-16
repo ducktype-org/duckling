@@ -51,8 +51,8 @@ namespace query {
 		 */
 		using ValueType = std::conditional_t<
 			USES_VARIANT,
-			PrimaryValue,
-			std::variant<PrimaryValue, SecondaryValues...>
+			std::variant<PrimaryValue, SecondaryValues...>,
+			PrimaryValue
 		>;
 
 	
@@ -87,6 +87,11 @@ namespace query {
 		template<class Value>
 		constexpr QResult& operator=(Value&& value) {
 			storage = ValueType{std::forward<Value>(value)};
+			return *this;
+		}
+
+		constexpr QResult& operator=(query::Failed) {
+			storage = query::Failed{};
 			return *this;
 		}
 
@@ -209,28 +214,28 @@ namespace query {
 		 */
 		constexpr const ValueType& valueOrThrow() const& {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::get<ValueType>(storage).value;
+			return std::get<ValueType>(storage);
 		}
 
 		constexpr const ValueType&& valueOrThrow() const&& {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::move(std::get<ValueType>(storage).value);
+			return std::move(std::get<ValueType>(storage));
 		}
 
 		constexpr ValueType& valueOrThrow() & {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::get<ValueType>(storage).value;
+			return std::get<ValueType>(storage);
 		}
 
 		constexpr ValueType&& valueOrThrow() && {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::move(std::get<ValueType>(storage).value);
+			return std::move(std::get<ValueType>(storage));
 		}
 
 		template<typename T>
 		constexpr auto getValueByTypeOrPanic() const -> decltype(auto) {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<T>(std::get<ValueType>(storage).error);
+			return std::get<T>(std::get<ValueType>(storage));
 		}
 
 

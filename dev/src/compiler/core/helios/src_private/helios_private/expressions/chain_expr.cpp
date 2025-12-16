@@ -297,15 +297,18 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-			// @TODO: #1412 fix dealias
+			
+				// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			if (callees_q_result.hasError())
-				return query::QError(query::Failed(callees_q_result.error()));
+			
+			if (callees_q_result.hasFailed())
+				return query::Failed();
+
 			const auto& callees = callees_q_result.valueOrThrow();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 
-			if (res.hasError()) {
+			if (res.hasFailed()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 						ident->getSourcePosition(),
@@ -328,7 +331,7 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
 			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			if (hout_expr.hasError()) return query::Failed();
+			if (hout_expr.hasFailed()) return query::Failed();
 
 			if (auto literal_type_expr
 			    = dynamic_cast<LiteralTypeExpr*>(hout_expr.valueOrThrow().get())) {
@@ -347,7 +350,7 @@ namespace compiler::helios::code {
 					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
 						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
 					);
-					if (arg_expr.hasError()) return query::Failed();
+					if (arg_expr.hasFailed()) return query::Failed();
 
 					auto cast_expr = makeBox<CastExpr>(
 						query_ctx, std::move(arg_expr.valueOrThrow()), literal_type_expr->value_type
@@ -400,7 +403,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
 			-> query::QResult<ChainState> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			if (expr.hasError()) return query::Failed();
+			
+			if (expr.hasFailed()) return query::Failed();
+
 			auto hout_expr = std::move(expr).valueOrThrow();
 			auto symbol    = getIdentifierExprSymID(hout_expr.ref());
 			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
@@ -423,7 +428,7 @@ namespace compiler::helios::code {
 
 			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
 
-			if (res.hasError()) return query::Failed();
+			if (res.hasFailed()) return query::Failed();
 			return ChainState::ofExpr(std::move(res.valueOrThrow()));
 		}
 
@@ -461,6 +466,8 @@ namespace compiler::helios::code {
 				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
 				return query::Failed();
 			}
+
+			// @TODO PR: fix/mock this:
 			auto sym = looked_up_symbols.valueOrThrow().back();
 
 			// const auto sym = looked_up_symbols.valueOrThrow().back();
@@ -533,12 +540,15 @@ namespace compiler::helios::code {
 
 			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			if (callees_q_result.hasError())
-				return query::QError(query::Failed(callees_q_result.error()));
-			const auto& callees = callees_q_result.valueOrThrow();
+			
+			if (callees_q_result.hasFailed())
+				return query::Failed();
+			
+				const auto& callees = callees_q_result.valueOrThrow();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
-			if (res.hasError()) {
+		
+			if (res.hasFailed()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
 						expr_access->getName().position,
@@ -596,7 +606,9 @@ namespace compiler::helios::code {
 				}
 				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
-			if (res.hasError()) return res.error();
+			
+			if (res.hasFailed()) return query::Failed();
+
 			this->current_state = std::move(res.valueOrThrow());
 			return {};
 		}
@@ -623,7 +635,9 @@ namespace compiler::helios::code {
                 }
                 CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
-			if (res.hasError()) return res.error();
+
+			if (res.hasFailed()) return query::Failed();
+			
 			this->current_state = std::move(res.valueOrThrow());
 			return {};
 		}
@@ -640,7 +654,9 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
 			auto res = processPSTExpr(current_element_value);
-			if (res.hasError()) return res.error();
+			
+			if (res.hasFailed()) return query::Failed();
+
 			this->current_state = std::move(res.valueOrThrow());
 			return {};
 		}
@@ -657,7 +673,9 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
 			auto res                   = processPSTExpr(current_element_value, next_element_value);
-			if (res.hasError()) return res.error();
+			
+			if (res.hasFailed()) return query::Failed();
+
 			this->current_state = std::move(res.valueOrThrow());
 			return {};
 		}
@@ -676,6 +694,7 @@ namespace compiler::helios::code {
 		 */
 		query::QResult<base::Box<Expr>> run() {
 			base::Optional<query::Failed> error{};
+
 			this->index = 0;
 			if (isCurrentElement<pst::expr::IdentifierLiteral>()
 			    && isNextElement<pst::expr::Call>()) {
@@ -714,7 +733,8 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 			}
-			if (error.has_value()) return query::QError(error.value());
+			if (error.has_value()) return query::Failed();
+
 			if (this->current_state.isExpr())
 				result_sequence.push_back(this->current_state.getExpr());
 			if (this->current_state.isNamespaceLike()) {

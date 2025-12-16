@@ -7,6 +7,7 @@ namespace query {
 	/**
 	 * @brief The Failed class is used as a marker to indicate that a query has failed.
 	 * It is returned by queries in QResult.
+	 * @note This class is intentionally empty.
 	 */
 	class Failed final {};
 
