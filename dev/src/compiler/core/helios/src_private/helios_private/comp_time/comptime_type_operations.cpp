@@ -19,6 +19,8 @@
  */
 #include "comptime_type_operations.hpp"
 
+#include "meta_type_memory_manager.hpp"
+
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
@@ -74,9 +76,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Box);
-		// TODOP: Figure out the memory management.
-		auto* result = new tsh::SymbolType<>(new_type);
-		return result;
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -87,9 +87,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Ref);
-		// TODOP: Figure out the memory management.
-		auto* result = new tsh::SymbolType<>(new_type);
-		return result;
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -100,9 +98,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
-		// TODOP: Figure out the memory management.
-		auto* result = new tsh::SymbolType<>(new_type);
-		return result;
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -132,10 +128,9 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
-		auto  tuple_type = builder_ptr->produce(*ctx_ptr);
-		auto* result     = new tsh::SymbolType<>(tuple_type);
+		auto tuple_type = builder_ptr->produce(*ctx_ptr);
 		delete builder_ptr;
-		return result;
+		return MetaTypeMemoryManager::instance().allocateType(tuple_type);
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -167,10 +162,9 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
-		auto  tuple_type = builder_ptr->produce(*ctx_ptr);
-		auto* result     = new tsh::SymbolType<>(tuple_type);
+		auto variant_type = builder_ptr->produce(*ctx_ptr);
 		delete builder_ptr;
-		return result;
+		return MetaTypeMemoryManager::instance().allocateType(variant_type);
 	}
 
 	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {

@@ -1,5 +1,7 @@
 #include "vm_evaluator.hpp"
 
+#include "helios_private/comp_time/meta_type_memory_manager.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <typesystem/higher/types.hpp>
@@ -202,8 +204,8 @@ namespace {
 		CompTimeDVM(const CompTimeDVM&)            = delete;
 		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
 
-		// @todo: Kill the CompTime VM process in the destructor once we get rid of the deadlock.
-		// This should happen after #1222.
+		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
+		// deadlock.
 		~CompTimeDVM() = default;
 
 		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
