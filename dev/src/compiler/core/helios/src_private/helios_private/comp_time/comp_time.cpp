@@ -1,5 +1,9 @@
 #include "comp_time.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+#include "helios/scope_symbol_id.hpp"
+#include "lir/lir_structure/lir_structure.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -15,12 +19,18 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/collections/optional.hpp"
+
+#include "query_framework/query_errors.hpp"
+#include "query_framework/query_result.hpp"
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
+#include <expected>
 #include <ranges>
 #include <type_traits>
+#include <vector>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -125,15 +135,17 @@ namespace compiler::helios {
 							        // cast expr beforehand.
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
-										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at "
-											"compile "
-											"time are of different type. This should be "
-											"prevented by casts.\nLeft side is:",
-											lhs.getTypeOfStoredValue(ctx).getType().toString(),
-											"\nRight side is: ",
-											rhs.getTypeOfStoredValue(ctx).getType().toString()
-										));
+										CORE_PANIC(
+											base::strConcat(
+												"Operands on binary expression evaluated at "
+												"compile "
+												"time are of different type. This should be "
+												"prevented by casts.\nLeft side is:",
+												lhs.getTypeOfStoredValue(ctx).getType().toString(),
+												"\nRight side is: ",
+												rhs.getTypeOfStoredValue(ctx).getType().toString()
+											)
+										);
 									}
 
 									LhsNumT rhs_val = maybe_rhs_val.value();
@@ -189,8 +201,9 @@ namespace compiler::helios {
 							case code::BuiltinBinary::BooleanOr:
 								return CompileTimeValue{ lhs || rhs };
 							default:
-								throw base::NotYetImplemented("Other binary operators for bool type"
-							    );
+								throw base::NotYetImplemented(
+									"Other binary operators for bool type"
+								);
 							}
 						} else {
 							// Unsupported type for binary operator.
@@ -323,15 +336,17 @@ namespace compiler::helios {
 						    // cast expr beforehand.
 							auto maybe_rhs_val = second.get<LhsNumT>();
 							if (!maybe_rhs_val.has_value()) {
-								CORE_PANIC(base::strConcat(
-									"Operands on binary expression evaluated at "
-									"compile "
-									"time are of different type. This should be "
-									"prevented by casts.\nLeft side is:",
-									first.getTypeOfStoredValue(ctx).getType().toString(),
-									"\nRight side is: ",
-									second.getTypeOfStoredValue(ctx).getType().toString()
-								));
+								CORE_PANIC(
+									base::strConcat(
+										"Operands on binary expression evaluated at "
+										"compile "
+										"time are of different type. This should be "
+										"prevented by casts.\nLeft side is:",
+										first.getTypeOfStoredValue(ctx).getType().toString(),
+										"\nRight side is: ",
+										second.getTypeOfStoredValue(ctx).getType().toString()
+									)
+								);
 							}
 
 							LhsNumT rhs_num = maybe_rhs_val.value();
@@ -416,8 +431,7 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) final {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
@@ -518,52 +532,82 @@ namespace compiler::helios {
 			}
 		};
 
+		struct LIRBuildResult {
+			std::string                      func_to_call;
+			std::vector<CRef<lir::Function>> functions;
+		};
+
 		/**
-		 * @brief Evaluates a HOUT call expression using VM Eval.
-		 * @return The calculated result represented by CompileTimeValue or a Failed error.
+		 * @brief Prepares all necessary LIR functions (dependencies + target) for the VM.
+		 * @TODO: #826 Change this code to a single query once it gets implemented.
 		 */
-		static CompTimeEvalResult evaluateFunctionWithVm(
-			query::Context& ctx, CRef<code::CallExpr> call_expr
+		static query::QResult<LIRBuildResult, query::Failed> prepareLIRForDVM(
+			query::Context& ctx, SymID function_sym_id
 		) {
-			// TODOP: Refactor this as well.
-			const auto* callee_ident
-				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return query::QError(query::Failed());
-
-			const SymID function_sym_id = callee_ident->symbol;
-
-			// Get code of the called function.
-			// @todo: Change this code to a single query once it gets implemented #826.
-			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
-
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
 			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
 
-			std::string                      func_to_call_name;
-			std::vector<CRef<lir::Function>> all_lir_functions;
+			LIRBuildResult result;
+			result.functions.reserve(dependencies->size());
+
 			for (const SymID& func_id: *dependencies) {
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
-				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
+
+				auto mir_func_result = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
 				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
+
 				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
 				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
 				if (func_id == function_sym_id)
-					func_to_call_name = lir_func_result->mangled_name.str();
+					result.func_to_call = lir_func_result->mangled_name.str();
 
-				all_lir_functions.push_back(lir_func_result);
+				result.functions.push_back(lir_func_result);
 			}
+			return result;
+		}
 
-			// Lower all function arguments.
+		/**
+		 * @brief Evaluates all argument expressions to CompileTimeValues.
+		 */
+		static query::QResult<std::vector<CompileTimeValue>, query::Failed> evaluateArguments(
+			query::Context& ctx, const std::vector<Box<code::Expr>>& args
+		) {
 			std::vector<CompileTimeValue> ctv_arguments;
-			for (const auto& arg_expr: call_expr->arguments) {
+			ctv_arguments.reserve(args.size());
+
+			for (const auto& arg_expr: args) {
 				auto arg_result = evalHoutExpr(ctx, arg_expr.ref());
-				if (arg_result.hasError()) return arg_result;
+				if (arg_result.hasError()) return query::QError(query::Failed());
 				ctv_arguments.push_back(arg_result.valueOrThrow());
 			}
+
+			return ctv_arguments;
+		}
+
+		/**
+		 * @brief Evaluates a HOUT call expression using DVM Eval.
+		 * @return The calculated result represented by CompileTimeValue or a Failed error.
+		 */
+		static CompTimeEvalResult evaluateFunctionWithVm(
+			query::Context& ctx, CRef<code::CallExpr> call_expr
+		) {
+			const auto* callee_ident
+				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
+			if (!callee_ident) return query::QError(query::Failed());
+			const SymID function_sym_id = callee_ident->symbol;
+
+			auto args_result = evaluateArguments(ctx, call_expr->arguments);
+			if (args_result.hasError()) return query::QError(query::Failed());
+			auto ctv_arguments = std::move(args_result.valueOrThrow());
+
+			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
+			if (lir_build_result.hasError()) return query::QError(query::Failed());
+			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
+
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
