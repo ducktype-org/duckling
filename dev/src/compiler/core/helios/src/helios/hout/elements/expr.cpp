@@ -96,7 +96,7 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, value);
 	}
 
-	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, tpc::StringValue value):
+	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, const base::StrID value):
 		  Expr(
 
 			  tsh::ExpressionType<>(
@@ -111,7 +111,7 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	LiteralStringExpr::LiteralStringExpr(
-		tsh::ExpressionType<> expression_type, tpc::StringValue value
+		const tsh::ExpressionType<>& expression_type, const base::StrID value
 	):
 		  Expr(expression_type),
 		  value(value) {}

@@ -91,7 +91,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
-				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue().value);
 			}
 
 			/**

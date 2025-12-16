@@ -522,7 +522,7 @@ private:
 			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
 			);
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
+				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
 			);
 
 			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
