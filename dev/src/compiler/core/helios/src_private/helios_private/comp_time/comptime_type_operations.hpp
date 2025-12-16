@@ -1,16 +1,7 @@
 #pragma once
 
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
-#include "base/collections/optional.hpp"
-
-#include "query_framework/context.hpp"
-#include "string_id/string_id.hpp"
-
 #include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
-#include <vm/bytecode/extern_c_function.hpp>
 
 namespace compiler::helios::comptime_ops {
 	/**

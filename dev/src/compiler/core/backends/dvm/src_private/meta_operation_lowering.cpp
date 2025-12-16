@@ -1,13 +1,6 @@
 #include "meta_operation_lowering.hpp"
 
-#include "dvm_operation.hpp"
-#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
-
-#include "string_id/string_id.hpp"
 
 namespace compiler::backend_vm::internal {
 

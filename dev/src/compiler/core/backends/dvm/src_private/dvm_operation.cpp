@@ -1,7 +1,5 @@
 #include "dvm_operation.hpp"
 
-#include "lir/lir_structure/lir_structure.hpp"
-
 namespace {
 	using namespace compiler;
 

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "lir/lir_structure/lir_structure.hpp"
+#include <lir/lir_structure/lir_structure.hpp>
 
-#include "vm/bytecode/builders/instruction_builder.hpp"
+#include <vm/bytecode/builders/instruction_builder.hpp>
 
 namespace compiler::backend_vm::internal {
 	using vm::code::builders::OpKind;
 
 	/**
-	 * @brief Represents a simple DVM operation that maps 1:1 to a DVM OpKind.
+	 * @brief Represents a simple DVM operation that trivially maps to a DVM OpKind.
 	 */
 	struct SimpleOperation {
 		OpKind op;

@@ -6,7 +6,6 @@
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <utility>
-#include <variant>
 
 namespace compiler::backend_vm::internal {
 	struct DVMLocal {

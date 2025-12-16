@@ -6,19 +6,13 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/collections/optional.hpp"
 #include <base/pointers/ref.hpp>
 
-#include "string_id/string_id.hpp"
-
-#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/interpret.hpp>
-
-#include <string>
 
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;

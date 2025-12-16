@@ -2,13 +2,8 @@
 
 #include <string_id/string_id.hpp>
 
-#include "vm/bytecode/serializer/serializer.hpp"
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
-
-#include <crow/http_parser_merged.h>
-
-#include <algorithm>
 
 namespace vm::code {
 	const SpecialTypes& SpecialTypes::get() {
@@ -52,10 +47,8 @@ namespace vm::code {
 	}
 
 	bool isBuiltinType(const TypeOfData& type) {
-		std::cout << "Checking type: " << typeToString(type) << '\n';
 		const auto& types = rawBuiltins();
 		bool        res   = std::ranges::find(types, type) != types.end();
-		std::cout << "Found: " << res << '\n';
 		return res;
 	}
 }

@@ -1,29 +1,14 @@
 #include "vm_evaluator.hpp"
 
-#include "ctv/ctv.hpp"
-#include "helios_private/comp_time/comptime_type_operations.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
+#include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "query_framework/context.hpp"
-#include "string_id/string_id.hpp"
-
-#include "vm/api/data/process_info.hpp"
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/core/process/interface_types.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
-#include <cmath>
 #include <expected>
-#include <unordered_set>
-#include <vector>
 
 namespace {
 	using namespace compiler::helios;
@@ -207,7 +192,7 @@ namespace {
 		 * evaluations and initializes the global context pointer needed for meta type compile time
 		 * evaluations.
 		 */
-		CompTimeDVM(query::Context& ctx) {
+		CompTimeDVM() {
 			if (auto res = vm::api::spawn()) {
 				pid = res->pid;
 				if (!initializeCompTimeOps()) pid.reset();
@@ -280,27 +265,28 @@ namespace {
 	};
 
 	std::expected<void, VmEvaluationError> loadLirFunctions(
-		CompTimeDVM& manager, const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
+		CompTimeDVM&                                      comptime_dvm,
+		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions
 	) {
 		compiler::backend_vm::Module m(base::StrID("COMP_TIME"));
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
-		auto comptime_code = comptime_ops::getComptimeTypeOperations(*manager.getPID());
+		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
 		m.insertRawBytecodeDefinitions(comptime_code);
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
-		return manager.loadCode(bytecode);
+		return comptime_dvm.loadCode(bytecode);
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
-		CompTimeDVM& manager, const std::vector<compiler::ctv::CompileTimeValue>& args
+		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(*manager.getPID(), ctv_arg);
+			auto res = ctvToVmValue(*comptime_dvm.getPID(), ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -335,12 +321,12 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		CompTimeDVM&                         manager,
+		CompTimeDVM&                         comptime_dvm,
 		const std::string&                   func_name,
 		const std::vector<Box<vm::VmValue>>& owned_args,
 		const compiler::tsh::SymbolType<>    return_type
 	) {
-		vm::PID pid = *manager.getPID();
+		vm::PID pid = *comptime_dvm.getPID();
 
 		vm::FunctionRunArguments args
 			= owned_args | std::views::transform([](auto& value) { return value.refMut(); })
@@ -382,7 +368,7 @@ namespace compiler::helios {
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
-		static CompTimeDVM comptime_dvm(ctx);
+		static CompTimeDVM comptime_dvm;
 		if (!comptime_dvm.isAlive())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::VmInitializationFailed,

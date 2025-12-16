@@ -1,22 +1,12 @@
-#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-
-#include "string_id/string_id.hpp"
 #include <logger/logger.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-
-#include <ranges>
 
 using namespace compiler::backend_vm::internal;
 using namespace vm::code;

@@ -1,5 +1,3 @@
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>

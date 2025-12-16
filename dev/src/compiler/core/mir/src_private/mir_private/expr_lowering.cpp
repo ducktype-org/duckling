@@ -1,10 +1,5 @@
 #include "expr_lowering.hpp"
 
-#include "mir/mir_structure/mir_lifetime_scope.hpp"
-#include "mir_private/mir_builders.hpp"
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -19,7 +14,6 @@
 #include <algorithm>
 #include <ranges>
 #include <variant>
-#include <vector>
 
 namespace compiler::mir {
 

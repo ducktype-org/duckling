@@ -5,8 +5,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
-
 namespace compiler::backend_vm {
 
 	Module::Module(base::StrID module_id):

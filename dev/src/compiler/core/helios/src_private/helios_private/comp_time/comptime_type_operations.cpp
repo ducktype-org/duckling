@@ -5,7 +5,7 @@
  * This file defines the interface that allows the DVM to interact directly with the compiler.
  * Performing calls to the type system etc.
  *
- * Some key concepts:
+ * Some important notes:
  * 1. Type Construction: Provides primitives to create modified types (Box, Ref, Const)
  *    and composite types (Tuples, Variants, Functions) during CTE.
  * 2. Builder Patterns: Due to the VM's limitations or supporting variadic type arguments, composite
@@ -19,18 +19,13 @@
  */
 #include "comptime_type_operations.hpp"
 
-#include "typesystem/higher/mutability.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/lower/queries.hpp"
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <query_framework/context.hpp>
 
-#include "string_id/string_id.hpp"
-
-#include "vm/api/vm.hpp"
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/bytecode/extern_c_function.hpp"
-#include "vm/bytecode/instructions.hpp"
+#include <vm/bytecode/extern_c_function.hpp>
+#include <vm/bytecode/instructions.hpp>
 
 namespace compiler::helios::comptime_ops {
 	namespace {
@@ -205,10 +200,9 @@ namespace compiler::helios::comptime_ops {
 	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid) {
 		// A global storing an opaque pointer to `query::Context` needed for performing type
 		// system calls during DVM evaluation.
-		vm::code::GlobalData context_global{ .name      = base::StrID("__comptime_query_ctx"),
-			                                 .type      = base::StrID("opaque_ptr"),
-			                                 .ctor_name = {},
-			                                 .dtor_name = {} };
+		vm::code::GlobalData context_global;
+		context_global.name = base::StrID("__comptime_query_ctx"),
+		context_global.type = base::StrID("opaque_ptr");
 
 		// A function used for initializing the global context pointer. Called by the comptime
 		// VM instance, before comptime operations. Takes in an opaque pointer storing the
@@ -225,11 +219,11 @@ namespace compiler::helios::comptime_ops {
 		);
 		vm::code::Instruction ret = vm::code::instructions::Op_ret{};
 
-		vm::code::Function init_global_context{ .name = base::StrID("__comptime_set_ctx"),
-			                                    .body = { mov_gopq_lopq, ret },
-			                                    .signature
-			                                    = { .result_type = base::StrID("void"),
-			                                        .parameters = { base::StrID("opaque_ptr") } } };
+		vm::code::Function init_global_context;
+		init_global_context.name = base::StrID("__comptime_set_ctx");
+		init_global_context.body = { mov_gopq_lopq, ret };
+		init_global_context.signature
+			= { .result_type = base::StrID("void"), .parameters = { base::StrID("opaque_ptr") } };
 
 		return {
 			.functions            = { init_global_context },
@@ -238,6 +232,4 @@ namespace compiler::helios::comptime_ops {
 			.external_c_functions = getComptimeTypeExternOperations(pid),
 		};
 	}
-
-
 }

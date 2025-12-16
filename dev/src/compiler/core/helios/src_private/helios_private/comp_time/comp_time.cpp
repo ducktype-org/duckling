@@ -1,7 +1,5 @@
 #include "comp_time.hpp"
 
-#include "helios_private/comp_time/comptime_type_operations.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -527,6 +525,7 @@ namespace compiler::helios {
 		static CompTimeEvalResult evaluateFunctionWithVm(
 			query::Context& ctx, CRef<code::CallExpr> call_expr
 		) {
+			// TODOP: Refactor this as well.
 			const auto* callee_ident
 				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
 			if (!callee_ident) return query::QError(query::Failed());
@@ -554,10 +553,6 @@ namespace compiler::helios {
 				// which function to call in the VM.
 				if (func_id == function_sym_id)
 					func_to_call_name = lir_func_result->mangled_name.str();
-
-				std::cout << "Produced LIR code:\n";
-				lir_func_result->debugPrint(ctx, std::cout);
-				std::cout << "\n";
 
 				all_lir_functions.push_back(lir_func_result);
 			}

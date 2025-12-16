@@ -2,13 +2,6 @@
 
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
-#include "function_lowering_context.hpp"
-
-#include "base/collections/optional.hpp"
-
-#include "string_id/string_id.hpp"
-
-#include <deque>
 
 namespace compiler::backend_vm::internal {
 	class FunctionLoweringContext;
@@ -17,6 +10,7 @@ namespace compiler::backend_vm::internal {
 	 * @brief Names of comptime type operation functions in DVM.
 	 */
 	namespace comptime_func_names {
+		// TODOP: Move to comptime_ops?
 		constexpr auto GLOBAL_QUERY_CONTEXT     = "__comptime_query_ctx";
 		constexpr auto CREATE_BOX               = "__comptime_create_box";
 		constexpr auto CREATE_REF               = "__comptime_create_ref";
@@ -71,6 +65,4 @@ namespace compiler::backend_vm::internal {
 		 */
 		DVMValue getQueryContext();
 	};
-
-
 }

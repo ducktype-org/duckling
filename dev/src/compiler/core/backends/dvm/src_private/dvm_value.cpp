@@ -1,6 +1,5 @@
 #include "dvm_value.hpp"
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>

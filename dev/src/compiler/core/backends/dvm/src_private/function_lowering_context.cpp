@@ -2,22 +2,14 @@
 
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
-#include "base/collections/optional.hpp"
-
 #include <string_id/string_id.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
-#include "vm/bytecode/validator/errors.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
-
-#include <bit>
-
 
 using namespace compiler::backend_vm::internal;
 

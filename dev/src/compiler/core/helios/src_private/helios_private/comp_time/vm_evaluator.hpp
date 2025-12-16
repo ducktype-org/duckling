@@ -1,10 +1,7 @@
 #pragma once
 
-#include "lir/lir_structure/lir_structure.hpp"
-
 #include <ctv/ctv.hpp>
-
-#include "query_framework/context.hpp"
+#include <lir/lir_structure/lir_structure.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 

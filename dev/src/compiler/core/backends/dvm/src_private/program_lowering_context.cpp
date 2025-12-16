@@ -1,14 +1,10 @@
 #include "program_lowering_context.hpp"
 
 #include "function_lowering_context.hpp"
-#include "typesystem/lower/type_layout.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
 
-#include "string_id/string_id.hpp"
-
-#include "vm/bytecode/builtin_types.hpp"
-#include "vm/bytecode/type_of_data.hpp"
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
 #include <ranges>
