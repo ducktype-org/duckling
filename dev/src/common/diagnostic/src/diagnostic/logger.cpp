@@ -9,7 +9,7 @@
 namespace dia {
 
 	void Logger::log(Box<Message> message_ptr) {
-		CORE_DEV_LOG(Diagnostics, "Diagnostic message: ", message_ptr->toString(true), "\n\n");
+		CORE_DEV_LOG(Diagnostics, "Diagnostic message at pos(", message_ptr->getSourcePosition().getStartLineColumn() , "): ", message_ptr->toString(true), "\n\n");
 
 		const auto severity_id
 			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));

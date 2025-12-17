@@ -4,6 +4,7 @@
 
 #include <diagnostic_interactive/logger_fwd.hpp>
 
+#include <logger/logger.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
@@ -36,7 +37,8 @@ namespace tpc {
 		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
-		bool                  skip_till_fallback = false;
+		bool                  skip_till_fallback = false; ///< Tells whether parser is currently skipping the parsing steps to get back to fallback.
+		u64                  skipped_entries_depth = 0; ///< Keeps balance of skipped entries to new fallbacks. Original fallback is only reached when it is 0.
 		bool finalized = false;
 
 		void checkAllParsed();
@@ -139,19 +141,49 @@ namespace tpc {
 		void finalize();
 
 		/**
-		 * @brief Logs an error relatively to the current token
+		 * @brief Adds to the balance of skipped_entries
 		 */
-		void fail(i64 rel_pos, const std::string& message) {
-			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-			skip_till_fallback = true;
+		void skipEntry() {
+			CORE_ASSERT(skip_till_fallback, "Skipped entries depth can only be counted during skipping till fallback");
+			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback");
+			skipped_entries_depth++;
+		}
+
+		/**
+		 * @brief Adds to the balance of skipped_entries
+		 */
+		bool removeEntry() {
+			CORE_ASSERT(skip_till_fallback, "Entries can only be counted during skipping till fallback.");
+			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback.");
+			skipped_entries_depth--;
+			return skipped_entries_depth == 0;
 		}
 
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
+		void fail(i64 rel_pos, const std::string& message) {
+			if (isSkipping()) {
+				CORE_DEV_LOG(Parser, "Skipped parsing error at pos(", ctokens().peek(rel_pos).getPosition().getStartLineColumn() , "): ", message, "\n\n");
+				return;
+			}
+			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
+			skip_till_fallback = true;
+			skipped_entries_depth = 1;
+		}
+
+		/**
+		 * @brief Logs an error relatively to the current token. 
+		 */
 		void log(Box<dia::Message> message) { 
-			if (message->getSeverity() == dia::Message::Severity::Error)
+			if (isSkipping()) {
+				CORE_DEV_LOG(Parser, "Skipped parsing message at pos(", message->getSourcePosition().getStartLineColumn() , "): ", message->toString(true), "\n\n");
+				return;
+			}
+			if (message->getSeverity() == dia::Message::Severity::Error) {
 				skip_till_fallback = true;
+				skipped_entries_depth = 1;
+			}
 			err->log(std::move(message)); 
 		}
 

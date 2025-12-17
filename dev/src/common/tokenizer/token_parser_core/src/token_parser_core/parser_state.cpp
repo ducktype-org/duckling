@@ -44,6 +44,7 @@ namespace tpc {
 		checkAllParsed();
 		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
+		skip_till_fallback = false;
 	}
 
 	void ParserState::goUpAndSkip() {
@@ -56,6 +57,7 @@ namespace tpc {
 		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
+		skip_till_fallback = false;
 	}
 
 	void ParserState::setFallback(u64 length) {
