@@ -128,6 +128,8 @@ namespace compiler::tsl {
 	 * Represents a runtime handle/ID to type metadata.
 	 *
 	 * Acts as a handle that references the type information stored in the static memory.
+	 *
+	 * @TODO: #1709 take a look at this as well - maybe some adjustments will have to be made.
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
 		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type):

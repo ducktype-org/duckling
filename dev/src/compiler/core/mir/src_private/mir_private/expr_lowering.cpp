@@ -203,57 +203,29 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleExpr(const hc::TupleExpr& expr) override {
-			auto result_type = expr.expression_type.getSymbolType();
-
-			// First check if we're creating a meta tuple type.
-			bool is_meta_tuple = std::ranges::all_of(expr.elements, [](const auto& elem) {
-				return elem->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta;
-			});
-
-			if (is_meta_tuple) {
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> values;
-
-				for (const auto& element: expr.elements | std::views::reverse) {
-					auto elem_lowered = lowerSubExpr(*element, current);
-					values.push_back(elem_lowered.getResult(function));
-					current = elem_lowered.begin;
-				}
-				std::ranges::reverse(values);
-
-				auto target_hole = current->addHole();
-
-				noValueOutput(
-					current,
-					target_hole,
-					Instruction(Operation::MetaCreateTuple, {}, values, {}, expr_scope),
-					result_type
-				);
-			} else {
-				throw base::NotYetImplemented("Non meta tuple constructor");
-			}
+		void visitTupleExpr(const hc::TupleExpr&) override {
+			throw base::NotYetImplemented("tuple constructor");
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
+			auto hole        = continuation->addHole();
 
 			BlockBuilderRef       current = continuation;
-			std::vector<MIRValue> values;
+			std::vector<MIRValue> subtype_values;
+			subtype_values.reserve(expr.subtypes.size());
 
 			for (const auto& element: expr.subtypes | std::views::reverse) {
 				auto elem_lowered = lowerSubExpr(*element, current);
-				values.push_back(elem_lowered.getResult(function));
+				subtype_values.push_back(elem_lowered.getResult(function));
 				current = elem_lowered.begin;
 			}
-			std::ranges::reverse(values);
-
-			auto target_hole = continuation->addHole();
+			std::ranges::reverse(subtype_values);
 
 			noValueOutput(
 				current,
-				target_hole,
-				Instruction(Operation::MetaCreateVariant, {}, values, {}, expr_scope),
+				hole,
+				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
 				result_type
 			);
 			return;
@@ -469,34 +441,6 @@ namespace compiler::mir {
 						.hole = hole,
 						.instr
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
-						.type = result_type }
-				);
-			} else if (const auto* variant_expr
-			           = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
-				auto hole = continuation->addHole();
-
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> subtype_values;
-				subtype_values.reserve(variant_expr->subtypes.size());
-
-				for (const auto& subtype: variant_expr->subtypes | std::views::reverse) {
-					auto subtype_result = lowerAndLiftToTypeRecursively(*subtype, current);
-					subtype_values.push_back(subtype_result.getResult(function));
-					current = subtype_result.begin;
-				}
-				std::ranges::reverse(subtype_values);
-
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
-
-				return ExprLowerRes(
-					current,
-					ExprLowerRes::Finalizer{
-						.hole  = hole,
-						.instr = Instruction(
-							Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope
-						),
 						.type = result_type }
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
