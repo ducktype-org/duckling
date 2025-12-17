@@ -49,7 +49,7 @@ int main(int argc, const char* argv[]) {
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
-						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();
 					auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n";
@@ -63,7 +63,7 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 			lir_fun->debugPrint(ctx, std::cerr);
 		});

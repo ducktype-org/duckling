@@ -5,7 +5,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -482,7 +481,7 @@ private:
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
 				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
-			          ->value()
+			          ->valueOrThrow()
 			          .getType()
 			          .getInterface(ctx)
 			          ->getElementsWithName(base::StrID("a"))
@@ -1066,7 +1065,7 @@ private:
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(
 					st(int32_type),
-					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
+					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->valueOrThrow()
 				);
 
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
@@ -1696,7 +1695,7 @@ private:
 			try {
 				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
 				CORE_PANIC("Should throw for invalid ABI.");
-			} catch (compiler::helios::errors::Failed& err) {
+			} catch (query::QueryFailedException& err) {
 				// Expected failure for invalid ABI
 			}
 		});
@@ -1956,14 +1955,14 @@ private:
 		try {
 			getConstValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
@@ -1972,35 +1971,35 @@ private:
 		try {
 			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 	}

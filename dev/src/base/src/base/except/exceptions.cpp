@@ -1,3 +1,4 @@
+
 #include <base/except/exceptions.hpp>
 
 #include <iostream>
@@ -13,9 +14,12 @@
 
 namespace base {
 
-	std::string getCurrentStackTrace() {
+	std::string getCurrentStackTrace(u16 max_depth) {
 #ifdef __cpp_lib_stacktrace
-		return prettyStacktraceString(std::stacktrace::current());
+		if (max_depth > 0)
+			return prettyStacktraceString(std::stacktrace::current(0, max_depth));
+		else
+			return prettyStacktraceString(std::stacktrace::current());
 #else
 		return "Stack trace is not supported in this compiler and/or system.";
 #endif

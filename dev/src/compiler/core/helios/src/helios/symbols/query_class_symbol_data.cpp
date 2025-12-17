@@ -71,20 +71,24 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.base_class, base) {
 				auto ctv = getTypeCTVFromPST(ctx, base);
-				if (ctv.hasError()) return query::QError(errors::Failed());
+				if (ctv.hasError()) return query::QError(query::Failed());
 				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 				// type of the base class has any specifiers.
-				class_info.base = ctv.value().get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(ctv.value().get<tsh::SymbolType<>>()->getType());
+				class_info.base = ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType();
+				class_info.implements.push_back(
+					ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
+				);
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
 					auto ctv = getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr());
-					if (ctv.hasError()) return query::QError(errors::Failed());
+					if (ctv.hasError()) return query::QError(query::Failed());
 					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 					// type of the base class has any specifiers.
-					class_info.implements.push_back(ctv.value().get<tsh::SymbolType<>>()->getType());
+					class_info.implements.push_back(
+						ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
+					);
 				}
 			}
 

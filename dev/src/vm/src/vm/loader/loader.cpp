@@ -34,7 +34,7 @@ namespace {
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		auto instruction
 			= vm::code::builders::makeInstructionFromArgs(opcode.opcode_name, opcode.args);
-		VISIT(instruction, i, i.bytecode_pos = opcode.position);
+		instruction.visit([&](auto&& i) { i.bytecode_pos = opcode.position; });
 		return instruction;
 	}
 }
@@ -121,9 +121,11 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 			e.label,
 			[&](Box<SomeValidationError>& err) {
 				for (const auto& instruction: e.jumps)
-					log.addNote<SomeValidationNote>(
-						err, instruction, code::StackStructureMismatchError::NOTE_MSG
-					);
+					instruction.visit([&](auto&& i) {
+						log.addNote<SomeValidationNote>(
+							err, i, code::StackStructureMismatchError::NOTE_MSG
+						);
+					});
 			},
 			e.what()
 		);
