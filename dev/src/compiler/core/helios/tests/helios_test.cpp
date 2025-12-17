@@ -1925,7 +1925,7 @@ private:
 
 			ctx.logger.clear();
 			assertTrue(
-				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasError(),
+				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasFailed(),
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;

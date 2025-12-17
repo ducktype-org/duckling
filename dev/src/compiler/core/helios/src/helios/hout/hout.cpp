@@ -128,31 +128,19 @@ namespace compiler::helios {
 			                                         .unlock(ctx)
 			                                         ->getExpr();
 				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
-					  "Handling errors in HOUT is not supported yet 2a — " + name(symbol).str()
+					  "Failed: query type of symbol 2a — " + name(symbol).str()
 				  );
-				  auto initial_value_hout
-					  = ctx.query<QueryHoutOfExpr>(initial_value_pst)
-			                .throwOnFail(
-								"Handling errors in HOUT is not supported yet 2b — "
-								+ name(symbol).str()
-							);
-
-				  // Apply necessary coercions.
-				  const auto coercion = canCoerce(
-					  ctx, initial_value_hout->expression_type.getSymbolType(), variable_type
-				  );
-				  const auto valid_coercion = coercion.throwOnFail(
-					  "Handling errors in HOUT is not supported yet 2c — " + name(symbol).str()
-				  );
-
-				  // Return the coerced value.
-				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
-					  valid_coercion.coerce(ctx, std::move(initial_value_hout))
+				  auto initial_value_hout_coerced
+					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
+					        .throwOnFail("Failed: variable initial value 2b — " + name(symbol).str());
+				
+				return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
+					  std::move(initial_value_hout_coerced)
 				  ) };
 			  }
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(
-					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
+					  "Failed: query const value 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");

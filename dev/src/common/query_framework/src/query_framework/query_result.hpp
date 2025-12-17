@@ -106,14 +106,26 @@ namespace query {
 			... && std::is_constructible_v<ValueType, Ts>
 		)
 		constexpr QResult& operator=(const QResult<Ts...>& oth) {
-			if (oth.hasFailed()) storage = query::Failed{};
+			if (oth.hasFailed()) {
+				storage = query::Failed{};
+				return *this;
+			}
 			else {
-				std::visit(
-					[&](auto&& val) {
-						storage = ValueType{std::forward<decltype(val)>(val)};
-					},
-					oth.valueOrPanic()
-				);
+				if constexpr (sizeof...(Ts) < 2) {
+					// oth does not use variant storage:
+					storage = oth.valueOrPanic();
+					return *this;
+				} 
+				else {
+					// oth uses variant storage:
+					std::visit(
+						[&](auto&& val) {
+							storage = ValueType{std::forward<decltype(val)>(val)};
+						},
+						oth.valueOrPanic()
+					);
+					return *this;
+				}
 			}
 		}
 

@@ -505,7 +505,7 @@ namespace compiler::helios {
 				return coercion.coerce(ctx, std::move(expr_hout));
 			}
 			variant_case(InvalidCoercion, _) {
-				ctx.logInt(makeBox<CannotCoerceError>(
+				ctx.log(makeBox<CannotCoerceError>(
 					pst_expr.element.unlock(ctx)->getSourcePosition(),
 					expr_hout->expression_type.getSymbolType(),
 					expected_type

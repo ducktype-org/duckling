@@ -567,7 +567,7 @@ namespace compiler::helios {
 				auto condition
 				    = getHoutOfExprWithExpectedType(
 						ctx,
-						stmt->getCondition(),
+						stmt->getCondition().unlock(ctx)->getExpr(),
 						tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
 						                    tsh::ReferenceKind::Direct,
 						                    tsh::Mutability::Mutable })
@@ -628,7 +628,7 @@ namespace compiler::helios {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
 							ctx,
-							stmt->getValue().value().unlock(ctx),
+							stmt->getValue().value().unlock(ctx)->getExpr(),
 							symbol_type
 						).throwOnFail("Failed: variable initial value");
 

@@ -436,12 +436,12 @@ namespace compiler::helios::code {
 			ctx.logInt(
 				makeBox<dia_int::PlaceholderCodeError>(
 					"Positional argument present after named argument",
+					call_expr->getSourcePosition(),
 					base::strConcat(
 						"Positional argument at index ",
 						base::toString(error_data.argument_index),
 						" cannot be after named arguments"
 					),
-					call_expr->getSourcePosition(),
 					"here"
 				)
 			);

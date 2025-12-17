@@ -621,7 +621,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA query::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -635,12 +635,12 @@ namespace compiler::helios {
 			const auto hout_qresult = getHoutOfExprWithExpectedType(
 				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
 			);
-			if (hout_qresult.hasError()) return query::Failed();
+			if (hout_qresult.hasFailed()) return query::Failed();
 
 			// Evaluate the HOUT expression at compile-time
 			auto ctv
 				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
-			if (ctv.hasError()) return query::Failed();
+			if (ctv.hasFailed()) return query::Failed();
 			return ctv.valueOrThrow();
 		}
 
