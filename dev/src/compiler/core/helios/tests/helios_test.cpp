@@ -1253,8 +1253,34 @@ private:
 
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
-		for (auto& function: hout->functions)
-			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+		for (auto& function: hout->functions) {
+			ASSERT_EQUAL(i64_type, function.declaration->return_type.getType());
+
+			if (function.declaration->original_name == base::StrID("big_example")) {
+				for (size_t i: std::initializer_list<size_t>{ 1, 2, 3, 4 }) {
+					auto if_stmt = function.body->statements.at(i).ref();
+					auto if_stmt_casted
+						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
+
+					auto ret_stmt = if_stmt_casted->then_body.statements.at(0).ref();
+					auto ret_stmt_casted
+						= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+					assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+					auto ret_type = ret_stmt_casted->value->expression_type.getType();
+					ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+				}
+				continue;
+			}
+
+			auto ret_stmt = function.body->statements.back().ref();
+			auto ret_stmt_casted
+				= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+			assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+			auto ret_type = ret_stmt_casted->value->expression_type.getType();
+			ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+		}
 	}
 
 	void testMangler() {
