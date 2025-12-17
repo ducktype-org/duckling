@@ -149,7 +149,7 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
-			// @TODO: visits for all valid stmt-s
+			// @TODO: #1710 visits for all valid stmt-s
 
 			template<class T>
 			void output(T&& value) {
@@ -607,9 +607,9 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  return_type(return_type) {}
 
-			// @TODO: visits for all valid stmt-s
+			// @TODO: #1710 visits for all valid stmt-s
 
-			// @TODO: some stuff in here are also symbols (like named if's)
+			// @TODO: #1710 some stuff in here are also symbols (like named if's)
 			// "query symbol in scope" should be able to just work
 			// and provide correct symbols for lookup, but some care
 			// has to be taken, to ensure consistency between this code and scope states.
