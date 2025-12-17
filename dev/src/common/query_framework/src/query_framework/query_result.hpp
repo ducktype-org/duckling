@@ -134,10 +134,11 @@ namespace query {
 			return std::holds_alternative<query::Failed>(storage);
 		}
 
-		/**
-		 * @brief Checks if QResult contains a value.
-		 */
-		explicit constexpr operator bool() const { return hasValue(); }
+		// BOOL CAST CAN BE UNINTUITIVE NOW:
+		// /**
+		//  * @brief Checks if QResult contains a value.
+		//  */
+		// explicit constexpr operator bool() const { return hasValue(); }
 
 
 
@@ -154,10 +155,12 @@ namespace query {
 			return {};
 		}
 
-		constexpr base::Optional<ValueType> optValueMove() && {
-			if (hasValue()) return std::move(std::get<ValueType>(storage));
-			return {};
-		}
+		// This was only used in tests:
+		// current interface still allows to move from QResult, it simply has to be done explicitly.
+		// constexpr base::Optional<ValueType> optValueMove() && {
+		// 	if (hasValue()) return std::move(std::get<ValueType>(storage));
+		// 	return {};
+		// }
 
 		/**
 		 * @brief Access the value, panic on no value.
@@ -232,10 +235,23 @@ namespace query {
 			return std::move(std::get<ValueType>(storage));
 		}
 
+		/** 
+		 * @brief Access the value by type, panic on no value.
+		 */
 		template<typename T>
 		constexpr auto getValueByTypeOrPanic() const -> decltype(auto) {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
 			return std::get<T>(std::get<ValueType>(storage));
+		}
+
+		/** 
+		 * @brief Test if QResult contains a value of type T.
+		 */
+		template<typename T>
+		[[nodiscard]]
+		constexpr bool hasValueByType() const {
+			if (!hasValue()) return false;
+			return std::holds_alternative<T>(std::get<ValueType>(storage));
 		}
 
 
