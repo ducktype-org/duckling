@@ -14,6 +14,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <diagnostic_interactive/usage.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
@@ -96,13 +97,13 @@ namespace compiler::helios {
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
 				using enum code::BuiltinBinary;
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
-				if (lhs_result.hasError()) {
+				if (lhs_result.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
 
 				auto rhs_result = evalHoutExpr(ctx, expr.rhs.ref());
-				if (rhs_result.hasError()) {
+				if (rhs_result.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
@@ -287,7 +288,7 @@ namespace compiler::helios {
 
 			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
 				auto cond_result = evalHoutExpr(ctx, expr.condition.ref());
-				if (cond_result.hasError()) {
+				if (cond_result.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
@@ -375,13 +376,13 @@ namespace compiler::helios {
 				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
 
 				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
-				if (evaluated.hasError()) {
+				if (evaluated.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
 				auto prev_value = evaluated.valueOrThrow();
 				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
-					if (next_expr.hasError()) {
+					if (next_expr.hasFailed()) {
 						result = query::Failed();
 						return;
 					}
@@ -421,29 +422,59 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
+
+				bool coercion_success = true;
+
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
 
 					auto coercion_qresult
 						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
-					if (coercion_qresult.hasError()) {
-						// @TODO: #1620 report error properly when HOUT exposes source positions.
-						result = query::Failed();
-						return;
-					}
-					const auto sub_type_coerced
-						= coercion_qresult.valueOrThrow().coerce(ctx, sub_type->clone());
-
-					const auto sub_type_ctv
-						= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
-					if (sub_type_ctv.hasError()) {
-						result = query::Failed();
-						return;
+					if (coercion_qresult.hasFailed()) {
+						coercion_success = false;
+						continue;
 					}
 
-					subtypes.emplace_back(
-						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
-					);
+					variant_match(coercion_qresult.valueOrPanic()) {
+						variant_case(Coercion, coercion) {
+							const auto sub_type_coerced
+								= coercion.coerce(ctx, sub_type->clone());
+
+							const auto sub_type_ctv
+								= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
+							if (sub_type_ctv.hasFailed()) {
+								result = query::Failed();
+								return;
+							}
+
+							subtypes.emplace_back(
+								sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+							);
+						}
+						variant_case(InvalidCoercion, _) {
+							coercion_success = false;
+
+							// @TODO: #1620 report error properly when HOUT exposes source positions.
+
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+								base::strConcat(
+									"Cannot coerce variant subtype of type ",
+									sub_type->expression_type.getSymbolType().toString(),
+									" to meta type."
+								)
+							));
+						}
+						variant_default {
+							CORE_PANIC(
+								"Unexpected coercion result when coercing to meta type."
+							);
+						}
+ 					}				
+				}
+
+				if (!coercion_success) {
+					result = query::Failed();
+					return;
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
@@ -608,18 +639,20 @@ namespace compiler::helios {
 		static auto evalHoutExpr(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			// Try evaluating with TreeEval(Short Path).
 			TreeEvalResult tree_eval_result = evaluateWithTreeEval(ctx, expr);
-			if (tree_eval_result.hasError()) {
-				variant_match(tree_eval_result.error()) {
-					variant_case(query::Failed, failed) { return query::Failed(); }
-					variant_case(CouldNotShortPath, _) {
-						// If TreeEval failed, try to evaluate with VM.
-						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-						if (!call_expr) return query::Failed();
-						return evaluateFunctionWithVm(ctx, call_expr);
-					}
+
+			variant_match(tree_eval_result.valueOrThrow()) {
+				variant_case(CompileTimeValue, ctv) { return ctv; }
+				variant_case(CouldNotShortPath, _) {
+					// If TreeEval failed, try to evaluate with VM.
+					const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
+					if (!call_expr) return query::Failed();
+					return evaluateFunctionWithVm(ctx, call_expr);
+				}
+				variant_default {
+					CORE_PANIC("Unexpected TreeEvalResult variant.");
 				}
 			}
-			return tree_eval_result.valueOrThrow();
+			CORE_UNREACHABLE();
 		}
 
 		static auto provide(query::Context& ctx, const QKey key) -> PResult {
