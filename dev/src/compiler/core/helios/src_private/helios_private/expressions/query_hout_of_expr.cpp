@@ -12,6 +12,7 @@
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+// #include <helios_private/errors/interactive_errors.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/collections/optional.hpp>
@@ -497,16 +498,25 @@ namespace compiler::helios {
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		if (coercion_qresult.hasFailed()) return query::Failed();
+
+		variant_match(coercion_qresult.valueOrPanic()) {
+			variant_case(Coercion, coercion) {
+				return coercion.coerce(ctx, std::move(expr_hout));
+			}
+			variant_case(InvalidCoercion, _) {
+				ctx.logInt(makeBox<CannotCoerceError>(
+					pst_expr.element.unlock(ctx)->getSourcePosition(),
+					expr_hout->expression_type.getSymbolType(),
+					expected_type
+				));
 		
-		// @TODO: fix error handling here:
-		if (coercion_qresult.hasError()) {
-			ctx.log(makeBox<CannotCoerceError>(
-				pst_expr.element.unlock(ctx)->getSourcePosition(),
-				expr_hout->expression_type.getSymbolType(),
-				expected_type
-			));
-			return query::Failed();
+				return query::Failed();
+			}
+			variant_default {
+				CORE_PANIC("Unhandled coercion result variant.");
+			}
 		}
-		return coercion_qresult.valueOrThrow().coerce(ctx, std::move(expr_hout));
+		CORE_UNREACHABLE();
 	}
 }
