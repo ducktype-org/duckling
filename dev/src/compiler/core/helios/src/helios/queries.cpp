@@ -630,7 +630,7 @@ namespace compiler::helios {
 							ctx,
 							stmt->getValue().value().unlock(ctx)->getExpr(),
 							symbol_type
-						).throwOnFail("Failed: variable initial value");
+						).throwOnFail("Failed: variable initial value 1");
 
 
 					output(code::VariableStmt(
