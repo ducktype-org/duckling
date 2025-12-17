@@ -284,9 +284,9 @@ namespace query {
 #define UNPACK_RESULT(var, new_value)                                         \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
-	var RES_VAR_NAME.valueOrThrow()
+	var RES_VAR_NAME.valueOrPanic()
 
 #define UNPACK_RESULT_MOVE(var, new_value)                                    \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
-	var std::move(RES_VAR_NAME).valueOrThrow()
+	var std::move(RES_VAR_NAME).valueOrPanic()

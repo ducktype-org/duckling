@@ -91,34 +91,37 @@ namespace compiler::helios {
 		AdditionalLookupParameters params
 	) const {
 		auto lookup_result = lookup(ctx, name, params);
+
 		auto get_as_single = lookup_result->getAsSingle();
 
-		if (get_as_single.hasError()) {
-			variant_match(get_as_single.error()) {
-				variant_case(errors::Ambiguity, _) {
-					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, "Ambiguity in lookup"
-					));
-				}
-				variant_case(errors::SymbolNotFound, _) {
-					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, base::strConcat("Symbol '", name, "' not found in lookup")
-					));
-				}
-				variant_default { CORE_PANIC("Invalid state"); }
-			}
+		if (get_as_single.hasFailed())
 			return query::Failed();
+
+		variant_match(get_as_single.valueOrPanic()) {
+			variant_case(SymbolList, symbol_list) {
+				SymbolList dealiased_result;
+
+				for (auto path_symbol: symbol_list) {
+					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
+					dealiased_result.appendList(dealiased);
+				}
+
+				return dealiased_result;
+			}
+			variant_case(errors::Ambiguity, _) {
+				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+					error_position, "Ambiguity in lookup"
+				));
+				return query::Failed();
+			}
+			variant_case(errors::SymbolNotFound, _) {
+				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+					error_position, base::strConcat("Symbol '", name, "' not found in lookup")
+				));
+				return query::Failed();
+			}
+			variant_default { CORE_PANIC("Invalid state"); }
 		}
-
-		const auto& symbols = get_as_single.valueOrThrow();
-
-		SymbolList dealiased_result;
-
-		for (auto path_symbol: symbols) {
-			UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-			dealiased_result.appendList(dealiased);
-		}
-
-		return dealiased_result;
+		CORE_UNREACHABLE();
 	}
 }
