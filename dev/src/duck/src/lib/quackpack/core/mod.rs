@@ -1,3 +1,4 @@
+pub mod fetcher;
 mod manifest;
 mod package_ctx;
 mod package_loader;

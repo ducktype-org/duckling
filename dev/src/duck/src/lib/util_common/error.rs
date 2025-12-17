@@ -15,9 +15,9 @@ pub struct QuackError {
     display_place: DisplayPlace,
 }
 
-pub trait QuackMessage: AsRef<str> + fmt::Debug {}
+pub trait QuackMessage: AsRef<str> + fmt::Debug + Send + Sync {}
 
-impl<M: AsRef<str> + fmt::Debug> QuackMessage for M {}
+impl<M: AsRef<str> + fmt::Debug + Send + Sync> QuackMessage for M {}
 
 /// Enum for single messages on the error stack.
 /// The underlying options represent:

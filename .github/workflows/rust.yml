@@ -45,12 +45,15 @@ jobs:
           rm -rf ${{ github.workspace }}
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
-      
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+
+      - name: Setup duck dependencies
+        uses: ./.github/actions/setup-duck-dependencies/
 
       - name: Run cargo clippy
         working-directory: ${{ matrix.project.path }}
@@ -119,6 +122,9 @@ jobs:
 
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+
+      - name: Setup duck dependencies
+        uses: ./.github/actions/setup-duck-dependencies/
 
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}

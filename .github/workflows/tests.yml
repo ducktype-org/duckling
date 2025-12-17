@@ -124,6 +124,9 @@ jobs:
       - name: Install Ninja
         run: sudo apt -y install ninja-build
 
+      - name: Setup duck dependencies
+        uses: ./.github/actions/setup-duck-dependencies/
+
       - name: Check installations
         run: |
           ${{ env.CXX_COMPILER }} --version

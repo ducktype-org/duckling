@@ -32,4 +32,8 @@ impl PackageMetadata {
     pub fn description(&self) -> Option<StrId> {
         self.description
     }
+
+    pub fn into_authors(self) -> Vec<StrId> {
+        self.authors
+    }
 }

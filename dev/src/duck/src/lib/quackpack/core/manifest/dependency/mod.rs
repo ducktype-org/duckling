@@ -1,10 +1,11 @@
-use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+use crate::{QuackError, QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 mod conditions;
 mod dependency_description;
 pub use dependency_description::*;
 mod dependencies;
 mod dependency_feature;
+use crate::quackpack::schemas::registry;
 pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
@@ -92,5 +93,70 @@ impl Dependency {
                 }
             })
             .collect()
+    }
+}
+
+impl TryFrom<(&str, registry::Dependency)> for Dependency {
+    type Error = QuackError;
+
+    fn try_from(value: (&str, registry::Dependency)) -> Result<Self, Self::Error> {
+        let (real_name, value) = value;
+        let real_name = real_name.into();
+        let registry::Dependency {
+            version,
+            source,
+            features,
+            pinned,
+            conditions,
+            is_alias_for,
+        } = value;
+        let manifest_name = is_alias_for.map(Into::into).unwrap_or(real_name);
+        let desc = DependencyDescription::new(manifest_name, version, source.try_into()?)?;
+        let features = features
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<_, _>>()?;
+        Self::new(
+            desc,
+            features,
+            pinned,
+            Some(conditions.try_into()?),
+            real_name,
+        )
+    }
+}
+
+impl TryFrom<Dependency> for registry::Dependency {
+    type Error = QuackError;
+
+    fn try_from(value: Dependency) -> Result<Self, Self::Error> {
+        let Dependency {
+            desc,
+            features,
+            is_pinned,
+            conditions,
+            real_name,
+        } = value;
+        let is_alias_for = if real_name == desc.manifest_name() {
+            None
+        } else {
+            Some(real_name.into())
+        };
+        let (_, version, source) = desc.decompose();
+        let features = features.into_iter().map(Into::into).collect();
+        let conditions = match conditions {
+            Some(conditions) => conditions.into(),
+            None => registry::DependencyCondition {
+                package_features: None,
+            },
+        };
+        Ok(Self {
+            version,
+            source: source.try_into()?,
+            features,
+            pinned: is_pinned,
+            conditions,
+            is_alias_for,
+        })
     }
 }
