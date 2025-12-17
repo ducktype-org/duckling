@@ -17,6 +17,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -68,6 +69,8 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
+		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -81,6 +84,7 @@ public:
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1189,10 +1193,11 @@ private:
 				ASSERT_EQUAL(1, function.body->statements.size());
 				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
-				Ref  ret_expr    = stmt_casted->value.ref();
-				Ref  ret_expr_casted
-					= dynamic_cast<const compiler::helios::code::LiteralNumericExpr*>(&*ret_expr);
-				ASSERT_EQUAL(1, ret_expr_casted->value.coerceTo<i64>());
+				auto ret_expr    = stmt_casted->value.get();
+				auto ctv
+					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr })
+				          .valueOrThrow();
+				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
 		}
 	}
@@ -1230,6 +1235,62 @@ private:
 			builtin_output_decl->parameters.at(0).type.getType().getKind(),
 			compiler::tsh::Kind::Integral
 		);
+	}
+
+	void testFunctionReturnTypeDeduction() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_deduction")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions)
+			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+	}
+
+	void testFunctionReturnTypeCheckAndCoercion() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_coercion")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions) {
+			ASSERT_EQUAL(i64_type, function.declaration->return_type.getType());
+
+			if (function.declaration->original_name == base::StrID("big_example")) {
+				for (size_t i: std::initializer_list<size_t>{ 1, 2, 3, 4 }) {
+					auto if_stmt = function.body->statements.at(i).ref();
+					auto if_stmt_casted
+						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
+
+					auto ret_stmt = if_stmt_casted->then_body.statements.at(0).ref();
+					auto ret_stmt_casted
+						= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+					assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+					auto ret_type = ret_stmt_casted->value->expression_type.getType();
+					ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
+						ret_stmt_casted->value.get()
+					);
+					assertTrue(cast_expr != nullptr, "Cast expression expected.");
+				}
+				continue;
+			}
+
+			auto ret_stmt = function.body->statements.back().ref();
+			auto ret_stmt_casted
+				= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+			assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+			auto ret_type = ret_stmt_casted->value->expression_type.getType();
+			ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+			auto cast_expr
+				= dynamic_cast<const compiler::helios::code::CastExpr*>(ret_stmt_casted->value.get()
+			    );
+			assertTrue(cast_expr != nullptr, "Cast expression expected.");
+		}
 	}
 
 	void testMangler() {
@@ -2014,6 +2075,24 @@ private:
 			assertThrows<std::exception>(
 				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
 				"Expected ambiguous callable candidates error"
+			);
+
+			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+			std::stringstream non_detailed_log;
+			ctx.logger.dumpLog(false, non_detailed_log);
+			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testErrorAmbiguousReturnType() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_return_type")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertThrows<std::exception>(
+				[&] { ctx.query<compiler::helios::QueryTopLevelEntities>(module_id); },
+				"Expected ambiguous return type error"
 			);
 
 			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
