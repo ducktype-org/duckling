@@ -33,6 +33,13 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Query function return type, deduced based on return statements in its body.
+	 */
+	DECLARE_QUERY(
+		QueryReturnTypeDeduction, SymID, CRef<tsh::SymbolType<>>, ({ .uses_qresult = false })
+	)
+
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scopes = ctx.query<QueryScopesInModule>(key);
