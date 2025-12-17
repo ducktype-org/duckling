@@ -530,13 +530,7 @@ namespace compiler::helios::code {
 			          .lookupExpectUnique(
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
-			if (!lookup_result) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						expr_access->getName().position,
-						base::strConcat("Value '", expr_access->getName().value, "' not found")
-					)
-				);
+			if (lookup_result.hasFailed()) {
 				return query::Failed();
 			}
 			// @TODO: handle dealias expressions #981:

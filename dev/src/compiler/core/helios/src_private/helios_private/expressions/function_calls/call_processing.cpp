@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -129,18 +130,20 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError())
+			if (coercion.hasValueByType<InvalidCoercion>())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
 					                                      .argument_index = i } };
-			if (not coercion.valueOrThrow().isEmptyCoercion()) coercion_present = true;
+			
+			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
 				.index_in_positional_args = i,
-				.requires_coercion        = not coercion.valueOrThrow().isEmptyCoercion() });
-			coercions[i].emplace(std::move(coercion).valueOrThrow());
+				.requires_coercion        = not is_empty });
+			coercions[i].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
 		}
 
 
@@ -173,19 +176,21 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError())
+			if (coercion.hasValueByType<InvalidCoercion>())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type    = provided_type,
 					                                      .expected_type = expected_type,
 					                                      .argument_index
                                                         = positional_arguments.size() + i } };
-			if (not coercion.valueOrThrow().isEmptyCoercion()) coercion_present = true;
+														
+			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx]
 				= NamedArgumentOrigin{ .index_in_named_args = i,
 				                       .requires_coercion
-				                       = not coercion.valueOrThrow().isEmptyCoercion() };
-			coercions[param_idx].emplace(std::move(coercion).valueOrThrow());
+				                       = not is_empty };
+			coercions[param_idx].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
 		}
 
 		// Go over default arguments
@@ -279,8 +284,8 @@ namespace compiler::helios::code {
 	 * @param call_expr The PST call expression containing arguments
 	 * @param positional_arguments Output vector for positional arguments
 	 * @param named_arguments Output map for named arguments
-	 * @return QError if validation fails (duplicate names, positional after named, or expression
-	 * error)
+	 * @return std::monostate is succeeded, 
+	 *         other states if validation fails (duplicate names, positional after named, or expression error)
 	 */
 	query::QResult<std::monostate, PositionalAfterNamedArgument> fillCallArgs(
 		query::Context&                                  ctx,
@@ -424,9 +429,26 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                          positional_arguments;
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
+
+		if (verify_result.hasFailed()) return query::Failed{};
+		if (verify_result.hasValueByType<PositionalAfterNamedArgument>()) {
+			auto error_data = verify_result.getValueByTypeOrPanic<PositionalAfterNamedArgument>();
+			ctx.logInt(
+				makeBox<dia_int::PlaceholderCodeError>(
+					"Positional argument present after named argument",
+					base::strConcat(
+						"Positional argument at index ",
+						base::toString(error_data.argument_index),
+						" cannot be after named arguments"
+					),
+					call_expr->getSourcePosition(),
+					"here"
+				)
+			);
+			return query::Failed{};
+		}
 		
-		// PR: fix this:
-		if (verify_result.hasError()) return query::QError(query::Failed{});
+	
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;
