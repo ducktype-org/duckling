@@ -82,15 +82,11 @@ namespace compiler::helios {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->hasValue()
-					              ? CompTimeEvalResult{ CompileTimeValue{ type->valueOrThrow() } }
-					              : query::Failed();
+					result = type->valueOrThrow();
 				} else {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
-					result                = const_val_result.hasValue()
-					                          ? CompTimeEvalResult{ const_val_result.valueOrThrow() }
-					                          : query::Failed();
+					result = const_val_result.valueOrThrow();
 				}
 			}
 
@@ -207,7 +203,7 @@ namespace compiler::helios {
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
 				auto expr_result = evalHoutExpr(ctx, expr.expr.ref());
-				if (expr_result.hasError()) {
+				if (expr_result.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
@@ -491,7 +487,7 @@ namespace compiler::helios {
 			void visitCastExpr(const code::CastExpr& cast) final {
 				// @note: We assume that if we got here, then the cast is valid.
 				auto expr_to_cast = evalHoutExpr(ctx, cast.source_expr.ref());
-				if (expr_to_cast.hasError()) {
+				if (expr_to_cast.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
@@ -540,7 +536,7 @@ namespace compiler::helios {
 
 			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
 				auto ctv_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
-				if (ctv_to_lift.hasError()) {
+				if (ctv_to_lift.hasFailed()) {
 					result = query::Failed();
 					return;
 				}
@@ -599,7 +595,7 @@ namespace compiler::helios {
 			std::vector<CompileTimeValue> ctv_arguments;
 			for (const auto& arg_expr: call_expr->arguments) {
 				auto arg_result = evalHoutExpr(ctx, arg_expr.ref());
-				if (arg_result.hasError()) return arg_result;
+				if (arg_result.hasFailed()) return query::Failed();
 				ctv_arguments.push_back(arg_result.valueOrThrow());
 			}
 
@@ -667,7 +663,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasError()) return query::Failed();
+			if (expr.hasFailed()) return query::Failed();
 			return ctx.query<QueryEvaluateHOUTExpression>({ expr.valueOrThrow().ref() });
 		}
 
@@ -688,7 +684,7 @@ namespace compiler::helios {
 				tsh::Mutability::Mutable,
 			}
 		);
-		if (hout_qresult.hasError()) return query::Failed();
+		if (hout_qresult.hasFailed()) return query::Failed();
 		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
 	}
 }

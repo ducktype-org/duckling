@@ -85,6 +85,7 @@ namespace query {
 		constexpr QResult& operator=(const QResult&)     = default;
 
 		template<class Value>
+		requires std::is_constructible_v<ValueType, Value&&>
 		constexpr QResult& operator=(Value&& value) {
 			storage = ValueType{std::forward<Value>(value)};
 			return *this;
@@ -96,26 +97,25 @@ namespace query {
 		}
 
 
-		// /**
-		//  * @brief Copy constructor from QResult, where Ts... are a subset of this QResult error
-		//  * types
-		//  */
-		// template<class T, class... Ts>
-		// requires std::is_constructible_v<MainValue, T> constexpr QResult(const QResult<T, Ts...>& oth) {
-		// 	// Cannot use the initializer list, because oth.value_storage is private (different
-		// 	// types)
-		// 	if (oth.hasValue()) storage = oth.valueOrThrow();
-
-		// 	if (oth.hasError()) {
-		// 		if constexpr (QResult<T, Ts...>::ErrorIsVariant::value)
-		// 			std::visit(
-		// 				[&](auto&& er_tp) { storage = std::unexpected(ErrorType{ er_tp }); },
-		// 				oth.error()
-		// 			);
-		// 		else
-		// 			storage = std::unexpected(oth.error());
-		// 	}
-		// }
+		/**
+		 * @brief Copy assignment from a different QResult
+		 * types
+		 */
+		template<class... Ts>
+		requires(
+			... && std::is_constructible_v<ValueType, Ts>
+		)
+		constexpr QResult& operator=(const QResult<Ts...>& oth) {
+			if (oth.hasFailed()) storage = query::Failed{};
+			else {
+				std::visit(
+					[&](auto&& val) {
+						storage = ValueType{std::forward<decltype(val)>(val)};
+					},
+					oth.valueOrPanic()
+				);
+			}
+		}
 
 
 		/**
