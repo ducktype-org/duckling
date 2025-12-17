@@ -131,6 +131,7 @@ namespace pst {
 				return *this;
 			}
 			el->addToken(state[0]);
+			result->position = state.getPosition();
 			result->value = state.tokens().next().getValue();
 			return *this;
 		}
@@ -142,6 +143,7 @@ namespace pst {
 		PSTAutomatic& one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
+				result->position = state.getPosition();
 				result->value = state.tokens().next().getValue();
 			}
 			return *this;

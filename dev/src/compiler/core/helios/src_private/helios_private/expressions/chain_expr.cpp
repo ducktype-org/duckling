@@ -571,7 +571,7 @@ namespace compiler::helios::code {
 			if (callees_q_result.hasFailed())
 				return query::Failed();
 			
-				const auto& callees = callees_q_result.valueOrThrow();
+			const auto& callees = callees_q_result.valueOrThrow();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
 		
