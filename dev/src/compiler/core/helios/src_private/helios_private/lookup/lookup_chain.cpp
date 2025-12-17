@@ -17,7 +17,7 @@ namespace compiler::helios {
 			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
 			                                     : HInterface::ofSymbol(result.back());
 
-			UNPACK_RESULT_MOVE(auto lookup =,
+			UNPACK_QRESULT_MOVE(auto lookup =,
 			                   lookup_interface.lookupExpectUnique(
 								   pointed.position, ctx, pointed.value, key.params
 							   ););

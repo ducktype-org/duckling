@@ -281,12 +281,12 @@ namespace query {
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
  * before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
  */
-#define UNPACK_RESULT(var, new_value)                                         \
+#define UNPACK_QRESULT(var, new_value)                                         \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var RES_VAR_NAME.valueOrPanic()
 
-#define UNPACK_RESULT_MOVE(var, new_value)                                    \
+#define UNPACK_QRESULT_MOVE(var, new_value)                                    \
 	auto&& RES_VAR_NAME = new_value;                                          \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var std::move(RES_VAR_NAME).valueOrPanic()

@@ -278,7 +278,7 @@ namespace compiler::mir {
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
 			// change FunctionEnd to proper return
-			UNPACK_RESULT_MOVE(
+			UNPACK_QRESULT_MOVE(
 				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
 			);
 

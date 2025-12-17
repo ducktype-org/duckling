@@ -102,7 +102,7 @@ namespace compiler::helios {
 				SymbolList dealiased_result;
 
 				for (auto path_symbol: symbol_list) {
-					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
+					UNPACK_QRESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
 					dealiased_result.appendList(dealiased);
 				}
 

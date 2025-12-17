@@ -606,7 +606,7 @@ namespace compiler::helios {
 				return SymbolList{ { key } };
 			}
 
-			UNPACK_RESULT_MOVE(
+			UNPACK_QRESULT_MOVE(
 				auto lookup_chain =,
 				lookupChain(
 					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
