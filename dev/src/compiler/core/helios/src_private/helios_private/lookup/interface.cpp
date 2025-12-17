@@ -6,7 +6,7 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <diagnostic/source_position.hpp>
+#include <diagnostic_interactive/usage.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -109,14 +109,20 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-					error_position, "Ambiguity in lookup"
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Ambiguity in lookup",
+					error_position,
+					"",
+					"symbol lookup here"
 				));
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-					error_position, base::strConcat("Symbol '", name, "' not found in lookup")
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat("Symbol '", name, "' not found in lookup"),
+					error_position,
+					"",
+					"symbol lookup here"
 				));
 				return query::Failed();
 			}

@@ -506,12 +506,6 @@ namespace compiler::helios {
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();
 				if (location_value_category == tsh::PrimaryCategory::Literal) {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							assignment->getSourcePosition(),
-							"Left side of assignment can't be a literal."
-						)
-					);
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						"Left side of assignment is a literal",
 						var.unlock(ctx)->getSourcePosition(),
