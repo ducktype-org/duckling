@@ -245,6 +245,16 @@ namespace query {
 		}
 
 		/** 
+		 * @brief Access the value by type, panic on no value.
+		 */
+		template<typename T>
+		constexpr auto getValueByTypeOrPanic() -> decltype(auto) {
+			if (!hasValue()) CORE_PANIC("Result is empty.");
+			return std::get<T>(std::get<ValueType>(storage));
+		}
+
+
+		/** 
 		 * @brief Test if QResult contains a value of type T.
 		 */
 		template<typename T>

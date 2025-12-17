@@ -21,17 +21,19 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <diagnostic_interactive/usage.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 
-#include <variant>
+// #include <variant>
 
 namespace compiler::helios::code {
 
@@ -117,7 +119,7 @@ namespace compiler::helios::code {
 	 * thing in our compiler (namespace is a valid type that can be for example passed to a
 	 * template).
 	 */
-	class ChainExprConstruction {
+	class ChainExprConstruction final {
 		query::Context& query_ctx;
 
 		/**
@@ -379,15 +381,9 @@ namespace compiler::helios::code {
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 				ident->getName().position, query_ctx, ident->getName().value
 			);
-			if (!lookup_result) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						ident->getName().position,
-						base::strConcat("Value '", ident->getName().value, "' not found")
-					)
-				);
+			if (lookup_result.hasFailed())
 				return query::Failed();
-			}
+
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.valueOrThrow().back();
 			// @TODO: handle dealias expressions #981:
@@ -460,30 +456,67 @@ namespace compiler::helios::code {
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
 
-			if (not looked_up_symbols.hasValue()) {
-				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
-				// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
-				// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
+			if (looked_up_symbols.hasFailed()) {
 				return query::Failed();
 			}
 
-			// @TODO PR: fix/mock this:
-			auto sym = looked_up_symbols.valueOrThrow().back();
+			variant_match(looked_up_symbols.valueOrPanic()) {
+				variant_case(SymbolList, result) {
+					// @TODO: handle dealias expressions #981:
+					auto sym = result.back();
 
-			// const auto sym = looked_up_symbols.valueOrThrow().back();
-			if (kind(sym) == SymbolKind::Field) {
-				auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
-				return ChainState::ofExpr(std::move(node));
-			} else if (kind(sym) == SymbolKind::Namespace) {
-				result_sequence.push_back(std::move(current_expr));
-				return ChainState::ofNamespaceLike(sym);
-			} else if (kind(sym) == SymbolKind::Method) {
-				throw base::NotYetImplemented(
-					"Handling of access to method without a call is not implemented yet"
-				);
+					// const auto sym = looked_up_symbols.valueOrThrow().back();
+					if (kind(sym) == SymbolKind::Field) {
+						auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
+						return ChainState::ofExpr(std::move(node));
+					} else if (kind(sym) == SymbolKind::Namespace) {
+						result_sequence.push_back(std::move(current_expr));
+						return ChainState::ofNamespaceLike(sym);
+					} else if (kind(sym) == SymbolKind::Method) {
+						throw base::NotYetImplemented(
+							"Handling of access to method without a call is not implemented yet"
+						);
+					}
+					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
+					return query::Failed();
+				}
+				variant_case_novalue(errors::Ambiguity) {
+
+					query_ctx.logInt(
+						makeBox<dia_int::PlaceholderCodeError>(
+							"Ambiguous symbol in type lookup",
+							expr_access->getName().position,
+							"",
+							"here"
+						)
+					);
+
+					return query::Failed();
+
+				}
+				variant_case_novalue(errors::SymbolNotFound) {
+					// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
+					// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
+					// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
+
+					query_ctx.logInt(
+						makeBox<dia_int::PlaceholderCodeError>(
+							"Ambiguous not found in type",
+							expr_access->getName().position,
+							"",
+							"here"
+						)
+					);
+
+					return query::Failed();
+				}
+
+				variant_default {
+					CORE_PANIC("Unexpected result type from lookup");
+				}
 			}
-			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
-			return query::Failed();
+			CORE_UNREACHABLE();
+
 		}
 
 		/**

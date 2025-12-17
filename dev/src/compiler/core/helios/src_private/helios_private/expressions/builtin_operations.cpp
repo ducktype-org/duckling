@@ -31,17 +31,17 @@ namespace {
 
 		// Try coercing left to right.
 		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
-		if (lhs_to_rhs.hasValue()) {
+		if (lhs_to_rhs.hasValueByType<Coercion>()) {
 			return std::make_tuple(
-				rhs_type, std::move(lhs_to_rhs.valueOrThrow()), Coercion::emptyCoercion(rhs_type)
+				rhs_type, std::move(lhs_to_rhs.getValueByTypeOrPanic<Coercion>()), Coercion::emptyCoercion(rhs_type)
 			);
 		}
 
 		// Try coercing right to left.
 		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
-		if (rhs_to_lhs.hasValue()) {
+		if (rhs_to_lhs.hasValueByType<Coercion>()) {
 			return std::make_tuple(
-				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.valueOrThrow())
+				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.getValueByTypeOrPanic<Coercion>())
 			);
 		}
 

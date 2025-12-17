@@ -33,6 +33,7 @@ namespace compiler::helios {
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 		
 		UNPACK_QRESULT(auto& child_path =, inner.getAsSingle());
+		
 		variant_match(child_path) {
 			variant_case(SymbolList, symbols) {
 				SymbolList result;
