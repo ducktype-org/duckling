@@ -41,4 +41,14 @@ impl DependencyDescription {
     pub fn source(&self) -> &Source {
         &self.source
     }
+
+    /// Destroy this description into inner parts
+    pub fn decompose(self) -> (StrId, Vec<Version>, Source) {
+        let Self {
+            manifest_name,
+            versions,
+            source,
+        } = self;
+        (manifest_name, versions, source)
+    }
 }

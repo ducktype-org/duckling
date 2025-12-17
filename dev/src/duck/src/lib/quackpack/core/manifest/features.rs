@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::{QuackResult, StrId, qp_bail};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 /// Name of a feature.
 pub type FeatureName = StrId;
@@ -68,6 +68,28 @@ impl Features {
     /// Get the underlying feature map.
     pub fn all_features(&self) -> &HashMap<FeatureName, Vec<FeatureName>> {
         &self.0
+    }
+}
+
+impl TryFrom<HashMap<String, Vec<String>>> for Features {
+    type Error = QuackError;
+
+    fn try_from(value: HashMap<String, Vec<String>>) -> Result<Self, Self::Error> {
+        Self::new(
+            value
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into_iter().map(Into::into).collect()))
+                .collect(),
+        )
+    }
+}
+
+impl From<Features> for HashMap<String, Vec<String>> {
+    fn from(value: Features) -> Self {
+        let map = value.0;
+        map.into_iter()
+            .map(|(k, v)| (k.into(), v.into_iter().map(Into::into).collect()))
+            .collect()
     }
 }
 

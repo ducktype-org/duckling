@@ -208,6 +208,7 @@ namespace vm::opargs {
 		ExtCFunctionName,
 		MethodName,
 		Label>;
+	using OpCodeArgCRef      = base::CRefifyParams<OpCodeArg>;
 	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
 	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
 	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
