@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 pub mod types;
 
 use std::{cell::OnceCell, marker::PhantomData};
@@ -65,7 +64,5 @@ impl<'duck> Solver<'duck, Prepared> {
         )
     }
 }
-=======
-mod solving;
-mod types;
->>>>>>> 242493a2e (work on solver engine begun)
+pub mod solving;
+pub mod types;

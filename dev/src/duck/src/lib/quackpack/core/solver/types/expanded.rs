@@ -2,26 +2,26 @@ use std::path::PathBuf;
 
 use crate::{QuackResult, StrId, qp_bail_internal, quackpack::core::Version};
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ExpandedLocation {
     Registry(ExpandedLocRegistry),
     Git(ExpandedLocGit),
     Local(ExpandedLocLocal),
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExpandedLocRegistry {
     url: StrId,
     real_name: StrId,
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExpandedLocGit {
     url: StrId,
     commit: StrId,
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExpandedLocLocal {
     absolute_path: PathBuf,
 }
@@ -40,10 +40,10 @@ impl ExpandedLocation {
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedPackage {
-    location: ExpandedLocation,
-    version: Option<Version>,
+    pub location: ExpandedLocation,
+    pub version: Option<Version>,
 }
 
 impl ExpandedPackage {

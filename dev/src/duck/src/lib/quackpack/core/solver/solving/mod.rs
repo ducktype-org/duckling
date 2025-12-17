@@ -1,3 +1,3 @@
 mod scip_ext;
 mod solver_engine;
-mod solver_model;
+pub mod solver_model;
