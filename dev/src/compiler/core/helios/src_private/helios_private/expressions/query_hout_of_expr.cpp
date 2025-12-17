@@ -147,7 +147,7 @@ namespace compiler::helios::code {
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = fromPST(ctx, sub_expr);
-						if (sub_expr_hout.hasError()) {
+						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
 						}
@@ -161,8 +161,8 @@ namespace compiler::helios::code {
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
 				// @todo: make failure more explicit...
-				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
-
+				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
+				
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
@@ -193,7 +193,7 @@ namespace compiler::helios::code {
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
 				auto result = fromChainExpr(ctx, chain_expr);
-				if (result.hasError()) {
+				if (result.hasFailed()) {
 					// Error has occurred.
 					return;
 				}
