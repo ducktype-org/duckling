@@ -120,6 +120,18 @@ impl Borrow<str> for StrId {
     }
 }
 
+impl From<StrId> for String {
+    fn from(value: StrId) -> Self {
+        value.as_str().into()
+    }
+}
+
+impl From<StrId> for &'static str {
+    fn from(value: StrId) -> Self {
+        value.as_str()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

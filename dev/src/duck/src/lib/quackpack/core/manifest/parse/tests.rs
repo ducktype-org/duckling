@@ -765,3 +765,62 @@ dependencies:
         )
     );
 }
+
+#[test]
+fn dep_features_with_invalid_conds() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      -
+        b:
+          package_features:
+            - a
+        c:
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 11 column 9",
+            ]
+        )
+    );
+
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      - {}
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 10 column 9",
+            ]
+        )
+    );
+}
