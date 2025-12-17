@@ -1269,6 +1269,11 @@ private:
 
 					auto ret_type = ret_stmt_casted->value->expression_type.getType();
 					ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
+						ret_stmt_casted->value.get()
+					);
+					assertTrue(cast_expr != nullptr, "Cast expression expected.");
 				}
 				continue;
 			}
@@ -1280,6 +1285,11 @@ private:
 
 			auto ret_type = ret_stmt_casted->value->expression_type.getType();
 			ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+			auto cast_expr
+				= dynamic_cast<const compiler::helios::code::CastExpr*>(ret_stmt_casted->value.get()
+			    );
+			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
 	}
 
