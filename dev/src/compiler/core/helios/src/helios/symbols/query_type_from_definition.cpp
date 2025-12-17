@@ -3,6 +3,7 @@
 
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -31,6 +32,14 @@ namespace compiler::helios {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
+			}
+
+			void visitConst(pst::Access<pst::Const>) final {
+				auto ctv_result = ctx.query<QueryConstValueOf>(key);
+				if (ctv_result.hasError()) return;
+				const auto& ctv           = ctv_result.valueOrThrow();
+				const auto& type_of_const = ctv.get<tsh::SymbolType<>>();
+				definition_symbol_type    = type_of_const;
 			}
 		};
 

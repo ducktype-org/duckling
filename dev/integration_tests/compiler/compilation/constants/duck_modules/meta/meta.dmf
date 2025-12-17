@@ -1,0 +1,20 @@
+fun createInt() -> type = i32;
+fun createBigInt() -> type = i64;
+const A = createInt();
+const B: A = 123;
+
+fun main() -> i64 = {
+    let sum: createInt() = 2147483647;
+    let sum2: A = 2147483647;
+
+    # If a correct type was evaluated this should be an overflow. So the result should be < 0.
+    if (sum + 1 < 0)  {
+        builtin_output_i64(1);
+    } 
+
+    if (sum2 + 1 < 0)  {
+        builtin_output_i64(2);
+    } 
+
+    return 0i64;
+}
