@@ -15,6 +15,7 @@ namespace tpc {
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
+	protected:
 		/**
 		 * @brief Types of substream:
 		 * - Recursive - Comes from the token structure.
@@ -37,12 +38,6 @@ namespace tpc {
 		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
-		bool                  skip_till_fallback = false; ///< Tells whether parser is currently skipping the parsing steps to get back to fallback.
-		u64                  skipped_entries_depth = 0; ///< Keeps balance of skipped entries to new fallbacks. Original fallback is only reached when it is 0.
-		bool finalized = false;
-
-		void checkAllParsed();
-
 	public:
 		/**
 		 * @brief provides mutable access to the current stream
@@ -53,19 +48,6 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
-
-		/**
-		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
-		 * reached.
-		 */
-		[[nodiscard]]
-		bool isSkipping() const;
-
-		/**
-		 * @brief Informs whether the state is finalized
-		 */
-		[[nodiscard]]
-		bool isFinalized() const;
 
 		// clang-format off
 		[[nodiscard]]
@@ -106,84 +88,30 @@ namespace tpc {
 
 		/**
 		 * @brief Creates a new stream from the current token in current stream and makes it the
-		 * current stream
+		 * current stream.
 		 */
-		void goDown();
+		virtual void goDown();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream. Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 * @brief deletes current stream and makes last stream the current stream. 
 		 */
-		void goUp();
+		virtual void goUp();
 		/**
 		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token(the recursive token that was the source of the deleted stream). Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
+		 * token.
 		 */
-		void goUpAndSkip();
-
-		/**
-		 * @brief Creates a new sub-stream of given length starting in the current token.
-		 */
-		void setFallback(u64 length);
-
-		/**
-		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
-		 * sub-stream wasn't parsed and an error wasn't emitted.
-		 */
-		void exitFallback();
-
-		/**
-		 * @brief Do final checks that everything is parsed.
-		 */
-		void finalize();
-
-		/**
-		 * @brief Adds to the balance of skipped_entries
-		 */
-		void skipEntry() {
-			CORE_ASSERT(skip_till_fallback, "Skipped entries depth can only be counted during skipping till fallback");
-			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback");
-			skipped_entries_depth++;
-		}
-
-		/**
-		 * @brief Adds to the balance of skipped_entries
-		 */
-		bool removeEntry() {
-			CORE_ASSERT(skip_till_fallback, "Entries can only be counted during skipping till fallback.");
-			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback.");
-			skipped_entries_depth--;
-			return skipped_entries_depth == 0;
-		}
+		virtual void goUpAndSkip();
 
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void fail(i64 rel_pos, const std::string& message) {
-			if (isSkipping()) {
-				CORE_DEV_LOG(Parser, "Skipped parsing error at pos(", ctokens().peek(rel_pos).getPosition().getStartLineColumn() , "): ", message, "\n\n");
-				return;
-			}
+		virtual void fail(i64 rel_pos, const std::string& message) {
 			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-			skip_till_fallback = true;
-			skipped_entries_depth = 1;
 		}
 
 		/**
 		 * @brief Logs an error relatively to the current token. 
 		 */
-		void log(Box<dia::Message> message) { 
-			if (isSkipping()) {
-				CORE_DEV_LOG(Parser, "Skipped parsing message at pos(", message->getSourcePosition().getStartLineColumn() , "): ", message->toString(true), "\n\n");
-				return;
-			}
-			if (message->getSeverity() == dia::Message::Severity::Error) {
-				skip_till_fallback = true;
-				skipped_entries_depth = 1;
-			}
+		virtual void log(Box<dia::Message> message) { 
 			err->log(std::move(message)); 
 		}
 

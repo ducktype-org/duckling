@@ -10,8 +10,6 @@ namespace pst {
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
-	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
-
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
 	void LangElement::calcElementPathHashRecursive() {
