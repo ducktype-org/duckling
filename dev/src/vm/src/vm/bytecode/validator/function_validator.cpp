@@ -752,8 +752,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type.type_name != wanted_type)
-					throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			instr_case(Op_variantSetInner_lptr_type, instr) {
 				const auto& variant_pointer
@@ -779,8 +778,7 @@ class FunctionValidator {
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.expected_type.type_name != wanted_type)
-					throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label) {}
 			instr_case_novalue(Op_jmp_label) {}
@@ -1130,8 +1128,7 @@ class FunctionValidator {
 
 	void validateSignature() {
 		for (const auto& param_type: function.signature.parameters) {
-			if (!tod_map.contains(param_type.str))
-				throw UnknownTypeError(opargs::Type{ param_type.str });
+			if (!tod_map.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
 			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
 		}
 		if (!tod_map.contains(function.signature.result_type.str))
