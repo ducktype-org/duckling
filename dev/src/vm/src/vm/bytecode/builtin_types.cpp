@@ -19,6 +19,7 @@ namespace vm::code {
 	const std::vector<TypeOfData>& rawBuiltins() {
 		static const std::vector<TypeOfData> types = {
 			TypeOfData(PrimitiveType(base::StrID("byte"), 1)),
+			TypeOfData(PrimitiveType(base::StrID("i8"), 1)),
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
 			TypeOfData(PrimitiveType(base::StrID("i64"), 8)),

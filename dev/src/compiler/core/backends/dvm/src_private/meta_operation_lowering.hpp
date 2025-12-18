@@ -1,5 +1,4 @@
 #pragma once
-
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 
@@ -13,6 +12,8 @@ namespace compiler::backend_vm::internal {
 		constexpr auto GLOBAL_QUERY_CONTEXT     = "__comptime_query_ctx";
 		constexpr auto CREATE_BOX               = "__comptime_create_box";
 		constexpr auto CREATE_REF               = "__comptime_create_ref";
+		constexpr auto TYPES_EQUAL              = "__comptime_types_equal";
+		constexpr auto TYPES_NOT_EQUAL          = "__comptime_types_not_equal";
 		constexpr auto TUPLE_BUILDER_NEW        = "__comptime_tuple_builder_new";
 		constexpr auto TUPLE_BUILDER_PUSH       = "__comptime_tuple_builder_push";
 		constexpr auto TUPLE_BUILDER_FINALIZE   = "__comptime_tuple_builder_finalize";
@@ -43,6 +44,12 @@ namespace compiler::backend_vm::internal {
 			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
 		);
 		void lowerCreateVariant(
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		);
+		void lowerTypesEqual(
+			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+		);
+		void lowerTypesNotEqual(
 			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
 		);
 

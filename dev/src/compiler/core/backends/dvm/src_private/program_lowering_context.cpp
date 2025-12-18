@@ -29,7 +29,7 @@ namespace {
 			return 8;
 		if (type_name == "i32" || type_name == "f32" || type_name == "u32") return 4;
 		if (type_name == "i16" || type_name == "u16") return 2;
-		if (type_name == "i8" || type_name == "u8" || type_name == "bool" || type_name == "void")
+		if (type_name == "i8" || type_name == "u8" || type_name == "byte" || type_name == "void")
 			// @TODO: #656 If void size changes, remember to change here.
 			return 1;
 		CORE_PANIC("Unsupported VM type: ", type_name.strView());

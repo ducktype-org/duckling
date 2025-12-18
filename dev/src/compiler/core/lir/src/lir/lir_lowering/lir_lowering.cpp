@@ -206,6 +206,10 @@ namespace compiler::lir {
 			return Operation::MetaCreateTuple;
 		case mir::Operation::MetaCreateVariant:
 			return Operation::MetaCreateVariant;
+		case mir::Operation::MetaEq:
+			return Operation::MetaEq;
+		case mir::Operation::MetaNeq:
+			return Operation::MetaNeq;
 
 		/// Logic ///
 		case mir::Operation::BooleanAnd:
@@ -537,6 +541,8 @@ namespace compiler::lir {
 				case mir::Operation::MetaCreateRef:
 				case mir::Operation::MetaCreateTuple:
 				case mir::Operation::MetaCreateVariant:
+				case mir::Operation::MetaEq:
+				case mir::Operation::MetaNeq:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:

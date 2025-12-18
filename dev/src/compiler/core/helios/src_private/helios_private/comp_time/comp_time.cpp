@@ -198,6 +198,7 @@ namespace compiler::helios {
 							// Unsupported type for binary operator.
 							return query::QError(query::Failed());
 						}
+						// TODOP: Add symbol type here
 					},
 					lhs_ctv.getStorage(),
 					rhs_ctv.getStorage()
@@ -356,6 +357,7 @@ namespace compiler::helios {
 								return lhs_num == rhs_num;
 							case IntegerNeq:
 							case FloatNeq:
+								// TODOP: Meta add here?
 								return lhs_num != rhs_num;
 							default:
 								CORE_UNREACHABLE();

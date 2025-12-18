@@ -25,6 +25,32 @@ fun megaType(a: type) -> type = {
 }
 const megaGigaType = megaType(i128);
 
+fun isMegaWithI128(a: type) -> bool = {
+    if (a == (i16, i32, i64, i128)) {
+        return true;
+    }
+    return false;
+}
+const IS_MEGA = isMegaWithI128((i16, i32, i64, i128));
+
+
+// TODOP: Link this in tests
+fun isI32(a: type) -> bool = {
+    if (a == i32) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+const REAL = isI32(i32);
+const FAKE = isI32(i64);
+
+
+# TODOP: issue
+# fun goo(t: type) -> type = (const t);
+# const GFKH = goo(i32);
+
 fun fib(n: i64) -> i64 = {
    if (n < 2i64) { return n; }
    return fib(n - 1i64) + fib(n - 2i64);

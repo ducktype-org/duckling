@@ -167,6 +167,26 @@ namespace compiler::helios::comptime_ops {
 		return MetaTypeMemoryManager::instance().allocateType(variant_type);
 	}
 
+	DEF_VM_EXT_C_FUNC(
+		bool,
+		"i8",
+		__comptime_types_equal,  // NOLINT(readability-identifier-naming)
+		(tsh::SymbolType<>*, "opaque_ptr", left),
+		(tsh::SymbolType<>*, "opaque_ptr", right)
+	) {
+		return *left == *right;
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		bool,
+		"byte",
+		__comptime_types_not_equal,  // NOLINT(readability-identifier-naming)
+		(tsh::SymbolType<>*, "opaque_ptr", left),
+		(tsh::SymbolType<>*, "opaque_ptr", right)
+	) {
+		return *left != *right;
+	}
+
 	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
 		return {
 			VM_INSTANCE_EXT_C_FUNC(__comptime_create_box, __comptime_create_box, pid),
@@ -188,6 +208,8 @@ namespace compiler::helios::comptime_ops {
 			VM_INSTANCE_EXT_C_FUNC(
 				__comptime_variant_builder_finalize, __comptime_variant_builder_finalize, pid
 			),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_types_equal, __comptime_types_equal, pid),
+			VM_INSTANCE_EXT_C_FUNC(__comptime_types_not_equal, __comptime_types_not_equal, pid),
 		};
 	}
 

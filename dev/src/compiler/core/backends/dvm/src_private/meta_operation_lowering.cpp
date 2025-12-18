@@ -24,6 +24,12 @@ namespace compiler::backend_vm::internal {
 		case lir::Operation::MetaCreateVariant:
 			lowerCreateVariant(args, output);
 			break;
+		case lir::Operation::MetaEq:
+			lowerTypesEqual(args, output);
+			break;
+		case lir::Operation::MetaNeq:
+			lowerTypesNotEqual(args, output);
+			break;
 		default:
 			CORE_PANIC("Unknown meta operation: ", base::enumToStr(meta_operation.meta_op));
 		}
@@ -77,6 +83,35 @@ namespace compiler::backend_vm::internal {
 			type_args,
 			output
 		);
+	}
+
+	void MetaOperationLowerer::lowerTypesEqual(
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+	) {
+		CORE_ASSERT(type_args.size() == 2, "MetaEq should have two arguments");
+		func_ctx.handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::TYPES_EQUAL), func_ctx.getProgramContext()
+			),
+			type_args,
+			output
+		);
+
+		func_ctx.pushInstruction({ OpKind::cmov, output.value(), DVMValue(1).asArgument() });
+	}
+
+	void MetaOperationLowerer::lowerTypesNotEqual(
+		const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
+	) {
+		CORE_ASSERT(type_args.size() == 2, "MetaNeq should have two arguments");
+		func_ctx.handleCall(
+			FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::TYPES_NOT_EQUAL), func_ctx.getProgramContext()
+			),
+			type_args,
+			output
+		);
+		func_ctx.pushInstruction({ OpKind::cmov, output.value(), DVMValue(1).asArgument() });
 	}
 
 	void MetaOperationLowerer::lowerBuilderPattern(

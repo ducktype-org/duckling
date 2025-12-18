@@ -140,7 +140,9 @@ namespace {
 		}
 
 		case compiler::tsh::Kind::Bool: {
-			if (vm_value->type->getName() != base::StrID("byte"))
+			// TODOP: Unify?
+			if (vm_value->type->getName() != base::StrID("byte")
+			    && vm_value->type->getName() != base::StrID("i8"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,
 					"Expected byte (bool) VM value but received type: "

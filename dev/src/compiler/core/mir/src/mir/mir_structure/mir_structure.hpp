@@ -78,6 +78,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	MetaCreateRef,
 	MetaCreateTuple, // N arguments, types to create the tuple type from
 	MetaCreateVariant, // N arguments, types to create the variant type from
+	MetaEq,
+	MetaNeq,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,

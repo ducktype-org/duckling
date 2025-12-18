@@ -563,6 +563,11 @@ namespace compiler::mir {
 			case FloatNeq:
 				return Operation::FloatNeq;
 
+			case MetaEq:
+				return Operation::MetaEq;
+			case MetaNeq:
+				return Operation::MetaNeq;
+
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:
