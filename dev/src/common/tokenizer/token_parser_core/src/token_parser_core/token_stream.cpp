@@ -47,15 +47,6 @@ namespace tpc {
 	}
 
 	TokenStream TokenStream::getSubstream(u64 length) const {
-		if (to - where < length && length > 0) {
-			std::println(
-				std::cerr,
-				"{} {} {}",
-				peek(where).getPosition().getStartLineColumn(),
-				peek(to).getPosition().getStartLineColumn(),
-				length
-			);
-		}
 		CORE_ASSERT(to - where >= length || length == 0, "Sub-stream should fit in parent stream");
 		return { tokens,
 			     peek(-1).asSentinel(),
