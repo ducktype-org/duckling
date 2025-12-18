@@ -98,11 +98,9 @@ namespace pst {
 			// We skip the first token as its the keyword we already found
 			i64 length = 1;
 
-			bool found_internal_start = false;
-
 			while (!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
 
-			fallbackLen(state, length);
+			fallbackLen(state, base::safeIntConv<u64>(length));
 
 			MBox<StmtSpecifier> out = StmtSpecifier::parse(state);
 
