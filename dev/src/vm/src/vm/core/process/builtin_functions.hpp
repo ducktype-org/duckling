@@ -113,4 +113,6 @@ namespace vm::builtins {
 	 * @brief Returns true if the name is a builtin function name.
 	 */
 	bool isBuiltinFunction(base::StrID name);
+
+	void setThreadCtx(const std::string ctx);
 }

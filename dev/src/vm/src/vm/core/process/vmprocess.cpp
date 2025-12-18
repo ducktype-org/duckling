@@ -326,8 +326,10 @@ namespace vm {
 
 	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
 		for (auto& thread: vm_threads) {
-			i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
-			if (id == thread_id) return thread;
+			if (thread.exec_thread) {	
+				i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+				if (id == thread_id) return thread;
+			}
 		}
 		return getMainVMThread();
 	}
