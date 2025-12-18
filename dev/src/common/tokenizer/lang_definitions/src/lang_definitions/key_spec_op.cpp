@@ -23,38 +23,25 @@ namespace lang_def {
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
 	constexpr auto LANG_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
-			{ Keyword::Fun, "fun", KeywordFlags() },
-			{ Keyword::FunDecl, "fundecl", KeywordFlags() },
-			{ Keyword::Pattern, "pattern", KeywordFlags() },
-			{ Keyword::Class, "class", KeywordFlags() },
-			{ Keyword::Namespace, "namespace", KeywordFlags() },
-			{ Keyword::Import, "import", KeywordFlags() },
-			{ Keyword::As, "as", KeywordFlags() },
-			{ Keyword::Using, "using", KeywordFlags() },
-			{ Keyword::Alias, "alias", KeywordFlags() },
-			{ Keyword::In, "in", KeywordFlags() },
-			{ Keyword::Lambda, "lambda", KeywordFlags() },
-			{ Keyword::Var, "var", KeywordFlags() },
-			{ Keyword::Let, "let", KeywordFlags() },
-			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			// These are Keywords that should always indicate a start of a statement.
+			// This allows for better handling of bad parsing cases.
+			{ Keyword::Fun, "fun", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::FunDecl, "fundecl", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Pattern, "pattern", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Class, "class", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Namespace, "namespace", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Import, "import", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Using, "using", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Alias, "alias", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Var, "var", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Let, "let", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::While, "while", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::For, "for", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Block, "block", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Expand, "expand", KeywordFlagsOptions::IsStmtStart },
 
-			{ Keyword::While, "while", KeywordFlags() },
-			{ Keyword::For, "for", KeywordFlags() },
-			{ Keyword::Loop, "loop", KeywordFlags() },
-			{ Keyword::If, "if", KeywordFlags() },
-			{ Keyword::Then, "then", KeywordFlags() },
-			{ Keyword::Else, "else", KeywordFlags() },
-			{ Keyword::Elif, "elif", KeywordFlags() },
-			{ Keyword::Block, "block", KeywordFlags() },
-			{ Keyword::With, "with", KeywordFlags() },
-			{ Keyword::Try, "try", KeywordFlags() },
-			{ Keyword::Catch, "catch", KeywordFlags() },
-			{ Keyword::Test, "test", KeywordFlags() },
-			{ Keyword::Debug, "debug", KeywordFlags() },
-			{ Keyword::Match, "match", KeywordFlags() },
-			{ Keyword::Switch, "switch", KeywordFlags() },
-			{ Keyword::Case, "case", KeywordFlags() },
-
+			// These Keywords also indicate start of a statement.
 			{ Keyword::Return, "return", KeywordFlagsOptions::IsAction },
 			{ Keyword::Break, "break", KeywordFlagsOptions::IsAction },
 			{ Keyword::Continue, "continue", KeywordFlagsOptions::IsAction },
@@ -62,10 +49,45 @@ namespace lang_def {
 			{ Keyword::Restart, "restart", KeywordFlagsOptions::IsAction },
 			{ Keyword::Defer, "defer", KeywordFlagsOptions::IsAction },
 			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsAction },
+
+			// These Keywords also indicate start of a statement.
+			{ Keyword::Test, "test", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Public, "public", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Private, "private", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
+
+ 			// If doesn't always indicate statement start.
+			{ Keyword::If, "if", KeywordFlags() },
+
+			// This is the list of keywords that are general prefix operators
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
+
+			// Not isn't a general prefix operator, it has specific handling
+			{ Keyword::Not, "not", KeywordFlags() },
+
+			{ Keyword::As, "as", KeywordFlags() },
+			{ Keyword::In, "in", KeywordFlags() },
+			{ Keyword::Lambda, "lambda", KeywordFlags() },
+
+			{ Keyword::Then, "then", KeywordFlags() },
+			{ Keyword::Else, "else", KeywordFlags() },
+			{ Keyword::Elif, "elif", KeywordFlags() },
+			{ Keyword::With, "with", KeywordFlags() },
+			{ Keyword::Try, "try", KeywordFlags() },
+			{ Keyword::Catch, "catch", KeywordFlags() },
+			{ Keyword::Match, "match", KeywordFlags() },
+			{ Keyword::Switch, "switch", KeywordFlags() },
+			{ Keyword::Case, "case", KeywordFlags() },
+
 			{ Keyword::Assert, "assert", KeywordFlags() },
 			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
-
-			{ Keyword::Expand, "expand", KeywordFlags() },
 
 			{ Keyword::i8, "i8", KeywordFlags() },
 			{ Keyword::i16, "i16", KeywordFlags() },
@@ -100,25 +122,14 @@ namespace lang_def {
 			{ Keyword::False, "false", KeywordFlags() },
 
 			{ Keyword::Sizeof, "sizeof", KeywordFlags() },
-			{ Keyword::Not, "not", KeywordFlags() },
 			{ Keyword::And, "and", KeywordFlags() },
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
-			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
-
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::Public, "public", KeywordFlags() },
-			{ Keyword::Private, "private", KeywordFlags() },
-			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
-			{ Keyword::Extern, "extern", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY

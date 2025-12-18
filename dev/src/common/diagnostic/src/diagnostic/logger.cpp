@@ -10,6 +10,7 @@ namespace dia {
 
 	void Logger::log(Box<Message> message_ptr) {
 		CORE_DEV_LOG(Diagnostics, "Diagnostic message at pos(", message_ptr->getSourcePosition().getStartLineColumn() , "): ", message_ptr->toString(true), "\n\n");
+		std::println(std::cerr, "Diagnostic message at pos({}): {}", message_ptr->getSourcePosition().getStartLineColumn(), message_ptr->toString(true));
 
 		const auto severity_id
 			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));

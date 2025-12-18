@@ -69,9 +69,12 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
+			bool is_good = internal::isGood(*state_box);
 			imports = internal::extractState(std::move(state_box));
-			calcElementPathHash();
-			calcHashes();
+			if (is_good) {
+				calcElementPathHash();
+				calcHashes();
+			}
 		}
 
 		/**

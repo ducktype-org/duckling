@@ -539,11 +539,17 @@ namespace pst {
 		PSTAutomatic& autoFallbackUntil() {
 			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
 			active_fallback = true;
+			return fallbackUntil<until>();
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
+		 */
+		PSTAutomatic& fallbackLen(u64 length) {
 			if (state.isSkipping()) {
 				state.skipEntry();
 				return *this;
 			}
-			u64 length = state.template countUntil<until>();
 			state.setFallback(length);
 			return *this;
 		}
@@ -616,4 +622,16 @@ namespace pst {
 			parseRest(q...);
 		}
 	};
+
+	/**
+	 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is currently being parsed. For example in statement parsing.
+	 */
+	void fallbackLen(LangParserState& state, u64 length);
+
+	/**
+	 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is currently being parsed. For example in statement parsing.
+	 */
+	void exitFallback(LangParserState& state);
 }

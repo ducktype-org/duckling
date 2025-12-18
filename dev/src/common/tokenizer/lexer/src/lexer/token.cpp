@@ -142,7 +142,7 @@ namespace lexer {
 			     std::move(sentinel_end), position,          group_type };
 	}
 
-	Token Token::asSentinel() const { return { type, str_id.view(), source_position }; }
+	Token Token::asSentinel() const { return { Type::Sentinel, "", source_position }; }
 
 	Token Token::makeError(const dia::SourcePosition& position) {
 		return { Type::Error, base::RawView("<error>"), position };

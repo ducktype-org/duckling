@@ -18,5 +18,6 @@ namespace pst {
 		bool isSentinel(LangParserState& state, i64 fwd);
 		const TokenStream& getTokenStream(LangParserState& state);
 		u64 streamSize(LangParserState& state);
+		bool isGood(LangParserState& state);
 	}
 }

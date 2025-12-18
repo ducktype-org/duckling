@@ -104,6 +104,11 @@ namespace pst {
 	public:
 		ListParsingTemplate() = delete;
 
+		template<TokenStreamCondition isSeparator, TokenStreamCondition isEnding>
+		static bool isSeparatorOrEnding(const TokenStream& state, i64 fwd) {
+			return isSeparator(state, fwd) || isEnding(state, fwd) || internal::Conditions::isSentinel(state, fwd);
+		}
+
 		/**
 		 * @brief General Element representing a list of Elements.
 		 *
@@ -150,12 +155,12 @@ namespace pst {
 				while (true) {
 					expr_length = 0;
 
-					// Find next separator or end
-					while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
-					       && !isSeparator(state.ctokens(), (i64) expr_length)
-					       && !isEnding(state.ctokens(), (i64) expr_length)) {
+					while (!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length)) {
 						expr_length++;
 					}
+
+					state.setFallback(expr_length);
+
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
 						if (state.empty() || isEnding(state.ctokens(), 0)) {
@@ -165,11 +170,8 @@ namespace pst {
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}
 							state.log(makeBox<EmptyFieldError<getName>>(pos));
-							break;
 						} else {
 							state.log(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0)));
-							state.parse(out).eatOne();
-							continue;
 						}
 					}
 
@@ -179,6 +181,8 @@ namespace pst {
 						out->elements.emplace_back(nullptr);
 						state.parse(out).assign(&out->elements.back(), std::move(box));
 					}
+
+					state.exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
 					if (isSeparator(state.ctokens(), 0))

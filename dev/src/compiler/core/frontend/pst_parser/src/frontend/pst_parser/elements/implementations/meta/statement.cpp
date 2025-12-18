@@ -8,18 +8,148 @@ namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
 
+	class EmptyStatementError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Non empty statement expected.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyStatementError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	namespace internal {
+
+		class StmtClassifiers {
+		public:
+			StmtClassifiers() = delete;
+
+			template<class T>
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) 
+					|| state[fwd].is(Special::AtSign)
+					|| state[fwd - 1].is(Special::Semicolon)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+					|| Conditions::isBlockGroup(state, fwd - 1);
+			}
+
+			template<>
+			bool isStmtEnd<ExprStmt>(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) 
+					|| state[fwd].is(Special::AtSign)
+					|| state[fwd - 1].is(Special::Semicolon)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			}
+
+			template<>
+			bool isStmtEnd<If>(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) 
+					|| state[fwd].is(Special::AtSign)
+					|| state[fwd - 1].is(Special::Semicolon)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+					|| (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else) && !state[fwd].is(Keyword::Elif));
+			}
+		};
+
+		class StmtSpecifierClassifiers {
+		public:
+			StmtSpecifierClassifiers() = delete;
+
+			static bool isDefiniteEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) 
+					|| state[fwd].is(Special::AtSign)
+					|| state[fwd - 1].is(Special::Semicolon)
+					|| Conditions::isBlockGroup(state, fwd - 1);
+			}
+
+			static bool isInternalStmtStart(const TokenStream& state, i64 fwd) {
+				return keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
+					|| state[fwd].is(Keyword::If);
+			}
+
+			static bool isNextStart(const TokenStream& state, i64 fwd) {
+				return keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
+					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			}
+		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
+
+			// We skip the first token as its the keyword we already found
+			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers::isStmtEnd<T>>(1);
+
+			fallbackLen(state, length);
+
 			MBox<T> out = T::parse(state);
+
 			auto    opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
+
+			exitFallback(state);
+
+			return out;
+		}
+
+		template<>
+		MBox<StmtSpecifier> parseStmt(LangParserState& state) {
+			// We skip the first token as its the keyword we already found
+			i64 length = 1;
+
+			bool found_internal_start = false;
+
+			while (!StmtSpecifierClassifiers::isDefiniteEnd(state.ctokens(), length)) {
+				if (found_internal_start && StmtSpecifierClassifiers::isNextStart(state.ctokens(), length)) {
+					break;
+				}
+				if (StmtSpecifierClassifiers::isNextStart(state.ctokens(), length)) {
+					found_internal_start = true;
+				}
+				length++;
+			}
+
+			fallbackLen(state, length);
+
+			MBox<StmtSpecifier> out = StmtSpecifier::parse(state);
+
+
+			auto    opt = out.toOpt();
+			if (opt && opt.value()->trailingSemicolon())
+				state.parse(opt.value()).one(Special::Semicolon);
+
+			exitFallback(state);
+
 			return out;
 		}
 
 		MBox<Stmt> chooseStmt(LangParserState& state) {
+			if (state[0].is(Special::Semicolon) && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+				state.tokens().skip();
+				return nullptr;
+			}
+
+			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
+				state.log(base::makeBox<EmptyStatementError>(
+					state.getPosition()
+				));
+				return nullptr;
+			}
+
 			Special as_special = state[0].asSpecial();
 			Keyword as_keyword = state[0].asKeyword();
 
@@ -78,11 +208,6 @@ namespace pst {
 
 			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
 				return internal::parseStmt<Action>(state);
-
-			if (as_special == Special::Semicolon) {
-				state.tokens().skip();
-				return nullptr;
-			}
 
 			// Expr as stmt have semicolon at the end:
 			return internal::parseStmt<ExprStmt>(state);

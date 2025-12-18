@@ -79,9 +79,11 @@ namespace tpc {
 
 		template <TokenStreamCondition until>
 		[[nodiscard]]
-		u64 countUntil() const {
+		u64 countUntil(i64 base = 0) const {
 			u64 length = 0;
-			while (!peek(base::safeIntConv<i64>(length)).is(Token::Type::Sentinel) && !until(*this, base::safeIntConv<i64>(length))) length++;
+			while (!peek(base + base::safeIntConv<i64>(length)).is(Token::Type::Sentinel) && !until(*this, base + base::safeIntConv<i64>(length))) {
+				length++;
+			}
 			return length;
 		}
 
