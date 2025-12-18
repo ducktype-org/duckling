@@ -56,9 +56,6 @@ namespace pst {
 				return state[fwd].is(Token::Type::Sentinel) 
 					|| state[fwd].is(Special::AtSign)
 					|| state[fwd - 1].is(Special::Semicolon)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
 					|| (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else) && !state[fwd].is(Keyword::Elif));
 			}
 		};
@@ -72,18 +69,6 @@ namespace pst {
 					|| state[fwd].is(Special::AtSign)
 					|| state[fwd - 1].is(Special::Semicolon)
 					|| Conditions::isBlockGroup(state, fwd - 1);
-			}
-
-			static bool isInternalStmtStart(const TokenStream& state, i64 fwd) {
-				return keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
-					|| state[fwd].is(Keyword::If);
-			}
-
-			static bool isNextStart(const TokenStream& state, i64 fwd) {
-				return keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}
 		};
 
@@ -114,23 +99,12 @@ namespace pst {
 			bool found_internal_start = false;
 
 			while (!StmtSpecifierClassifiers::isDefiniteEnd(state.ctokens(), length)) {
-				if (found_internal_start && StmtSpecifierClassifiers::isNextStart(state.ctokens(), length)) {
-					break;
-				}
-				if (StmtSpecifierClassifiers::isNextStart(state.ctokens(), length)) {
-					found_internal_start = true;
-				}
 				length++;
 			}
 
 			fallbackLen(state, length);
 
 			MBox<StmtSpecifier> out = StmtSpecifier::parse(state);
-
-
-			auto    opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon())
-				state.parse(opt.value()).one(Special::Semicolon);
 
 			exitFallback(state);
 
