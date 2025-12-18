@@ -573,31 +573,12 @@ namespace compiler::helios {
 			auto stmt    = body->getStmt().unlock(ctx);
 			auto as_expr = stmt.dynamicCast<pst::ExprStmt>();
 			if (as_expr) {
-				auto expr
-					= ctx.query<QueryHoutOfExpr>(as_expr.value()->getExpr().unlock(ctx)->getExpr())
-				          .throwOnFail("Not handling errors here yet... (single expr function body)"
+				auto expr_coerced
+					= getHoutOfExprWithExpectedType(ctx, as_expr.value()->getExpr().unlock(ctx)->getExpr(), return_type)
+				          .throwOnFail("Failed: getting expr in single-statement function body."
 				          );
 
-				// handle type check and coercion
-				auto coercion = canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
-				if (coercion.hasError()) {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getSourcePosition(),
-							base::strConcat(
-								"Bad return type\n",
-								expr->expression_type.getSymbolType().toString(),
-								"can not be coerced to ",
-								return_type.toString(),
-								"\n"
-							)
-						)
-					);
-					CORE_PANIC("Return expression of invalid type");
-				}
-				auto coerced_expr = coercion.valueOrThrow().coerce(ctx, std::move(expr));
-
-				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(coerced_expr)));
+				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
 				return block;
 			} else {
 				ctx.log(
@@ -634,29 +615,9 @@ namespace compiler::helios {
 
 			void visitReturn(pst::Access<pst::Return> stmt) override {
 				if (auto val = stmt->getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
-					                .throwOnFail("Not handling errors here yet... (return expr)");
-
-					// handle type check and coercion
-					auto coercion
-						= canCoerce(ctx, expr->expression_type.getSymbolType(), return_type);
-					if (coercion.hasError()) {
-						ctx.log(makeBox<
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getSourcePosition(),
-							base::strConcat(
-								"Bad return type\n",
-								expr->expression_type.getSymbolType().toString(),
-								"can not be coerced to ",
-								return_type.toString(),
-								"\n"
-							)
-						));
-						CORE_PANIC("Return expression of invalid type");
-					}
-					auto coerced_expr = coercion.valueOrThrow().coerce(ctx, std::move(expr));
-
-					output(code::ReturnStmt(std::move(coerced_expr)));
+					auto expr_coerced = getHoutOfExprWithExpectedType(ctx, val.value().unlock(ctx)->getExpr(), return_type)
+					                .throwOnFail("Failed: Bad type in return statement.");
+					output(code::ReturnStmt(std::move(expr_coerced)));
 				} else {
 					output(code::VoidReturnStmt());
 				}
