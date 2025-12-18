@@ -36,6 +36,11 @@ namespace vm::code {
 	std::string argumentToString(const opargs::OpCodeArg& arg);
 
 	/**
+	 * @brief Stringifies instruction arguments.
+	 */
+	std::string argumentToString(opargs::OpCodeArgCRef arg);
+
+	/**
 	 * @brief Stringifies an instruction.
 	 */
 	std::string instructionToString(const Instruction& instruction);

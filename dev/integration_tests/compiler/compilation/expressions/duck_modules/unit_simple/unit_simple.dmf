@@ -2,7 +2,7 @@
 
 let a: () = ();
 # const unitType: type = ();
-# @TODO: #902 when type consts work, use the above type somewhere below.
+# @TODO: #1507 when type consts work, use the above type somewhere below.
 
 fun foo(u: ()) -> () = {
     builtin_output_i64(1);

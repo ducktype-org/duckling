@@ -13,7 +13,7 @@ To edit the registry schema you have to:
 
     humans don't need to read this file (and probably never will), it needs to be as simple as possible
     (e.g. in the `Manifest`'s schema source, there is a fairly complex type with not so obvious exclusive fields, whereas for the `Registry` we are using tagged enums).
-- add appropriate `From` and `Into` trait impls to your struct
+- add appropriate `From`/`TryFrom` trait impls to your struct
 
     rust-analyzer should guide you to any callers which have to be updated,
 - __update schema on the Ducknest side__.

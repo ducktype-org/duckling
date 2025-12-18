@@ -236,23 +236,28 @@ namespace compiler::mir {
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Variant Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
 
 			BlockBuilderRef       current = continuation;
-			std::vector<MIRValue> values;
+			std::vector<MIRValue> subtype_values;
+			subtype_values.reserve(expr.subtypes.size());
 
 			for (const auto& element: expr.subtypes | std::views::reverse) {
 				auto elem_lowered = lowerSubExpr(*element, current);
-				values.push_back(elem_lowered.getResult(function));
+				subtype_values.push_back(elem_lowered.getResult(function));
 				current = elem_lowered.begin;
 			}
-			std::ranges::reverse(values);
-
-			auto target_hole = continuation->addHole();
+			std::ranges::reverse(subtype_values);
 
 			noValueOutput(
 				current,
-				target_hole,
-				Instruction(Operation::MetaCreateVariant, {}, values, {}, expr_scope),
+				hole,
+				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
 				result_type
 			);
 			return;
@@ -468,34 +473,6 @@ namespace compiler::mir {
 						.hole = hole,
 						.instr
 						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
-						.type = result_type }
-				);
-			} else if (const auto* variant_expr
-			           = dynamic_cast<const hc::VariantTypeConstructorExpr*>(&expr)) {
-				auto hole = continuation->addHole();
-
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> subtype_values;
-				subtype_values.reserve(variant_expr->subtypes.size());
-
-				for (const auto& subtype: variant_expr->subtypes | std::views::reverse) {
-					auto subtype_result = lowerAndLiftToTypeRecursively(*subtype, current);
-					subtype_values.push_back(subtype_result.getResult(function));
-					current = subtype_result.begin;
-				}
-				std::ranges::reverse(subtype_values);
-
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
-
-				return ExprLowerRes(
-					current,
-					ExprLowerRes::Finalizer{
-						.hole  = hole,
-						.instr = Instruction(
-							Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope
-						),
 						.type = result_type }
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))

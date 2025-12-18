@@ -11,6 +11,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
+#include <ranges>
 
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
@@ -42,39 +43,35 @@ namespace vm::code {
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
+	std::string argumentToString(const opargs::OpCodeArg& arg) {
+		return VISIT(arg, a, return toString(a));
+	}
+
+	std::string argumentToString(opargs::OpCodeArgCRef arg) {
+		return VISIT(arg, a, return toString(*a));
+	}
+
 	void displayComment(const std::string_view comment_content, std::ostream& out) {
 		out << '#' << ' ' << comment_content;
 	}
 
-	namespace {
-		void displayOpcodeArgs(std::ostream& out, const auto& head, const auto&... tail) {
-			out << std::setw(8) << std::right << toString(head);
-			((out << ", " << std::setw(8) << std::right << toString(tail)), ...);
-		}
-	}
-
-	template<IsInstruction I>
-	void displayOpcode(const I& instruction, std::ostream& out) {
-		out << std::setw(22) << std::left << I::NAME;
-		std::apply(
-			[&](const auto&... args) {
-				if constexpr (sizeof...(args) > 0) {
-					out << " ";
-					displayOpcodeArgs(out, args...);
-				}
-			},
-			instruction.argsAsTuple()
-		);
-		out << ";";
-	}
-
-	template<>
-	void displayOpcode(const instructions::Comment& comment, std::ostream& out) {
-		displayComment(comment.comment.strView(), out);
-	}
-
 	void displayInstruction(Instruction instruction, std::ostream& out) {
-		VISIT(instruction, i, displayOpcode(i, out));
+		instr_match(instruction) {
+			instr_case(instructions::Comment, comment) {
+				displayComment(comment.comment.strView(), out);
+			}
+			instr_default {
+				out << std::setw(22) << std::left << instruction.name().strView();
+				auto args = instruction.args();
+				if (args.size() > 0) {
+					out << " ";
+					out << std::setw(8) << std::right << argumentToString(args[0]);
+					for (auto arg: args | std::views::drop(1))
+						out << ", " << std::setw(8) << std::right << argumentToString(arg);
+				}
+				out << ';';
+			}
+		}
 	}
 
 	class FunctionSerializer final {
@@ -276,10 +273,6 @@ namespace vm::code {
 		out << '\n';
 		for (const auto& func: code.functions) serialize(func, out);
 		out << '\n';
-	}
-
-	std::string argumentToString(const opargs::OpCodeArg& arg) {
-		return VISIT(arg, a, return toString(a));
 	}
 
 	std::string instructionToString(const Instruction& instruction) {
