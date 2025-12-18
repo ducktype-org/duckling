@@ -53,6 +53,7 @@ namespace vm::loader::parser {
 		void dprint(std::ostream& out) const override;
 	};
 
+	// @TODO: #1705 Figure out a better name
 	struct OpCode final: AsmElement {
 		using AsmElement::AsmElement;
 

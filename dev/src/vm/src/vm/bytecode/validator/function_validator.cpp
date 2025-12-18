@@ -26,7 +26,9 @@ namespace {
 	// Helpers
 	using namespace instructions;
 
-	using ValidLastInstructions      = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	constexpr std::array VALID_LAST_OPCODES
+		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
+
 	using DeinitializingInstructions = std::tuple<
 		Op_deinit,
 		Op_call_func,
@@ -172,13 +174,13 @@ class FunctionValidator {
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
 		// Used for errors.
-		auto                generic_arg = opargs::OpCodeArg{ instr.arg0 };
+		auto                generic_arg = opargs::OpCodeArg{ instr.function };
 		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
-            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.arg0)>)
-                return *builtins::getBuiltinFunctionSignature(instr.arg0.function_name);
-            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.arg0)>)
-                return &ext_c_signatures.at(instr.arg0.function_name)->signature;
-            return &signatures.at(instr.arg0.function_name);
+            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
+                return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
+            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
+                return &ext_c_signatures.at(instr.function.function_name)->signature;
+            return &signatures.at(instr.function.function_name);
 		}();
 
 		bool check_ret_val = signature->result_type.str != base::StrID("void");
@@ -212,13 +214,13 @@ class FunctionValidator {
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(
                 type.getInheritanceMetadata(), inh_meta
-            ) return inh_meta->vtable.contains(instr.arg1.method_name);
+            ) return inh_meta->vtable.contains(instr.method.method_name);
             return false;
         });
 		auto        inh_meta = it->getInheritanceMetadata().value();
-		impl_name            = inh_meta->vtable[instr.arg1.method_name];
+		impl_name            = inh_meta->vtable[instr.method.method_name];
 
-		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
+		auto generic_arg   = opargs::OpCodeArg{ instr.method };
 		auto signature     = signatures.at(impl_name);
 		bool check_ret_val = signature.result_type.str != base::StrID("void");
 
@@ -233,7 +235,7 @@ class FunctionValidator {
 
 		auto type_name    = code::typeName(*local_stack.back().type);
 		auto ptr_on_stack = std::get<PointerType>(*tod_map.at(type_name));
-		auto ptr_in_call  = std::get<PointerType>(*local_stack.at(instr.arg0.var_name));
+		auto ptr_in_call  = std::get<PointerType>(*local_stack.at(instr.object_ptr.var_name));
 		if (ptr_in_call.inner != ptr_on_stack.inner)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
@@ -247,7 +249,7 @@ class FunctionValidator {
 		const Op_ret_tailcall_func& instr,
 		const FuncSignature&        current_signature
 	) const {
-		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
+		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.function };
 		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
 		// Used for errors.
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
@@ -277,118 +279,110 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		auto args = VISIT(
-			instruction,
-			i,
-			return std::apply(
-				[](auto... arg_pack) { return std::vector<opargs::OpCodeArg>{ arg_pack... }; },
-				i.argsAsTuple()
-			)
-		);
+		std::vector<PrimitiveType> primitive_args;
 
-		std::vector<PrimitiveType> arg_types;
-
-		for (auto arg: args) {
+		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
-	variant_case(opargs::StackLocal##BIT_COUNT, local) {                                         \
-		if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);           \
-		CRef<TypeOfData> entry = current_stack.at(local.var_name);                               \
-		variant_match(*entry) {                                                                  \
-			variant_case(PrimitiveType, primitive_type) {                                        \
-				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
-				arg_types.push_back(primitive_type);                                             \
-			}                                                                                    \
-			variant_default { throw InvalidArgumentTypeError(arg); }                             \
-		}                                                                                        \
+#define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
+	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
+		if (!current_stack.contains(local->var_name)) throw UnknownLocalNameError(*local); \
+		CRef<TypeOfData> entry = current_stack.at(local->var_name);                        \
+		variant_match(*entry) {                                                            \
+			variant_case(PrimitiveType, primitive_type) {                                  \
+				if (primitive_type.size != (BIT_COUNT / 8))                                \
+					throw InvalidArgumentSizeError(*local);                                \
+				primitive_args.push_back(primitive_type);                                  \
+			}                                                                              \
+			variant_default { throw InvalidArgumentTypeError(*local); }                    \
+		}                                                                                  \
 	}
-#define GLOBAL_CASE(BIT_COUNT)                                                                   \
-	variant_case(opargs::Global##BIT_COUNT, global) {                                            \
-		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
-		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
-		auto             type  = tod_map.at(entry->type);                                        \
-		variant_match(*type) {                                                                   \
-			variant_case(PrimitiveType, primitive_type) {                                        \
-				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
-				arg_types.push_back(primitive_type);                                             \
-			}                                                                                    \
-			variant_default { throw InvalidArgumentTypeError(arg); }                             \
-		}                                                                                        \
+#define GLOBAL_CASE(BIT_COUNT)                                                                  \
+	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {                                     \
+		if (!globals.contains(global->global_data_name)) throw UnknownGlobalNameError(*global); \
+		CRef<GlobalData> entry = globals.at(global->global_data_name);                          \
+		auto             type  = tod_map.at(entry->type);                                       \
+		variant_match(*type) {                                                                  \
+			variant_case(PrimitiveType, primitive_type) {                                       \
+				if (primitive_type.size != (BIT_COUNT / 8))                                     \
+					throw InvalidArgumentSizeError(*global);                                    \
+				primitive_args.push_back(primitive_type);                                       \
+			}                                                                                   \
+			variant_default { throw InvalidArgumentTypeError(*global); }                        \
+		}                                                                                       \
 	}
 				GLOBAL_CASE(8);
 				GLOBAL_CASE(16);
 				GLOBAL_CASE(32);
 				GLOBAL_CASE(64);
 
-				variant_case(opargs::GlobalPtr, global) {
-					if (!globals.contains(global.global_data_name))
-						throw UnknownGlobalNameError(arg);
-					CRef<GlobalData> entry = globals.at(global.global_data_name);
+				variant_case(CRef<opargs::GlobalPtr>, global) {
+					if (!globals.contains(global->global_data_name))
+						throw UnknownGlobalNameError(*global);
+					CRef<GlobalData> entry = globals.at(global->global_data_name);
 					auto             type  = tod_map.at(entry->type);
 					if (!std::holds_alternative<PointerType>(*type))
-						throw InvalidArgumentTypeError(arg);
+						throw InvalidArgumentTypeError(*global);
 				}
-				variant_case(opargs::GlobalOpq, global_opq) {
-					if (!globals.contains(global_opq.global_data_name))
-						throw UnknownGlobalNameError(arg);
-					CRef<GlobalData> entry = globals.at(global_opq.global_data_name);
+				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
+					if (!globals.contains(global_opq->global_data_name))
+						throw UnknownGlobalNameError(*global_opq);
+					CRef<GlobalData> entry = globals.at(global_opq->global_data_name);
 					auto             type  = tod_map.at(entry->type);
 					if (!std::holds_alternative<OpaqueType>(*type))
-						throw InvalidArgumentTypeError(arg);
+						throw InvalidArgumentTypeError(*global_opq);
 				}
 
 				STACK_LOCAL_CASE(8);
 				STACK_LOCAL_CASE(16);
 				STACK_LOCAL_CASE(32);
 				STACK_LOCAL_CASE(64);
-				variant_case(opargs::StackLocalPtr, local) {
-					if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
-					CRef<TypeOfData> type = current_stack.at(local.var_name);
+				variant_case(CRef<opargs::StackLocalPtr>, local) {
+					if (!current_stack.contains(local->var_name))
+						throw UnknownLocalNameError(*local);
+					CRef<TypeOfData> type = current_stack.at(local->var_name);
 					if (!std::holds_alternative<PointerType>(*type))
-						throw InvalidArgumentTypeError(arg);
+						throw InvalidArgumentTypeError(*local);
 				}
-				variant_case(opargs::StackLocalAny, local) {
-					variant_match(instruction) {
-						variant_case_novalue(Op_init_lany_type) {
-							if (current_stack.contains(local.var_name))
-								throw DuplicatedLocalNameError(arg);
+				variant_case(CRef<opargs::StackLocalAny>, local) {
+					instr_match(instruction) {
+						instr_case_novalue(Op_init_lany_type) {
+							if (current_stack.contains(local->var_name))
+								throw DuplicatedLocalNameError(*local);
 						}
 						variant_default {
-							if (!current_stack.contains(local.var_name))
-								throw UnknownLocalNameError(arg);
+							if (!current_stack.contains(local->var_name))
+								throw UnknownLocalNameError(*local);
 						}
 					}
 				}
-				variant_case(opargs::StackLocalOpq, local) {
-					if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
-					CRef<TypeOfData> type = current_stack.at(local.var_name);
+				variant_case(CRef<opargs::StackLocalOpq>, local) {
+					if (!current_stack.contains(local->var_name))
+						throw UnknownLocalNameError(*local);
+					CRef<TypeOfData> type = current_stack.at(local->var_name);
 					if (!std::holds_alternative<OpaqueType>(*type))
-						throw InvalidArgumentTypeError(arg);
+						throw InvalidArgumentTypeError(*local);
 				}
-				variant_case_novalue(opargs::Immediate) {}
-				variant_case(opargs::Type, type_value) {
-					if (!tod_map.contains(type_value.type_name)) throw UnknownTypeError(arg);
+				variant_case_novalue(CRef<opargs::Immediate>) {}
+				variant_case(CRef<opargs::Type>, type_value) {
+					if (!tod_map.contains(type_value->type_name))
+						throw UnknownTypeError(*type_value);
 				}
-				variant_case(opargs::FunctionName, function_value) {
-					auto fun_name    = function_value.function_name;
-					auto generic_arg = opargs::OpCodeArg{ function_value };
-					if (!signatures.contains(fun_name)) throw UnknownFunctionError(generic_arg);
+				variant_case(CRef<opargs::FunctionName>, function_value) {
+					auto fun_name = function_value->function_name;
+					if (!signatures.contains(fun_name)) throw UnknownFunctionError(*function_value);
 				}
-				variant_case(opargs::BuiltinFunctionName, function_value) {
-					auto fun_name    = function_value.function_name;
-					auto generic_arg = opargs::OpCodeArg{ function_value };
+				variant_case(CRef<opargs::BuiltinFunctionName>, function_value) {
+					auto fun_name = function_value->function_name;
 					if (!builtins::isBuiltinFunction(fun_name))
-						throw InvalidBuiltinFunctionError(generic_arg);
+						throw InvalidBuiltinFunctionError(*function_value);
 				}
-				variant_case(opargs::ExtCFunctionName, function_value) {
-					auto fun_name    = function_value.function_name;
-					auto generic_arg = opargs::OpCodeArg{ function_value };
+				variant_case(CRef<opargs::ExtCFunctionName>, function_value) {
+					auto fun_name = function_value->function_name;
 					if (!ext_c_signatures.contains(fun_name))
-						throw UnknownFunctionError(generic_arg);
+						throw UnknownFunctionError(*function_value);
 				}
-				variant_case(opargs::MethodName, method_value) {
-					auto method_name = method_value.method_name;
-					auto generic_arg = opargs::OpCodeArg{ method_value };
+				variant_case(CRef<opargs::MethodName>, method_value) {
+					auto method_name = method_value->method_name;
 					bool valid       = false;
 					for (const auto& type: tod_map) {
 						std::visit(
@@ -402,35 +396,36 @@ class FunctionValidator {
 						);
 						if (valid) break;
 					}
-					if (!valid) throw UnknownMethodError(generic_arg);
+					if (!valid) throw UnknownMethodError(*method_value);
 				}
-				variant_case(opargs::Label, label_value) {
-					variant_match(instruction) {
-						variant_case_novalue(Op_label) {}
+				variant_case(CRef<opargs::Label>, label_value) {
+					instr_match(instruction) {
+						instr_case_novalue(Op_label) {}
 						// The default instruction for a label argument is a jump instruction.
-						variant_default {
-							if (!index_of_label.contains(label_value.label_name))
-								throw UnknownLabelError(label_value);
+						instr_default {
+							if (!index_of_label.contains(label_value->label_name))
+								throw UnknownLabelError(*label_value);
 						}
 					}
 				}
 
-				variant_case(opargs::StackLocalVnt, variant) {
-					if (!current_stack.contains(variant.var_name)) throw UnknownLocalNameError(arg);
-					CRef<TypeOfData> type = current_stack.at(variant.var_name);
+				variant_case(CRef<opargs::StackLocalVnt>, variant) {
+					if (!current_stack.contains(variant->var_name))
+						throw UnknownLocalNameError(*variant);
+					CRef<TypeOfData> type = current_stack.at(variant->var_name);
 					if (!std::holds_alternative<VariantType>(*type))
-						throw InvalidArgumentTypeError(arg);
+						throw InvalidArgumentTypeError(*variant);
 				}
 
-				variant_case(opargs::Field, field) {
-					auto type = tod_map.at(field.type_name);
+				variant_case(CRef<opargs::Field>, field) {
+					auto type = tod_map.at(field->type_name);
 					variant_match(*type) {
 						variant_case(DataType, ztruct) {
-							if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
+							if (std::ranges::find(ztruct.fields, field->field_name, &Field::name)
 							    == ztruct.fields.end())
-								throw UnknownFieldError(field);
+								throw UnknownFieldError(*field);
 						}
-						variant_default { throw InvalidArgumentTypeError(arg); }
+						variant_default { throw InvalidArgumentTypeError(*field); }
 					}
 				}
 
@@ -442,12 +437,12 @@ class FunctionValidator {
 		}
 
 		// We assert no cross-type operations on primitive types.
-		if (arg_types.size() >= 2) {
-			bool sizes_match = std::ranges::all_of(arg_types, [&](auto x) {
-				return x.size == arg_types.front().size;
+		if (primitive_args.size() >= 2) {
+			bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
+				return x.size == primitive_args.front().size;
 			});
-			bool names_match = std::ranges::all_of(arg_types, [&](auto x) {
-				return x.name == arg_types.front().name;
+			bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
+				return x.name == primitive_args.front().name;
 			});
 			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
 		}
@@ -462,240 +457,242 @@ class FunctionValidator {
 	void validateArgTypesNonTrivially(
 		const Instruction& instruction, const LocalStack& current_stack
 	) const {
-		variant_match(instruction) {
-			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
-			variant_case(Op_alloc_lptr_type, instr) {
-				validateArgInstantiable(instr.arg1);
-				CRef<TypeOfData> variable = current_stack.at(instr.arg0.var_name);
+		PUSH_DIAGNOSTIC
+		UNHANDLED_ENUM
+		instr_match(instruction) {
+			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
+			instr_case(Op_alloc_lptr_type, instr) {
+				validateArgInstantiable(instr.type);
+				CRef<TypeOfData> variable = current_stack.at(instr.ptr.var_name);
 				PointerType      pointer  = std::get<PointerType>(*variable);
-				if (pointer.inner != instr.arg1.type_name) throw PointerTypeMismatchError(instr);
+				if (pointer.inner != instr.type.type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
-			variant_case(Op_cast_l8_type, instr) {
-				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			instr_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
+			instr_case(Op_cast_l8_type, instr) {
+				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			variant_case(Op_cast_l16_type, instr) {
-				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			instr_case(Op_cast_l16_type, instr) {
+				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			variant_case(Op_cast_l32_type, instr) {
-				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			instr_case(Op_cast_l32_type, instr) {
+				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			variant_case(Op_cast_l64_type, instr) {
-				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			instr_case(Op_cast_l64_type, instr) {
+				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
 
-			variant_case_novalue(Comment) {}
-			variant_case(Op_mov_l8_imm, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val")
+			instr_case_novalue(Comment) {}
+			instr_case(Op_mov_l8_imm, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
-			variant_case(Op_mov_l8_l8, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val")
+			instr_case(Op_mov_l8_l8, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
-			variant_case(Op_cmov_l8_l8, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val")
+			instr_case(Op_cmov_l8_l8, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
-			variant_case(Op_cmov_l8_imm, instr) {
-				if (instr.arg0.var_name == base::StrID("ret_val")
+			instr_case(Op_cmov_l8_imm, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
 			}
-			variant_case_novalue(Op_mov_l16_imm) {}
-			variant_case_novalue(Op_mov_l16_l16) {}
-			variant_case_novalue(Op_cmov_l16_l16) {}
-			variant_case_novalue(Op_cmov_l16_imm) {}
-			variant_case_novalue(Op_mov_l32_imm) {}
-			variant_case_novalue(Op_mov_l32_l32) {}
-			variant_case_novalue(Op_cmov_l32_l32) {}
-			variant_case_novalue(Op_cmov_l32_imm) {}
-			variant_case_novalue(Op_mov_l64_imm) {}
-			variant_case_novalue(Op_mov_l64_l64) {}
-			variant_case_novalue(Op_cmov_l64_l64) {}
-			variant_case_novalue(Op_cmov_l64_imm) {}
-			variant_case_novalue(Op_mov_g64_g64) {}
-			variant_case_novalue(Op_mov_g64_l64) {}
-			variant_case_novalue(Op_mov_g64_imm) {}
-			variant_case_novalue(Op_mov_g32_g32) {}
-			variant_case_novalue(Op_mov_g32_l32) {}
-			variant_case_novalue(Op_mov_g32_imm) {}
-			variant_case_novalue(Op_mov_g16_g16) {}
-			variant_case_novalue(Op_mov_g16_l16) {}
-			variant_case_novalue(Op_mov_g16_imm) {}
-			variant_case_novalue(Op_mov_g8_g8) {}
-			variant_case_novalue(Op_mov_g8_l8) {}
-			variant_case_novalue(Op_mov_g8_imm) {}
-			variant_case_novalue(Op_mov_gptr_lptr) {}
-			variant_case_novalue(Op_mov_l64_g64) {}
-			variant_case_novalue(Op_mov_l32_g32) {}
-			variant_case_novalue(Op_mov_l16_g16) {}
-			variant_case_novalue(Op_mov_l8_g8) {}
-			variant_case_novalue(Op_mov_lptr_gptr) {}
-			variant_case_novalue(Op_mov_lptr_lptr) {}
-			variant_case_novalue(Op_mov_lopq_lopq) {}
-			variant_case_novalue(Op_mov_lopq_gopq) {}
-			variant_case_novalue(Op_mov_gopq_lopq) {}
-			variant_case_novalue(Op_setNull_lptr) {}
-			variant_case_novalue(Op_add_l64_l64) {}
-			variant_case_novalue(Op_add_l64_imm) {}
-			variant_case_novalue(Op_add_l32_l32) {}
-			variant_case_novalue(Op_add_l32_imm) {}
-			variant_case_novalue(Op_sub_l64_l64) {}
-			variant_case_novalue(Op_sub_l64_imm) {}
-			variant_case_novalue(Op_sub_l32_l32) {}
-			variant_case_novalue(Op_sub_l32_imm) {}
-			variant_case_novalue(Op_mul_l64_l64) {}
-			variant_case_novalue(Op_mul_l64_imm) {}
-			variant_case_novalue(Op_mul_l32_l32) {}
-			variant_case_novalue(Op_mul_l32_imm) {}
-			variant_case_novalue(Op_mod_l64_l64) {}
-			variant_case_novalue(Op_mod_l64_imm) {}
-			variant_case_novalue(Op_mod_l32_l32) {}
-			variant_case_novalue(Op_mod_l32_imm) {}
-			variant_case_novalue(Op_div_l64_l64) {}
-			variant_case_novalue(Op_div_l64_imm) {}
-			variant_case_novalue(Op_div_l32_l32) {}
-			variant_case_novalue(Op_div_l32_imm) {}
-			variant_case_novalue(Op_neg_l64) {}
-			variant_case_novalue(Op_neg_l32) {}
-			variant_case_novalue(Op_cmpEq_l64_l64) {}
-			variant_case_novalue(Op_cmpEq_l64_imm) {}
-			variant_case_novalue(Op_cmpEq_l32_l32) {}
-			variant_case_novalue(Op_cmpEq_l32_imm) {}
-			variant_case_novalue(Op_cmpEq_l8_l8) {}
-			variant_case_novalue(Op_cmpEq_l8_imm) {}
-			variant_case_novalue(Op_cmpG_l64_l64) {}
-			variant_case_novalue(Op_cmpG_l64_imm) {}
-			variant_case_novalue(Op_cmpG_l32_l32) {}
-			variant_case_novalue(Op_cmpG_l32_imm) {}
-			variant_case_novalue(Op_cmpG_l8_l8) {}
-			variant_case_novalue(Op_cmpG_l8_imm) {}
-			variant_case_novalue(Op_ucmpG_l64_l64) {}
-			variant_case_novalue(Op_ucmpG_l64_imm) {}
-			variant_case_novalue(Op_ucmpG_l32_l32) {}
-			variant_case_novalue(Op_ucmpG_l32_imm) {}
-			variant_case_novalue(Op_ucmpG_l8_l8) {}
-			variant_case_novalue(Op_ucmpG_l8_imm) {}
-			variant_case_novalue(Op_cmpL_l64_l64) {}
-			variant_case_novalue(Op_cmpL_l64_imm) {}
-			variant_case_novalue(Op_cmpL_l32_l32) {}
-			variant_case_novalue(Op_cmpL_l32_imm) {}
-			variant_case_novalue(Op_cmpL_l8_l8) {}
-			variant_case_novalue(Op_cmpL_l8_imm) {}
-			variant_case_novalue(Op_ucmpL_l64_l64) {}
-			variant_case_novalue(Op_ucmpL_l64_imm) {}
-			variant_case_novalue(Op_ucmpL_l32_l32) {}
-			variant_case_novalue(Op_ucmpL_l32_imm) {}
-			variant_case_novalue(Op_ucmpL_l8_l8) {}
-			variant_case_novalue(Op_ucmpL_l8_imm) {}
-			variant_case_novalue(Op_cmpNull_lptr) {}
+			instr_case_novalue(Op_mov_l16_imm) {}
+			instr_case_novalue(Op_mov_l16_l16) {}
+			instr_case_novalue(Op_cmov_l16_l16) {}
+			instr_case_novalue(Op_cmov_l16_imm) {}
+			instr_case_novalue(Op_mov_l32_imm) {}
+			instr_case_novalue(Op_mov_l32_l32) {}
+			instr_case_novalue(Op_cmov_l32_l32) {}
+			instr_case_novalue(Op_cmov_l32_imm) {}
+			instr_case_novalue(Op_mov_l64_imm) {}
+			instr_case_novalue(Op_mov_l64_l64) {}
+			instr_case_novalue(Op_cmov_l64_l64) {}
+			instr_case_novalue(Op_cmov_l64_imm) {}
+			instr_case_novalue(Op_mov_g64_g64) {}
+			instr_case_novalue(Op_mov_g64_l64) {}
+			instr_case_novalue(Op_mov_g64_imm) {}
+			instr_case_novalue(Op_mov_g32_g32) {}
+			instr_case_novalue(Op_mov_g32_l32) {}
+			instr_case_novalue(Op_mov_g32_imm) {}
+			instr_case_novalue(Op_mov_g16_g16) {}
+			instr_case_novalue(Op_mov_g16_l16) {}
+			instr_case_novalue(Op_mov_g16_imm) {}
+			instr_case_novalue(Op_mov_g8_g8) {}
+			instr_case_novalue(Op_mov_g8_l8) {}
+			instr_case_novalue(Op_mov_g8_imm) {}
+			instr_case_novalue(Op_mov_gptr_lptr) {}
+			instr_case_novalue(Op_mov_l64_g64) {}
+			instr_case_novalue(Op_mov_l32_g32) {}
+			instr_case_novalue(Op_mov_l16_g16) {}
+			instr_case_novalue(Op_mov_l8_g8) {}
+			instr_case_novalue(Op_mov_lptr_gptr) {}
+			instr_case_novalue(Op_mov_lptr_lptr) {}
+			instr_case_novalue(Op_mov_lopq_lopq) {}
+			instr_case_novalue(Op_mov_lopq_gopq) {}
+			instr_case_novalue(Op_mov_gopq_lopq) {}
+			instr_case_novalue(Op_setNull_lptr) {}
+			instr_case_novalue(Op_add_l64_l64) {}
+			instr_case_novalue(Op_add_l64_imm) {}
+			instr_case_novalue(Op_add_l32_l32) {}
+			instr_case_novalue(Op_add_l32_imm) {}
+			instr_case_novalue(Op_sub_l64_l64) {}
+			instr_case_novalue(Op_sub_l64_imm) {}
+			instr_case_novalue(Op_sub_l32_l32) {}
+			instr_case_novalue(Op_sub_l32_imm) {}
+			instr_case_novalue(Op_mul_l64_l64) {}
+			instr_case_novalue(Op_mul_l64_imm) {}
+			instr_case_novalue(Op_mul_l32_l32) {}
+			instr_case_novalue(Op_mul_l32_imm) {}
+			instr_case_novalue(Op_mod_l64_l64) {}
+			instr_case_novalue(Op_mod_l64_imm) {}
+			instr_case_novalue(Op_mod_l32_l32) {}
+			instr_case_novalue(Op_mod_l32_imm) {}
+			instr_case_novalue(Op_div_l64_l64) {}
+			instr_case_novalue(Op_div_l64_imm) {}
+			instr_case_novalue(Op_div_l32_l32) {}
+			instr_case_novalue(Op_div_l32_imm) {}
+			instr_case_novalue(Op_neg_l64) {}
+			instr_case_novalue(Op_neg_l32) {}
+			instr_case_novalue(Op_cmpEq_l64_l64) {}
+			instr_case_novalue(Op_cmpEq_l64_imm) {}
+			instr_case_novalue(Op_cmpEq_l32_l32) {}
+			instr_case_novalue(Op_cmpEq_l32_imm) {}
+			instr_case_novalue(Op_cmpEq_l8_l8) {}
+			instr_case_novalue(Op_cmpEq_l8_imm) {}
+			instr_case_novalue(Op_cmpG_l64_l64) {}
+			instr_case_novalue(Op_cmpG_l64_imm) {}
+			instr_case_novalue(Op_cmpG_l32_l32) {}
+			instr_case_novalue(Op_cmpG_l32_imm) {}
+			instr_case_novalue(Op_cmpG_l8_l8) {}
+			instr_case_novalue(Op_cmpG_l8_imm) {}
+			instr_case_novalue(Op_ucmpG_l64_l64) {}
+			instr_case_novalue(Op_ucmpG_l64_imm) {}
+			instr_case_novalue(Op_ucmpG_l32_l32) {}
+			instr_case_novalue(Op_ucmpG_l32_imm) {}
+			instr_case_novalue(Op_ucmpG_l8_l8) {}
+			instr_case_novalue(Op_ucmpG_l8_imm) {}
+			instr_case_novalue(Op_cmpL_l64_l64) {}
+			instr_case_novalue(Op_cmpL_l64_imm) {}
+			instr_case_novalue(Op_cmpL_l32_l32) {}
+			instr_case_novalue(Op_cmpL_l32_imm) {}
+			instr_case_novalue(Op_cmpL_l8_l8) {}
+			instr_case_novalue(Op_cmpL_l8_imm) {}
+			instr_case_novalue(Op_ucmpL_l64_l64) {}
+			instr_case_novalue(Op_ucmpL_l64_imm) {}
+			instr_case_novalue(Op_ucmpL_l32_l32) {}
+			instr_case_novalue(Op_ucmpL_l32_imm) {}
+			instr_case_novalue(Op_ucmpL_l8_l8) {}
+			instr_case_novalue(Op_ucmpL_l8_imm) {}
+			instr_case_novalue(Op_cmpNull_lptr) {}
 
-			variant_case_novalue(Op_fadd_l64_l64) {}
-			variant_case_novalue(Op_fadd_l64_imm) {}
-			variant_case_novalue(Op_fadd_l32_l32) {}
-			variant_case_novalue(Op_fadd_l32_imm) {}
+			instr_case_novalue(Op_fadd_l64_l64) {}
+			instr_case_novalue(Op_fadd_l64_imm) {}
+			instr_case_novalue(Op_fadd_l32_l32) {}
+			instr_case_novalue(Op_fadd_l32_imm) {}
 
-			variant_case_novalue(Op_fsub_l64_l64) {}
-			variant_case_novalue(Op_fsub_l64_imm) {}
-			variant_case_novalue(Op_fsub_l32_l32) {}
-			variant_case_novalue(Op_fsub_l32_imm) {}
+			instr_case_novalue(Op_fsub_l64_l64) {}
+			instr_case_novalue(Op_fsub_l64_imm) {}
+			instr_case_novalue(Op_fsub_l32_l32) {}
+			instr_case_novalue(Op_fsub_l32_imm) {}
 
-			variant_case_novalue(Op_fmul_l64_l64) {}
-			variant_case_novalue(Op_fmul_l64_imm) {}
-			variant_case_novalue(Op_fmul_l32_l32) {}
-			variant_case_novalue(Op_fmul_l32_imm) {}
+			instr_case_novalue(Op_fmul_l64_l64) {}
+			instr_case_novalue(Op_fmul_l64_imm) {}
+			instr_case_novalue(Op_fmul_l32_l32) {}
+			instr_case_novalue(Op_fmul_l32_imm) {}
 
-			variant_case_novalue(Op_fdiv_l64_l64) {}
-			variant_case_novalue(Op_fdiv_l64_imm) {}
-			variant_case_novalue(Op_fdiv_l32_l32) {}
-			variant_case_novalue(Op_fdiv_l32_imm) {}
+			instr_case_novalue(Op_fdiv_l64_l64) {}
+			instr_case_novalue(Op_fdiv_l64_imm) {}
+			instr_case_novalue(Op_fdiv_l32_l32) {}
+			instr_case_novalue(Op_fdiv_l32_imm) {}
 
-			variant_case_novalue(Op_fneg_l64) {}
-			variant_case_novalue(Op_fneg_l32) {}
+			instr_case_novalue(Op_fneg_l64) {}
+			instr_case_novalue(Op_fneg_l32) {}
 
-			variant_case_novalue(Op_umul_l64_l64) {}
-			variant_case_novalue(Op_umul_l64_imm) {}
-			variant_case_novalue(Op_umul_l32_l32) {}
-			variant_case_novalue(Op_umul_l32_imm) {}
-			variant_case_novalue(Op_umod_l64_l64) {}
-			variant_case_novalue(Op_umod_l64_imm) {}
-			variant_case_novalue(Op_umod_l32_l32) {}
-			variant_case_novalue(Op_umod_l32_imm) {}
-			variant_case_novalue(Op_udiv_l64_l64) {}
-			variant_case_novalue(Op_udiv_l64_imm) {}
-			variant_case_novalue(Op_udiv_l32_l32) {}
-			variant_case_novalue(Op_udiv_l32_imm) {}
-			variant_case_novalue(Op_log_and_l8_l8) {}
-			variant_case_novalue(Op_log_and_l8_imm) {}
-			variant_case_novalue(Op_log_or_l8_l8) {}
-			variant_case_novalue(Op_log_or_l8_imm) {}
-			variant_case_novalue(Op_log_xor_l8_l8) {}
-			variant_case_novalue(Op_log_xor_l8_imm) {}
-			variant_case_novalue(Op_log_not_l8) {}
+			instr_case_novalue(Op_umul_l64_l64) {}
+			instr_case_novalue(Op_umul_l64_imm) {}
+			instr_case_novalue(Op_umul_l32_l32) {}
+			instr_case_novalue(Op_umul_l32_imm) {}
+			instr_case_novalue(Op_umod_l64_l64) {}
+			instr_case_novalue(Op_umod_l64_imm) {}
+			instr_case_novalue(Op_umod_l32_l32) {}
+			instr_case_novalue(Op_umod_l32_imm) {}
+			instr_case_novalue(Op_udiv_l64_l64) {}
+			instr_case_novalue(Op_udiv_l64_imm) {}
+			instr_case_novalue(Op_udiv_l32_l32) {}
+			instr_case_novalue(Op_udiv_l32_imm) {}
+			instr_case_novalue(Op_log_and_l8_l8) {}
+			instr_case_novalue(Op_log_and_l8_imm) {}
+			instr_case_novalue(Op_log_or_l8_l8) {}
+			instr_case_novalue(Op_log_or_l8_imm) {}
+			instr_case_novalue(Op_log_xor_l8_l8) {}
+			instr_case_novalue(Op_log_xor_l8_imm) {}
+			instr_case_novalue(Op_log_not_l8) {}
 
 
-			variant_case(Op_variantSetInner_lvnt_type, instr) {
+			instr_case(Op_variantSetInner_lvnt_type, instr) {
 				const auto& variant_type
-					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));
-				base::StrID                     wanted_type    = instr.arg1.type_name;
+					= std::get<VariantType>(*current_stack.at(instr.variant.var_name));
+				base::StrID                     wanted_type    = instr.inner_type.type_name;
 				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lvnt_type, instr) {
+			instr_case(Op_variantGetInner_lptr_lvnt_type, instr) {
 				const auto& variant_type
-					= std::get<VariantType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<VariantType>(*current_stack.at(instr.variant.var_name));
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 				base::StrID                     wanted_type    = pointer_type.inner;
 				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.arg2 != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantSetInner_lptr_type, instr) {
+			instr_case(Op_variantSetInner_lptr_type, instr) {
 				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.variant_ptr.var_name));
 
 				const auto& variant_type
 					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
 
-				base::StrID wanted_type = instr.arg1.type_name;
+				base::StrID wanted_type = instr.inner_type.type_name;
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			variant_case(Op_variantGetInner_lptr_lptr_type, instr) {
+			instr_case(Op_variantGetInner_lptr_lptr_type, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 				base::StrID wanted_type = pointer_type.inner;
 
 				const auto& variant_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.variant_ptr.var_name));
 				const auto& variant_type
 					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
 
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
 
-				if (instr.arg2 != wanted_type) throw VariantTypeMismatchError(instr);
+				if (instr.expected_type != wanted_type) throw VariantTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_label) {}
-			variant_case_novalue(Op_jmp_label) {}
-			variant_case_novalue(Op_jmpIf_label) {}
-			variant_case_novalue(Op_jmpIfNot_label) {}
-			variant_case_novalue(Op_call_func) {}
-			variant_case_novalue(Op_call_builtinfunc) {}
-			variant_case_novalue(Op_call_cfunc) {}
-			variant_case(Op_virtual_call_lptr_method, instr) {
+			instr_case_novalue(Op_label) {}
+			instr_case_novalue(Op_jmp_label) {}
+			instr_case_novalue(Op_jmpIf_label) {}
+			instr_case_novalue(Op_jmpIfNot_label) {}
+			instr_case_novalue(Op_call_func) {}
+			instr_case_novalue(Op_call_builtinfunc) {}
+			instr_case_novalue(Op_call_cfunc) {}
+			instr_case(Op_virtual_call_lptr_method, instr) {
 				// For a method all to be valid, the called method has to be declared as a virtual
 				// method in this inheritable or it's superclasses or interfaces.
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
 				const auto& inh_meta
 					= type_metadata.at(pointer_type.inner)->getInheritanceMetadata();
 
@@ -705,7 +702,7 @@ class FunctionValidator {
 				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
 					if (valid) return;
 					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
-						if (imd->virtual_methods.contains(instr.arg1.method_name)) {
+						if (imd->virtual_methods.contains(instr.method.method_name)) {
 							valid = true;
 							return;
 						}
@@ -719,159 +716,158 @@ class FunctionValidator {
 				check_for_superclasses(obj_type);
 				if (!inh_meta.has_value() || !valid) throw InvalidVirtualCallError(instr);
 			}
-			variant_case_novalue(Op_ret_tailcall_func) {}
-			variant_case_novalue(Op_ret) {}
-			variant_case_novalue(Op_deinit) {}
-			variant_case_novalue(Op_input_l64) {}
-			variant_case_novalue(Op_output_l64) {}
-			variant_case_novalue(Op_input_l32) {}
-			variant_case_novalue(Op_output_l32) {}
-			variant_case(Op_setVTable_lptr_type, instr) {
+			instr_case_novalue(Op_ret_tailcall_func) {}
+			instr_case_novalue(Op_ret) {}
+			instr_case_novalue(Op_deinit) {}
+			instr_case_novalue(Op_input_l64) {}
+			instr_case_novalue(Op_output_l64) {}
+			instr_case_novalue(Op_input_l32) {}
+			instr_case_novalue(Op_output_l32) {}
+			instr_case(Op_setVTable_lptr_type, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				if (pointer_type.inner != instr.arg1.type_name)
+					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
+				if (pointer_type.inner != instr.type.type_name)
 					throw VTableTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_downcast_lptr_lptr_type) {}
-			variant_case_novalue(Op_free_lptr) {}
-			variant_case(Op_store_lptr_lany, instr) {
+			instr_case_novalue(Op_downcast_lptr_lptr_type) {}
+			instr_case_novalue(Op_free_lptr) {}
+			instr_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.src.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_load_lany_lptr, instr) {
+			instr_case(Op_load_lany_lptr, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.arg0.var_name);
+					= std::get<PointerType>(*current_stack.at(instr.src_ptr.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.dst.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_ref_lptr_lany, instr) {
+			instr_case(Op_ref_lptr_lany, instr) {
 				const auto& pointer_type
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.src.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
-			variant_case(Op_structLea_lptr_lptr_field, instr) {
+			instr_case(Op_structLea_lptr_lptr_field, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 
 				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_data_ptr.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				validateStructFieldType(ztruct, instr.arg2, destination.inner, instr);
+				validateStructFieldType(ztruct, instr.field, destination.inner, instr);
 			}
-			variant_case(Op_structLoad_lany_lptr_field, instr) {
-				const auto& destination = current_stack.at(instr.arg0.var_name);
+			instr_case(Op_structLoad_lany_lptr_field, instr) {
+				const auto& destination = current_stack.at(instr.dst.var_name);
 
 				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_data_ptr.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				validateStructFieldType(ztruct, instr.arg2, typeName(*destination), instr);
+				validateStructFieldType(ztruct, instr.field, typeName(*destination), instr);
 			}
-			variant_case(Op_structStore_lptr_lany_field, instr) {
-				const auto& source = current_stack.at(instr.arg1.var_name);
+			instr_case(Op_structStore_lptr_lany_field, instr) {
+				const auto& source = current_stack.at(instr.src.var_name);
 
 				const auto& ztruct_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_data_ptr.var_name));
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
-				validateStructFieldType(ztruct, instr.arg2, typeName(*source), instr);
+				validateStructFieldType(ztruct, instr.field, typeName(*source), instr);
 			}
-			variant_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
+			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (destination.inner != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLea_lptr_lptr_l64, instr) {
+			instr_case(Op_dynTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 
 				if (destination.inner != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
-				const auto& destination = current_stack.at(instr.arg0.var_name);
+			instr_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
+				const auto& destination = current_stack.at(instr.dst.var_name);
 
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (typeName(*destination) != table_type.inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableLoad_lany_lptr_l64, instr) {
-				const auto& destination = current_stack.at(instr.arg0.var_name);
+			instr_case(Op_dynTableLoad_lany_lptr_l64, instr) {
+				const auto& destination = current_stack.at(instr.dst.var_name);
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.src_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 				if (typeName(*destination) != table_type.inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
-				const auto& source = current_stack.at(instr.arg1.var_name);
+			instr_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
+				const auto& source = current_stack.at(instr.src.var_name);
 
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<FixedSizeTableType>(table_pointer, tod_map, instr);
 
 				if (table_type.inner != typeName(*source))
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableStore_lptr_lany_l64, instr) {
-				const auto& source = current_stack.at(instr.arg1.var_name);
+			instr_case(Op_dynTableStore_lptr_lany_l64, instr) {
+				const auto& source = current_stack.at(instr.src.var_name);
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 
 				if (table_type.inner != typeName(*source))
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
+			instr_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.dst_table_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 
-				base::StrID wanted_type = instr.arg1.type_name;
-				if (wanted_type != table_type.name) throw InvalidArgumentTypeError(instr.arg1);
+				base::StrID wanted_type = instr.table_type.type_name;
+				if (wanted_type != table_type.name)
+					throw InvalidArgumentTypeError(instr.table_type);
 			}
-			variant_case(Op_strOutput_lptr, instr) {
+			instr_case(Op_strOutput_lptr, instr) {
 				const auto& table_pointer
-					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+					= std::get<PointerType>(*current_stack.at(instr.string_ptr.var_name));
 				const auto& table_type
 					= expectPointerType<DynamicTableType>(table_pointer, tod_map, instr);
 				if (table_type.inner != "byte") throw DynamicTableTypeMismatchError(instr);
 			}
-			variant_case_novalue(Op_nop) {}
-			variant_case_novalue(Op_exit) {}
-			variant_case_novalue(Op_breakpoint) {}
-
-			variant_default {
-				CORE_PANIC("Unhandled instruction: ", instructionToString(instruction));
-			}
+			instr_case_novalue(Op_nop) {}
+			instr_case_novalue(Op_exit) {}
+			instr_case_novalue(Op_breakpoint) {}
+			instr_case_novalue(Op_initFromVmValue) {}
 		}
+		POP_DIAGNOSTIC
 	}
 
 	/**
@@ -885,8 +881,8 @@ class FunctionValidator {
 
 	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
 		const {
-		auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
-		auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
+		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
+		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
 		auto dst_type = type_metadata.at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
 		auto src_type = type_metadata.at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
@@ -913,7 +909,7 @@ class FunctionValidator {
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
-		        && !base::variantHoldsOneOf<ValidLastInstructions>(function.body.back()))) {
+		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
 			throw PathWithoutEndError(function.name);
 		}
 	}
@@ -924,19 +920,21 @@ class FunctionValidator {
 
 	void preprocessLabels() {
 		auto register_jump = [&](const auto& instr) {
-			jumps_to_label.try_emplace(instr.arg0.label_name);
-			jumps_to_label.at(instr.arg0.label_name).push_back(instr);
+			jumps_to_label.try_emplace(instr.label.label_name);
+			jumps_to_label.at(instr.label.label_name).push_back(instr);
 		};
 
 		for (usize index = 0; index < function.body.size(); index++) {
-			variant_match(function.body[index]) {
-				variant_case(Op_label, instr) {
-					auto [_, added] = index_of_label.insert_or_assign(instr.arg0.label_name, index);
-					if (!added) throw DuplicatedLabelError(instr.arg0);
+			instr_match(function.body[index]) {
+				instr_case(Op_label, instr) {
+					auto [_, added]
+						= index_of_label.insert_or_assign(instr.label.label_name, index);
+					if (!added) throw DuplicatedLabelError(instr.label);
 				}
-				variant_case(Op_jmp_label, instr) { register_jump(instr); }
-				variant_case(Op_jmpIf_label, instr) { register_jump(instr); }
-				variant_case(Op_jmpIfNot_label, instr) { register_jump(instr); }
+				instr_case(Op_jmp_label, instr) { register_jump(instr); }
+				instr_case(Op_jmpIf_label, instr) { register_jump(instr); }
+				instr_case(Op_jmpIfNot_label, instr) { register_jump(instr); }
+				instr_default {}
 			}
 		}
 	}
@@ -957,74 +955,74 @@ class FunctionValidator {
 			validateArgTypesNonTrivially(instructions[index], local_stack);
 
 			visited_instructions[index] = true;
-			variant_match(instructions[index]) {
-				variant_case(Op_init_lany_type, instr) {
-					local_stack.push(instr.arg0, instr.arg1);
+			instr_match(instructions[index]) {
+				instr_case(Op_init_lany_type, instr) {
+					local_stack.push(instr.var, instr.type);
 					index++;
 				}
-				variant_case(Op_deinit, instr) {
+				instr_case(Op_deinit, instr) {
 					local_stack.pop(instr);
 					index++;
 				}
-				variant_case(Op_label, instr) {
-					match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
+				instr_case(Op_label, instr) {
+					match_optional(stack_at_label.atMaybe(instr.label.label_name)) {
 						opt_some(label_state) {
 							if (*label_state != local_stack.getStackState())
 								throw StackStructureMismatchError(
-									instr, jumps_to_label.at(instr.arg0.label_name)
+									instr, jumps_to_label.at(instr.label.label_name)
 								);
 							std::tie(index, local_stack) = dfs_stack.back();
 							dfs_stack.pop_back();
 						}
 						opt_none {
-							stack_at_label.put(instr.arg0.label_name, local_stack.getStackState());
+							stack_at_label.put(instr.label.label_name, local_stack.getStackState());
 							index++;
 						}
 					}
 				}
-				variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
-				variant_case(Op_jmpIf_label, instr) {
+				instr_case(Op_jmp_label, instr) { index = getLabelTarget(instr.label); }
+				instr_case(Op_jmpIf_label, instr) {
 					index++;
-					dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
+					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
-				variant_case(Op_jmpIfNot_label, instr) {
+				instr_case(Op_jmpIfNot_label, instr) {
 					index++;
-					dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
+					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
-				variant_case(Op_ret, instr) {
+				instr_case(Op_ret, instr) {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-				variant_case(Op_call_func, instr) {
+				instr_case(Op_call_func, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_call_builtinfunc, instr) {
+				instr_case(Op_call_builtinfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_call_cfunc, instr) {
+				instr_case(Op_call_cfunc, instr) {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_virtual_call_lptr_method, instr) {
+				instr_case(Op_virtual_call_lptr_method, instr) {
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
-				variant_case(Op_ret_tailcall_func, instr) {
+				instr_case(Op_ret_tailcall_func, instr) {
 					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-#define HANDLE_CAST(SIZE)                                  \
-	variant_case(Op_cast_l##SIZE##_type, instr) {          \
-		local_stack.castPrimitive(instr.arg0, instr.arg1); \
-		index++;                                           \
+#define HANDLE_CAST(SIZE)                                          \
+	instr_case(Op_cast_l##SIZE##_type, instr) {                    \
+		local_stack.castPrimitive(instr.value, instr.target_type); \
+		index++;                                                   \
 	}
 
 				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
 #undef HANDLE_CAST
-				variant_default { index++; }
+				instr_default { index++; }
 			}
 		}
 	}

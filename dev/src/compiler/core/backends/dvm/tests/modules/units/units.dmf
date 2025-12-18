@@ -11,5 +11,5 @@ fun foo(u: ()) -> () = {
 
 fun main() -> i64 = {
     foo(a);
-    return 0;
+    return 0i64;
 }
