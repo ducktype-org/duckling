@@ -242,7 +242,7 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	// @TODO: Check for over/under flows. This should be done in #1216.
+	// @TODO: #1216 Check for over/under flows.
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
 	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
 	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
