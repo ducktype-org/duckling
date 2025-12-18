@@ -211,13 +211,13 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-#define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
+#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                               \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
 			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
+			lhs OP rhs;                                                                  \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
@@ -227,7 +227,7 @@ namespace vm {
 			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
 			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
+			lhs OP rhs;                                                                  \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
@@ -246,43 +246,43 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
 	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
 	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
-	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
-	DEFINE_DIVISION_OP(div, 64, i64)
+	DEFINE_DIVISION_LIKE_OP(mod, 64, i64, %=)
+	DEFINE_DIVISION_LIKE_OP(div, 64, i64, /=)
 	DEFINE_NEGATION_OP(neg, 64, i64);
 	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
-	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
-	DEFINE_DIVISION_OP(udiv, 64, u64)
+	DEFINE_DIVISION_LIKE_OP(umod, 64, u64, %=)
+	DEFINE_DIVISION_LIKE_OP(udiv, 64, u64, /=)
 
 	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
 	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
 	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
-	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
-	DEFINE_DIVISION_OP(div, 32, i32)
+	DEFINE_DIVISION_LIKE_OP(mod, 32, i32, %=)
+	DEFINE_DIVISION_LIKE_OP(div, 32, i32, /=)
 	DEFINE_NEGATION_OP(neg, 32, i32);
 	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
-	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
-	DEFINE_DIVISION_OP(udiv, 32, u32)
+	DEFINE_DIVISION_LIKE_OP(umod, 32, u32, %=)
+	DEFINE_DIVISION_LIKE_OP(udiv, 32, u32, /=)
 
 	DEFINE_ARITHMETIC_OP(add, 16, i16, +=)
 	DEFINE_ARITHMETIC_OP(sub, 16, i16, -=)
 	DEFINE_ARITHMETIC_OP(mul, 16, i16, *=)
-	DEFINE_ARITHMETIC_OP(mod, 16, i16, %=)
-	DEFINE_DIVISION_OP(div, 16, i16)
+	DEFINE_DIVISION_LIKE_OP(mod, 16, i16, %=)
+	DEFINE_DIVISION_LIKE_OP(div, 16, i16, /=)
 	DEFINE_NEGATION_OP(neg, 16, i16);
 	DEFINE_ARITHMETIC_OP(umul, 16, u16, *=)
-	DEFINE_ARITHMETIC_OP(umod, 16, u16, %=)
-	DEFINE_DIVISION_OP(udiv, 16, u16)
+	DEFINE_DIVISION_LIKE_OP(umod, 16, u16, %=)
+	DEFINE_DIVISION_LIKE_OP(udiv, 16, u16, /=)
 
 	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
 	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
 	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_DIVISION_OP(fdiv, 64, double)
+	DEFINE_DIVISION_LIKE_OP(fdiv, 64, double, /=)
 	DEFINE_NEGATION_OP(fneg, 64, double);
 
 	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
 	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
 	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_DIVISION_OP(fdiv, 32, float)
+	DEFINE_DIVISION_LIKE_OP(fdiv, 32, float, /=)
 	DEFINE_NEGATION_OP(fneg, 32, float);
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
