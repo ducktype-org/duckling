@@ -36,6 +36,11 @@
 #define VM_OPCODE_FROM_NAME(name) vm::code::OpCode::Op_##name
 
 namespace vm::code {
+	constexpr usize INSTR_COUNT = 1  // Comment
+#define HANDLE_INSTR(name) +1
+#include "instruction_definitions.hpp"
+#undef HANDLE_INSTR
+		;
 
 	enum class OpCode : u64 {
 #define HANDLE_INSTR(name) Op_##name,
@@ -171,7 +176,7 @@ namespace vm::code {
 		[[nodiscard]] OpCode opcode() const { return code; }
 
 		[[nodiscard]] base::StrID name() const {
-			static std::array map = {
+			static std::array<base::StrID, INSTR_COUNT> map = {
 #define HANDLE_INSTR(name) base::StrID(#name),
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR

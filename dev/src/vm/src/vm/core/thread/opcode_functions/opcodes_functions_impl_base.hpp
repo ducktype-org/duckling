@@ -194,8 +194,8 @@ namespace vm {
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
 			lhs OP     rhs;                                                              \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
@@ -203,8 +203,8 @@ namespace vm {
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = safeReadBytes<TYPE>(instr->arg1);                           \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = safeReadBytes<TYPE>(instr->arg1);                           \
 			lhs OP     rhs;                                                              \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
@@ -214,8 +214,8 @@ namespace vm {
 #define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
 			lhs /= rhs;                                                                  \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
@@ -224,7 +224,7 @@ namespace vm {
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			TYPE lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
+			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
 			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
 			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
 			lhs /= rhs;                                                                  \
@@ -236,7 +236,7 @@ namespace vm {
 #define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
 		{                                                                                \
-			TYPE value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
+			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
 			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \

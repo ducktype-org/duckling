@@ -15,6 +15,7 @@ public:
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
+		TESTER_ADD_TEST(check16BitsInstructions);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(check64BitsInstructions);
 		TESTER_ADD_TEST(pointerTest);
