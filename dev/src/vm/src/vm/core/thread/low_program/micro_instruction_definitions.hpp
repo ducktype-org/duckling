@@ -112,84 +112,85 @@ DEF_MICRO_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocal
 DEF_MICRO_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
 
-// ========= ARITHMETIC OPERATIONS ========
-
+// ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(add_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(sub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(sub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(mul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(div_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(div_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(mod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(neg_l64, vm::opargs::StackLocal64)
 
 DEF_MICRO_INSTR(add_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(add_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-
-DEF_MICRO_INSTR(sub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(sub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(sub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(sub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-
-DEF_MICRO_INSTR(mul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(mul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(mul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(mul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(mod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(mod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(mod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(mod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(div_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(div_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(div_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(div_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(neg_l64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(mod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(mod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(neg_l32, vm::opargs::StackLocal32)
+
+DEF_MICRO_INSTR(add_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(add_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(sub_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sub_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mul_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(mul_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(div_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(div_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mod_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(mod_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(neg_l16, vm::opargs::StackLocal16)
+
+// ========= UNSIGNED INTEGER ARITHMETIC OPERATIONS ========
+DEF_MICRO_INSTR(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(umod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(umod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(udiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+
+DEF_MICRO_INSTR(umul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(umul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(umod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(umod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+
+DEF_MICRO_INSTR(umul_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(umul_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(umod_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(umod_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(udiv_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(udiv_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
 
 // ========= FLOATING POINT OPERATIONS ========
 DEF_MICRO_INSTR(fadd_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(fadd_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_MICRO_INSTR(fadd_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(fadd_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(fsub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(fsub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_MICRO_INSTR(fsub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(fsub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(fmul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(fmul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_MICRO_INSTR(fmul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(fmul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
 DEF_MICRO_INSTR(fdiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(fdiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fneg_l64, vm::opargs::StackLocal64)
+
+DEF_MICRO_INSTR(fadd_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fadd_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fsub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fsub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fmul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fmul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(fdiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(fdiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(fneg_l64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(fneg_l32, vm::opargs::StackLocal32)
-
-DEF_MICRO_INSTR(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(umul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(umul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(umod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(umod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(umod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(umod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(udiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_MICRO_INSTR(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_MICRO_INSTR(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_MICRO_INSTR(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
 // ========= BOOLEAN OPERATIONS ========
 
@@ -209,38 +210,121 @@ DEF_MICRO_INSTR(log_not_l8, vm::opargs::StackLocal8)
 
 // ========= LOGICAL OPERATIONS ========
 
+// --- 64-bit Integer Comparisons ---
 DEF_MICRO_INSTR(cmpEq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(cmpEq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpNeq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(cmpNeq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(cmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpGe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(cmpGe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(ucmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpGe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(ucmpGe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpL_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(cmpL_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpLe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(cmpLe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpL_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(ucmpL_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpLe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(ucmpLe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
 
+// --- 32-bit Integer Comparisons ---
 DEF_MICRO_INSTR(cmpEq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(cmpEq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpNeq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(cmpNeq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(cmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpGe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(cmpGe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(ucmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpGe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(ucmpGe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpL_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(cmpL_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpLe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(cmpLe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpL_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
 DEF_MICRO_INSTR(ucmpL_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpLe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(ucmpLe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
+// --- 16-bit Integer Comparisons ---
+DEF_MICRO_INSTR(cmpEq_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpEq_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpNeq_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpNeq_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpG_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpG_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpGe_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpGe_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpG_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(ucmpG_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpGe_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(ucmpGe_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpL_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpL_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpLe_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(cmpLe_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpL_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(ucmpL_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpLe_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(ucmpLe_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+
+// --- 8-bit Integer Comparisons ---
 DEF_MICRO_INSTR(cmpEq_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_MICRO_INSTR(cmpEq_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpNeq_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(cmpNeq_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_MICRO_INSTR(cmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpGe_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(cmpGe_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_MICRO_INSTR(ucmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpGe_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(ucmpGe_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_MICRO_INSTR(cmpL_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_MICRO_INSTR(cmpL_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(cmpLe_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(cmpLe_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 DEF_MICRO_INSTR(ucmpL_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
 DEF_MICRO_INSTR(ucmpL_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(ucmpLe_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(ucmpLe_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+
+// --- 64-bit Floating Point Comparisons ---
+DEF_MICRO_INSTR(fcmpEq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpEq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpNeq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpNeq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpGe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpGe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpL_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpL_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpLe_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fcmpLe_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+
+// --- 32-bit Floating Point Comparisons ---
+DEF_MICRO_INSTR(fcmpEq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpEq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpNeq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpNeq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpGe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpGe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpL_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpL_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_MICRO_INSTR(fcmpLe_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fcmpLe_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
 
 // sets the flag if pointer is null
 DEF_MICRO_INSTR(cmpNull_lptr, vm::opargs::StackLocalPtr)
