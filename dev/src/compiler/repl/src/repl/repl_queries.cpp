@@ -40,12 +40,12 @@ namespace compiler::repl {
 			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
 
 			CORE_ASSERT(
-				!hout_expr_result.hasError(),
+				hout_expr_result.hasValue(),
 				"Failed to convert expression to HOUT in REPL expression wrapper"
 			);
 
 
-			auto hout_expr   = std::move(hout_expr_result).value();
+			auto hout_expr   = std::move(hout_expr_result).valueOrPanic();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
 			std::cout << "[DEBUG] Expression return type: " << return_type.toString() << "\n";
@@ -78,7 +78,7 @@ namespace compiler::repl {
 			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
 
 			std::cout << "[DEBUG] QueryReplExpressionWrapper completed successfully\n";
-			return { decl, code_block };
+			return helios::HOUTFunction{ decl, code_block };
 		}
 
 		// When counter is used as part of the key, caching is not very useful.
@@ -137,7 +137,7 @@ namespace compiler::repl {
 
 			const auto class_type
 				= ctx.query<helios::QueryTypeFromDefinition>(class_sym)
-			          ->expect("Not handling errors here yet... (generating class constructor)")
+			          ->throwOnFail("Not handling errors here yet... (generating class constructor)")
 			          .getType()
 			          .as<tsh::ClassAbstractType>();
 			const auto implicit_ctor

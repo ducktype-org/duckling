@@ -9,6 +9,9 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include <base/except/exceptions.hpp>
 
@@ -17,7 +20,9 @@
 
 #include <vm/api/vm.hpp>
 
+#include <cstring>
 #include <iostream>
+#include <string_view>
 
 namespace compiler::repl {
 	// TODO: decide if we want to do it here or in the main.cpp.
@@ -35,7 +40,12 @@ namespace compiler::repl {
 		std::cout << "[DVM initialized with PID " << m_dvm_pid << "]\n";
 	}
 
-	ReplSession::ReplSession(): m_config(), m_should_exit(false), m_line_counter(0), m_dvm_pid(0) {
+	ReplSession::ReplSession():
+		  m_config(),
+		  m_should_exit(false),
+		  m_line_counter(0),
+		  m_dvm_pid(0),
+		  m_frontend(m_history, m_config) {
 		initDVM();
 	}
 
@@ -43,19 +53,9 @@ namespace compiler::repl {
 		  m_config(std::move(config)),
 		  m_should_exit(false),
 		  m_line_counter(0),
-		  m_dvm_pid(0) {
+		  m_dvm_pid(0),
+		  m_frontend(m_history, m_config) {
 		initDVM();
-	}
-
-	void ReplSession::printWelcome() const {
-		std::cout << "Duckling REPL\n";
-		std::cout << "Type /help for available commands, /exit to quit.\n";
-		std::cout << "Enter " << m_config.multiline_start << " for multiline mode.\n\n";
-	}
-
-	void ReplSession::printPrompt() const {
-		std::cout << m_config.prompt;
-		std::cout.flush();
 	}
 
 	bool ReplSession::isCommand(const std::string& line) const {
@@ -88,12 +88,12 @@ namespace compiler::repl {
 		}
 
 		if (line == "/history" || line == "/h") {
-			printHistory();
+			m_frontend.printHistory();
 			return true;
 		}
 
 		if (line == "/help" || line == "/?") {
-			printHelp();
+			m_frontend.printHelp();
 			return true;
 		}
 
@@ -108,67 +108,9 @@ namespace compiler::repl {
 		return false;
 	}
 
-	void ReplSession::printHistory() const {
-		if (m_history.empty()) {
-			std::cout << "No history yet.\n";
-			return;
-		}
-
-		std::cout << "\n=== REPL History (" << m_history.size()
-				  << (m_history.size() == 1 ? " statement" : " statements") << ") ===\n";
-		for (size_t i = 0; i < m_history.size(); ++i) {
-			const auto& stmt = m_history[i];
-			std::cout << "[" << (i + 1) << "] ";
-
-			if (stmt.source_code.find('\n') != std::string::npos) {
-				std::cout << "(multiline)\n";
-				std::cout << stmt.source_code << "\n";
-			} else {
-				std::cout << stmt.source_code << "\n";
-			}
-		}
-		std::cout << "\n";
-	}
-
-	void ReplSession::printHelp() const {
-		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?           - Show this help message\n";
-		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /history, /h        - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear statement history\n";
-		std::cout << "\n=== Multiline Mode ===\n";
-		std::cout << "  " << m_config.multiline_start
-				  << "                  - Start multiline input\n";
-		std::cout << "  " << m_config.multiline_end
-				  << "                   - End multiline input and execute\n";
-		std::cout << "\n";
-	}
-
 	void ReplSession::clearHistory() {
 		m_history.clear();
 		m_line_counter = 0;
-	}
-
-	std::string ReplSession::handleMultilineInput() {
-		std::string multiline_input;
-
-		std::cout << "(Multiline mode - type '" << m_config.multiline_end
-				  << "' on a new line to finish)\n";
-
-		while (true) {
-			std::cout << "         |";
-			std::cout.flush();
-
-			std::string ml;
-			if (!std::getline(std::cin, ml)) break;
-
-			if (ml == m_config.multiline_end) break;
-
-			if (!multiline_input.empty()) multiline_input += "\n";
-			multiline_input += ml;
-		}
-
-		return multiline_input;
 	}
 
 	ReplResult ReplSession::processLine(const std::string& line) {
@@ -176,11 +118,6 @@ namespace compiler::repl {
 			handleCommand(line);
 			if (m_should_exit) return ReplResult::exit();
 			return ReplResult::success();
-		}
-
-		if (line == m_config.multiline_start) {
-			std::string multiline_content = handleMultilineInput();
-			return executeInput(multiline_content);
 		}
 
 		return executeInput(line);
@@ -342,13 +279,12 @@ namespace compiler::repl {
 	}
 
 	int ReplSession::run() {
-		printWelcome();
-
-		std::string line;
+		m_frontend.printWelcome();
 		while (!m_should_exit) {
-			printPrompt();
+			m_frontend.printPrompt();
+			std::string line = m_frontend.readLine();
 
-			if (!std::getline(std::cin, line)) {
+			if (line.empty() && std::cin.eof()) {
 				std::cout << "\nGoodbye!\n";
 				break;
 			}

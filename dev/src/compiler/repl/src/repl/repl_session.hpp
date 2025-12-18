@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include "repl_frontend.hpp"
+#include "repl_structs.hpp"
+
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -22,55 +25,6 @@
 #include <vector>
 
 namespace compiler::repl {
-
-	struct ReplStatement {
-		std::string                     source_code;
-		base::Ref<frontend::ModuleTree> module;
-		frontend::ModuleID              module_id;
-
-		ReplStatement(std::string code, base::Ref<frontend::ModuleTree> mod):
-			  source_code(std::move(code)),
-			  module(mod),
-			  module_id(module->getModuleID()) {}
-	};
-
-	struct ReplConfig {
-		std::string prompt          = "duckling> ";
-		std::string continuation    = "      |";
-		std::string multiline_start = R"(""")";
-		std::string multiline_end   = "/end";
-		bool        show_hout_debug = true;
-		bool        run_dvm         = true;
-	};
-
-	/**
-	 * @brief Result of processing a REPL input
-	 *
-	 * Contains the status of the operation and an optional message.
-	 */
-	struct ReplResult {
-		enum class Status { Success, Error, Exit, IncompleteInput };
-
-		Status      status;
-		std::string message;
-
-		static ReplResult success(std::string msg = "") {
-			return ReplResult{ .status = Status::Success, .message = std::move(msg) };
-		}
-
-		static ReplResult error(std::string msg) {
-			return ReplResult{ .status = Status::Error, .message = std::move(msg) };
-		}
-
-		static ReplResult exit() {
-			return ReplResult{ .status = Status::Exit, .message = "Goodbye!" };
-		}
-
-		static ReplResult incomplete() {
-			return ReplResult{ .status = Status::IncompleteInput, .message = "" };
-		}
-	};
-
 	/**
 	 * @brief Manages an interactive REPL session for Duckling compiler.
 	 *
@@ -81,8 +35,6 @@ namespace compiler::repl {
 	public:
 		ReplSession();
 		explicit ReplSession(ReplConfig config);
-
-		void printWelcome() const;
 
 		/**
 		 * Run the main REPL loop (blocking).
@@ -108,15 +60,11 @@ namespace compiler::repl {
 			return m_should_exit;
 		}
 
-		void printHistory() const;
-		void printHelp() const;
 		void clearHistory();
 
 	private:
-		std::string        handleMultilineInput();
 		[[nodiscard]] bool isCommand(const std::string& line) const;
 		bool               handleCommand(const std::string& line);
-		void               printPrompt() const;
 
 		[[nodiscard]] base::Optional<pst::AccessLocked<pst::ExprStmt>> extractSingleExpression(
 			query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
@@ -125,13 +73,14 @@ namespace compiler::repl {
 		ReplResult handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt);
 		ReplResult handleDefinition(frontend::ModuleID module_id);
 
-		void                       initDVM();
+		void initDVM();
+
 		ReplConfig                 m_config;
 		std::vector<ReplStatement> m_history;
 		bool                       m_should_exit;
 		u32                        m_line_counter;
-
-		vm::PID m_dvm_pid;
+		vm::PID                    m_dvm_pid;
+		ReplFrontend               m_frontend;
 	};
 
 }  // namespace compiler::repl

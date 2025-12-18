@@ -32,7 +32,10 @@ namespace compiler::repl {
 	 * expression wrapped in a return statement.
 	 */
 	DECLARE_QUERY(
-		QueryReplExpressionWrapper, QueryReplExpressionWrapper_Key, helios::HOUTFunction, ({})
+		QueryReplExpressionWrapper,
+		QueryReplExpressionWrapper_Key,
+		helios::HOUTFunction,
+		({ .uses_qresult = false })
 	);
 
 	/**
@@ -41,6 +44,8 @@ namespace compiler::repl {
 	 * Right now it's the same as QueryModuleHOUT. Expression wrapping is
 	 * handled separately in the REPL session logic. TODO: decide if this should change.
 	 */
-	DECLARE_QUERY(QueryReplModuleHOUT, frontend::ModuleID, helios::HOUTUnit, ({}));
+	DECLARE_QUERY(
+		QueryReplModuleHOUT, frontend::ModuleID, helios::HOUTUnit, ({ .uses_qresult = false })
+	);
 
 }  // namespace compiler::repl
