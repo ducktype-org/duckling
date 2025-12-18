@@ -35,7 +35,7 @@ namespace vm::code::builders {
 			);
 
 			return [&]<usize... Indices>(std::index_sequence<Indices...>) {
-				auto all_ok
+				bool all_ok
 					= (std::holds_alternative<std::tuple_element_t<Indices, ArgTypes>>(
 						   args.at(Indices)
 					   )
