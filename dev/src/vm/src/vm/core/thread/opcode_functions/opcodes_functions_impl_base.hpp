@@ -276,13 +276,13 @@ namespace vm {
 	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
 	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
 	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
+	DEFINE_DIVISION_OP(fdiv, 64, double)
 	DEFINE_NEGATION_OP(fneg, 64, double);
 
 	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
 	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
 	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+	DEFINE_DIVISION_OP(fdiv, 32, float)
 	DEFINE_NEGATION_OP(fneg, 32, float);
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
