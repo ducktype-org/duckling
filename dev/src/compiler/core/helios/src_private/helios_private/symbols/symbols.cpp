@@ -852,6 +852,10 @@ namespace compiler::helios {
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
 			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
+				expr.value_expr->acceptVisitor(*this);
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

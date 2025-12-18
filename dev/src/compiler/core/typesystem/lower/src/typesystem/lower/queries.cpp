@@ -9,6 +9,8 @@ namespace compiler::tsl {
 			switch (key.getKind()) {
 			case Unit:
 				return EmptyTypeLayout(key);
+			case Meta:
+				return MetaTypeLayout(tsh::MetaAbstractType(key));
 			case Byte:
 				return IntegralTypeLayout(tsh::ByteAbstractType(key));
 			case Bool:
