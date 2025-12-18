@@ -28,8 +28,8 @@ namespace pst {
 		 */
 		template<std::derived_from<ExprElement> T>
 		MBox<ExprElement> parseUntilEnd(LangParserState& state) {
-			u64 length = internal::streamSize(state);
-			auto res = T::parse(state, length);
+			u64  length = internal::streamSize(state);
+			auto res    = T::parse(state, length);
 		}
 	}
 }

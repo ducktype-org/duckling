@@ -106,7 +106,8 @@ namespace pst {
 
 		template<TokenStreamCondition isSeparator, TokenStreamCondition isEnding>
 		static bool isSeparatorOrEnding(const TokenStream& state, i64 fwd) {
-			return isSeparator(state, fwd) || isEnding(state, fwd) || internal::Conditions::isSentinel(state, fwd);
+			return isSeparator(state, fwd) || isEnding(state, fwd)
+			    || internal::Conditions::isSentinel(state, fwd);
 		}
 
 		/**
@@ -126,8 +127,8 @@ namespace pst {
 			typename Self,
 			bool                      NON_EMPTY,
 			lexer::Token::BracketType BRACKETS,
-			TokenStreamCondition            isSeparator,
-			TokenStreamCondition            isEnding,
+			TokenStreamCondition      isSeparator,
+			TokenStreamCondition      isEnding,
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
@@ -155,7 +156,8 @@ namespace pst {
 				while (true) {
 					expr_length = 0;
 
-					while (!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length)) {
+					while (!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length)
+					) {
 						expr_length++;
 					}
 

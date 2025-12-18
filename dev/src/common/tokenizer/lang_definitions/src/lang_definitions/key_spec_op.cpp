@@ -58,7 +58,7 @@ namespace lang_def {
 			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
 
- 			// If doesn't always indicate statement start.
+			// If doesn't always indicate statement start.
 			{ Keyword::If, "if", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators

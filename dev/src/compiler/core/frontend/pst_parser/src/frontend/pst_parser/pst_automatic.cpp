@@ -1,4 +1,5 @@
 #include "pst_automatic.hpp"
+
 #include "lang_parser_state.hpp"
 
 namespace pst {
@@ -12,9 +13,7 @@ namespace pst {
 
 	void exitFallback(LangParserState& state) {
 		if (state.isSkipping()) {
-			if (!state.removeEntry()) {
-				return;
-			}
+			if (!state.removeEntry()) return;
 		}
 		state.exitFallback();
 	}

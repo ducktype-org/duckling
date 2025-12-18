@@ -4,10 +4,10 @@
 
 #include <diagnostic_interactive/logger_fwd.hpp>
 
-#include <logger/logger.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
+#include <logger/logger.hpp>
 
 namespace tpc {
 
@@ -38,6 +38,7 @@ namespace tpc {
 		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
+
 	public:
 		/**
 		 * @brief provides mutable access to the current stream
@@ -92,7 +93,7 @@ namespace tpc {
 		 */
 		virtual void goDown();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream. 
+		 * @brief deletes current stream and makes last stream the current stream.
 		 */
 		virtual void goUp();
 		/**
@@ -109,13 +110,11 @@ namespace tpc {
 		}
 
 		/**
-		 * @brief Logs an error relatively to the current token. 
+		 * @brief Logs an error relatively to the current token.
 		 */
-		virtual void log(Box<dia::Message> message) { 
-			err->log(std::move(message)); 
-		}
+		virtual void log(Box<dia::Message> message) { err->log(std::move(message)); }
 
-		template <TokenStreamCondition until>
+		template<TokenStreamCondition until>
 		[[nodiscard]]
 		u64 countUntil() const {
 			return current_stream->countUntil<until>();

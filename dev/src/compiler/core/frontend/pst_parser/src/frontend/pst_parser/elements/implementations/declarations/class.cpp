@@ -7,7 +7,7 @@
 namespace pst {
 	bool ExprParserHelper::untilExtendsEnd(const TokenStream& state, i64 fwd = 0) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			|| internal::Conditions::isImplementsOrBlockGroup(state, fwd);
+		    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);
 	}
 
 	MBox<Class> Class::parse(LangParserState& state) {
@@ -18,12 +18,13 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends))
-			state.parse(out).one(&out->base);
+		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
-		state.parse(out).with(&out->body, ClassBlock::parse, { .name=out->name, .specifiers={} });
+		state.parse(out).with(
+			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
+		);
 
 		return out;
 	}

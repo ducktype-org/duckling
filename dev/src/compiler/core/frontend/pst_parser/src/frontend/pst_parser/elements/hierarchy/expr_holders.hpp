@@ -17,7 +17,9 @@ namespace pst {
 	class ExprHolder: public NotStmt {
 	protected:
 		NAMED_CHILD(expr, ExprElement);
-		friend void internal::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun, u64);
+		friend void internal::parseExprIntoHolder(
+			LangParserState&, Ref<ExprHolder>, ExprParseFun, u64
+		);
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
@@ -97,9 +99,9 @@ namespace pst {
 	 */
 	class UniversalExprHolder final:
 		  public ExprHolderTemplate<
-		  	  UniversalExprHolder, 
-			  ExprParserHelper::parseTernary, 
-			  ExprParserHelper::untilUniversalEnd, 
+			  UniversalExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalEnd,
 			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
@@ -141,8 +143,8 @@ namespace pst {
 	 */
 	class CommaExprHolder final:
 		  public ExprHolderTemplate<
-			  CommaExprHolder, 
-			  ExprParserHelper::parseComma, 
+			  CommaExprHolder,
+			  ExprParserHelper::parseComma,
 			  ExprParserHelper::untilUniversalAllowCommaEnd,
 			  true> {
 	public:
@@ -156,8 +158,8 @@ namespace pst {
 	 */
 	class AssignmentExprHolder final:
 		  public ExprHolderTemplate<
-			  AssignmentExprHolder, 
-			  ExprParserHelper::parseAssignment, 
+			  AssignmentExprHolder,
+			  ExprParserHelper::parseAssignment,
 			  ExprParserHelper::untilSemicolon,
 			  true> {
 	public:
@@ -171,9 +173,9 @@ namespace pst {
 	 */
 	class ForTypeExprHolder final:
 		  public ExprHolderTemplate<
-		  	  ForTypeExprHolder, 
-			  ExprParserHelper::parseComma, 
-			  ExprParserHelper::untilForTypeEnd, 
+			  ForTypeExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilForTypeEnd,
 			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
@@ -213,9 +215,9 @@ namespace pst {
 	 */
 	class ValuePatternExprHolder final:
 		  public ExprHolderTemplate<
-		  	  ValuePatternExprHolder, 
-			  ExprParserHelper::parseTernary, 
-			  ExprParserHelper::untilUniversalAllowBlockEnd, 
+			  ValuePatternExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalAllowBlockEnd,
 			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;

@@ -13,9 +13,7 @@ namespace pst::internal {
 		return std::move(*state_ptr).extractState();
 	}
 
-	void finalizeParsing(Ref<LangParserState> state) {
-		state->finalize();
-	}
+	void finalizeParsing(Ref<LangParserState> state) { state->finalize(); }
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::LangParserState)

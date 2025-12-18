@@ -22,7 +22,7 @@ namespace pst {
 			"No recursive token stream to go up from"
 		);
 		checkAllParsed();
-		u64 fwd = fallback_stack.back().post_jump;
+		u64 fwd        = fallback_stack.back().post_jump;
 		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
@@ -43,7 +43,7 @@ namespace pst {
 			"No fallback token stream to go up from"
 		);
 		checkAllParsed();
-		u64 fwd = fallback_stack.back().post_jump;
+		u64 fwd        = fallback_stack.back().post_jump;
 		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
@@ -55,17 +55,15 @@ namespace pst {
 		checkAllParsed();
 	}
 
-	bool LangParserState::isFinalized() const {
-		return finalized;
-	}
+	bool LangParserState::isFinalized() const { return finalized; }
 
 	class NotAllParsedError;
-	void LangParserState::checkAllParsed()  {
+
+	void LangParserState::checkAllParsed() {
 		if (!isSkipping() && !empty()) {
 			log(base::makeBox<NotAllParsedError>(dia::SourcePosition{
-				getPosition(), 
-				ctokens()[base::safeIntConv<i64>(ctokens().size()) - 1].getPosition().getEnd()
-			}));
+				getPosition(),
+				ctokens()[base::safeIntConv<i64>(ctokens().size()) - 1].getPosition().getEnd() }));
 		}
 	}
 

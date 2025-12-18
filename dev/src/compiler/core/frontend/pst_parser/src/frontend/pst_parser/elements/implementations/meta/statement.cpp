@@ -32,31 +32,35 @@ namespace pst {
 
 			template<class T>
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) 
-					|| state[fwd].is(Special::AtSign)
-					|| state[fwd - 1].is(Special::Semicolon)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-					|| Conditions::isBlockGroup(state, fwd - 1);
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsAction)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+				    || Conditions::isBlockGroup(state, fwd - 1);
 			}
 
 			template<>
 			bool isStmtEnd<ExprStmt>(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) 
-					|| state[fwd].is(Special::AtSign)
-					|| state[fwd - 1].is(Special::Semicolon)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsAction)
-					|| keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsAction)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}
 
 			template<>
 			bool isStmtEnd<If>(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) 
-					|| state[fwd].is(Special::AtSign)
-					|| state[fwd - 1].is(Special::Semicolon)
-					|| (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else) && !state[fwd].is(Keyword::Elif));
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else)
+				        && !state[fwd].is(Keyword::Elif));
 			}
 		};
 
@@ -65,16 +69,14 @@ namespace pst {
 			StmtSpecifierClassifiers() = delete;
 
 			static bool isDefiniteEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) 
-					|| state[fwd].is(Special::AtSign)
-					|| state[fwd - 1].is(Special::Semicolon)
-					|| Conditions::isBlockGroup(state, fwd - 1);
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || Conditions::isBlockGroup(state, fwd - 1);
 			}
 		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
-
 			// We skip the first token as its the keyword we already found
 			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers::isStmtEnd<T>>(1);
 
@@ -82,7 +84,7 @@ namespace pst {
 
 			MBox<T> out = T::parse(state);
 
-			auto    opt = out.toOpt();
+			auto opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
 
@@ -98,9 +100,7 @@ namespace pst {
 
 			bool found_internal_start = false;
 
-			while (!StmtSpecifierClassifiers::isDefiniteEnd(state.ctokens(), length)) {
-				length++;
-			}
+			while (!StmtSpecifierClassifiers::isDefiniteEnd(state.ctokens(), length)) length++;
 
 			fallbackLen(state, length);
 
@@ -112,15 +112,14 @@ namespace pst {
 		}
 
 		MBox<Stmt> chooseStmt(LangParserState& state) {
-			if (state[0].is(Special::Semicolon) && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+			if (state[0].is(Special::Semicolon)
+			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
 				state.tokens().skip();
 				return nullptr;
 			}
 
 			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
-				state.log(base::makeBox<EmptyStatementError>(
-					state.getPosition()
-				));
+				state.log(base::makeBox<EmptyStatementError>(state.getPosition()));
 				return nullptr;
 			}
 

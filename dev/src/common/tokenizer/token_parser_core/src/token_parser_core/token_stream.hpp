@@ -23,8 +23,8 @@ namespace tpc {
 		const Tokens& tokens;          ///< Source list of tokens
 		usize         where;           ///< current position
 		usize         from, to;        ///< end position
-		const Token  sentinel_end;    ///< Token to return if out of bounds forward
-		const Token  sentinel_begin;  ///< Token to return if out of bounds backwards
+		const Token   sentinel_end;    ///< Token to return if out of bounds forward
+		const Token   sentinel_begin;  ///< Token to return if out of bounds backwards
 
 	public:
 		TokenStream()             = delete;
@@ -77,11 +77,12 @@ namespace tpc {
 		[[nodiscard]]
 		TokenStream getSubstream(u64 length) const;
 
-		template <TokenStreamCondition until>
+		template<TokenStreamCondition until>
 		[[nodiscard]]
 		u64 countUntil(i64 base = 0) const {
 			u64 length = 0;
-			while (!peek(base + base::safeIntConv<i64>(length)).is(Token::Type::Sentinel) && !until(*this, base + base::safeIntConv<i64>(length))) {
+			while (!peek(base + base::safeIntConv<i64>(length)).is(Token::Type::Sentinel)
+			       && !until(*this, base + base::safeIntConv<i64>(length))) {
 				length++;
 			}
 			return length;

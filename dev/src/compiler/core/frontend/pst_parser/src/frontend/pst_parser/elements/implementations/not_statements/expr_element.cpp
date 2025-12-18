@@ -54,18 +54,18 @@ namespace pst {
 
 	bool ExprParserHelper::untilUniversalEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
-			|| ExprClassify::isAssignment(state, fwd)
-			|| internal::Conditions::isBlockGroup(state, fwd);
+		    || ExprClassify::isAssignment(state, fwd)
+		    || internal::Conditions::isBlockGroup(state, fwd);
 	}
 
 	bool ExprParserHelper::untilUniversalAllowBlockEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
-			|| ExprClassify::isAssignment(state, fwd);
+		    || ExprClassify::isAssignment(state, fwd);
 	}
 
 	bool ExprParserHelper::untilUniversalAllowCommaEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
-			|| internal::Conditions::isBlockGroup(state, fwd);
+		    || internal::Conditions::isBlockGroup(state, fwd);
 	}
 
 	bool ExprParserHelper::untilSemicolon(const TokenStream& state, i64 fwd) {
@@ -79,6 +79,7 @@ namespace pst {
 	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
 		return expr::Comma::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
 	}
+
 	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
 		return expr::Ternary::parse(state, base::safeIntConv<i64>(state.ctokens().size()));
 	}

@@ -24,7 +24,7 @@ namespace pst {
 
 	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			|| state[fwd].is(Keyword::In);
+		    || state[fwd].is(Keyword::In);
 	}
 
 	MBox<For> For::parse(LangParserState& state) {

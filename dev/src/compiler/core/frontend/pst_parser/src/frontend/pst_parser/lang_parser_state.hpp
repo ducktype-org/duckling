@@ -20,11 +20,14 @@ namespace pst {
 	class LangParserState final: public tpc::ParserState {
 		std::vector<ImportType> imports;
 
-		bool                  skip_till_fallback = false; ///< Tells whether parser is currently skipping the parsing steps to get back to fallback.
-		u64                  skipped_entries_depth = 0; ///< Keeps balance of skipped entries to new fallbacks. Original fallback is only reached when it is 0.
+		bool skip_till_fallback = false;  ///< Tells whether parser is currently skipping the
+		                                  ///< parsing steps to get back to fallback.
+		u64 skipped_entries_depth = 0;    ///< Keeps balance of skipped entries to new fallbacks.
+		                                  ///< Original fallback is only reached when it is 0.
 		bool finalized = false;
 
 		void checkAllParsed();
+
 	public:
 		LangParserState(
 			tpc::TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err
@@ -95,8 +98,13 @@ namespace pst {
 		 * @brief Adds to the balance of skipped_entries
 		 */
 		void skipEntry() {
-			CORE_ASSERT(skip_till_fallback, "Skipped entries depth can only be counted during skipping till fallback");
-			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback");
+			CORE_ASSERT(
+				skip_till_fallback,
+				"Skipped entries depth can only be counted during skipping till fallback"
+			);
+			CORE_ASSERT(
+				skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback"
+			);
 			skipped_entries_depth++;
 		}
 
@@ -104,8 +112,12 @@ namespace pst {
 		 * @brief Adds to the balance of skipped_entries
 		 */
 		bool removeEntry() {
-			CORE_ASSERT(skip_till_fallback, "Entries can only be counted during skipping till fallback.");
-			CORE_ASSERT(skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback.");
+			CORE_ASSERT(
+				skip_till_fallback, "Entries can only be counted during skipping till fallback."
+			);
+			CORE_ASSERT(
+				skipped_entries_depth, "Illegal state, if the depth is 0 then we found the fallback."
+			);
 			skipped_entries_depth--;
 			return skipped_entries_depth == 0;
 		}
@@ -115,29 +127,42 @@ namespace pst {
 		 */
 		void fail(i64 rel_pos, const std::string& message) override {
 			if (isSkipping()) {
-				CORE_DEV_LOG(Parser, "Skipped parsing error at pos(", ctokens().peek(rel_pos).getPosition().getStartLineColumn() , "): ", message, "\n\n");
+				CORE_DEV_LOG(
+					Parser,
+					"Skipped parsing error at pos(",
+					ctokens().peek(rel_pos).getPosition().getStartLineColumn(),
+					"): ",
+					message,
+					"\n\n"
+				);
 				return;
 			}
 			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-			skip_till_fallback = true;
+			skip_till_fallback    = true;
 			skipped_entries_depth = 1;
 		}
 
 		/**
-		 * @brief Logs an error relatively to the current token. 
+		 * @brief Logs an error relatively to the current token.
 		 */
-		void log(Box<dia::Message> message) override { 
+		void log(Box<dia::Message> message) override {
 			if (isSkipping()) {
-				CORE_DEV_LOG(Parser, "Skipped parsing message at pos(", message->getSourcePosition().getStartLineColumn() , "): ", message->toString(true), "\n\n");
+				CORE_DEV_LOG(
+					Parser,
+					"Skipped parsing message at pos(",
+					message->getSourcePosition().getStartLineColumn(),
+					"): ",
+					message->toString(true),
+					"\n\n"
+				);
 				return;
 			}
 			if (message->getSeverity() == dia::Message::Severity::Error) {
-				skip_till_fallback = true;
+				skip_till_fallback    = true;
 				skipped_entries_depth = 1;
 			}
-			err->log(std::move(message)); 
+			err->log(std::move(message));
 		}
-
 
 		/**
 		 * @brief Gives access to automatic parsing tools.

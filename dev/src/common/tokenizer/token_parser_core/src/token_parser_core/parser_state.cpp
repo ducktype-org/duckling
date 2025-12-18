@@ -48,7 +48,7 @@ namespace tpc {
 			fallback_stack.size() && fallback_stack.back().type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		u64 fwd = fallback_stack.back().post_jump;
+		u64 fwd        = fallback_stack.back().post_jump;
 		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));

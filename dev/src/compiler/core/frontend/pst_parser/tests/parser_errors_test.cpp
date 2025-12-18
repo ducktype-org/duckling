@@ -178,8 +178,10 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, false> bad_stmt_choice{ "block {}" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
-	Example<pst::ExprHolder, true, pst::UniversalAllowBlockExprHolder>  block_expr{ "x + {return 2 * x;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>           simple_expr{ "x + y" };
+	Example<pst::ExprHolder, true, pst::UniversalAllowBlockExprHolder> block_expr{
+		"x + {return 2 * x;}"
+	};
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
@@ -292,15 +294,9 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::While, true> simple_while{ "while (x < 5) {}" };
 
-	Example<pst::UniversalExprHolder, true> simple_ternary{
-		"if 5 then '\\n' else y"
-	};
-	Example<pst::UniversalExprHolder, false> bad1_ternary{
-		"if if 5 then x else y"
-	};
-	Example<pst::UniversalExprHolder, false> bad2_ternary{
-		"+ if 5 then x else y"
-	};
+	Example<pst::UniversalExprHolder, true>  simple_ternary{ "if 5 then '\\n' else y" };
+	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
+	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
@@ -311,31 +307,21 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, true> simple_operators{ "++ ++ 3 + 5 ++" };
 	Example<pst::UniversalExprHolder, true> text_operator{ "++ ++ 3 + 5 kg ++" };
 	Example<pst::UniversalExprHolder, true> new_operators{ "<> 3 <> 'x' <>" };
-	Example<pst::UniversalExprHolder, true> all_integer_operators{
-		"1 + 2 - 3 * 4 / 5 % 6 ** 7"
-	};
+	Example<pst::UniversalExprHolder, true> all_integer_operators{ "1 + 2 - 3 * 4 / 5 % 6 ** 7" };
 	Example<pst::UniversalExprHolder, true> all_boolean_operators{
 		"true and true or false and not false"
 	};
 	Example<pst::UniversalExprHolder, true>  prefix_named{ "ref const T" };
 	Example<pst::UniversalExprHolder, false> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::UniversalExprHolder, true> simple_block_expr{
-		"(x + {return 2;})"
-	};
-	Example<pst::AssignmentExprHolder, true> simple_block_expr2{
-		"x + {return 2;}"
-	};
+	Example<pst::UniversalExprHolder, true>  simple_block_expr{ "(x + {return 2;})" };
+	Example<pst::AssignmentExprHolder, true> simple_block_expr2{ "x + {return 2;}" };
 
 	Example<pst::UniversalExprHolder, true> simple_round_expr{ "x + (x, y)" };
 
-	Example<pst::UniversalExprHolder, true> simple_chain_expr{
-		"(x * t).y.z(4)[3]"
-	};
+	Example<pst::UniversalExprHolder, true> simple_chain_expr{ "(x * t).y.z(4)[3]" };
 
-	Example<pst::UniversalExprHolder, true> simple_template_expr{
-		"((x * t).y:{x, y}.z:{}(4)[3])"
-	};
+	Example<pst::UniversalExprHolder, true> simple_template_expr{ "((x * t).y:{x, y}.z:{}(4)[3])" };
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
 	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
@@ -377,30 +363,20 @@ class PSTErrorTests: public tester::TestSuite {
         case _                                      = print("did not match");
     })"
 	};
-	Example<pst::AssignmentExprHolder, true> match_no_cases_in_block{
-		R"(match (value) {})"
-	};
-	Example<pst::AssignmentExprHolder, false> match_no_value_expr{
-		R"(match { case _ = 1; })"
-	};
+	Example<pst::AssignmentExprHolder, true>  match_no_cases_in_block{ R"(match (value) {})" };
+	Example<pst::AssignmentExprHolder, false> match_no_value_expr{ R"(match { case _ = 1; })" };
 	Example<pst::AssignmentExprHolder, false> match_no_parens_for_value{
 		R"(match x { case _ = 1; })"
 	};
 	Example<pst::AssignmentExprHolder, false> match_empty_parens_for_value{
 		R"(match () { case _ = 1; })"
 	};
-	Example<pst::AssignmentExprHolder, false> match_no_curly_braces{
-		R"(match(x))"
-	};
+	Example<pst::AssignmentExprHolder, false> match_no_curly_braces{ R"(match(x))" };
 	Example<pst::AssignmentExprHolder, false> match_unclosed_curly_braces{
 		R"(match(x) { case _ = 1)"
 	};
-	Example<pst::AssignmentExprHolder, false> match_case_no_pattern{
-		R"(match(x) { case = 1; })"
-	};
-	Example<pst::AssignmentExprHolder, false> match_case_no_body{
-		R"(match(x) { case 1; })"
-	};
+	Example<pst::AssignmentExprHolder, false> match_case_no_pattern{ R"(match(x) { case = 1; })" };
+	Example<pst::AssignmentExprHolder, false> match_case_no_body{ R"(match(x) { case 1; })" };
 	Example<pst::AssignmentExprHolder, false> match_case_no_equals{
 		R"(match(x) { case 1 "one"; })"
 	};

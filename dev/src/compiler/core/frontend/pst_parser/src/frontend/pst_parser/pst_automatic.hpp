@@ -23,13 +23,14 @@
 #pragma once
 
 #include "access.hpp"
-#include "lang_parser_element.hpp"
 #include "elements/lang_state_unmethods.hpp"
+#include "lang_parser_element.hpp"
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_state.hpp>
 
-#define PST_AUTOMATIC_SKIP(ret) if (state.isSkipping()) {return ret;}
+#define PST_AUTOMATIC_SKIP(ret) \
+	if (state.isSkipping()) { return ret; }
 
 namespace pst {
 	using lang_def::Keyword;
@@ -53,7 +54,7 @@ namespace pst {
 	protected:
 		State&                state;
 		Ref<pst::LangElement> el;
-		bool active_fallback = false;
+		bool                  active_fallback = false;
 
 	public:
 		PSTAutomatic(State& state, Ref<pst::LangElement> caller): state(state), el(caller) {}
@@ -61,9 +62,7 @@ namespace pst {
 		PSTAutomatic(const PSTAutomatic&) = delete;
 
 		~PSTAutomatic() {
-			if (active_fallback) {
-				exitFallback();
-			}
+			if (active_fallback) exitFallback();
 		}
 
 		// Useful for debugging:
@@ -500,9 +499,7 @@ namespace pst {
 		 */
 		PSTAutomatic& goUpAndSkip() {
 			if (state.isSkipping()) {
-				if (!state.removeEntry()) {
-					return *this;
-				}
+				if (!state.removeEntry()) return *this;
 			}
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());
@@ -511,15 +508,19 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Setup a fallback for parsing. The fallback is automatically exited when PSTAutomatic is destructed at the end of the expression. 
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
+		 * PSTAutomatic is destructed at the end of the expression.
 		 *
 		 * Intended usage:
 		 * state.parse(el).autoFallbackLen(length).parseOne(...);
 		 *
-		 * @note Needed when the condition has to be calculated in an hpp file because of templates. Normally in cpp files the until version should be used
+		 * @note Needed when the condition has to be calculated in an hpp file because of templates.
+		 * Normally in cpp files the until version should be used
 		 */
 		PSTAutomatic& autoFallbackLen(u64 length) {
-			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
+			CORE_ASSERT(
+				!active_fallback, "Only one active auto fallback supported in pst automatic"
+			);
 			active_fallback = true;
 			if (state.isSkipping()) {
 				state.skipEntry();
@@ -530,20 +531,24 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Setup a fallback for parsing. The fallback is automatically exited when PSTAutomatic is destructed at the end of the expression. 
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
+		 * PSTAutomatic is destructed at the end of the expression.
 		 *
 		 * Intended usage:
 		 * state.parse(el).autoFallbackUntil<condition>().parseOne(...);
 		 */
 		template<TokenStreamCondition until>
 		PSTAutomatic& autoFallbackUntil() {
-			CORE_ASSERT(!active_fallback, "Only one active auto fallback supported in pst automatic");
+			CORE_ASSERT(
+				!active_fallback, "Only one active auto fallback supported in pst automatic"
+			);
 			active_fallback = true;
 			return fallbackUntil<until>();
 		}
 
 		/**
-		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+		 * after-error parsing short-cutting when exited.
 		 */
 		PSTAutomatic& fallbackLen(u64 length) {
 			if (state.isSkipping()) {
@@ -555,7 +560,8 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+		 * after-error parsing short-cutting when exited.
 		 */
 		template<TokenStreamCondition until>
 		PSTAutomatic& fallbackUntil() {
@@ -569,13 +575,12 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when exited.
+		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
+		 * exited.
 		 */
 		PSTAutomatic& exitFallback() {
 			if (state.isSkipping()) {
-				if (!state.removeEntry()) {
-					return *this;
-				}
+				if (!state.removeEntry()) return *this;
 			}
 			state.exitFallback();
 			return *this;
@@ -624,14 +629,18 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the after-error parsing short-cutting when exited.
-	 * @note Should not be normally used, is used in situations where there is no elements that is currently being parsed. For example in statement parsing.
+	 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+	 * after-error parsing short-cutting when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
 	 */
 	void fallbackLen(LangParserState& state, u64 length);
 
 	/**
-	 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when exited.
-	 * @note Should not be normally used, is used in situations where there is no elements that is currently being parsed. For example in statement parsing.
+	 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
+	 * exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
 	 */
 	void exitFallback(LangParserState& state);
 }

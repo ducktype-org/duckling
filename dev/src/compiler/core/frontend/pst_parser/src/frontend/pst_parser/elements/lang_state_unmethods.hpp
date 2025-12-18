@@ -14,10 +14,12 @@ namespace pst {
 	// These are needed to not include parser state definition
 	namespace internal {
 		dia::SourcePosition getPosition(LangParserState& state);
-		void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length);
-		bool isSentinel(LangParserState& state, i64 fwd);
+		void                parseExprIntoHolder(
+						   LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
+					   );
+		bool               isSentinel(LangParserState& state, i64 fwd);
 		const TokenStream& getTokenStream(LangParserState& state);
-		u64 streamSize(LangParserState& state);
-		bool isGood(LangParserState& state);
+		u64                streamSize(LangParserState& state);
+		bool               isGood(LangParserState& state);
 	}
 }
