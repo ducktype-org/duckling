@@ -133,6 +133,20 @@ impl Git {
     pub fn commit(&self) -> Option<StrId> {
         self.commit
     }
+
+    /// Check whether we can perform a shallow clone of this dependency.
+    ///
+    /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
+    ///
+    /// However, we always disallow shallow clones when commit is specified.
+    pub fn can_shallow_clone(&self) -> bool {
+        let looks_like_remote_url = self.url.starts_with("https://")
+            || self.url.starts_with("git@")
+            || self.url.starts_with("ssh://")
+            || self.url.starts_with("http://")
+            || self.url.starts_with("ftp://");
+        looks_like_remote_url && !self.rev().is_tag() && self.commit.is_none()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
