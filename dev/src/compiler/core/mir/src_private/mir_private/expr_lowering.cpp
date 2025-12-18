@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "typesystem/higher/kind.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -209,7 +211,12 @@ namespace compiler::mir {
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
-			auto hole        = continuation->addHole();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Variant Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
 
 			BlockBuilderRef       current = continuation;
 			std::vector<MIRValue> subtype_values;
