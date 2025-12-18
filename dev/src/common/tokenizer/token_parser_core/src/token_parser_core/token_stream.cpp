@@ -63,7 +63,7 @@ namespace tpc {
 		return (
 			base::safeIntConv<i64>(where) + fwd >= base::safeIntConv<i64>(to)
 				? sentinel_end
-				: tokens[base::safeIntConv<i64>(where) + fwd]
+				: peek(base::safeIntConv<i64>(where) + fwd)
 		);
 	}
 
