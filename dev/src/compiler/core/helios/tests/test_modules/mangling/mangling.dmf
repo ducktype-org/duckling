@@ -10,7 +10,7 @@ fun foooo(a: i32) -> i32 = {
 
 namespace Mspc {
     namespace Ooo {
-        const Cnst: i64 = 3;
+        const Cnst: i32 = 3;
 
         fun goooo(a: i32, b: f64) -> i32 = {
             var x: i64 = 5;
