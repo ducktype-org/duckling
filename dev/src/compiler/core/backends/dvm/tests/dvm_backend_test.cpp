@@ -1,4 +1,4 @@
-#include <backends/dvm/backend.hpp>
+#include <backends/dvm/dvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -39,35 +39,34 @@ private:
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		std::vector<CRef<lir::Function>>          funcs;
-		std::vector<backend_vm::BackendDVMGlobal> globals;
-		base::StrID                               module_name;
-		vm::code::CodeCollection                  code;
+		vm::code::CodeCollection code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+
+			backend_vm::Module m(moduleName(module));
 
 			for (auto& hout_glob: top_level->glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
+						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						globals.emplace_back(
+						m.insertLirGlobal(
 							lir_glob,
 							// @TODO: #929 add legit dtors when implemented
 							lir_func,
-							std::nullopt
+							{}
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @future #1554 -- const ctors will probably be added here
+						// @TODO: #1553 -- const ctors will probably be added here
 						fail(base::strConcat(
-							"We fail here, because constants don't work on DVM as expected, remove "
+							"We fail here, because constants don't work on DVM as expected, "
+							"remove "
 							"the fail after #1553. ",
 							"Global constant: ",
 							hout_glob.original_name.strView()
@@ -84,11 +83,10 @@ private:
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					{ &mir_fun->expect("Couldn\'t compile") }
+					{ &mir_fun->throwOnFail("Couldn\'t compile") }
 				);
-				funcs.emplace_back(lir_fun);
+				m.insertLirFunction(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs, globals };
 			code = m.build();
 		});
 		return code;

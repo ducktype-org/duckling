@@ -11,6 +11,7 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include <algorithm>
 #include <ranges>
 #include <variant>
 
@@ -66,26 +67,23 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
-			valueOutput(continuation, MIRValue{ MIRUnitConst{} });
+			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
 		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
-			// @TODO: #1499 All numeric literals are interpreted as i64 in MIR and LIR for now.
-			valueOutput(
-				continuation, MIRValue{ MIRIntegerConst{ value.value.coerceTo<i64>().value() } }
-			);
+			valueOutput(continuation, MIRValue{ MIRConstant{ value.value } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MIRBoolConst{ expr.value } });
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
 			throw base::NotYetImplemented("string literal");
 		}
 
-		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
-			throw base::NotYetImplemented("type literal");
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value_type } });
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
@@ -209,8 +207,33 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
-		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
-			throw base::NotYetImplemented("variant constructor");
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Variant Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
+
+			BlockBuilderRef       current = continuation;
+			std::vector<MIRValue> subtype_values;
+			subtype_values.reserve(expr.subtypes.size());
+
+			for (const auto& element: expr.subtypes | std::views::reverse) {
+				auto elem_lowered = lowerSubExpr(*element, current);
+				subtype_values.push_back(elem_lowered.getResult(function));
+				current = elem_lowered.begin;
+			}
+			std::ranges::reverse(subtype_values);
+
+			noValueOutput(
+				current,
+				hole,
+				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
+				result_type
+			);
+			return;
 		}
 
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
@@ -374,15 +397,64 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitLiftToTypeExpr(const helios::code::LiftToTypeExpr&) override {
-			throw base::NotYetImplemented("lift to type expr lowering");
+		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
+			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
+			valueOutput(result.begin, result.getResult(function));
 		}
 
 
 	private:
+		/**
+		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
+		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
+		 * Unit). Other nodes are delegated back to the standard expression lowerer.
+		 */
+		ExprLowerRes lowerAndLiftToTypeRecursively(
+			const hc::Expr& expr, BlockBuilderRef continuation
+		) {
+			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
+				tsh::SymbolType<> unit_sym_type{
+					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
+			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
+				auto                  hole    = continuation->addHole();
+				BlockBuilderRef       current = continuation;
+				std::vector<MIRValue> element_types;
+				element_types.reserve(tuple_expr->elements.size());
+
+				for (const auto& element: tuple_expr->elements | std::views::reverse) {
+					auto elem_result = lowerAndLiftToTypeRecursively(*element, current);
+					element_types.push_back(elem_result.getResult(function));
+					current = elem_result.begin;
+				}
+				std::ranges::reverse(element_types);
+
+				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
+					                           tsh::ReferenceKind::Direct,
+					                           tsh::Mutability::Mutable };
+
+				return ExprLowerRes(
+					current,
+					ExprLowerRes::Finalizer{
+						.hole = hole,
+						.instr
+						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
+						.type = result_type }
+				);
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
+
+			return lowerSubExpr(expr, continuation);
+		}
+
 		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 			using enum hc::BuiltinBinary;
 			switch (builtin) {
+			/// Integer arithmetic ///
 			case IntegerAdd:
 				return Operation::IntegerAdd;
 			case IntegerSub:
@@ -394,8 +466,10 @@ namespace compiler::mir {
 			case IntegerMod:
 				return Operation::IntegerMod;
 			case IntegerPow:
-				// @fixme: Implement exponentiation as a function call.
+				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
+
+			/// Integer comparisons ///
 			case IntegerLt:
 				return Operation::IntegerLt;
 			case IntegerGt:
@@ -408,6 +482,34 @@ namespace compiler::mir {
 				return Operation::IntegerEq;
 			case IntegerNeq:
 				return Operation::IntegerNeq;
+
+			/// Floating point arithmetic d///
+			case FloatAdd:
+				return Operation::FloatAdd;
+			case FloatSub:
+				return Operation::FloatSub;
+			case FloatMul:
+				return Operation::FloatMul;
+			case FloatDiv:
+				return Operation::FloatDiv;
+			case FloatPow:
+				// @TODO: #1610 Implement exponentiation as a function call.
+				throw base::NotYetImplemented("Exponentiation on variables");
+
+			/// Floating point comparisons ///
+			case FloatLt:
+				return Operation::FloatLt;
+			case FloatGt:
+				return Operation::FloatGt;
+			case FloatLteq:
+				return Operation::FloatLteq;
+			case FloatGteq:
+				return Operation::FloatGteq;
+			case FloatEq:
+				return Operation::FloatEq;
+			case FloatNeq:
+				return Operation::FloatNeq;
+
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:
@@ -422,8 +524,14 @@ namespace compiler::mir {
 			switch (builtin) {
 			case IntegerNegation:
 				return Operation::IntegerNeg;
+			case FloatNegation:
+				return Operation::FloatNeg;
 			case BooleanNot:
 				return Operation::BooleanNot;
+			case Box:
+				return Operation::MetaCreateBox;
+			case Ref:
+				return Operation::MetaCreateRef;
 			default:
 				CORE_UNREACHABLE();
 			}
@@ -437,19 +545,8 @@ namespace compiler::mir {
 		 */
 		static tsh::SymbolType<> typeOfMIRValue(const MIRValue& value, query::Context& ctx) {
 			variant_match(value.getVariant()) {
-				variant_case_novalue(MIRIntegerConst) {
-					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryIntegralType>({ 64 }),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case_novalue(MIRBoolConst) {
-					return tsh::SymbolType<>{
-						ctx.query<tsh::QueryBoolType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
+				variant_case(MIRConstant, constant) {
+					return constant.value.getTypeOfStoredValue(ctx);
 				}
 				variant_case(MIRPlace, place) { return place.type; }
 				variant_default { CORE_UNREACHABLE(); }
@@ -528,8 +625,8 @@ namespace compiler::mir {
 
 				hole.fillNop(scope);
 				res_data.instr.output.emplace(target);
-				res_data.hole.fill(res_data.instr);
 				res_data.instr.flags.insert(res_data.instr.flags.end(), flags.begin(), flags.end());
+				res_data.hole.fill(res_data.instr);
 				value = target;
 			}
 		}

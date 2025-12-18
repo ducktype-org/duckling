@@ -10,13 +10,13 @@
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
 
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-// #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/logger.hpp>
@@ -27,71 +27,15 @@
 using namespace vm::loader;
 
 namespace {
-	template<class Instruction>
-	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
-
-#define HANDLE_INSTR_0ARGS(opcode)                                        \
-	template<>                                                            \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
-		const parser::OpCode& opcode                                      \
-	) {                                                                   \
-		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
-		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = opcode.position;                             \
-		return instr;                                                     \
-	}
-
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type)                                                  \
-	template<>                                                                                 \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
-		const parser::OpCode& opcode                                                           \
-	) {                                                                                        \
-		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
-			instr.bytecode_pos = opcode.position;                                              \
-			return instr;                                                                      \
-		}                                                                                      \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
-	}
-
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type)                                               \
-	template<>                                                                                         \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
-		const parser::OpCode& opcode                                                                   \
-	) {                                                                                                \
-		CORE_ASSERT(opcode.args.size() == 2, "Invalid number of args");                                \
-		if (std::holds_alternative<arg0_type>(opcode.args.at(0))                                       \
-		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
-			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
-				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
-			instr.bytecode_pos = opcode.position;                                                      \
-			return instr;                                                                              \
-		}                                                                                              \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
-	}
-
-#include <vm/bytecode/instruction_definitions.hpp>
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-
-#define HANDLE_INSTR(opcode) \
-	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
-
-	std::unordered_map instr_to_factory{
-#include <vm/bytecode/instruction_definitions.hpp>
-	};
-
-#undef HANDLE_INSTR
-
 	/**
 	 * @brief Translates a parsed opcode (`parser::OpCode`) into a high-level bytecode instruction
 	 * (`vm::code::Instruction`).
 	 */
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
-		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
+		auto instruction
+			= vm::code::builders::makeInstructionFromArgs(opcode.opcode_name, opcode.args);
+		instruction.visit([&](auto&& i) { i.bytecode_pos = opcode.position; });
+		return instruction;
 	}
 }
 
@@ -177,9 +121,11 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 			e.label,
 			[&](Box<SomeValidationError>& err) {
 				for (const auto& instruction: e.jumps)
-					log.addNote<SomeValidationNote>(
-						err, instruction, code::StackStructureMismatchError::NOTE_MSG
-					);
+					instruction.visit([&](auto&& i) {
+						log.addNote<SomeValidationNote>(
+							err, i, code::StackStructureMismatchError::NOTE_MSG
+						);
+					});
 			},
 			e.what()
 		);

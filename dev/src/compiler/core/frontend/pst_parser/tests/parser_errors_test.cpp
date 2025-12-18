@@ -239,6 +239,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Class, true> nested_class{
 		"class outer { class inner { x: i32 = 0; } x: i32 = 0;}"
 	};
+	Example<pst::Class, true> complicated_extends_class{ "class B extends ref A {}" };
+	Example<pst::Class, true> complicated_extends_class2{ "class B extends 1 + 1 {}" };
+	Example<pst::Class, true> complicated_implements_class{
+		"class B extends A implements ref A, 1 + 1 {}"
+	};
 	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };

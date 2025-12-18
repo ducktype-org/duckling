@@ -207,7 +207,7 @@ namespace compiler::mir {
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
 		result.access_chain.push_back(field);
-		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
+		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
 
@@ -226,9 +226,7 @@ namespace compiler::mir {
 
 	void MIRValue::debugPrint(std::ostream& os) const {
 		variant_match(value) {
-			variant_case_novalue(MIRUnitConst) { os << "()"; }
-			variant_case(MIRIntegerConst, value) { os << value.value; }
-			variant_case(MIRBoolConst, value) { os << (value.value ? "true" : "false"); }
+			variant_case(MIRConstant, value) { os << value.value.toString(); }
 			variant_case(MIRPlace, place) { place.debugPrint(os); }
 			variant_case(BlockID, block) { os << "Block(" << u64(block) << ")"; }
 			variant_case(MIRFunctionLiteral, func) {

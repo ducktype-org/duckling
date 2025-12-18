@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crate::StrId;
+use crate::quackpack::schemas::registry;
+use crate::{QuackError, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
 /// General dependency source.
@@ -30,6 +31,24 @@ impl Source {
     }
 }
 
+impl From<Registry> for Source {
+    fn from(val: Registry) -> Self {
+        Source::Registry(val)
+    }
+}
+
+impl From<Local> for Source {
+    fn from(val: Local) -> Self {
+        Source::Local(val)
+    }
+}
+
+impl From<Git> for Source {
+    fn from(val: Git) -> Self {
+        Source::Git(val)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
@@ -52,21 +71,37 @@ impl Registry {
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
-    _entry_in_manifest: StrId,
+    entry_in_manifest: StrId,
+    was_original_entry_relative: bool,
 }
 
 impl Local {
     /// Create a new local source.
-    pub fn new(absolute: PathBuf, entry_in_manifest: StrId) -> Self {
+    pub fn new(
+        absolute: PathBuf,
+        entry_in_manifest: StrId,
+        was_original_entry_relative: bool,
+    ) -> Self {
         Self {
             absolute,
-            _entry_in_manifest: entry_in_manifest,
+            entry_in_manifest,
+            was_original_entry_relative,
         }
     }
 
     /// Get the absolute path to the local package.
     pub fn absolute(&self) -> &Path {
         &self.absolute
+    }
+
+    /// Get the entry which was directly specified in the manifest.
+    pub fn entry_in_manifest(&self) -> StrId {
+        self.entry_in_manifest
+    }
+
+    /// Whether [`entry_in_manifest`](Self::entry_in_manifest) was found to be a relative path.
+    pub fn was_original_entry_relative(&self) -> bool {
+        self.was_original_entry_relative
     }
 }
 
@@ -100,7 +135,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum GitRevision {
     /// The main branch.
@@ -125,5 +160,93 @@ impl GitRevision {
     /// Helper around `matches!(self, GitRevision::Branch(..))`.
     pub fn is_branch(&self) -> bool {
         matches!(self, GitRevision::Branch(..))
+    }
+}
+
+impl TryFrom<registry::DependencySource> for Source {
+    type Error = QuackError;
+
+    fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
+        let tmp = match value.inner {
+            registry::SourceInner::Registry { registry_url } => Registry {
+                url: registry_url.into(),
+            }
+            .into(),
+            registry::SourceInner::Local {
+                absolute_dir_root,
+                dir_entry_in_manifest,
+            } => Local {
+                absolute: absolute_dir_root.into(),
+                entry_in_manifest: dir_entry_in_manifest.into(),
+                was_original_entry_relative: false,
+            }
+            .into(),
+            registry::SourceInner::Git {
+                git_url,
+                commit,
+                tag,
+                branch,
+            } => {
+                let rev = match (tag, branch) {
+                    (None, None) => GitRevision::Main,
+                    (None, Some(branch)) => GitRevision::Branch(branch.into()),
+                    (Some(tag), None) => GitRevision::Tag(tag.into()),
+                    (Some(_), Some(_)) => {
+                        qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
+                    }
+                };
+                Git {
+                    url: git_url.into(),
+                    rev,
+                    commit: commit.map(Into::into),
+                }
+                .into()
+            }
+        };
+        Ok(tmp)
+    }
+}
+
+impl TryFrom<Source> for registry::DependencySource {
+    type Error = QuackError;
+    fn try_from(value: Source) -> Result<Self, Self::Error> {
+        let inner = match value {
+            Source::Registry(registry) => registry::SourceInner::Registry {
+                registry_url: registry.url.into(),
+            },
+            Source::Local(local) => {
+                let Local {
+                    absolute,
+                    entry_in_manifest,
+                    ..
+                } = local;
+                let absolute_dir_root = match absolute.into_os_string().into_string() {
+                    Ok(absolute) => absolute,
+                    Err(original) => qp_bail!(
+                        "absolute path `{}` is not a utf-8 string",
+                        original.display()
+                    ),
+                };
+                registry::SourceInner::Local {
+                    absolute_dir_root,
+                    dir_entry_in_manifest: entry_in_manifest.into(),
+                }
+            }
+            Source::Git(git) => {
+                let Git { url, rev, commit } = git;
+                let (tag, branch) = match rev {
+                    GitRevision::Main => (None, None),
+                    GitRevision::Tag(tag) => (Some(tag.into()), None),
+                    GitRevision::Branch(branch) => (None, Some(branch.into())),
+                };
+                registry::SourceInner::Git {
+                    git_url: url.into(),
+                    commit: commit.map(Into::into),
+                    tag,
+                    branch,
+                }
+            }
+        };
+        Ok(Self { inner })
     }
 }

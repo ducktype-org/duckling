@@ -30,7 +30,12 @@ namespace compiler::helios {
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type-instance lookups.
 	 */
-	DECLARE_QUERY(QueryLookupInTypeInstance, KeyOf_LookupInTypeInstance, CRef<LookupResult>, ({}))
+	DECLARE_QUERY(
+		QueryLookupInTypeInstance,
+		KeyOf_LookupInTypeInstance,
+		CRef<LookupResult>,
+		({ .uses_qresult = false })
+	)
 
 	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
@@ -79,7 +84,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList, query::Failed> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,
@@ -97,15 +102,15 @@ namespace compiler::helios {
 				}
 				variant_case(errors::SymbolNotFound, _) {
 					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, "Symbol not found in lookup"
+						error_position, base::strConcat("Symbol '", name, "' not found in lookup")
 					));
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}
-			return query::QError(errors::Failed());
+			return query::QError(query::Failed());
 		}
 
-		const auto& symbols = get_as_single.value();
+		const auto& symbols = get_as_single.valueOrThrow();
 
 		SymbolList dealiased_result;
 

@@ -52,9 +52,11 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
+
+	bool isAlias(SymID id) { return getSymRef(id)->common.is_alias; }
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
@@ -78,6 +80,7 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
+			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
 				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
@@ -409,7 +412,12 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
+			DECLARE_QUERY(
+				QueryGlobalBuiltinSymbols,
+				query::EmptyKey,
+				CRef<std::vector<SymID>>,
+				({ .uses_qresult = false })
+			);
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
@@ -526,10 +534,10 @@ namespace compiler::helios {
 				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
-					lookup_res.hasValue() && not lookup_res.value().empty(),
+					lookup_res.hasValue() && not lookup_res.valueOrThrow().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow().back() });
 				output(ret);
 			}
 
@@ -613,32 +621,27 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA query::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto const_pst
+			const auto pst
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
-			auto const_value_hout
-				= ctx.query<QueryHoutOfExpr>(
-						 const_pst->getValue().value().unlock(ctx)->getExpr().unlock(ctx)
-				)
-			          .valueOrThrow();
-			const auto const_type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
-			// Introduce coercion to match expected type (there will be no coercion if the type
-			// is deduced from the expression, because the expected and actual types will match).
-			// @TODO: #1618 Introduce abstraction, deduplicate
-			const auto coercion
-				= canCoerce(ctx, const_value_hout->expression_type.getSymbolType(), const_type)
-			          .valueOrThrow();
-			const auto const_value_hout_coerced = coercion.coerce(ctx, std::move(const_value_hout));
+			// Get the coerced HOUT expression
+			const auto hout_qresult = getHoutOfExprWithExpectedType(
+				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+			);
+			if (hout_qresult.hasError()) return query::QError(query::Failed());
 
-			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ const_value_hout_coerced.ref() });
-			if (ctv.hasError()) return query::QError(errors::Failed());
-			return ctv.value();
+			// Evaluate the HOUT expression at compile-time
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			if (ctv.hasError()) return query::QError(query::Failed());
+			return ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -841,6 +844,10 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
+				expr.value_expr->acceptVisitor(*this);
 			}
 		};
 

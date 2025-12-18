@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
     ffi::OsString,
+    io::Write,
     path::{Path, PathBuf},
 };
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::{Context, bail};
+use crate::{DuckCtx, QuackResult, QuackResultContext, qp_bail};
 use clap::ArgMatches;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -21,7 +21,7 @@ use crate::duck::driver::{
 pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
-        "found external subcommands `{}`",
+        "found the external subcommands `{}`",
         external.keys().cloned().collect::<Vec<_>>().join(", ")
     );
     let cli = cli();
@@ -32,13 +32,18 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
-        std::env::set_current_dir(chdir)
-            .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
+        std::env::set_current_dir(chdir).with_context(|| {
+            format!(
+                "couldn't change the current working directory to `{}`",
+                chdir.display()
+            )
+        })?;
+        ctx.reload_cwd()?;
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
     debug!(
-        "after expanding everything we have subcommand: `{:#?}`",
+        "after expanding everything we have the subcommand: `{:#?}`",
         args.subcommand_name()
     );
     run_subcmd(ctx, args, &external)
@@ -99,7 +104,7 @@ fn run_subcmd(
     match (exec_for(sub_cmd), external.get(sub_cmd)) {
         (Some(exec_fn), Some(_)) => {
             ctx.error_console().warning(format!(
-                "builtin subcommand `{sub_cmd}` shadows external subcmd"
+                "builtin subcommand `{sub_cmd}` shadows an external subcommand"
             ));
             exec_fn(ctx, sub_args)
         }
@@ -109,9 +114,9 @@ fn run_subcmd(
             drop(ctx.error_console().flush());
             let args = external_cli_args(sub_args);
             execute_external_subcmd(exec_path, args)
-                .with_context(|| format!("failed to execute external subcmd `{sub_cmd}`"))
+                .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
-        (None, None) => bail!("No such command: `{sub_cmd}`"),
+        (None, None) => qp_bail!("No such command: `{sub_cmd}`"),
     }
 }
 
@@ -125,7 +130,7 @@ fn external_cli_args(sub_args: &ArgMatches) -> Vec<OsString> {
 
 fn execute_external_subcmd(exec_path: &Path, cli_args: Vec<OsString>) -> QuackResult<()> {
     debug!(
-        "executing external cmd `{}`, args are `{cli_args:?}`",
+        "executing the external command `{}`, arguments are `{cli_args:?}`",
         exec_path.display()
     );
     let mut command = std::process::Command::new(exec_path);

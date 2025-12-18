@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
-use crate::QuackResult;
-use anyhow::anyhow;
+use crate::{QuackResult, qp_internal};
 use clap::ArgMatches;
 
-use crate::{DuckCtx, InternalError, duck::util::terminal::Verbosity};
+use crate::{DuckCtx, duck::util::terminal::Verbosity};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
@@ -14,18 +13,17 @@ pub enum Color {
 }
 
 impl FromStr for Color {
-    type Err = crate::InternalError;
+    type Err = crate::QuackError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
             "auto" => Ok(Self::Auto),
-            _ => Err(anyhow!(
+            _ => Err(qp_internal!(
                 "`{}` is not a valid color. This should be guarded by a parser",
-                s
-            )
-            .into()),
+                s,
+            )),
         }
     }
 }
@@ -43,11 +41,7 @@ impl GlobalCliOptions {
         let verbose = matches.get_flag("verbose");
         let color = matches
             .get_one::<String>("color")
-            .ok_or_else(|| {
-                InternalError::from(anyhow!(
-                    "this should be guarded by a default color in parser"
-                ))
-            })
+            .ok_or_else(|| qp_internal!("this should be guarded by a default color in the parser"))
             .and_then(|color| Color::from_str(color))?;
         Ok(Self {
             verbose,

@@ -4,11 +4,11 @@
 
 #include <cstdint>
 
-DECLARE_QUERY(Query1, uint64_t, uint64_t, ({}))
+DECLARE_QUERY(Query1, uint64_t, uint64_t, ({ .uses_qresult = false }))
 
-DECLARE_QUERY(Query2, uint64_t, uint64_t, ({}))
+DECLARE_QUERY(Query2, uint64_t, uint64_t, ({ .uses_qresult = false }))
 
-DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t, ({}))
+DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t, ({ .uses_qresult = false }))
 
 /**
  * @brief Simple query extension

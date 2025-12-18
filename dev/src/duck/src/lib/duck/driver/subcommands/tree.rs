@@ -1,13 +1,15 @@
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("tree")
-        .about("Print the dependency tree of a package")
-        .arg(flag("no-dedup", "Show subtree of a package everytime"))
+        .about("Print the dependency tree of the package")
+        .arg(flag(
+            "no-dedup",
+            "Don't deduplicate the subtrees of the same package",
+        ))
         .arg(
             Arg::new("max-depth")
                 .help("Set the maximal displayed depth of the tree")
@@ -16,5 +18,5 @@ pub fn get_parser() -> Command {
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    bail!("implement tree")
+    qp_bail!("implement tree")
 }

@@ -75,10 +75,10 @@ namespace vm {
 	// call and may cause the stack to explode.
 
 	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
-	// macro. This means, every other will jump to the next instruction at the end of it with
+	// macro. This means, every other instruction will jump to the next at the end of it with
 	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
 	// use this opcode. It also requires different macro surrounding the function call in the
-	// computed goto's and switch case, because in those approaches we can't end execution from
+	// switch case because in this approach we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
@@ -472,17 +472,39 @@ namespace vm {
 			auto ext_func_id = instr->arg0;
 			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
 
-			auto arg_count        = ext_func->parameters.size();
-			u64  result_value_idx = frame->block_stack.size() - arg_count - 1;
+			auto arg_count = ext_func->parameters.size();
+			bool is_void   = ext_func->result_type->getName() == "void";
 
-			auto ext_result_destination = frame->block_stack[result_value_idx];
-			auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+			if (arg_count == 0 && is_void) {
+				// Special case: void function with no arguments.
+				ext_func->function_pointer(nullptr, nullptr);
+			} else {
+				// Calculate the index of the result value on the block stack.
+				// If the function is void, there is no result value, so we don't
+				// need to account for it.
+				// Local stack layout:
+				// 		CURRENT_FUNC_RESULT_VALUE (this is where the stack begins)
+				// 		...
+				// 		result_value,
+				// 		arg0,
+				// 		arg1
+				// 		...
+				// 		argN
+				u64 result_value_idx = frame->block_stack.size() - arg_count - (is_void ? 0 : 1);
 
-			ext_func->function_pointer(
-				result_view.getBegin(), result_view.getBegin() + ext_func->result_type->getSize()
-			);
 
-			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+				auto ext_result_destination = frame->block_stack[result_value_idx];
+				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+
+				// Prepare arguments and call the function.
+				byte* result_pointer = result_view.getBegin();
+				byte* args_pointer
+					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize());
+
+				ext_func->function_pointer(result_pointer, args_pointer);
+
+				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+			}
 		}
 
 		FUNCTION_CONT(1);
@@ -685,6 +707,28 @@ namespace vm {
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
 			auto src_block     = frame->block_stack[src_block_idx];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
+		{
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
+			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
+		{
+			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);

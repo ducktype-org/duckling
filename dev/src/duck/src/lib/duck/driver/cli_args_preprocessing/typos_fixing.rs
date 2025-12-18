@@ -1,7 +1,6 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::Itertools;
 use tracing::debug;
@@ -44,7 +43,7 @@ pub fn fix_typos(
         let new_args = fix(name, first, subcmd_args)?;
         Ok(new_args)
     } else {
-        bail!(make_levenshtein_nofix_msg(name, &closest_targets))
+        qp_bail!("{}", make_levenshtein_nofix_msg(name, &closest_targets))
     }
 }
 

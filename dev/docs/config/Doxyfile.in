@@ -6,7 +6,7 @@ INPUT = "@DOXYGEN_INPUT_DIR@"
 OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
 GENERATE_XML = YES
 RECURSIVE = YES
-FILE_PATTERNS = *.hpp *.cpp *.md
+FILE_PATTERNS = *.hpp *.cpp *.md *.py
 EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/config/*" \
                    */toolbox.py \

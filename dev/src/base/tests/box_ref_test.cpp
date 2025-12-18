@@ -31,8 +31,8 @@ static_assert(
 );
 
 // Box, MBox asserts:
-static_assert(not std::is_copy_constructible_v<Box<int>>, "Box should be copy constructible");
-static_assert(not std::is_copy_constructible_v<MBox<int>>, "MBox should be copy constructible");
+static_assert(not std::is_copy_constructible_v<Box<int>>, "Box should not be copy constructible");
+static_assert(not std::is_copy_constructible_v<MBox<int>>, "MBox should not be copy constructible");
 
 static_assert(std::is_move_constructible_v<Box<int>>, "Box should be move constructible");
 static_assert(std::is_move_constructible_v<MBox<int>>, "MBox should be move constructible");
@@ -367,7 +367,7 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// Ref from Box:
+		// Ref from MBox:
 		{
 			MBox<LiveCounter> a = makeBox<LiveCounter>(123);
 			ASSERT_EQUAL(LiveCounter::count, 1);

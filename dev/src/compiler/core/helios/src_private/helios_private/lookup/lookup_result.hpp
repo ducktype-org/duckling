@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
@@ -16,6 +15,15 @@
 #include <vector>
 
 namespace compiler::helios {
+
+	/**
+	 * @brief Possible errors during lookupExpectUnique.
+	 */
+	namespace errors {
+		class Ambiguity final {};
+
+		class SymbolNotFound final {};
+	}
 
 	struct NestedResult;
 

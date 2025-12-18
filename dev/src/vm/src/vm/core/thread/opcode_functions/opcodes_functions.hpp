@@ -15,8 +15,6 @@
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/module_flags/module_flags.hpp>
 
-#include <iostream>
-
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
 #else

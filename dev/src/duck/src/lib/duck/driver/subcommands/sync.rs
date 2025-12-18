@@ -1,14 +1,13 @@
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
 pub fn get_parser() -> Command {
     subcommand("sync")
-        .about("Synchronize current venv")
-        .arg(flag("frozen", "Don't update freezefile"))
-        .arg(flag("offline", "Don't perform network requests"))
+        .about("Synchronize the current venv")
+        .arg(flag("frozen", "Don't update the freezefile"))
+        .arg(flag("offline", "Don't perform any network requests"))
         .arg(
             flag(
                 "overwrite",
@@ -23,5 +22,5 @@ pub fn get_parser() -> Command {
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    bail!("implement sync")
+    qp_bail!("implement sync")
 }

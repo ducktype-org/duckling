@@ -1,0 +1,24 @@
+fun example_one_stmt(x: i32) -> i64 = x+1;
+
+fun example(x: i32) -> i64 = {
+    return x - 1;
+}
+
+fun big_example(xyz: i64) -> i64 = {
+    let x: i8  = 0;
+    let y: i16 = 1; 
+    let z: i32 = 2;
+    
+    if (xyz > 0) {
+        return x;
+    }
+    if (xyz > 10) {
+        return y;
+    }
+    if (xyz > 20) {
+        return z;
+    }
+    if (xyz > 30) {
+        return x + y + z;
+    }
+}

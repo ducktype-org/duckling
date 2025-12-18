@@ -1,6 +1,7 @@
 #include "raw_view.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/misc/shared_view.hpp>
 
 #include <cstring>
 

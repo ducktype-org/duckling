@@ -1,7 +1,6 @@
 #pragma once
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/hout/elements/expr.hpp>
 
 #include <base/pointers/box.hpp>
@@ -21,7 +20,7 @@ namespace compiler::helios::code {
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param call_expr The PST call expression representing the function call.
 	 */
-	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
+	query::QResult<Box<CallExpr>, query::Failed> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr

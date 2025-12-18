@@ -161,10 +161,11 @@ namespace vm::loader::compiler {
 		// in this function. Not used when lowering to microbytecode.
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
-			variant_match(instr) {
-				variant_case(code::instructions::Op_label, label) {
-					label_positions.put(label.arg0.label_name, idx);
+			instr_match(instr) {
+				instr_case(code::instructions::Op_label, label) {
+					label_positions.put(label.label.label_name, idx);
 				}
+				instr_default {}
 			}
 		}
 
@@ -187,45 +188,43 @@ namespace vm::loader::compiler {
 			}
 			visited_instructions[index] = true;
 
-			variant_match(ctx.function.body[index]) {
+			instr_match(ctx.function.body[index]) {
 				using namespace code::instructions;
-				variant_case(Op_init_lany_type, instr) {
-					push(instr.arg0, instr.arg1);
+				instr_case(Op_init_lany_type, instr) {
+					push(instr.var, instr.type);
 					index++;
 				}
-				variant_case(Op_deinit, instr) {
+				instr_case(Op_deinit, instr) {
 					pop();
 					index++;
 				}
-				variant_case(Op_jmp_label, instr) {
-					index = label_positions[instr.arg0.label_name];
-				}
-				variant_case(Op_jmpIf_label, instr) {
+				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
+				instr_case(Op_jmpIf_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
 					);
 				}
-				variant_case(Op_jmpIfNot_label, instr) {
+				instr_case(Op_jmpIfNot_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.arg0.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
 					);
 				}
-				variant_case(Op_ret, instr) {
+				instr_case(Op_ret, instr) {
 					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-				variant_case(Op_call_func, instr) {
-					usize number_of_params
-						= program_ctx.function_forward_declarations.at(instr.arg0.function_name)
-					          ->signature.parameters.size();
+				instr_case(Op_call_func, instr) {
+					usize number_of_params = program_ctx.function_forward_declarations
+					                             .at(instr.function.function_name)
+					                             ->signature.parameters.size();
 					for (usize i = 0; i < number_of_params; i++) pop();
 					index++;
 				}
-				variant_case(Op_call_builtinfunc, instr) {
+				instr_case(Op_call_builtinfunc, instr) {
 					for (usize i = 0;
-					     i < builtins::getBuiltinFunctionSignature(instr.arg0.function_name)
+					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
 					             .value()
 					             ->parameters.size();
 					     i++) {
@@ -233,24 +232,25 @@ namespace vm::loader::compiler {
 					}
 					index++;
 				}
-				variant_case(Op_call_cfunc, instr) {
-					for (usize i = 0; i < program_ctx.ext_c_functions.at(instr.arg0.function_name)
-					                          ->signature.parameters.size();
+				instr_case(Op_call_cfunc, instr) {
+					for (usize i = 0;
+					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
+					             ->signature.parameters.size();
 					     i++) {
 						pop();
 					}
 					index++;
 				}
-				variant_case(Op_virtual_call_lptr_method, instr) {
-					for (usize i = 0; i < *seek_method_param_count(instr.arg1.method_name); i++)
+				instr_case(Op_virtual_call_lptr_method, instr) {
+					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
 						pop();
 					index++;
 				}
-				variant_case(Op_ret_tailcall_func, instr) {
+				instr_case(Op_ret_tailcall_func, instr) {
 					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-				variant_default { index++; }
+				instr_default { index++; }
 			}
 		}
 

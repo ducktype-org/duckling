@@ -1,9 +1,7 @@
-use anyhow::Context;
-use rustvil::os::env::Env;
 use tracing::debug;
 
 use crate::{
-    QuackResult, duck::util::terminal::Terminal, quackpack::util::paths::config_file,
+    QuackResult, QuackResultContext, duck::util::duck_home::DuckHome,
     util_common::toml_config::TomlConfig,
 };
 
@@ -13,18 +11,9 @@ pub struct DuckCfg {
 }
 
 impl DuckCfg {
-    pub fn new(env: &Env, term: &Terminal) -> QuackResult<DuckCfg> {
-        let inner = match config_file(env) {
-            Some(path) => {
-                debug!("reading user config from `{}`", path.display());
-                TomlConfig::new(path)?
-            }
-            None => {
-                term.warning("couldn't detect user config path, falling back to defaults...");
-                TomlConfig::default()
-            }
-        };
-        debug!("parsed user config `{inner:?}`");
+    pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
+        let inner = TomlConfig::new(home.user_config().to_path_buf())?;
+        debug!("parsed the user config `{inner:?}`");
         Ok(Self { inner })
     }
 
@@ -39,20 +28,20 @@ impl DuckCfg {
     pub fn max_fix_dist(&self) -> QuackResult<u32> {
         self.inner
             .get_int("security.typos.max_distance")
-            .context("when trying to check maximum typos fixing distance")?
+            .context("when trying to check the maximum typos fixing distance")?
             .unwrap_or(3)
             .try_into()
             .with_context(|| self.inner.make_location_error())
             .context("maximum typos fixing distance does not fit in `u32`")
-            .context("when getting key `security.typos.max_distance`")
-            .context("when trying to check maximum typos fixing distance")
+            .context("when getting the key `security.typos.max_distance`")
+            .context("when trying to check the maximum typos fixing distance")
     }
 
     pub fn aliases(&self) -> QuackResult<Option<impl Iterator<Item = &String>>> {
         let Some(aliases) = self
             .inner
             .get_table("aliases")
-            .context("when trying to get all user-defined aliases")?
+            .context("when trying to get all the user-defined aliases")?
         else {
             return Ok(None);
         };
@@ -62,7 +51,7 @@ impl DuckCfg {
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<&str>> {
         self.inner
             .get_str(&format!("aliases.{key}"))
-            .with_context(|| format!("when trying to get alias expansions `{key}`"))
+            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
     }
 
     pub fn toml_config(&self) -> &TomlConfig {

@@ -1,7 +1,8 @@
 use std::{fmt, str::FromStr};
 
-use anyhow::bail;
 use serde::{de, ser};
+
+use crate::{QuackError, qp_bail};
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 pub struct Version {
@@ -116,7 +117,7 @@ impl ser::Serialize for Version {
 }
 
 impl FromStr for Version {
-    type Err = anyhow::Error;
+    type Err = QuackError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut splitted = s.split('.');
@@ -133,7 +134,7 @@ impl FromStr for Version {
             (Some(major), Some(minor), Some(patch), None) => {
                 Ok(Self::new(major.parse()?, minor.parse()?, patch.parse()?))
             }
-            _ => bail!("expected version of format `X`, `X.Y`, or `X.Y.Z`"),
+            _ => qp_bail!("expected a version in the format `X`, `X.Y`, or `X.Y.Z`"),
         }
     }
 }
@@ -164,11 +165,11 @@ mod tests {
 
         assert_eq!(
             "1.12.24.".parse::<Version>().unwrap_err().to_string(),
-            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12.24.1".parse::<Version>().unwrap_err().to_string(),
-            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "a".parse::<Version>().unwrap_err().to_string(),
@@ -176,15 +177,15 @@ mod tests {
         );
         assert_eq!(
             "1.a.24.".parse::<Version>().unwrap_err().to_string(),
-            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12.b.".parse::<Version>().unwrap_err().to_string(),
-            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "1.12..".parse::<Version>().unwrap_err().to_string(),
-            "expected version of format `X`, `X.Y`, or `X.Y.Z`"
+            "expected a version in the format `X`, `X.Y`, or `X.Y.Z`"
         );
         assert_eq!(
             "-1".parse::<Version>().unwrap_err().to_string(),
