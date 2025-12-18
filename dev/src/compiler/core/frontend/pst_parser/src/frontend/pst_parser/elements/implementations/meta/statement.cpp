@@ -121,7 +121,6 @@ namespace pst {
 				return nullptr;
 			}
 
-			Special as_special = state[0].asSpecial();
 			Keyword as_keyword = state[0].asKeyword();
 
 			switch (as_keyword) {
