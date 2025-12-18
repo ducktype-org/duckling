@@ -265,11 +265,10 @@ namespace query::internal {
 	);                                                                                                                                 \
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
-			type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                         \
-			query::IsQResult<type::PResult>::value                                                                                 \
+			type::QueryType::QUERY_DATA.tags.uses_qresult, query::IsQResult<type::PResult>::value                                      \
 		),                                                                                                                             \
-		"PResult must be a QResult if uses_qresult is true"                                                                       \
-	);  																															   \
+		"PResult must be a QResult if uses_qresult is true"                                                                            \
+	);                                                                                                                                 \
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
 			not type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                         \

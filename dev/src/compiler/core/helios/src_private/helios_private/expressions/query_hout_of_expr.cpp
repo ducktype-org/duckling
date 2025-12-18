@@ -162,7 +162,7 @@ namespace compiler::helios::code {
 
 				// @todo: make failure more explicit...
 				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
-				
+
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
@@ -491,7 +491,7 @@ namespace compiler::helios {
 		const tsh::SymbolType<>                          expected_type
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
-		
+
 		if (expr_hout_qresult.hasFailed()) return query::Failed();
 
 		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
@@ -501,21 +501,17 @@ namespace compiler::helios {
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrPanic()) {
-			variant_case(Coercion, coercion) {
-				return coercion.coerce(ctx, std::move(expr_hout));
-			}
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
 			variant_case(InvalidCoercion, _) {
 				ctx.log(makeBox<CannotCoerceError>(
 					pst_expr.element.unlock(ctx)->getSourcePosition(),
 					expr_hout->expression_type.getSymbolType(),
 					expected_type
 				));
-		
+
 				return query::Failed();
 			}
-			variant_default {
-				CORE_PANIC("Unhandled coercion result variant.");
-			}
+			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
 		}
 		CORE_UNREACHABLE();
 	}

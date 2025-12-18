@@ -18,9 +18,10 @@ namespace query {
 	/**
 	 * @brief QResult is a special type used to represent the typical
 	 * result of a query or a helper function working within the query framework.
-	 * Structurally it behaves similarly to a variant of all provided possible values and implicitly provided special states,
-	 * but with certain assumptions used by the query framwork and with interface optimized for implementation of queries.
-	 * 
+	 * Structurally it behaves similarly to a variant of all provided possible values and implicitly
+	 * provided special states, but with certain assumptions used by the query framwork and with
+	 * interface optimized for implementation of queries.
+	 *
 	 * In particular, it can always represent a value of special query::Failed type
 	 * which semantically represent opaque failure of a query.
 	 * Query framework is aware of this type and can handle/use it in special ways.
@@ -28,17 +29,17 @@ namespace query {
 	template<class PrimaryValue, class... SecondaryValues>
 	class QResult final {
 	private:
-
 		static_assert(
-			(!std::is_reference_v<PrimaryValue>) && 
-			(... && (!std::is_reference_v<SecondaryValues>)),
+			(!std::is_reference_v<PrimaryValue>)
+				&& (... && (!std::is_reference_v<SecondaryValues>) ),
 			"ErrorValues types should not be references (use CRef instead)"
 		);
 
 		static_assert(
-			(!std::is_same_v<PrimaryValue, query::Failed>) && 
-			(... && (!std::is_same_v<SecondaryValues, query::Failed>)),
-			"query::Failed should not be used as an ErrorValue type, it can be represented by default by the QResult"
+			(!std::is_same_v<PrimaryValue, query::Failed>)
+				&& (... && (!std::is_same_v<SecondaryValues, query::Failed>) ),
+			"query::Failed should not be used as an ErrorValue type, it can be represented by "
+		    "default by the QResult"
 		);
 
 		/**
@@ -46,18 +47,16 @@ namespace query {
 		 */
 		constexpr static bool USES_VARIANT = sizeof...(SecondaryValues) > 0;
 
-		/** 
+		/**
 		 * Main value type of QResult.
 		 */
 		using ValueType = std::conditional_t<
 			USES_VARIANT,
 			std::variant<PrimaryValue, SecondaryValues...>,
-			PrimaryValue
-		>;
+			PrimaryValue>;
 
-	
+
 	public:
-		
 		/**
 		 * @brief Standard value state constructor.
 		 *
@@ -70,9 +69,8 @@ namespace query {
 		 * which one to use.
 		 */
 		template<class... Args>
-		requires std::is_constructible_v<ValueType, Args...>
-		QResult(Args&&... args):
-			storage(std::in_place_type_t<ValueType>(), std::forward<Args>(args)...) {}
+		requires std::is_constructible_v<ValueType, Args...> QResult(Args&&... args):
+			  storage(std::in_place_type_t<ValueType>(), std::forward<Args>(args)...) {}
 
 		/**
 		 * @brief Failed state constructor.
@@ -87,7 +85,7 @@ namespace query {
 		template<class Value>
 		requires std::is_constructible_v<ValueType, Value&&>
 		constexpr QResult& operator=(Value&& value) {
-			storage = ValueType{std::forward<Value>(value)};
+			storage = ValueType{ std::forward<Value>(value) };
 			return *this;
 		}
 
@@ -96,39 +94,29 @@ namespace query {
 			return *this;
 		}
 
-
 		/**
 		 * @brief Copy assignment from a different QResult
 		 * types
 		 */
 		template<class... Ts>
-		requires(
-			... && std::is_constructible_v<ValueType, Ts>
-		)
+		requires(... && std::is_constructible_v<ValueType, Ts>)
 		constexpr QResult& operator=(const QResult<Ts...>& oth) {
 			if (oth.hasFailed()) {
 				storage = query::Failed{};
 				return *this;
-			}
-			else {
-				if constexpr (sizeof...(Ts) < 2) {
-					// oth does not use variant storage:
-					storage = oth.valueOrPanic();
-					return *this;
-				} 
-				else {
-					// oth uses variant storage:
-					std::visit(
-						[&](auto&& val) {
-							storage = ValueType{std::forward<decltype(val)>(val)};
-						},
-						oth.valueOrPanic()
-					);
-					return *this;
-				}
+			} else if constexpr (sizeof...(Ts) < 2) {
+				// oth does not use variant storage:
+				storage = oth.valueOrPanic();
+				return *this;
+			} else {
+				// oth uses variant storage:
+				std::visit(
+					[&](auto&& val) { storage = ValueType{ std::forward<decltype(val)>(val) }; },
+					oth.valueOrPanic()
+				);
+				return *this;
 			}
 		}
-
 
 		/**
 		 * @brief Checks if QResult contains one of user specified values.
@@ -151,7 +139,6 @@ namespace query {
 		//  * @brief Checks if QResult contains a value.
 		//  */
 		// explicit constexpr operator bool() const { return hasValue(); }
-
 
 
 		/**
@@ -221,7 +208,6 @@ namespace query {
 			return std::move(std::get<ValueType>(storage));
 		}
 
-
 		/**
 		 * @brief Access the value, throw the query failed exception if no value.
 		 * This kind of exception can be caught by the query framework.
@@ -247,7 +233,7 @@ namespace query {
 			return std::move(std::get<ValueType>(storage));
 		}
 
-		/** 
+		/**
 		 * @brief Access the value by type, panic on no value.
 		 */
 		template<typename T>
@@ -256,7 +242,7 @@ namespace query {
 			return std::get<T>(std::get<ValueType>(storage));
 		}
 
-		/** 
+		/**
 		 * @brief Access the value by type, panic on no value.
 		 */
 		template<typename T>
@@ -265,8 +251,7 @@ namespace query {
 			return std::get<T>(std::get<ValueType>(storage));
 		}
 
-
-		/** 
+		/**
 		 * @brief Test if QResult contains a value of type T.
 		 */
 		template<typename T>
@@ -278,7 +263,6 @@ namespace query {
 
 
 	private:
-
 		std::variant<ValueType, query::Failed> storage;
 	};
 
@@ -303,12 +287,12 @@ namespace query {
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
  * before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
  */
-#define UNPACK_QRESULT(var, new_value)                                         \
-	auto&& RES_VAR_NAME = new_value;                                          \
+#define UNPACK_QRESULT(var, new_value)                    \
+	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var RES_VAR_NAME.valueOrPanic()
 
-#define UNPACK_QRESULT_MOVE(var, new_value)                                    \
-	auto&& RES_VAR_NAME = new_value;                                          \
+#define UNPACK_QRESULT_MOVE(var, new_value)               \
+	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var std::move(RES_VAR_NAME).valueOrPanic()

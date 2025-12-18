@@ -132,11 +132,13 @@ namespace compiler::helios {
 				  );
 				  auto initial_value_hout_coerced
 					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
-					        .throwOnFail("Failed: variable initial value 2b — " + name(symbol).str());
-				
-				return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
-					  std::move(initial_value_hout_coerced)
-				  ) };
+			                .throwOnFail(
+								"Failed: variable initial value 2b — " + name(symbol).str()
+							);
+
+				  return HOUTGlobalVariable{
+					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
+				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
 				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(

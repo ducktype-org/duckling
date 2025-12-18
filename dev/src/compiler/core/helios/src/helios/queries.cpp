@@ -406,32 +406,30 @@ namespace compiler::helios {
 					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
 						return ctx
 					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
-					        .throwOnFail(
-								"Failed: getting field init expr for implicit ctor."
-							);
+					        .throwOnFail("Failed: getting field init expr for implicit ctor.");
 					}
 				);
 				auto init_expr_coerced_opt
 					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) -> Box<code::Expr> {
 						  const auto init_expr_type = expr->expression_type.getSymbolType();
 						  const auto field_type     = field.getType(ctx);
-						  const auto coercion
-							  = canCoerce(ctx, init_expr_type, field_type);
-						 if (coercion.hasValueByType<InvalidCoercion>()) {
-							// @TODO: #1620 report error with position here when HOUT exposes position.
-							  ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-								  base::strConcat(
-									  "Cannot coerce default field value of type ",
-									  init_expr_type.toString(),
-									  " to the field's expected type ",
-									  field_type.toString()
-								  )
-							  ));
-							  throw query::QueryFailedException("Coercion failure in implicit ctor.");
-						  }	
+						  const auto coercion       = canCoerce(ctx, init_expr_type, field_type);
+						  if (coercion.hasValueByType<InvalidCoercion>()) {
+							  // @TODO: #1620 report error with position here when HOUT exposes position.
+							  ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
+								  "Cannot coerce default field value of type ",
+								  init_expr_type.toString(),
+								  " to the field's expected type ",
+								  field_type.toString()
+							  )));
+							  throw query::QueryFailedException("Coercion failure in implicit ctor."
+						      );
+						  }
 
-						 
-						  return coercion.getValueByTypeOrPanic<Coercion>().coerce(ctx, std::move(expr));
+
+						  return coercion.getValueByTypeOrPanic<Coercion>().coerce(
+							  ctx, std::move(expr)
+						  );
 					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
@@ -574,9 +572,10 @@ namespace compiler::helios {
 			auto as_expr = stmt.dynamicCast<pst::ExprStmt>();
 			if (as_expr) {
 				auto expr_coerced
-					= getHoutOfExprWithExpectedType(ctx, as_expr.value()->getExpr().unlock(ctx)->getExpr(), return_type)
-				          .throwOnFail("Failed: getting expr in single-statement function body."
-				          );
+					= getHoutOfExprWithExpectedType(
+						  ctx, as_expr.value()->getExpr().unlock(ctx)->getExpr(), return_type
+					)
+				          .throwOnFail("Failed: getting expr in single-statement function body.");
 
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
 				return block;
@@ -615,8 +614,10 @@ namespace compiler::helios {
 
 			void visitReturn(pst::Access<pst::Return> stmt) override {
 				if (auto val = stmt->getValue()) {
-					auto expr_coerced = getHoutOfExprWithExpectedType(ctx, val.value().unlock(ctx)->getExpr(), return_type)
-					                .throwOnFail("Failed: Bad type in return statement.");
+					auto expr_coerced = getHoutOfExprWithExpectedType(
+											ctx, val.value().unlock(ctx)->getExpr(), return_type
+					)
+					                        .throwOnFail("Failed: Bad type in return statement.");
 					output(code::ReturnStmt(std::move(expr_coerced)));
 				} else {
 					output(code::VoidReturnStmt());
@@ -639,12 +640,12 @@ namespace compiler::helios {
 				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).throwOnFail(
 					"Failed: getting lhs of assignment"
 				);
-				auto new_value_expr_coerced = getHoutOfExprWithExpectedType(
-					ctx,
-					val,
-					location_expr->expression_type.getSymbolType()
-				).throwOnFail("Failed: getting rhs of assignment");
-				
+				auto new_value_expr_coerced
+					= getHoutOfExprWithExpectedType(
+						  ctx, val, location_expr->expression_type.getSymbolType()
+					)
+				          .throwOnFail("Failed: getting rhs of assignment");
+
 
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();
@@ -658,7 +659,7 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				auto location_type  = location_expr->expression_type.getSymbolType();
+				auto location_type = location_expr->expression_type.getSymbolType();
 
 				// When this code was being written, this check could not be tested.
 				// The optional result of this visitor is getting unwrapped without
@@ -675,7 +676,9 @@ namespace compiler::helios {
 					return;  // fail
 				}
 
-				output(code::AssignmentStmt(std::move(location_expr), std::move(new_value_expr_coerced)));
+				output(code::AssignmentStmt(
+					std::move(location_expr), std::move(new_value_expr_coerced)
+				));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
@@ -698,14 +701,14 @@ namespace compiler::helios {
 			void visitIf(pst::Access<pst::If> stmt) override {
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition
-				    = getHoutOfExprWithExpectedType(
-						ctx,
-						stmt->getCondition().unlock(ctx)->getExpr(),
-						tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
-						                    tsh::ReferenceKind::Direct,
-						                    tsh::Mutability::Mutable })
-					).throwOnFail("Failed: if condition expression");
+				auto condition = getHoutOfExprWithExpectedType(
+									 ctx,
+									 stmt->getCondition().unlock(ctx)->getExpr(),
+									 tsh::SymbolType<>({ ctx.query<tsh::QueryBoolType>({}),
+				                                         tsh::ReferenceKind::Direct,
+				                                         tsh::Mutability::Mutable })
+				)
+				                     .throwOnFail("Failed: if condition expression");
 
 				auto then_body = queryCodeOfCodeBlock(ctx, stmt->getThenBody(), return_type);
 
@@ -761,17 +764,13 @@ namespace compiler::helios {
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
-							ctx,
-							stmt->getValue().value().unlock(ctx)->getExpr(),
-							symbol_type
-						).throwOnFail("Failed: variable initial value 1");
+							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
+						)
+					          .throwOnFail("Failed: variable initial value 1");
 
 
-					output(code::VariableStmt(
-						std::move(initial_value_coerced),
-						symbol_type,
-						symbol
-					));
+					output(code::VariableStmt(std::move(initial_value_coerced), symbol_type, symbol)
+					);
 				}
 			}
 

@@ -767,9 +767,7 @@ private:
 		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
 	}
 
-	void testQueryResultConcept() {
-
-	}
+	void testQueryResultConcept() {}
 
 	void testQueryResult() {
 		using namespace query;
@@ -784,7 +782,7 @@ private:
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		query::QResult<std::string, float> hr2        = "Value";
+		query::QResult<std::string, float> hr2 = "Value";
 		// base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
 		// ASSERT_EQUAL("Value", stolen_opt);
 

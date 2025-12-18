@@ -135,14 +135,13 @@ namespace compiler::helios::code {
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
 					                                      .argument_index = i } };
-			
+
 			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
-				.index_in_positional_args = i,
-				.requires_coercion        = not is_empty });
+				.index_in_positional_args = i, .requires_coercion = not is_empty });
 			coercions[i].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
 		}
 
@@ -182,14 +181,12 @@ namespace compiler::helios::code {
 					                                      .expected_type = expected_type,
 					                                      .argument_index
                                                         = positional_arguments.size() + i } };
-														
+
 			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
-			argument_origin[param_idx]
-				= NamedArgumentOrigin{ .index_in_named_args = i,
-				                       .requires_coercion
-				                       = not is_empty };
+			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
+				                                              .requires_coercion   = not is_empty };
 			coercions[param_idx].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
 		}
 
@@ -284,8 +281,9 @@ namespace compiler::helios::code {
 	 * @param call_expr The PST call expression containing arguments
 	 * @param positional_arguments Output vector for positional arguments
 	 * @param named_arguments Output map for named arguments
-	 * @return std::monostate is succeeded, 
-	 *         other states if validation fails (duplicate names, positional after named, or expression error)
+	 * @return std::monostate is succeeded,
+	 *         other states if validation fails (duplicate names, positional after named, or
+	 * expression error)
 	 */
 	query::QResult<std::monostate, PositionalAfterNamedArgument> fillCallArgs(
 		query::Context&                                  ctx,
@@ -304,7 +302,9 @@ namespace compiler::helios::code {
 				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
 			} else {
 				if (!named_arguments.empty())
-					return PositionalAfterNamedArgument{ arg_index };  // Normal argument after named one.
+					return PositionalAfterNamedArgument{
+						arg_index
+					};  // Normal argument after named one.
 
 				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
 			}
@@ -433,22 +433,19 @@ namespace compiler::helios::code {
 		if (verify_result.hasFailed()) return query::Failed{};
 		if (verify_result.hasValueByType<PositionalAfterNamedArgument>()) {
 			auto error_data = verify_result.getValueByTypeOrPanic<PositionalAfterNamedArgument>();
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderCodeError>(
-					"Positional argument present after named argument",
-					call_expr->getSourcePosition(),
-					base::strConcat(
-						"Positional argument at index ",
-						base::toString(error_data.argument_index),
-						" cannot be after named arguments"
-					),
-					"here"
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Positional argument present after named argument",
+				call_expr->getSourcePosition(),
+				base::strConcat(
+					"Positional argument at index ",
+					base::toString(error_data.argument_index),
+					" cannot be after named arguments"
+				),
+				"here"
+			));
 			return query::Failed{};
 		}
-		
-	
+
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;

@@ -25,9 +25,7 @@ namespace compiler::helios {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
-			void setFailed() {
-				symbol_type_qresult = query::Failed();
-			}
+			void setFailed() { symbol_type_qresult = query::Failed(); }
 
 			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
 				if (symbol_type_qresult.hasValue())
@@ -61,8 +59,7 @@ namespace compiler::helios {
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			query::QResult<tsh::SymbolType<>> symbol_type_qresult
-				= query::Failed();
+			query::QResult<tsh::SymbolType<>> symbol_type_qresult = query::Failed();
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {

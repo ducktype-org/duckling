@@ -1,12 +1,12 @@
 #include "interface.hpp"
 
+#include <diagnostic_interactive/usage.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <diagnostic_interactive/usage.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -94,8 +94,7 @@ namespace compiler::helios {
 
 		auto get_as_single = lookup_result->getAsSingle();
 
-		if (get_as_single.hasFailed())
-			return query::Failed();
+		if (get_as_single.hasFailed()) return query::Failed();
 
 		variant_match(get_as_single.valueOrPanic()) {
 			variant_case(SymbolList, symbol_list) {
@@ -110,10 +109,7 @@ namespace compiler::helios {
 			}
 			variant_case(errors::Ambiguity, _) {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Ambiguity in lookup",
-					error_position,
-					"",
-					"symbol lookup here"
+					"Ambiguity in lookup", error_position, "", "symbol lookup here"
 				));
 				return query::Failed();
 			}

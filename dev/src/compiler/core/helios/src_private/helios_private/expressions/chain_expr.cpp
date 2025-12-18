@@ -5,6 +5,7 @@
 
 #include "chain_expr.hpp"
 
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -21,13 +22,12 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <diagnostic_interactive/usage.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
@@ -299,12 +299,11 @@ namespace compiler::helios::code {
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
 				= HInterface::ofScopeWithParents(scope).lookup(query_ctx, ident->getName().value);
-			
-				// @TODO: #1412 fix dealias
+
+			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			
-			if (callees_q_result.hasFailed())
-				return query::Failed();
+
+			if (callees_q_result.hasFailed()) return query::Failed();
 
 			const auto& callees = callees_q_result.valueOrThrow();
 
@@ -381,8 +380,7 @@ namespace compiler::helios::code {
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 				ident->getName().position, query_ctx, ident->getName().value
 			);
-			if (lookup_result.hasFailed())
-				return query::Failed();
+			if (lookup_result.hasFailed()) return query::Failed();
 
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.valueOrThrow().back();
@@ -396,10 +394,9 @@ namespace compiler::helios::code {
 		 * Case when as a first element in the chain
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
-		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr)
-			-> query::QResult<ChainState> {
+		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr) -> query::QResult<ChainState> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			
+
 			if (expr.hasFailed()) return query::Failed();
 
 			auto hout_expr = std::move(expr).valueOrThrow();
@@ -456,9 +453,7 @@ namespace compiler::helios::code {
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
 
-			if (looked_up_symbols.hasFailed()) {
-				return query::Failed();
-			}
+			if (looked_up_symbols.hasFailed()) return query::Failed();
 
 			variant_match(looked_up_symbols.valueOrPanic()) {
 				variant_case(SymbolList, result) {
@@ -481,42 +476,31 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
-
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Ambiguous symbol in type lookup",
-							expr_access->getName().position,
-							"",
-							"here"
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Ambiguous symbol in type lookup",
+						expr_access->getName().position,
+						"",
+						"here"
+					));
 
 					return query::Failed();
-
 				}
 				variant_case_novalue(errors::SymbolNotFound) {
-					// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator overloads.
-					// Ex.: obj.a fails to look up 'a', but it can still call obj.selectDynamic("a").
-					// See Scala's Dynamic: https://www.scala-lang.org/api/current/scala/Dynamic.html
+					// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
+					// overloads. Ex.: obj.a fails to look up 'a', but it can still call
+					// obj.selectDynamic("a"). See Scala's Dynamic:
+					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Ambiguous not found in type",
-							expr_access->getName().position,
-							"",
-							"here"
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Ambiguous not found in type", expr_access->getName().position, "", "here"
+					));
 
 					return query::Failed();
 				}
 
-				variant_default {
-					CORE_PANIC("Unexpected result type from lookup");
-				}
+				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
 			}
 			CORE_UNREACHABLE();
-
 		}
 
 		/**
@@ -530,9 +514,7 @@ namespace compiler::helios::code {
 			          .lookupExpectUnique(
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
-			if (lookup_result.hasFailed()) {
-				return query::Failed();
-			}
+			if (lookup_result.hasFailed()) return query::Failed();
 			// @TODO: handle dealias expressions #981:
 			const auto& sym = lookup_result.valueOrThrow().back();
 			return processNamespaceOrValue(sym);
@@ -567,14 +549,13 @@ namespace compiler::helios::code {
 
 			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-			
-			if (callees_q_result.hasFailed())
-				return query::Failed();
-			
+
+			if (callees_q_result.hasFailed()) return query::Failed();
+
 			const auto& callees = callees_q_result.valueOrThrow();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
-		
+
 			if (res.hasFailed()) {
 				query_ctx.log(
 					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
@@ -594,8 +575,7 @@ namespace compiler::helios::code {
 		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol)
-			-> query::QResult<ChainState> {
+		auto processNamespaceOrValue(const SymID& symbol) -> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
@@ -633,7 +613,7 @@ namespace compiler::helios::code {
 				}
 				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
-			
+
 			if (res.hasFailed()) return query::Failed();
 
 			this->current_state = std::move(res.valueOrThrow());
@@ -664,7 +644,7 @@ namespace compiler::helios::code {
 			}();
 
 			if (res.hasFailed()) return query::Failed();
-			
+
 			this->current_state = std::move(res.valueOrThrow());
 			return {};
 		}
@@ -681,7 +661,7 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
 			auto res = processPSTExpr(current_element_value);
-			
+
 			if (res.hasFailed()) return query::Failed();
 
 			this->current_state = std::move(res.valueOrThrow());
@@ -700,7 +680,7 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
 			auto res                   = processPSTExpr(current_element_value, next_element_value);
-			
+
 			if (res.hasFailed()) return query::Failed();
 
 			this->current_state = std::move(res.valueOrThrow());

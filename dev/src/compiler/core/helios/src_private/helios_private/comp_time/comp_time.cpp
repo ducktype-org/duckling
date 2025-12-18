@@ -3,6 +3,7 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
@@ -14,7 +15,6 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
-#include <diagnostic_interactive/usage.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
@@ -70,23 +70,19 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value_type };
 			}
 
-			void visitCallExpr(const code::CallExpr&) final {
-				result = CouldNotShortPath{};
-			}
+			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitAccessExpr(const code::AccessExpr&) final {
-				result = CouldNotShortPath{};
-			}
+			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result = type->valueOrThrow();
+					result    = type->valueOrThrow();
 				} else {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
-					result = const_val_result.valueOrThrow();
+					result                = const_val_result.valueOrThrow();
 				}
 			}
 
@@ -433,8 +429,7 @@ namespace compiler::helios {
 
 					variant_match(coercion_qresult.valueOrPanic()) {
 						variant_case(Coercion, coercion) {
-							const auto sub_type_coerced
-								= coercion.coerce(ctx, sub_type->clone());
+							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
 
 							const auto sub_type_ctv
 								= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
@@ -452,20 +447,16 @@ namespace compiler::helios {
 
 							// @TODO: #1620 report error properly when HOUT exposes source positions.
 
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-								base::strConcat(
-									"Cannot coerce variant subtype of type ",
-									sub_type->expression_type.getSymbolType().toString(),
-									" to meta type."
-								)
-							));
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
+								"Cannot coerce variant subtype of type ",
+								sub_type->expression_type.getSymbolType().toString(),
+								" to meta type."
+							)));
 						}
 						variant_default {
-							CORE_PANIC(
-								"Unexpected coercion result when coercing to meta type."
-							);
+							CORE_PANIC("Unexpected coercion result when coercing to meta type.");
 						}
- 					}				
+					}
 				}
 
 				if (!coercion_success) {
@@ -573,8 +564,8 @@ namespace compiler::helios {
 			for (const SymID& func_id: *dependencies) {
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
 				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
-				
-				
+
+
 				if (mir_func_result->hasFailed()) return query::Failed();
 
 				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
@@ -644,9 +635,7 @@ namespace compiler::helios {
 					if (!call_expr) return query::Failed();
 					return evaluateFunctionWithVm(ctx, call_expr);
 				}
-				variant_default {
-					CORE_PANIC("Unexpected TreeEvalResult variant.");
-				}
+				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
 			}
 			CORE_UNREACHABLE();
 		}

@@ -31,9 +31,9 @@ namespace compiler::helios {
 
 		auto&& [node_id, inner] = children.at(0);
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
-		
+
 		UNPACK_QRESULT(auto& child_path =, inner.getAsSingle());
-		
+
 		variant_match(child_path) {
 			variant_case(SymbolList, symbols) {
 				SymbolList result;
@@ -41,15 +41,11 @@ namespace compiler::helios {
 				result.appendList(symbols);
 				return result;
 			}
-			variant_case(errors::Ambiguity, _) {
-				return errors::Ambiguity();
-			}
-			variant_case(errors::SymbolNotFound, _) {
-				return errors::SymbolNotFound();
-			}
-			variant_default { CORE_PANIC("Invalid state");}
+			variant_case(errors::Ambiguity, _) { return errors::Ambiguity(); }
+			variant_case(errors::SymbolNotFound, _) { return errors::SymbolNotFound(); }
+			variant_default { CORE_PANIC("Invalid state"); }
 		}
-		CORE_UNREACHABLE();		
+		CORE_UNREACHABLE();
 	}
 
 	u64 LookupResult::symbolCount() const {
