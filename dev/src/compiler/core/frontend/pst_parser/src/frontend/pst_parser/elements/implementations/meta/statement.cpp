@@ -26,11 +26,8 @@ namespace pst {
 
 	namespace internal {
 
-		class StmtClassifiers {
-		public:
-			StmtClassifiers() = delete;
-
-			template<class T>
+		template<class T>
+		struct StmtClassifiers {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
@@ -42,9 +39,11 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
 				    || Conditions::isBlockGroup(state, fwd - 1);
 			}
+		};
 
-			template<>
-			bool isStmtEnd<ExprStmt>(const TokenStream& state, i64 fwd) {
+		template<>
+		struct StmtClassifiers<ExprStmt> {
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
 				    || keywordFlags(state[fwd].asKeyword())
@@ -54,9 +53,11 @@ namespace pst {
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}
+		};
 
-			template<>
-			bool isStmtEnd<If>(const TokenStream& state, i64 fwd) {
+		template<>
+		struct StmtClassifiers<If> {
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
 				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else)
@@ -64,21 +65,20 @@ namespace pst {
 			}
 		};
 
-		class StmtSpecifierClassifiers {
-		public:
-			StmtSpecifierClassifiers() = delete;
-
-			static bool isDefiniteEnd(const TokenStream& state, i64 fwd) {
+		template<>
+		struct StmtClassifiers<StmtSpecifier> {
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else)
+				        && !state[fwd].is(Keyword::Elif));
 			}
 		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			// We skip the first token as its the keyword we already found
-			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers::isStmtEnd<T>>(1);
+			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
 
 			fallbackLen(state, length);
 
@@ -100,7 +100,7 @@ namespace pst {
 
 			bool found_internal_start = false;
 
-			while (!StmtSpecifierClassifiers::isDefiniteEnd(state.ctokens(), length)) length++;
+			while (!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
 
 			fallbackLen(state, length);
 
