@@ -1,6 +1,7 @@
 #include "compile_llvm.hpp"
 
 #include "../statistics_private/statistics.hpp"
+#include "builtins_registry.hpp"
 #include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
