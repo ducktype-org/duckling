@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "lir/lir_structure/lir_structure.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -541,14 +543,30 @@ namespace compiler::helios {
 			}
 		};
 
+		/**
+		 * @brief A POD to encapsulate the results of `prepareLIRForDVM`.
+		 * - `func_to_call` - a mangled name of the function we evaluate.
+		 * - `functions` -
+		 */
 		struct LIRBuildResult {
-			std::string                      func_to_call;
-			std::vector<CRef<lir::Function>> functions;
+			std::string func_to_call;  // Mangled name of the function we evaluate.
+			std::vector<CRef<lir::Function>>
+				functions;             // List of LIR functions needed to evaluate `func_to_call`.
 		};
 
 		/**
-		 * @brief Prepares all necessary LIR functions (dependencies + target) for the VM.
-		 * @TODO: #826 Change this code to a single query once it gets implemented.
+		 * @brief Collects all data needed to evaluate a function with the given `function_sym_id`
+		 * (target function). This includes:
+		 *- Collection all function dependencies - collecting all functions which are being called
+		 * by the target function.
+		 * - Retrieving the mangled name of the target function
+		 * - Compiling all of the necessary functions to LIR
+		 *
+		 * This data along with the argument CTVs is passed to `CompTimeDVM`, compiled to bytecode
+		 * and the function with the mangled name is called.
+		 *
+		 * @return A `QResult` with either a `LIRBuildResult` a (mangled_function_name,
+		 * all_necessary_lir_functions) or a `query::Failed` if any of the steps on the way failed.
 		 */
 		static query::QResult<LIRBuildResult, query::Failed> prepareLIRForDVM(
 			query::Context& ctx, SymID function_sym_id
@@ -561,6 +579,7 @@ namespace compiler::helios {
 			result.functions.reserve(dependencies->size());
 
 			for (const SymID& func_id: *dependencies) {
+				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
 
 				auto mir_func_result = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });

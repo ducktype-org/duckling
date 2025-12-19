@@ -91,7 +91,7 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::Function> extra_bytecode_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
-		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;
-		base::HashMap<base::StrID, vm::code::GlobalData> lir_global_to_dvm_data;
+		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
+		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
 	};
 }

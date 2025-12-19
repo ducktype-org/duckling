@@ -44,7 +44,7 @@ vm::code::TypeOfData ProgramLoweringContext::getTypeFromName(base::StrID type_na
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
-	if (auto maybe_global = lir_global_to_dvm.atMaybe(global->mangled_name))
+	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
 		return **maybe_global;
 	else
 		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
@@ -60,7 +60,7 @@ const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 }
 
 void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
-	for (const auto& global: bytecode.global_data) lir_global_to_dvm_data.put(global.name, global);
+	for (const auto& global: bytecode.global_data) global_name_to_dvm_data.put(global.name, global);
 
 	for (const auto& ext_func: bytecode.external_c_functions)
 		extern_c_functions.put(ext_func.name.str, ext_func);
@@ -75,14 +75,14 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	base::Optional<CRef<lir::Function>> global_ctor,
 	base::Optional<CRef<lir::Function>> global_dtor
 ) {
-	if (auto maybe_global = lir_global_to_dvm_data.atMaybe(lir_global.mangled_name))
+	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
 		return **maybe_global;
 
 	auto global_type = lowerAndKeepTslType(lir_global.layout);
 
 	// Register the global variable itself before inserting ctor/dtor to handle
 	// recursive references.
-	lir_global_to_dvm.put(
+	global_name_to_dvm.put(
 		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
 	);
 
@@ -108,8 +108,8 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	global_data.ctor_name = ctor_name;
 	global_data.dtor_name = dtor_name;
 
-	lir_global_to_dvm_data.put(lir_global.mangled_name, global_data);
-	return lir_global_to_dvm_data.at(lir_global.mangled_name);
+	global_name_to_dvm_data.put(lir_global.mangled_name, global_data);
+	return global_name_to_dvm_data.at(lir_global.mangled_name);
 }
 
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
@@ -195,7 +195,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
 	collection.global_data = std::ranges::to<std::vector>(
-		lir_global_to_dvm_data | std::views::values
+		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(
