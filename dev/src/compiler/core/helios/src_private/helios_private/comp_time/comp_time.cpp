@@ -1,5 +1,8 @@
 #include "comp_time.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -14,6 +17,8 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include "base/except/exceptions.hpp"
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
@@ -198,7 +203,6 @@ namespace compiler::helios {
 							// Unsupported type for binary operator.
 							return query::QError(query::Failed());
 						}
-						// TODOP: Add symbol type here
 					},
 					lhs_ctv.getStorage(),
 					rhs_ctv.getStorage()
@@ -313,57 +317,81 @@ namespace compiler::helios {
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
 				auto compare = [this](
-								   const NumericValue& first,
-								   const NumericValue& second,
-								   code::BuiltinBinary operation
+								   const CompileTimeValue& first,
+								   const CompileTimeValue& second,
+								   code::BuiltinBinary     operation
 							   ) {
 					return std::visit(
-						[&](auto&& lhs_num) -> bool {
-							using LhsNumT = std::decay_t<decltype(lhs_num)>;
+						[&](auto&& lhs_val, auto&& rhs_val) -> bool {
+							using LhsT = std::decay_t<decltype(lhs_val)>;
+							using RhsT = std::decay_t<decltype(rhs_val)>;
 
-							// @note: We assume both sides of the binary operation have the
-						    // same types. If types differ, they should be casted with the
-						    // cast expr beforehand.
-							auto maybe_rhs_val = second.get<LhsNumT>();
-							if (!maybe_rhs_val.has_value()) {
-								CORE_PANIC(base::strConcat(
-									"Operands on binary expression evaluated at "
-									"compile "
-									"time are of different type. This should be "
-									"prevented by casts.\nLeft side is:",
-									first.getTypeOfStoredValue(ctx).getType().toString(),
-									"\nRight side is: ",
-									second.getTypeOfStoredValue(ctx).getType().toString()
-								));
-							}
+							if constexpr (std::is_same_v<LhsT, NumericValue>
+						                  && std::is_same_v<RhsT, NumericValue>) {
+								return std::visit(
+									[&](auto&& lhs_num) -> bool {
+										using LhsNumT = std::decay_t<decltype(lhs_num)>;
 
-							LhsNumT rhs_num = maybe_rhs_val.value();
-							using enum code::BuiltinBinary;
-							switch (operation) {
-							case IntegerLt:
-							case FloatLt:
-								return lhs_num < rhs_num;
-							case IntegerGt:
-							case FloatGt:
-								return lhs_num > rhs_num;
-							case IntegerLteq:
-							case FloatLteq:
-								return lhs_num <= rhs_num;
-							case IntegerGteq:
-							case FloatGteq:
-								return lhs_num >= rhs_num;
-							case IntegerEq:
-							case FloatEq:
-								return lhs_num == rhs_num;
-							case IntegerNeq:
-							case FloatNeq:
-								// TODOP: Meta add here?
-								return lhs_num != rhs_num;
-							default:
-								CORE_UNREACHABLE();
+										// @note: We assume both sides of the binary operation have
+								        // the same types. If types differ, they should be casted
+								        // with the cast expr beforehand.
+										auto maybe_rhs_val = rhs_val.template get<LhsNumT>();
+										if (!maybe_rhs_val.has_value()) {
+											CORE_PANIC(base::strConcat(
+												"Operands on binary expression evaluated at "
+												"compile "
+												"time are of different type. This should be "
+												"prevented by casts.\nLeft side is:",
+												first.getTypeOfStoredValue(ctx).getType().toString(),
+												"\nRight side is: ",
+												second.getTypeOfStoredValue(ctx).getType().toString()
+											));
+										}
+
+										LhsNumT rhs_num = maybe_rhs_val.value();
+										using enum code::BuiltinBinary;
+										switch (operation) {
+										case IntegerLt:
+										case FloatLt:
+											return lhs_num < rhs_num;
+										case IntegerGt:
+										case FloatGt:
+											return lhs_num > rhs_num;
+										case IntegerLteq:
+										case FloatLteq:
+											return lhs_num <= rhs_num;
+										case IntegerGteq:
+										case FloatGteq:
+											return lhs_num >= rhs_num;
+										case IntegerEq:
+										case FloatEq:
+											return lhs_num == rhs_num;
+										case IntegerNeq:
+										case FloatNeq:
+											return lhs_num != rhs_num;
+										default:
+											CORE_UNREACHABLE();
+										}
+									},
+									lhs_val.getStorage()
+								);
+							} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
+						                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
+								using enum code::BuiltinBinary;
+								switch (operation) {
+								case code::BuiltinBinary::MetaEq:
+									return lhs_val == rhs_val;
+								case code::BuiltinBinary::MetaNeq:
+									return lhs_val != rhs_val;
+								default:
+									CORE_UNREACHABLE();
+								}
+							} else {
+								CORE_PANIC("Unsupported types in CTE chain expr");
 							}
 						},
-						first.getStorage()
+						first.getStorage(),
+						second.getStorage()
 					);
 				};
 
@@ -389,9 +417,7 @@ namespace compiler::helios {
 					}
 
 					auto next_value = next_expr.valueOrThrow();
-					if (!compare(
-							*prev_value.get<NumericValue>(), *next_value.get<NumericValue>(), comp
-						)) {
+					if (!compare(prev_value, next_value, comp)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -424,8 +450,6 @@ namespace compiler::helios {
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
-					// should we here short-path or not?
-
 					auto coercion_qresult
 						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
 					if (coercion_qresult.hasError()) {
