@@ -43,7 +43,14 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			auto symbol_path = symbol->getAsSingle().getValueByTypeOrPanic<SymbolList>();
+			
+			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
+			CORE_ASSERT(
+				std::holds_alternative<SymbolList>(symbol_path_variant),
+				"Expected single symbol in chain lookup"
+			);
+			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
+
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
 				result.appendList(dealiased);
