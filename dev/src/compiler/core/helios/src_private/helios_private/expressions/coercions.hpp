@@ -29,6 +29,9 @@ namespace compiler::helios {
 			  to(to) {}
 	};
 
+	/** 
+	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
+	 */
 	struct InvalidCoercion final {};
 
 	class CoercionResult;
@@ -84,7 +87,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief The result of a coercion check, either a valid Coercion or an InvalidCoercion.
-	 * This is mostly a utility wrapper around std::variant, that helps avoid boilerplate code.
+	 * This is mostly a utility wrapper around std::variant, that helps in avoiding boilerplate code.
 	 */
 	class CoercionResult final {
 	public:
