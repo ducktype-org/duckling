@@ -19,10 +19,8 @@
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
-#include <expected>
 #include <ranges>
 #include <type_traits>
-#include <vector>
 
 namespace compiler::helios {
 	using namespace ctv;

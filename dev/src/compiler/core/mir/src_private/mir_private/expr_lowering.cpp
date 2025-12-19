@@ -203,35 +203,8 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleExpr(const hc::TupleExpr& expr) override {
-			auto result_type = expr.expression_type.getSymbolType();
-
-			// First check if we're creating a meta tuple type.
-			bool is_meta_tuple = std::ranges::all_of(expr.elements, [](const auto& elem) {
-				return elem->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta;
-			});
-			if (is_meta_tuple) {
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> values;
-
-				for (const auto& element: expr.elements | std::views::reverse) {
-					auto elem_lowered = lowerSubExpr(*element, current);
-					values.push_back(elem_lowered.getResult(function));
-					current = elem_lowered.begin;
-				}
-				std::ranges::reverse(values);
-
-				auto target_hole = current->addHole();
-
-				noValueOutput(
-					current,
-					target_hole,
-					Instruction(Operation::MetaCreateTuple, {}, values, {}, expr_scope),
-					result_type
-				);
-			} else {
-				throw base::NotYetImplemented("Non meta tuple constructor");
-			}
+		void visitTupleExpr(const hc::TupleExpr&) override {
+			throw base::NotYetImplemented("tuple constructor");
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
