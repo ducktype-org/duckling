@@ -109,14 +109,18 @@ impl Local {
 /// Represents a source a dependency cloned from git.
 pub struct Git {
     url: StrId,
-    rev: GitRevision,
-    commit: Option<StrId>,
+    branch_or_tag: BranchOrTag,
+    rev: Option<StrId>,
 }
 
 impl Git {
     /// Create a new git source.
-    pub fn new(url: StrId, rev: GitRevision, commit: Option<StrId>) -> Self {
-        Self { url, rev, commit }
+    pub fn new(url: StrId, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
+        Self {
+            url,
+            branch_or_tag,
+            rev,
+        }
     }
 
     /// Get the git repository URL.
@@ -124,14 +128,14 @@ impl Git {
         self.url
     }
 
-    /// Get the git revision.
-    pub fn rev(&self) -> GitRevision {
-        self.rev
+    /// Get the git branch or tag.
+    pub fn branch_or_tag(&self) -> BranchOrTag {
+        self.branch_or_tag
     }
 
-    /// Get the specific commit hash, if any.
-    pub fn commit(&self) -> Option<StrId> {
-        self.commit
+    /// Get the specific revision (commit hash), if any.
+    pub fn rev(&self) -> Option<StrId> {
+        self.rev
     }
 
     /// Check whether we can perform a shallow clone of this dependency.
@@ -145,35 +149,35 @@ impl Git {
             || self.url.starts_with("ssh://")
             || self.url.starts_with("http://")
             || self.url.starts_with("ftp://");
-        looks_like_remote_url && !self.rev().is_tag() && self.commit.is_none()
+        looks_like_remote_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
-pub enum GitRevision {
-    /// The main branch.
-    Main,
+pub enum BranchOrTag {
+    /// The default branch.
+    Default,
     /// A specific tag.
     Tag(StrId),
     /// A specific branch.
     Branch(StrId),
 }
 
-impl GitRevision {
-    /// Helper around `matches!(self, GitRevision::Main)`.
-    pub fn is_main(&self) -> bool {
-        matches!(self, GitRevision::Main)
+impl BranchOrTag {
+    /// Helper around `matches!(self, BranchOrTag::Default)`.
+    pub fn is_default(&self) -> bool {
+        matches!(self, BranchOrTag::Default)
     }
 
-    /// Helper around `matches!(self, GitRevision::Tag(..))`.
+    /// Helper around `matches!(self, BranchOrTag::Tag(..))`.
     pub fn is_tag(&self) -> bool {
-        matches!(self, GitRevision::Tag(..))
+        matches!(self, BranchOrTag::Tag(..))
     }
 
-    /// Helper around `matches!(self, GitRevision::Branch(..))`.
+    /// Helper around `matches!(self, BranchOrTag::Branch(..))`.
     pub fn is_branch(&self) -> bool {
-        matches!(self, GitRevision::Branch(..))
+        matches!(self, BranchOrTag::Branch(..))
     }
 }
 
@@ -201,18 +205,18 @@ impl TryFrom<registry::DependencySource> for Source {
                 tag,
                 branch,
             } => {
-                let rev = match (tag, branch) {
-                    (None, None) => GitRevision::Main,
-                    (None, Some(branch)) => GitRevision::Branch(branch.into()),
-                    (Some(tag), None) => GitRevision::Tag(tag.into()),
+                let branch_or_tag = match (tag, branch) {
+                    (None, None) => BranchOrTag::Default,
+                    (None, Some(branch)) => BranchOrTag::Branch(branch.into()),
+                    (Some(tag), None) => BranchOrTag::Tag(tag.into()),
                     (Some(_), Some(_)) => {
                         qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
                     }
                 };
                 Git {
                     url: git_url.into(),
-                    rev,
-                    commit: commit.map(Into::into),
+                    branch_or_tag,
+                    rev: commit.map(Into::into),
                 }
                 .into()
             }
@@ -247,15 +251,19 @@ impl TryFrom<Source> for registry::DependencySource {
                 }
             }
             Source::Git(git) => {
-                let Git { url, rev, commit } = git;
-                let (tag, branch) = match rev {
-                    GitRevision::Main => (None, None),
-                    GitRevision::Tag(tag) => (Some(tag.into()), None),
-                    GitRevision::Branch(branch) => (None, Some(branch.into())),
+                let Git {
+                    url,
+                    branch_or_tag,
+                    rev,
+                } = git;
+                let (tag, branch) = match branch_or_tag {
+                    BranchOrTag::Default => (None, None),
+                    BranchOrTag::Tag(tag) => (Some(tag.into()), None),
+                    BranchOrTag::Branch(branch) => (None, Some(branch.into())),
                 };
                 registry::SourceInner::Git {
                     git_url: url.into(),
-                    commit: commit.map(Into::into),
+                    commit: rev.map(Into::into),
                     tag,
                     branch,
                 }

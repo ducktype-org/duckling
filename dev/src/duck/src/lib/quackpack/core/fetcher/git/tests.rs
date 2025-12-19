@@ -5,7 +5,7 @@ use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{Git, GitRevision, PackageLoader, fetcher::git::GitClient},
+    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
 };
 
 fn generate_local_git_repo() -> TempDir {
@@ -57,7 +57,7 @@ fn clone_local_repo() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         dir.path().as_os_str().to_str().unwrap().into(),
-        GitRevision::Main,
+        BranchOrTag::Default,
         None,
     );
 
@@ -81,7 +81,7 @@ fn clone_local_repo_with_branch() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         dir.path().as_os_str().to_str().unwrap().into(),
-        GitRevision::Branch("test-branch".into()),
+        BranchOrTag::Branch("test-branch".into()),
         None,
     );
 
@@ -100,7 +100,7 @@ fn clone_local_repo_with_tag() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         dir.path().as_os_str().to_str().unwrap().into(),
-        GitRevision::Tag("v1.0.0".into()),
+        BranchOrTag::Tag("v1.0.0".into()),
         None,
     );
 
@@ -128,7 +128,7 @@ fn clone_local_repo_with_rev() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         dir.path().as_os_str().to_str().unwrap().into(),
-        GitRevision::Main,
+        BranchOrTag::Default,
         Some(original_commit.id().to_string().into()),
     );
     let ctx = DuckCtx::default();

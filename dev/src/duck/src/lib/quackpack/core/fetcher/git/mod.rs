@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::{
     QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{Git, GitRevision, PackageLoader, fetcher::types::GitCloneResponse},
+    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
 };
 
 use async_scoped::TokioScope;
@@ -34,14 +34,14 @@ impl GitClient {
             builder.fetch_options(fetch_options);
         }
         // git2-rs doesn't support cloning with a given tag :(.
-        if let GitRevision::Branch(branch) = source.rev() {
+        if let BranchOrTag::Branch(branch) = source.branch_or_tag() {
             builder.branch(branch.as_str());
         }
 
         let repository = builder.clone(source.url().as_str(), destination)?;
 
         // Prefer specific commits over tags.
-        if let Some(commit) = source.commit() {
+        if let Some(commit) = source.rev() {
             repository
                 .checkout_to_a_given_commit(commit)
                 .with_context(|| {
@@ -50,7 +50,7 @@ impl GitClient {
                         source.url(), commit
                     )
                 })?;
-        } else if let GitRevision::Tag(tag) = source.rev() {
+        } else if let BranchOrTag::Tag(tag) = source.branch_or_tag() {
             repository.checkout_to_a_given_tag(tag).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
