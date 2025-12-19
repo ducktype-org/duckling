@@ -30,7 +30,7 @@ namespace compiler::helios {
 	};
 
 	struct InvalidCoercion final {};
-	
+
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
 
@@ -82,7 +82,6 @@ namespace compiler::helios {
 			  to(to) {}
 	};
 
-
 	/**
 	 * @brief The result of a coercion check, either a valid Coercion or an InvalidCoercion.
 	 * This is mostly a utility wrapper around std::variant, that helps avoid boilerplate code.
@@ -90,6 +89,7 @@ namespace compiler::helios {
 	class CoercionResult final {
 	public:
 		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
+
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
 
 		[[nodiscard]]
@@ -107,6 +107,7 @@ namespace compiler::helios {
 			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
 			return std::get<Coercion>(storage);
 		}
+
 		[[nodiscard]]
 		Coercion&& getCoercion() && {
 			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
@@ -131,21 +132,16 @@ namespace compiler::helios {
 		std::variant<Coercion, InvalidCoercion> storage;
 	};
 
-
 	/**
 	 * @brief Checks if a coercion from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(
-		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
-	);
+	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
 
 	/**
 	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
 	 * a function performing the coercion if it is.
 	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
 	 */
-	CoercionQResult canCoerceToMeta(
-		query::Context& ctx, tsh::SymbolType<> from
-	);
+	CoercionQResult canCoerceToMeta(query::Context& ctx, tsh::SymbolType<> from);
 }

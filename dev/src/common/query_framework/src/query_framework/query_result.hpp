@@ -30,14 +30,13 @@ namespace query {
 	class QResult final {
 	private:
 		static_assert(
-			!std::is_reference_v<Value>,
-			"Value type should not be references (use CRef instead)"
+			!std::is_reference_v<Value>, "Value type should not be references (use CRef instead)"
 		);
 
 		static_assert(
 			(!std::is_same_v<Value, query::Failed>),
 			"query::Failed should not be used as an Value type, it can be represented by "
-		    "default by the QResult"
+			"default by the QResult"
 		);
 
 	public:
@@ -78,7 +77,6 @@ namespace query {
 			return *this;
 		}
 
-
 		/**
 		 * @brief Checks if QResult contains one of user specified values.
 		 */
@@ -107,7 +105,7 @@ namespace query {
 			if (hasValue()) return &std::get<Value>(storage);
 			return {};
 		}
-		
+
 		/**
 		 * @brief Access the value, panic on no value.
 		 */

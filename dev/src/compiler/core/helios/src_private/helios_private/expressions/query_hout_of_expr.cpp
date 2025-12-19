@@ -144,7 +144,8 @@ namespace compiler::helios::code {
 					};
 
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
+						auto sub_expr_hout
+							= getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;

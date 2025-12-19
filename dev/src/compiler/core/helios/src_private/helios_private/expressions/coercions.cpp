@@ -59,9 +59,7 @@ namespace compiler::helios {
 		return InvalidCoercion{};
 	}
 
-	CoercionQResult canCoerceToMeta(
-		query::Context& ctx, const tsh::SymbolType<> from
-	) {
+	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::SymbolType<> from) {
 		return canCoerce(
 			ctx,
 			from,

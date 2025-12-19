@@ -785,7 +785,7 @@ private:
 		// base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
 		// ASSERT_EQUAL("Value", stolen_opt);
 
-		std::string                           info  = "Hello";
+		std::string                      info  = "Hello";
 		query::QResult<std::string_view> whoa2 = std::string_view(info);
 		ASSERT_TRUE(whoa2.hasValue());
 

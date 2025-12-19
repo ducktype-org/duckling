@@ -508,7 +508,7 @@ namespace compiler::helios {
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type);
-				auto sub_result                 = maybe_new_numeric.has_value()
+				auto sub_result        = maybe_new_numeric.has_value()
 				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
 				                           : query::Failed();
 				if (sub_result.hasFailed()) {

@@ -43,7 +43,7 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			
+
 			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
 			CORE_ASSERT(
 				std::holds_alternative<SymbolList>(symbol_path_variant),

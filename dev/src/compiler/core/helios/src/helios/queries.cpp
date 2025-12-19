@@ -427,9 +427,7 @@ namespace compiler::helios {
 						  }
 
 
-						  return coercion.valueOrPanic().coerce(
-							  ctx, std::move(expr)
-						  );
+						  return coercion.valueOrPanic().coerce(ctx, std::move(expr));
 					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
