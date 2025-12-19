@@ -564,6 +564,8 @@ namespace compiler::mir {
 				return Operation::MetaCreateBox;
 			case Ref:
 				return Operation::MetaCreateRef;
+			case Const:
+				return Operation::MetaCreateConst;
 			default:
 				CORE_UNREACHABLE();
 			}

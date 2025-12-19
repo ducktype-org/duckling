@@ -5,8 +5,9 @@ namespace {
 
 	bool isMetaTypeOperation(lir::Operation op) {
 		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateTuple || op == lir::Operation::MetaCreateVariant
-		    || op == lir::Operation::MetaEq || op == lir::Operation::MetaNeq;
+		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
+		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
+		    || op == lir::Operation::MetaNeq;
 	}
 }
 

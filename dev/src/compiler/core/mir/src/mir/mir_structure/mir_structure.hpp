@@ -76,6 +76,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** Operations on meta types for compile time function evaluation */
 	MetaCreateBox,
 	MetaCreateRef,
+	MetaCreateConst,
 	MetaCreateTuple, // N arguments, types to create the tuple type from
 	MetaCreateVariant, // N arguments, types to create the variant type from
 	MetaEq,

@@ -161,6 +161,49 @@ private:
 
 		auto unit_type = query::entryPoint<compiler::tsh::QueryUnitType>({});
 
+		// Tree eval
+		{
+			{
+				auto simple_ref
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, simple_ref);
+			}
+			{
+				auto simple_box
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_BOX", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, simple_box);
+			}
+			{
+				auto simple_const
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
+				auto expected = st(i64_type).withMutability(Immutable);
+				ASSERT_EQUAL(expected, simple_const);
+			}
+			{
+				auto simple_variant
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_VARIANT", root_scope);
+				auto expected
+					= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
+				                                                                st(f64_type) } }));
+				ASSERT_EQUAL(expected, simple_variant);
+			}
+			{
+				auto simple_tuple
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_TUPLE", root_scope);
+				auto expected
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
+				                                                              st(f64_type) } }));
+				ASSERT_EQUAL(expected, simple_tuple);
+			}
+			{
+				auto cmp_1 = getConstValueAs<bool>("CMP_1", root_scope);
+				ASSERT_EQUAL(cmp_1, true);
+				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
+				ASSERT_EQUAL(cmp_2, true);
+			}
+		}
 
 		// Function evaluation.
 		{
@@ -181,17 +224,22 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
-					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
-				);
-				ASSERT_EQUAL(st(expected), d_type);
+				auto expected = st(i32_type).withMutability(compiler::tsh::Mutability::Immutable);
+				ASSERT_EQUAL(expected, d_type);
 			}
 			{
 				auto e_type   = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
+				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				);
+				ASSERT_EQUAL(st(expected), e_type);
+			}
+			{
+				auto f_type   = getConstValueAs<compiler::tsh::SymbolType<>>("F", root_scope);
 				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
 					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
 				));
-				ASSERT_EQUAL(expected, e_type);
+				ASSERT_EQUAL(expected, f_type);
 			}
 			{
 				auto mega_type

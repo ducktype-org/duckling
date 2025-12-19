@@ -202,6 +202,8 @@ namespace compiler::lir {
 			return Operation::MetaCreateBox;
 		case mir::Operation::MetaCreateRef:
 			return Operation::MetaCreateRef;
+		case mir::Operation::MetaCreateConst:
+			return Operation::MetaCreateConst;
 		case mir::Operation::MetaCreateTuple:
 			return Operation::MetaCreateTuple;
 		case mir::Operation::MetaCreateVariant:
@@ -539,6 +541,7 @@ namespace compiler::lir {
 
 				case mir::Operation::MetaCreateBox:
 				case mir::Operation::MetaCreateRef:
+				case mir::Operation::MetaCreateConst:
 				case mir::Operation::MetaCreateTuple:
 				case mir::Operation::MetaCreateVariant:
 				case mir::Operation::MetaEq:

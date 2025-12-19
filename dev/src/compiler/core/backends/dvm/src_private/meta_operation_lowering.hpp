@@ -12,6 +12,7 @@ namespace compiler::backend_vm::internal {
 		constexpr auto GLOBAL_QUERY_CONTEXT     = "comptime_query_ctx";
 		constexpr auto CREATE_BOX               = "comptime_create_box";
 		constexpr auto CREATE_REF               = "comptime_create_ref";
+		constexpr auto CREATE_CONST             = "comptime_create_const";
 		constexpr auto TYPES_EQUAL              = "comptime_types_equal";
 		constexpr auto TYPES_NOT_EQUAL          = "comptime_types_not_equal";
 		constexpr auto TUPLE_BUILDER_NEW        = "comptime_tuple_builder_new";
@@ -40,6 +41,7 @@ namespace compiler::backend_vm::internal {
 
 		void lowerCreateBox(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
 		void lowerCreateRef(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
+		void lowerCreateConst(const DVMValue& type_arg, const base::Optional<DVMValue>& output);
 		void lowerCreateTuple(
 			const std::deque<DVMValue>& type_args, const base::Optional<DVMValue>& output
 		);

@@ -1,10 +1,18 @@
 ### Tree evaluation.
-
+const SIMPLE_REF = ref i64;
+const SIMPLE_BOX = box i64;
+const SIMPLE_CONST = const i64;
+const SIMPLE_VARIANT = i32 | f64;
+const SIMPLE_TUPLE: type = (i32, f64);
+const CMP_1 = (const i32) == createConst(i32);
+const CMP_2 = i32 != i64;
 
 ### Function evaluation.
 fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
 fun createRef(t: type) -> type = ref t;
+# @TODO: #1727 Change the following, when this gets fixed.
+fun createConst(t: type) -> type = (const t);
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 fun megaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
@@ -12,8 +20,9 @@ fun megaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i6
 const A = createUnit();
 const B = createBox(i32);
 const C = createRef(i32);
-const D = createVariant(i16, i32, i64, i128);
-const E = createTuple(i16, i32, i64, i128);
+const D = createConst(i32);
+const E = createVariant(i16, i32, i64, i128);
+const F = createTuple(i16, i32, i64, i128);
 const megaGigaType = megaType(i128);
 
 # @TODO: #1571 Remove type specifiers from this file once casts exist in DVM.
@@ -53,9 +62,4 @@ fun isI32(a: type) -> bool = {
 }
 const REAL = isI32(i32);
 const FAKE = isI32(i64);
-
-
-# @TODO: #1727 Change the following, when this gets fixed.
-# fun goo(t: type) -> type = (const t);
-# const GFKH = goo(i32);
 

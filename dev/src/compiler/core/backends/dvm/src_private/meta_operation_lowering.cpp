@@ -15,8 +15,12 @@ namespace compiler::backend_vm::internal {
 			lowerCreateBox(args[0], output);
 			break;
 		case lir::Operation::MetaCreateRef:
-			CORE_ASSERT(args.size() == 1, "MetaCreateBox expects 1 argument");
+			CORE_ASSERT(args.size() == 1, "MetaCreateRef expects 1 argument");
 			lowerCreateRef(args[0], output);
+			break;
+		case lir::Operation::MetaCreateConst:
+			CORE_ASSERT(args.size() == 1, "MetaCreateConst expects 1 argument");
+			lowerCreateConst(args[0], output);
 			break;
 		case lir::Operation::MetaCreateTuple:
 			lowerCreateTuple(args, output);
@@ -53,6 +57,18 @@ namespace compiler::backend_vm::internal {
 		func_ctx.handleCall(
 			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
 				base::StrID(comptime_func_names::CREATE_REF), func_ctx.program_context
+			),
+			{ type_arg },
+			output
+		);
+	}
+
+	void MetaOperationLowerer::lowerCreateConst(
+		const DVMValue& type_arg, const base::Optional<DVMValue>& output
+	) {
+		func_ctx.handleCall(
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::CREATE_CONST), func_ctx.program_context
 			),
 			{ type_arg },
 			output
