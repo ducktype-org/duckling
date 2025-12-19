@@ -22,8 +22,8 @@ namespace query {
 	 * Structurally it behaves similarly to a variant of a @tp Value type and special states
 	 * provided implicitly by the query framwork (currently query::Failed state).
 	 * Query framework is aware of such special states and can handle/use them in special ways.
-	 * Crucially valueOrThrow method throws a special query::QueryFailedException, that can be automatically
-	 * caught by the query framework to mark the query as failed.
+	 * Crucially valueOrThrow method throws a special query::QueryFailedException, that can be
+	 * automatically caught by the query framework to mark the query as failed.
 	 */
 	template<class Value>
 	class QResult final {
