@@ -26,35 +26,19 @@ namespace query {
 	 * which semantically represent opaque failure of a query.
 	 * Query framework is aware of this type and can handle/use it in special ways.
 	 */
-	template<class PrimaryValue, class... SecondaryValues>
+	template<class Value>
 	class QResult final {
 	private:
 		static_assert(
-			(!std::is_reference_v<PrimaryValue>)
-				&& (... && (!std::is_reference_v<SecondaryValues>) ),
-			"ErrorValues types should not be references (use CRef instead)"
+			!std::is_reference_v<Value>,
+			"Value type should not be references (use CRef instead)"
 		);
 
 		static_assert(
-			(!std::is_same_v<PrimaryValue, query::Failed>)
-				&& (... && (!std::is_same_v<SecondaryValues, query::Failed>) ),
-			"query::Failed should not be used as an ErrorValue type, it can be represented by "
+			(!std::is_same_v<Value, query::Failed>),
+			"query::Failed should not be used as an Value type, it can be represented by "
 		    "default by the QResult"
 		);
-
-		/**
-		 * Indicates whether the QResult uses a variant to store its value.
-		 */
-		constexpr static bool USES_VARIANT = sizeof...(SecondaryValues) > 0;
-
-		/**
-		 * Main value type of QResult.
-		 */
-		using ValueType = std::conditional_t<
-			USES_VARIANT,
-			std::variant<PrimaryValue, SecondaryValues...>,
-			PrimaryValue>;
-
 
 	public:
 		/**
@@ -69,8 +53,8 @@ namespace query {
 		 * which one to use.
 		 */
 		template<class... Args>
-		requires std::is_constructible_v<ValueType, Args...> QResult(Args&&... args):
-			  storage(std::in_place_type_t<ValueType>(), std::forward<Args>(args)...) {}
+		requires std::is_constructible_v<Value, Args...> QResult(Args&&... args):
+			  storage(std::in_place_type_t<Value>(), std::forward<Args>(args)...) {}
 
 		/**
 		 * @brief Failed state constructor.
@@ -82,10 +66,10 @@ namespace query {
 		constexpr QResult& operator=(QResult&&) noexcept = default;
 		constexpr QResult& operator=(const QResult&)     = default;
 
-		template<class Value>
-		requires std::is_constructible_v<ValueType, Value&&>
-		constexpr QResult& operator=(Value&& value) {
-			storage = ValueType{ std::forward<Value>(value) };
+		template<class OthValue>
+		requires std::is_constructible_v<Value, OthValue&&>
+		constexpr QResult& operator=(OthValue&& value) {
+			storage = Value{ std::forward<OthValue>(value) };
 			return *this;
 		}
 
@@ -94,36 +78,13 @@ namespace query {
 			return *this;
 		}
 
-		/**
-		 * @brief Copy assignment from a different QResult
-		 * types
-		 */
-		template<class... Ts>
-		requires(... && std::is_constructible_v<ValueType, Ts>)
-		constexpr QResult& operator=(const QResult<Ts...>& oth) {
-			if (oth.hasFailed()) {
-				storage = query::Failed{};
-				return *this;
-			} else if constexpr (sizeof...(Ts) < 2) {
-				// oth does not use variant storage:
-				storage = oth.valueOrPanic();
-				return *this;
-			} else {
-				// oth uses variant storage:
-				std::visit(
-					[&](auto&& val) { storage = ValueType{ std::forward<decltype(val)>(val) }; },
-					oth.valueOrPanic()
-				);
-				return *this;
-			}
-		}
 
 		/**
 		 * @brief Checks if QResult contains one of user specified values.
 		 */
 		[[nodiscard]]
 		constexpr bool hasValue() const {
-			return std::holds_alternative<ValueType>(storage);
+			return std::holds_alternative<Value>(storage);
 		}
 
 		/**
@@ -134,78 +95,64 @@ namespace query {
 			return std::holds_alternative<query::Failed>(storage);
 		}
 
-		// BOOL CAST CAN BE UNINTUITIVE NOW:
-		// /**
-		//  * @brief Checks if QResult contains a value.
-		//  */
-		// explicit constexpr operator bool() const { return hasValue(); }
-
-
 		/**
 		 * @brief Access the value as an optional.
 		 */
-		constexpr base::Optional<base::Ref<ValueType>> optValue() {
-			if (hasValue()) return &std::get<ValueType>(storage);
+		constexpr base::Optional<base::Ref<Value>> optValue() {
+			if (hasValue()) return &std::get<Value>(storage);
 			return {};
 		}
 
-		constexpr base::Optional<base::CRef<ValueType>> optValue() const {
-			if (hasValue()) return &std::get<ValueType>(storage);
+		constexpr base::Optional<base::CRef<Value>> optValue() const {
+			if (hasValue()) return &std::get<Value>(storage);
 			return {};
 		}
-
-		// This was only used in tests:
-		// current interface still allows to move from QResult, it simply has to be done explicitly.
-		// constexpr base::Optional<ValueType> optValueMove() && {
-		// 	if (hasValue()) return std::move(std::get<ValueType>(storage));
-		// 	return {};
-		// }
-
+		
 		/**
 		 * @brief Access the value, panic on no value.
 		 */
-		constexpr const ValueType& valueOrPanic() const& {
+		constexpr const Value& valueOrPanic() const& {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr const ValueType&& valueOrPanic() const&& {
+		constexpr const Value&& valueOrPanic() const&& {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::move(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr ValueType& valueOrPanic() & {
+		constexpr Value& valueOrPanic() & {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr ValueType&& valueOrPanic() && {
+		constexpr Value&& valueOrPanic() && {
 			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::move(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
 		/**
 		 * @brief Access the value, throw on no value with a message.
 		 * Used when we always except a value to be present.
 		 */
-		constexpr const ValueType& throwOnFail(std::string_view message) const& {
+		constexpr const Value& throwOnFail(std::string_view message) const& {
 			if (!hasValue()) throw query::QueryFailedException(message);
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr const ValueType&& throwOnFail(std::string_view message) const&& {
+		constexpr const Value&& throwOnFail(std::string_view message) const&& {
 			if (!hasValue()) throw query::QueryFailedException(message);
-			return std::move(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr ValueType& throwOnFail(std::string_view message) & {
+		constexpr Value& throwOnFail(std::string_view message) & {
 			if (!hasValue()) throw query::QueryFailedException(message);
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr ValueType&& throwOnFail(std::string_view message) && {
+		constexpr Value&& throwOnFail(std::string_view message) && {
 			if (!hasValue()) throw query::QueryFailedException(message);
-			return std::move(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
 		/**
@@ -213,57 +160,29 @@ namespace query {
 		 * This kind of exception can be caught by the query framework.
 		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
-		constexpr const ValueType& valueOrThrow() const& {
+		constexpr const Value& valueOrThrow() const& {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr const ValueType&& valueOrThrow() const&& {
+		constexpr const Value&& valueOrThrow() const&& {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::move(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr ValueType& valueOrThrow() & {
+		constexpr Value& valueOrThrow() & {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::get<ValueType>(storage);
+			return std::get<Value>(storage);
 		}
 
-		constexpr ValueType&& valueOrThrow() && {
+		constexpr Value&& valueOrThrow() && {
 			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
-			return std::move(std::get<ValueType>(storage));
-		}
-
-		/**
-		 * @brief Access the value by type, panic on no value.
-		 */
-		template<typename T>
-		constexpr auto getValueByTypeOrPanic() const -> decltype(auto) {
-			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<T>(std::get<ValueType>(storage));
-		}
-
-		/**
-		 * @brief Access the value by type, panic on no value.
-		 */
-		template<typename T>
-		constexpr auto getValueByTypeOrPanic() -> decltype(auto) {
-			if (!hasValue()) CORE_PANIC("Result is empty.");
-			return std::get<T>(std::get<ValueType>(storage));
-		}
-
-		/**
-		 * @brief Test if QResult contains a value of type T.
-		 */
-		template<typename T>
-		[[nodiscard]]
-		constexpr bool hasValueByType() const {
-			if (!hasValue()) return false;
-			return std::holds_alternative<T>(std::get<ValueType>(storage));
+			return std::move(std::get<Value>(storage));
 		}
 
 
 	private:
-		std::variant<ValueType, query::Failed> storage;
+		std::variant<Value, query::Failed> storage;
 	};
 
 	template<typename T>
