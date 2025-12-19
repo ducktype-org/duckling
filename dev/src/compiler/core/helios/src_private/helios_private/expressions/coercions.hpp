@@ -29,7 +29,7 @@ namespace compiler::helios {
 			  to(to) {}
 	};
 
-	/** 
+	/**
 	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
 	 */
 	struct InvalidCoercion final {};
