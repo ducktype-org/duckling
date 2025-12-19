@@ -498,7 +498,7 @@ namespace compiler::helios {
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrPanic()) {
+		variant_match(coercion_qresult.valueOrPanic().getVariant()) {
 			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
 			variant_case(InvalidCoercion, _) {
 				ctx.log(makeBox<CannotCoerceError>(
