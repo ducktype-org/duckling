@@ -130,19 +130,19 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasValueByType<InvalidCoercion>())
+			if (coercion.valueOrPanic().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
 					                                      .argument_index = i } };
 
-			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
+			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
 				.index_in_positional_args = i, .requires_coercion = not is_empty });
-			coercions[i].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
+			coercions[i].emplace(std::move(coercion).valueOrPanic().getCoercion());
 		}
 
 
@@ -175,19 +175,19 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasValueByType<InvalidCoercion>())
+			if (coercion.valueOrPanic().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type    = provided_type,
 					                                      .expected_type = expected_type,
 					                                      .argument_index
                                                         = positional_arguments.size() + i } };
 
-			bool is_empty = coercion.getValueByTypeOrPanic<Coercion>().isEmptyCoercion();
+			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
 				                                              .requires_coercion   = not is_empty };
-			coercions[param_idx].emplace(std::move(coercion).getValueByTypeOrPanic<Coercion>());
+			coercions[param_idx].emplace(std::move(coercion).valueOrPanic().getCoercion());
 		}
 
 		// Go over default arguments
@@ -285,7 +285,7 @@ namespace compiler::helios::code {
 	 *         other states if validation fails (duplicate names, positional after named, or
 	 * expression error)
 	 */
-	query::QResult<std::monostate, PositionalAfterNamedArgument> fillCallArgs(
+	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument>> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -431,8 +431,8 @@ namespace compiler::helios::code {
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
 
 		if (verify_result.hasFailed()) return query::Failed{};
-		if (verify_result.hasValueByType<PositionalAfterNamedArgument>()) {
-			auto error_data = verify_result.getValueByTypeOrPanic<PositionalAfterNamedArgument>();
+		if (std::holds_alternative<PositionalAfterNamedArgument>(verify_result.valueOrPanic())) {
+			auto error_data = std::get<PositionalAfterNamedArgument>(verify_result.valueOrPanic());
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 				"Positional argument present after named argument",
 				call_expr->getSourcePosition(),

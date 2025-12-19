@@ -34,7 +34,7 @@ namespace compiler::helios {
 		 */
 		struct CouldNotShortPath {};
 
-		using TreeEvalResult = query::QResult<CompileTimeValue, CouldNotShortPath>;
+		using TreeEvalResult = query::QResult<std::variant<CompileTimeValue, CouldNotShortPath>>;
 
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
@@ -297,10 +297,21 @@ namespace compiler::helios {
 					}
 				}
 
-				if (condition_is_true)
-					result = evalHoutExpr(ctx, expr.if_true.ref());
-				else
-					result = evalHoutExpr(ctx, expr.if_false.ref());
+				if (condition_is_true) {
+					auto sub_result = evalHoutExpr(ctx, expr.if_true.ref());
+					if (sub_result.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					result = sub_result.valueOrPanic();
+				} else {
+					auto sub_result = evalHoutExpr(ctx, expr.if_false.ref());
+					if (sub_result.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					result = sub_result.valueOrPanic();
+				}
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
@@ -393,7 +404,12 @@ namespace compiler::helios {
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-				result = evalHoutExpr(ctx, expr.inner.ref());
+				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrPanic();
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
@@ -427,7 +443,7 @@ namespace compiler::helios {
 						continue;
 					}
 
-					variant_match(coercion_qresult.valueOrPanic()) {
+					variant_match(coercion_qresult.valueOrPanic().getVariant()) {
 						variant_case(Coercion, coercion) {
 							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
 
@@ -472,7 +488,12 @@ namespace compiler::helios {
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
-				result = evalHoutExpr(ctx, seq.expressions.back().ref());
+				auto sub_result = evalHoutExpr(ctx, seq.expressions.back().ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrPanic();
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
@@ -487,9 +508,14 @@ namespace compiler::helios {
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type);
-				result                 = maybe_new_numeric.has_value()
+				auto sub_result                 = maybe_new_numeric.has_value()
 				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
 				                           : query::Failed();
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrPanic();
 			}
 
 			/**
