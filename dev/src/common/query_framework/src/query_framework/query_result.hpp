@@ -18,13 +18,12 @@ namespace query {
 	/**
 	 * @brief QResult is a special type used to represent the typical
 	 * result of a query or a helper function working within the query framework.
-	 * Structurally it behaves similarly to a variant of all provided possible values and implicitly
-	 * provided special states, but with certain assumptions used by the query framwork and with
-	 * interface optimized for implementation of queries.
 	 *
-	 * In particular, it can always represent a value of special query::Failed type
-	 * which semantically represent opaque failure of a query.
-	 * Query framework is aware of this type and can handle/use it in special ways.
+	 * Structurally it behaves similarly to a variant of a @tp Value type and special states
+	 * provided implicitly by the query framwork (currently query::Failed state).
+	 * Query framework is aware of such special states and can handle/use them in special ways.
+	 * Crucially valueOrThrow method throws a special query::QueryFailedException, that can be automatically
+	 * caught by the query framework to mark the query as failed.
 	 */
 	template<class Value>
 	class QResult final {
