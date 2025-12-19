@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_context.hpp>
 
@@ -26,7 +25,8 @@ namespace vm::code {
 	code::TypeContext getBuiltinTypes();
 
 	/**
-	 * @brief Is the given Type a DVM builtin.
+	 * @brief Returns the builtin type of a given name.
+	 * @return The type or empty optional if a type with the given name doesn't exist.
 	 */
-	bool isBuiltinType(const TypeOfData& type);
+	base::Optional<TypeOfData> getBuiltinTypeByName(base::StrID type_name);
 }

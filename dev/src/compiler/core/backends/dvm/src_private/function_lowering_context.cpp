@@ -232,11 +232,11 @@ FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallI
 
 	base::Optional<vm::code::TypeOfData> called_result_type = {};
 	if (ext_func.signature.result_type.str != base::StrID("void"))
-		called_result_type = program_context.getTypeFromName(ext_func.signature.result_type);
+		called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type);
 
 	std::vector<vm::code::TypeOfData> param_types
 		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
-			  return program_context.getTypeFromName(type_name);
+			  return vm::code::getBuiltinTypeByName(type_name).value();
 		  })
 	    | std::ranges::to<std::vector>();
 

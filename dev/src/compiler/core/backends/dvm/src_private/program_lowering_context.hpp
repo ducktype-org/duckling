@@ -54,17 +54,6 @@ namespace compiler::backend_vm::internal {
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
 
 		/**
-		 * @brief Gets a TypeOfData from a type name (for primitives and opaque types).
-		 *
-		 * This is used for lowering extern C function signatures that reference
-		 * types by name rather than by TSL layout.
-		 *
-		 * @param type_name The name of the type (e.g., "i64", "opaque_ptr")
-		 * @return The corresponding TypeOfData
-		 */
-		[[nodiscard]] vm::code::TypeOfData getTypeFromName(base::StrID type_name) const;
-
-		/**
 		 * @brief Insert raw bytecode into program context.
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);

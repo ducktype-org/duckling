@@ -22,27 +22,6 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 	}
 }
 
-namespace {
-	static u64 getByteSizeForType(base::StrID type_name) {
-		if (type_name == "i64" || type_name == "f64" || type_name == "u64" || type_name == "ptr"
-		    || type_name == "opaque_ptr")
-			return 8;
-		if (type_name == "i32" || type_name == "f32" || type_name == "u32") return 4;
-		if (type_name == "i16" || type_name == "u16") return 2;
-		if (type_name == "i8" || type_name == "u8" || type_name == "byte" || type_name == "void")
-			// @TODO: #656 If void size changes, remember to change here.
-			return 1;
-		CORE_PANIC("Unsupported VM type: ", type_name.strView());
-	}
-
-}
-
-vm::code::TypeOfData ProgramLoweringContext::getTypeFromName(base::StrID type_name) const {
-	if (type_name == "opaque_ptr")
-		return vm::code::OpaqueType{ type_name, getByteSizeForType(type_name) };
-	return vm::code::PrimitiveType(type_name, getByteSizeForType(type_name));
-}
-
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
 		return **maybe_global;
@@ -198,10 +177,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
-	collection.types = std::ranges::to<std::vector>(
-		tsl_type_to_dvm | std::views::values
-		| std::views::filter([](const auto& type) { return !vm::code::isBuiltinType(type); })
-	);
+	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
