@@ -9,9 +9,9 @@ namespace compiler::helios::comptime_ops {
 	 * type operations.
 	 *
 	 * It constructs a code collection that includes:
-	 * 1. **Global Data**: specifically `__comptime_query_ctx`, which holds the opaque pointer to
+	 * 1. **Global Data**: specifically `comptime_query_ctx`, which holds the opaque pointer to
 	 * the compiler's `query::Context`, used to call the Type System
-	 * 2. **Initialization Functions**: `__comptime_set_ctx`, used to inject the C++ query context
+	 * 2. **Initialization Functions**: `comptime_set_ctx`, used to inject the C++ query context
 	 *    into DVMs memory.
 	 * 3. **External C Functions**: A set of external C++ function available for calling from the VM.
 	 *

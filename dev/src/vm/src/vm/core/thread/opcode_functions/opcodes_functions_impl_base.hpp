@@ -708,6 +708,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
 		{
+			// @TODO: #1728 remove this evil instruction
 			const void* value = safeReadBytes<void*>(instr->arg1);
 			writeToStack(local_stack, instr->arg0, value);
 		}

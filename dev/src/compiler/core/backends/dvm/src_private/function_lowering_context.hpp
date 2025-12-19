@@ -17,29 +17,6 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
-	struct FunctionCallInfo {
-		DVMCallable                          call_target;
-		base::Optional<vm::code::TypeOfData> return_type;
-		std::vector<vm::code::TypeOfData>    param_types;
-		bool                                 is_extern_c;
-
-		/**
-		 * @brief Created call info for a LIR function.
-		 * Translates TSL type layouts to corresponding DVM types.
-		 */
-		static FunctionCallInfo fromLirFunction(
-			const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-		);
-
-		/**
-		 * @brief Creates call info for an extern C function.
-		 * Translates type names from extern C function signatures to corresponding DVM types.
-		 */
-		static FunctionCallInfo fromExternCFunction(
-			const base::StrID& func_name, ProgramLoweringContext& program_context
-		);
-	};
-
 	class FunctionLoweringContext {
 	public:
 		friend class MetaOperationLowerer;
@@ -75,11 +52,32 @@ namespace compiler::backend_vm::internal {
 
 		DVMLocal getFunctionReturnValueLocal();
 
-		ProgramLoweringContext& getProgramContext();
-
 		vm::code::Function finish() &&;
 
 	private:
+		struct FunctionCallInfo {
+			DVMCallable                          call_target;
+			base::Optional<vm::code::TypeOfData> return_type;
+			std::vector<vm::code::TypeOfData>    param_types;
+			bool                                 is_extern_c;
+
+			/**
+			 * @brief Created call info for a LIR function.
+			 * Translates TSL type layouts to corresponding DVM types.
+			 */
+			static FunctionCallInfo fromLirFunction(
+				const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
+			);
+
+			/**
+			 * @brief Creates call info for an extern C function.
+			 * Translates type names from extern C function signatures to corresponding DVM types.
+			 */
+			static FunctionCallInfo fromExternCFunction(
+				const base::StrID& func_name, ProgramLoweringContext& program_context
+			);
+		};
+
 		// Creates a mapping between a LIR local and DVM local.
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 

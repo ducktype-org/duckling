@@ -308,7 +308,7 @@ namespace {
 		auto ctx_vm_value = std::move(response->vm_value);
 		ctx_vm_value->writeBytes(&ctx);
 
-		if (!vm::api::runFunction(pid, "__comptime_set_ctx", { ctx_vm_value.refMut() }))
+		if (!vm::api::runFunction(pid, "comptime_set_ctx", { ctx_vm_value.refMut() }))
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				"Failed to initialize the global context on DVM."

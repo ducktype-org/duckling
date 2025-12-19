@@ -74,6 +74,7 @@ namespace {
 			}
 			variant_case(bool, value) { return DVMImmediate{ value }; }
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
+				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
 				return DVMImmediate{ std::bit_cast<u64>(&type_val) };
 			}
@@ -203,11 +204,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	});
 }
 
-ProgramLoweringContext& compiler::backend_vm::internal::FunctionLoweringContext::getProgramContext() {
-	return program_context;
-}
-
-FunctionCallInfo FunctionCallInfo::fromLirFunction(
+FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
 	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 ) {
 	base::Optional<vm::code::TypeOfData> called_result_type = {};
@@ -228,7 +225,7 @@ FunctionCallInfo FunctionCallInfo::fromLirFunction(
 	};
 }
 
-FunctionCallInfo FunctionCallInfo::fromExternCFunction(
+FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
 	const base::StrID& ext_func_name, ProgramLoweringContext& program_context
 ) {
 	const auto& ext_func = program_context.getExternCFunction(ext_func_name);

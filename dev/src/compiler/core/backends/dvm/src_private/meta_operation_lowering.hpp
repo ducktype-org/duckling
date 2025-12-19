@@ -9,17 +9,17 @@ namespace compiler::backend_vm::internal {
 	 * @brief Names of comptime type operation functions in DVM.
 	 */
 	namespace comptime_func_names {
-		constexpr auto GLOBAL_QUERY_CONTEXT     = "__comptime_query_ctx";
-		constexpr auto CREATE_BOX               = "__comptime_create_box";
-		constexpr auto CREATE_REF               = "__comptime_create_ref";
-		constexpr auto TYPES_EQUAL              = "__comptime_types_equal";
-		constexpr auto TYPES_NOT_EQUAL          = "__comptime_types_not_equal";
-		constexpr auto TUPLE_BUILDER_NEW        = "__comptime_tuple_builder_new";
-		constexpr auto TUPLE_BUILDER_PUSH       = "__comptime_tuple_builder_push";
-		constexpr auto TUPLE_BUILDER_FINALIZE   = "__comptime_tuple_builder_finalize";
-		constexpr auto VARIANT_BUILDER_NEW      = "__comptime_variant_builder_new";
-		constexpr auto VARIANT_BUILDER_PUSH     = "__comptime_variant_builder_push";
-		constexpr auto VARIANT_BUILDER_FINALIZE = "__comptime_variant_builder_finalize";
+		constexpr auto GLOBAL_QUERY_CONTEXT     = "comptime_query_ctx";
+		constexpr auto CREATE_BOX               = "comptime_create_box";
+		constexpr auto CREATE_REF               = "comptime_create_ref";
+		constexpr auto TYPES_EQUAL              = "comptime_types_equal";
+		constexpr auto TYPES_NOT_EQUAL          = "comptime_types_not_equal";
+		constexpr auto TUPLE_BUILDER_NEW        = "comptime_tuple_builder_new";
+		constexpr auto TUPLE_BUILDER_PUSH       = "comptime_tuple_builder_push";
+		constexpr auto TUPLE_BUILDER_FINALIZE   = "comptime_tuple_builder_finalize";
+		constexpr auto VARIANT_BUILDER_NEW      = "comptime_variant_builder_new";
+		constexpr auto VARIANT_BUILDER_PUSH     = "comptime_variant_builder_push";
+		constexpr auto VARIANT_BUILDER_FINALIZE = "comptime_variant_builder_finalize";
 	}
 
 	class MetaOperationLowerer {

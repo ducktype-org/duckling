@@ -39,8 +39,8 @@ namespace compiler::backend_vm::internal {
 		const DVMValue& type_arg, const base::Optional<DVMValue>& output
 	) {
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID(comptime_func_names::CREATE_BOX), func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::CREATE_BOX), func_ctx.program_context
 			),
 			{ type_arg },
 			output
@@ -51,8 +51,8 @@ namespace compiler::backend_vm::internal {
 		const DVMValue& type_arg, const base::Optional<DVMValue>& output
 	) {
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID(comptime_func_names::CREATE_REF), func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::CREATE_REF), func_ctx.program_context
 			),
 			{ type_arg },
 			output
@@ -90,8 +90,8 @@ namespace compiler::backend_vm::internal {
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaEq should have two arguments");
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID(comptime_func_names::TYPES_EQUAL), func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::TYPES_EQUAL), func_ctx.program_context
 			),
 			type_args,
 			output
@@ -105,8 +105,8 @@ namespace compiler::backend_vm::internal {
 	) {
 		CORE_ASSERT(type_args.size() == 2, "MetaNeq should have two arguments");
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				base::StrID(comptime_func_names::TYPES_NOT_EQUAL), func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				base::StrID(comptime_func_names::TYPES_NOT_EQUAL), func_ctx.program_context
 			),
 			type_args,
 			output
@@ -124,8 +124,8 @@ namespace compiler::backend_vm::internal {
 		);
 		DVMValue builder_value = { DVMLocal{ .name = builder.name, .type = builder.type } };
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				builder_sequence.new_func, func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				builder_sequence.new_func, func_ctx.program_context
 			),
 			{},
 			builder_value
@@ -133,8 +133,8 @@ namespace compiler::backend_vm::internal {
 
 		for (const auto& type_arg: type_args) {
 			func_ctx.handleCall(
-				FunctionCallInfo::fromExternCFunction(
-					builder_sequence.push_func, func_ctx.getProgramContext()
+				FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+					builder_sequence.push_func, func_ctx.program_context
 				),
 				{ builder_value, type_arg },
 				{}
@@ -143,8 +143,8 @@ namespace compiler::backend_vm::internal {
 
 		auto ctx = getQueryContext();
 		func_ctx.handleCall(
-			FunctionCallInfo::fromExternCFunction(
-				builder_sequence.finalize_func, func_ctx.getProgramContext()
+			FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
+				builder_sequence.finalize_func, func_ctx.program_context
 			),
 			{ ctx, builder_value },
 			output
@@ -152,15 +152,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	DVMValue MetaOperationLowerer::getQueryContext() {
-		auto ctx_local
-			= func_ctx.pushTempLocal(vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "ctx");
-
-		func_ctx.pushInstruction(
-			{ OpKind::mov,
-		      ctx_local.asArgument(),
-		      vm::opargs::GlobalOpq(base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT)) }
-		);
-
-		return DVMValue{ ctx_local };
+		return DVMValue{ DVMGlobal{ .name = base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
+			                        .type = vm::code::OpaqueType(base::StrID("opaque_ptr"), 8) } };
 	}
 }

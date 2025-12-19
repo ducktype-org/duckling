@@ -13,9 +13,6 @@
  *    ... -> Finalize).
  * 3. Opaque Pointers: Manages the passing of raw C++ pointers (`tsh::SymbolType*`, builders)
  *    through the VM as `opaque_ptr` types.
- *
- * @note These functions are prefixed with `__comptime_` to avoid namespace collisions
- *       with user-defined functions within the VM context.
  */
 #include "comptime_type_operations.hpp"
 
@@ -37,17 +34,17 @@ namespace compiler::helios::comptime_ops {
 		 * (with an arbitrary number of arguments) are built with help of builders.
 		 * They are used as follows:
 		 *	```
-		 *	builder_ptr = __comptime_X_builder_new()
-		 *	__comptime_X_builder_push(type_ptr)
+		 *	builder_ptr = comptime_X_builder_new()
+		 *	comptime_X_builder_push(builder_ptr, type_ptr)
 		 *	(...)
-		 *	__comptime_X_builder_push(type_ptr)
-		 *	new_type_ptr = __comptime_X_builder_finalize
+		 *	comptime_X_builder_push(builder_ptr, type_ptr)
+		 *	new_type_ptr = comptime_X_builder_finalize(builder_ptr)
 		 *	```
 		 */
 		struct VariantTypeBuilder {
 			std::vector<tsh::SymbolType<>> subtypes;
 
-			tsh::SymbolType<> produce(query::Context& ctx) {
+			tsh::SymbolType<> finalize(query::Context& ctx) {
 				return tsh::SymbolType<>{
 					ctx.query<tsh::QueryVariantType>({ subtypes }),
 					tsh::ReferenceKind::Direct,
@@ -59,7 +56,7 @@ namespace compiler::helios::comptime_ops {
 		struct TupleTypeBuilder {
 			std::vector<tsh::SymbolType<>> subtypes;
 
-			tsh::SymbolType<> produce(query::Context& ctx) {
+			tsh::SymbolType<> finalize(query::Context& ctx) {
 				return tsh::SymbolType<>{
 					ctx.query<tsh::QueryTupleType>({ subtypes }),
 					tsh::ReferenceKind::Direct,
@@ -72,7 +69,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_box,  // NOLINT(readability-identifier-naming)
+		comptime_create_box,
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Box);
@@ -82,8 +79,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_ref,  // NOLINT(readability-identifier-naming)
-
+		comptime_create_ref,
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Ref);
@@ -93,19 +89,14 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_create_const,  // NOLINT(readability-identifier-naming)
-
+		comptime_create_const,
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
-	DEF_VM_EXT_C_FUNC(
-		TupleTypeBuilder*,
-		"opaque_ptr",
-		__comptime_tuple_builder_new  // NOLINT(readability-identifier-naming)
-	) {
+	DEF_VM_EXT_C_FUNC(TupleTypeBuilder*, "opaque_ptr", comptime_tuple_builder_new) {
 		auto* builder = new TupleTypeBuilder();
 		return builder;
 	}
@@ -113,7 +104,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_tuple_builder_push,  // NOLINT(readability-identifier-naming)
+		comptime_tuple_builder_push,
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -123,22 +114,16 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_tuple_builder_finalize,  // NOLINT(readability-identifier-naming)
-
+		comptime_tuple_builder_finalize,
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(TupleTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
-		auto tuple_type = builder_ptr->produce(*ctx_ptr);
+		auto tuple_type = builder_ptr->finalize(*ctx_ptr);
 		delete builder_ptr;
 		return MetaTypeMemoryManager::instance().allocateType(tuple_type);
 	}
 
-	DEF_VM_EXT_C_FUNC(
-		VariantTypeBuilder*,
-		"opaque_ptr",
-		__comptime_variant_builder_new  // NOLINT(readability-identifier-naming)
-
-	) {
+	DEF_VM_EXT_C_FUNC(VariantTypeBuilder*, "opaque_ptr", comptime_variant_builder_new) {
 		auto* builder = new VariantTypeBuilder();
 		return builder;
 	}
@@ -146,8 +131,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		void,
 		"void",
-		__comptime_variant_builder_push,  // NOLINT(readability-identifier-naming)
-
+		comptime_variant_builder_push,
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
@@ -157,12 +141,11 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::SymbolType<>*,
 		"opaque_ptr",
-		__comptime_variant_builder_finalize,  // NOLINT(readability-identifier-naming)
-
+		comptime_variant_builder_finalize,
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(VariantTypeBuilder*, "opaque_ptr", builder_ptr)
 	) {
-		auto variant_type = builder_ptr->produce(*ctx_ptr);
+		auto variant_type = builder_ptr->finalize(*ctx_ptr);
 		delete builder_ptr;
 		return MetaTypeMemoryManager::instance().allocateType(variant_type);
 	}
@@ -170,7 +153,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		bool,
 		"i8",
-		__comptime_types_equal,  // NOLINT(readability-identifier-naming)
+		comptime_types_equal,
 		(tsh::SymbolType<>*, "opaque_ptr", left),
 		(tsh::SymbolType<>*, "opaque_ptr", right)
 	) {
@@ -180,7 +163,7 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		bool,
 		"byte",
-		__comptime_types_not_equal,  // NOLINT(readability-identifier-naming)
+		comptime_types_not_equal,
 		(tsh::SymbolType<>*, "opaque_ptr", left),
 		(tsh::SymbolType<>*, "opaque_ptr", right)
 	) {
@@ -189,27 +172,23 @@ namespace compiler::helios::comptime_ops {
 
 	std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
 		return {
-			VM_INSTANCE_EXT_C_FUNC(__comptime_create_box, __comptime_create_box, pid),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_create_ref, __comptime_create_ref, pid),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_create_const, __comptime_create_const, pid),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_tuple_builder_new, __comptime_tuple_builder_new, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_create_const, comptime_create_const, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_push, comptime_tuple_builder_push, pid),
 			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_tuple_builder_push, __comptime_tuple_builder_push, pid
+				comptime_tuple_builder_finalize, comptime_tuple_builder_finalize, pid
+			),
+			VM_INSTANCE_EXT_C_FUNC(comptime_variant_builder_new, comptime_variant_builder_new, pid),
+			VM_INSTANCE_EXT_C_FUNC(
+				comptime_variant_builder_push, comptime_variant_builder_push, pid
 			),
 			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_tuple_builder_finalize, __comptime_tuple_builder_finalize, pid
+				comptime_variant_builder_finalize, comptime_variant_builder_finalize, pid
 			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_variant_builder_new, __comptime_variant_builder_new, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_variant_builder_push, __comptime_variant_builder_push, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(
-				__comptime_variant_builder_finalize, __comptime_variant_builder_finalize, pid
-			),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_types_equal, __comptime_types_equal, pid),
-			VM_INSTANCE_EXT_C_FUNC(__comptime_types_not_equal, __comptime_types_not_equal, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_types_equal, comptime_types_equal, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_types_not_equal, comptime_types_not_equal, pid),
 		};
 	}
 
@@ -217,7 +196,7 @@ namespace compiler::helios::comptime_ops {
 		// A global storing an opaque pointer to `query::Context` needed for performing type
 		// system calls during DVM evaluation.
 		vm::code::GlobalData context_global;
-		context_global.name = base::StrID("__comptime_query_ctx"),
+		context_global.name = base::StrID("comptime_query_ctx"),
 		context_global.type = base::StrID("opaque_ptr");
 
 		// A function used for initializing the global context pointer. Called by the comptime
@@ -225,8 +204,8 @@ namespace compiler::helios::comptime_ops {
 		// `query::Context*` and sets the value of the global context pointer. The function looks as
 		// follows:
 		//
-		// function __comptime_set_ctx { opaque_ptr } -> void {
-		// 		mov_gopq_lopq __comptime_query_ctx, arg0;
+		// function comptime_set_ctx { opaque_ptr } -> void {
+		// 		mov_gopq_lopq comptime_query_ctx, arg0;
 		// 		ret;
 		// }
 		vm::code::Instruction mov_gopq_lopq = vm::code::instructions::Op_mov_gopq_lopq(
@@ -236,7 +215,7 @@ namespace compiler::helios::comptime_ops {
 		vm::code::Instruction ret = vm::code::instructions::Op_ret{};
 
 		vm::code::Function init_global_context;
-		init_global_context.name = base::StrID("__comptime_set_ctx");
+		init_global_context.name = base::StrID("comptime_set_ctx");
 		init_global_context.body = { mov_gopq_lopq, ret };
 		init_global_context.signature
 			= { .result_type = base::StrID("void"), .parameters = { base::StrID("opaque_ptr") } };
