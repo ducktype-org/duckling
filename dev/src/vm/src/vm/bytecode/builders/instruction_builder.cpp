@@ -35,21 +35,12 @@ namespace vm::code::builders {
 			);
 
 			return [&]<usize... Indices>(std::index_sequence<Indices...>) {
-				(
-					// Lambda is required since CORE_ASSERT is a statement (not an expression),
-				    // so it can't be used in a fold expression as-is.
-					[&] {
-						CORE_ASSERT(
-							std::holds_alternative<std::tuple_element_t<Indices COMMA ArgTypes>>(
-								args.at(Indices)
-							),
-							base::strConcat(
-								"Invalid argument type for arg", Indices, " in ", I::NAME
-							)
-						);
-					}(),
-					...
-				);
+				bool all_ok
+					= (std::holds_alternative<std::tuple_element_t<Indices, ArgTypes>>(
+						   args.at(Indices)
+					   )
+				       && ...);
+				CORE_ASSERT(all_ok, base::strConcat("Invalid argument types for ", I::NAME));
 
 				return I{ std::get<std::tuple_element_t<Indices, ArgTypes>>(args.at(Indices))... };
 			}(std::make_index_sequence<ARITY>{});
