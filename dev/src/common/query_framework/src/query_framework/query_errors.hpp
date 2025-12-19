@@ -11,11 +11,12 @@ namespace query {
 	 * The intended semantics of this type is as follows:
 	 *
 	 * - When a query returns a query::Failed state, it indicates that the query could not
-	 *   successfully compute a result, and that all relevant diagnostic reporting has already been performed.
+	 *   successfully compute a result, and that all relevant diagnostic reporting has already been
+	 * performed.
 	 *
-	 * - Queries that depend on other queries should generally propagate the Failed state if any of their 
-	 *   dependencies return Failed. This allows Failed state to cascade naturally through the query graph,
-	 *   but diagnostic to be reported only once at the source of the failure.
+	 * - Queries that depend on other queries should generally propagate the Failed state if any of
+	 * their dependencies return Failed. This allows Failed state to cascade naturally through the
+	 * query graph, but diagnostic to be reported only once at the source of the failure.
 	 *
 	 * @note This class is intentionally empty.
 	 */

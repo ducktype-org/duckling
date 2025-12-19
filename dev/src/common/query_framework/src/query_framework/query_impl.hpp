@@ -256,10 +256,10 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>), \
 		"loadFromDisk must be implemented for queries that are cached on disk"                                                         \
-	);                                                                                                                                \
+	);                                                                                                                                 \
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
-			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                      \
+			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
 		),                                                                                                                             \
 		"PResult must be a QResult if uses_qresult is true"                                                                            \
 	);                                                                                                                                 \
