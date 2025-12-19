@@ -1,5 +1,3 @@
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>

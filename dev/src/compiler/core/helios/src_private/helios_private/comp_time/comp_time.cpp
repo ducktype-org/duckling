@@ -1,8 +1,5 @@
 #include "comp_time.hpp"
 
-#include "helios/hout/elements/expr.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -17,8 +14,6 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
-
-#include "base/except/exceptions.hpp"
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>

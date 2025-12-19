@@ -55,7 +55,7 @@ const REAL = isI32(i32);
 const FAKE = isI32(i64);
 
 
-# TODOP: issue
+# @TODO: #1727 Change the following, when this gets fixed.
 # fun goo(t: type) -> type = (const t);
 # const GFKH = goo(i32);
 

@@ -140,7 +140,6 @@ namespace {
 		}
 
 		case compiler::tsh::Kind::Bool: {
-			// TODOP: Unify?
 			if (vm_value->type->getName() != base::StrID("byte")
 			    && vm_value->type->getName() != base::StrID("i8"))
 				return std::unexpected(VmEvaluationError(
