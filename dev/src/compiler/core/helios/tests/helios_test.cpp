@@ -161,67 +161,82 @@ private:
 
 		auto unit_type = query::entryPoint<compiler::tsh::QueryUnitType>({});
 
-		{
-			auto a_type   = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
-			auto expected = st(unit_type);
-			ASSERT_EQUAL(expected, a_type);
-		}
-		{
-			auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
-			auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
-			ASSERT_EQUAL(expected, b_type);
-		}
-		{
-			auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
-			auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-			ASSERT_EQUAL(expected, c_type);
-		}
-		{
-			auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-			auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
-				{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
-			);
-			ASSERT_EQUAL(st(expected), d_type);
-		}
-		{
-			auto e_type   = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
-			auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
-				{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
-			));
-			ASSERT_EQUAL(expected, e_type);
-		}
-		{
-			auto mega_type
-				= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
 
-			auto first  = st(unit_type);
-			auto second = st(i128_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
-			auto third  = st(i32_type);
-			auto fourth = st(
-				query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type), st(f16_type) } })
-			);
-			auto fifth_inner_tuple
-				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(f64_type),
-			                                                              st(f128_type) } }));
-			auto fifth
-				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i64_type),
-			                                                                fifth_inner_tuple } }));
-
-			auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
-				{ { first, second, third, fourth, fifth } }
-			));
-
-			ASSERT_EQUAL(expected, mega_type);
-		}
+		// Function evaluation.
 		{
-			auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
-			auto expected   = st(i16_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
-			ASSERT_EQUAL(expected, first_type);
-		}
-		{
-			auto second_type = getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
-			auto expected    = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-			ASSERT_EQUAL(expected, second_type);
+			{
+				auto a_type   = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
+				auto expected = st(unit_type);
+				ASSERT_EQUAL(expected, a_type);
+			}
+			{
+				auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
+				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, b_type);
+			}
+			{
+				auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
+				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, c_type);
+			}
+			{
+				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
+				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				);
+				ASSERT_EQUAL(st(expected), d_type);
+			}
+			{
+				auto e_type   = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
+				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
+					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				));
+				ASSERT_EQUAL(expected, e_type);
+			}
+			{
+				auto mega_type
+					= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
+
+				auto first  = st(unit_type);
+				auto second = st(i128_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto third  = st(i32_type);
+				auto fourth
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type),
+				                                                              st(f16_type) } }));
+				auto fifth_inner_tuple
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(f64_type),
+				                                                              st(f128_type) } }));
+				auto fifth = st(query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { st(i64_type), fifth_inner_tuple } }
+				));
+
+				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
+					{ { first, second, third, fourth, fifth } }
+				));
+
+				ASSERT_EQUAL(expected, mega_type);
+			}
+			{
+				auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
+				auto expected   = st(i16_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, first_type);
+			}
+			{
+				auto second_type
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, second_type);
+			}
+			{  // Type Comparisons
+				auto real_type = getConstValueAs<bool>("REAL", root_scope);
+				ASSERT_EQUAL(real_type, true);
+				auto fake_type = getConstValueAs<bool>("FAKE", root_scope);
+				ASSERT_EQUAL(fake_type, false);
+				auto mega_type = getConstValueAs<bool>("IS_MEGA", root_scope);
+				ASSERT_EQUAL(mega_type, true);
+				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);
+				ASSERT_EQUAL(not_mega_type, false);
+			}
 		}
 	}
 

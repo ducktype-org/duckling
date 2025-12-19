@@ -1,56 +1,22 @@
-fun createUnit() -> type = {
-    var a: type = ();
-    return a;
-}
-const A = createUnit();
+### Tree evaluation.
 
+
+### Function evaluation.
+fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
-const B = createBox(i32);
-
 fun createRef(t: type) -> type = ref t;
-const C = createRef(i32);
-
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
+fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
+fun megaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
+
+const A = createUnit();
+const B = createBox(i32);
+const C = createRef(i32);
 const D = createVariant(i16, i32, i64, i128);
-
-fun createTuple(a: type, b: type, c: type, d: type) -> type = {
-    var e: type = (a, b, c, d);
-    return e;
-}
 const E = createTuple(i16, i32, i64, i128);
-
-fun megaType(a: type) -> type = {
-    var c: type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
-    return c;
-}
 const megaGigaType = megaType(i128);
 
-fun isMegaWithI128(a: type) -> bool = {
-    if (a == (i16, i32, i64, i128)) {
-        return true;
-    }
-    return false;
-}
-const IS_MEGA = isMegaWithI128((i16, i32, i64, i128));
-
-
-// TODOP: Link this in tests
-fun isI32(a: type) -> bool = {
-    if (a == i32) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-const REAL = isI32(i32);
-const FAKE = isI32(i64);
-
-
-# TODOP: issue
-# fun goo(t: type) -> type = (const t);
-# const GFKH = goo(i32);
-
+# @TODO: #1571 Remove type specifiers from this file once casts exist in DVM.
 fun fib(n: i64) -> i64 = {
    if (n < 2i64) { return n; }
    return fib(n - 1i64) + fib(n - 2i64);
@@ -66,3 +32,30 @@ fun complexLogic(n: i64) -> type = {
 
 const FIRST = complexLogic(5);
 const SECOND = complexLogic(10);
+
+fun isMegaWithI128(a: type) -> bool = {
+    if (a == (i16, i32, i64, i128)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+const IS_MEGA = isMegaWithI128((i16, i32, i64, i128));
+const NOT_IS_MEGA = isMegaWithI128((i16, f32, i64, i128));
+
+
+fun isI32(a: type) -> bool = {
+    if (a == i32) {
+        return true;
+    } else {
+        return false;
+    }
+}
+const REAL = isI32(i32);
+const FAKE = isI32(i64);
+
+
+# TODOP: issue
+# fun goo(t: type) -> type = (const t);
+# const GFKH = goo(i32);
+

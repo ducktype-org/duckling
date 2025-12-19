@@ -435,9 +435,6 @@ namespace compiler::mir {
 		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
 		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
 		 * Unit). Other nodes are delegated back to the standard expression lowerer.
-		 * @TODO: #1693 This is a temporary approach since tuples are not supported in DVM, so
-		 * casting from them is impossible. This should probably get removed and liftToType should
-		 * be handled in MIR, LIR and DVM
 		 */
 		ExprLowerRes lowerAndLiftToTypeRecursively(
 			const hc::Expr& expr, BlockBuilderRef continuation
