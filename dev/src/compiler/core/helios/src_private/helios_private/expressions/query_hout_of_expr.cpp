@@ -132,21 +132,19 @@ namespace compiler::helios::code {
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				if (stmt->getOperator().str() == "|") {
-					// @todo HOUT 2.0:
-					// Here we assume that "|" always produces a variant (likely valid).
-					// If it does not, and "|" will remain a binary operator,
-					// we will have to do something with it.
-					// (likely if-out if all sub expressions are meta or non-meta, throw otherwise,
-					// (require parentheses))
-
-					auto sub_exprs = getVariantSubExprs(ctx, stmt);
-					// @todo HOUT 2.0:
-					// validate that all sub types are meta
-
+					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
+					// Expect all subexpressions in variant constructor to be Meta types or try to
+					// lift them if they aren't.
+					const auto meta_type = tsh::SymbolType<>{
+						ctx.query<tsh::QueryMetaType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = fromPST(ctx, sub_expr);
+						auto sub_expr_hout = getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;

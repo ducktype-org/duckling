@@ -11,6 +11,7 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include <algorithm>
 #include <ranges>
 #include <variant>
 
@@ -81,8 +82,8 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("string literal");
 		}
 
-		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
-			throw base::NotYetImplemented("type literal");
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value_type } });
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
@@ -206,8 +207,33 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
-		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
-			throw base::NotYetImplemented("variant constructor");
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Variant Type Constructor should be meta"
+			);
+
+			auto hole = continuation->addHole();
+
+			BlockBuilderRef       current = continuation;
+			std::vector<MIRValue> subtype_values;
+			subtype_values.reserve(expr.subtypes.size());
+
+			for (const auto& element: expr.subtypes | std::views::reverse) {
+				auto elem_lowered = lowerSubExpr(*element, current);
+				subtype_values.push_back(elem_lowered.getResult(function));
+				current = elem_lowered.begin;
+			}
+			std::ranges::reverse(subtype_values);
+
+			noValueOutput(
+				current,
+				hole,
+				Instruction(Operation::MetaCreateVariant, {}, subtype_values, {}, expr_scope),
+				result_type
+			);
+			return;
 		}
 
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
@@ -371,12 +397,63 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitLiftToTypeExpr(const helios::code::LiftToTypeExpr&) override {
-			throw base::NotYetImplemented("lift to type expr lowering");
+		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
+			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
+			valueOutput(result.begin, result.getResult(function));
 		}
 
 
 	private:
+		/**
+		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
+		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
+		 * Unit). Other nodes are delegated back to the standard expression lowerer.
+		 * @TODO: #1693 This is a temporary approach since tuples are not supported in DVM, so
+		 * casting from them is impossible. This should probably get removed and liftToType should
+		 * be handled in MIR, LIR and DVM
+		 */
+		ExprLowerRes lowerAndLiftToTypeRecursively(
+			const hc::Expr& expr, BlockBuilderRef continuation
+		) {
+			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
+				tsh::SymbolType<> unit_sym_type{
+					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
+			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
+				auto                  hole    = continuation->addHole();
+				BlockBuilderRef       current = continuation;
+				std::vector<MIRValue> element_types;
+				element_types.reserve(tuple_expr->elements.size());
+
+				for (const auto& element: tuple_expr->elements | std::views::reverse) {
+					auto elem_result = lowerAndLiftToTypeRecursively(*element, current);
+					element_types.push_back(elem_result.getResult(function));
+					current = elem_result.begin;
+				}
+				std::ranges::reverse(element_types);
+
+				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
+					                           tsh::ReferenceKind::Direct,
+					                           tsh::Mutability::Mutable };
+
+				return ExprLowerRes(
+					current,
+					ExprLowerRes::Finalizer{
+						.hole = hole,
+						.instr
+						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
+						.type = result_type }
+				);
+			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr))
+				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
+
+			return lowerSubExpr(expr, continuation);
+		}
+
 		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 			using enum hc::BuiltinBinary;
 			switch (builtin) {
@@ -454,6 +531,10 @@ namespace compiler::mir {
 				return Operation::FloatNeg;
 			case BooleanNot:
 				return Operation::BooleanNot;
+			case Box:
+				return Operation::MetaCreateBox;
+			case Ref:
+				return Operation::MetaCreateRef;
 			default:
 				CORE_UNREACHABLE();
 			}
