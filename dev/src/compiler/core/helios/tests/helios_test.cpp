@@ -1262,7 +1262,7 @@ private:
 					auto if_stmt_casted
 						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
 					if (!if_stmt_casted) {
-						// we only test if statements here
+						// we only test if-statements here
 						continue;
 					}
 

@@ -33,8 +33,6 @@
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 
-// #include <variant>
-
 namespace compiler::helios::code {
 
 	/**
@@ -382,9 +380,9 @@ namespace compiler::helios::code {
 			);
 			if (lookup_result.hasFailed()) return query::Failed();
 
-			// @TODO: handle dealias expressions #981:
+			// @TODO: #981 handle dealias expressions:
 			const auto& sym = lookup_result.valueOrThrow().back();
-			// @TODO: handle dealias expressions #981:
+			// @TODO: #981 handle dealias expressions:
 			return processNamespaceOrValue(sym);
 		}
 
@@ -457,7 +455,7 @@ namespace compiler::helios::code {
 
 			variant_match(looked_up_symbols.valueOrPanic()) {
 				variant_case(SymbolList, result) {
-					// @TODO: handle dealias expressions #981:
+					// @TODO: #981 handle dealias expressions:
 					auto sym = result.back();
 
 					// const auto sym = looked_up_symbols.valueOrThrow().back();
@@ -515,7 +513,7 @@ namespace compiler::helios::code {
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
 			if (lookup_result.hasFailed()) return query::Failed();
-			// @TODO: handle dealias expressions #981:
+			// @TODO: #981 handle dealias expressions:
 			const auto& sym = lookup_result.valueOrThrow().back();
 			return processNamespaceOrValue(sym);
 		}

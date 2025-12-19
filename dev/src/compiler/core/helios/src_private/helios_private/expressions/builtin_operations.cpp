@@ -16,7 +16,7 @@ namespace {
 	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
 	 *
-	 * @TODO: #973 this function panics on failure, should probably propagate failed instead.
+	 * @TODO: #973 this function panics on query::Failed in coercions, should probably propagate failed instead.
 	 * If we conclude, that this will return empty optional on failure, we should document it here.
 	 */
 	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypewithCoercion(

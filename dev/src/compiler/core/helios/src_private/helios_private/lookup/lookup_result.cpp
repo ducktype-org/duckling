@@ -22,8 +22,8 @@ namespace compiler::helios {
 		if (isEmpty()) return errors::SymbolNotFound();
 		if (!isSingle()) return errors::Ambiguity();
 
-		// if leaves has exactly one symbol,
-		// it must work (as symbolCount() == 1):
+		// The following line must work, since at this point we know that
+		// symbolCount() == 1:
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");

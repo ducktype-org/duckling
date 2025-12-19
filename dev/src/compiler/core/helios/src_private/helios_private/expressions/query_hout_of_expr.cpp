@@ -12,7 +12,6 @@
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-// #include <helios_private/errors/interactive_errors.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/collections/optional.hpp>

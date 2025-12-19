@@ -41,14 +41,6 @@ namespace query {
 	public:
 		/**
 		 * @brief Standard value state constructor.
-		 *
-		 * @note If variant based value storage is used, provided parameters
-		 * are forwarded to the constructor of the variant type.
-		 * This means that `std::in_place_type_t<DecidedType>()` can be used as the first parameter
-		 * to explicitly specify which type to construct.
-		 * This can be especially useful when given parameters can construct
-		 * multiple types of the variant and the compiler cannot deduce
-		 * which one to use.
 		 */
 		template<class... Args>
 		requires std::is_constructible_v<Value, Args...> QResult(Args&&... args):
@@ -64,6 +56,9 @@ namespace query {
 		constexpr QResult& operator=(QResult&&) noexcept = default;
 		constexpr QResult& operator=(const QResult&)     = default;
 
+		/**
+		 * @brief Assignment forming a Value state.
+		 */
 		template<class OthValue>
 		requires std::is_constructible_v<Value, OthValue&&>
 		constexpr QResult& operator=(OthValue&& value) {
@@ -71,6 +66,9 @@ namespace query {
 			return *this;
 		}
 
+		/**
+		 * @brief Assignment forming a Failed state.
+		 */
 		constexpr QResult& operator=(query::Failed) {
 			storage = query::Failed{};
 			return *this;
@@ -196,8 +194,8 @@ namespace query {
 
 /**
  * @brief Since C++ doesn't have an error-propagating operator, this macro
- * essentially implements it - checks if `value` has an error and if it does, then
- * returns an error as well, otherwise stores an unpacked value
+ * essentially implements it - checks if `value` is in Failed state and if it does, then
+ * returns a Failed state as well, otherwise stores an unpacked value
  * inside a new variable named `name`.
  * For interested: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2561r1.html#ref-P2561R0
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement

@@ -130,7 +130,7 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrPanic().isInvalid())
+			if (coercion.valueOrThrow().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
@@ -175,7 +175,7 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.valueOrPanic().isInvalid())
+			if (coercion.valueOrThrow().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type    = provided_type,
 					                                      .expected_type = expected_type,
