@@ -772,36 +772,32 @@ private:
 	void testQueryResult() {
 		using namespace query;
 
-		query::QResult<int, float> hr1 = 1;
+		query::QResult<int> hr1 = 1;
 		ASSERT_TRUE(hr1.hasValue());
-		ASSERT_TRUE(!hr1.hasValueByType<int>());
-		ASSERT_EQUAL(1, hr1.getValueByTypeOrPanic<int>());
+		ASSERT_EQUAL(1, hr1.valueOrPanic());
 
-		int                      temp_val = hr1.getValueByTypeOrPanic<int>();
+		int                      temp_val = hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		query::QResult<std::string, float> hr2 = "Value";
+		query::QResult<std::string> hr2 = "Value";
 		// base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
 		// ASSERT_EQUAL("Value", stolen_opt);
 
 		std::string                           info  = "Hello";
-		query::QResult<int, std::string_view> whoa2 = std::string_view(info);
+		query::QResult<std::string_view> whoa2 = std::string_view(info);
 		ASSERT_TRUE(whoa2.hasValue());
-		ASSERT_TRUE(!whoa2.hasValueByType<int>());
-		ASSERT_TRUE(whoa2.hasValueByType<std::string_view>());
-		ASSERT_EQUAL(whoa2.getValueByTypeOrPanic<std::string_view>(), "Hello");
 
-		struct Err1 {};
+		// struct Err1 {};
 
-		struct Err2 {};
+		// struct Err2 {};
 
-		struct Err3 {};
+		// struct Err3 {};
 
-		struct Err4 {};
+		// struct Err4 {};
 
-		query::QResult<int, Err2, Err4> sub_result = Err2();
+		// query::QResult<int, Err2, Err4> sub_result = Err2();
 
 		// bool entered2 = false;
 		// ASSERT_TRUE(!result.hasValue());
