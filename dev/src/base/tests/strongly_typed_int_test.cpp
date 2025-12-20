@@ -66,11 +66,11 @@ public:
 		assertTrue(b == 8, "Cast failed 6");
 
 		u8   no(0);
-		u8   yes(0);
+		u8   yes(1);
 		bool x = static_cast<bool>(no);
 		assertFalse(x, "Cast failed 7");
 		bool y = static_cast<bool>(yes);
-		assertFalse(y, "Cast failed 8");
+		assertTrue(y, "Cast failed 8");
 	}
 
 	~StronglyTypedIntTest() override = default;

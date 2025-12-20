@@ -75,12 +75,11 @@
 		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}       \
 		template<typename T>                                                                       \
 		requires(std::is_arithmetic_v<T>)                                                          \
-		inline constexpr explicit(EXPLICIT_BASE) NAME(T x) noexcept:                               \
-			  value(static_cast<BASE>(x)) {}                                                       \
+		inline constexpr explicit(true) NAME(T x) noexcept: value(static_cast<BASE>(x)) {}         \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }  \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
 		template<typename T>                                                                       \
-		inline constexpr explicit(EXPLICIT_BASE) operator T() const noexcept {                     \
+		inline constexpr explicit(true) operator T() const noexcept {                              \
 			return static_cast<T>(value);                                                          \
 		}                                                                                          \
 		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
