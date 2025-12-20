@@ -6,7 +6,7 @@
  * compilation times and artifact sizes get very unpleasant.
  * (For connoisseurs: getting to the n-th alternative of a std::variant
  * is fast at runtime, but at compile time requires instantiating O(n) templates.
- * Furhtermore, each alternative does not share the template instances with the other alternatives
+ * Furthermore, each alternative does not share the template instances with the other alternatives
  * resulting in a quadratic number of templates getting instantiated when e.g. visiting a variant.)
  *
  * This code uses a lot of X-macros, making it somewhat unwieldy, but strives to provide a usable
@@ -17,9 +17,9 @@
  * - `Instruction::get<ConcreteInstructionType>() -> ConcreteInstructionType`
  * - `Instruction::getMaybe<ConcreteInstructionType>() -> Optional<ConcreteInstructionType>`
  * - `Instruction::visit(CallableAcceptingEachConcreteInstruction) -> ResultOfSaidCallable`
- * - `instr_match` macro anologous to `variant_match`
+ * - `instr_match` macro analogous to `variant_match`
  * - `args() -> std::vector<opargs::OpCodeArgCRef>` helpful for generic operations on args
- *   (like serialisation) with runtime dispatch for faster compilation and less template mess
+ *   (like serialization) with runtime dispatch for faster compilation and less template mess
  */
 
 #pragma once
@@ -36,6 +36,11 @@
 #define VM_OPCODE_FROM_NAME(name) vm::code::OpCode::Op_##name
 
 namespace vm::code {
+	constexpr usize INSTR_COUNT = 1  // `instructions::Comment` treated separately
+#define HANDLE_INSTR(name) +1
+#include "instruction_definitions.hpp"
+#undef HANDLE_INSTR
+		;
 
 	enum class OpCode : u64 {
 #define HANDLE_INSTR(name) Op_##name,
@@ -74,7 +79,7 @@ namespace vm::code {
 #define ARG_TYPE_LIST(type, name)            , type
 
 		// Concrete instruction type
-		// Be careful when editing: notice that many things have to be seperately defined
+		// Be careful when editing: notice that many things have to be separately defined
 		// for `Comment` as it's not an instruction defined in the definition file.
 #define HANDLE_INSTR_ARGS(name, ...)                                                                \
 	struct Op_##name final: detail::InstructionBase {                                               \
@@ -107,8 +112,8 @@ namespace vm::code {
 
 		/**
 		 * @brief An extra instruction that represents a comment.
-		 * @note It also helps with macros, as it often goes after an othewise trailing comma.
-		 * It's treated seperately, e.g. the parser does not generate it.
+		 * @note It also helps with macros, as it often goes after an otherwise trailing comma.
+		 * It's treated separately, e.g. the parser does not generate it.
 		 * It is however useful for debugging the compiler backend.
 		 */
 		struct Comment final: detail::InstructionBase {
@@ -140,7 +145,7 @@ namespace vm::code {
 	}
 
 	/// Handmade variant of all concrete instructions with helper accessors.
-	// Be careful when editing: notice that many things have to be seperately defined
+	// Be careful when editing: notice that many things have to be separately defined
 	// for `Comment` as it's not an instruction defined in the definition file.
 	class Instruction final {
 		// Sanity check for better errors.
@@ -171,7 +176,7 @@ namespace vm::code {
 		[[nodiscard]] OpCode opcode() const { return code; }
 
 		[[nodiscard]] base::StrID name() const {
-			static std::array map = {
+			static std::array<base::StrID, INSTR_COUNT> map = {
 #define HANDLE_INSTR(name) base::StrID(#name),
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
@@ -180,7 +185,7 @@ namespace vm::code {
 			return map.at(std::to_underlying(opcode()));
 		}
 
-		// Specialisations are outside the class, as required by gcc
+		// Specializations are outside the class, as required by gcc
 		template<IsInstruction T>
 		[[nodiscard]] base::Optional<Ref<T>> getMaybe();
 

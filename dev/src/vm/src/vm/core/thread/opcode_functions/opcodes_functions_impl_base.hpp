@@ -1,4 +1,3 @@
-
 /**
  * @file opcodes_functions_impl_base.hpp
  * @brief The opcodes functions implementations.
@@ -195,8 +194,8 @@ namespace vm {
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
 			lhs OP     rhs;                                                              \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
@@ -204,64 +203,70 @@ namespace vm {
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = safeReadBytes<TYPE>(instr->arg1);                           \
-			lhs OP     rhs;                                                              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = safeReadBytes<TYPE>(instr->arg1);                           \
+			lhs        OP static_cast<TYPE>(rhs);                                        \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-#define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+		{                                                                                 \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+		{                                                                                 \
+			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
+			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                  \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			TYPE lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
-			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
+			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	// @TODO: Check for over/under flows. This should be done in #1216.
-	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
-	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
-	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
-	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
-	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
-	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
-	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
-	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
-	DEFINE_DIVISION_OP(div, 64, i64)
-	DEFINE_DIVISION_OP(div, 32, i32)
+// @TODO: #1216 Check for over/under flows.
+#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
 
-	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
-	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
-	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
-	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
-	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
-	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
+#define FLOAT_64_TYPE double
+#define FLOAT_32_TYPE float
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
-	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
-	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
-	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
-	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
-	DEFINE_DIVISION_OP(udiv, 64, u64)
-	DEFINE_DIVISION_OP(udiv, 32, u32)
+	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
+
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
@@ -309,23 +314,29 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
-	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
-	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
-	DEFINE_COMPARISON_OP(cmpL, 64, i64, <)
-	DEFINE_COMPARISON_OP(ucmpL, 64, u64, <)
+#define DEFINE_INT_N_COMPARISONS(SIZE)              \
+	DEFINE_COMPARISON_OP(cmpEq, SIZE, i##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(cmpNeq, SIZE, i##SIZE, !=) \
+	DEFINE_COMPARISON_OP(cmpGt, SIZE, i##SIZE, >)   \
+	DEFINE_COMPARISON_OP(cmpGe, SIZE, i##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(cmpLt, SIZE, i##SIZE, <)   \
+	DEFINE_COMPARISON_OP(cmpLe, SIZE, i##SIZE, <=)  \
+	DEFINE_COMPARISON_OP(ucmpGt, SIZE, u##SIZE, >)  \
+	DEFINE_COMPARISON_OP(ucmpGe, SIZE, u##SIZE, >=) \
+	DEFINE_COMPARISON_OP(ucmpLt, SIZE, u##SIZE, <)  \
+	DEFINE_COMPARISON_OP(ucmpLe, SIZE, u##SIZE, <=)
 
-	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
-	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
-	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
-	DEFINE_COMPARISON_OP(cmpL, 32, i32, <)
-	DEFINE_COMPARISON_OP(ucmpL, 32, u32, <)
+	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
 
-	DEFINE_COMPARISON_OP(cmpEq, 8, i8, ==)
-	DEFINE_COMPARISON_OP(cmpG, 8, i8, >)
-	DEFINE_COMPARISON_OP(ucmpG, 8, u8, >)
-	DEFINE_COMPARISON_OP(cmpL, 8, i8, <)
-	DEFINE_COMPARISON_OP(ucmpL, 8, u8, <)
+#define DEFINE_FLOAT_N_COMPARISONS(SIZE)                         \
+	DEFINE_COMPARISON_OP(fcmpEq, SIZE, FLOAT_##SIZE##_TYPE, ==)  \
+	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, FLOAT_##SIZE##_TYPE, !=) \
+	DEFINE_COMPARISON_OP(fcmpGt, SIZE, FLOAT_##SIZE##_TYPE, >)   \
+	DEFINE_COMPARISON_OP(fcmpGe, SIZE, FLOAT_##SIZE##_TYPE, >=)  \
+	DEFINE_COMPARISON_OP(fcmpLt, SIZE, FLOAT_##SIZE##_TYPE, <)   \
+	DEFINE_COMPARISON_OP(fcmpLe, SIZE, FLOAT_##SIZE##_TYPE, <=)
+
+	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
@@ -352,38 +363,6 @@ namespace vm {
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
-		{
-			i64 value = readFromStack<i64>(local_stack, instr->arg0);
-			writeToStack<i64>(local_stack, instr->arg0, value * -1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
-		{
-			i32 value = readFromStack<i32>(local_stack, instr->arg0);
-			writeToStack<i32>(local_stack, instr->arg0, value * -1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
-		{
-			auto value = readFromStack<double>(local_stack, instr->arg0);
-			writeToStack<double>(local_stack, instr->arg0, value * -1.0);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
-		{
-			auto value = readFromStack<float>(local_stack, instr->arg0);
-			writeToStack<float>(local_stack, instr->arg0, value * -1.0f);
-		}
-		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {

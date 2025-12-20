@@ -537,58 +537,166 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_lopq_gopq) {}
 			instr_case_novalue(Op_mov_gopq_lopq) {}
 			instr_case_novalue(Op_setNull_lptr) {}
+
 			instr_case_novalue(Op_add_l64_l64) {}
 			instr_case_novalue(Op_add_l64_imm) {}
-			instr_case_novalue(Op_add_l32_l32) {}
-			instr_case_novalue(Op_add_l32_imm) {}
 			instr_case_novalue(Op_sub_l64_l64) {}
 			instr_case_novalue(Op_sub_l64_imm) {}
-			instr_case_novalue(Op_sub_l32_l32) {}
-			instr_case_novalue(Op_sub_l32_imm) {}
 			instr_case_novalue(Op_mul_l64_l64) {}
 			instr_case_novalue(Op_mul_l64_imm) {}
-			instr_case_novalue(Op_mul_l32_l32) {}
-			instr_case_novalue(Op_mul_l32_imm) {}
 			instr_case_novalue(Op_mod_l64_l64) {}
 			instr_case_novalue(Op_mod_l64_imm) {}
-			instr_case_novalue(Op_mod_l32_l32) {}
-			instr_case_novalue(Op_mod_l32_imm) {}
 			instr_case_novalue(Op_div_l64_l64) {}
 			instr_case_novalue(Op_div_l64_imm) {}
+			instr_case_novalue(Op_neg_l64) {}
+
+			instr_case_novalue(Op_add_l32_l32) {}
+			instr_case_novalue(Op_add_l32_imm) {}
+			instr_case_novalue(Op_sub_l32_l32) {}
+			instr_case_novalue(Op_sub_l32_imm) {}
+			instr_case_novalue(Op_mul_l32_l32) {}
+			instr_case_novalue(Op_mul_l32_imm) {}
+			instr_case_novalue(Op_mod_l32_l32) {}
+			instr_case_novalue(Op_mod_l32_imm) {}
 			instr_case_novalue(Op_div_l32_l32) {}
 			instr_case_novalue(Op_div_l32_imm) {}
-			instr_case_novalue(Op_neg_l64) {}
 			instr_case_novalue(Op_neg_l32) {}
+
+			instr_case_novalue(Op_add_l16_l16) {}
+			instr_case_novalue(Op_add_l16_imm) {}
+			instr_case_novalue(Op_sub_l16_l16) {}
+			instr_case_novalue(Op_sub_l16_imm) {}
+			instr_case_novalue(Op_mul_l16_l16) {}
+			instr_case_novalue(Op_mul_l16_imm) {}
+			instr_case_novalue(Op_mod_l16_l16) {}
+			instr_case_novalue(Op_mod_l16_imm) {}
+			instr_case_novalue(Op_div_l16_l16) {}
+			instr_case_novalue(Op_div_l16_imm) {}
+			instr_case_novalue(Op_neg_l16) {}
+
+			instr_case_novalue(Op_add_l8_l8) {}
+			instr_case_novalue(Op_add_l8_imm) {}
+			instr_case_novalue(Op_sub_l8_l8) {}
+			instr_case_novalue(Op_sub_l8_imm) {}
+			instr_case_novalue(Op_mul_l8_l8) {}
+			instr_case_novalue(Op_mul_l8_imm) {}
+			instr_case_novalue(Op_mod_l8_l8) {}
+			instr_case_novalue(Op_mod_l8_imm) {}
+			instr_case_novalue(Op_div_l8_l8) {}
+			instr_case_novalue(Op_div_l8_imm) {}
+			instr_case_novalue(Op_neg_l8) {}
+
 			instr_case_novalue(Op_cmpEq_l64_l64) {}
 			instr_case_novalue(Op_cmpEq_l64_imm) {}
+			instr_case_novalue(Op_cmpNeq_l64_l64) {}
+			instr_case_novalue(Op_cmpNeq_l64_imm) {}
 			instr_case_novalue(Op_cmpEq_l32_l32) {}
 			instr_case_novalue(Op_cmpEq_l32_imm) {}
+			instr_case_novalue(Op_cmpNeq_l32_l32) {}
+			instr_case_novalue(Op_cmpNeq_l32_imm) {}
+			instr_case_novalue(Op_cmpEq_l16_l16) {}
+			instr_case_novalue(Op_cmpEq_l16_imm) {}
+			instr_case_novalue(Op_cmpNeq_l16_l16) {}
+			instr_case_novalue(Op_cmpNeq_l16_imm) {}
 			instr_case_novalue(Op_cmpEq_l8_l8) {}
 			instr_case_novalue(Op_cmpEq_l8_imm) {}
-			instr_case_novalue(Op_cmpG_l64_l64) {}
-			instr_case_novalue(Op_cmpG_l64_imm) {}
-			instr_case_novalue(Op_cmpG_l32_l32) {}
-			instr_case_novalue(Op_cmpG_l32_imm) {}
-			instr_case_novalue(Op_cmpG_l8_l8) {}
-			instr_case_novalue(Op_cmpG_l8_imm) {}
-			instr_case_novalue(Op_ucmpG_l64_l64) {}
-			instr_case_novalue(Op_ucmpG_l64_imm) {}
-			instr_case_novalue(Op_ucmpG_l32_l32) {}
-			instr_case_novalue(Op_ucmpG_l32_imm) {}
-			instr_case_novalue(Op_ucmpG_l8_l8) {}
-			instr_case_novalue(Op_ucmpG_l8_imm) {}
-			instr_case_novalue(Op_cmpL_l64_l64) {}
-			instr_case_novalue(Op_cmpL_l64_imm) {}
-			instr_case_novalue(Op_cmpL_l32_l32) {}
-			instr_case_novalue(Op_cmpL_l32_imm) {}
-			instr_case_novalue(Op_cmpL_l8_l8) {}
-			instr_case_novalue(Op_cmpL_l8_imm) {}
-			instr_case_novalue(Op_ucmpL_l64_l64) {}
-			instr_case_novalue(Op_ucmpL_l64_imm) {}
-			instr_case_novalue(Op_ucmpL_l32_l32) {}
-			instr_case_novalue(Op_ucmpL_l32_imm) {}
-			instr_case_novalue(Op_ucmpL_l8_l8) {}
-			instr_case_novalue(Op_ucmpL_l8_imm) {}
+			instr_case_novalue(Op_cmpNeq_l8_l8) {}
+			instr_case_novalue(Op_cmpNeq_l8_imm) {}
+
+			instr_case_novalue(Op_cmpGt_l64_l64) {}
+			instr_case_novalue(Op_cmpGt_l64_imm) {}
+			instr_case_novalue(Op_cmpGe_l64_l64) {}
+			instr_case_novalue(Op_cmpGe_l64_imm) {}
+			instr_case_novalue(Op_cmpGt_l32_l32) {}
+			instr_case_novalue(Op_cmpGt_l32_imm) {}
+			instr_case_novalue(Op_cmpGe_l32_l32) {}
+			instr_case_novalue(Op_cmpGe_l32_imm) {}
+			instr_case_novalue(Op_cmpGt_l16_l16) {}
+			instr_case_novalue(Op_cmpGt_l16_imm) {}
+			instr_case_novalue(Op_cmpGe_l16_l16) {}
+			instr_case_novalue(Op_cmpGe_l16_imm) {}
+			instr_case_novalue(Op_cmpGt_l8_l8) {}
+			instr_case_novalue(Op_cmpGt_l8_imm) {}
+			instr_case_novalue(Op_cmpGe_l8_l8) {}
+			instr_case_novalue(Op_cmpGe_l8_imm) {}
+
+			instr_case_novalue(Op_ucmpGt_l64_l64) {}
+			instr_case_novalue(Op_ucmpGt_l64_imm) {}
+			instr_case_novalue(Op_ucmpGe_l64_l64) {}
+			instr_case_novalue(Op_ucmpGe_l64_imm) {}
+			instr_case_novalue(Op_ucmpGt_l32_l32) {}
+			instr_case_novalue(Op_ucmpGt_l32_imm) {}
+			instr_case_novalue(Op_ucmpGe_l32_l32) {}
+			instr_case_novalue(Op_ucmpGe_l32_imm) {}
+			instr_case_novalue(Op_ucmpGt_l16_l16) {}
+			instr_case_novalue(Op_ucmpGt_l16_imm) {}
+			instr_case_novalue(Op_ucmpGe_l16_l16) {}
+			instr_case_novalue(Op_ucmpGe_l16_imm) {}
+			instr_case_novalue(Op_ucmpGt_l8_l8) {}
+			instr_case_novalue(Op_ucmpGt_l8_imm) {}
+			instr_case_novalue(Op_ucmpGe_l8_l8) {}
+			instr_case_novalue(Op_ucmpGe_l8_imm) {}
+
+			instr_case_novalue(Op_cmpLt_l64_l64) {}
+			instr_case_novalue(Op_cmpLt_l64_imm) {}
+			instr_case_novalue(Op_cmpLe_l64_l64) {}
+			instr_case_novalue(Op_cmpLe_l64_imm) {}
+			instr_case_novalue(Op_cmpLt_l32_l32) {}
+			instr_case_novalue(Op_cmpLt_l32_imm) {}
+			instr_case_novalue(Op_cmpLe_l32_l32) {}
+			instr_case_novalue(Op_cmpLe_l32_imm) {}
+			instr_case_novalue(Op_cmpLt_l16_l16) {}
+			instr_case_novalue(Op_cmpLt_l16_imm) {}
+			instr_case_novalue(Op_cmpLe_l16_l16) {}
+			instr_case_novalue(Op_cmpLe_l16_imm) {}
+			instr_case_novalue(Op_cmpLt_l8_l8) {}
+			instr_case_novalue(Op_cmpLt_l8_imm) {}
+			instr_case_novalue(Op_cmpLe_l8_l8) {}
+			instr_case_novalue(Op_cmpLe_l8_imm) {}
+
+			instr_case_novalue(Op_ucmpLt_l64_l64) {}
+			instr_case_novalue(Op_ucmpLt_l64_imm) {}
+			instr_case_novalue(Op_ucmpLe_l64_l64) {}
+			instr_case_novalue(Op_ucmpLe_l64_imm) {}
+			instr_case_novalue(Op_ucmpLt_l32_l32) {}
+			instr_case_novalue(Op_ucmpLt_l32_imm) {}
+			instr_case_novalue(Op_ucmpLe_l32_l32) {}
+			instr_case_novalue(Op_ucmpLe_l32_imm) {}
+			instr_case_novalue(Op_ucmpLt_l16_l16) {}
+			instr_case_novalue(Op_ucmpLt_l16_imm) {}
+			instr_case_novalue(Op_ucmpLe_l16_l16) {}
+			instr_case_novalue(Op_ucmpLe_l16_imm) {}
+			instr_case_novalue(Op_ucmpLt_l8_l8) {}
+			instr_case_novalue(Op_ucmpLt_l8_imm) {}
+			instr_case_novalue(Op_ucmpLe_l8_l8) {}
+			instr_case_novalue(Op_ucmpLe_l8_imm) {}
+
+			instr_case_novalue(Op_fcmpEq_l64_l64) {}
+			instr_case_novalue(Op_fcmpEq_l64_imm) {}
+			instr_case_novalue(Op_fcmpNeq_l64_l64) {}
+			instr_case_novalue(Op_fcmpNeq_l64_imm) {}
+			instr_case_novalue(Op_fcmpGt_l64_l64) {}
+			instr_case_novalue(Op_fcmpGt_l64_imm) {}
+			instr_case_novalue(Op_fcmpGe_l64_l64) {}
+			instr_case_novalue(Op_fcmpGe_l64_imm) {}
+			instr_case_novalue(Op_fcmpLt_l64_l64) {}
+			instr_case_novalue(Op_fcmpLt_l64_imm) {}
+			instr_case_novalue(Op_fcmpLe_l64_l64) {}
+			instr_case_novalue(Op_fcmpLe_l64_imm) {}
+
+			instr_case_novalue(Op_fcmpEq_l32_l32) {}
+			instr_case_novalue(Op_fcmpEq_l32_imm) {}
+			instr_case_novalue(Op_fcmpNeq_l32_l32) {}
+			instr_case_novalue(Op_fcmpNeq_l32_imm) {}
+			instr_case_novalue(Op_fcmpGt_l32_l32) {}
+			instr_case_novalue(Op_fcmpGt_l32_imm) {}
+			instr_case_novalue(Op_fcmpGe_l32_l32) {}
+			instr_case_novalue(Op_fcmpGe_l32_imm) {}
+			instr_case_novalue(Op_fcmpLt_l32_l32) {}
+			instr_case_novalue(Op_fcmpLt_l32_imm) {}
+			instr_case_novalue(Op_fcmpLe_l32_l32) {}
+			instr_case_novalue(Op_fcmpLe_l32_imm) {}
+
 			instr_case_novalue(Op_cmpNull_lptr) {}
 
 			instr_case_novalue(Op_fadd_l64_l64) {}
@@ -616,16 +724,32 @@ class FunctionValidator {
 
 			instr_case_novalue(Op_umul_l64_l64) {}
 			instr_case_novalue(Op_umul_l64_imm) {}
-			instr_case_novalue(Op_umul_l32_l32) {}
-			instr_case_novalue(Op_umul_l32_imm) {}
 			instr_case_novalue(Op_umod_l64_l64) {}
 			instr_case_novalue(Op_umod_l64_imm) {}
-			instr_case_novalue(Op_umod_l32_l32) {}
-			instr_case_novalue(Op_umod_l32_imm) {}
 			instr_case_novalue(Op_udiv_l64_l64) {}
 			instr_case_novalue(Op_udiv_l64_imm) {}
+
+			instr_case_novalue(Op_umul_l32_l32) {}
+			instr_case_novalue(Op_umul_l32_imm) {}
+			instr_case_novalue(Op_umod_l32_l32) {}
+			instr_case_novalue(Op_umod_l32_imm) {}
 			instr_case_novalue(Op_udiv_l32_l32) {}
 			instr_case_novalue(Op_udiv_l32_imm) {}
+
+			instr_case_novalue(Op_umul_l16_l16) {}
+			instr_case_novalue(Op_umul_l16_imm) {}
+			instr_case_novalue(Op_umod_l16_l16) {}
+			instr_case_novalue(Op_umod_l16_imm) {}
+			instr_case_novalue(Op_udiv_l16_l16) {}
+			instr_case_novalue(Op_udiv_l16_imm) {}
+
+			instr_case_novalue(Op_umul_l8_l8) {}
+			instr_case_novalue(Op_umul_l8_imm) {}
+			instr_case_novalue(Op_umod_l8_l8) {}
+			instr_case_novalue(Op_umod_l8_imm) {}
+			instr_case_novalue(Op_udiv_l8_l8) {}
+			instr_case_novalue(Op_udiv_l8_imm) {}
+
 			instr_case_novalue(Op_log_and_l8_l8) {}
 			instr_case_novalue(Op_log_and_l8_imm) {}
 			instr_case_novalue(Op_log_or_l8_l8) {}
