@@ -122,7 +122,8 @@
 		   STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                        \
 		       STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                    \
 		           STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=)                               \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=))                          \
+		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=)                           \
+		                   STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=))                      \
 	};                                                                                             \
                                                                                                    \
 	static_assert(                                                                                 \

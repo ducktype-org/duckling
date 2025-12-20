@@ -724,22 +724,32 @@ class FunctionValidator {
 
 			instr_case_novalue(Op_umul_l64_l64) {}
 			instr_case_novalue(Op_umul_l64_imm) {}
-			instr_case_novalue(Op_umul_l32_l32) {}
-			instr_case_novalue(Op_umul_l32_imm) {}
-			instr_case_novalue(Op_umul_l16_l16) {}
-			instr_case_novalue(Op_umul_l16_imm) {}
 			instr_case_novalue(Op_umod_l64_l64) {}
 			instr_case_novalue(Op_umod_l64_imm) {}
-			instr_case_novalue(Op_umod_l32_l32) {}
-			instr_case_novalue(Op_umod_l32_imm) {}
-			instr_case_novalue(Op_umod_l16_l16) {}
-			instr_case_novalue(Op_umod_l16_imm) {}
 			instr_case_novalue(Op_udiv_l64_l64) {}
 			instr_case_novalue(Op_udiv_l64_imm) {}
+
+			instr_case_novalue(Op_umul_l32_l32) {}
+			instr_case_novalue(Op_umul_l32_imm) {}
+			instr_case_novalue(Op_umod_l32_l32) {}
+			instr_case_novalue(Op_umod_l32_imm) {}
 			instr_case_novalue(Op_udiv_l32_l32) {}
 			instr_case_novalue(Op_udiv_l32_imm) {}
+
+			instr_case_novalue(Op_umul_l16_l16) {}
+			instr_case_novalue(Op_umul_l16_imm) {}
+			instr_case_novalue(Op_umod_l16_l16) {}
+			instr_case_novalue(Op_umod_l16_imm) {}
 			instr_case_novalue(Op_udiv_l16_l16) {}
 			instr_case_novalue(Op_udiv_l16_imm) {}
+
+			instr_case_novalue(Op_umul_l8_l8) {}
+			instr_case_novalue(Op_umul_l8_imm) {}
+			instr_case_novalue(Op_umod_l8_l8) {}
+			instr_case_novalue(Op_umod_l8_imm) {}
+			instr_case_novalue(Op_udiv_l8_l8) {}
+			instr_case_novalue(Op_udiv_l8_imm) {}
+
 			instr_case_novalue(Op_log_and_l8_l8) {}
 			instr_case_novalue(Op_log_and_l8_imm) {}
 			instr_case_novalue(Op_log_or_l8_l8) {}

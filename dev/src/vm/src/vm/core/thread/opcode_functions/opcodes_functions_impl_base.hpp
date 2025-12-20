@@ -205,32 +205,32 @@ namespace vm {
 		{                                                                                \
 			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
 			const auto rhs = safeReadBytes<TYPE>(instr->arg1);                           \
-			lhs OP     rhs;                                                              \
+			lhs        OP static_cast<TYPE>(rhs);                                        \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
-		{                                                                                \
-			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs OP rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
-			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs OP rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+		{                                                                                 \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+		{                                                                                 \
+			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
+			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                  \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 #define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
@@ -321,10 +321,10 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpGe, SIZE, i##SIZE, >=)  \
 	DEFINE_COMPARISON_OP(cmpLt, SIZE, i##SIZE, <)   \
 	DEFINE_COMPARISON_OP(cmpLe, SIZE, i##SIZE, <=)  \
-	DEFINE_COMPARISON_OP(ucmpGt, SIZE, i##SIZE, >)  \
-	DEFINE_COMPARISON_OP(ucmpGe, SIZE, i##SIZE, >=) \
-	DEFINE_COMPARISON_OP(ucmpLt, SIZE, i##SIZE, <)  \
-	DEFINE_COMPARISON_OP(ucmpLe, SIZE, i##SIZE, <=)
+	DEFINE_COMPARISON_OP(ucmpGt, SIZE, u##SIZE, >)  \
+	DEFINE_COMPARISON_OP(ucmpGe, SIZE, u##SIZE, >=) \
+	DEFINE_COMPARISON_OP(ucmpLt, SIZE, u##SIZE, <)  \
+	DEFINE_COMPARISON_OP(ucmpLe, SIZE, u##SIZE, <=)
 
 	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
 
