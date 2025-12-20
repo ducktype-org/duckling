@@ -600,13 +600,10 @@ namespace compiler::helios {
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
-			if (pst_ref.getLogger()->good()) {
+			if (pst_ref.getLogger()->good())
 				return { pst_ref.getRootElement() };
-			} else {
-				return query::QError(
-					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
-				);
-			}
+			else
+				return ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger());
 		}
 
 		static auto load(KHash key) -> LoadResult {
