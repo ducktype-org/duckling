@@ -90,9 +90,13 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
-<function-type> ::= "F" <function-qualifier>* <return-type> <type>* "E"
+<function-type> ::= "F" <function-qualifier>* <return-type> (<function-argument> <function-argument-name>)* "E"
 
 <return-type> ::= <type>
+
+<function-argument> := <type> <function-argument-name>
+
+<function-argument-name> := <identifier>
 
 // additional qualifiers for functions including member functions
 // more qualifiers should be added in the future
