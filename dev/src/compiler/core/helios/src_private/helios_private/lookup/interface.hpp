@@ -134,7 +134,7 @@ namespace compiler::helios {
 		 * @note This function is intended to be used as a quick placeholder
 		 * that we might one day change to custom code for better compilation errors or logic.
 		 */
-		query::QResult<SymbolList, query::Failed> lookupExpectUnique(
+		query::QResult<SymbolList> lookupExpectUnique(
 			dia::SourcePosition error_position,
 			query::Context&     ctx,
 			base::StrID         name,
