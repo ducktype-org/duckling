@@ -15,11 +15,11 @@ using namespace vm::code::builders;
 
 namespace {
 	bool isComparison(OpKind op) {
-		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpL
-		    || op == OpKind::cmpLe || op == OpKind::cmpG || op == OpKind::cmpGe
-		    || op == OpKind::ucmpL || op == OpKind::ucmpLe || op == OpKind::ucmpG
+		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
+		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
+		    || op == OpKind::ucmpLt || op == OpKind::ucmpLe || op == OpKind::ucmpGt
 		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
-		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
+		    || op == OpKind::fcmpLt || op == OpKind::fcmpLe || op == OpKind::fcmpGt
 		    || op == OpKind::fcmpGe;
 	}
 

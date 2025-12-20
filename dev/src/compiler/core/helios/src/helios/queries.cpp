@@ -486,42 +486,40 @@ namespace compiler::helios {
 							}
 						}
 					}
-					variant_default {
-						// Builtin symbols are handled below due to a different SymbolKind.
-						CORE_UNREACHABLE();
+					variant_case(builtin::BuiltinFunctionData, builtin) {
+						const auto builtin_type
+							= ctx.query<QueryTypeOfSymbol>({ key })
+						          ->throwOnFail(
+									  "Not handling errors here yet... (getting "
+									  "declaration of builtin function)"
+								  )
+						          .getType()
+						          .as<tsh::FunctionAbstractType>();
+						const auto return_type = builtin_type.getResultType();
+						auto       parameters  = std::vector<code::Parameter>{};
+						for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
+							const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+								base::StrID(base::strConcat("_", i).c_str()),
+								houtgen::GeneratedSymbolData{
+									houtgen::GeneratedSymbolData::Parameter{
+										.function_symbol = key,
+										.parameter_index = i,
+									},
+								},
+							});
+							parameters.emplace_back(
+								name(param_symbol), param_type, std::nullopt, param_symbol
+							);
+						}
+						return HOUTFunctionDeclaration{
+							key,
+							return_type,
+							std::move(parameters),
+						};
 					}
+					variant_default { CORE_UNREACHABLE(); }
 				}
 				CORE_UNREACHABLE();
-			}
-			case SymbolKind::BuiltinFunction: {
-				const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ key })
-				                              ->throwOnFail(
-												  "Not handling errors here yet... (getting "
-												  "declaration of builtin function)"
-											  )
-				                              .getType()
-				                              .as<tsh::FunctionAbstractType>();
-				const auto return_type = builtin_type.getResultType();
-				auto       parameters  = std::vector<code::Parameter>{};
-				for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
-					const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
-						base::StrID(base::strConcat("_", i).c_str()),
-						houtgen::GeneratedSymbolData{
-							houtgen::GeneratedSymbolData::Parameter{
-								.function_symbol = key,
-								.parameter_index = i,
-							},
-						},
-					});
-					parameters.emplace_back(
-						name(param_symbol), param_type, std::nullopt, param_symbol
-					);
-				}
-				return HOUTFunctionDeclaration{
-					key,
-					return_type,
-					std::move(parameters),
-				};
 			}
 			default:
 				CORE_UNREACHABLE();

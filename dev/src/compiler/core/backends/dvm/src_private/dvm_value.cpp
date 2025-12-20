@@ -58,8 +58,7 @@ namespace {
 		else if constexpr (sizeof(T) == 2)
 			return vm::safeReadBytes<u16>(value);
 		else if constexpr (sizeof(T) == 1)
-			// @TODO: #1652 Use `u8` here when casting is possible.
-			return vm::safeReadBytes<std::uint8_t>(value);
+			return static_cast<u64>(vm::safeReadBytes<u8>(value));
 		else
 			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
 	}

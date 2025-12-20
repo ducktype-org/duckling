@@ -54,29 +54,29 @@ namespace compiler::backend_vm::internal {
 		case IntegerNeq:
 			return SimpleOperation{ OpKind::cmpNeq };
 		case IntegerSLt:
-			return SimpleOperation{ OpKind::cmpL };
+			return SimpleOperation{ OpKind::cmpLt };
 		case IntegerSLteq:
 			return SimpleOperation{ OpKind::cmpLe };
 		case IntegerSGt:
-			return SimpleOperation{ OpKind::cmpG };
+			return SimpleOperation{ OpKind::cmpGt };
 		case IntegerSGteq:
 			return SimpleOperation{ OpKind::cmpGe };
 
 		/// Unsigned integer comparisons ///
 		case IntegerULt:
-			return SimpleOperation{ OpKind::ucmpL };
+			return SimpleOperation{ OpKind::ucmpLt };
 		case IntegerULteq:
 			return SimpleOperation{ OpKind::ucmpLe };
 		case IntegerUGt:
-			return SimpleOperation{ OpKind::ucmpG };
+			return SimpleOperation{ OpKind::ucmpGt };
 		case IntegerUGteq:
 			return SimpleOperation{ OpKind::ucmpGe };
 
 		/// Floating point comparisons ///
 		case FloatLt:
-			return SimpleOperation{ OpKind::fcmpL };
+			return SimpleOperation{ OpKind::fcmpLt };
 		case FloatGt:
-			return SimpleOperation{ OpKind::fcmpG };
+			return SimpleOperation{ OpKind::fcmpGt };
 		case FloatLteq:
 			return SimpleOperation{ OpKind::fcmpLe };
 		case FloatGteq:
