@@ -231,6 +231,6 @@ namespace lexer {
 		void       operator=(const TokenData&) = delete;
 		TokenData& operator=(TokenData&&)      = default;
 
-		virtual ~TokenData();
+		~TokenData();
 	};
 }
