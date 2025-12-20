@@ -43,85 +43,85 @@
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op)              \
-	inline constexpr SELF_T& operator op(const SELF_T& rhs) noexcept { \
-		value op rhs.value;                                            \
-		return *this;                                                  \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(op)               \
+	inline constexpr SELF_T& operator op(const SELF_T & rhs) noexcept { \
+		value op rhs.value;                                             \
+		return *this;                                                   \
 	}
 
 /**
  * @brief This is helper macro, do not use directly
  */
-#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op)       \
-	inline constexpr SELF_T& operator op(const BASE_T& rhs) noexcept { \
-		value op rhs;                                                  \
-		return *this;                                                  \
+#define STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(op)        \
+	inline constexpr SELF_T& operator op(const BASE_T & rhs) noexcept { \
+		value op rhs;                                                   \
+		return *this;                                                   \
 	}
 
 
-#define STRONG_TYPEDEF_INT_AUX(NAME, BASE, EXPLICIT_BASE, DIMENSIONAL)                               \
-	class NAME final {                                                                               \
-	private:                                                                                         \
-		using BASE_T = BASE;                                                                         \
-		using SELF_T = NAME;                                                                         \
-		BASE value;                                                                                  \
-                                                                                                     \
-	public:                                                                                          \
-		inline NAME()                               = default;                                       \
-		inline NAME(const NAME& mX)                 = default;                                       \
-		inline NAME(NAME&& mX) noexcept             = default;                                       \
-		inline NAME& operator=(const NAME& rhs)     = default;                                       \
-		inline NAME& operator=(NAME&& rhs) noexcept = default;                                       \
-		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}         \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }    \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }          \
-		inline constexpr NAME                    operator+() const noexcept { return NAME(+value); } \
-		inline constexpr NAME                    operator-() const noexcept {                        \
-            return NAME(static_cast<BASE_T>(-value));                             \
-		}                                                                                            \
-		inline constexpr NAME& operator++() noexcept {                                               \
-			value++;                                                                                 \
-			return *this;                                                                            \
-		}                                                                                            \
-		inline constexpr NAME& operator--() noexcept {                                               \
-			value--;                                                                                 \
-			return *this;                                                                            \
-		}                                                                                            \
-		inline constexpr NAME operator++(int) noexcept {                                             \
-			NAME old = *this;                                                                        \
-			value++;                                                                                 \
-			return old;                                                                              \
-		}                                                                                            \
-		inline constexpr NAME operator--(int) noexcept {                                             \
-			NAME old = *this;                                                                        \
-			value--;                                                                                 \
-			return old;                                                                              \
-		}                                                                                            \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(==, bool)                                              \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(!=, bool)                                              \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<, bool)                                               \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>, bool)                                               \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<=, bool)                                              \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>=, bool)                                              \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(+, SELF_T)                                             \
-		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                             \
-		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=)                                            \
-		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=)                                            \
-		IF(DIMENSIONAL,                                                                              \
-		   STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                   \
-		       STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                               \
-		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=)                          \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=),                     \
-		   STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                          \
-		       STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                      \
-		           STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=)                                 \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=))                            \
-	};                                                                                               \
-                                                                                                     \
-	static_assert(                                                                                   \
-		std::is_integral_v<BASE>,                                                                    \
-		"STRONG_TYPEDEF_INT can only define integral types. Use `STRONG_TYPEDEF` for any generic "   \
-		"types"                                                                                      \
+#define STRONG_TYPEDEF_INT_AUX(NAME, BASE, EXPLICIT_BASE, DIMENSIONAL)                             \
+	class NAME final {                                                                             \
+	private:                                                                                       \
+		using BASE_T = BASE;                                                                       \
+		using SELF_T = NAME;                                                                       \
+		BASE value;                                                                                \
+                                                                                                   \
+	public:                                                                                        \
+		inline NAME()                               = default;                                     \
+		inline NAME(const NAME& mX)                 = default;                                     \
+		inline NAME(NAME&& mX) noexcept             = default;                                     \
+		inline NAME& operator=(const NAME& rhs)     = default;                                     \
+		inline NAME& operator=(NAME&& rhs) noexcept = default;                                     \
+		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}       \
+		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }  \
+		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
+		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
+		inline constexpr NAME operator-() const noexcept {                                         \
+			return NAME(static_cast<BASE_T>(-value));                                              \
+		}                                                                                          \
+		inline constexpr NAME& operator++() noexcept {                                             \
+			value++;                                                                               \
+			return *this;                                                                          \
+		}                                                                                          \
+		inline constexpr NAME& operator--() noexcept {                                             \
+			value--;                                                                               \
+			return *this;                                                                          \
+		}                                                                                          \
+		inline constexpr NAME operator++(int) noexcept {                                           \
+			NAME old = *this;                                                                      \
+			value++;                                                                               \
+			return old;                                                                            \
+		}                                                                                          \
+		inline constexpr NAME operator--(int) noexcept {                                           \
+			NAME old = *this;                                                                      \
+			value--;                                                                               \
+			return old;                                                                            \
+		}                                                                                          \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(==, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(!=, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<, bool)                                             \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>, bool)                                             \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<=, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>=, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(+, SELF_T)                                           \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
+		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=)                                          \
+		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=)                                          \
+		IF(DIMENSIONAL,                                                                            \
+		   STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                 \
+		       STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                             \
+		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=)                        \
+		               STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=),                   \
+		   STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                        \
+		       STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                    \
+		           STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=)                               \
+		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=))                          \
+	};                                                                                             \
+                                                                                                   \
+	static_assert(                                                                                 \
+		std::is_integral_v<BASE>,                                                                  \
+		"STRONG_TYPEDEF_INT can only define integral types. Use `STRONG_TYPEDEF` for any generic " \
+		"types"                                                                                    \
 	);
 
 /**
