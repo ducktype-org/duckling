@@ -149,6 +149,18 @@ DEF_MICRO_INSTR(mod_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
 DEF_MICRO_INSTR(mod_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
 DEF_MICRO_INSTR(neg_l16, vm::opargs::StackLocal16)
 
+DEF_MICRO_INSTR(add_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(add_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(sub_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sub_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mul_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(mul_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(div_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(div_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(mod_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(mod_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(neg_l8, vm::opargs::StackLocal8)
+
 // ========= UNSIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
 DEF_MICRO_INSTR(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
@@ -170,6 +182,13 @@ DEF_MICRO_INSTR(umod_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16
 DEF_MICRO_INSTR(umod_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
 DEF_MICRO_INSTR(udiv_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
 DEF_MICRO_INSTR(udiv_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+
+DEF_MICRO_INSTR(umul_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(umul_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(umod_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(umod_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_MICRO_INSTR(udiv_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(udiv_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
 
 // ========= FLOATING POINT OPERATIONS ========
 DEF_MICRO_INSTR(fadd_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)

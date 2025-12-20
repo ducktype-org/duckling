@@ -117,33 +117,44 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_add_l32_imm, i) { addLow<Op_add_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_l16_l16, i) { addLow<Op_add_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_add_l16_imm, i) { addLow<Op_add_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_add_l8_l8, i) { addLow<Op_add_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_add_l8_imm, i) { addLow<Op_add_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_sub_l64_l64, i) { addLow<Op_sub_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_sub_l64_imm, i) { addLow<Op_sub_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_sub_l32_l32, i) { addLow<Op_sub_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_sub_l32_imm, i) { addLow<Op_sub_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_sub_l16_l16, i) { addLow<Op_sub_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_sub_l16_imm, i) { addLow<Op_sub_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_sub_l8_l8, i) { addLow<Op_sub_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_sub_l8_imm, i) { addLow<Op_sub_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_mul_l64_l64, i) { addLow<Op_mul_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_mul_l64_imm, i) { addLow<Op_mul_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_mul_l32_l32, i) { addLow<Op_mul_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_mul_l32_imm, i) { addLow<Op_mul_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_mul_l16_l16, i) { addLow<Op_mul_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_mul_l16_imm, i) { addLow<Op_mul_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_mul_l8_l8, i) { addLow<Op_mul_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_mul_l8_imm, i) { addLow<Op_mul_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_div_l64_l64, i) { addLow<Op_div_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_div_l64_imm, i) { addLow<Op_div_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_div_l32_l32, i) { addLow<Op_div_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_div_l32_imm, i) { addLow<Op_div_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_div_l16_l16, i) { addLow<Op_div_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_div_l16_imm, i) { addLow<Op_div_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_div_l8_l8, i) { addLow<Op_div_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_div_l8_imm, i) { addLow<Op_div_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_mod_l64_l64, i) { addLow<Op_mod_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_mod_l64_imm, i) { addLow<Op_mod_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_mod_l32_l32, i) { addLow<Op_mod_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_mod_l32_imm, i) { addLow<Op_mod_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_mod_l16_l16, i) { addLow<Op_mod_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_mod_l16_imm, i) { addLow<Op_mod_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_mod_l8_l8, i) { addLow<Op_mod_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_mod_l8_imm, i) { addLow<Op_mod_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_neg_l64, i) { addLow<Op_neg_l64>(i.dst); }
 			instr_case(high::Op_neg_l32, i) { addLow<Op_neg_l32>(i.dst); }
 			instr_case(high::Op_neg_l16, i) { addLow<Op_neg_l16>(i.dst); }
+			instr_case(high::Op_neg_l8, i) { addLow<Op_neg_l8>(i.dst); }
 			instr_case(high::Op_fadd_l64_l64, i) { addLow<Op_fadd_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_fadd_l64_imm, i) { addLow<Op_fadd_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_fadd_l32_l32, i) { addLow<Op_fadd_l32_l32>(i.dst, i.src); }
@@ -168,18 +179,24 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_umul_l32_imm, i) { addLow<Op_umul_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_umul_l16_l16, i) { addLow<Op_umul_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_umul_l16_imm, i) { addLow<Op_umul_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_umul_l8_l8, i) { addLow<Op_umul_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_umul_l8_imm, i) { addLow<Op_umul_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_umod_l64_l64, i) { addLow<Op_umod_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_umod_l64_imm, i) { addLow<Op_umod_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_umod_l32_l32, i) { addLow<Op_umod_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_umod_l32_imm, i) { addLow<Op_umod_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_umod_l16_l16, i) { addLow<Op_umod_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_umod_l16_imm, i) { addLow<Op_umod_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_umod_l8_l8, i) { addLow<Op_umod_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_umod_l8_imm, i) { addLow<Op_umod_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l64_l64, i) { addLow<Op_udiv_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l64_imm, i) { addLow<Op_udiv_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l32_l32, i) { addLow<Op_udiv_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l32_imm, i) { addLow<Op_udiv_l32_imm>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l16_l16, i) { addLow<Op_udiv_l16_l16>(i.dst, i.src); }
 			instr_case(high::Op_udiv_l16_imm, i) { addLow<Op_udiv_l16_imm>(i.dst, i.src); }
+			instr_case(high::Op_udiv_l8_l8, i) { addLow<Op_udiv_l8_l8>(i.dst, i.src); }
+			instr_case(high::Op_udiv_l8_imm, i) { addLow<Op_udiv_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_log_and_l8_l8, i) { addLow<Op_log_and_l8_l8>(i.dst, i.src); }
 			instr_case(high::Op_log_and_l8_imm, i) { addLow<Op_log_and_l8_imm>(i.dst, i.src); }
 			instr_case(high::Op_log_or_l8_l8, i) { addLow<Op_log_or_l8_l8>(i.dst, i.src); }

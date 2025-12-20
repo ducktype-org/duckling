@@ -135,6 +135,18 @@ DEF_INSTR(mod_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal1
 DEF_INSTR(mod_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(neg_l16, (vm::opargs::StackLocal16, dst))
 
+DEF_INSTR(add_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(add_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(sub_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(sub_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mul_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(mul_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(div_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(div_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mod_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(mod_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(neg_l8, (vm::opargs::StackLocal8, dst))
+
 // ========= UNSIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_INSTR(umul_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
 DEF_INSTR(umul_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
@@ -156,6 +168,13 @@ DEF_INSTR(umod_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal
 DEF_INSTR(umod_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(udiv_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
 DEF_INSTR(udiv_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+
+DEF_INSTR(umul_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(umul_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(umod_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(umod_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(udiv_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(udiv_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
 // ========= FLOATING POINT OPERATIONS ========
 DEF_INSTR(fadd_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))

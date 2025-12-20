@@ -242,48 +242,31 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	// @TODO: #1216 Check for over/under flows.
-	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
-	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
-	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
-	DEFINE_DIVISION_LIKE_OP(mod, 64, i64, %=)
-	DEFINE_DIVISION_LIKE_OP(div, 64, i64, /=)
-	DEFINE_NEGATION_OP(neg, 64, i64);
-	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
-	DEFINE_DIVISION_LIKE_OP(umod, 64, u64, %=)
-	DEFINE_DIVISION_LIKE_OP(udiv, 64, u64, /=)
+// @TODO: #1216 Check for over/under flows.
+#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
 
-	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
-	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
-	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
-	DEFINE_DIVISION_LIKE_OP(mod, 32, i32, %=)
-	DEFINE_DIVISION_LIKE_OP(div, 32, i32, /=)
-	DEFINE_NEGATION_OP(neg, 32, i32);
-	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
-	DEFINE_DIVISION_LIKE_OP(umod, 32, u32, %=)
-	DEFINE_DIVISION_LIKE_OP(udiv, 32, u32, /=)
+	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
-	DEFINE_ARITHMETIC_OP(add, 16, i16, +=)
-	DEFINE_ARITHMETIC_OP(sub, 16, i16, -=)
-	DEFINE_ARITHMETIC_OP(mul, 16, i16, *=)
-	DEFINE_DIVISION_LIKE_OP(mod, 16, i16, %=)
-	DEFINE_DIVISION_LIKE_OP(div, 16, i16, /=)
-	DEFINE_NEGATION_OP(neg, 16, i16);
-	DEFINE_ARITHMETIC_OP(umul, 16, u16, *=)
-	DEFINE_DIVISION_LIKE_OP(umod, 16, u16, %=)
-	DEFINE_DIVISION_LIKE_OP(udiv, 16, u16, /=)
+#define FLOAT_64_TYPE double
+#define FLOAT_32_TYPE float
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
-	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
-	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
-	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_DIVISION_LIKE_OP(fdiv, 64, double, /=)
-	DEFINE_NEGATION_OP(fneg, 64, double);
+	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
 
-	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
-	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
-	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_DIVISION_LIKE_OP(fdiv, 32, float, /=)
-	DEFINE_NEGATION_OP(fneg, 32, float);
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
@@ -331,63 +314,29 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
-	DEFINE_COMPARISON_OP(cmpNeq, 64, i64, !=)
-	DEFINE_COMPARISON_OP(cmpGt, 64, i64, >)
-	DEFINE_COMPARISON_OP(cmpGe, 64, i64, >=)
-	DEFINE_COMPARISON_OP(cmpLt, 64, i64, <)
-	DEFINE_COMPARISON_OP(cmpLe, 64, i64, <=)
-	DEFINE_COMPARISON_OP(ucmpGt, 64, u64, >)
-	DEFINE_COMPARISON_OP(ucmpGe, 64, u64, >=)
-	DEFINE_COMPARISON_OP(ucmpLt, 64, u64, <)
-	DEFINE_COMPARISON_OP(ucmpLe, 64, u64, <=)
+#define DEFINE_INT_N_COMPARISONS(SIZE)              \
+	DEFINE_COMPARISON_OP(cmpEq, SIZE, i##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(cmpNeq, SIZE, i##SIZE, !=) \
+	DEFINE_COMPARISON_OP(cmpGt, SIZE, i##SIZE, >)   \
+	DEFINE_COMPARISON_OP(cmpGe, SIZE, i##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(cmpLt, SIZE, i##SIZE, <)   \
+	DEFINE_COMPARISON_OP(cmpLe, SIZE, i##SIZE, <=)  \
+	DEFINE_COMPARISON_OP(ucmpGt, SIZE, i##SIZE, >)  \
+	DEFINE_COMPARISON_OP(ucmpGe, SIZE, i##SIZE, >=) \
+	DEFINE_COMPARISON_OP(ucmpLt, SIZE, i##SIZE, <)  \
+	DEFINE_COMPARISON_OP(ucmpLe, SIZE, i##SIZE, <=)
 
-	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
-	DEFINE_COMPARISON_OP(cmpNeq, 32, i32, !=)
-	DEFINE_COMPARISON_OP(cmpGt, 32, i32, >)
-	DEFINE_COMPARISON_OP(cmpGe, 32, i32, >=)
-	DEFINE_COMPARISON_OP(cmpLt, 32, i32, <)
-	DEFINE_COMPARISON_OP(cmpLe, 32, i32, <=)
-	DEFINE_COMPARISON_OP(ucmpGt, 32, u32, >)
-	DEFINE_COMPARISON_OP(ucmpGe, 32, u32, >=)
-	DEFINE_COMPARISON_OP(ucmpLt, 32, u32, <)
-	DEFINE_COMPARISON_OP(ucmpLe, 32, u32, <=)
+	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
 
-	DEFINE_COMPARISON_OP(cmpEq, 16, i16, ==)
-	DEFINE_COMPARISON_OP(cmpNeq, 16, i16, !=)
-	DEFINE_COMPARISON_OP(cmpGt, 16, i16, >)
-	DEFINE_COMPARISON_OP(cmpGe, 16, i16, >=)
-	DEFINE_COMPARISON_OP(cmpLt, 16, i16, <)
-	DEFINE_COMPARISON_OP(cmpLe, 16, i16, <=)
-	DEFINE_COMPARISON_OP(ucmpGt, 16, u16, >)
-	DEFINE_COMPARISON_OP(ucmpGe, 16, u16, >=)
-	DEFINE_COMPARISON_OP(ucmpLt, 16, u16, <)
-	DEFINE_COMPARISON_OP(ucmpLe, 16, u16, <=)
+#define DEFINE_FLOAT_N_COMPARISONS(SIZE)                         \
+	DEFINE_COMPARISON_OP(fcmpEq, SIZE, FLOAT_##SIZE##_TYPE, ==)  \
+	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, FLOAT_##SIZE##_TYPE, !=) \
+	DEFINE_COMPARISON_OP(fcmpGt, SIZE, FLOAT_##SIZE##_TYPE, >)   \
+	DEFINE_COMPARISON_OP(fcmpGe, SIZE, FLOAT_##SIZE##_TYPE, >=)  \
+	DEFINE_COMPARISON_OP(fcmpLt, SIZE, FLOAT_##SIZE##_TYPE, <)   \
+	DEFINE_COMPARISON_OP(fcmpLe, SIZE, FLOAT_##SIZE##_TYPE, <=)
 
-	DEFINE_COMPARISON_OP(cmpEq, 8, i8, ==)
-	DEFINE_COMPARISON_OP(cmpNeq, 8, i8, !=)
-	DEFINE_COMPARISON_OP(cmpGt, 8, i8, >)
-	DEFINE_COMPARISON_OP(cmpGe, 8, i8, >=)
-	DEFINE_COMPARISON_OP(cmpLt, 8, i8, <)
-	DEFINE_COMPARISON_OP(cmpLe, 8, i8, <=)
-	DEFINE_COMPARISON_OP(ucmpGt, 8, u8, >)
-	DEFINE_COMPARISON_OP(ucmpGe, 8, u8, >=)
-	DEFINE_COMPARISON_OP(ucmpLt, 8, u8, <)
-	DEFINE_COMPARISON_OP(ucmpLe, 8, u8, <=)
-
-	DEFINE_COMPARISON_OP(fcmpEq, 64, double, ==)
-	DEFINE_COMPARISON_OP(fcmpNeq, 64, double, !=)
-	DEFINE_COMPARISON_OP(fcmpGt, 64, double, >)
-	DEFINE_COMPARISON_OP(fcmpGe, 64, double, >=)
-	DEFINE_COMPARISON_OP(fcmpLt, 64, double, <)
-	DEFINE_COMPARISON_OP(fcmpLe, 64, double, <=)
-
-	DEFINE_COMPARISON_OP(fcmpEq, 32, float, ==)
-	DEFINE_COMPARISON_OP(fcmpNeq, 32, float, !=)
-	DEFINE_COMPARISON_OP(fcmpGt, 32, float, >)
-	DEFINE_COMPARISON_OP(fcmpGe, 32, float, >=)
-	DEFINE_COMPARISON_OP(fcmpLt, 32, float, <)
-	DEFINE_COMPARISON_OP(fcmpLe, 32, float, <=)
+	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
