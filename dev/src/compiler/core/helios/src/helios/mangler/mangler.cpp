@@ -333,8 +333,8 @@ namespace compiler::helios::mangler {
 						}
 					}
 					// The last case is that the symbol is a builtin function, which is handled
-					// in a separate branch of the switch by symbol kind.
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// in a separate branch of ImplementationOf_QueryMangledSymbol::provide.
+					// @TODO: #1700 Simplify this handling of builtin functions.
 				}
 				CORE_UNREACHABLE();
 			}
