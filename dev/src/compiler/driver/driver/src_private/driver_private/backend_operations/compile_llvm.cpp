@@ -73,7 +73,9 @@ namespace compiler::driver {
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {
 		auto builtin_obj_file
 			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
-		auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
+		auto mod = backend_llvm::Module::fromLLVMBC(
+			builtins_x86_64_linux_gnu_bc, builtins_x86_64_linux_gnu_bc_len
+		);
 		mod.compile(
 			builtin_obj_file.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 		);

@@ -10,6 +10,9 @@
 
 #include <logger/logger.hpp>
 
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Support/MemoryBuffer.h>
+
 #include <iostream>
 
 namespace compiler::backend_llvm {
@@ -17,6 +20,28 @@ namespace compiler::backend_llvm {
 
 	Module Module::fromIRCode(std::string_view llvm_ir_code) {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
+	}
+
+	Module Module::fromLLVMBC(const unsigned char* llvm_bc_data, size_t llvm_bc_size) {
+		// Wrap the array in a MemoryBuffer
+		auto buffer = llvm::MemoryBuffer::getMemBuffer(
+			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data), llvm_bc_size),
+			/*BufferName=*/"builtins_bc",
+			/*RequiresNullTerminator=*/false
+		);
+
+		llvm::LLVMContext                             context;
+		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
+			= parseBitcodeFile(buffer->getMemBufferRef(), context);
+
+		if (!mod_or_err)
+			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
+
+		// Compile module to object file
+		auto result = Module{
+			makeBox<ModuleImpl>(Box<llvm::Module>::fromPointer(std::move(*mod_or_err).release()))
+		};
+		return result;
 	}
 
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {

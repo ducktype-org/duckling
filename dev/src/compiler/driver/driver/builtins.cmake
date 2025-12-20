@@ -30,9 +30,9 @@ foreach (target IN LISTS BUILTIN_TARGETS)
             --target=${target}
             -O2
             -emit-llvm
-            -c ${BUILTINS_SOURCE_DIR}/builtins_source.hpp
+            -c ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
             -o ${bc_file}
-            DEPENDS ${BUILTINS_SOURCE_DIR}/builtins_source.hpp
+            DEPENDS ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
             COMMENT "Generating LLVM bitcode for target ${target}"
     )
 

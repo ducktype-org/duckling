@@ -2,8 +2,6 @@
 
 #include <string_view>
 
-#include "../builtins/builtins_source.hpp"
-
 namespace compiler::driver {
 
 	/**
