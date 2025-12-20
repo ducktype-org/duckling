@@ -36,7 +36,7 @@
 #define VM_OPCODE_FROM_NAME(name) vm::code::OpCode::Op_##name
 
 namespace vm::code {
-	constexpr usize INSTR_COUNT = 1  // Comment
+	constexpr usize INSTR_COUNT = 1  // `instructions::Comment` treated separately
 #define HANDLE_INSTR(name) +1
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR

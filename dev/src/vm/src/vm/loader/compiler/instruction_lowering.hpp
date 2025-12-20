@@ -191,104 +191,104 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_cmpEq_l64_imm, i) { addLow<Op_cmpEq_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l64_l64, i) { addLow<Op_cmpNeq_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l64_imm, i) { addLow<Op_cmpNeq_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l64_l64, i) { addLow<Op_cmpG_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l64_imm, i) { addLow<Op_cmpG_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l64_l64, i) { addLow<Op_cmpGt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l64_imm, i) { addLow<Op_cmpGt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l64_l64, i) { addLow<Op_cmpGe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l64_imm, i) { addLow<Op_cmpGe_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l64_l64, i) { addLow<Op_ucmpG_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l64_imm, i) { addLow<Op_ucmpG_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l64_l64, i) { addLow<Op_ucmpGt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l64_imm, i) { addLow<Op_ucmpGt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l64_l64, i) { addLow<Op_ucmpGe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l64_imm, i) { addLow<Op_ucmpGe_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l64_l64, i) { addLow<Op_cmpL_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l64_imm, i) { addLow<Op_cmpL_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l64_l64, i) { addLow<Op_cmpLt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l64_imm, i) { addLow<Op_cmpLt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l64_l64, i) { addLow<Op_cmpLe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l64_imm, i) { addLow<Op_cmpLe_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l64_l64, i) { addLow<Op_ucmpL_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l64_imm, i) { addLow<Op_ucmpL_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l64_l64, i) { addLow<Op_ucmpLt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l64_imm, i) { addLow<Op_ucmpLt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l64_l64, i) { addLow<Op_ucmpLe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l64_imm, i) { addLow<Op_ucmpLe_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l32_l32, i) { addLow<Op_cmpEq_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l32_imm, i) { addLow<Op_cmpEq_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l32_l32, i) { addLow<Op_cmpNeq_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l32_imm, i) { addLow<Op_cmpNeq_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l32_l32, i) { addLow<Op_cmpG_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l32_imm, i) { addLow<Op_cmpG_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l32_l32, i) { addLow<Op_cmpGt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l32_imm, i) { addLow<Op_cmpGt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l32_l32, i) { addLow<Op_cmpGe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l32_imm, i) { addLow<Op_cmpGe_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l32_l32, i) { addLow<Op_ucmpG_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l32_imm, i) { addLow<Op_ucmpG_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l32_l32, i) { addLow<Op_ucmpGt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l32_imm, i) { addLow<Op_ucmpGt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l32_l32, i) { addLow<Op_ucmpGe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l32_imm, i) { addLow<Op_ucmpGe_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l32_l32, i) { addLow<Op_cmpL_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l32_imm, i) { addLow<Op_cmpL_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l32_l32, i) { addLow<Op_cmpLt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l32_imm, i) { addLow<Op_cmpLt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l32_l32, i) { addLow<Op_cmpLe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l32_imm, i) { addLow<Op_cmpLe_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l32_l32, i) { addLow<Op_ucmpL_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l32_imm, i) { addLow<Op_ucmpL_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l32_l32, i) { addLow<Op_ucmpLt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l32_imm, i) { addLow<Op_ucmpLt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l32_l32, i) { addLow<Op_ucmpLe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l32_imm, i) { addLow<Op_ucmpLe_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l16_l16, i) { addLow<Op_cmpEq_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l16_imm, i) { addLow<Op_cmpEq_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l16_l16, i) { addLow<Op_cmpNeq_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l16_imm, i) { addLow<Op_cmpNeq_l16_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l16_l16, i) { addLow<Op_cmpG_l16_l16>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l16_imm, i) { addLow<Op_cmpG_l16_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l16_l16, i) { addLow<Op_cmpGt_l16_l16>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l16_imm, i) { addLow<Op_cmpGt_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l16_l16, i) { addLow<Op_cmpGe_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l16_imm, i) { addLow<Op_cmpGe_l16_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l16_l16, i) { addLow<Op_ucmpG_l16_l16>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l16_imm, i) { addLow<Op_ucmpG_l16_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l16_l16, i) { addLow<Op_ucmpGt_l16_l16>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l16_imm, i) { addLow<Op_ucmpGt_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l16_l16, i) { addLow<Op_ucmpGe_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l16_imm, i) { addLow<Op_ucmpGe_l16_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l16_l16, i) { addLow<Op_cmpL_l16_l16>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l16_imm, i) { addLow<Op_cmpL_l16_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l16_l16, i) { addLow<Op_cmpLt_l16_l16>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l16_imm, i) { addLow<Op_cmpLt_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l16_l16, i) { addLow<Op_cmpLe_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l16_imm, i) { addLow<Op_cmpLe_l16_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l16_l16, i) { addLow<Op_ucmpL_l16_l16>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l16_imm, i) { addLow<Op_ucmpL_l16_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l16_l16, i) { addLow<Op_ucmpLt_l16_l16>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l16_imm, i) { addLow<Op_ucmpLt_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l16_l16, i) { addLow<Op_ucmpLe_l16_l16>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l16_imm, i) { addLow<Op_ucmpLe_l16_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l8_l8, i) { addLow<Op_cmpEq_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpEq_l8_imm, i) { addLow<Op_cmpEq_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l8_l8, i) { addLow<Op_cmpNeq_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_l8_imm, i) { addLow<Op_cmpNeq_l8_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l8_l8, i) { addLow<Op_cmpG_l8_l8>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpG_l8_imm, i) { addLow<Op_cmpG_l8_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l8_l8, i) { addLow<Op_cmpGt_l8_l8>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpGt_l8_imm, i) { addLow<Op_cmpGt_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l8_l8, i) { addLow<Op_cmpGe_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpGe_l8_imm, i) { addLow<Op_cmpGe_l8_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l8_l8, i) { addLow<Op_ucmpG_l8_l8>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpG_l8_imm, i) { addLow<Op_ucmpG_l8_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l8_l8, i) { addLow<Op_ucmpGt_l8_l8>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpGt_l8_imm, i) { addLow<Op_ucmpGt_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l8_l8, i) { addLow<Op_ucmpGe_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpGe_l8_imm, i) { addLow<Op_ucmpGe_l8_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l8_l8, i) { addLow<Op_cmpL_l8_l8>(i.lhs, i.rhs); }
-			instr_case(high::Op_cmpL_l8_imm, i) { addLow<Op_cmpL_l8_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l8_l8, i) { addLow<Op_cmpLt_l8_l8>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpLt_l8_imm, i) { addLow<Op_cmpLt_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l8_l8, i) { addLow<Op_cmpLe_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpLe_l8_imm, i) { addLow<Op_cmpLe_l8_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l8_l8, i) { addLow<Op_ucmpL_l8_l8>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpL_l8_imm, i) { addLow<Op_ucmpL_l8_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l8_l8, i) { addLow<Op_ucmpLt_l8_l8>(i.lhs, i.rhs); }
+			instr_case(high::Op_ucmpLt_l8_imm, i) { addLow<Op_ucmpLt_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l8_l8, i) { addLow<Op_ucmpLe_l8_l8>(i.lhs, i.rhs); }
 			instr_case(high::Op_ucmpLe_l8_imm, i) { addLow<Op_ucmpLe_l8_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpEq_l64_l64, i) { addLow<Op_fcmpEq_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpEq_l64_imm, i) { addLow<Op_fcmpEq_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpNeq_l64_l64, i) { addLow<Op_fcmpNeq_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpNeq_l64_imm, i) { addLow<Op_fcmpNeq_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpG_l64_l64, i) { addLow<Op_fcmpG_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpG_l64_imm, i) { addLow<Op_fcmpG_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpGt_l64_l64, i) { addLow<Op_fcmpGt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpGt_l64_imm, i) { addLow<Op_fcmpGt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpGe_l64_l64, i) { addLow<Op_fcmpGe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpGe_l64_imm, i) { addLow<Op_fcmpGe_l64_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpL_l64_l64, i) { addLow<Op_fcmpL_l64_l64>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpL_l64_imm, i) { addLow<Op_fcmpL_l64_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpLt_l64_l64, i) { addLow<Op_fcmpLt_l64_l64>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpLt_l64_imm, i) { addLow<Op_fcmpLt_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_l64_l64, i) { addLow<Op_fcmpLe_l64_l64>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_l64_imm, i) { addLow<Op_fcmpLe_l64_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpEq_l32_l32, i) { addLow<Op_fcmpEq_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpEq_l32_imm, i) { addLow<Op_fcmpEq_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpNeq_l32_l32, i) { addLow<Op_fcmpNeq_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpNeq_l32_imm, i) { addLow<Op_fcmpNeq_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpG_l32_l32, i) { addLow<Op_fcmpG_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpG_l32_imm, i) { addLow<Op_fcmpG_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpGt_l32_l32, i) { addLow<Op_fcmpGt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpGt_l32_imm, i) { addLow<Op_fcmpGt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpGe_l32_l32, i) { addLow<Op_fcmpGe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpGe_l32_imm, i) { addLow<Op_fcmpGe_l32_imm>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpL_l32_l32, i) { addLow<Op_fcmpL_l32_l32>(i.lhs, i.rhs); }
-			instr_case(high::Op_fcmpL_l32_imm, i) { addLow<Op_fcmpL_l32_imm>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpLt_l32_l32, i) { addLow<Op_fcmpLt_l32_l32>(i.lhs, i.rhs); }
+			instr_case(high::Op_fcmpLt_l32_imm, i) { addLow<Op_fcmpLt_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_l32_l32, i) { addLow<Op_fcmpLe_l32_l32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_l32_imm, i) { addLow<Op_fcmpLe_l32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNull_lptr, i) { addLow<Op_cmpNull_lptr>(i.ptr); }

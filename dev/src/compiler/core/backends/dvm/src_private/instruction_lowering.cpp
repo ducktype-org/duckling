@@ -53,29 +53,29 @@ namespace {
 		case lir::Operation::IntegerNeq:
 			return OpKind::cmpNeq;
 		case lir::Operation::IntegerSLt:
-			return OpKind::cmpL;
+			return OpKind::cmpLt;
 		case lir::Operation::IntegerSLteq:
 			return OpKind::cmpLe;
 		case lir::Operation::IntegerSGt:
-			return OpKind::cmpG;
+			return OpKind::cmpGt;
 		case lir::Operation::IntegerSGteq:
 			return OpKind::cmpGe;
 
 		/// Unsigned integer comparisons ///
 		case lir::Operation::IntegerULt:
-			return OpKind::ucmpL;
+			return OpKind::ucmpLt;
 		case lir::Operation::IntegerULteq:
 			return OpKind::ucmpLe;
 		case lir::Operation::IntegerUGt:
-			return OpKind::ucmpG;
+			return OpKind::ucmpGt;
 		case lir::Operation::IntegerUGteq:
 			return OpKind::ucmpGe;
 
 		/// Floating point comparisons ///
 		case lir::Operation::FloatLt:
-			return OpKind::fcmpL;
+			return OpKind::fcmpLt;
 		case lir::Operation::FloatGt:
-			return OpKind::fcmpG;
+			return OpKind::fcmpGt;
 		case lir::Operation::FloatLteq:
 			return OpKind::fcmpLe;
 		case lir::Operation::FloatGteq:
@@ -106,11 +106,11 @@ namespace {
 	}
 
 	bool isComparison(OpKind op) {
-		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpL
-		    || op == OpKind::cmpLe || op == OpKind::cmpG || op == OpKind::cmpGe
-		    || op == OpKind::ucmpL || op == OpKind::ucmpLe || op == OpKind::ucmpG
+		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
+		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
+		    || op == OpKind::ucmpLt || op == OpKind::ucmpLe || op == OpKind::ucmpGt
 		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
-		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
+		    || op == OpKind::fcmpLt || op == OpKind::fcmpLe || op == OpKind::fcmpGt
 		    || op == OpKind::fcmpGe;
 	}
 

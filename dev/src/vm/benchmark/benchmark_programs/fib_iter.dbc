@@ -40,7 +40,7 @@ function main { i64, ptr_argv } -> i64 {
         deinit; # c
 
         # if n > 0 : end
-        cmpG_l64_imm    32, 0;
+        cmpGt_l64_imm    32, 0;
         jmpIf_label  Loop;
 
     output_l64      48;

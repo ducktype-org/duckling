@@ -50,9 +50,9 @@ function integers {} -> i32 {
 	cmpNeq_l32_imm	a, 20;		# 20 != 20
 	jmpIf_label		fail;
 
-	cmpG_l32_l32 	a, b;		# 20 > 10
+	cmpGt_l32_l32 	a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
-	cmpG_l32_imm 	b, 2;		# 10 > 2
+	cmpGt_l32_imm 	b, 2;		# 10 > 2
 	jmpIfNot_label 	fail;
 
 	cmpGe_l32_l32	a, b;		# 20 >= 10
@@ -62,9 +62,9 @@ function integers {} -> i32 {
 	cmpGe_l32_imm	b, 20;		# 10 >= 20
 	jmpIf_label		fail;
 
-	cmpL_l32_l32	b, a;		# 10 < 20
+	cmpLt_l32_l32	b, a;		# 10 < 20
 	jmpIfNot_label	fail;
-	cmpL_l32_imm	a, 10;		# 20 < 10
+	cmpLt_l32_imm	a, 10;		# 20 < 10
 	jmpIf_label		fail;
 
 	cmpLe_l32_l32	b, a;		# 10 <= 20
@@ -79,9 +79,9 @@ function integers {} -> i32 {
 	mov_l32_imm		b, -1; 			# b = -1 (MAX_U32) 
 	mov_l32_l32		c, a;
 
-	ucmpG_l32_l32	b, a;		# MAX_U32 > 10
+	ucmpGt_l32_l32	b, a;		# MAX_U32 > 10
 	jmpIfNot_label	fail;
-	ucmpG_l32_imm	a, -1;		# 10 > MAX_U32
+	ucmpGt_l32_imm	a, -1;		# 10 > MAX_U32
 	jmpIf_label		fail;
 
 	ucmpGe_l32_l32	b, a;		# MAX_U32 >= 10
@@ -91,9 +91,9 @@ function integers {} -> i32 {
 	ucmpGe_l32_imm	a, -1;		# 10 >= MAX_U32
 	jmpIf_label		fail;
 	
-	ucmpL_l32_l32	a, b;		# 10 < MAX_U32
+	ucmpLt_l32_l32	a, b;		# 10 < MAX_U32
 	jmpIfNot_label	fail;
-	ucmpL_l32_imm	b, 10;		# MAX_U32 < 10
+	ucmpLt_l32_imm	b, 10;		# MAX_U32 < 10
 	jmpIf_label		fail;
 
 	ucmpLe_l32_l32	a, b;		# 10 <= MAX_U32
@@ -154,14 +154,14 @@ function floats {} -> i32 {
 	mov_l32_imm		b, 10.0f32;		# b = 10.0
 	mov_l32_l32		c, b;			# c = 10.0
 
-	fcmpG_l32_l32	a, b;			# 20.0 > 10.0
+	fcmpGt_l32_l32	a, b;			# 20.0 > 10.0
 	jmpIfNot_label	fail;
-	fcmpG_l32_imm	b, 20.0f32;		# 10.0 > 20.0
+	fcmpGt_l32_imm	b, 20.0f32;		# 10.0 > 20.0
 	jmpIf_label		fail;
 
-	fcmpL_l32_l32	b, a;			# 10.0 < 20.0
+	fcmpLt_l32_l32	b, a;			# 10.0 < 20.0
 	jmpIfNot_label	fail;
-	fcmpL_l32_imm	a, 10.0f32;		# 20.0 < 10.0
+	fcmpLt_l32_imm	a, 10.0f32;		# 20.0 < 10.0
 	jmpIf_label		fail;
 
 	fcmpGe_l32_l32	a, b;			# 20.0 >= 10.0

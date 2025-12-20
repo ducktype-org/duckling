@@ -49,9 +49,9 @@ function integers {} -> i64 {
 	cmpNeq_l64_imm	a, 20;		# 20 != 20
 	jmpIf_label		fail;
 
-	cmpG_l64_l64 	a, b;		# 20 > 10
+	cmpGt_l64_l64 	a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
-	cmpG_l64_imm 	b, 2;		# 10 > 2
+	cmpGt_l64_imm 	b, 2;		# 10 > 2
 	jmpIfNot_label 	fail;
 
 	cmpGe_l64_l64	a, b;		# 20 >= 10
@@ -61,9 +61,9 @@ function integers {} -> i64 {
 	cmpGe_l64_imm	b, 20;		# 10 >= 20
 	jmpIf_label		fail;
 
-	cmpL_l64_l64	b, a;		# 10 < 20
+	cmpLt_l64_l64	b, a;		# 10 < 20
 	jmpIfNot_label	fail;
-	cmpL_l64_imm	a, 10;		# 20 < 10
+	cmpLt_l64_imm	a, 10;		# 20 < 10
 	jmpIf_label		fail;
 
 	cmpLe_l64_l64	b, a;		# 10 <= 20
@@ -78,9 +78,9 @@ function integers {} -> i64 {
 	mov_l64_imm		b, -1; 		# b = -1 (MAX_U64) 
 	mov_l64_l64		c, a;
 
-	ucmpG_l64_l64	b, a;		# MAX_U64 > 10
+	ucmpGt_l64_l64	b, a;		# MAX_U64 > 10
 	jmpIfNot_label	fail;
-	ucmpG_l64_imm	a, -1;		# 10 > MAX_U64
+	ucmpGt_l64_imm	a, -1;		# 10 > MAX_U64
 	jmpIf_label		fail;
 
 	ucmpGe_l64_l64	b, a;		# MAX_U64 >= 10
@@ -90,9 +90,9 @@ function integers {} -> i64 {
 	ucmpGe_l64_imm	a, -1;		# 10 >= MAX_U64
 	jmpIf_label		fail;
 	
-	ucmpL_l64_l64	a, b;		# 10 < MAX_U64
+	ucmpLt_l64_l64	a, b;		# 10 < MAX_U64
 	jmpIfNot_label	fail;
-	ucmpL_l64_imm	b, 10;		# MAX_U64 < 10
+	ucmpLt_l64_imm	b, 10;		# MAX_U64 < 10
 	jmpIf_label		fail;
 
 	ucmpLe_l64_l64	a, b;		# 10 <= MAX_U64
@@ -152,14 +152,14 @@ function floats {} -> i64 {
 	mov_l64_imm		b, 10.0;
 	mov_l64_l64		c, b;
 
-	fcmpG_l64_l64	a, b;			# 20.0 > 10.0
+	fcmpGt_l64_l64	a, b;			# 20.0 > 10.0
 	jmpIfNot_label	fail;
-	fcmpG_l64_imm	b, 20.0;		# 10.0 > 20.0
+	fcmpGt_l64_imm	b, 20.0;		# 10.0 > 20.0
 	jmpIf_label		fail;
 
-	fcmpL_l64_l64	b, a;			# 10.0 < 20.0
+	fcmpLt_l64_l64	b, a;			# 10.0 < 20.0
 	jmpIfNot_label	fail;
-	fcmpL_l64_imm	a, 10.0;		# 20.0 < 10.0
+	fcmpLt_l64_imm	a, 10.0;		# 20.0 < 10.0
 	jmpIf_label		fail;
 
 	fcmpGe_l64_l64	a, b;			# 20.0 >= 10.0
