@@ -423,8 +423,7 @@ namespace compiler::helios {
 								  " to the field's expected type ",
 								  field_type.toString()
 							  )));
-							  throw query::QueryFailedException("Coercion failure in implicit ctor."
-						      );
+							  query::throwFailed();
 						  }
 
 

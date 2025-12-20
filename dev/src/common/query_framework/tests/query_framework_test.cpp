@@ -767,7 +767,18 @@ private:
 		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
 	}
 
-	void testQueryResultConcept() {}
+	void testQueryResultConcept() {
+		static_assert(query::IsQResult<query::QResult<u64>>::value, "QResult concept failed (1)");
+		static_assert(
+			!query::IsQResult<u64>::value, "QResult concept failed (2)"
+		);
+
+		// not a q result:
+		struct QResult {};
+		static_assert(
+			!query::IsQResult<QResult>::value, "QResult concept failed (3)"
+		);	
+	}
 
 	void testQueryResult() {
 		using namespace query;
@@ -788,25 +799,6 @@ private:
 		std::string                      info  = "Hello";
 		query::QResult<std::string_view> whoa2 = std::string_view(info);
 		ASSERT_TRUE(whoa2.hasValue());
-
-		// struct Err1 {};
-
-		// struct Err2 {};
-
-		// struct Err3 {};
-
-		// struct Err4 {};
-
-		// query::QResult<int, Err2, Err4> sub_result = Err2();
-
-		// bool entered2 = false;
-		// ASSERT_TRUE(!result.hasValue());
-		// ASSERT_TRUE(result.hasError());
-		// variant_match(result.error()) {
-		// 	variant_case(Err2, value) { entered2 = true; }
-		// 	variant_default CORE_PANIC("Invalid branch");
-		// }
-		// ASSERT_TRUE(entered2);
 	}
 
 	void testNoKeyCopy() {
