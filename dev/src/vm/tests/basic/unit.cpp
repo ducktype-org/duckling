@@ -15,6 +15,7 @@ public:
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
+		TESTER_ADD_TEST(check8BitsInstructions);
 		TESTER_ADD_TEST(check16BitsInstructions);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(check64BitsInstructions);
@@ -38,6 +39,8 @@ private:
 	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, {}, 1'337); }
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
+
+	void check8BitsInstructions() { runTestOnVm("8bits.dbc", "", "1", {}); }
 
 	void check16BitsInstructions() { runTestOnVm("16bits.dbc", "", "1", {}); }
 
