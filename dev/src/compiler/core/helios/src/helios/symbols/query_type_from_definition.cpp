@@ -36,7 +36,7 @@ namespace compiler::helios {
 
 			void visitConst(pst::Access<pst::Const>) final {
 				auto ctv_result = ctx.query<QueryConstValueOf>(key);
-				if (ctv_result.hasError()) return;
+				if (ctv_result.hasFailed()) return;
 				const auto& ctv           = ctv_result.valueOrThrow();
 				const auto& type_of_const = ctv.get<tsh::SymbolType<>>();
 				definition_symbol_type    = type_of_const;

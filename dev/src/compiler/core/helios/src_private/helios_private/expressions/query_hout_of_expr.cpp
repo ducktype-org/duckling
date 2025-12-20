@@ -145,7 +145,7 @@ namespace compiler::helios::code {
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout
 							= getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
-						if (sub_expr_hout.hasError()) {
+						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
 						}
@@ -159,7 +159,7 @@ namespace compiler::helios::code {
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
 				// @todo: make failure more explicit...
-				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
+				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
 
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
@@ -191,7 +191,7 @@ namespace compiler::helios::code {
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
 				auto result = fromChainExpr(ctx, chain_expr);
-				if (result.hasError()) {
+				if (result.hasFailed()) {
 					// Error has occurred.
 					return;
 				}
@@ -324,7 +324,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
 					auto res = fromPST(ctx, ex);
-					if (res.hasError()) {
+					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
 					}
@@ -344,7 +344,7 @@ namespace compiler::helios::code {
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
 				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasError()) return;  // failed
+				if (inner.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -373,7 +373,7 @@ namespace compiler::helios::code {
 				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
 				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
 
-				if (condition_res.hasError() or if_true_res.hasError() or if_false_res.hasError())
+				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
 
 				auto condition = std::move(condition_res).valueOrThrow();
@@ -396,7 +396,7 @@ namespace compiler::helios::code {
 				result_exprs.reserve(expr_count);
 				for (size_t i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
-					if (result.hasError())
+					if (result.hasFailed())
 						return;
 					else
 						result_exprs.push_back(std::move(result.valueOrThrow()));
@@ -454,7 +454,7 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 	}
 }
@@ -489,19 +489,28 @@ namespace compiler::helios {
 		const tsh::SymbolType<>                          expected_type
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
-		if (expr_hout_qresult.hasError()) return query::QError(expr_hout_qresult.error());
+
+		if (expr_hout_qresult.hasFailed()) return query::Failed();
+
 		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
-		if (coercion_qresult.hasError()) {
-			ctx.log(makeBox<CannotCoerceError>(
-				pst_expr.element.unlock(ctx)->getSourcePosition(),
-				expr_hout->expression_type.getSymbolType(),
-				expected_type
-			));
-			return query::QError(query::Failed());
+		if (coercion_qresult.hasFailed()) return query::Failed();
+
+		variant_match(coercion_qresult.valueOrPanic().getVariant()) {
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_case(InvalidCoercion, _) {
+				ctx.log(makeBox<CannotCoerceError>(
+					pst_expr.element.unlock(ctx)->getSourcePosition(),
+					expr_hout->expression_type.getSymbolType(),
+					expected_type
+				));
+
+				return query::Failed();
+			}
+			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
 		}
-		return coercion_qresult.valueOrThrow().coerce(ctx, std::move(expr_hout));
+		CORE_UNREACHABLE();
 	}
 }

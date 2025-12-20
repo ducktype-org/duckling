@@ -1401,6 +1401,10 @@ private:
 					auto if_stmt = function.body->statements.at(i).ref();
 					auto if_stmt_casted
 						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
+					if (!if_stmt_casted) {
+						// we only test if-statements here
+						continue;
+					}
 
 					auto ret_stmt = if_stmt_casted->then_body.statements.at(0).ref();
 					auto ret_stmt_casted
@@ -2126,7 +2130,7 @@ private:
 
 			ctx.logger.clear();
 			assertTrue(
-				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasError(),
+				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasFailed(),
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;

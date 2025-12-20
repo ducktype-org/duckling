@@ -174,7 +174,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::QResult<Function, query::Failed> finalizeFunctionEnd(query::Context&, Function function) {
+	query::QResult<Function> finalizeFunctionEnd(query::Context&, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
@@ -194,7 +194,7 @@ namespace compiler::mir {
 		} else {
 			// @todo there should be logging here of missing return value / control reaches the
 			// end of non-void function
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 	}
 
@@ -256,7 +256,7 @@ namespace compiler::mir {
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
-			if (validateFunction(function_reachable).isBad()) return query::QError(query::Failed());
+			if (validateFunction(function_reachable).isBad()) return query::Failed();
 
 			return function_reachable;
 		}
@@ -278,7 +278,7 @@ namespace compiler::mir {
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
 
 			// change FunctionEnd to proper return
-			UNPACK_RESULT_MOVE(
+			UNPACK_QRESULT_MOVE(
 				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
 			);
 
