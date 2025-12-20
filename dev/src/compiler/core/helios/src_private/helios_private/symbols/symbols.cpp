@@ -689,7 +689,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 
-			if (kind(key) == SymbolKind::BuiltinFunction) {
+			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other)) {
 				// Builtin functions have no specifiers
 				return {};
 			}

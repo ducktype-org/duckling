@@ -430,9 +430,10 @@ namespace compiler::helios::mangler {
 					return base::StrID{ "main" };
 				}
 
-				if (kind(sym_id) == SymbolKind::BuiltinFunction) {
+				if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(sym_id)->other)) {
 					// Builtin functions are not mangled
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// @TODO: #1700 Simplify this handling of builtin functions.
+					// i.e. probably make it similar to mangling regular functions.
 					return name(sym_id);
 				}
 

@@ -22,6 +22,7 @@
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -1218,7 +1219,9 @@ private:
 		);
 		auto call_expr_1_callee
 			= compiler::helios::getIdentifierExprSymID(call_expr_1->callee.ref()).value();
-		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1_callee));
+		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
+			getSymRef(call_expr_1_callee)->other
+		));
 		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
 
 		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
@@ -1227,7 +1230,9 @@ private:
 		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		auto call_expr_2_callee
 			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
-		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2_callee));
+		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
+			getSymRef(call_expr_2_callee)->other
+		));
 		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
 		auto builtin_output_decl
 			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee);
