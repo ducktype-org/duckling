@@ -58,11 +58,11 @@ namespace dia {
 	}
 
 	Ref<tokenizer::TokenSource> FakeLocation::getSource() const {
-		CORE_PANIC("Tried to access a fake location from a fake position.");
+		CORE_PANIC("Tried to access a TokenSource from fake location.");
 	}
 
 	fs::File FakeLocation::getSourceFile() const {
-		CORE_PANIC("Tried to access a fake location from a fake position.");
+		CORE_PANIC("Tried to access a File from fake location.");
 	}
 
 	FakeLocation FakeLocation::instance = {};

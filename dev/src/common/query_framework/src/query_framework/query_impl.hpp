@@ -127,7 +127,7 @@ namespace query::internal {
 
 				if constexpr (QueryImplType::USES_QRESULT
 				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-					return QueryImplType::store(perfect_hash, query::QError(Failed()), acd);
+					return QueryImplType::store(perfect_hash, query::Failed(), acd);
 				} else {
 					CORE_PANIC(qfe.what());
 				}
@@ -260,13 +260,6 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
 			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
-		),                                                                                                                             \
-		"PResult must be a QResult if uses_qresult is true"                                                                            \
-	);                                                                                                                                 \
-	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(                                                                                                                  \
-			type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                             \
-			::query::HasFailedInQResult<type::PResult>::value                                                                          \
 		),                                                                                                                             \
 		"PResult must be a QResult if uses_qresult is true"                                                                            \
 	);                                                                                                                                 \
