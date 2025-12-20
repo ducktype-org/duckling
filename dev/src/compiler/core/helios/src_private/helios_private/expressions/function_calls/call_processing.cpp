@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -129,18 +130,19 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError())
+			if (coercion.valueOrThrow().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
 					                                      .argument_index = i } };
-			if (not coercion.valueOrThrow().isEmptyCoercion()) coercion_present = true;
+
+			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
-				.index_in_positional_args = i,
-				.requires_coercion        = not coercion.valueOrThrow().isEmptyCoercion() });
-			coercions[i].emplace(std::move(coercion).valueOrThrow());
+				.index_in_positional_args = i, .requires_coercion = not is_empty });
+			coercions[i].emplace(std::move(coercion).valueOrPanic().getCoercion());
 		}
 
 
@@ -173,19 +175,19 @@ namespace compiler::helios::code {
 			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError())
+			if (coercion.valueOrThrow().isInvalid())
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type    = provided_type,
 					                                      .expected_type = expected_type,
 					                                      .argument_index
                                                         = positional_arguments.size() + i } };
-			if (not coercion.valueOrThrow().isEmptyCoercion()) coercion_present = true;
 
-			argument_origin[param_idx]
-				= NamedArgumentOrigin{ .index_in_named_args = i,
-				                       .requires_coercion
-				                       = not coercion.valueOrThrow().isEmptyCoercion() };
-			coercions[param_idx].emplace(std::move(coercion).valueOrThrow());
+			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
+
+			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
+				                                              .requires_coercion   = not is_empty };
+			coercions[param_idx].emplace(std::move(coercion).valueOrPanic().getCoercion());
 		}
 
 		// Go over default arguments
@@ -279,10 +281,11 @@ namespace compiler::helios::code {
 	 * @param call_expr The PST call expression containing arguments
 	 * @param positional_arguments Output vector for positional arguments
 	 * @param named_arguments Output map for named arguments
-	 * @return QError if validation fails (duplicate names, positional after named, or expression
-	 * error)
+	 * @return std::monostate is succeeded,
+	 *         other states if validation fails (duplicate names, positional after named, or
+	 * expression error)
 	 */
-	query::QResult<std::monostate, PositionalAfterNamedArgument, query::Failed> fillCallArgs(
+	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument>> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -292,15 +295,16 @@ namespace compiler::helios::code {
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasError()) return query::QError(arg_expr.error());
+			if (arg_expr.hasFailed()) return query::Failed();
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
 			} else {
 				if (!named_arguments.empty())
-					return query::QError(PositionalAfterNamedArgument{ arg_index }
-					);  // Normal argument after named one.
+					return PositionalAfterNamedArgument{
+						arg_index
+					};  // Normal argument after named one.
 
 				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
 			}
@@ -416,7 +420,7 @@ namespace compiler::helios::code {
 			main_msg->attachMessage(std::move(first_candidate_msg).value());
 	}
 
-	query::QResult<Box<CallExpr>, query::Failed> processFunctionCall(
+	query::QResult<Box<CallExpr>> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
@@ -425,7 +429,23 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                          positional_arguments;
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
-		if (verify_result.hasError()) return query::QError(query::Failed{});
+
+		if (verify_result.hasFailed()) return query::Failed{};
+		if (std::holds_alternative<PositionalAfterNamedArgument>(verify_result.valueOrPanic())) {
+			auto error_data = std::get<PositionalAfterNamedArgument>(verify_result.valueOrPanic());
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Positional argument present after named argument",
+				call_expr->getSourcePosition(),
+				base::strConcat(
+					"Positional argument at index ",
+					base::toString(error_data.argument_index),
+					" cannot be after named arguments"
+				),
+				"here"
+			));
+			return query::Failed{};
+		}
+
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;
@@ -452,7 +472,7 @@ namespace compiler::helios::code {
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
 			ctx.logInt(std::move(main_msg));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
 			return constructCallExpr(
@@ -470,7 +490,7 @@ namespace compiler::helios::code {
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
 			ctx.logInt(std::move(main_msg));
-			return query::QError(query::Failed());
+			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
 			return constructCallExpr(
@@ -494,6 +514,6 @@ namespace compiler::helios::code {
 		}
 
 		// ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
-		return query::QError(query::Failed());
+		return query::Failed();
 	}
 }
