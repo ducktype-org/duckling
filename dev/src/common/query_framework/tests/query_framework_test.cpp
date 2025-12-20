@@ -769,15 +769,12 @@ private:
 
 	void testQueryResultConcept() {
 		static_assert(query::IsQResult<query::QResult<u64>>::value, "QResult concept failed (1)");
-		static_assert(
-			!query::IsQResult<u64>::value, "QResult concept failed (2)"
-		);
+		static_assert(!query::IsQResult<u64>::value, "QResult concept failed (2)");
 
 		// not a q result:
 		struct QResult {};
-		static_assert(
-			!query::IsQResult<QResult>::value, "QResult concept failed (3)"
-		);	
+
+		static_assert(!query::IsQResult<QResult>::value, "QResult concept failed (3)");
 	}
 
 	void testQueryResult() {
