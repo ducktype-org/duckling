@@ -99,7 +99,7 @@ namespace compiler::helios {
 		return SymbolData{
 			.common = {
 				.name = name,
-				.kind = SymbolKind::BuiltinFunction,
+				.kind = SymbolKind::Function,
 			},
 			.other  = builtin_data,
 		};
