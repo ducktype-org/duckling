@@ -83,8 +83,10 @@
 		inline constexpr explicit(EXPLICIT_BASE) operator T() const noexcept {                     \
 			return static_cast<T>(value);                                                          \
 		}                                                                                          \
-		inline constexpr NAME  operator+() const noexcept { return NAME(+value); }                 \
-		inline constexpr NAME  operator-() const noexcept { return NAME(-value); }                 \
+		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
+		inline constexpr NAME operator-() const noexcept {                                         \
+			return NAME(static_cast<BASE_T>(-value));                                              \
+		}                                                                                          \
 		inline constexpr NAME& operator++() noexcept {                                             \
 			value++;                                                                               \
 			return *this;                                                                          \
