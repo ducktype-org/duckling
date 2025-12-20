@@ -156,7 +156,7 @@ namespace compiler::helios::code {
 		  Expr(
 
 			  tsh::ExpressionType<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+				  ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
 					  "Handling errors in HOUT is not supported yet 1 — " + name(symbol).str()
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -541,7 +541,7 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(query::Context& ctx, Box<Expr> base, const SymID field):
 		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(tsh::ExpressionType(
-			  ctx.query<QueryTypeOfSymbol>(field)->expect(
+			  ctx.query<QueryTypeOfSymbol>(field)->throwOnFail(
 				  "Handling errors here is not supported yet -- this will probably have to be "
 				  "refactored to some kind of static method.."
 			  ),

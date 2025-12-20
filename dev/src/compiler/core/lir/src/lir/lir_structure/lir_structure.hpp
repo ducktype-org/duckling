@@ -73,6 +73,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatEq,
 	FloatNeq,
 
+	/** Meta type operations. */
+	MetaCreateBox,
+	MetaCreateRef,
+	MetaCreateTuple, // N arguments, types to create the tuple type from
+	MetaCreateVariant, // N arguments, types to create the variant type from
+
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,

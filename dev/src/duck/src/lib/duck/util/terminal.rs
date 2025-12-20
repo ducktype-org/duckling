@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::io::Read;
 use std::io::Write;
 
-use crate::QuackResult;
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 use paste::item;
 
@@ -87,10 +86,6 @@ impl Terminal {
         }
     }
 
-    pub fn flush(&self) -> QuackResult<()> {
-        Ok(self.term.flush()?)
-    }
-
     fn print_nl_impl(&self, text: impl FnOnce() -> String, verbose_only: bool) {
         if self.verbosity.is_quiet() {
             return;
@@ -146,6 +141,14 @@ impl Terminal {
         note => "Note:" + cyan + bold,
         hint => "Hint:" + cyan + bold,
         critical => "Critical:" + red + reverse + bold,
+    }
+
+    pub fn verbosity(&self) -> &Verbosity {
+        &self.verbosity
+    }
+
+    pub fn term(&self) -> &Term {
+        &self.term
     }
 }
 

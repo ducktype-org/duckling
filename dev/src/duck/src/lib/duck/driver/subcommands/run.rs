@@ -1,7 +1,6 @@
 use std::ffi::OsString;
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::{ArgMatches, Command, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, multi, subcommand};
@@ -31,5 +30,5 @@ pub fn get_parser() -> Command {
 }
 
 pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    bail!("implement run")
+    qp_bail!("implement run")
 }

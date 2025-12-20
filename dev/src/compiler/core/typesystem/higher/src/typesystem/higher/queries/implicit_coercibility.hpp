@@ -85,7 +85,7 @@ namespace compiler::tsh {
 		QueryImplicitCoercibilityOnAbstractType,
 		KeyFor_QueryImplicitCoercibilityOnAbstractType,
 		bool,
-		({})
+		({ .uses_qresult = false })
 	)
 
 	/**
@@ -132,7 +132,7 @@ namespace compiler::tsh {
 		QueryImplicitCoercibilityOnSymbolType,
 		KeyFor_QueryImplicitCoercibilityOnSymbolType,
 		bool,
-		({})
+		({ .uses_qresult = false })
 	)
 
 	/**
@@ -179,6 +179,6 @@ namespace compiler::tsh {
 		QueryImplicitCoercibilityOnExpressionType,
 		KeyFor_QueryImplicitCoercibilityOnExpressionType,
 		bool,
-		({})
+		({ .uses_qresult = false })
 	)
 }

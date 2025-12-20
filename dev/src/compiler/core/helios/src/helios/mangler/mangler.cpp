@@ -7,6 +7,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -14,6 +15,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -203,8 +205,9 @@ namespace compiler::helios::mangler {
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
-				ret       = "F";
-				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+				ret = "F";
+				auto type
+					= ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->valueOrThrow().getType();
 				auto fun_type = tsh::FunctionAbstractType(type);
 
 				auto ret_type = fun_type.getResultType();
@@ -243,7 +246,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();  // "META" ?
@@ -275,7 +278,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();
@@ -419,15 +422,26 @@ namespace compiler::helios::mangler {
 			using namespace std::literals::string_view_literals;
 
 			if (key.kind == ManglingSymbolKind::Standard) {
+				auto sym_id = std::get<SymID>(key.symbol_key);
 				// a temporary hack:
-				// @TODO: fix it when we do #895
-				if (name(std::get<0>(key.symbol_key)) == "main") {
+				// @TODO: #895 fix it when we add script based package targets
+				if (name(sym_id) == "main") {
 					// main is not mangled
 					return base::StrID{ "main" };
-				} else if (kind(std::get<0>(key.symbol_key)) == SymbolKind::BuiltinFunction) {
+				}
+
+				if (kind(sym_id) == SymbolKind::BuiltinFunction) {
 					// Builtin functions are not mangled
 					// @TODO: #1419 Simplify this handling of builtin functions.
-					return name(std::get<0>(key.symbol_key));
+					return name(sym_id);
+				}
+
+				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
+					variant_match(abi->valueOrThrow()) {
+						variant_case_novalue(CAbi) { return name(sym_id); }
+						variant_case_novalue(DefaultAbi) { /* Handled below */ }
+						variant_default { CORE_UNREACHABLE(); }
+					}
 				}
 			}
 

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
 use super::source;
-use anyhow::Context;
 use tracing::Level;
 use tracing::span;
 use tracing::trace;
@@ -13,11 +12,13 @@ use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
 use crate::quackpack::core::DependencyDescription;
 use crate::quackpack::core::DependencyFeature;
+use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::manifest::Dependencies as DependenciesSchema;
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
 use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
 use crate::quackpack::schemas::manifest::DependencySource;
+use crate::util_common::error::QuackResultContext;
 
 use crate::static_str_id;
 use crate::{QpCtx, QuackResult, quackpack::core::Dependencies};
@@ -100,17 +101,19 @@ fn parse_features(
                 result.push(DependencyFeature::new(name.into(), None));
             }
             FeatureSchema::Detailed(detailed_feature) => {
-                for (name, conditions) in detailed_feature.0.iter() {
-                    let name = name.into();
-                    scope.push(name);
-                    scope.push(static_str_id!("conditions"));
-                    result.push(DependencyFeature::new(
-                        name,
-                        Some(parse_conditions(conditions, scope)?),
-                    ));
-                    scope.pop();
-                    scope.pop();
-                }
+                let OneEntryMap {
+                    key: ref name,
+                    value: ref conditions,
+                } = detailed_feature.0;
+                let name = name.into();
+                scope.push(name);
+                scope.push(static_str_id!("conditions"));
+                result.push(DependencyFeature::new(
+                    name,
+                    Some(parse_conditions(conditions, scope)?),
+                ));
+                scope.pop();
+                scope.pop();
             }
         }
     }

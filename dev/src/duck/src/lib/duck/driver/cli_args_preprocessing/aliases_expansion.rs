@@ -1,7 +1,6 @@
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::bail;
+use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::chain;
 use tracing::debug;
@@ -89,7 +88,7 @@ fn expand_single_alias(
     debug!("replaced the alias `{alias}` with `{alias_expansion}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
-        bail!("user-defined alias `{alias}` does not have a subcommand")
+        qp_bail!("user-defined alias `{alias}` does not have a subcommand")
     };
     visited.push(alias.into());
     check_alias_cycle(alias, new_subcmd, visited)?;
@@ -115,7 +114,7 @@ fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult
 
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
     if visited.contains(&next.into()) {
-        bail!(
+        qp_bail!(
             "user-defined alias `{current}` cycles: {} -> {next}",
             visited.join(" -> "),
         );

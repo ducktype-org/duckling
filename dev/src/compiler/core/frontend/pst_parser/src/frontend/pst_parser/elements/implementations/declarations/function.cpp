@@ -23,6 +23,10 @@ namespace pst {
 		return out;
 	}
 
+	base::Optional<AccessLocked<ExprHolder>> Fun::getRet() const {
+		return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
+	}
+
 	void Fun::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";

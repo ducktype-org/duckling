@@ -109,7 +109,8 @@ DEF_MICRO_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocal
 DEF_MICRO_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
 
 DEF_MICRO_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
-
+DEF_MICRO_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
+DEF_MICRO_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
 
 // ========= ARITHMETIC OPERATIONS ========
 

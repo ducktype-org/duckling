@@ -16,7 +16,9 @@ namespace compiler::lir {
 	 * @brief Lower a MIRFunction to a LIRFunction
 	 * Generates TSL types
 	 */
-	DECLARE_QUERY(LowerToLIRFunction, KeyOf_LowerToLIRFunction, CRef<Function>, ({}))
+	DECLARE_QUERY(
+		LowerToLIRFunction, KeyOf_LowerToLIRFunction, CRef<Function>, ({ .uses_qresult = false })
+	)
 
 	/**
 	 * @brief Creates a LIR function that call each function in the list (in the provided order).

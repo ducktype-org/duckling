@@ -52,7 +52,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -80,6 +80,7 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
+			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
 				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
@@ -411,7 +412,12 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
+			DECLARE_QUERY(
+				QueryGlobalBuiltinSymbols,
+				query::EmptyKey,
+				CRef<std::vector<SymID>>,
+				({ .uses_qresult = false })
+			);
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
@@ -528,10 +534,10 @@ namespace compiler::helios {
 				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
-					lookup_res.hasValue() && not lookup_res.value().empty(),
+					lookup_res.hasValue() && not lookup_res.valueOrThrow().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow().back() });
 				output(ret);
 			}
 
@@ -600,7 +606,7 @@ namespace compiler::helios {
 				return SymbolList{ { key } };
 			}
 
-			UNPACK_RESULT_MOVE(
+			UNPACK_QRESULT_MOVE(
 				auto lookup_chain =,
 				lookupChain(
 					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
@@ -615,7 +621,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -629,12 +635,13 @@ namespace compiler::helios {
 			const auto hout_qresult = getHoutOfExprWithExpectedType(
 				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
 			);
-			if (hout_qresult.hasError()) return query::QError(errors::Failed());
+			if (hout_qresult.hasFailed()) return query::Failed();
 
 			// Evaluate the HOUT expression at compile-time
-			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.value().ref() });
-			if (ctv.hasError()) return query::QError(errors::Failed());
-			return ctv.value();
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			if (ctv.hasFailed()) return query::Failed();
+			return ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -837,6 +844,10 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
+			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
+				expr.value_expr->acceptVisitor(*this);
 			}
 		};
 
