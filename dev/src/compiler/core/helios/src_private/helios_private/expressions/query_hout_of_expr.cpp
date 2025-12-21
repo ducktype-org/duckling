@@ -2,6 +2,7 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
+#include "helios_private/errors/interactive_errors.hpp"
 #include "numeric_literals.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -484,9 +485,10 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	ExprConstructionResult getHoutOfExprWithExpectedType(
-		query::Context&                                  ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		const tsh::SymbolType<>                          expected_type
+		query::Context&                                      ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
+		const tsh::SymbolType<>                              expected_type,
+		base::Optional<std::function<void(query::Context&)>> log_error
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -501,12 +503,15 @@ namespace compiler::helios {
 		variant_match(coercion_qresult.valueOrPanic().getVariant()) {
 			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
 			variant_case(InvalidCoercion, _) {
-				ctx.log(makeBox<CannotCoerceError>(
-					pst_expr.element.unlock(ctx)->getSourcePosition(),
-					expr_hout->expression_type.getSymbolType(),
-					expected_type
-				));
-
+				if (log_error.has_value()) {
+					(*log_error)(ctx);
+				} else {
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						pst_expr.element.unlock(ctx)->getSourcePosition(),
+						InteractiveType{ expr_hout->expression_type.getSymbolType() },
+						InteractiveType{ expected_type }
+					));
+				}
 				return query::Failed();
 			}
 			variant_default { CORE_PANIC("Unhandled coercion result variant."); }

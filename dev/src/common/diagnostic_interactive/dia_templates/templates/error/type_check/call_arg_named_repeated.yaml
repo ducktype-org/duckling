@@ -1,8 +1,8 @@
 metadata:
   type: "error"
   family: "type_check"
-  name: "call_arg_duplicate_named"
-  code: "6004"
+  name: "call_arg_named_repeated"
+  code: "6002"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"
@@ -13,22 +13,10 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
-  function_name:
-    description: "The name of the function being called."
-    optional: true
 
 
 header_message:
-  - case:
-      is_param_provided: "function_name"
-    of:
-      true:
-        - "Failed to call `"
-        - param: "function_name"
-        - "`. "
-      false: []
-  - "A named argument is specified more than once."
-
+  - "Named argument is already provided in the function call."
 
 description:
   - codeblock:
@@ -42,4 +30,5 @@ pointer_messages:
     priority: 1
     type: "error"
     content:
-      - "duplicated argument appears here"
+      - "here"
+

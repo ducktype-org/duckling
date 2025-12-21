@@ -1,9 +1,11 @@
 #include "interactive_errors.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/usage.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -14,7 +16,7 @@
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-namespace compiler::helios::errors {
+namespace compiler::helios {
 	using namespace dia_int;
 
 	std::string getStr(dia::SourcePosition pos) {
@@ -114,19 +116,43 @@ namespace compiler::helios::errors {
 		return link;
 	}
 
-	IncompatibleTypesError::IncompatibleTypesError(
-		dia::SourcePosition    source_position,
-		const InteractiveType& expected_type,
-		const InteractiveType& actual_type
-	):
-		  MessageWithCodeFragmentAndCause(source_position) {
-		addArgument<InteractiveArgument>("expected_type", makeBox<InteractiveType>(expected_type));
-		addArgument<InteractiveArgument>("given_type", makeBox<InteractiveType>(actual_type));
-	}
+	class FunctionDeclaredHereNote final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "function_declared_here" };
+		}
 
-	InteractiveType::InteractiveType(
-		tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::LangElement>> pst_expr
-	):
-		  symbol_type(symbol_type),
-		  pst_expr(std::move(pst_expr)) {}
+	public:
+		FunctionDeclaredHereNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	Box<dia_args::Component> InteractiveFunction::getValue(MessageBase& msg) {
+		std::string              message_id;
+		std::vector<std::string> linked_messages;
+		std::string              displayed_name = name(function_symbol).str();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto maybe_function = getSymRef(function_symbol)->getPSTData()->pst_element.unlock(ctx);
+			if (maybe_function->getElementKind() == pst::ElementKind::Fun) {
+				auto function  = maybe_function.dynamicCast<pst::Fun>().value();
+				auto fun_decl  = function->getParams().unlock(ctx);
+				auto fun_ident = function->getNameIdentifier();
+				auto position
+					= dia::SourcePosition::merge(fun_ident.position, fun_decl->getSourcePosition());
+				auto id = MessageBase::getUniqueID();
+				msg.addLinkedMessage(id, makeBox<FunctionDeclaredHereNote>(position));
+				linked_messages.push_back(std::move(id));
+			}
+		});
+
+		msg.addEntity<TextBasedEntity>(linked_messages, displayed_name);
+
+		auto content = makeBox<dia_args::TextComponent>(displayed_name);
+		auto link
+			= makeBox<dia_args::LinkComponent>(std::move(linked_messages), std::move(content));
+		return link;
+	}
 }

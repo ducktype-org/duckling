@@ -1,6 +1,7 @@
 #include "queries.hpp"
 
-#include <diagnostic_interactive/usage.hpp>
+#include "diagnostic_interactive/placeholder.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -413,9 +414,10 @@ namespace compiler::helios {
 					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) -> Box<code::Expr> {
 						  const auto init_expr_type = expr->expression_type.getSymbolType();
 						  const auto field_type     = field.getType(ctx);
-						  const auto coercion       = canCoerce(ctx, init_expr_type, field_type);
+						  const auto coercion
+							  = canCoerce(ctx, init_expr_type, field_type).valueOrThrow();
 
-						  if (coercion.valueOrThrow().isInvalid()) {
+						  if (coercion.isInvalid()) {
 							  // @TODO: #1620 report error with position here when HOUT exposes position.
 							  ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
 								  "Cannot coerce default field value of type ",
@@ -426,8 +428,7 @@ namespace compiler::helios {
 							  query::throwFailed();
 						  }
 
-
-						  return coercion.valueOrPanic().coerce(ctx, std::move(expr));
+						  return coercion.coerce(ctx, std::move(expr));
 					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)

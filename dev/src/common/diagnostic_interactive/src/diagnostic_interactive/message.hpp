@@ -113,6 +113,9 @@ namespace dia_int {
 	 * @brief InteractiveElement is an interface for elements that can be used
 	 * as arguments in InteractiveArgument.
 	 * They can add new messages and entities when generating their value.
+	 *
+	 * We couldn't use Argument here directly because Argument requires a name
+	 * and InteractiveElement doesn't have a name.
 	 */
 	class InteractiveElement {
 	public:
@@ -121,7 +124,7 @@ namespace dia_int {
 		virtual ~InteractiveElement() = default;
 	};
 
-	class InteractiveArgument final: public Argument {
+	class InteractiveArgument: public Argument {
 	private:
 		Box<InteractiveElement> element;
 
@@ -324,4 +327,24 @@ namespace dia_int {
 		virtual ~MessageBase() = default;
 	};
 
+	/**
+	 * @brief This is a helper base class for messages.
+	 * This is the same as MessageWithCodeFragmentAndCause, but without the cause pointer message.
+	 */
+	class MessageWithCodeFragment: public MessageBase {
+	protected:
+		MessageWithCodeFragment(dia::SourcePosition source_position);
+	};
+
+	/**
+	 * @brief This is a helper base class for messages.
+	 * The `code` and `code_location` arguments are the same arguments as any other,
+	 * they are not special in any way.
+	 * But they are very commonly used together with the `cause` pointer message,
+	 * so this base class adds them both based on the provided source position.
+	 */
+	class MessageWithCodeFragmentAndCause: public MessageBase {
+	protected:
+		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position);
+	};
 }

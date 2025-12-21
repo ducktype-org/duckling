@@ -1,5 +1,8 @@
-fun main() -> i64 = {
-    var a: i64 = 123;
+fun aaa(x: i64) ={
+}
 
-    return a + 3;
+fun main() -> i64 = {
+    aaa(w=5);
+
+    # return a + 3;
 }

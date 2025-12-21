@@ -1,5 +1,4 @@
 #include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -96,8 +95,8 @@ namespace compiler::helios::code {
 	};
 
 	struct NoMatch final {
-		SymID        function;
-		MatchFailure reason;
+		SymID                function;
+		FunctionMatchFailure reason;
 	};
 
 	using MatchResult = std::variant<CoercionMatch, ExactMatch, NoMatch>;
@@ -119,9 +118,10 @@ namespace compiler::helios::code {
 
 		if (positional_arguments.size() > decl->parameters.size())
 			return NoMatch{ .function = fun,
-				            .reason   = TooManyCallArguments{
-								  .valid_arguments = decl->parameters.size(),
-								  .total_arguments = positional_arguments.size() } };
+				            .reason
+				            = TooManyCallArguments{ .valid_arguments = decl->parameters.size(),
+				                                    .total_arguments = positional_arguments.size(),
+				                                    .function        = fun } };
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
@@ -134,7 +134,8 @@ namespace compiler::helios::code {
 				return NoMatch{ .function = fun,
 					            .reason   = TypeMismatch{ .given_type     = provided_type,
 					                                      .expected_type  = expected_type,
-					                                      .argument_index = i } };
+					                                      .argument_index = i,
+					                                      .function       = fun } };
 
 			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -154,8 +155,9 @@ namespace compiler::helios::code {
 				if (decl->parameters[param_idx].name == name) {
 					if (argument_origin[param_idx].has_value())
 						return NoMatch{ .function = fun,
-							            .reason   = DuplicateNamedArgument{
-                                            positional_arguments.size() + i } };
+							            .reason   = NamedArgumentProvidedByPositional{
+											  .argument_index = positional_arguments.size() + i,
+											  .function       = fun } };
 
 					param_idx_with_matching_name = param_idx;
 					break;
@@ -165,9 +167,10 @@ namespace compiler::helios::code {
 			// Name mismatch case.
 			if (param_idx_with_matching_name.empty())
 				return NoMatch{ .function = fun,
-					            .reason   = UnknownNamedArgument{
-									  .name           = name,
-									  .argument_index = positional_arguments.size() + i } };
+					            .reason   = UnknownNamedArgument{ .name = name,
+					                                              .argument_index
+                                                                = positional_arguments.size() + i,
+					                                              .function = fun } };
 
 			usize           param_idx = param_idx_with_matching_name.value();
 			tsh::SymbolType provided_type
@@ -177,10 +180,11 @@ namespace compiler::helios::code {
 
 			if (coercion.valueOrThrow().isInvalid())
 				return NoMatch{ .function = fun,
-					            .reason   = TypeMismatch{ .given_type    = provided_type,
-					                                      .expected_type = expected_type,
-					                                      .argument_index
-                                                        = positional_arguments.size() + i } };
+					            .reason
+					            = TypeMismatch{ .given_type     = provided_type,
+					                            .expected_type  = expected_type,
+					                            .argument_index = positional_arguments.size() + i,
+					                            .function       = fun } };
 
 			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
@@ -200,7 +204,9 @@ namespace compiler::helios::code {
 						decl->parameters[i].initial_value.value()->expression_type.getSymbolType()
 					));
 				} else
-					return NoMatch{ .function = fun, .reason = MissingCallArgument{ i } };
+					return NoMatch{ .function = fun,
+						            .reason   = MissingCallArgument{ .parameter_index = i,
+						                                             .function        = fun } };
 			}
 		}
 
@@ -285,7 +291,7 @@ namespace compiler::helios::code {
 	 *         other states if validation fails (duplicate names, positional after named, or
 	 * expression error)
 	 */
-	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument>> fillCallArgs(
+	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument, RepeatedNamedArgument>> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -299,6 +305,9 @@ namespace compiler::helios::code {
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
+				for (auto&& [existing_name, _]: named_arguments)
+					if (existing_name == arg_name)
+						return RepeatedNamedArgument{ arg_index };  // Duplicate named argument.
 				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
 			} else {
 				if (!named_arguments.empty())
@@ -403,7 +412,7 @@ namespace compiler::helios::code {
 				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
 			candidate_note->attachMessage(
-				createDetailedCallErrorMessage(ctx, match.function, call_expr, match.reason, false)
+				createDetailedCallErrorMessage(ctx, call_expr, match.reason, true)
 			);
 
 			if (first_candidate_msg.empty())
@@ -431,18 +440,13 @@ namespace compiler::helios::code {
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
 
 		if (verify_result.hasFailed()) return query::Failed{};
-		if (std::holds_alternative<PositionalAfterNamedArgument>(verify_result.valueOrPanic())) {
-			auto error_data = std::get<PositionalAfterNamedArgument>(verify_result.valueOrPanic());
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Positional argument present after named argument",
-				call_expr->getSourcePosition(),
-				base::strConcat(
-					"Positional argument at index ",
-					base::toString(error_data.argument_index),
-					" cannot be after named arguments"
-				),
-				"here"
-			));
+
+		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrPanic())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
+			return query::Failed{};
+		}
+		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrPanic())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
 			return query::Failed{};
 		}
 
@@ -504,9 +508,7 @@ namespace compiler::helios::code {
 		}
 
 		if (candidates.size() == 1) {
-			ctx.logInt(createDetailedCallErrorMessage(
-				ctx, candidates[0], call_expr, no_match[0].reason, true
-			));
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, no_match[0].reason, true));
 		} else {
 			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, false);

@@ -4,6 +4,7 @@
 #include <frontend/pst_parser/generic_query_key.hpp>
 #include <helios/hout/elements/expr.hpp>
 
+#include <diagnostic/source_position.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -31,8 +32,9 @@ namespace compiler::helios {
 	 * @return A HOUT Expression of the expected type, or an error if coercion is not possible.
 	 */
 	ExprConstructionResult getHoutOfExprWithExpectedType(
-		query::Context&                                  ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		tsh::SymbolType<>                                expected_type
+		query::Context&                                      ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
+		tsh::SymbolType<>                                    expected_type,
+		base::Optional<std::function<void(query::Context&)>> log_error = {}
 	);
 }

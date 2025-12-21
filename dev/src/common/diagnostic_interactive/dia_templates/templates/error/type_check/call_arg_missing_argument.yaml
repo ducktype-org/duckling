@@ -17,22 +17,9 @@ params:
     description: "The code snippet of the function call."
   call_code_location:
     description: "The location of the function call code snippet."
-  function_name:
-    description: "The name of the function being called."
-    optional: true
-
 
 header_message:
-  - case:
-      is_param_provided: "function_name"
-    of:
-      true:
-        - "Failed to call `"
-        - param: "function_name"
-        - "`. "
-      false: []
   - "The call is missing a required argument with no default value."
-
 
 description:
   - codeblock:

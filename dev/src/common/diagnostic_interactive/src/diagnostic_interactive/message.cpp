@@ -212,6 +212,19 @@ namespace dia_int {
 		edge.name = message_id;
 		return edge;
 	}
+
+	MessageWithCodeFragment::MessageWithCodeFragment(dia::SourcePosition source_position) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+	}
+
+	MessageWithCodeFragmentAndCause::MessageWithCodeFragmentAndCause(
+		dia::SourcePosition source_position
+	) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+		addPointerMessage({ "cause", source_position });
+	}
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::MessageBase);
