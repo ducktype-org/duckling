@@ -110,6 +110,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_setNull_lptr, i) { addLow<Op_setNull_lptr>(i.dst); }
 			instr_case(high::Op_mov_lopq_lopq, i) { addLow<Op_mov_lopq_lopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }

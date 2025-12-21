@@ -510,6 +510,11 @@ namespace compiler::mir {
 			case FloatNeq:
 				return Operation::FloatNeq;
 
+			case MetaEq:
+				return Operation::MetaEq;
+			case MetaNeq:
+				return Operation::MetaNeq;
+
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:
@@ -532,6 +537,8 @@ namespace compiler::mir {
 				return Operation::MetaCreateBox;
 			case Ref:
 				return Operation::MetaCreateRef;
+			case Const:
+				return Operation::MetaCreateConst;
 			default:
 				CORE_UNREACHABLE();
 			}

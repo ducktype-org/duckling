@@ -405,6 +405,14 @@ private:
 			}
 
 			{
+				auto create_ref = module.lirFunc("createConst");
+				ASSERT_TRUE(create_ref->validateParameters().isOk());
+				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
+				const auto& block = create_ref->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateConst);
+			}
+
+			{
 				auto create_variant = module.lirFunc("createVariant");
 				for (const auto& local: create_variant->local_list) assert_is_meta_local(local);
 				const auto& block = create_variant->block_order[0];
