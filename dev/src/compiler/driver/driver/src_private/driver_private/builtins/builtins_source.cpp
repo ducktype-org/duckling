@@ -21,17 +21,17 @@ struct DucklingString {
 // The definitions will be given below.
 extern "C" {
 	// Basic numeric I/O
-	int32_t builtin_output_i64(int64_t v);
-	int64_t builtin_input_i64();
-	int32_t builtin_output_u64(uint64_t v);
+	int32_t  builtin_output_i64(int64_t v);
+	int64_t  builtin_input_i64();
+	int32_t  builtin_output_u64(uint64_t v);
 	uint64_t builtin_input_u64();
-	int32_t builtin_output_f64(double v);
-	double builtin_input_f64();
+	int32_t  builtin_output_f64(double v);
+	double   builtin_input_f64();
 
 	// String I/O
-	int32_t builtin_output_string(DucklingString s);
+	int32_t        builtin_output_string(DucklingString s);
 	DucklingString builtin_input_string();
-	void builtin_free_string(DucklingString& s);
+	void           builtin_free_string(DucklingString& s);
 }
 
 int32_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
@@ -111,9 +111,9 @@ void builtin_free_string(DucklingString& s) {
 		// The data pointer might not be the start of the allocation.
 		// Adjust back by the offset to get the real start.
 		free(s.data - s.memory_begin_offset);
-		s.data = NULL;
-		s.length = 0;
+		s.data                = NULL;
+		s.length              = 0;
 		s.memory_begin_offset = 0;
-		s.memory_end_offset = 0;
+		s.memory_end_offset   = 0;
 	}
 }
