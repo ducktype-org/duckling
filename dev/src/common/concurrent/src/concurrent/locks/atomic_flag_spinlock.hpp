@@ -37,11 +37,11 @@ namespace concurrent {
 	 * Unlocking:
 	 * - The lock is released by clearing the atomic_flag. It is always a wait-free operation.
 	 *
-	 * @note This lock is not fair at all, and relies to en extend on spin locking which might often be not ideal.
-	 * For now it won synthetic tests performed with very fast critical sections and/or rare waiting
-	 * (scenarios we expect for example in hash maps).
-	 * In the future, when possible,
-	 * it might be worth to benchmark it in real scenarios and potentially swap it / improve it.
+	 * @note This lock is not fair at all, and relies to en extend on spin locking which might often
+	 * be not ideal. For now it won synthetic tests performed with very fast critical sections
+	 * and/or rare waiting (scenarios we expect for example in hash maps). In the future, when
+	 * possible, it might be worth to benchmark it in real scenarios and potentially swap it /
+	 * improve it.
 	 */
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
@@ -66,7 +66,8 @@ namespace concurrent {
 			}
 
 			// if not successful, yield until the lock is acquired
-			// we yield a lot of times here, as we only want to call `sleep_for` if yielding is somehow unsuccessful:
+			// we yield a lot of times here, as we only want to call `sleep_for` if yielding is
+			// somehow unsuccessful:
 			for (u64 i = 0; i < SPIN_TRIES * 16; i++) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
 				std::this_thread::yield();

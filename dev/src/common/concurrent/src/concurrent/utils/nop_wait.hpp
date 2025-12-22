@@ -1,7 +1,8 @@
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <immintrin.h>
+
+#include <base/types/ints.hpp>
 
 namespace concurrent {
 	/**

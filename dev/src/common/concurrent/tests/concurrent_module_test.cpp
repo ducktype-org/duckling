@@ -189,7 +189,8 @@ private:
 	}
 
 	/**
-	 * Tests multi-threaded writes to the concurrent::ConHashMap on the same key using maybePutAndUpdate.
+	 * Tests multi-threaded writes to the concurrent::ConHashMap on the same key using
+	 * maybePutAndUpdate.
 	 */
 	template<u64 thread_count>
 	void multiThreadedSimpleTest2() {

@@ -55,7 +55,7 @@ namespace concurrent {
 		 * Each method must then specify whether it needs a read or write lock.
 		 */
 		struct WithShardLock final {
-			u64            shard_index;
+			u64               shard_index;
 			const ConHashMap& self;
 
 			WithShardLock(const ConHashMap& self, u64 shard_index) noexcept:

@@ -19,7 +19,7 @@ namespace concurrent {
 	 * Unique data associated with each worker.
 	 * This data can be freely used by each worker without additional synchronization.
 	 * @important Each data can be accessed only by the worker it belongs to.
-	 
+
 	 * See the README of this module for more information about workers.
 	 */
 	struct WorkerData final {
