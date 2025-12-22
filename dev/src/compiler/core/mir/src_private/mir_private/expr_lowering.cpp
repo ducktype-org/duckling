@@ -22,7 +22,7 @@ namespace compiler::mir {
 	 * @note The result of the visitor is stored in out member. To store expr
 	 * result somewhere, call finalize with place to store it
 	 */
-	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
+	struct ExprBlockVisitor final: public hc::HoutExprVisitorPanicky {
 		BlockBuilderRef continuation;
 
 		base::Optional<ExprLowerRes> out;

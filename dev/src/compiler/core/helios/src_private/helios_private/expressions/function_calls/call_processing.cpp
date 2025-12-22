@@ -111,15 +111,15 @@ namespace compiler::helios::code {
 		const std::vector<Box<Expr>>&                          positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
-		auto                                        decl = ctx.query<QueryDeclOfFun>(fun);
-		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl->parameters.size());
-		std::vector<base::Optional<Coercion>>       coercions(decl->parameters.size());
+		auto&                                        decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
+		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
+		std::vector<base::Optional<Coercion>>       coercions(decl.parameters.size());
 		bool                                        coercion_present = false;
 
-		if (positional_arguments.size() > decl->parameters.size())
+		if (positional_arguments.size() > decl.parameters.size())
 			return NoMatch{ .function = fun,
 				            .reason
-				            = TooManyCallArguments{ .valid_arguments = decl->parameters.size(),
+				            = TooManyCallArguments{ .valid_arguments = decl.parameters.size(),
 				                                    .total_arguments = positional_arguments.size(),
 				                                    .function        = fun } };
 
@@ -127,7 +127,7 @@ namespace compiler::helios::code {
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
 			tsh::SymbolType provided_type
 				= positional_arguments[i]->expression_type.getSymbolType();
-			tsh::SymbolType expected_type = decl->parameters[i].type;
+			tsh::SymbolType expected_type = decl.parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid())
@@ -151,8 +151,8 @@ namespace compiler::helios::code {
 		for (usize i{ 0 }; i < named_arguments.size(); i++) {
 			base::Optional<usize> param_idx_with_matching_name{};
 			auto&                 name = std::get<0>(named_arguments[i]);
-			for (usize param_idx{ 0 }; param_idx < decl->parameters.size(); param_idx++) {
-				if (decl->parameters[param_idx].name == name) {
+			for (usize param_idx{ 0 }; param_idx < decl.parameters.size(); param_idx++) {
+				if (decl.parameters[param_idx].name == name) {
 					if (argument_origin[param_idx].has_value())
 						return NoMatch{ .function = fun,
 							            .reason   = NamedArgumentProvidedByPositional{
@@ -175,7 +175,7 @@ namespace compiler::helios::code {
 			usize           param_idx = param_idx_with_matching_name.value();
 			tsh::SymbolType provided_type
 				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
-			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
+			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid())
@@ -195,13 +195,13 @@ namespace compiler::helios::code {
 		}
 
 		// Go over default arguments
-		for (usize i{ 0 }; i < decl->parameters.size(); i++) {
+		for (usize i{ 0 }; i < decl.parameters.size(); i++) {
 			if (not argument_origin[i].has_value()) {
-				if (decl->parameters[i].initial_value.has_value()) {
+				if (decl.parameters[i].initial_value.has_value()) {
 					argument_origin[i].emplace(DefaultArgumentOrigin{
-						decl->parameters[i].initial_value.value().ref() });
+						decl.parameters[i].initial_value.value().ref() });
 					coercions[i].emplace(Coercion::emptyCoercion(
-						decl->parameters[i].initial_value.value()->expression_type.getSymbolType()
+						decl.parameters[i].initial_value.value()->expression_type.getSymbolType()
 					));
 				} else
 					return NoMatch{ .function = fun,
@@ -508,7 +508,7 @@ namespace compiler::helios::code {
 		}
 
 		if (candidates.size() == 1) {
-			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, no_match[0].reason, true));
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, no_match[0].reason, false));
 		} else {
 			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, false);

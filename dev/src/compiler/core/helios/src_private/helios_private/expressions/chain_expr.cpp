@@ -264,12 +264,13 @@ namespace compiler::helios::code {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
 				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
-				                      ->throwOnFail("Class symbol did not yield a class type")
+				                      ->panicOnFailed("Class symbol did not yield a class type")
 				                      .getType()
 				                      .as<tsh::ClassAbstractType>();
 				const auto ctor
-					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
-				return std::vector{ ctor->declaration->original_symbol };
+					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type })
+				          ->valueOrThrow();
+				return std::vector{ ctor.declaration->original_symbol };
 			}
 			default:
 				CORE_PANIC("Not implemented yet (", name(symbol), ")");
@@ -305,17 +306,8 @@ namespace compiler::helios::code {
 			const auto& callees = callees_q_result.valueOrThrow();
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
-
-			if (res.hasFailed()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						ident->getSourcePosition(),
-						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
-					)
-				);
-				return query::Failed();
-			}
-			return ChainState::ofExpr(std::move(res.valueOrThrow()));
+			if (res.hasFailed()) return query::Failed();
+			return ChainState::ofExpr(std::move(res).valueOrThrow());
 		}
 
 		/**

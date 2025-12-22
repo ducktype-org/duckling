@@ -13,7 +13,7 @@ namespace compiler::tsh {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
 
 			const auto& class_data
-				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->throwOnFail(
+				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->panicOnFailed(
 					"Handling ERRORS in TS is not supported yet..."
 				);
 

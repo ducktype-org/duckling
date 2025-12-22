@@ -130,23 +130,47 @@ namespace query {
 		 * @brief Access the value, throw on no value with a message.
 		 * Used when we always except a value to be present.
 		 */
-		constexpr const Value& throwOnFail(std::string_view message) const& {
+		constexpr const Value& throwOnFailed(std::string_view message) const& {
 			if (!hasValue()) throw query::QueryFailedException(message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr const Value&& throwOnFail(std::string_view message) const&& {
+		constexpr const Value&& throwOnFailed(std::string_view message) const&& {
 			if (!hasValue()) throw query::QueryFailedException(message);
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& throwOnFail(std::string_view message) & {
+		constexpr Value& throwOnFailed(std::string_view message) & {
 			if (!hasValue()) throw query::QueryFailedException(message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr Value&& throwOnFail(std::string_view message) && {
+		constexpr Value&& throwOnFailed(std::string_view message) && {
 			if (!hasValue()) throw query::QueryFailedException(message);
+			return std::move(std::get<Value>(storage));
+		}
+
+				/**
+		 * @brief Access the value, throw on no value with a message.
+		 * Used when we always except a value to be present.
+		 */
+		constexpr const Value& panicOnFailed(std::string_view message) const& {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
+			return std::get<Value>(storage);
+		}
+
+		constexpr const Value&& panicOnFailed(std::string_view message) const&& {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
+			return std::move(std::get<Value>(storage));
+		}
+
+		constexpr Value& panicOnFailed(std::string_view message) & {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
+			return std::get<Value>(storage);
+		}
+
+		constexpr Value&& panicOnFailed(std::string_view message) && {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
 

@@ -33,4 +33,6 @@ namespace dia_int {
 			makeBox<dia_int::TemplateResistryMainProvider>()
 		);
 	}
+
+	usize Logger::messageCount() const { return diagnostics.size(); }
 }

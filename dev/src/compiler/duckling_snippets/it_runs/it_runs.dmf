@@ -2,7 +2,8 @@ fun aaa(x: i64) ={
 }
 
 fun main() -> i64 = {
-    aaa(w=5);
-
+    # return 0;
+    # aaa(4.0);
+    # x = 5;
     # return a + 3;
 }

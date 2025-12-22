@@ -22,5 +22,7 @@ namespace dia_int {
 		void log(Box<MessageBase> message);
 
 		void dumpLog(std::ostream& out = std::cout);
+
+		[[nodiscard]] usize messageCount() const;
 	};
 }

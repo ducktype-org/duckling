@@ -235,9 +235,9 @@ namespace compiler::helios::code {
 				auto get_interactive_function
 					= [&](SymID function_symbol) -> base::Optional<Box<InteractiveFunction>> {
 					if (is_for_candidate_function_msg)
-						return makeBox<InteractiveFunction>(function_symbol);
-					else
 						return std::nullopt;
+					else
+						return makeBox<InteractiveFunction>(function_symbol);
 				};
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {

@@ -19,6 +19,7 @@
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
+#include "base/types/ok_bad.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
@@ -40,11 +41,8 @@
  * Simple function for showing compilation errors.
  */
 void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
-		query::Context::int_logger.dumpLog(std::cerr);
-	}
+	query::Context::logger.dumpLog(true, std::cerr);
+	query::Context::int_logger.dumpLog(std::cerr);
 }
 
 clah::Clah getStandardDucklingOptions() {
@@ -196,7 +194,8 @@ clah::Clah getClahForMain() {
 							   auto root
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
-								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
+		                                 .panicOnFailed("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
 									   std::cout << hout_unit.debugPrint(ctx);
@@ -350,7 +349,7 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compileEntirePackage(
+					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 
@@ -384,7 +383,7 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::exit();
 
-					return 0;
+					return result.isOk() ? 0 : 1;
 				})
 		)
 	    .addSubcommand(

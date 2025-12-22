@@ -191,12 +191,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
-				auto result = fromChainExpr(ctx, chain_expr);
-				if (result.hasFailed()) {
-					// Error has occurred.
-					return;
-				}
-				node = std::move(result.valueOrThrow());
+				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {

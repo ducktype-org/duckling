@@ -663,7 +663,7 @@ namespace compiler::lir {
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->throwOnFail(
+							return ctx.query<helios::QuerySymbolABI>(name.id)->panicOnFailed(
 								"Handling errors in MIR is not supported yet"
 							);
 						}
@@ -782,10 +782,10 @@ namespace compiler::lir {
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		          ->throwOnFail("Handling errors in MIR is not supported yet")
+		          ->panicOnFailed("Handling errors in MIR is not supported yet")
 		          .getType();
 
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->throwOnFail(
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->panicOnFailed(
 			"Handling errors in MIR is not supported yet"
 		);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);

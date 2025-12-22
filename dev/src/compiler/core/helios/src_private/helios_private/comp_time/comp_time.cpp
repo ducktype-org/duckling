@@ -579,7 +579,7 @@ namespace compiler::helios {
 
 			// Get code of the called function.
 			// @todo: Change this code to a single query once it gets implemented #826.
-			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
+			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id).valueOrThrow();
 
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
@@ -588,21 +588,16 @@ namespace compiler::helios {
 			std::string                      func_to_call_name;
 			std::vector<CRef<lir::Function>> all_lir_functions;
 			for (const SymID& func_id: *dependencies) {
-				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
-				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
-
-
-				if (mir_func_result->hasFailed()) return query::Failed();
-
-				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
-				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
+				auto hout_fun = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
+				auto& mir_fun  = ctx.query<mir::LowerToMIRFunction>({ hout_fun })->valueOrThrow();
+				auto lir_fun         = ctx.query<lir::LowerToLIRFunction>({ &mir_fun });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
 				if (func_id == function_sym_id)
-					func_to_call_name = lir_func_result->mangled_name.str();
+					func_to_call_name = lir_fun->mangled_name.str();
 
-				all_lir_functions.push_back(lir_func_result);
+				all_lir_functions.push_back(lir_fun);
 			}
 
 			backend_vm::Module m(base::StrID("COMP_TIME"));

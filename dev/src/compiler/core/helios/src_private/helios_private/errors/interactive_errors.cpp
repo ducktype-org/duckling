@@ -143,7 +143,7 @@ namespace compiler::helios {
 				auto position
 					= dia::SourcePosition::merge(fun_ident.position, fun_decl->getSourcePosition());
 				auto id = MessageBase::getUniqueID();
-				msg.addLinkedMessage(id, makeBox<FunctionDeclaredHereNote>(position));
+				msg.attachMessage(makeBox<FunctionDeclaredHereNote>(position));
 				linked_messages.push_back(std::move(id));
 			}
 		});

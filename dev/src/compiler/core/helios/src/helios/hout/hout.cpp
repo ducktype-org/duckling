@@ -126,12 +126,12 @@ namespace compiler::helios {
 			                                         .value()
 			                                         .unlock(ctx)
 			                                         ->getExpr();
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->panicOnFailed(
 					  "Failed: query type of symbol 2a — " + name(symbol).str()
 				  );
 				  auto initial_value_hout_coerced
 					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
-			                .throwOnFail(
+			                .panicOnFailed(
 								"Failed: variable initial value 2b — " + name(symbol).str()
 							);
 
@@ -140,14 +140,14 @@ namespace compiler::helios {
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).panicOnFailed(
 					  "Failed: query const value 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->panicOnFailed(
 			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
 		  )) {}
 }

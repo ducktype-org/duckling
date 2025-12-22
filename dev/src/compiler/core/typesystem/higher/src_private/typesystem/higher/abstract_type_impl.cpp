@@ -255,7 +255,7 @@ namespace compiler::tsh {
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                 ->throwOnFail("Not handling ERRORS in TS yet")
+		                 ->panicOnFailed("Not handling ERRORS in TS yet")
 		                 .base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
@@ -265,7 +265,7 @@ namespace compiler::tsh {
 		query::Context& ctx
 	) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       ->throwOnFail("Not handling ERRORS in TS yet")
+		                       ->panicOnFailed("Not handling ERRORS in TS yet")
 		                       .implements;
 		return { implements.begin(), implements.end() };
 	}
@@ -274,7 +274,7 @@ namespace compiler::tsh {
 		query::Context& ctx
 	) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       ->throwOnFail("Not handling ERRORS in TS yet")
+		                       ->panicOnFailed("Not handling ERRORS in TS yet")
 		                       .implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto transformer = [](const AbstractType& interface) {
