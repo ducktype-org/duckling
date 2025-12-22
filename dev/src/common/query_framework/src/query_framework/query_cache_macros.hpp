@@ -82,7 +82,7 @@
  * on cache hit.
  */
 #define QUERY_AUTO_CACHE_CREF                                                              \
-	static inline concurrent::HashMap<KHash, query::CacheEntry<PResult>> cache;            \
+	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;            \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
 			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };           \

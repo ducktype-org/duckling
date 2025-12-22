@@ -55,10 +55,10 @@ public:
 
 private:
 	/**
-	 * Simple single-threaded test of concurrent::HashMap.
+	 * Simple single-threaded test of concurrent::ConHashMap.
 	 */
 	void hashMapSingleThreadTest1() {
-		concurrent::HashMap<int, int> map;
+		concurrent::ConHashMap<int, int> map;
 
 		map.put(1, 10);
 		map.put(2, 20);
@@ -98,7 +98,7 @@ private:
 	}
 
 	/**
-	 * Single-threaded random test of concurrent::HashMap adapted from tests of maps from base.
+	 * Single-threaded random test of concurrent::ConHashMap adapted from tests of maps from base.
 	 */
 	template<u64 count>
 	void singleThreadedRandomTest() {
@@ -106,7 +106,7 @@ private:
 		{
 			std::minstd_rand rng(42);
 
-			concurrent::HashMap<BigObject<13>, BigObject<16>> map;
+			concurrent::ConHashMap<BigObject<13>, BigObject<16>> map;
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
@@ -155,13 +155,13 @@ private:
 	}
 
 	/**
-	 * Tests multi-threaded writes to the concurrent::HashMap on different keys.
+	 * Tests multi-threaded writes to the concurrent::ConHashMap on different keys.
 	 */
 	template<u64 thread_count>
 	void multiThreadedSimpleTest1() {
 		constexpr u64 LOOK_OPS_PER_THREAD = 10'000;
 
-		concurrent::HashMap<u64, u64> map;
+		concurrent::ConHashMap<u64, u64> map;
 
 		std::vector<std::jthread> threads;
 		threads.reserve(thread_count);
@@ -187,13 +187,13 @@ private:
 	}
 
 	/**
-	 * Tests multi-threaded writes to the concurrent::HashMap on the same key using maybePutAndUpdate.
+	 * Tests multi-threaded writes to the concurrent::ConHashMap on the same key using maybePutAndUpdate.
 	 */
 	template<u64 thread_count>
 	void multiThreadedSimpleTest2() {
 		constexpr u64 OPS_PER_THREAD = 10'000;
 
-		concurrent::HashMap<u64, u64> map;
+		concurrent::ConHashMap<u64, u64> map;
 
 		std::vector<std::jthread> threads;
 		threads.reserve(thread_count);
@@ -212,13 +212,13 @@ private:
 	}
 
 	/**
-	 * Tests multi-threaded writes to the concurrent::HashMap on the same key using update method.
+	 * Tests multi-threaded writes to the concurrent::ConHashMap on the same key using update method.
 	 */
 	template<u64 thread_count>
 	void multiThreadedSimpleTest3() {
 		constexpr u64 OPS_PER_THREAD = 10'000;
 
-		concurrent::HashMap<u64, u64> map;
+		concurrent::ConHashMap<u64, u64> map;
 		map.put(u64(1), u64(0));
 
 		std::vector<std::jthread> threads;

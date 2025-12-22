@@ -24,7 +24,7 @@ namespace concurrent {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class HashMap final {
+	class ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
@@ -56,9 +56,9 @@ namespace concurrent {
 		 */
 		struct WithShardLock final {
 			u64            shard_index;
-			const HashMap& self;
+			const ConHashMap& self;
 
-			WithShardLock(const HashMap& self, u64 shard_index) noexcept:
+			WithShardLock(const ConHashMap& self, u64 shard_index) noexcept:
 				  shard_index(shard_index),
 				  self(self) {
 				self.shard_mutexes[shard_index]->lock();
@@ -69,15 +69,15 @@ namespace concurrent {
 
 
 	public:
-		HashMap(): shards(SHARD_COUNT) {
+		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
 		}
 
-		HashMap(const HashMap&) = delete;
-		HashMap(HashMap&&)      = delete;
+		ConHashMap(const ConHashMap&) = delete;
+		ConHashMap(ConHashMap&&)      = delete;
 
-		~HashMap() = default;
+		~ConHashMap() = default;
 
 		/**
 		 * Inserts key->value into the container.
