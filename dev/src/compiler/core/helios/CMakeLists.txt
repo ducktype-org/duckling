@@ -16,6 +16,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/expressions/coercions.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
+	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_code_generation/class_constructors.cpp
 	src_private/helios_private/errors/interactive_errors.cpp
 
@@ -32,7 +33,6 @@ add_library(HELIOS STATIC
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
-	src/helios/helios_errors.hpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)

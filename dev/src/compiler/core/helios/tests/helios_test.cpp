@@ -5,7 +5,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -18,10 +17,12 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -50,6 +51,7 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
+		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
@@ -69,6 +71,8 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
+		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -82,6 +86,7 @@ public:
 		// error tests
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
+		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -143,6 +148,147 @@ private:
 		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
 	}
 
+	void testMetaCompTime() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
+
+		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
+		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
+
+		auto f16_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
+		auto f64_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
+
+		auto unit_type = query::entryPoint<compiler::tsh::QueryUnitType>({});
+
+		// Tree eval
+		{
+			{
+				auto simple_ref
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, simple_ref);
+			}
+			{
+				auto simple_box
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_BOX", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, simple_box);
+			}
+			{
+				auto simple_const
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
+				auto expected = st(i64_type).withMutability(Immutable);
+				ASSERT_EQUAL(expected, simple_const);
+			}
+			{
+				auto simple_variant
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_VARIANT", root_scope);
+				auto expected
+					= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
+				                                                                st(f64_type) } }));
+				ASSERT_EQUAL(expected, simple_variant);
+			}
+			{
+				auto simple_tuple
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_TUPLE", root_scope);
+				auto expected
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
+				                                                              st(f64_type) } }));
+				ASSERT_EQUAL(expected, simple_tuple);
+			}
+			{
+				auto cmp_1 = getConstValueAs<bool>("CMP_1", root_scope);
+				ASSERT_EQUAL(cmp_1, true);
+				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
+				ASSERT_EQUAL(cmp_2, true);
+			}
+		}
+
+		// Function evaluation.
+		{
+			{
+				auto a_type   = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
+				auto expected = st(unit_type);
+				ASSERT_EQUAL(expected, a_type);
+			}
+			{
+				auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
+				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, b_type);
+			}
+			{
+				auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
+				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, c_type);
+			}
+			{
+				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
+				auto expected = st(i32_type).withMutability(compiler::tsh::Mutability::Immutable);
+				ASSERT_EQUAL(expected, d_type);
+			}
+			{
+				auto e_type   = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
+				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				);
+				ASSERT_EQUAL(st(expected), e_type);
+			}
+			{
+				auto f_type   = getConstValueAs<compiler::tsh::SymbolType<>>("F", root_scope);
+				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
+					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				));
+				ASSERT_EQUAL(expected, f_type);
+			}
+			{
+				auto mega_type
+					= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
+
+				auto first  = st(unit_type);
+				auto second = st(i128_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto third  = st(i32_type);
+				auto fourth
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type),
+				                                                              st(f16_type) } }));
+				auto fifth_inner_tuple
+					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(f64_type),
+				                                                              st(f128_type) } }));
+				auto fifth = st(query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { st(i64_type), fifth_inner_tuple } }
+				));
+
+				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
+					{ { first, second, third, fourth, fifth } }
+				));
+
+				ASSERT_EQUAL(expected, mega_type);
+			}
+			{
+				auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
+				auto expected   = st(i16_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				ASSERT_EQUAL(expected, first_type);
+			}
+			{
+				auto second_type
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
+				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				ASSERT_EQUAL(expected, second_type);
+			}
+			{  // Type Comparisons
+				auto real_type = getConstValueAs<bool>("REAL", root_scope);
+				ASSERT_EQUAL(real_type, true);
+				auto fake_type = getConstValueAs<bool>("FAKE", root_scope);
+				ASSERT_EQUAL(fake_type, false);
+				auto mega_type = getConstValueAs<bool>("IS_MEGA", root_scope);
+				ASSERT_EQUAL(mega_type, true);
+				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);
+				ASSERT_EQUAL(not_mega_type, false);
+			}
+		}
+	}
+
 	void testNumericLiterals() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/numeric_literals")));
 
@@ -187,8 +333,6 @@ private:
 		                                      compiler::tsh::Mutability   expected_mutability) {
 			auto var_name    = base::strConcat(keyword, "_", type_suffix);
 			auto symbol_type = getSymbolTypeOf(var_name, root_scope);
-
-			std::cout << keyword << type_suffix << '\n';
 			ASSERT_EQUAL(expected_type, symbol_type.getType());
 			ASSERT_EQUAL(expected_mutability, symbol_type.getMutability());
 		};
@@ -482,7 +626,7 @@ private:
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
 				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
-			          ->value()
+			          ->valueOrThrow()
 			          .getType()
 			          .getInterface(ctx)
 			          ->getElementsWithName(base::StrID("a"))
@@ -1066,7 +1210,7 @@ private:
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(
 					st(int32_type),
-					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
+					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->valueOrThrow()
 				);
 
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
@@ -1190,10 +1334,11 @@ private:
 				ASSERT_EQUAL(1, function.body->statements.size());
 				auto stmt        = function.body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
-				Ref  ret_expr    = stmt_casted->value.ref();
-				Ref  ret_expr_casted
-					= dynamic_cast<const compiler::helios::code::LiteralNumericExpr*>(&*ret_expr);
-				ASSERT_EQUAL(1, ret_expr_casted->value.coerceTo<i64>());
+				auto ret_expr    = stmt_casted->value.get();
+				auto ctv
+					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr })
+				          .valueOrThrow();
+				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
 		}
 	}
@@ -1214,7 +1359,9 @@ private:
 		);
 		auto call_expr_1_callee
 			= compiler::helios::getIdentifierExprSymID(call_expr_1->callee.ref()).value();
-		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1_callee));
+		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
+			getSymRef(call_expr_1_callee)->other
+		));
 		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
 
 		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
@@ -1223,7 +1370,9 @@ private:
 		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		auto call_expr_2_callee
 			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
-		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2_callee));
+		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
+			getSymRef(call_expr_2_callee)->other
+		));
 		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
 		auto builtin_output_decl
 			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee);
@@ -1231,6 +1380,66 @@ private:
 			builtin_output_decl->parameters.at(0).type.getType().getKind(),
 			compiler::tsh::Kind::Integral
 		);
+	}
+
+	void testFunctionReturnTypeDeduction() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_deduction")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions)
+			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+	}
+
+	void testFunctionReturnTypeCheckAndCoercion() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/return_coercion")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+
+		for (auto& function: hout->functions) {
+			ASSERT_EQUAL(i64_type, function.declaration->return_type.getType());
+
+			if (function.declaration->original_name == base::StrID("big_example")) {
+				for (size_t i: std::initializer_list<size_t>{ 1, 2, 3, 4 }) {
+					auto if_stmt = function.body->statements.at(i).ref();
+					auto if_stmt_casted
+						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
+					if (!if_stmt_casted) {
+						// we only test if-statements here
+						continue;
+					}
+
+					auto ret_stmt = if_stmt_casted->then_body.statements.at(0).ref();
+					auto ret_stmt_casted
+						= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+					assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+					auto ret_type = ret_stmt_casted->value->expression_type.getType();
+					ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
+						ret_stmt_casted->value.get()
+					);
+					assertTrue(cast_expr != nullptr, "Cast expression expected.");
+				}
+				continue;
+			}
+
+			auto ret_stmt = function.body->statements.back().ref();
+			auto ret_stmt_casted
+				= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+			assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+			auto ret_type = ret_stmt_casted->value->expression_type.getType();
+			ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+
+			auto cast_expr
+				= dynamic_cast<const compiler::helios::code::CastExpr*>(ret_stmt_casted->value.get()
+			    );
+			assertTrue(cast_expr != nullptr, "Cast expression expected.");
+		}
 	}
 
 	void testMangler() {
@@ -1696,7 +1905,7 @@ private:
 			try {
 				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
 				CORE_PANIC("Should throw for invalid ABI.");
-			} catch (compiler::helios::errors::Failed& err) {
+			} catch (query::QueryFailedException& err) {
 				// Expected failure for invalid ABI
 			}
 		});
@@ -1926,7 +2135,7 @@ private:
 
 			ctx.logger.clear();
 			assertTrue(
-				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasError(),
+				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasFailed(),
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
@@ -1956,14 +2165,14 @@ private:
 		try {
 			getConstValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
@@ -1972,35 +2181,35 @@ private:
 		try {
 			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (query::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 	}
@@ -2015,6 +2224,24 @@ private:
 			assertThrows<std::exception>(
 				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
 				"Expected ambiguous callable candidates error"
+			);
+
+			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+
+			std::stringstream non_detailed_log;
+			ctx.logger.dumpLog(false, non_detailed_log);
+			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testErrorAmbiguousReturnType() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/ambiguous_return_type")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertThrows<std::exception>(
+				[&] { ctx.query<compiler::helios::QueryTopLevelEntities>(module_id); },
+				"Expected ambiguous return type error"
 			);
 
 			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");

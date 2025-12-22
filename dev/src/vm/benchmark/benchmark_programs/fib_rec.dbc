@@ -9,7 +9,7 @@ function fib {
     mov_l64_l64         0, 8;
 
     # if !(n > 1): end
-    cmpG_l64_imm        8, 1;
+    cmpGt_l64_imm        8, 1;
     jmpIfNot_label   End;
 
     # fib(n - 1)

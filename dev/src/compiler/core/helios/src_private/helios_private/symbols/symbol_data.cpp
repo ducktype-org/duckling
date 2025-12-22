@@ -34,7 +34,7 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) {
 					const auto class_type
 						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->expect(
+					          ->throwOnFail(
 								  "Not handling errors here yet... "
 								  "(getting type of generated constructor symbol)"
 							  )
@@ -66,7 +66,7 @@ namespace compiler::helios {
 				variant_case(Parameter, param) {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
-					          ->expect(
+					          ->throwOnFail(
 								  "Not handling errors here yet... "
 								  "(getting type of generated parameter symbol)"
 							  )
@@ -99,7 +99,7 @@ namespace compiler::helios {
 		return SymbolData{
 			.common = {
 				.name = name,
-				.kind = SymbolKind::BuiltinFunction,
+				.kind = SymbolKind::Function,
 			},
 			.other  = builtin_data,
 		};

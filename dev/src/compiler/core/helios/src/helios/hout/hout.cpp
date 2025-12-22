@@ -42,8 +42,7 @@ namespace compiler::helios {
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
-				or kind(symbol) == SymbolKind::BuiltinFunction,
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
 			"Symbol is not a function or function declaration"
 		);
 	}
@@ -127,38 +126,28 @@ namespace compiler::helios {
 			                                         .value()
 			                                         .unlock(ctx)
 			                                         ->getExpr();
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-					  "Handling errors in HOUT is not supported yet 2a — " + name(symbol).str()
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
+					  "Failed: query type of symbol 2a — " + name(symbol).str()
 				  );
-				  auto initial_value_hout
-					  = ctx.query<QueryHoutOfExpr>(initial_value_pst)
-			                .expect(
-								"Handling errors in HOUT is not supported yet 2b — "
-								+ name(symbol).str()
+				  auto initial_value_hout_coerced
+					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
+			                .throwOnFail(
+								"Failed: variable initial value 2b — " + name(symbol).str()
 							);
 
-				  // Apply necessary coercions.
-				  const auto coercion = canCoerce(
-					  ctx, initial_value_hout->expression_type.getSymbolType(), variable_type
-				  );
-				  const auto valid_coercion = coercion.expect(
-					  "Handling errors in HOUT is not supported yet 2c — " + name(symbol).str()
-				  );
-
-				  // Return the coerced value.
-				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
-					  valid_coercion.coerce(ctx, std::move(initial_value_hout))
-				  ) };
+				  return HOUTGlobalVariable{
+					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
+				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
-					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(
+					  "Failed: query const value 3 — " + name(symbol).str()
 				  ) };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
 			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
 		  )) {}
 }

@@ -2,7 +2,6 @@
 
 #include "interface.hpp"
 
-#include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
@@ -23,7 +22,5 @@ namespace compiler::helios {
 	 * a list of names that are assumed to form expression of form `name1.name2.name3...`.
 	 * It is currently used for looking up symbols in usings/aliases.
 	 */
-	query::QResult<SymbolList, errors::Failed> lookupChain(
-		query::Context& ctx, const LookupChainKey& key
-	);
+	query::QResult<SymbolList> lookupChain(query::Context& ctx, const LookupChainKey& key);
 }

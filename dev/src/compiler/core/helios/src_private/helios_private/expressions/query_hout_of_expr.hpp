@@ -2,7 +2,6 @@
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/generic_query_key.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -10,7 +9,7 @@
 
 namespace compiler::helios {
 
-	using ExprConstructionResult = query::QResult<Box<code::Expr>, errors::Failed>;
+	using ExprConstructionResult = query::QResult<Box<code::Expr>>;
 
 	/**
 	 * @brief Constructs a HOUT Expr from Pst Expr.

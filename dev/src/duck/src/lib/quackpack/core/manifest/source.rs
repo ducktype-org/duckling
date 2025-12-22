@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use crate::StrId;
+use crate::quackpack::schemas::registry;
+use crate::{QuackError, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
 /// General dependency source.
@@ -159,5 +160,93 @@ impl GitRevision {
     /// Helper around `matches!(self, GitRevision::Branch(..))`.
     pub fn is_branch(&self) -> bool {
         matches!(self, GitRevision::Branch(..))
+    }
+}
+
+impl TryFrom<registry::DependencySource> for Source {
+    type Error = QuackError;
+
+    fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
+        let tmp = match value.inner {
+            registry::SourceInner::Registry { registry_url } => Registry {
+                url: registry_url.into(),
+            }
+            .into(),
+            registry::SourceInner::Local {
+                absolute_dir_root,
+                dir_entry_in_manifest,
+            } => Local {
+                absolute: absolute_dir_root.into(),
+                entry_in_manifest: dir_entry_in_manifest.into(),
+                was_original_entry_relative: false,
+            }
+            .into(),
+            registry::SourceInner::Git {
+                git_url,
+                commit,
+                tag,
+                branch,
+            } => {
+                let rev = match (tag, branch) {
+                    (None, None) => GitRevision::Main,
+                    (None, Some(branch)) => GitRevision::Branch(branch.into()),
+                    (Some(tag), None) => GitRevision::Tag(tag.into()),
+                    (Some(_), Some(_)) => {
+                        qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
+                    }
+                };
+                Git {
+                    url: git_url.into(),
+                    rev,
+                    commit: commit.map(Into::into),
+                }
+                .into()
+            }
+        };
+        Ok(tmp)
+    }
+}
+
+impl TryFrom<Source> for registry::DependencySource {
+    type Error = QuackError;
+    fn try_from(value: Source) -> Result<Self, Self::Error> {
+        let inner = match value {
+            Source::Registry(registry) => registry::SourceInner::Registry {
+                registry_url: registry.url.into(),
+            },
+            Source::Local(local) => {
+                let Local {
+                    absolute,
+                    entry_in_manifest,
+                    ..
+                } = local;
+                let absolute_dir_root = match absolute.into_os_string().into_string() {
+                    Ok(absolute) => absolute,
+                    Err(original) => qp_bail!(
+                        "absolute path `{}` is not a utf-8 string",
+                        original.display()
+                    ),
+                };
+                registry::SourceInner::Local {
+                    absolute_dir_root,
+                    dir_entry_in_manifest: entry_in_manifest.into(),
+                }
+            }
+            Source::Git(git) => {
+                let Git { url, rev, commit } = git;
+                let (tag, branch) = match rev {
+                    GitRevision::Main => (None, None),
+                    GitRevision::Tag(tag) => (Some(tag.into()), None),
+                    GitRevision::Branch(branch) => (None, Some(branch.into())),
+                };
+                registry::SourceInner::Git {
+                    git_url: url.into(),
+                    commit: commit.map(Into::into),
+                    tag,
+                    branch,
+                }
+            }
+        };
+        Ok(Self { inner })
     }
 }

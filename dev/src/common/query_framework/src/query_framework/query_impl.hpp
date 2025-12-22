@@ -10,8 +10,10 @@
 #include "internal/query_graph/node_making.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_errors.hpp"
 #include "query_hash.hpp"
 #include "query_int.hpp"
+#include "query_result.hpp"
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -113,9 +115,23 @@ namespace query::internal {
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
-			// This is all at the end, with defer above,
-			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			try {
+				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			} catch (const QueryFailedException& qfe) {
+				CORE_DEV_LOG(
+					Query,
+					"[QUERY \"",
+					QueryIntType::QUERY_DATA.name,
+					"\"]: Caught failed exception.\n"
+				);
+
+				if constexpr (QueryImplType::USES_QRESULT
+				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+					return QueryImplType::store(perfect_hash, query::Failed(), acd);
+				} else {
+					CORE_PANIC(qfe.what());
+				}
+			}
 		}
 	}
 
@@ -145,6 +161,9 @@ namespace query::internal {
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
 		constexpr static bool CAN_BE_LOADED_FROM_DISK
 			= QueryType_tp::QUERY_DATA.tags.can_be_loaded_from_disk;
+		constexpr static bool USES_QRESULT = QueryType_tp::QUERY_DATA.tags.uses_qresult;
+		constexpr static bool CATCH_EXCEPTIONS_IF_USING_QRESULT
+			= QueryType_tp::QUERY_DATA.tags.catch_exceptions_if_using_qresult;
 
 
 		/**
@@ -172,7 +191,6 @@ namespace query::internal {
 	concept HasLoadFromDiscWithSignature = requires(const typename Impl::QKey& key) {
 		{ Impl::loadFromDisc(key) } -> std::same_as<base::Optional<typename Impl::PResult>>;
 	};
-
 }
 
 /**
@@ -238,6 +256,19 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>), \
 		"loadFromDisk must be implemented for queries that are cached on disk"                                                         \
+	);                                                                                                                                 \
+	static_assert(                                                                                                                     \
+		LAZY_IMPLIES(                                                                                                                  \
+			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
+		),                                                                                                                             \
+		"PResult must be a QResult if uses_qresult is true"                                                                            \
+	);                                                                                                                                 \
+	static_assert(                                                                                                                     \
+		LAZY_IMPLIES(                                                                                                                  \
+			not type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                         \
+			not query::IsQResult<type::PResult>::value                                                                                 \
+		),                                                                                                                             \
+		"PResult must not be a QResult if uses_qresult is false"                                                                       \
 	);                                                                                                                                 \
 	decltype(type::QueryType::id) type::QueryType::id                                                                                  \
 		= ::query::internal::registerQuery(type::QueryType::QUERY_DATA);

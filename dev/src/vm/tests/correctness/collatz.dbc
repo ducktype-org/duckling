@@ -46,14 +46,14 @@ function collatz { i64 } -> i64 {
 		label afterIf;
 
 		# if n > max:
-		cmpG_l64_l64     	arg0, max;
+		cmpGt_l64_l64     	arg0, max;
 		cmov_l64_l64     	max, arg0; # max := n
 
 		# if n == 1
 		cmpEq_l64_imm       arg0, 1;
 		jmpIfNot_label   WhileNneq0;
 
-		# cmpG_l64_imm       arg0, 1;
+		# cmpGt_l64_imm       arg0, 1;
 		# jmpIf_label   WhileNneq0;
 
 	label End;
@@ -99,7 +99,7 @@ function main { i64, ptr_argv } -> i64 {
 		deinit; # col_ret_val
 
 		# if tmp > max:
-		cmpG_l64_l64       	tmp, max;
+		cmpGt_l64_l64       	tmp, max;
 		jmpIfNot_label  	EndIF;
 			mov_l64_l64    	max, tmp; 	# max := tmp
 
@@ -108,7 +108,7 @@ function main { i64, ptr_argv } -> i64 {
 		add_l64_imm      	i, 1; 		# i := i + 1
 
 		# if x > i : end
-		cmpG_l64_l64     	x, i;
+		cmpGt_l64_l64     	x, i;
 		jmpIf_label   	Loop;
 
 	output_l64      max;
