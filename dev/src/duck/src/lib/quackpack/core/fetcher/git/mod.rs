@@ -42,16 +42,15 @@ impl GitClient {
 
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
-            repository
-                .checkout_to_a_given_commit(commit)
-                .with_context(|| {
-                    format!(
-                        "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
-                        source.url(), commit
-                    )
-                })?;
+            repository.checkout_commit(commit).with_context(|| {
+                format!(
+                    "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
+                    source.url(),
+                    commit
+                )
+            })?;
         } else if let BranchOrTag::Tag(tag) = source.branch_or_tag() {
-            repository.checkout_to_a_given_tag(tag).with_context(|| {
+            repository.checkout_tag(tag).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
                     source.url(),
@@ -108,13 +107,13 @@ fn unpack_results_vec<T>(
 
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
-    fn checkout_to_a_given_commit(&self, commit: StrId) -> QuackResult<()>;
+    fn checkout_commit(&self, commit: StrId) -> QuackResult<()>;
     /// Checkout `self` into a given tag.
-    fn checkout_to_a_given_tag(&self, tag: StrId) -> QuackResult<()>;
+    fn checkout_tag(&self, tag: StrId) -> QuackResult<()>;
 }
 
 impl RepositoryExt for Repository {
-    fn checkout_to_a_given_commit(&self, commit: StrId) -> QuackResult<()> {
+    fn checkout_commit(&self, commit: StrId) -> QuackResult<()> {
         let oid =
             Oid::from_str(&commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
         let commit = self
@@ -126,7 +125,7 @@ impl RepositoryExt for Repository {
         Ok(())
     }
 
-    fn checkout_to_a_given_tag(&self, tag: StrId) -> QuackResult<()> {
+    fn checkout_tag(&self, tag: StrId) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self
             .find_reference(&refname)
