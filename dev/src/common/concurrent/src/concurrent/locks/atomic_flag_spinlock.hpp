@@ -27,7 +27,7 @@ namespace concurrent {
 	 *
 	 * - If the lock is not acquired in the busy-wait phase, it then tries to
 	 *   acquire the lock by yielding the thread, allowing other threads to run.
-	 *   This phase uses `std::this_thread::yield()` which proven to be more effective
+	 *   This phase uses `std::this_thread::yield()` which proved to be more effective
 	 *   than sleep for short waits.
 	 *
 	 * - If the lock is still not acquired after yielding, it falls back to
