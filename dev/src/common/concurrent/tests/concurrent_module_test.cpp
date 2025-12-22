@@ -99,6 +99,8 @@ private:
 
 	/**
 	 * Single-threaded random test of concurrent::ConHashMap adapted from tests of maps from base.
+	 * It tests correctness of maybePut and atMaybe methods by comparing certain aggregated results
+	 * with the results obtained when using std::unordered_map.
 	 */
 	template<u64 count>
 	void singleThreadedRandomTest() {
@@ -159,7 +161,7 @@ private:
 	 */
 	template<u64 thread_count>
 	void multiThreadedSimpleTest1() {
-		constexpr u64 LOOK_OPS_PER_THREAD = 10'000;
+		constexpr u64 LOOP_OPS_PER_THREAD = 10'000;
 
 		concurrent::ConHashMap<u64, u64> map;
 
@@ -168,7 +170,7 @@ private:
 
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map, i]() {
-				for (u64 j = 0; j < LOOK_OPS_PER_THREAD; j++) {
+				for (u64 j = 0; j < LOOP_OPS_PER_THREAD; j++) {
 					u64 key = j * thread_count + i;
 					map.put(key, key * 10);
 				}
@@ -178,7 +180,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
 
 		for (u64 i = 0; i < thread_count; i++) {
-			for (u64 j = 0; j < LOOK_OPS_PER_THREAD; j++) {
+			for (u64 j = 0; j < LOOP_OPS_PER_THREAD; j++) {
 				u64 key = j * thread_count + i;
 				ASSERT_TRUE(map.contains(key));
 				ASSERT_EQUAL(map.getCopy(key), key * 10);
