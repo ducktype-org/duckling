@@ -1,4 +1,4 @@
-use crate::quackpack::core::solver::types::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub struct ParentWithDependencyLoc {

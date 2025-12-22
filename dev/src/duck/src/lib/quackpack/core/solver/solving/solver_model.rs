@@ -14,7 +14,7 @@ use crate::{
         FeatureName, Version,
         solver::{
             solving::scip_ext::BinModelExt,
-            types::{ExpandedPackage, ParentWithDependencyLoc, PresentFeature},
+            types_common::{ExpandedPackage, ParentWithDependencyLoc, PresentFeature},
         },
     },
 };
@@ -189,7 +189,7 @@ impl SolverModel<ProblemCreated> {
         Ok(())
     }
 
-    pub fn require_satisfy_dep_feature(
+    pub fn require_satisfying_dep_feature(
         &mut self,
         dep: &ParentWithDependencyLoc,
         parent_feature: PresentFeature,
@@ -204,7 +204,7 @@ impl SolverModel<ProblemCreated> {
         Ok(())
     }
 
-    pub fn require_satisfy_dep_version(
+    pub fn require_satisfying_dep_version(
         &mut self,
         dep: &ParentWithDependencyLoc,
         parent_feature: PresentFeature,
@@ -235,7 +235,7 @@ impl SolverModel<ProblemCreated> {
         Ok(())
     }
 
-    pub fn require_dep_features_substantiation(
+    pub fn require_substantiate_dep_features(
         &mut self,
         dep: &ParentWithDependencyLoc,
         possible_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -271,5 +271,20 @@ impl SolverModel<ProblemCreated> {
             }
         }
         Ok(())
+    }
+}
+
+pub struct FoundSolution {
+    new_packages: HashSet<ExpandedPackage>,
+    package_flags: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    dependency_realisations: HashMap<ParentWithDependencyLoc, >
+}
+
+impl SolverModel<ProblemCreated> {
+    pub fn solve<'a>(
+        self,
+        preexisting_packages: impl Iterator<Item = &'a ExpandedPackage>
+    ) {
+
     }
 }
