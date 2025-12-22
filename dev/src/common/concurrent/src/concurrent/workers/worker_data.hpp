@@ -16,9 +16,11 @@ namespace concurrent {
 	using WDRef = Ref<WorkerData>;
 
 	/**
-	 * Each worker -- i.e. thread -- has its own global worker-local data.
-	 * This data can then be used in various places allowing for more efficient
-	 * implementations.
+	 * Unique data associated with each worker.
+	 * This data can be freely used by each worker without additional synchronization.
+	 * @important Each data can be accessed only by the worker it belongs to.
+	 
+	 * See the README of this module for more information about workers.
 	 */
 	struct WorkerData final {
 	private:

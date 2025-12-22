@@ -10,24 +10,6 @@ namespace concurrent {
     [[gnu::noinline]]
 	void nopWait(u64 repeat) noexcept {
 		for (u64 i = 0; i < repeat; i++) {
-			// asm volatile(R"(
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            //     nop
-            // )");
             _mm_pause();
 		}
 	}
