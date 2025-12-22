@@ -36,7 +36,7 @@ namespace query {
 
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
-				what_str += base::getCurrentStackTrace(5);
+				what_str += base::getCurrentStackTrace();
 			});
 		}
 

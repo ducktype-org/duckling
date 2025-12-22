@@ -59,7 +59,7 @@ namespace dia_int {
 			std::string                 header_message,
 			dia::SourcePosition         source_position,
 			std::string                 description             = "",
-			base::Optional<std::string> pointer_message_content = {}
+			base::Optional<std::string> pointer_message_content = "here"
 		);
 	};
 }

@@ -122,7 +122,8 @@ namespace query::internal {
 					Query,
 					"[QUERY \"",
 					QueryIntType::QUERY_DATA.name,
-					"\"]: Caught failed exception.\n"
+					"\"]: Caught failed exception.\n",
+					qfe.what()
 				);
 
 				if constexpr (QueryImplType::USES_QRESULT
