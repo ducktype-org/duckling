@@ -22,28 +22,26 @@ namespace concurrent {
 	 * The behavior of this lock is as follows:
 	 * Locking:
 	 * - It first tries to acquire the lock in a busy-wait loop for a number
-	 *   of iterations, using exponential backoff with nop instructions to reduce
-	 *   contention.
+	 *   of iterations, increasing the amount of spining with each iteration.
 	 *
 	 * - If the lock is not acquired in the busy-wait phase, it then tries to
-	 *   acquire the lock by yielding the thread, allowing other threads to run.
-	 *   This phase uses `std::this_thread::yield()` which proven to be more effective
-	 *   than sleep for short waits.
+	 *   acquire the lock in the `std::this_thread::yield()` loop, allowing other threads to run.
+	 *   This phase uses `std::this_thread::yield()` because it proven to be very efficient
+	 *   in short wait scenarios.
 	 *
 	 * - If the lock is still not acquired after yielding, it falls back to
 	 *   sleeping for a short duration in a loop until the lock is acquired.
-	 *   This phase is only present due to the lack of guarantees about the behavior
+	 *   This phase is only present mostly due to the lack of guarantees about the behavior
 	 *   of `std::this_thread::yield()`.
 	 *
 	 * Unlocking:
 	 * - The lock is released by clearing the atomic_flag. It is always a wait-free operation.
 	 *
-	 * @note This lock is not fair at all, and relies to en extend on spin locking which might not
-	 * always be ideal. However, it is very simple and efficient for short critical sections. With
-	 * experimental testing performed so far it proven much faster than mutexes/semaphores,
-	 *       `std::atomic_flag.wait()` based synchronization, or other more complex lock
-	 * implementations. It is especially effective for short critical sections or when waiting for
-	 * lock is rare.
+	 * @note This lock is not fair at all, and relies to en extend on spin locking which might often be not ideal.
+	 * For now it won synthetic tests performed with very fast critical sections and/or rare waiting
+	 * (scenarios we expect for example in hash maps).
+	 * In the future, when possible,
+	 * it might be worth to benchmark it in real scenarios and potentially swap it / improve it.
 	 */
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
@@ -54,9 +52,7 @@ namespace concurrent {
 		 * Acquires the lock, waiting or sleeping if necessary.
 		 */
 		void lock() noexcept {
-			// try to acquire the lock in a busy wait a few times:
-
-			// note: higher numbers make it less fair, but usually faster
+			// try to acquire the lock in a busy wait loop first:
 			constexpr u64 SPIN_TRIES = 128;
 
 			u64 wait_rep = 2;
@@ -70,7 +66,7 @@ namespace concurrent {
 			}
 
 			// if not successful, yield until the lock is acquired
-			// we yield a lot of times here, as we only want to sleep in extreme cases:
+			// we yield a lot of times here, as we only want to call `sleep_for` if yielding is somehow unsuccessful:
 			for (u64 i = 0; i < SPIN_TRIES * 16; i++) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
 				std::this_thread::yield();
