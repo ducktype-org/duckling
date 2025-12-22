@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::{cell::OnceCell, marker::PhantomData};
 
 use crate::{QpCtx, QuackResult, quackpack::core::PackageCtx};
 
@@ -6,20 +6,15 @@ pub enum Todo {}
 pub type VenvFreeze = Todo;
 pub type GitAccess = Todo;
 
-pub enum SolverState {
-    Created,
-    Prepared,
-}
+pub trait SolverState {}
 
-// This is so ugly, but that is completely Rust's fault, there are no generics by custom types.
-pub const fn to_i32(state: SolverState) -> i32 {
-    match state {
-        SolverState::Created => 0,
-        SolverState::Prepared => 1,
-    }
-}
+pub struct Created();
+pub struct Prepared();
 
-pub struct Solver<'duck, const STATE: i32> {
+impl SolverState for Created {}
+impl SolverState for Prepared {}
+
+pub struct Solver<'duck, State: SolverState> {
     _qp_ctx: &'duck QpCtx<'duck>,
     _root_package_ctx: &'duck PackageCtx<'duck>,
     // Passing this needs further consideration from the storage:
@@ -28,22 +23,24 @@ pub struct Solver<'duck, const STATE: i32> {
     //  * in the case of its absence an empty freeze should be passed.
     _current_freeze: VenvFreeze,
     _gathered_info: OnceCell<Todo>,
+    _state: PhantomData<State>,
 }
 
-impl<'duck> Solver<'duck, { to_i32(SolverState::Created) }> {
-    pub fn _new(package_ctx: &'duck PackageCtx<'duck>, current_freeze: VenvFreeze) -> Self {
+impl<'duck> Solver<'duck, Prepared> {
+    pub fn new(package_ctx: &'duck PackageCtx<'duck>, current_freeze: VenvFreeze) -> Self {
         Self {
             _qp_ctx: package_ctx.ctx(),
             _root_package_ctx: package_ctx,
             _current_freeze: current_freeze,
             _gathered_info: OnceCell::new(),
+            _state: PhantomData,
         }
     }
 
-    pub async fn _prepare_solving(
+    pub async fn prepare_solving(
         self,
         _git_access: &mut GitAccess,
-    ) -> QuackResult<Solver<'duck, { to_i32(SolverState::Prepared) }>> {
+    ) -> QuackResult<Solver<'duck, Prepared>> {
         todo!(
             "\
 1. Determine which dependencies are unsatisfied,
@@ -54,7 +51,7 @@ impl<'duck> Solver<'duck, { to_i32(SolverState::Created) }> {
     }
 }
 
-impl<'duck> Solver<'duck, { to_i32(SolverState::Prepared) }> {
+impl<'duck> Solver<'duck, Prepared> {
     pub fn _solve(self) -> QuackResult<VenvFreeze> {
         todo!(
             "\
