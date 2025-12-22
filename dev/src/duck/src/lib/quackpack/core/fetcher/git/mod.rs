@@ -3,8 +3,11 @@
 use std::path::Path;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
+    QpCtx, QuackResult, QuackResultContext, StrId,
+    quackpack::{
+        core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
+        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
+    },
 };
 
 use async_scoped::TokioScope;
@@ -84,25 +87,9 @@ impl GitClient {
             spawner.spawn_blocking(|| Self::clone_blocking(source, destination, ctx))
         });
 
-        unpack_results_vec(results)
+        let results = unpack_tokio_scoped_vector(results)?;
+        extract_single_item_from_vec(results)?
     }
-}
-
-/// Extract a single item stored in this vector.
-fn extract_single<T>(vec: Vec<T>) -> Option<T> {
-    let [single]: [T; 1] = vec.try_into().ok()?;
-    Some(single)
-}
-
-/// Unpack a single result from a vec returned by [`TokioScope`](async_scoped::Scope).
-fn unpack_results_vec<T>(
-    vec: Vec<Result<QuackResult<T>, tokio::task::JoinError>>,
-) -> QuackResult<T> {
-    let Some(first) = extract_single(vec) else {
-        qp_bail_internal!("we've given exactly one closure, we should have got exactly one result")
-    };
-
-    first.context_internal("git thread panicked")?
 }
 
 trait RepositoryExt {
