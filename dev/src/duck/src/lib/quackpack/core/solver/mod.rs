@@ -2,9 +2,9 @@ use std::{cell::OnceCell, marker::PhantomData};
 
 use crate::{QpCtx, QuackResult, quackpack::core::PackageCtx};
 
-pub enum Todo {}
-pub type VenvFreeze = Todo;
-pub type GitAccess = Todo;
+pub enum ToImplement {}
+pub type VenvFreeze = ToImplement;
+pub type GitAccess = ToImplement;
 
 pub trait SolverState {}
 
@@ -22,7 +22,7 @@ pub struct Solver<'duck, State: SolverState> {
     //  * in the case of its absence the freeze from the storage should be passed
     //  * in the case of its absence an empty freeze should be passed.
     _current_freeze: VenvFreeze,
-    _gathered_info: OnceCell<Todo>,
+    _gathered_info: OnceCell<ToImplement>,
     _state: PhantomData<State>,
 }
 
