@@ -23,25 +23,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Module Module::fromLLVMBC(const unsigned char* llvm_bc_data, size_t llvm_bc_size) {
-		// Wrap the array in a MemoryBuffer
-		auto buffer = llvm::MemoryBuffer::getMemBuffer(
-			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data), llvm_bc_size),
-			/*BufferName=*/"builtins_bc",
-			/*RequiresNullTerminator=*/false
-		);
-
-		llvm::LLVMContext                             context;
-		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
-			= parseBitcodeFile(buffer->getMemBufferRef(), context);
-
-		if (!mod_or_err)
-			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
-
-		// Compile module to object file
-		auto result = Module{
-			makeBox<ModuleImpl>(Box<llvm::Module>::fromPointer(std::move(*mod_or_err).release()))
-		};
-		return result;
+		return { parseLLVMBCToModuleImpl(llvm_bc_data, llvm_bc_size) };
 	}
 
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {

@@ -3,6 +3,37 @@
 #include <cstdlib>
 #include <cstring>
 
+struct DucklingString {
+	// Pointer to the data of the string proper.
+	char* data;
+	// The length of the string proper.
+	uint64_t length;
+	// The difference between the pointer to the data and
+	// the beginning of the allocated memory (always non-negative).
+	uint64_t memory_begin_offset;
+	// The difference between the end of the allocated memory and
+	// the pointer to the data (always non-negative). The total size
+	// of the allocated buffer is thus memory_begin_offset + memory_end_offset.
+	uint64_t memory_end_offset;
+};
+
+// Here, we declare the entire interface as extern "C" to avoid name mangling.
+// The definitions will be given below.
+extern "C" {
+	// Basic numeric I/O
+	int32_t builtin_output_i64(int64_t v);
+	int64_t builtin_input_i64();
+	int32_t builtin_output_u64(uint64_t v);
+	uint64_t builtin_input_u64();
+	int32_t builtin_output_f64(double v);
+	double builtin_input_f64();
+
+	// String I/O
+	int32_t builtin_output_string(DucklingString s);
+	DucklingString builtin_input_string();
+	void builtin_free_string(DucklingString& s);
+}
+
 int32_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
 
 int64_t builtin_input_i64() {
@@ -26,20 +57,6 @@ double builtin_input_f64() {
 	if (scanf("%lf", &v) != 1) exit(1);
 	return v;
 }
-
-struct DucklingString {
-	// Pointer to the data of the string proper.
-	char* data;
-	// The length of the string proper.
-	uint64_t length;
-	// The difference between the pointer to the data and
-	// the beginning of the allocated memory (always non-negative).
-	uint64_t memory_begin_offset;
-	// The difference between the end of the allocated memory and
-	// the pointer to the data (always non-negative). The total size
-	// of the allocated buffer is thus memory_begin_offset + memory_end_offset.
-	uint64_t memory_end_offset;
-};
 
 DucklingString builtin_input_string() {
 	char*   line = nullptr;
@@ -78,7 +95,7 @@ DucklingString builtin_input_string() {
 	};
 }
 
-int64_t builtin_output_string(DucklingString s) {
+int32_t builtin_output_string(DucklingString s) {
 	if (s.data == NULL || s.length == 0) {
 		printf("\n");
 		return 0;

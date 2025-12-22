@@ -993,6 +993,26 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
+	Box<ModuleImpl> parseLLVMBCToModuleImpl(const unsigned char* llvm_bc_data, size_t llvm_bc_size) {
+		// Wrap the array in a MemoryBuffer
+		auto buffer = llvm::MemoryBuffer::getMemBuffer(
+			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data), llvm_bc_size),
+			/*BufferName=*/"",
+			/*RequiresNullTerminator=*/false  // Maybe unnecessary, but BC files may not end with null
+		);
+
+		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
+			= parseBitcodeFile(buffer->getMemBufferRef(), getLLVMContext());
+
+		if (!mod_or_err)
+			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
+
+		// Compile module to object file
+		auto result
+			= makeBox<ModuleImpl>(Box<llvm::Module>::fromPointer(std::move(*mod_or_err).release()));
+		return result;
+	}
+
 	llvm::Function* addFunctionToModuleInternal(
 		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
