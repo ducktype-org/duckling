@@ -7,7 +7,7 @@ use crate::{
         driver::{cli, cli_ext::subcommand},
         util::terminal::Terminal,
     },
-    internal_bail,
+    qp_bail_internal,
 };
 use clap::ArgMatches;
 
@@ -25,7 +25,7 @@ pub fn get_parser() -> Command {
 
 pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
     let Some(generator) = matches.get_one::<Shell>("generator").cloned() else {
-        internal_bail!("this should be guarded by a `.required(true)` in a parser")
+        qp_bail_internal!("this should be guarded by a `.required(true)` in a parser")
     };
     print_completions(generator, cli(), ctx);
     Ok(())

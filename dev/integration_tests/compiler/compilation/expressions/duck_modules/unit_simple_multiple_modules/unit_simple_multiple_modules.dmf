@@ -3,10 +3,9 @@
 import unit_simple_submodule as unit_simple_submodule;
 
 let a: () = ();
-# const unitType: type = ();
-# @TODO: #902 when type consts work, use the above type somewhere below.
 
 fun main() -> i64 = {
     unit_simple_submodule.foo(a);
+    unit_simple_submodule.foo(unitType);
     return 0i64;
 }

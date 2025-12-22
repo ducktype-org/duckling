@@ -108,6 +108,12 @@ namespace {
 				}
 				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
 			}
+			variant_case_novalue(compiler::tsh::SymbolType<>) {
+				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
+				// using compile time operations on types to compile. This should never be used in
+				// runtime.
+				return llvm::ConstantInt::get(llvm_type, 0, false);
+			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "
@@ -273,6 +279,14 @@ namespace compiler::backend_llvm {
 			}
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(llvm_context);
+			}
+			variant_case(tsl::MetaTypeLayout, meta_layout) {
+				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
+				// using compile time operations on types to compile. This should never be used in
+				// runtime.
+				return llvm::Type::getIntNTy(
+					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
+				);
 			}
 			variant_default {
 				CORE_PANIC(

@@ -15,6 +15,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::StackLocalPtr(name); }
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::StackLocalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
 		}
@@ -31,6 +32,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::Global8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::GlobalPtr(name); }
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::GlobalOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));
 		}
@@ -56,8 +58,7 @@ namespace {
 		else if constexpr (sizeof(T) == 2)
 			return vm::safeReadBytes<u16>(value);
 		else if constexpr (sizeof(T) == 1)
-			// @TODO: #1652 Use `u8` here when casting is possible.
-			return vm::safeReadBytes<std::uint8_t>(value);
+			return static_cast<u64>(vm::safeReadBytes<u8>(value));
 		else
 			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
 	}
@@ -86,6 +87,10 @@ DVMImmediate::DVMImmediate(u32 value): value(translateToU64(value)) {}
 		return vm::opargs::BuiltinFunctionName{ name };
 	else
 		return vm::opargs::FunctionName{ name };
+}
+
+[[nodiscard]] vm::opargs::OpCodeArg DVMExternCFunctionName::asArgument() const {
+	return vm::opargs::ExtCFunctionName{ name };
 }
 
 DVMValue::operator vm::opargs::OpCodeArg() const { return asArgument(); }

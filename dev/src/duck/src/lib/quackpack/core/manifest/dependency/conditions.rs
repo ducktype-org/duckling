@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use crate::QuackError;
+use crate::quackpack::schemas::registry;
 use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 #[derive(Debug)]
@@ -53,6 +55,26 @@ impl Conditions {
         // @TODO: #1353 We could work with plain iterators and/or keep `required_root_package_features` as a HashSet,
         //  but only if creating temporary HashSets becomes a bottleneck. Also connected with !TODO above, in `is_enabled_for`.
         !enabled_features.is_disjoint(&required_features)
+    }
+}
+
+impl TryFrom<registry::DependencyCondition> for Conditions {
+    type Error = QuackError;
+
+    fn try_from(value: registry::DependencyCondition) -> Result<Self, Self::Error> {
+        let features = value.package_features;
+        let features = features.map(|vec| vec.into_iter().map(Into::into).collect());
+        Self::new(features)
+    }
+}
+
+impl From<Conditions> for registry::DependencyCondition {
+    fn from(value: Conditions) -> Self {
+        let features = value.required_root_package_features;
+        let features = features.map(|vec| vec.into_iter().map(Into::into).collect());
+        Self {
+            package_features: features,
+        }
     }
 }
 

@@ -197,7 +197,23 @@ namespace compiler::lir {
 		case mir::Operation::FloatNeq:
 			return Operation::FloatNeq;
 
-		// Logic
+		/// Meta type operations ///
+		case mir::Operation::MetaCreateBox:
+			return Operation::MetaCreateBox;
+		case mir::Operation::MetaCreateRef:
+			return Operation::MetaCreateRef;
+		case mir::Operation::MetaCreateConst:
+			return Operation::MetaCreateConst;
+		case mir::Operation::MetaCreateTuple:
+			return Operation::MetaCreateTuple;
+		case mir::Operation::MetaCreateVariant:
+			return Operation::MetaCreateVariant;
+		case mir::Operation::MetaEq:
+			return Operation::MetaEq;
+		case mir::Operation::MetaNeq:
+			return Operation::MetaNeq;
+
+		/// Logic ///
 		case mir::Operation::BooleanAnd:
 			return Operation::BooleanAnd;
 		case mir::Operation::BooleanOr:
@@ -522,6 +538,14 @@ namespace compiler::lir {
 				case mir::Operation::FloatGteq:
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
+
+				case mir::Operation::MetaCreateBox:
+				case mir::Operation::MetaCreateRef:
+				case mir::Operation::MetaCreateConst:
+				case mir::Operation::MetaCreateTuple:
+				case mir::Operation::MetaCreateVariant:
+				case mir::Operation::MetaEq:
+				case mir::Operation::MetaNeq:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
