@@ -18,9 +18,19 @@ namespace lexer {
 		using namespace lang_def;
 		static std::set<NamedOperator> specials = {
 			NamedOperator::Period,      NamedOperator::PeriodStar,  NamedOperator::Colon,
-			NamedOperator::SingleArrow, NamedOperator::DoubleArrow,
+			NamedOperator::SingleArrow, NamedOperator::DoubleArrow, NamedOperator::PeriodQuestion,
+			NamedOperator::Reflect
 		};
 		return specials.contains(asNamed());
+	}
+
+
+	bool Operator::isAccessOp() const {
+		using namespace lang_def;
+		static std::set<NamedOperator> access = {
+			NamedOperator::Period, NamedOperator::PeriodQuestion, NamedOperator::Reflect
+		};
+		return access.contains(asNamed());
 	}
 
 	bool Operator::isNotReserved() const {
