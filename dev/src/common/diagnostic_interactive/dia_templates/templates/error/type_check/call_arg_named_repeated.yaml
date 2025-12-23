@@ -2,7 +2,7 @@ metadata:
   type: "error"
   family: "type_check"
   name: "call_arg_named_repeated"
-  code: "6002"
+  code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"

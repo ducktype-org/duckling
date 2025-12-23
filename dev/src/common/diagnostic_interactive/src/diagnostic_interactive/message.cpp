@@ -74,7 +74,7 @@ namespace dia_int {
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
 
 		usize begin_char = source->getLine(first_line).first;
-		usize end_char   = source->getLine(last_line).second + 1;
+		usize end_char   = source->getLine(last_line).second;
 
 		auto code_list = std::vector<Box<dia_args::Component>>();
 

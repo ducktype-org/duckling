@@ -5,6 +5,7 @@
 
 #include "chain_expr.hpp"
 
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -35,6 +36,49 @@
 #include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
+
+	/**
+	 * @brief Error messages
+	 */
+	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_invalid_callables" };
+		}
+
+	public:
+		class InvaidCallableReferenceDocs final: public dia_int::MessageBase {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "docs",
+					     .family        = "expressions",
+					     .name          = "invalid_callable_reference" };
+			}
+
+		public:
+			InvaidCallableReferenceDocs(): MessageBase() {}
+		};
+
+		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "note",
+					     .family        = "type_check",
+					     .name          = "callable_candidate" };
+			}
+
+		public:
+			CandidateNote(dia::SourcePosition source_position):
+				  MessageWithCodeFragmentAndCause(source_position) {}
+		};
+
+		CallInvalidCallablesError(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			attachMessage(makeBox<InvaidCallableReferenceDocs>());
+		}
+	};
 
 	/**
 	 * State for the building of the chain expression in HOUT.
@@ -183,40 +227,6 @@ namespace compiler::helios::code {
 			return elem.value().dynamicCast<T>().has_value();
 		}
 
-		class AmbiguousCallableCandidates final: public dia::Error {
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "The expression could refer to multiple callable symbols, at least one of "
-					   "which is not a function.";
-			}
-
-			[[nodiscard]]
-			std::string toStringDetailed() const override {
-				return "The expression could refer to multiple callable symbols, at least one of "
-					   "which is not a function. It must either refer to a set of overloaded "
-					   "functions, or a single symbol with a defined (possibly overloaded) call "
-					   "operator.";
-			}
-
-		public:
-			[[nodiscard]] Domain getDomain() const override { return Domain::Lookup; }
-
-			explicit AmbiguousCallableCandidates(const dia::SourcePosition& source_position):
-				  Error(source_position) {}
-
-			class Candidate final: public dia::NoteWithPosition {
-			protected:
-				[[nodiscard]] std::string toStringBrief() const override {
-					return "Candidate defined here.";
-				}
-
-			public:
-				explicit Candidate(const dia::SourcePosition& source_position):
-					  NoteWithPosition(source_position) {}
-			};
-		};
-
 		/**
 		 * @brief Resolves a set of symbols which act as callees into a set of function symbols.
 		 *
@@ -246,15 +256,15 @@ namespace compiler::helios::code {
 
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
-				auto error = makeBox<AmbiguousCallableCandidates>(
+				auto error = makeBox<CallInvalidCallablesError>(
 					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
-					error->addNote(makeBox<AmbiguousCallableCandidates::Candidate>(
+					error->attachMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
 						stmt(query_ctx, candidate).value()->getSourcePosition()
 					));
 				}
-				query_ctx.log(std::move(error));
+				query_ctx.logInt(std::move(error));
 				return query::Failed();
 			}
 
@@ -461,8 +471,7 @@ namespace compiler::helios::code {
 				}
 				variant_case_novalue(errors::Ambiguity) {
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Accessed value is ambiguous.",
-						expr_access->getName().position
+						"Accessed value is ambiguous.", expr_access->getName().position
 					));
 					return query::Failed();
 				}
@@ -473,7 +482,7 @@ namespace compiler::helios::code {
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Accessed value not found.",  expr_access->getName().position
+						"Accessed value not found.", expr_access->getName().position
 					));
 					return query::Failed();
 				}
@@ -557,9 +566,7 @@ namespace compiler::helios::code {
 			default:
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					base::strConcat(
-						"Unsupported kind of the symbol `",
-						name(symbol),
-						"` in chain expression."
+						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
 					),
 					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
 				));
