@@ -41,7 +41,7 @@ impl<'duck> Solver<'duck, Prepared> {
         self,
         _git_access: &mut GitAccess,
     ) -> QuackResult<Solver<'duck, Prepared>> {
-        todo!(
+        unimplemented!(
             "\
 1. Determine which dependencies are unsatisfied,
     this requires also checking all local dependencies freezefiles.
@@ -52,8 +52,8 @@ impl<'duck> Solver<'duck, Prepared> {
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn _solve(self) -> QuackResult<VenvFreeze> {
-        todo!(
+    pub fn solve(self) -> QuackResult<VenvFreeze> {
+        unimplemented!(
             "\
 1. Solve the problem \
 2. Generate a new freezefile"
