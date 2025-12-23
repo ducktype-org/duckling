@@ -13,13 +13,14 @@
 #include <mir_private/stmt_lowering.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/str/str_utils.hpp"
+
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <stack>
 #include <unordered_set>
-#include "base/str/str_utils.hpp"
 
 namespace compiler::mir {
 	namespace hc = helios::code;
@@ -194,7 +195,9 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat("The function `", function.name,  "` is missing a return statement")));
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("The function `", function.name, "` is missing a return statement")
+			));
 			return query::Failed();
 		}
 	}

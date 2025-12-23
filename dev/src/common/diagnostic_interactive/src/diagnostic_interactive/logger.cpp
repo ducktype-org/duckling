@@ -35,4 +35,6 @@ namespace dia_int {
 	}
 
 	usize Logger::messageCount() const { return diagnostics.size(); }
+
+	bool Logger::bad() const { return diagnostics.size() > 0; }
 }

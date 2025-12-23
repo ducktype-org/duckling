@@ -127,7 +127,7 @@ namespace compiler::helios {
 			                                         .unlock(ctx)
 			                                         ->getExpr();
 				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto initial_value_hout_coerced
+				  auto       initial_value_hout_coerced
 					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
 			                .valueOrThrow();
 

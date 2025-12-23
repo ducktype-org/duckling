@@ -183,15 +183,8 @@ namespace compiler::helios {
 						                .valueOrThrow();
 						output(expr->expression_type.getSymbolType());
 					} else {
-						ctx.log(makeBox<  //@TODO
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							fun->getSourcePosition(),
-							"Function body in single-statement function must be an expression "
-							"statement"
-						));
 						CORE_PANIC(
-							"Not handling errors here yet... (return type collector: single stmt "
-							"function body)"
+							"Function body in single-statement function must be an expression stmt"
 						);
 					}
 				} else {
@@ -240,17 +233,12 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						fun->getSourcePosition(),
-						"Function declared with no explicit return type and inconsistent "
-						"returns"
-					)
-				);
-				CORE_PANIC(
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Function declared with no explicit return type and inconsistent "
-					"returns"
-				);
+					"returns",
+					fun->getSourcePosition()
+				));
+				return query::Failed();
 			}
 		}
 
@@ -610,7 +598,7 @@ namespace compiler::helios {
 				auto val = assignment->getValue();
 
 				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).valueOrThrow();
-				auto   new_value_expr_coerced
+				auto new_value_expr_coerced
 					= getHoutOfExprWithExpectedType(
 						  ctx, val, location_expr->expression_type.getSymbolType()
 					)
@@ -638,12 +626,10 @@ namespace compiler::helios {
 				// @todo write a test for this once helios error handling is more robust
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							assignment->getSourcePosition(),
-							"Left side of assignment can't be immutable."
-						)
-					);
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Left side of assignment can't be immutable.",
+						assignment->getSourcePosition()
+					));
 					query::throwFailed();
 					return;
 				}

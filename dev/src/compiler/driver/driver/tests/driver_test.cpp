@@ -67,7 +67,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM }).valueOrPanic();
+			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
+			                    .valueOrPanic();
 
 			ASSERT_TRUE(module_o.FILE.exists());
 
@@ -158,7 +159,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM }).valueOrPanic();
+			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
+			                    .valueOrPanic();
 
 			assertTrue(module_o.FILE.exists(), "Object file does not exist");
 
@@ -167,8 +169,8 @@ private:
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_dbc
-				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM }).valueOrPanic();
+			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
+			                      .valueOrPanic();
 			assertTrue(module_dbc.FILE.exists(), "Object file does not exist");
 
 			std::filesystem::remove(module_dbc.FILE.getFilePath().getPath());

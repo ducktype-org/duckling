@@ -111,7 +111,7 @@ namespace compiler::helios::code {
 		const std::vector<Box<Expr>>&                          positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
-		auto&                                        decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
+		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
 		std::vector<base::Optional<Coercion>>       coercions(decl.parameters.size());
 		bool                                        coercion_present = false;
@@ -137,13 +137,13 @@ namespace compiler::helios::code {
 					                                      .argument_index = i,
 					                                      .function       = fun } };
 
-			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
 			argument_origin[i].emplace(PositionalArgumentOrigin{
 				.index_in_positional_args = i, .requires_coercion = not is_empty });
-			coercions[i].emplace(std::move(coercion).valueOrPanic().getCoercion());
+			coercions[i].emplace(std::move(coercion).valueOrThrow().getCoercion());
 		}
 
 
@@ -186,12 +186,12 @@ namespace compiler::helios::code {
 					                            .argument_index = positional_arguments.size() + i,
 					                            .function       = fun } };
 
-			bool is_empty = coercion.valueOrPanic().getCoercion().isEmptyCoercion();
+			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
 			if (not is_empty) coercion_present = true;
 
 			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
 				                                              .requires_coercion   = not is_empty };
-			coercions[param_idx].emplace(std::move(coercion).valueOrPanic().getCoercion());
+			coercions[param_idx].emplace(std::move(coercion).valueOrThrow().getCoercion());
 		}
 
 		// Go over default arguments
@@ -439,13 +439,13 @@ namespace compiler::helios::code {
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
 
-		if (verify_result.hasFailed()) return query::Failed{};
+		if (verify_result.hasFailed()) return query::Failed();
 
-		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrPanic())) {
+		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
 			return query::Failed{};
 		}
-		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrPanic())) {
+		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrThrow())) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
 			return query::Failed{};
 		}
@@ -515,7 +515,6 @@ namespace compiler::helios::code {
 			ctx.logInt(std::move(main_msg));
 		}
 
-		// ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
 		return query::Failed();
 	}
 }

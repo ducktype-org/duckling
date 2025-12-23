@@ -103,15 +103,19 @@ namespace compiler::helios::code {
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
 				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-				if (result) {
-					auto [operation, lhs_coercion, rhs_coercion] = std::move(result).value();
 
-					auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-					auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, lhs_coercion, rhs_coercion] = value;
 
-					return makeBox<BinaryOperatorExpr>(
-						ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-					);
+						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
+						return makeBox<BinaryOperatorExpr>(
+							ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+						);
+					}
+					opt_none { return {}; }
 				}
 				return {};
 			}
@@ -495,7 +499,7 @@ namespace compiler::helios {
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrPanic().getVariant()) {
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
 			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
 			variant_case(InvalidCoercion, _) {
 				if (log_error.has_value()) {

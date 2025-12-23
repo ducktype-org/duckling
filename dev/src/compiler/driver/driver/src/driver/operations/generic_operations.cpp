@@ -98,7 +98,7 @@ namespace compiler::driver {
 				return query::Failed();
 			}
 			auto lir_data = std::move(lir_data_result).valueOrPanic();
-			
+
 			// @TODO: this creates an empty output file even if compilation fails later on.
 			// Also there is a problem with caching, we should not create output file
 			// until we are sure compilation succeeded (or delete the file on failure).
@@ -179,7 +179,7 @@ namespace compiler::driver {
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = package_info.root_module;
+		auto        root   = package_info.root_module;
 		base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -188,12 +188,10 @@ namespace compiler::driver {
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
 			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
-			if (module_result.hasValue()) {
+			if (module_result.hasValue())
 				objects.emplace_back(module_result.valueOrPanic());
-			}
-			else {
+			else
 				result = base::BAD;
-			}
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
@@ -218,7 +216,7 @@ namespace compiler::driver {
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		auto lir_data = ctx.query<CompileToLIRModuleData>(module_id).valueOrPanic();
+		auto lir_data            = ctx.query<CompileToLIRModuleData>(module_id).valueOrPanic();
 		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};

@@ -96,7 +96,7 @@ namespace compiler::helios {
 
 		if (get_as_single.hasFailed()) return query::Failed();
 
-		variant_match(get_as_single.valueOrPanic()) {
+		variant_match(get_as_single.valueOrThrow()) {
 			variant_case(SymbolList, symbol_list) {
 				SymbolList dealiased_result;
 

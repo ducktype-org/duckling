@@ -1,6 +1,5 @@
 #include "placeholder.hpp"
 
-
 namespace dia_int {
 
 	PlaceholderHeaderError::PlaceholderHeaderError(std::string header_message): MessageBase() {

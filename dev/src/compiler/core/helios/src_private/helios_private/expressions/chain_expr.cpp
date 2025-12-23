@@ -5,7 +5,6 @@
 
 #include "chain_expr.hpp"
 
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -701,12 +700,10 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-							currentElem().value()->getSourcePosition(),
-							"Expected access or call expression in chain expression"
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected access or call expression in chain expression",
+						currentElem().value()->getSourcePosition()
+					));
 					return query::Failed();
 				}
 			}

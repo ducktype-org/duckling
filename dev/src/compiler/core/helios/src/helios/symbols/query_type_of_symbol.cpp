@@ -144,7 +144,7 @@ namespace compiler::helios {
 
 		static auto handleFunction(Context& ctx, SymID sym) {
 			// @note: this crates false dependency of default parameter expressions
-			auto&                           declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
+			auto& declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
 			std::vector<tsh::SymbolType<>> param_types{};
 			param_types.reserve(declaration.parameters.size());
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
