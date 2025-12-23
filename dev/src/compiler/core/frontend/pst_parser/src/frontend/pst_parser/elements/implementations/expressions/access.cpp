@@ -34,7 +34,8 @@ namespace pst::expr {
 		out->type = state[0].getValue();
 
 		// This should never occur if access parsing is called well
-		if (!state[0].asBinaryOperator().map([](auto x) {return x.isAccessOp();}).copyValueOr(false)) {
+		if (!state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+		    ).copyValueOr(false)) {
 			state.log(makeBox<BadAccessError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));

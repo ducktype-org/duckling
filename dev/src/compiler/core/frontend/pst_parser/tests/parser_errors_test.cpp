@@ -320,7 +320,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T.Y" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x::size() + {return 2;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{
+		"x::size() + {return 2;}"
+	};
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_round_expr{ "x.?y + (x, y)" };
 

@@ -53,7 +53,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<base::StrID> getDeclSymbolName() const override {
-			return name.value;	
+			return name.value;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

@@ -28,9 +28,10 @@ namespace pst::expr {
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
 		while (fwd < length) {
-			if (state[fwd].asBinaryOperator().map([](auto x) {return x.isAccessOp();}).copyValueOr(false)
-				|| state[fwd].isBracketGroup(lexer::Token::Square)
-				|| state[fwd].isBracketGroup(lexer::Token::Round)) {
+			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+			    ).copyValueOr(false)
+			    || state[fwd].isBracketGroup(lexer::Token::Square)
+			    || state[fwd].isBracketGroup(lexer::Token::Round)) {
 				break;
 			}
 			fwd++;
@@ -53,7 +54,8 @@ namespace pst::expr {
 		while (length > 0) {
 			fwd = toNextLink(state, length);
 			MBox<ExprElement> extension;
-			if (state[0].asBinaryOperator().map([](auto x) {return x.isAccessOp();}).copyValueOr(false)) {
+			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+			    ).copyValueOr(false)) {
 				state.parse(out).with(&extension, Access::parse, +fwd);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {

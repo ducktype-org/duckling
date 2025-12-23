@@ -30,9 +30,11 @@ namespace pst::expr {
 				   state[fwd].isOperatorSymbol()
 				   && state[fwd].asBinaryOperator().value().isNotReserved()
 			   )
-		       && !(state[fwd].isIdentifier() 
-			   && !state[fwd - 1].asBinaryOperator().map([](auto x) {return x.isAccessOp();}).copyValueOr(false)
-			)) {
+		       && !(
+				   state[fwd].isIdentifier()
+				   && !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+		           ).copyValueOr(false)
+			   )) {
 			fwd++;
 		}
 		return fwd;
