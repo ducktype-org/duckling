@@ -15,7 +15,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 namespace compiler::helios::code {

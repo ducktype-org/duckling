@@ -6,13 +6,13 @@
 #pragma once
 
 
-#include "helios/hout/hout.hpp"
+#include <helios/hout/hout.hpp>
 #include "hout/hout_fd.hpp"
 #include "scope_symbol_id.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 
-#include "query_framework/query_result.hpp"
+#include <query_framework/query_result.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::helios {

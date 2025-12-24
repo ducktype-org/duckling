@@ -1,7 +1,7 @@
 #include "mir_queries.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
-#include "diagnostic_interactive/placeholder.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
@@ -13,7 +13,7 @@
 #include <mir_private/stmt_lowering.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/str/str_utils.hpp"
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_int.hpp>

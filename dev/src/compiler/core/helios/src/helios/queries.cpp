@@ -1,6 +1,6 @@
 #include "queries.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -30,7 +30,7 @@
 
 #include <base/except/exceptions.hpp>
 
-#include "query_framework/query_errors.hpp"
+#include <query_framework/query_errors.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {

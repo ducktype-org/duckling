@@ -2,7 +2,7 @@
 
 #include "symbol_abi.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
@@ -16,10 +16,10 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
-#include "query_framework/query_result.hpp"
+#include <query_framework/query_result.hpp>
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {

@@ -2,7 +2,7 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
-#include "helios_private/errors/interactive_errors.hpp"
+#include <helios_private/errors/interactive_errors.hpp>
 #include "numeric_literals.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
