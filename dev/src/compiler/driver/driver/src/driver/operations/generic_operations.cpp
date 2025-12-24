@@ -97,7 +97,7 @@ namespace compiler::driver {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			auto lir_data = std::move(lir_data_result).valueOrPanic();
+			auto lir_data = std::move(lir_data_result).valueOrThrow();
 
 			// @TODO: this creates an empty output file even if compilation fails later on.
 			// Also there is a problem with caching, we should not create output file

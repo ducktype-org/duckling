@@ -39,15 +39,17 @@ namespace compiler::helios {
 		auto str_lit_opt
 			= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 
-		if (not str_lit_opt.has_value()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Expected string literal in extern() call argument",
-				arg.unlock(ctx)->getSourcePosition()
-			));
-			return query::Failed();
+		match_optional(str_lit_opt) {
+			opt_none {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected string literal in extern() call argument",
+					arg.unlock(ctx)->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			opt_some(str_lit) { return str_lit->getValue().value; }
 		}
-
-		return str_lit_opt.value()->getValue().value;
+		return query::Failed();  // unreachable
 	}
 
 	QuerySymbolABI_Result getSymbolABI(

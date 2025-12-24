@@ -1,13 +1,5 @@
-namespace W {
-    fun aaa(x: i64) ={
-    }
-    var x: i64 = 10;
-}
-
 fun main() -> i64 = {
-    # return 0;
-    W.x.b;
-    # x = 5;
-    # return a + 3;
-    return 0;
+    var a: i64 = 123;
+
+    return a + 3;
 }

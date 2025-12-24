@@ -41,4 +41,4 @@ pointer_messages:
     priority: 1
     type: "error"
     content: 
-      - "value used here"
+      - "here"
