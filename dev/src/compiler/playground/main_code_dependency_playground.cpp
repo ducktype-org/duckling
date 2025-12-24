@@ -59,7 +59,7 @@ int notMain(int argc, const char* const* argv) {
 
 	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
-	for (auto& i: top_level->functions) {
+	for (auto& i: top_level.functions) {
 		if (i.declaration->original_name == base::StrID("main")) {
 			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
 				i.declaration->original_symbol

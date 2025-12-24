@@ -44,7 +44,7 @@ int main(int argc, const char* argv[]) {
 
 	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
-	for (const auto& hout_glob: top_level->glob_data) {
+	for (const auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
@@ -61,7 +61,7 @@ int main(int argc, const char* argv[]) {
 		});
 	}
 
-	for (auto& fun: top_level->functions) {
+	for (auto& fun: top_level.functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
