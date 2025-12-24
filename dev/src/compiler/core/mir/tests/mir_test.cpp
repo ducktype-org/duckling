@@ -511,6 +511,16 @@ private:
 					ASSERT_EQUAL(instr.arguments.size(), 1);
 					ASSERT_TRUE(instr.arguments[0].isLocal());
 					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createConst") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateConst);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
 				} else if (fun.declaration->original_name.str() == "createVariant") {
 					auto& mir_fun
 						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();

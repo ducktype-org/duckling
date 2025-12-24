@@ -536,6 +536,7 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_lopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_gopq) {}
 			instr_case_novalue(Op_mov_gopq_lopq) {}
+			instr_case_novalue(Op_mov_lopq_imm) {}
 			instr_case_novalue(Op_setNull_lptr) {}
 
 			instr_case_novalue(Op_add_l64_l64) {}

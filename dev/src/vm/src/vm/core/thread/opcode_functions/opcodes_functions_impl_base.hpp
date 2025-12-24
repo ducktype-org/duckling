@@ -685,6 +685,15 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+		{
+			// @TODO: #1728 remove this evil instruction
+			const void* value = safeReadBytes<void*>(instr->arg1);
+			writeToStack(local_stack, instr->arg0, value);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);

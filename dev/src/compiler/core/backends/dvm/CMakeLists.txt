@@ -5,6 +5,8 @@ add_library(DVMBackend STATIC
     src_private/function_lowering_context.cpp
     src_private/instruction_lowering.cpp
     src_private/dvm_value.cpp
+    src_private/dvm_operation.cpp
+    src_private/meta_operation_lowering.cpp
 )
 
 make_module(DVMBackend USES Base QueryFramework LIR LibVM Logger)

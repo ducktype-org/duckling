@@ -62,6 +62,7 @@ namespace pst {
 				.withDef(&out->code_block_or_stmt, CodeBlock::CodeBlockType::Unordered);
 		}
 
+		// @TODO: #1739 Move this handling outside of parser.
 		// Check if only legal elements are present in the extern block or statement
 		// (for example "print();" is illegal, only function and classes are allowed)
 		if (out->specifier == Keyword::Extern) {
