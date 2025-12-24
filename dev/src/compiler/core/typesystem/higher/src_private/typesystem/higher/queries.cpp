@@ -8,14 +8,12 @@
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::tsh {
-	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
+	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
 
 			const auto& class_data
-				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->panicOnFailed(
-					"Handling ERRORS in TS is not supported yet..."
-				);
+				= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow();
 
 			std::vector<InterfaceElement> elements;
 			elements.reserve(class_data.members.size() + class_data.methods.size());

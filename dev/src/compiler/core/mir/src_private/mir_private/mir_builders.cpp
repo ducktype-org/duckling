@@ -98,7 +98,7 @@ namespace compiler::mir {
 			  variant_match(helios_symbol) {
 				  variant_case(FunctionSymID, fun_sym) {
 					  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
-				          ->panicOnFailed("Handling errors in MIR is not supported yet")
+				          ->valueOrThrow()
 				          .getType();
 				  }
 				  variant_default {
@@ -175,9 +175,7 @@ namespace compiler::mir {
 	MIRLocalMutRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
 		local_list.emplaceBack(MIRLocal{
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->panicOnFailed(
-				"Handling ERRORS in MIR is not supported yet..."
-			),
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
 		});
 		return local_list.last();
 	}
@@ -189,9 +187,7 @@ namespace compiler::mir {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 		local_list.emplaceBack(MIRLocal{
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->panicOnFailed(
-				"Handling ERRORS in MIR is not supported yet..."
-			),
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
 			parameter_index,
 		});
 		return local_list.last();

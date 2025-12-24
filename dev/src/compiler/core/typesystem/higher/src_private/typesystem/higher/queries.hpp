@@ -2,6 +2,7 @@
 
 #include <typesystem/higher/type_interface.hpp>
 
+#include "query_framework/query_result.hpp"
 #include <query_framework/query_int.hpp>
 
 namespace compiler::tsh {
@@ -31,7 +32,7 @@ namespace compiler::tsh {
 	DECLARE_QUERY(
 		QueryInterfaceOfClass,
 		WrappedClassAbstractTypeImplPtr,
-		CRef<TypeInterface>,
-		({ .uses_qresult = false })
+		CRef<query::QResult<TypeInterface>>,
+		({})
 	)
 }
