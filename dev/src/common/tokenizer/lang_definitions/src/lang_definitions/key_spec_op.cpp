@@ -168,8 +168,10 @@ namespace lang_def {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
 		{ NamedOperator::Period, "." },
+		{ NamedOperator::PeriodQuestion, ".?" },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
+		{ NamedOperator::Reflect, "::" },
 		{ NamedOperator::Assign, "=" },
 		{ NamedOperator::QuestionMark, "?" },
 		{ NamedOperator::SingleArrow, "->" },
