@@ -32,4 +32,11 @@ namespace vm::low {
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 	};
+
+	constexpr const char* OPCODE_NAMES[] = {
+#define HANDLE_MICRO_INSTR(opcode) #opcode,
+#include "micro_instruction_definitions.hpp"
+#undef HANDLE_MICRO_INSTR
+	};
+
 }
