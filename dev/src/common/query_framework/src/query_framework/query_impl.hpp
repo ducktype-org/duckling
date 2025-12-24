@@ -7,8 +7,8 @@
 #include "context.hpp"
 #include "internal/acd.hpp"
 #include "internal/context_access.hpp"
-#include "internal/query_graph/node_making.hpp"
 #include "internal/query_errors.hpp"
+#include "internal/query_graph/node_making.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_errors.hpp"

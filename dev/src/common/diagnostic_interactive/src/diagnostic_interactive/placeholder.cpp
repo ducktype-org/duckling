@@ -2,7 +2,10 @@
 
 namespace dia_int {
 
-	PlaceholderHeaderError::PlaceholderHeaderError(std::string header_message, std::string description): MessageBase() {
+	PlaceholderHeaderError::PlaceholderHeaderError(
+		std::string header_message, std::string description
+	):
+		  MessageBase() {
 		addArgument<TextArgument>("header_message", std::move(header_message));
 		addArgument<TextArgument>("description", std::move(description));
 	}

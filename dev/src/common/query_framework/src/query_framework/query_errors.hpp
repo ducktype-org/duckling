@@ -1,8 +1,9 @@
 #pragma once
 
-#include <query_framework/internal/query_errors.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+
+#include <query_framework/internal/query_errors.hpp>
 
 namespace query {
 	/**

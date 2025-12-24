@@ -621,10 +621,10 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
-				auto hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
+				auto  hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
 				auto& mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
 
-				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
+				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
