@@ -42,7 +42,7 @@ int main(int argc, const char* argv[]) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	for (const auto& hout_glob: top_level->glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {

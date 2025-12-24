@@ -57,7 +57,7 @@ int notMain(int argc, const char* const* argv) {
 
 	defer(printContextErrors());
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	for (auto& i: top_level->functions) {
 		if (i.declaration->original_name == base::StrID("main")) {

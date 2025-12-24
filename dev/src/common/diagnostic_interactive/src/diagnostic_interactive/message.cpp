@@ -28,7 +28,7 @@ namespace dia_int {
 	}
 
 	/**
-	 * @brief Helper method to add the code lines components 
+	 * @brief Helper method to add the code lines components
 	 * from the source to the code list from [start, end) range.
 	 * If the start is at the beginning of the line adds a StartLineComponent.
 	 * @param[in,out] code_list The list to add the code lines to.
@@ -43,16 +43,15 @@ namespace dia_int {
 		if (lines.empty()) return;
 
 		auto char_range = source->getCharRange(start, start + 1).stringView();
-		
+
 		// The start can be at the first character of the line
 		// but also at the last character of the previous line (like '\n').
-		// This is because the source positions are inclusive and offsets count the '\n' characters, 
+		// This is because the source positions are inclusive and offsets count the '\n' characters,
 		// so the `pos_end + 1` points
 		// to the '\n' char of the same line instead of the first character of the next line.
-		if (char_range[0] == '\n' or char_range[0] == '\r' or source->getLineColumn(start).second == 1)
-			code_list.emplace_back(
-				makeBox<dia_args::StartLineComponent>(lines[0].first)
-			);
+		if (char_range[0] == '\n' or char_range[0] == '\r'
+		    or source->getLineColumn(start).second == 1)
+			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[0].first));
 
 		code_list.emplace_back(makeBox<dia_args::CodeComponent>(lines[0].second.stdString()));
 

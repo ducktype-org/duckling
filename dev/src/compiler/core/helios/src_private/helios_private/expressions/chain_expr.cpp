@@ -23,11 +23,11 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
-#include <base/str/str_utils.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context.hpp>

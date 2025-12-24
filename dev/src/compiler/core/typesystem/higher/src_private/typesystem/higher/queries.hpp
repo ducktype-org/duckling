@@ -2,8 +2,8 @@
 
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/query_result.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::tsh {
 	class ClassAbstractTypeImpl;

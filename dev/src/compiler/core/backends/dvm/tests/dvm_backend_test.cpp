@@ -44,11 +44,11 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 			backend_vm::Module m(moduleName(module));
 
-			for (auto& hout_glob: top_level->glob_data) {
+			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
@@ -80,7 +80,7 @@ private:
 					}
 				}
 			}
-			for (auto& fun: top_level->functions) {
+			for (auto& fun: top_level.functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
 					{ &mir_fun->panicOnFailed("Couldn\'t compile") }

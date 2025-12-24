@@ -57,9 +57,9 @@ int notMain(int argc, const char* const* argv) {
 
 	defer(printContextErrors());
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 	query::utils::withContextDo([&](query::Context& ctx) {
-		std::cerr << top_level->debugPrint(ctx) << "\n\n";
+		std::cerr << top_level.debugPrint(ctx) << "\n\n";
 	});
 
 	std::cerr << "Inputs of entire hout:\n";

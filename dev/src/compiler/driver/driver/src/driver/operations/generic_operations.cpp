@@ -15,8 +15,8 @@
 #include <linker/link.hpp>
 #include <timer/timer.hpp>
 
-#include <base/types/ok_bad.hpp>
 #include <base/collections/optional.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
@@ -99,9 +99,6 @@ namespace compiler::driver {
 			}
 			auto lir_data = std::move(lir_data_result).valueOrThrow();
 
-			// @TODO: this creates an empty output file even if compilation fails later on.
-			// Also there is a problem with caching, we should not create output file
-			// until we are sure compilation succeeded (or delete the file on failure).
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 			auto output

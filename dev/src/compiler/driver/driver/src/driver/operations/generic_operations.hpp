@@ -12,9 +12,9 @@
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
 
-#include <query_framework/query_result.hpp>
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::driver {
 

@@ -1852,13 +1852,10 @@ private:
 				= getModule(fs::File(path("test_modules/error_generating/ambiguous_exact_match")));
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
-				assertThrows<std::exception>(
-					[&] {
-						ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id)
-							.valueOrPanic();
-					},
-					"Expected ambiguous callable candidates error"
+				auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
+				assertTrue(
+					result.hasFailed(),
+					"Expected overload resolution to fail due to ambiguous exact matches."
 				);
 
 				assertTrue(
@@ -1875,7 +1872,6 @@ private:
 			    );
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
 				assertThrows<std::exception>(
 					[&] {
 						ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id)
@@ -2112,15 +2108,11 @@ private:
 		    ));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
-			assertThrows<std::exception>(
-				[&] {
-					ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id).valueOrPanic(
-					);
-				},
-				"Expected ambiguous callable candidates error"
-			);
+			auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
 
+			assertTrue(
+				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
+			);
 			assertTrue(
 				ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
 			);

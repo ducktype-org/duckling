@@ -1,7 +1,6 @@
 #include "queries.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -85,8 +84,6 @@ namespace compiler::helios {
 			                            ->valueOrThrow()
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
-			// @TODO: here is a copy of the HOUTFunction that could be avoided since
-			// the function is also stored in the query cache
 			const auto implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.push_back(implicit_ctor);

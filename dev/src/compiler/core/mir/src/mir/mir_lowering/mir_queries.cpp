@@ -1,10 +1,10 @@
 #include "mir_queries.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
-#include <diagnostic_interactive/placeholder.hpp>
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>

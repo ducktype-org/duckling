@@ -2,17 +2,16 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries.hpp>
-
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_cache_macros.hpp>
-#include <query_framework/query_impl.hpp>
 #include <hashing/component_hash.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/query_cache_macros.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::driver {
 

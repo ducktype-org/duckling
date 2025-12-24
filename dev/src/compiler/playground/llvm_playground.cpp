@@ -43,7 +43,7 @@ int main(int argc, const char* argv[]) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
 

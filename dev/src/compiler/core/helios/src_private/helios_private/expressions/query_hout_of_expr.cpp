@@ -2,13 +2,13 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
-#include <helios_private/errors/interactive_errors.hpp>
 #include "numeric_literals.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -463,12 +463,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
-			);
-
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
 		}
