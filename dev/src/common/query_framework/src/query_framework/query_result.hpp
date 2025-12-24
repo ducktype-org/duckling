@@ -131,22 +131,22 @@ namespace query {
 		 * Used when we always except a value to be present.
 		 */
 		constexpr const Value& throwOnFailed(std::string_view message) const& {
-			if (!hasValue()) throw query::QueryFailedException(message);
+			if (!hasValue()) throwFailed(message);
 			return std::get<Value>(storage);
 		}
 
 		constexpr const Value&& throwOnFailed(std::string_view message) const&& {
-			if (!hasValue()) throw query::QueryFailedException(message);
+			if (!hasValue()) throwFailed(message);
 			return std::move(std::get<Value>(storage));
 		}
 
 		constexpr Value& throwOnFailed(std::string_view message) & {
-			if (!hasValue()) throw query::QueryFailedException(message);
+			if (!hasValue()) throwFailed(message);
 			return std::get<Value>(storage);
 		}
 
 		constexpr Value&& throwOnFailed(std::string_view message) && {
-			if (!hasValue()) throw query::QueryFailedException(message);
+			if (!hasValue()) throwFailed(message);
 			return std::move(std::get<Value>(storage));
 		}
 
@@ -180,22 +180,22 @@ namespace query {
 		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
 		constexpr const Value& valueOrThrow() const& {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::get<Value>(storage);
 		}
 
 		constexpr const Value&& valueOrThrow() const&& {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
 		}
 
 		constexpr Value& valueOrThrow() & {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::get<Value>(storage);
 		}
 
 		constexpr Value&& valueOrThrow() && {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
 		}
 

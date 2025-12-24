@@ -32,7 +32,7 @@ namespace dia_int {
 		}
 
 	public:
-		PlaceholderHeaderError(std::string header_message);
+		PlaceholderHeaderError(std::string header_message, std::string description = "");
 	};
 
 	/**

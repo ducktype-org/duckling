@@ -23,29 +23,7 @@ namespace query {
 	class Failed final {};
 
 	/**
-	 * @brief Exception that can be thrown when accessing a result of a query that has failed.
-	 * It can be caught by the enclosing query from query framework.
+	 * A simple wrapper to throw QueryFailedException that can be caught by the query framework.
 	 */
-	class QueryFailedException final: public base::Exception {
-		std::string what_str;
-
-	public:
-		QueryFailedException(std::string_view reason) {
-			what_str = std::string("Query failure not handled: ");
-			what_str += std::string(reason) + "\n\n";
-
-			IF_BUILD_TYPE_DEV({
-				what_str += "Stacktrace:\n";
-				what_str += base::getCurrentStackTrace();
-			});
-		}
-
-		[[nodiscard]] const char* what() const noexcept final { return what_str.c_str(); }
-	};
-
-	/**
-	 * A simple wrapper to throw QueryFailedException, in order to not use QueryFailedException
-	 * directly.
-	 */
-	inline void throwFailed() { throw QueryFailedException("Query failure"); }
+	void throwFailed(std::string_view reason = "Query failure");
 }
