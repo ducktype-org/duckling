@@ -58,10 +58,10 @@ namespace pst {
 		template<>
 		struct StmtClassifiers<If> {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else)
-				        && !state[fwd].is(Keyword::Elif));
+				return state[fwd].is(Token::Type::Sentinel)
+				    || ((state[fwd - 1].is(Special::Semicolon)
+				         || Conditions::isBlockGroup(state, fwd - 1))
+				        && !state[fwd].is(Keyword::Else) && !state[fwd].is(Keyword::Elif));
 			}
 		};
 
