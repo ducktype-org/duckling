@@ -458,7 +458,8 @@ private:
 			ASSERT_EQUAL(functions.at(2).declaration->original_name, base::StrID("unreachable_end"));
 			ASSERT_EQUAL(functions.at(3).declaration->original_name, base::StrID("empty"));
 
-			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
+			ASSERT_TRUE(
+				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasFailed()
 			);
 
 			auto& should_add_retvoid_fun
@@ -518,6 +519,16 @@ private:
 					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
 					const auto& instr = block.instructions[0];
 					ASSERT_TRUE(instr.operation == MetaCreateRef);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createConst") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateConst);
 					ASSERT_EQUAL(instr.arguments.size(), 1);
 					ASSERT_TRUE(instr.arguments[0].isLocal());
 					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);

@@ -43,7 +43,14 @@ namespace compiler::helios::test_utils {
 
 										 );
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
-			auto symbol_path = symbol->getAsSingle().valueOrThrow();
+
+			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
+			CORE_ASSERT(
+				std::holds_alternative<SymbolList>(symbol_path_variant),
+				"Expected single symbol in chain lookup"
+			);
+			auto symbol_path = std::get<SymbolList>(symbol_path_variant);
+
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrPanic();
 				result.appendList(dealiased);
@@ -72,7 +79,7 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			base::Optional<query::QResult<Box<code::Expr>, query::Failed>> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");
@@ -95,7 +102,7 @@ namespace compiler::helios::test_utils {
 
 	Box<code::Expr> getExprOfVariable(SymID sym) {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
-			base::Optional<query::QResult<Box<code::Expr>, query::Failed>> expr_tree;
+			base::Optional<query::QResult<Box<code::Expr>>> expr_tree;
 
 			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
 				CORE_ASSERT(!expr_tree.has_value(), "Expr tree already set");

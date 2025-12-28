@@ -33,6 +33,9 @@ namespace lexer {
 		bool isNotReserved() const;
 
 		[[nodiscard]]
+		bool isAccessOp() const;
+
+		[[nodiscard]]
 		base::Optional<Operator> filterNotReserved() const;
 
 		[[nodiscard]]

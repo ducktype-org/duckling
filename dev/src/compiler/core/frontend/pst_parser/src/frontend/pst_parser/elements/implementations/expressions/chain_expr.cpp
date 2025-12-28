@@ -27,10 +27,13 @@ namespace pst::expr {
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		PST_WHILE(fwd < length) {
-			if (state[fwd].is(lang_def::NamedOperator::Period)) break;
-			if (state[fwd].isBracketGroup(lexer::Token::Square)) break;
-			if (state[fwd].isBracketGroup(lexer::Token::Round)) break;
+		PST_WHILE (fwd < length) {
+			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+			    ).copyValueOr(false)
+			    || state[fwd].isBracketGroup(lexer::Token::Square)
+			    || state[fwd].isBracketGroup(lexer::Token::Round)) {
+				break;
+			}
 			fwd++;
 		}
 
@@ -51,7 +54,8 @@ namespace pst::expr {
 		PST_WHILE(length > 0) {
 			fwd = toNextLink(state, length);
 			MBox<ExprElement> extension;
-			if (state[0].is(lang_def::NamedOperator::Period)) {
+			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+			    ).copyValueOr(false)) {
 				state.parse(out).with(&extension, Access::parse, +fwd);
 			} else if (state[0].isBracketGroup(lexer::Token::Round)
 			           || state[0].isBracketGroup(lexer::Token::Square)) {

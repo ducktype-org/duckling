@@ -206,6 +206,8 @@ namespace compiler::helios::code {
 		case FloatGteq:
 		case FloatEq:
 		case FloatNeq:
+		case MetaEq:
+		case MetaNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -637,9 +639,11 @@ namespace compiler::helios::code {
 				return ">=";
 			case IntegerEq:
 			case FloatEq:
+			case MetaEq:
 				return "==";
 			case IntegerNeq:
 			case FloatNeq:
+			case MetaNeq:
 				return "!=";
 			default:
 				CORE_UNREACHABLE();

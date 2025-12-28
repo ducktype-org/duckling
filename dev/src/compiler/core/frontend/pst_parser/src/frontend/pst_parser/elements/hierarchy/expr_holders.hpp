@@ -26,11 +26,6 @@ namespace pst {
 			this->element_kind = ElementKind::ExprHolder;
 		}
 
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Top Level Expression";
-		}
-
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
@@ -85,6 +80,11 @@ namespace pst {
 			auto length = internal::getTokenStream(state).countUntil<until>();
 			internal::parseExprIntoHolder(state, out.refMut(), parseFun, length);
 			return out;
+		}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return TOP_LEVEL ? "Top Level Expression" : "Expression Holder";
 		}
 
 		[[nodiscard]]

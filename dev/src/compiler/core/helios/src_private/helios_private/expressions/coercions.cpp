@@ -51,17 +51,15 @@ namespace compiler::helios {
 		}
 	}
 
-	query::QResult<Coercion, InvalidCoercion> canCoerce(
+	CoercionQResult canCoerce(
 		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
 		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
-		return query::QError{ InvalidCoercion{} };
+		return InvalidCoercion{};
 	}
 
-	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(
-		query::Context& ctx, const tsh::SymbolType<> from
-	) {
+	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::SymbolType<> from) {
 		return canCoerce(
 			ctx,
 			from,

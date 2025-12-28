@@ -311,17 +311,20 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, true> all_boolean_operators{
 		"true and true or false and not false"
 	};
-	Example<pst::UniversalExprHolder, true>  prefix_named{ "ref const T" };
+	Example<pst::UniversalExprHolder, true>  prefix_named{ "ref const T.Y" };
 	Example<pst::UniversalExprHolder, false> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::UniversalExprHolder, true>  simple_block_expr{ "(x + {return 2;})" };
-	Example<pst::AssignmentExprHolder, true> simple_block_expr2{ "x + {return 2;}" };
+	Example<pst::UniversalAllowBlockExprHolder, true> simple_block_expr{
+		"x::size() + {return 2;}"
+	};
 
-	Example<pst::UniversalExprHolder, true> simple_round_expr{ "x + (x, y)" };
+	Example<pst::UniversalExprHolder, true> simple_round_expr{ "x.?y + (x, y)" };
 
 	Example<pst::UniversalExprHolder, true> simple_chain_expr{ "(x * t).y.z(4)[3]" };
 
-	Example<pst::UniversalExprHolder, true> simple_template_expr{ "((x * t).y:{x, y}.z:{}(4)[3])" };
+	Example<pst::UniversalExprHolder, true> simple_template_expr{
+		"(x * t).y:{x, y}::z:{abc}(4)[3]"
+	};
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
 	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };

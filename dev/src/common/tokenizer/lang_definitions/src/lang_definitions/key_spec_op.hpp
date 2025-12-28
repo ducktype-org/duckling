@@ -200,8 +200,10 @@ namespace lang_def {
 		NotAnOperator,
 
 		Period,
+		PeriodQuestion,
 		PeriodStar,
 		Colon,
+		Reflect,
 		Assign,
 		QuestionMark,
 		SingleArrow,

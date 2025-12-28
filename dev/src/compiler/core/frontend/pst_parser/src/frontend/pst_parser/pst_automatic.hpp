@@ -148,7 +148,8 @@ namespace pst {
 				return *this;
 			}
 			el->addToken(state[0]);
-			result->value = state.tokens().next().getValue();
+			result->position = state.getPosition();
+			result->value    = state.tokens().next().getValue();
 			return *this;
 		}
 
@@ -160,7 +161,8 @@ namespace pst {
 			PST_AUTOMATIC_SKIP(*this);
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
-				result->value = state.tokens().next().getValue();
+				result->position = state.getPosition();
+				result->value    = state.tokens().next().getValue();
 			}
 			return *this;
 		}
