@@ -48,18 +48,25 @@ fn dependency_version_var_name(dep: &ParentWithDependencyLoc, version: Option<Ve
 type FeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 type ChildVersionsToVars = HashMap<Option<Version>, Rc<Variable>>;
 type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
-pub struct SolverModel<State> {
+pub struct SolverModel<'a, State> {
     model: Model<State>,
+    preexisting_packages: &'a HashSet<ExpandedPackage>,
+    preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
     package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
     package_to_feature_vars: HashMap<ExpandedPackage, FeaturesToVars>,
     dependency_to_feature_vars: HashMap<ParentWithDependencyLoc, ChildFeaturesToVars>,
     dependency_to_version_vars: HashMap<ParentWithDependencyLoc, ChildVersionsToVars>,
 }
 
-impl SolverModel<ProblemCreated> {
-    pub fn new() -> Self {
+impl<'a> SolverModel<'a, ProblemCreated> {
+    pub fn new(
+        preexisting_packages: &'a HashSet<ExpandedPackage>,
+        preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    ) -> Self {
         SolverModel {
             model: Model::default().hide_output(),
+            preexisting_packages,
+            preexisting_features,
             package_vars: HashMap::new(),
             package_to_feature_vars: HashMap::new(),
             dependency_to_version_vars: HashMap::new(),
@@ -124,10 +131,18 @@ impl SolverModel<ProblemCreated> {
     }
 
     pub fn add_package_var(&mut self, pkg: ExpandedPackage) -> QuackResult<()> {
+        let objective_coef = if self.preexisting_packages.contains(&pkg) {
+            0.0
+        } else {
+            1.0
+        };
         let var_name = package_var_name(&pkg);
-        self.package_vars
-            .entry(pkg)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin())));
+        self.package_vars.entry(pkg).or_insert_with(|| {
+            Rc::new(
+                self.model
+                    .add(var().name(&var_name).bin().obj(objective_coef)),
+            )
+        });
         Ok(())
     }
 
@@ -141,7 +156,7 @@ impl SolverModel<ProblemCreated> {
             .entry(pkg)
             .or_insert_with(|| FeaturesToVars::new())
             .entry(feature)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin())));
+            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
         Ok(())
     }
 
@@ -155,7 +170,7 @@ impl SolverModel<ProblemCreated> {
             .entry(dep)
             .or_insert_with(|| ChildFeaturesToVars::new())
             .entry(feature)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin())));
+            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
         Ok(())
     }
 
@@ -169,7 +184,7 @@ impl SolverModel<ProblemCreated> {
             .entry(dep)
             .or_insert(ChildVersionsToVars::new())
             .entry(version)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin())));
+            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
         Ok(())
     }
 
@@ -275,16 +290,47 @@ impl SolverModel<ProblemCreated> {
 }
 
 pub struct FoundSolution {
-    new_packages: HashSet<ExpandedPackage>,
-    package_flags: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    dependency_realisations: HashMap<ParentWithDependencyLoc, >
+    pub new_packages: HashSet<ExpandedPackage>,
+    pub new_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
 }
 
-impl SolverModel<ProblemCreated> {
-    pub fn solve<'a>(
-        self,
-        preexisting_packages: impl Iterator<Item = &'a ExpandedPackage>
-    ) {
-
+impl<'a> SolverModel<'a, ProblemCreated> {
+    pub fn solve(self) -> FoundSolution {
+        self.model.minimize().solve();
+        let new_packages = self
+            .package_vars
+            .into_iter()
+            .filter_map(|(pkg, var)| if is_one(&var) { Some(pkg) } else { None })
+            .collect::<HashSet<ExpandedPackage>>()
+            .difference(self.preexisting_packages)
+            .cloned()
+            .collect::<HashSet<ExpandedPackage>>();
+        let mut new_features = HashMap::new();
+        for pkg in self.preexisting_packages.iter().chain(new_packages.iter()) {
+            let mut pkg_features = HashSet::new();
+            if let Some(features_to_vars) = self.package_to_feature_vars.get(pkg) {
+                pkg_features = features_to_vars
+                    .iter()
+                    .filter_map(
+                        |(feature, var)| {
+                            if is_one(var) { Some(feature) } else { None }
+                        },
+                    )
+                    .cloned()
+                    .collect();
+            }
+            if let Some(features) = self.preexisting_features.get(pkg) {
+                pkg_features = pkg_features.difference(features).cloned().collect();
+            }
+            new_features.insert(pkg.clone(), pkg_features);
+        }
+        FoundSolution {
+            new_packages,
+            new_features,
+        }
     }
+}
+
+fn is_one(var: &Variable) -> bool {
+    var.sol_val() > 0.5
 }
