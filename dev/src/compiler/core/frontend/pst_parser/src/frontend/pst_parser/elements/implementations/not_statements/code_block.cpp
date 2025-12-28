@@ -23,7 +23,7 @@ namespace pst {
 		state.parse(out).goDown();
 
 		// @TODO: #1484 Rethink parser errors
-		PST_WHILE (state.notEmpty()) {
+		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
 
@@ -32,7 +32,7 @@ namespace pst {
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));
 			}
 
-			PST_WHILE (state[0].is(Special::Semicolon)) {
+			PST_WHILE(state[0].is(Special::Semicolon)) {
 				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
 				state.tokens().skip();
 			}

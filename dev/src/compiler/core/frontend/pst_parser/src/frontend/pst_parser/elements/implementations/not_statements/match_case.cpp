@@ -84,7 +84,8 @@ namespace pst {
 				break;
 			}
 			out->branches.push_back(std::move(current_branch));
-		} PST_WHILE (true);
+		}
+		PST_WHILE(true);
 
 		if (out->branches.empty()) {  // Empty match expression.
 			state.log(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));

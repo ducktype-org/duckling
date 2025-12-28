@@ -18,12 +18,12 @@ namespace pst {
 
 	i64 ClassStmt::countSpecifiers(LangParserState& state) {
 		i64 res = 0;
-		PST_WHILE (class_specs.contains(state[res].asKeyword())) res++;
+		PST_WHILE(class_specs.contains(state[res].asKeyword())) res++;
 		return res;
 	}
 
 	void ClassStmt::parseSpecifiers(LangParserState& state) {
-		PST_WHILE (class_specs.contains(state[0].asKeyword())) {
+		PST_WHILE(class_specs.contains(state[0].asKeyword())) {
 			context.specifiers.emplace_back(&state[0]);
 			state.parse(Ref(this)).eatOne();
 		}

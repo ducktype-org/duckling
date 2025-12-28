@@ -14,7 +14,7 @@ namespace pst {
 
 		state.parse(out).goDown();
 
-		PST_WHILE (state.notEmpty()) {
+		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
 			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
 			out->statements.emplace_back(nullptr);

@@ -27,7 +27,7 @@ namespace pst::expr {
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		PST_WHILE (fwd < length) {
+		PST_WHILE(fwd < length) {
 			if (state[fwd].is(lang_def::NamedOperator::Period)) break;
 			if (state[fwd].isBracketGroup(lexer::Token::Square)) break;
 			if (state[fwd].isBracketGroup(lexer::Token::Round)) break;
@@ -48,7 +48,7 @@ namespace pst::expr {
 		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
 
-		PST_WHILE (length > 0) {
+		PST_WHILE(length > 0) {
 			fwd = toNextLink(state, length);
 			MBox<ExprElement> extension;
 			if (state[0].is(lang_def::NamedOperator::Period)) {
