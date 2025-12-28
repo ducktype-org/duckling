@@ -1,10 +1,14 @@
+pub mod types;
+
 use std::{cell::OnceCell, marker::PhantomData};
 
-use crate::{QpCtx, QuackResult, quackpack::core::PackageCtx};
+use crate::{
+    QpCtx, QuackResult,
+    quackpack::core::{PackageCtx, solver::types::GitAccess},
+};
 
 pub enum ToImplement {}
 pub type VenvFreeze = ToImplement;
-pub type GitAccess = ToImplement;
 
 pub trait SolverState {}
 
@@ -37,9 +41,9 @@ impl<'duck> Solver<'duck, Prepared> {
         }
     }
 
-    pub async fn prepare_solving(
+    pub async fn prepare_solving<Access: GitAccess>(
         self,
-        _git_access: &mut GitAccess,
+        _git_access: &mut Access,
     ) -> QuackResult<Solver<'duck, Prepared>> {
         unimplemented!(
             "\
