@@ -8,8 +8,8 @@ pub type GitAccess = ToImplement;
 
 pub trait SolverState {}
 
-pub struct Created();
-pub struct Prepared();
+pub struct Created;
+pub struct Prepared;
 
 impl SolverState for Created {}
 impl SolverState for Prepared {}
