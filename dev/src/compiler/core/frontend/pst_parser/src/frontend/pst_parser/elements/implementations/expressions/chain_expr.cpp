@@ -27,7 +27,7 @@ namespace pst::expr {
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		PST_WHILE (fwd < length) {
+		PST_WHILE(fwd < length) {
 			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)
 			    || state[fwd].isBracketGroup(lexer::Token::Square)

@@ -25,16 +25,18 @@ namespace pst::expr {
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
-		PST_WHILE (fwd < length
-		       && !(
-				   state[fwd].isOperatorSymbol()
-				   && state[fwd].asBinaryOperator().value().isNotReserved()
-			   )
-		       && !(
-				   state[fwd].isIdentifier()
-				   && !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
-		           ).copyValueOr(false)
-			   )) {
+		PST_WHILE(
+			fwd < length
+			&& !(
+				state[fwd].isOperatorSymbol()
+				&& state[fwd].asBinaryOperator().value().isNotReserved()
+			)
+			&& !(
+				state[fwd].isIdentifier()
+				&& !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+		        ).copyValueOr(false)
+			)
+		) {
 			fwd++;
 		}
 		return fwd;
