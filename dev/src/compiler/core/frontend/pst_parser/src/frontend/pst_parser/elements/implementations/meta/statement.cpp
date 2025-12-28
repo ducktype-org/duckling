@@ -98,7 +98,7 @@ namespace pst {
 			// We skip the first token as its the keyword we already found
 			i64 length = 1;
 
-			while (!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
+			PST_WHILE (!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
 
 			fallbackLen(state, base::safeIntConv<u64>(length));
 
@@ -188,7 +188,7 @@ namespace pst {
 		auto        as_special = state[0].asSpecial();
 		AttrBoxList attributes;
 
-		while (as_special == Special::AtSign) {
+		PST_WHILE (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
 			auto            opt  = std::move(attr).toOptBox();
 			if (opt) attributes.emplace_back(std::move(opt.value()));

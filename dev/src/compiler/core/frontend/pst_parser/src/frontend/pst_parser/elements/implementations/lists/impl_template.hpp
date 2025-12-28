@@ -153,10 +153,10 @@ namespace pst {
 				if constexpr (NON_EMPTY)
 					state.log(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
 			} else {
-				while (true) {
+				PST_WHILE (true) {
 					expr_length = 0;
 
-					while (!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length)
+					PST_WHILE ((!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length))
 					) {
 						expr_length++;
 					}

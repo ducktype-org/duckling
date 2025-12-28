@@ -6,7 +6,7 @@
 namespace pst::expr {
 	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
-		while (fwd < length && !ExprClassify::isComparison(state.ctokens(), fwd)) fwd++;
+		PST_WHILE (fwd < length && !ExprClassify::isComparison(state.ctokens(), fwd)) fwd++;
 		return fwd;
 	}
 
@@ -18,7 +18,7 @@ namespace pst::expr {
 
 		auto out = makeBox<ComparisonChain>(state.getPosition());
 
-		while (fwd < length) {
+		PST_WHILE (fwd < length) {
 			out->sub_expr.emplace_back(nullptr);
 			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
 

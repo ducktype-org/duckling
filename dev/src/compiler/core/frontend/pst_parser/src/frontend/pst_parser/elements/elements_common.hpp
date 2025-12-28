@@ -6,6 +6,8 @@
 
 #include <base/types/ints.hpp>
 
+#define PST_WHILE(condition) while (!state.isSkipping() && (condition))
+
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;

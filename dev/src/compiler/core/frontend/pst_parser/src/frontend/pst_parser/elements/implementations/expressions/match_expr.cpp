@@ -79,7 +79,7 @@ namespace pst::expr {
 		}
 		state.parse(out).goDown();
 
-		while (true) {
+		PST_WHILE (true) {
 			if (state[0].is(Keyword::Case)) {
 				MBox<MatchCase> match_case;
 				state.parse(out).one(&match_case);
