@@ -85,14 +85,4 @@ namespace compiler::helios {
 		);
 	}
 
-	void defaultLogTypeMismatchError(
-		query::Context&          ctx,
-		dia::SourcePosition      source_position,
-		const tsh::SymbolType<>& expected_type,
-		const tsh::SymbolType<>& actual_type
-	) {
-		ctx.logInt(makeBox<IncompatibleTypesError>(
-			source_position, InteractiveType{ expected_type }, InteractiveType{ actual_type }
-		));
-	}
 }

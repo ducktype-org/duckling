@@ -27,13 +27,6 @@ namespace compiler::helios {
 		);
 	};
 
-	void defaultLogTypeMismatchError(
-		query::Context&          ctx,
-		dia::SourcePosition      source_position,
-		const tsh::SymbolType<>& expected_type,
-		const tsh::SymbolType<>& actual_type
-	);
-
 	/**
 	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
 	 */
