@@ -84,7 +84,7 @@ namespace compiler::helios {
 			                            ->valueOrThrow()
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
-			const auto implicit_ctor
+			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
 			out_functions.push_back(implicit_ctor);
 		}

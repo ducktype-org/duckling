@@ -279,7 +279,7 @@ namespace compiler::helios::code {
 				                      ->valueOrThrow()
 				                      .getType()
 				                      .as<tsh::ClassAbstractType>();
-				const auto ctor
+				const auto& ctor
 					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type })
 				          ->valueOrThrow();
 				return std::vector{ ctor.declaration->original_symbol };
