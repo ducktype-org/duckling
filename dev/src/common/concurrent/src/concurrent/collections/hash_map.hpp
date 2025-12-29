@@ -335,7 +335,7 @@ namespace concurrent {
 		/**
 		 * Number of shards used in the map.
 		 */
-		constexpr static u64 SHARD_COUNT = 4;
+		constexpr static u64 SHARD_COUNT = 128;
 
 		/**
 		 * The shards of the map.
