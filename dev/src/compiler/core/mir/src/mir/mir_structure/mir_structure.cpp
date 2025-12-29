@@ -106,15 +106,15 @@ namespace compiler::mir {
 		for (const auto block_id: block_order) {
 			const auto& block = blocks[block_id];
 
-			os << "  block " << u64(block.id);
+			os << "  Block " << u64(block.id);
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {
-				os << "    ";
+				os << "     ";
 				instruction.debugPrint(os);
 				os << "\n";
 			}
-			os << "    ";
+			os << "     ";
 			block.terminator.debugPrint(os);
 			os << "\n";
 		}
@@ -137,7 +137,7 @@ namespace compiler::mir {
 		// save flags to restore
 		auto output_flags = os.flags();
 
-		os << std::left << std::setw(12);
+		os << std::left << std::setw(13);
 		if (output.has_value()) {
 			output.value().debugPrint(os);
 			os << " :=";
@@ -165,8 +165,8 @@ namespace compiler::mir {
 			os << separator;
 			flag.debugPrint(os);
 			separator = ", ";
+			os << "],";
 		}
-		os << "],";
 		debugPrintInstrParameters(os, extra_params);
 		os << " scope:" << scope->id;
 
@@ -175,8 +175,11 @@ namespace compiler::mir {
 	}
 
 	void MIRLocal::debugPrint(std::ostream& os, bool detailed) const {
+		os << std::setw(0);
 		os << "Local(" << u64(id) << ")";
 		if (detailed) {
+
+	void noTest() {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: ";
 			os << type.toString();
@@ -197,7 +200,7 @@ namespace compiler::mir {
 	base::StrID MIRLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
-	}
+		}
 
 	void MIRLocal::setLifetimeScope(ScopeRef scope) {
 		CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
