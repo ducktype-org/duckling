@@ -1,7 +1,5 @@
 #pragma once
 
-#include <immintrin.h>
-
 #include <base/types/ints.hpp>
 
 namespace concurrent {
