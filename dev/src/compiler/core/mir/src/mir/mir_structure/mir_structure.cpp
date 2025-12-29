@@ -178,8 +178,6 @@ namespace compiler::mir {
 		os << std::setw(0);
 		os << "Local(" << u64(id) << ")";
 		if (detailed) {
-
-	void noTest() {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: ";
 			os << type.toString();
