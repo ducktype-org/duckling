@@ -221,7 +221,7 @@ namespace concurrent {
 			return result;
 		}
 
-		using KeyValuePair = typename HashMapType::KeyValuePair;
+		// using KeyValuePair = typename HashMapType::KeyValuePair;
 
 		/**
 		 * RAII lock for a given shard.
@@ -237,9 +237,13 @@ namespace concurrent {
 				  shard_index(shard_index),
 				  self(self) {
 				self.shard_mutexes[shard_index]->lock();
+				// self.shard_mutexes[shard_index]->acquire();
 			}
 
-			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+			~WithShardLock() noexcept { 
+				self.shard_mutexes[shard_index]->unlock();
+				// self.shard_mutexes[shard_index]->release();
+			}
 		};
 
 
@@ -248,6 +252,7 @@ namespace concurrent {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
 				// shard_mutexes.emplace_back(makeBox<std::mutex>());
+				// shard_mutexes.emplace_back(makeBox<std::binary_semaphore>(1));
 		}
 
 		StdConHashMap(const StdConHashMap&) = delete;
@@ -265,34 +270,34 @@ namespace concurrent {
 		 * already existed.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		MRef<KeyValuePair> maybePut(const K& key, D&& value) RELEASE_NOEXCEPT {
+		auto maybePut(const K& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
 			return shards.at(lock.shard_index).emplace(key, std::forward<D>(value));
 		}
 
-		/**
-		 * Performs atomically a following sequence:
-		 * 1. Inserts key->value into the container if key does not exist.
-		 * 2. Calls f with reference to the value associated with the key.
-		 */
-		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+		// /**
+		//  * Performs atomically a following sequence:
+		//  * 1. Inserts key->value into the container if key does not exist.
+		//  * 2. Calls f with reference to the value associated with the key.
+		//  */
+		// template<typename K = KEY_T, typename D = DATA_T, typename Func>
+		// void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
+		// 	WithShardLock lock(*this, keyToShard(key));
 
-			shards[lock.shard_index].maybePut(key, value);
-			f(shards[lock.shard_index][key]);
-		}
+		// 	shards[lock.shard_index].maybePut(key, value);
+		// 	f(shards[lock.shard_index][key]);
+		// }
 
-		/**
-		 * Atomically retrieves a copy of the value associated with the given key.
-		 */
-		[[nodiscard]]
-		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			DATA_T        value = shards[lock.shard_index][key];
-			return value;
-		}
+		// /**
+		//  * Atomically retrieves a copy of the value associated with the given key.
+		//  */
+		// [[nodiscard]]
+		// DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+		// 	WithShardLock lock(*this, keyToShard(key));
+		// 	DATA_T        value = shards[lock.shard_index][key];
+		// 	return value;
+		// }
 
 		/**
 		 * Atomically retrieves a reference to the value associated with the given key.
@@ -301,22 +306,24 @@ namespace concurrent {
 		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
 		 */
 		[[nodiscard]]
-		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> std::optional<DATA_T> {
 			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].atMaybe(key);
+			if (!shards[lock.shard_index].contains(key))
+				return {};
+			else return shards[lock.shard_index].at(key);
 		}
 
-		template<typename K = KEY_T, typename D = DATA_T>
-		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
-			shards[lock.shard_index][key] = value;
-		}
+		// template<typename K = KEY_T, typename D = DATA_T>
+		// void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+		// 	WithShardLock lock(*this, keyToShard(key));
+		// 	shards[lock.shard_index][key] = value;
+		// }
 
-		[[nodiscard]]
-		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].contains(key);
-		}
+		// [[nodiscard]]
+		// auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		// 	WithShardLock lock(*this, keyToShard(key));
+		// 	return shards[lock.shard_index].contains(key);
+		// }
 
 		[[nodiscard]]
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
@@ -328,7 +335,7 @@ namespace concurrent {
 		/**
 		 * Number of shards used in the map.
 		 */
-		constexpr static u64 SHARD_COUNT = 128;
+		constexpr static u64 SHARD_COUNT = 4;
 
 		/**
 		 * The shards of the map.
@@ -340,6 +347,7 @@ namespace concurrent {
 		 */
 		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
 		// mutable std::vector<Box<std::mutex>> shard_mutexes;
+		// mutable std::vector<Box<std::binary_semaphore>> shard_mutexes;
 	};
 
 }

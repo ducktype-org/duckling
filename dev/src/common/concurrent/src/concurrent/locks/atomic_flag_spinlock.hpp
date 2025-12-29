@@ -53,30 +53,39 @@ namespace concurrent {
 		 */
 		void lock() noexcept {
 			// try to acquire the lock in a busy wait loop first:
-			constexpr u64 SPIN_TRIES = 128*16;
+			// constexpr u64 SPIN_TRIES = 16;
 
-			u64 wait_rep = 2;
-			for (u64 i = 0; i < SPIN_TRIES; i++) {
+			u64 wait_repetitions = 2;
+			while (true) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
 
 				// note: higher nopWait counts make it less fair, but usually faster
-				wait_rep *= 2;
-				wait_rep = std::min(wait_rep, u64(2'048));
-				concurrent::nopWait(wait_rep);
+				wait_repetitions *= 2;
+				// wait_rep = std::min(wait_rep, u64(2'048));
+
+				if (wait_repetitions > 128) {
+					std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+					wait_repetitions = 4;
+				}
+				else {
+					concurrent::nopWait(wait_repetitions);
+				}
+
 			}
+		
 
 			// if not successful, yield until the lock is acquired
 			// we yield a lot of times here, as we only want to call `sleep_for` if yielding is
 			// somehow unsuccessful:
-			for (u64 i = 0; i < SPIN_TRIES * 16; i++) {
-				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
-				std::this_thread::yield();
-			}
+			// for (u64 i = 0; i < SPIN_TRIES * 1024; i++) {
+			// 	if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
+			// 	std::this_thread::yield();
+			// }
 
 			// yield might technically not do anything (no guarantees by the standard),
 			// so after some tries, we wait with sleep:
-			while (atomic_flag.test_and_set(std::memory_order_acquire))
-				std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+			// while (atomic_flag.test_and_set(std::memory_order_acquire))
+			// 	std::this_thread::sleep_for(std::chrono::nanoseconds(50));
 		}
 
 		// This is left for reference, but not used currently.

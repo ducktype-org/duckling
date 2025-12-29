@@ -149,7 +149,7 @@ public:
 };
 
 class DuckMap {
-    concurrent::ConHashMap<std::string, int, std::hash<std::string>, sizeof(std::string)*2> m_map;
+    concurrent::ConHashMap<std::string, int> m_map;
 public:
     void put(const std::string &key, int value) {
         m_map.maybePut(key, value);
@@ -166,6 +166,23 @@ public:
         return m_map.erase(key);
     }
 };
+
+class DuckStdMap {
+    concurrent::StdConHashMap<std::string, int> m_map;
+public:
+    void put(const std::string &key, int value) {
+        m_map.maybePut(key, value);
+    }
+
+    std::optional<int> get(const std::string &key) {
+        return m_map.atMaybe(key);
+    }
+
+    bool remove(const std::string &key) {
+        return m_map.erase(key);
+    }
+};
+
 
 template<class T>
 void do_worker(size_t seed, T& kv, const std::vector<std::string>& key_set, size_t num_ops) {
@@ -225,6 +242,8 @@ int main(int argc, char** argv) {
         run<KVIntelTBB>(num_workers, num_keys, num_ops, key_set);
     else if (strcmp(argv[2], "DuckMap") == 0)
         run<DuckMap>(num_workers, num_keys, num_ops, key_set);
+    else if (strcmp(argv[2], "StdDuckMap") == 0)
+        run<DuckStdMap>(num_workers, num_keys, num_ops, key_set);
     else
         return 1;
 }
