@@ -8,16 +8,18 @@
 namespace concurrent {
 
 	/**
-	 * A shared concurrent StableHashMap implementation.
+	 * A sharded concurrent StableHashMap implementation.
 	 * It is implemented as a simple wrapper around base::StableHashMap.
 	 * It does not forward a full interface of a hash map, in particular it does not implement
 	 * iteration.
+	 *
+	 * For more info on sharding see (for example): https://le.qun.ch/en/blog/sharding/ 
 	 *
 	 * Concurrency:
 	 * - Methods of this class are thread-safe.
 	 * - Sequential consistency is guaranteed only per key.
 	 * - Internally the map is sharded into multiple sub-maps, each protected by
-	 *    its own AtomicFlagSpinlock.
+	 *    its own lock.
 	 */
 	template<
 		typename KEY_T,
@@ -101,10 +103,10 @@ namespace concurrent {
 		 * already existed.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		MRef<KeyValuePair> maybePut(const K& key, D&& value) RELEASE_NOEXCEPT {
+		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			return shards.at(lock.shard_index).maybePut(key, std::forward<D>(value));
+			return shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
 		}
 
 		/**
