@@ -24,11 +24,17 @@
 namespace compiler::helios {
 
 
-	query::QResult<base::StrID> getStrFromExternCallArg(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> arg
+	/**
+	 * @brief Extracts a string literal from an extern() call argument.
+	 * @param ctx The query context.
+	 * @param arg The call argument to extract the string from.
+	 * @return The string literal value, or a query::Failed if extraction fails (there is no string
+	 * literal there).
+	 */
+	query::QResult<base::StrID> getStrFromCallArg(
+		query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
 	) {
-		// Add proper helios error handling once we have new error logging system
-		auto call_arg = arg.unlock(ctx).dynamicCast<pst::CallArgument>().value();
+		auto call_arg = arg.unlock(ctx);
 
 		if (call_arg->getArgName().value.has_value())
 			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
@@ -54,8 +60,8 @@ namespace compiler::helios {
 	QuerySymbolABI_Result getSymbolABI(
 		query::Context& ctx, pst::AccessLocked<pst::CallList> extern_args
 	) {
-		std::vector<pst::AccessLocked<pst::LangElement>> args{ extern_args.unlock(ctx)->begin(),
-			                                                   extern_args.unlock(ctx)->end() };
+		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args.unlock(ctx)->begin(),
+			                                                    extern_args.unlock(ctx)->end() };
 
 		if (args.empty()) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -65,11 +71,11 @@ namespace compiler::helios {
 			return query::Failed();
 		}
 
-		UNPACK_QRESULT(auto first_arg =, getStrFromExternCallArg(ctx, args[0]));
+		UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
 
 		if (first_arg == base::StrID("C")) {
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
-				UNPACK_QRESULT(auto lib_str_lit =, getStrFromExternCallArg(ctx, args[1]));
+				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
 				return CAbi{ .library = lib_str_lit };
 			} else if (args.size() == 1) {  // `extern("C")` case
 				return CAbi{};
