@@ -2,6 +2,8 @@ from typing import List
 import re
 from pathlib import Path
 
+import click
+
 from .cpp_linter import get_files_for_linter
 from .helpers import (
     log_info,
@@ -17,6 +19,7 @@ def duck_linter_impl(
     branch: str = "origin/main",
     verbose: bool = False,
     no_merge_base: bool = False,
+    no_fix: bool = False,
 ):
     passed_all = True
     files_with_fixes = []
@@ -29,15 +32,15 @@ def duck_linter_impl(
         if len(f.fixes) > 0:
             files_with_fixes.append(f)
 
-    if len(files_with_fixes) > 0:
+    if len(files_with_fixes) > 0 and not no_fix:
         total_fixes = sum(len(f.fixes) for f in files_with_fixes)
         log_new_line()
         log_info(
             f"Can perform {total_fixes} automatic fixes across {len(files_with_fixes)} files."
         )
         try:
-            res = input("Do you want to apply these fixes? [y/N] ")
-            if res.lower() == "y":
+            value = click.prompt('Do you want to apply these fixes? ', type=bool)
+            if value:
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
