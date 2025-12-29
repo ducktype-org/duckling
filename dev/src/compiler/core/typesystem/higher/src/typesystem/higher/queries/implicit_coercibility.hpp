@@ -80,6 +80,8 @@ namespace compiler::tsh {
 	/**
 	 * @brief Query to check whether implicit coercion from one type described by AbstractType to
 	 * another is allowed.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnAbstractType,
@@ -127,6 +129,8 @@ namespace compiler::tsh {
 	/**
 	 * @brief Query to check whether implicit coercion from one value described by SymbolType to
 	 * another is allowed.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnSymbolType,
@@ -174,6 +178,8 @@ namespace compiler::tsh {
 	/**
 	 * @brief Query to check whether implicit coercion from one value described by ExpressionType to
 	 * another is allowed.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryImplicitCoercibilityOnExpressionType,

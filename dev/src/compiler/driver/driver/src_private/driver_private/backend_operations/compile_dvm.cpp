@@ -1,3 +1,8 @@
+/**
+ * @file generic_operation.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "compile_dvm.hpp"
 
 #include "../statistics_private/statistics.hpp"

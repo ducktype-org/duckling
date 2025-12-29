@@ -1,0 +1,26 @@
+/**
+ * @defgroup query_thread_safe Already thread-safe queries
+ * @ingroup parallel
+ * @brief These queries perform only read-only work over already-built structures, or they construct only local data. They don’t write to global structures.
+ */
+
+/**
+ * @defgroup query_thread_safe_if_cache Queries that are thread-safe if cache is thread-safe
+ * @ingroup parallel
+ * @brief These queries are logically read-only but rely on cached results and read shared structures. If caches are thread-safe, these become thread-safe too.
+ * @note Several of them read from PST; concurrent modification of PST would lead to races.
+ */
+
+ /**
+ * @defgroup query_thread_safe_if_cache_and_struct Queries that are thread-safe if cache is thread-safe and exactly one global structureis thread-safe
+ * @ingroup parallel
+ * @ingroup query_thread_safe_if_cache
+ * @brief These queries perform a write to exactly one global structure. If the cache is thread-safe and that single global structure is also thread-safe, the query becomes thread-safe.
+ * @note They do not appear again in \ref query_not_thread_safe.
+ */
+
+/**
+ * @defgroup query_not_thread_safe Queries that require more work to be thread-safe
+ * @ingroup parallel
+ * @brief These queries/operations touch multiple global structures, perform complex construction, or invoke external side-effects (filesystem, timers, VM). They need targeted concurrency work (per-structure synchronization, per-key deduplication, temp-file + atomic rename, per-thread managers, etc.).
+ */

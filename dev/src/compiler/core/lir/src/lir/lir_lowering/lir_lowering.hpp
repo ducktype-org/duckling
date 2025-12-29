@@ -15,6 +15,8 @@ namespace compiler::lir {
 	/**
 	 * @brief Lower a MIRFunction to a LIRFunction
 	 * Generates TSL types
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		LowerToLIRFunction, KeyOf_LowerToLIRFunction, CRef<Function>, ({ .uses_qresult = false })

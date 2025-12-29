@@ -29,6 +29,8 @@ namespace compiler::helios {
 	 *
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type-instance lookups.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryLookupInTypeInstance,

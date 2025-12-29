@@ -8,6 +8,8 @@
 namespace compiler::tsl {
 	/**
 	 * @brief Get a TypeLayout for a given AbstractType.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryAbstractTypeLayout, tsh::AbstractType, CRef<TypeLayout>, ({ .uses_qresult = false })

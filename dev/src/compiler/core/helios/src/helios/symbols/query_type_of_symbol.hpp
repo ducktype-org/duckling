@@ -13,6 +13,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query type of the symbol.
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>, ({}))
 }

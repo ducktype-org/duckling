@@ -51,6 +51,8 @@ namespace compiler::frontend {
 	 * - Source files and other files can have any path, including outside the module directory.
 	 *   Files may be virtual or real; their location on disk does not affect their association
 	 *   with the module.
+	 *
+	 * \parallel note that getComponentHash / updateComponentHash / invalidateComponentHash are lazy-initialized per-module component hash; updated walking parents and writing m_component_hash. Lazy writes can race under concurrency.
 	 */
 	class ModuleTree final {
 		friend class ModuleTreeBuilder;

@@ -12,6 +12,10 @@ namespace query::internal {
 
 	class QueryState;
 
+	/**
+	 * @brief Core dependency graph powering evaluation across the compiler.
+	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
+	 */
 	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
 		/*

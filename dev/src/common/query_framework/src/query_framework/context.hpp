@@ -32,6 +32,8 @@ namespace query {
 	 * @FUTURE: there exist a concept of "custom context" types as
 	 * a way to hack-in the query model. This however will most likely be
 	 * discarded.
+	 *
+	 * \parallel Current implementation uses a global vector; not thread-safe; serialize or buffer per-thread.
 	 */
 	struct Context final {
 	private:

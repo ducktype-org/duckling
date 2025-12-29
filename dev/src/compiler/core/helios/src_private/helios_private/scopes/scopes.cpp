@@ -54,6 +54,12 @@ namespace compiler::helios {
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
 	namespace {
+		/**
+		 * @brief Global storage for scope information.
+		 *
+		 * @note Written via \ref QueryRootScopeOf and \ref QueryPrimaryCodeScopeFor ( \ref putInScopeTable / \ref parent_map usage).
+		 * \parallel Must be made thread safe.
+		 */
 		base::StableVector<ScopeData> scope_table;
 
 		template<class... T>

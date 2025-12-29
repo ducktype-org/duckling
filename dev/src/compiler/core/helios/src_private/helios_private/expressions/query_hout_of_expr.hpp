@@ -15,6 +15,8 @@ namespace compiler::helios {
 	 * @brief Constructs a HOUT Expr from Pst Expr.
 	 * @note This will likely panic for non-top expression in the future.
 	 * @TODO: #1362 hout 2.0: make it return ref, not box
+	 *
+	 * @ingroup query_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryHoutOfExpr,

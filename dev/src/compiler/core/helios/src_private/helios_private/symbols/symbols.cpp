@@ -51,6 +51,8 @@ namespace compiler::helios {
 	 *
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
+	 *
+	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
@@ -148,9 +150,13 @@ namespace compiler::helios {
 
 	namespace {
 		/**
-		 * @brief Global Symbol Table
-		 * @note: in the future it might not be needed once
+		 * @brief Global storage for symbols used by Helios symbol queries and generators.
+		 *
+		 * @note in the future it might not be needed once
 		 * we will move toward more pure Query Model
+		 * 
+		 * @note Written by \ref QuerySymbolOfSTMT, \ref QueryGlobalBuiltinSymbols, \ref QueryLookupInSymbol, \ref QueryGeneratedSymbol.
+		 * \parallel Must be made thread safe.
 		 */
 		base::StableVector<const SymbolData> symbol_table;
 
@@ -411,6 +417,8 @@ namespace compiler::helios {
 		namespace {
 			/**
 			 * Query all builtin symbols.
+			 *
+			 * @ingroup query_thread_safe_if_cache_and_struct
 			 */
 			DECLARE_QUERY(
 				QueryGlobalBuiltinSymbols,

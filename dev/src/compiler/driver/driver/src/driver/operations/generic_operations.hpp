@@ -52,6 +52,13 @@ namespace compiler::driver {
 
 	/**
 	 * Query that produces .dbc/.o file for given Duckling module.
+	 *
+	 * \parallel
+	 * - Writes artifacts (\ref ArtifactCollection)
+	 * - Produces processed files (artifact outputs, LLVM/DVM intermediates)
+	 * - Updates backend compilation timer (\ref timer::AddToTime)
+	 * - Uses \ref getComponentHash(module_id) (lazy \ref ModuleTree mutation)
+	 * @ingroup query_non_thread_safe
 	 */
 	DECLARE_QUERY(
 		CompileModule,
