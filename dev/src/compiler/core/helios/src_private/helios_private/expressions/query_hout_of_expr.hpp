@@ -29,6 +29,8 @@ namespace compiler::helios {
 	 * @param ctx The query context.
 	 * @param pst_expr The PST expression.
 	 * @param expected_type The expected type of the expression.
+	 * @param log_error Optional function to log errors in case coercion fails. If not provided the
+	 * default coercion error logging will be used.
 	 * @return A HOUT Expression of the expected type, or an error if coercion is not possible.
 	 */
 	ExprConstructionResult getHoutOfExprWithExpectedType(

@@ -219,7 +219,7 @@ namespace compiler::helios::code {
 		query::Context&              ctx,
 		pst::Access<pst::expr::Call> call_expr,
 		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function_msg
+		bool                         is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
@@ -234,7 +234,7 @@ namespace compiler::helios::code {
 			variant_case(FunctionMatchFailure, data) {
 				auto get_interactive_function
 					= [&](SymID function_symbol) -> base::Optional<Box<InteractiveFunction>> {
-					if (is_for_candidate_function_msg)
+					if (is_for_candidate_function)
 						return std::nullopt;
 					else
 						return makeBox<InteractiveFunction>(function_symbol);
@@ -278,7 +278,7 @@ namespace compiler::helios::code {
 							= getNthDeclarationParameter(ctx, decl, data.parameter_index);
 
 						base::Optional<std::string> function_name_str{};
-						if (is_for_candidate_function_msg)
+						if (is_for_candidate_function)
 							function_name_str.emplace(name(data.function).str());
 
 						return makeBox<CallMissingArgumentError>(

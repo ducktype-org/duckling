@@ -27,12 +27,6 @@ namespace dia_int {
 		);
 	}
 
-	/**
-	 * @brief Helper method to add the code lines components
-	 * from the source to the code list from [start, end) range.
-	 * If the start is at the beginning of the line adds a StartLineComponent.
-	 * @param[in,out] code_list The list to add the code lines to.
-	 */
 	void CodeArgument::addCodeLines(
 		std::vector<Box<dia_args::Component>>& code_list,
 		Ref<tokenizer::TokenSource>            source,

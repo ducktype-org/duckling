@@ -94,11 +94,20 @@ namespace compiler::helios::code {
 		void addExploreExactCandidates(usize no_candidates, Box<dia_int::MessageBase> candidate_list);
 	};
 
+	/**
+	 * @brief Creates a call error message based on the provided failure reason.
+	 * @param ctx The query context.
+	 * @param call_expr The PST call expression.
+	 * @param failure_reason The reason for the call failure.
+	 * @param is_for_candidate_function Whether the message is for a candidate function
+	 * (used in ambiguous matches) or for the main call error.
+	 * @return A detailed error message describing the call failure.
+	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
 		query::Context&              ctx,
 		pst::Access<pst::expr::Call> call_expr,
 		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function_msg
+		bool                         is_for_candidate_function
 	);
 
 	pst::Access<pst::ParamList> getFunctionParamList(

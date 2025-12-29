@@ -66,7 +66,12 @@ namespace dia_int {
 		usize               lines_before = 1;
 		usize               lines_after  = 1;
 
-	public:
+		/**
+		 * @brief Helper method to add the code lines components
+		 * from the source to the code list from [start, end) range.
+		 * If the start is at the beginning of the line adds a StartLineComponent.
+		 * @param[in,out] code_list The list to add the code lines to.
+		 */
 		static void addCodeLines(
 			std::vector<Box<dia_args::Component>>& code_list,
 			Ref<tokenizer::TokenSource>            source,
@@ -74,6 +79,7 @@ namespace dia_int {
 			usize                                  end
 		);
 
+	public:
 		Box<dia_args::Component> getValue(MessageBase&) override;
 
 		CodeArgument(std::string name, dia::SourcePosition position):
@@ -124,7 +130,7 @@ namespace dia_int {
 		virtual ~InteractiveElement() = default;
 	};
 
-	class InteractiveArgument: public Argument {
+	class InteractiveArgument final: public Argument {
 	private:
 		Box<InteractiveElement> element;
 
@@ -338,6 +344,14 @@ namespace dia_int {
 
 	/**
 	 * @brief This is a helper base class for messages.
+	 * The `cause` is the name of the pointer message.
+	 * A pointer message is a text displayed below the highlighted code fragment.
+	 *
+	 * So this class besided the code fragment also adds a pointer message titled "cause"
+	 * argument. All is handled by one SourcePosition, because the code fragment is the
+	 * source position and some lines around it, and the pointer message points to exactly
+	 * the given source position.
+	 *
 	 * The `code` and `code_location` arguments are the same arguments as any other,
 	 * they are not special in any way.
 	 * But they are very commonly used together with the `cause` pointer message,

@@ -38,6 +38,8 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Error messages
+	 * This error message is used when there are both function symbols and non-function valid
+	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
 	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -502,6 +504,7 @@ namespace compiler::helios::code {
 			          .lookupExpectUnique(
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
+			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			return processNamespaceOrValue(sym_list.back());
 		}
