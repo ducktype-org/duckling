@@ -13,7 +13,7 @@ namespace concurrent {
 	 * It does not forward a full interface of a hash map, in particular it does not implement
 	 * iteration.
 	 *
-	 * For more info on sharding see (for example): https://le.qun.ch/en/blog/sharding/ 
+	 * For more info on sharding see (for example): https://le.qun.ch/en/blog/sharding/
 	 *
 	 * Concurrency:
 	 * - Methods of this class are thread-safe.

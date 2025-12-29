@@ -1,7 +1,7 @@
 
 #include "nop_wait.hpp"
 
-#include <immintrin.h> // for _mm_pause
+#include <immintrin.h>  // for _mm_pause
 
 namespace concurrent {
 	/**
