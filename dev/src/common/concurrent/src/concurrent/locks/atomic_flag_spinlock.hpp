@@ -53,7 +53,7 @@ namespace concurrent {
 		 */
 		void lock() noexcept {
 			// try to acquire the lock in a busy wait loop first:
-			constexpr u64 SPIN_TRIES = 128;
+			constexpr u64 SPIN_TRIES = 128*16;
 
 			u64 wait_rep = 2;
 			for (u64 i = 0; i < SPIN_TRIES; i++) {
