@@ -89,7 +89,7 @@ private:
 			for (auto& fun: top_level.functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					{ &mir_fun->panicOnFailed("Couldn\'t compile") }
+					{ &mir_fun->valueOrPanicMsg("Couldn\'t compile") }
 				);
 				m.insertLirFunction(lir_fun);
 			}

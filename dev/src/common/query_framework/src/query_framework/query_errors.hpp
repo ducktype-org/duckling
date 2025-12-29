@@ -3,8 +3,6 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/internal/query_errors.hpp>
-
 namespace query {
 	/**
 	 * @brief The Failed class is used as a marker to indicate that a query has failed.

@@ -195,7 +195,7 @@ clah::Clah getClahForMain() {
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
 								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
-		                                 .panicOnFailed("The hout creation failed");
+		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
 									   std::cout << hout_unit.debugPrint(ctx);

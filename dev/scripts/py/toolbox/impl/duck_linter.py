@@ -19,30 +19,12 @@ def duck_linter_impl(
     no_merge_base: bool = False,
 ):
     passed_all = True
-    files_with_fixes = []
 
     file = get_source_files(all, branch, no_merge_base)
     for f in file:
         passed = f.runAllChecks(verbose)
         if not passed:
             passed_all = False
-        if len(f.fixes) > 0:
-            files_with_fixes.append(f)
-
-    if len(files_with_fixes) > 0:
-        total_fixes = sum(len(f.fixes) for f in files_with_fixes)
-        log_new_line()
-        log_info(
-            f"Found {total_fixes} possible fixes across {len(files_with_fixes)} files."
-        )
-        try:
-            res = input("Do you want to apply fixes? [y/N] ")
-            if res.lower() == "y":
-                for f in files_with_fixes:
-                    f.applyFixes()
-                log_info("Fixes applied!")
-        except EOFError:
-            pass
 
     return passed_all
 
@@ -52,13 +34,12 @@ class SourceFile:
         self.path = Path(path)
         self.dir = self.path.parent
         self.errors = []
-        self.fixes = []
         with open(path, "r") as file:
             self.content = file.read()
-        self.lines = self.content.splitlines(keepends=True)
 
     def _relativeImportChecks(self):
-        for i, line in enumerate(self.lines):
+        lines = self.content.splitlines()
+        for i, line in enumerate(lines):
             imports = re.findall(_RELATIVE_IMPORT_REGEX, line)
             for imp in imports:
                 import_path = self.dir / imp
@@ -66,16 +47,6 @@ class SourceFile:
                     self.errors.append(
                         f"Relative import `{imp}` does not exist: {self.path}:{i + 1}"
                     )
-                    self.fixes.append(lambda i=i, imp=imp: self._fixImport(i, imp))
-
-    def _fixImport(self, line_idx, imp):
-        self.lines[line_idx] = self.lines[line_idx].replace(f'"{imp}"', f"<{imp}>")
-
-    def applyFixes(self):
-        for fix in self.fixes:
-            fix()
-        with open(self.path, "w") as f:
-            f.writelines(self.lines)
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""

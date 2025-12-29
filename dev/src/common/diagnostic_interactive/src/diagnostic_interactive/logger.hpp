@@ -23,6 +23,7 @@ namespace dia_int {
 
 		/**
 		 * @brief Check if any error messages have been logged.
+		 * @TODO: #1750 change this to okBad.
 		 */
 		[[nodiscard]] bool bad() const;
 

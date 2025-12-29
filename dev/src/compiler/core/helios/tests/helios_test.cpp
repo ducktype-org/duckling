@@ -35,6 +35,7 @@
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
