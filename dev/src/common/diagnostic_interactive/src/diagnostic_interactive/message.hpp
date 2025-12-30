@@ -66,7 +66,12 @@ namespace dia_int {
 		usize               lines_before = 1;
 		usize               lines_after  = 1;
 
-	public:
+		/**
+		 * @brief Helper method to add the code lines components
+		 * from the source to the code list from [start, end) range.
+		 * If the start is at the beginning of the line adds a StartLineComponent.
+		 * @param[in,out] code_list The list to add the code lines to.
+		 */
 		static void addCodeLines(
 			std::vector<Box<dia_args::Component>>& code_list,
 			Ref<tokenizer::TokenSource>            source,
@@ -74,6 +79,7 @@ namespace dia_int {
 			usize                                  end
 		);
 
+	public:
 		Box<dia_args::Component> getValue(MessageBase&) override;
 
 		CodeArgument(std::string name, dia::SourcePosition position):
@@ -113,6 +119,9 @@ namespace dia_int {
 	 * @brief InteractiveElement is an interface for elements that can be used
 	 * as arguments in InteractiveArgument.
 	 * They can add new messages and entities when generating their value.
+	 *
+	 * We couldn't use Argument here directly because Argument requires a name
+	 * and InteractiveElement doesn't have a name.
 	 */
 	class InteractiveElement {
 	public:
@@ -324,4 +333,32 @@ namespace dia_int {
 		virtual ~MessageBase() = default;
 	};
 
+	/**
+	 * @brief This is a helper base class for messages.
+	 * This is the same as MessageWithCodeFragmentAndCause, but without the cause pointer message.
+	 */
+	class MessageWithCodeFragment: public MessageBase {
+	protected:
+		MessageWithCodeFragment(dia::SourcePosition source_position);
+	};
+
+	/**
+	 * @brief This is a helper base class for messages.
+	 * The `cause` is the name of the pointer message.
+	 * A pointer message is a text displayed below the highlighted code fragment.
+	 *
+	 * So this class besided the code fragment also adds a pointer message titled "cause"
+	 * argument. All is handled by one SourcePosition, because the code fragment is the
+	 * source position and some lines around it, and the pointer message points to exactly
+	 * the given source position.
+	 *
+	 * The `code` and `code_location` arguments are the same arguments as any other,
+	 * they are not special in any way.
+	 * But they are very commonly used together with the `cause` pointer message,
+	 * so this base class adds them both based on the provided source position.
+	 */
+	class MessageWithCodeFragmentAndCause: public MessageBase {
+	protected:
+		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position);
+	};
 }

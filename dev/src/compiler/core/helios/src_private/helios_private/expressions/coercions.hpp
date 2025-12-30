@@ -1,32 +1,30 @@
 #pragma once
 
+#include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
-	class CannotCoerceError final: public dia::Error {
-		tsh::SymbolType<> from, to;
 
-	protected:
-		[[nodiscard]] std::string toStringBrief() const override {
-			return "Cannot coerce from type '" + from.toString() + "' to type '" + to.toString()
-			     + "'.";
+
+	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "incompatible_types" };
 		}
 
 	public:
-		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
-
-		CannotCoerceError(
-			const dia::SourcePosition& source_position,
-			const tsh::SymbolType<>&   from,
-			const tsh::SymbolType<>&   to
-		):
-			  Error(source_position),
-			  from(from),
-			  to(to) {}
+		IncompatibleTypesError(
+			dia::SourcePosition    source_position,
+			const InteractiveType& actual_type,
+			const InteractiveType& expected_type
+		);
 	};
 
 	/**

@@ -6,7 +6,6 @@
 #pragma once
 
 #include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/usage.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -21,6 +20,11 @@ namespace compiler::helios::code {
 	 * messages.
 	 */
 
+
+	struct RepeatedNamedArgument final {
+		usize argument_index;
+	};
+
 	struct PositionalAfterNamedArgument final {
 		usize argument_index;
 	};
@@ -28,35 +32,42 @@ namespace compiler::helios::code {
 	struct TooManyCallArguments final {
 		usize valid_arguments;
 		usize total_arguments;
+		SymID function;
 	};
 
-	struct DuplicateNamedArgument final {
+	struct NamedArgumentProvidedByPositional final {
 		usize argument_index;
+		SymID function;
 	};
 
 	struct UnknownNamedArgument final {
 		base::StrID name;
 		usize       argument_index;
+		SymID       function;
 	};
 
 	struct TypeMismatch final {
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
 		usize             argument_index;
+		SymID             function;
 	};
 
 	struct MissingCallArgument final {
 		/** Index of the parameter of the declaration that was not filled */
 		usize parameter_index;
+		SymID function;
 	};
 
-	using MatchFailure = std::variant<
+	using FunctionMatchFailure = std::variant<
 		TooManyCallArguments,
-		DuplicateNamedArgument,
+		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
 		TypeMismatch,
-		MissingCallArgument,
-		PositionalAfterNamedArgument>;
+		MissingCallArgument>;
+
+	using CallFailure
+		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
 
 	class AmbiguousMatchesError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -83,12 +94,20 @@ namespace compiler::helios::code {
 		void addExploreExactCandidates(usize no_candidates, Box<dia_int::MessageBase> candidate_list);
 	};
 
+	/**
+	 * @brief Creates a call error message based on the provided failure reason.
+	 * @param ctx The query context.
+	 * @param call_expr The PST call expression.
+	 * @param failure_reason The reason for the call failure.
+	 * @param is_for_candidate_function Whether the message is for a candidate function
+	 * (used in ambiguous matches) or for the main call error.
+	 * @return A detailed error message describing the call failure.
+	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
 		query::Context&              ctx,
-		SymID                        function_symbol,
 		pst::Access<pst::expr::Call> call_expr,
-		const MatchFailure&          failure_reason,
-		bool                         is_for_candidate_function_msg
+		const CallFailure&           failure_reason,
+		bool                         is_for_candidate_function
 	);
 
 	pst::Access<pst::ParamList> getFunctionParamList(

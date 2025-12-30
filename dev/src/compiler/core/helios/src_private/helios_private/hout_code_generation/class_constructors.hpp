@@ -4,6 +4,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios::houtgen {
 	/**
@@ -15,7 +16,7 @@ namespace compiler::helios::houtgen {
 	DECLARE_QUERY(
 		QueryImplicitClassConstructor,
 		tsh::ClassAbstractType,
-		CRef<HOUTFunction>,
-		({ .uses_qresult = false })
+		CRef<query::QResult<HOUTFunction>>,
+		({})
 	);
 }

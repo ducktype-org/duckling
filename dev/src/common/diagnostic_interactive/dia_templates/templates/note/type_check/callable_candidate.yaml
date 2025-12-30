@@ -1,28 +1,20 @@
 metadata:
   type: "note"
-  family: "lookup"
-  name: "is_alias_code"
+  family: "type_check"
+  name: "callable_candidate"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"
 
 params:
-  alias_name:
-    description: "The name which is an alias for another name."
-  underlying_name:
-    description: "The name the alias evaluates to."
   code:
     description: "The code snippet showing the alias definition."
   code_location:
     description: "Location of the code snippet."
 
 header_message:
-  - "name `"
-  - param: "alias_name"
-  - "` is an alias for `"
-  - param: "underlying_name"
-  - "`"
+  - "Candidate defined here."
 
 description:
   codeblock:

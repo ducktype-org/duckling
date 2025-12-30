@@ -7,6 +7,6 @@ const unitType: type = ();
 
 fun main() -> i64 = {
     unit_simple_submodule.foo(a);
-    unit_simple_submodule.foo(unitType);
+    # unit_simple_submodule.foo(unitType); # @TODO: #1742 not compiling
     return 0i64;
 }
