@@ -25,6 +25,7 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/collections/optional.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -106,18 +107,41 @@ namespace compiler::lir {
 	}
 
 	LIRPlace::LIRPlace(
-		query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
+		query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain
 	):
 		  base(base),
 		  access_chain(std::move(access_chain)),
-		  layout(
-			  this->access_chain.size() == 0
-				  ? getBaseLayout()
-				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())
-							->valueOrThrow()
-					)
-		  ) {}
+		  layout([&]() -> CRef<tsl::TypeLayout> {
+			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
+		      // projections.
+			  CRef<tsl::TypeLayout> current_layout = getBaseLayout();
+
+			  for (const auto& proj: access_chain) {
+				  variant_match(proj.storage) {
+					  variant_case(FieldProjection, field) {
+						  const auto& class_layout
+							  = std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+						  const auto layout_idx
+							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					  }
+					  variant_case_novalue(DerefProjection) {
+						  const auto& pointer_layout
+							  = std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+						  current_layout = pointer_layout.getPointee();
+					  }
+					  variant_case_novalue(IndexProjection) {
+						  const auto& array_layout
+							  = std::get<tsl::DynamicArrayTypeLayout>(current_layout->getVariant());
+						  current_layout = array_layout.getElementLayout();
+					  }
+				  }
+			  }
+			  return current_layout;
+		  }())
+
+
+	{}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
@@ -275,13 +299,32 @@ namespace compiler::lir {
 			}
 
 			[[nodiscard]]
-			LIRPlace getPlace(mir::MIRPlace mir_place) const {
+			LIRPlace getPlace(const mir::MIRPlace& mir_place) const {
+				std::vector<Projection> lir_projection_chain;
+				lir_projection_chain.reserve(mir_place.access_chain.size());
+
+				// Map all MIR projections to LIR projections.
+				// TODOP: These are basically the same. Unify them in the future.
+				for (const auto& proj: mir_place.access_chain) {
+					variant_match(proj.storage) {
+						variant_case(mir::FieldProjection, field) {
+							lir_projection_chain.push_back(Projection::field(field.field_id));
+						}
+						variant_case_novalue(mir::DerefProjection) {
+							lir_projection_chain.push_back(Projection::deref());
+						}
+						variant_case_novalue(mir::IndexProjection) {
+							lir_projection_chain.push_back(Projection::index());
+						}
+					}
+				}
+
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { ctx, getLocal(local), mir_place.access_chain };
+						return { ctx, getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { ctx, getGlobal(global), mir_place.access_chain };
+						return { ctx, getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();

@@ -1,8 +1,11 @@
 #include "mir_structure.hpp"
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -204,9 +207,24 @@ namespace compiler::mir {
 		this->scope.emplace(scope);
 	}
 
+	MIRPlace MIRPlace::withDeref() const {
+		MIRPlace result = *this;
+
+		result.access_chain.push_back(Projection::deref());
+		// New type after deref is the one which was referenced by the ref/box, without the
+		// reference specifier.
+		result.type = result.type.getPointeeSymbolType();
+		return result;
+	}
+
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
-		result.access_chain.push_back(field);
+
+		// When handling thinks like `a.b`, where a: ref T, we automatically insert a deref for 'a'
+		// before the field access.
+		if (result.type.getRefKind() != tsh::ReferenceKind::Direct) result = result.withDeref();
+
+		result.access_chain.push_back(Projection::field(field));
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
@@ -216,7 +234,15 @@ namespace compiler::mir {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
 			variant_case(MIRGlobal, global) { global.debugPrint(os, detailed); }
 		}
-		for (const auto& arg: access_chain) os << "." << name(arg).strView();
+		for (const auto& proj: access_chain) {
+			variant_match(proj.storage) {
+				variant_case(FieldProjection, field) {
+					os << "." << name(field.field_id).strView();
+				}
+				variant_case_novalue(DerefProjection) { os << ".*"; }
+				variant_case_novalue(IndexProjection) { os << "[]"; }
+			}
+		}
 		if (detailed and not access_chain.empty()) {
 			os << ": Unstable hash: " << access_chain.back().queryUnstablePerfectHash();
 			os << ", Type: ";

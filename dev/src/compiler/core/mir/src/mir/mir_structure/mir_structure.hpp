@@ -1,11 +1,13 @@
 #pragma once
 
+#include "helios/scope_symbol_id.hpp"
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
 #include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
@@ -30,6 +32,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	Call,
 	VCall,
+	
+	AddressOf,
+	Deref, // TODOP: Needed?
 
 	/** Simple byte by byte assignment */
 	Assign,
@@ -277,6 +282,46 @@ namespace compiler::mir {
 		}
 	};
 
+	struct DerefProjection {
+		bool operator==(const DerefProjection&) const = default;
+	};
+
+	struct FieldProjection {
+		helios::SymID field_id;
+		bool          operator==(const FieldProjection&) const = default;
+	};
+
+	struct IndexProjection {
+		// TODOP
+		bool operator==(const IndexProjection&) const = default;
+	};
+
+	struct Projection {
+		std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
+
+		static Projection field(helios::SymID field_id) {
+			return Projection(FieldProjection(field_id));
+		}
+
+		static Projection deref() { return Projection(DerefProjection()); }
+
+		static Projection index() { return Projection(IndexProjection()); }
+
+		bool operator==(const Projection& other) const = default;
+
+		[[nodiscard]] u64 queryUnstablePerfectHash() const {
+			// TODOP: Temp
+			variant_match(storage) {
+				variant_case(DerefProjection, deref) { return 0x12'34; }
+				variant_case(FieldProjection, field) {
+					return field.field_id.queryUnstablePerfectHash();
+				}
+				variant_case(IndexProjection, index) { return 0x43'21; }
+			}
+			CORE_UNREACHABLE();
+		}
+	};
+
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
@@ -315,13 +360,15 @@ namespace compiler::mir {
 		/**
 		 * @brief The symbols of the fields accessed within the variable.
 		 */
-		std::vector<helios::SymID> access_chain;
+		// TODOP: Comment
+		std::vector<Projection> access_chain;
 
 		/**
 		 * @brief The type of the final accessed field.
 		 * @note This type may be different from the type of the base variable,
 		 * especially when the access chain is not empty.
 		 */
+		// TODOP: Comment.
 		tsh::SymbolType<> type;
 
 		/**
@@ -337,6 +384,9 @@ namespace compiler::mir {
 		 * @return The extended MIRPlace structure.
 		 */
 		MIRPlace withField(query::Context& ctx, helios::SymID field) const;
+		// TODOP
+		// Automatically inserts derefs if needed.
+		[[nodiscard]] MIRPlace withDeref() const;
 
 		[[nodiscard]]
 		bool isLocal() const {

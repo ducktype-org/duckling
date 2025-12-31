@@ -515,7 +515,7 @@ namespace compiler::backend_llvm {
 		auto gepPointerFromLIRPlace(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			// First, get the pointer and type of the base value.
-			const auto base_ptr = [&] -> llvm::Value* {
+			auto current_ptr = [&] -> llvm::Value* {
 				variant_match(place.base) {
 					variant_case(lir::LIRLocalRef, lir_local) {
 						return local_register_map[lir_local].get();
@@ -529,28 +529,65 @@ namespace compiler::backend_llvm {
 
 			// Then, perform appropriate pointer modification based on the access chain.
 			// If there is no access chain, we can return the base pointer directly.
-			if (not place.hasAccess()) return base_ptr;
+			if (not place.hasAccess()) return current_ptr;
+
+			llvm::Type* current_type = typeFromLayout(module, place.getBaseLayout());
 
 			// Otherwise, we need to get the layout indices of the accessed fields.
 			// - First, collect the subsequent layout indices.
 			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
 			std::vector<llvm::Value*> access_indices;
-			access_indices.reserve(place.access_chain.size() + 1);
-			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
 			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
-			for (const auto& field_sym: place.access_chain) {
-				const auto& current_class_layout
-					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-				const auto layout_idx = current_class_layout.getLayoutIndexOfFieldSymbol(field_sym);
-				access_indices.push_back(
-					llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
-				);
-				current_layout = current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+
+			// A GEP constructor invoked when encountering a deref projection. Creates a GEP from
+			// all projection indicies up to this point so `load` can be performed on the address.
+			auto flush_gep = [&]() {
+				if (access_indices.size() > 1) {
+					// Create a GEP if needed.
+					current_ptr = builder.CreateGEP(current_type, current_ptr, access_indices);
+					// TODOP: Update type.
+				}
+				access_indices.clear();
+				// Reset the new base, since GEP assumes  we work on arrays.
+				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			};
+
+
+			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
+
+			for (const auto& projection: place.access_chain) {
+				variant_match(projection.storage) {
+					variant_case(lir::FieldProjection, field) {
+						const auto& current_class_layout
+							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+						const auto layout_idx
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+
+						access_indices.push_back(
+							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
+						);
+						current_layout
+							= current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					}
+					variant_case_novalue(lir::DerefProjection) {
+						// If deref was encountered, we have to create a GEP which includes all the
+						// projections built up to this point and perform a load.
+						flush_gep();
+
+						current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+						const auto& current_pointer_layout
+							= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+						current_layout = current_pointer_layout.getPointee();
+						current_type   = typeFromLayout(module, current_layout);
+					}
+				}
 			}
 
-			// - Then, create the GEP instruction to get the final pointer.
-			const auto base_llvm_type = typeFromLayout(module, place.getBaseLayout());
-			return builder.CreateGEP(base_llvm_type, base_ptr, access_indices);
+			// After no more projections exist, we create a GEP instruction with all projections up
+			// to this point. `current_ptr` stores a value which is the result of GEP.
+			flush_gep();
+			return current_ptr;
 		}
 
 		/**

@@ -3,6 +3,8 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
+#include "base/except/exceptions.hpp"
+
 namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
@@ -186,6 +188,12 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		SymbolType withMutability(const Mutability new_mutability) const {
 			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
+		}
+
+		[[nodiscard]]
+		SymbolType getPointeeSymbolType() const {
+			CORE_ASSERT(reference_kind != ReferenceKind::Direct, "Cannot dereference a Direct type");
+			return withReferenceKind(ReferenceKind::Direct);
 		}
 
 		/**

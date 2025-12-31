@@ -26,6 +26,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
+	AddressOf, // TODOP: Add this to debug prints etc.
 
 	/**
 		@brief Placeholder.
@@ -222,6 +223,46 @@ namespace compiler::lir {
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 
+	struct DerefProjection {
+		bool operator==(const DerefProjection&) const = default;
+	};
+
+	struct FieldProjection {
+		helios::SymID field_id;
+		bool          operator==(const FieldProjection&) const = default;
+	};
+
+	struct IndexProjection {
+		// TODOP
+		bool operator==(const IndexProjection&) const = default;
+	};
+
+	struct Projection {
+		std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
+
+		static Projection field(helios::SymID field_id) {
+			return Projection(FieldProjection(field_id));
+		}
+
+		static Projection deref() { return Projection(DerefProjection()); }
+
+		static Projection index() { return Projection(IndexProjection()); }
+
+		bool operator==(const Projection& other) const = default;
+
+		[[nodiscard]] u64 queryUnstablePerfectHash() const {
+			// TODOP: Figure this out
+			variant_match(storage) {
+				variant_case(DerefProjection, deref) { return 0x12'34; }
+				variant_case(FieldProjection, field) {
+					return field.field_id.queryUnstablePerfectHash();
+				}
+				variant_case(IndexProjection, index) { return 0x43'21; }
+			}
+			CORE_UNREACHABLE();
+		}
+	};
+
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
@@ -231,6 +272,7 @@ namespace compiler::lir {
 	 *
 	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
 	 */
+	// TODOP: Comment
 	struct LIRPlace final {
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
 		/**
@@ -258,7 +300,7 @@ namespace compiler::lir {
 		/**
 		 * @brief The symbols of the fields accessed within the variable.
 		 */
-		std::vector<helios::SymID> access_chain;
+		std::vector<Projection> access_chain;
 
 		/**
 		 * @brief The type layout of the final accessed field.
@@ -267,9 +309,7 @@ namespace compiler::lir {
 		 */
 		CRef<tsl::TypeLayout> layout;
 
-		LIRPlace(
-			query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
-		);
+		LIRPlace(query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain);
 
 		[[nodiscard]]
 		bool isLocal() const {
