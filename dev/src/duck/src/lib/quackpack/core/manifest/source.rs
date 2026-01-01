@@ -143,6 +143,7 @@ impl Git {
     /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
     ///
     /// However, we always disallow shallow clones when commit is specified.
+    // @TODO: #1751 change `looks_like_remote_url` to `self.url.scheme() != "file"`.
     pub fn can_shallow_clone(&self) -> bool {
         let looks_like_remote_url = self.url.starts_with("https://")
             || self.url.starts_with("git@")
