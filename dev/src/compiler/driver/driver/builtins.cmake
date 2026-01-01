@@ -20,16 +20,6 @@ find_program(CLANG_BIN
     REQUIRED
 )
 
-if (NOT CLANG_BIN)
-    message(FATAL_ERROR
-            "clang-${LLVM_VERSION_MAJOR} not found. "
-            "Please install clang ${LLVM_VERSION_MAJOR} to build the bitcode of Duckling built-ins "
-            "with the same LLVM version as the API used to compile Duckling itself."
-    )
-else ()
-    message(STATUS "Using clang binary: ${CLANG_BIN}")
-endif()
-
 # For each target, add command to generate the LLVM bitcode
 # and convert it to an embedded header file.
 foreach (target IN LISTS BUILTIN_TARGETS)

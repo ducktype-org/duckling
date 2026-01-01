@@ -132,7 +132,7 @@ namespace vm::builtins {
 			     {
 					 BuiltinFunctionID::OutputI64,
 					 { base::StrID("builtin_output_i64"),
-			           code::FuncSignature(base::StrID("i64"), { base::StrID("i64") }) },
+			           code::FuncSignature(base::StrID("i32"), { base::StrID("i64") }) },
 				 },
 			     {
 					 BuiltinFunctionID::OutputString,

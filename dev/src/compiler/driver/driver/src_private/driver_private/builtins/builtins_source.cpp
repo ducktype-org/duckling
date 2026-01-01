@@ -50,11 +50,11 @@ uint64_t builtin_input_u64() {
 	return v;
 }
 
-int32_t builtin_output_f64(double v) { return printf("%lf\n", v); }
+int32_t builtin_output_f64(double v) { return printf("%.4lg\n", v); }
 
 double builtin_input_f64() {
 	double v;
-	if (scanf("%lf", &v) != 1) exit(1);
+	if (scanf("%lg", &v) != 1) exit(1);
 	return v;
 }
 
