@@ -2,6 +2,7 @@
 
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <iostream>
 
 namespace query::internal {
 	/**
@@ -19,6 +20,8 @@ namespace query::internal {
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
 				what_str += base::getCurrentStackTrace(6);
+
+				// std::cerr << "stacktrace!\n";
 			});
 		}
 
