@@ -1,3 +1,5 @@
+/// Module containing a wrapper over russcip::Model, with utilities related to dependency resolving.
+/// By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
@@ -19,14 +21,17 @@ use crate::{
     },
 };
 
+/// Creates a unique mapping of packages to their variable names.
 fn package_var_name(pkg: &ExpandedPackage) -> StrId {
     StrId::new(format!("{:?}@{:?}", pkg.location(), pkg.version()))
 }
 
+/// Creates a unique mapping of pairs of form (package, feature) to its variable name.
 fn package_with_feature_var_name(pkg: &ExpandedPackage, feature: FeatureName) -> StrId {
     StrId::new(format!("{}@{:?}", package_var_name(pkg), feature))
 }
 
+/// Creates a unique mapping of a pair of form (dependency relation, child feature) to its variable name.
 fn dependency_feature_var_name(dep: &ParentWithDependencyLoc, feature: FeatureName) -> StrId {
     StrId::new(format!(
         "{}->{:?}@_@{:?}",
@@ -36,6 +41,7 @@ fn dependency_feature_var_name(dep: &ParentWithDependencyLoc, feature: FeatureNa
     ))
 }
 
+/// Creates a unique mapping of a pair of form (dependency relation, child version) to its variable name.
 fn dependency_version_var_name(dep: &ParentWithDependencyLoc, version: Option<Version>) -> StrId {
     StrId::new(format!(
         "{}->{:?}@{:?}@_",
@@ -48,9 +54,12 @@ fn dependency_version_var_name(dep: &ParentWithDependencyLoc, version: Option<Ve
 type FeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 type ChildVersionsToVars = HashMap<Option<Version>, Rc<Variable>>;
 type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
+/// Wrapper of russcip::Model, adding mappings from appropriate variable identifiers to their variables.
 pub struct SolverModel<'a, State> {
     model: Model<State>,
+    // Packages already placed in the previous freeze.
     preexisting_packages: &'a HashSet<ExpandedPackage>,
+    // With what features they were placed there.
     preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
     package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
     package_to_feature_vars: HashMap<ExpandedPackage, FeaturesToVars>,
@@ -59,6 +68,7 @@ pub struct SolverModel<'a, State> {
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
+    /// Creates an empty model, given packages already placed in the previous freeze and their features.
     pub fn new(
         preexisting_packages: &'a HashSet<ExpandedPackage>,
         preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -74,6 +84,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         }
     }
 
+    /// Returns the variable associated with the given pair (package, optional feature).
+    /// If the feature is not supplied, returns the variable associated with the package,
+    /// otherwise returns the variable associated with the pair (package, feature).
     fn get_package_variable(
         &self,
         pkg: &ExpandedPackage,
@@ -90,6 +103,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         }
     }
 
+    /// Returns the mapping from child features to variables, associated with the given dependency.
     fn get_feature_to_var_map_for_dep(
         &self,
         dep: &ParentWithDependencyLoc,
@@ -99,6 +113,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         )
     }
 
+    /// Returns the variable associated with the given (dependency, child feature) pair.
     fn get_dependency_feature_variable(
         &self,
         dep: &ParentWithDependencyLoc,
@@ -110,6 +125,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         )
     }
 
+    /// Returns the mapping from child versions to variables, associated with the given dependency.
     fn get_version_to_var_map_for_dep(
         &self,
         dep: &ParentWithDependencyLoc,
@@ -119,6 +135,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         )
     }
 
+    /// Returns the variable associated with the given (dependency, child version) pair.
     fn get_dependency_version_variable(
         &self,
         dep: &ParentWithDependencyLoc,
@@ -130,6 +147,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         )
     }
 
+    /// Creates the variable associated with the package and adds it to the model.
     pub fn add_package_var(&mut self, pkg: ExpandedPackage) -> QuackResult<()> {
         let objective_coef = if self.preexisting_packages.contains(&pkg) {
             0.0
@@ -146,6 +164,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Creates the variable associated with the (package, feature) pair and adds it to the model.
     pub fn add_package_with_feature_var(
         &mut self,
         pkg: ExpandedPackage,
@@ -160,6 +179,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Creates a variable associated with the (dependency, child feature) pair and adds it to the model.
     pub fn add_dependency_feature_realisation_var(
         &mut self,
         dep: ParentWithDependencyLoc,
@@ -174,6 +194,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Creates a variable associated with the (dependency, child version) pair and adds it to the model.
     pub fn add_dependency_version_realisation_var(
         &mut self,
         dep: ParentWithDependencyLoc,
@@ -188,12 +209,14 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Adds a constraint that forces the package to be present in the solution to the model.
     pub fn require_package(&mut self, pkg: &ExpandedPackage) -> QuackResult<()> {
         let var = self.get_package_variable(&pkg, None)?;
         self.model.add(cons().coef(&var, 1.0).eq(1.0));
         Ok(())
     }
 
+    /// Adds a constaint that forces the package to be present with a feature.
     pub fn require_package_with_feature(
         &mut self,
         pkg: &ExpandedPackage,
@@ -204,6 +227,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Adds a constraint that forces the child to be present with all of the required features.
     pub fn require_satisfying_dep_feature(
         &mut self,
         dep: &ParentWithDependencyLoc,
@@ -219,6 +243,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Adds a constraint that forces the child to be present in at least one of the required versions.
     pub fn require_satisfying_dep_version(
         &mut self,
         dep: &ParentWithDependencyLoc,
@@ -234,6 +259,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Adds a constraint that if the variable associated with a pair (dependency, child version)
+    /// was chosen by the model to be present, the underlying package variable of the child in that version
+    /// has to be present.
     pub fn require_substantiate_dep(&mut self, dep: &ParentWithDependencyLoc) -> QuackResult<()> {
         for (pkg_version, version_realization_var) in
             self.get_version_to_var_map_for_dep(&dep)?.clone()
@@ -250,6 +278,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    /// Adds a constraint that if the variable associated with a pair (dependency, child version) was chosen to be present
+    /// and the variable associated with a pair (dependency, child's feature) was chosen to be present,
+    /// then the underlying package variable of the child in that version with that feature has to be present.
     pub fn require_substantiate_dep_features(
         &mut self,
         dep: &ParentWithDependencyLoc,
@@ -289,12 +320,15 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 }
 
+/// Output of the solver model, contains new packages to be put into the freeze, with their features.
 pub struct FoundSolution {
     pub new_packages: HashSet<ExpandedPackage>,
     pub new_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
+    /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
+    /// constructs the output and returns it.
     pub fn solve(self) -> FoundSolution {
         self.model.minimize().solve();
         let new_packages = self
@@ -331,6 +365,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 }
 
+/// Helper function for determining whether the model did or did not put the variable into the solution.
 fn is_one(var: &Variable) -> bool {
+    // The condition "> 0.5" is arbitrary, ideally it could be "== 1.0", but maybe to circumvent some float magic "> 0.5" is better.
     var.sol_val() > 0.5
 }
