@@ -18,7 +18,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     (dir, manifest)
 }
 
-fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> String {
+fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
         "when trying to parse the user manifest at `{}/x`",
         root.path().display()
@@ -176,7 +176,7 @@ dependencies:
   a:
     version: 0.1 or 2
     source:
-      git_url: git
+      git_url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -192,8 +192,8 @@ dependencies:
     assert_eq!(a.desc().versions()[0].to_string(), "0.1.0");
     assert_eq!(a.desc().versions()[1].to_string(), "2.0.0");
     assert!(a.desc().source().is_git());
-    if let Source::Git(git_source) = a.desc().source() {
-        assert_eq!(git_source.url(), "git");
+    if let Source::Git(git_source) = a.desc().source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
     }
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
@@ -241,7 +241,7 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: xd
+      registry_url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -388,10 +388,10 @@ dependencies:
     version: 0.1
     source:
       name: alias
-      registry_url: xd
+      registry_url: https://google.com
   e:
     source:
-      git_url: git
+      git_url: https://google.com
       branch: branch
       commit: commit
 "#,
@@ -408,7 +408,7 @@ dependencies:
         .get_dependency(static_str_id!("a"))
         .unwrap();
     assert!(a.desc().source().is_local());
-    if let Source::Local(local_source) = a.desc().source() {
+    if let Source::Local(local_source) = a.desc().source().as_ref() {
         assert_eq!(
             local_source.absolute(),
             manifest_path
@@ -430,7 +430,7 @@ dependencies:
         .get_dependency(static_str_id!("a1"))
         .unwrap();
     assert!(a1.desc().source().is_local());
-    if let Source::Local(local_source) = a1.desc().source() {
+    if let Source::Local(local_source) = a1.desc().source().as_ref() {
         assert_eq!(
             local_source.absolute(),
             manifest_path
@@ -452,7 +452,7 @@ dependencies:
         .get_dependency(static_str_id!("a2"))
         .unwrap();
     assert!(a2.desc().source().is_local());
-    if let Source::Local(local_source) = a2.desc().source() {
+    if let Source::Local(local_source) = a2.desc().source().as_ref() {
         let home_dir = home().unwrap();
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
         assert!(!local_source.was_original_entry_relative());
@@ -465,7 +465,7 @@ dependencies:
         .get_dependency(static_str_id!("a3"))
         .unwrap();
     assert!(a3.desc().source().is_local());
-    if let Source::Local(local_source) = a3.desc().source() {
+    if let Source::Local(local_source) = a3.desc().source().as_ref() {
         assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "/xd");
@@ -477,9 +477,9 @@ dependencies:
         .get_dependency(static_str_id!("b"))
         .unwrap();
     assert!(b.desc().source().is_registry());
-    if let Source::Registry(registry_source) = b.desc().source() {
+    if let Source::Registry(registry_source) = b.desc().source().as_ref() {
         let default_registry = QpCtx::new(&ctx).registry_url().unwrap();
-        assert_eq!(registry_source.url(), default_registry);
+        assert_eq!(*registry_source.url(), default_registry);
     }
     assert_eq!(b.desc().versions().len(), 1);
     assert_eq!(b.desc().versions()[0].to_string(), "0.1.0");
@@ -502,8 +502,8 @@ dependencies:
         .get_dependency(static_str_id!("d"))
         .unwrap();
     assert!(d.desc().source().is_registry());
-    if let Source::Registry(registry_source) = d.desc().source() {
-        assert_eq!(registry_source.url(), "xd");
+    if let Source::Registry(registry_source) = d.desc().source().as_ref() {
+        assert_eq!(registry_source.url().as_str(), "https://google.com/");
     }
     assert_eq!(d.desc().versions().len(), 1);
     assert_eq!(d.real_name().to_string(), "alias");
@@ -515,8 +515,8 @@ dependencies:
         .get_dependency(static_str_id!("e"))
         .unwrap();
     assert!(e.desc().source().is_git());
-    if let Source::Git(git_source) = e.desc().source() {
-        assert_eq!(git_source.url(), "git");
+    if let Source::Git(git_source) = e.desc().source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
         assert_eq!(
             git_source.branch_or_tag(),
             BranchOrTag::Branch(static_str_id!("branch"))
@@ -823,4 +823,61 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn git_url_points_to_local_dir() {
+    let root_dir = TempDir::new().unwrap();
+    let (dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    source:
+      git_url: {}
+"#,
+        root_dir.path().display()
+    ));
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                &format!("`{}` is not a valid URL", root_dir.path().display()),
+                "git dependency points to a file on the disk",
+                &format!(
+                    "either change it to a local dependency or change the URL to `file://{}`",
+                    root_dir.path().display()
+                ),
+                "relative URL without a base",
+            ]
+        )
+    );
+}
+
+#[test]
+fn valid_git_url_points_to_local_dir() {
+    let root_dir = TempDir::new().unwrap();
+    let (_dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    source:
+      git_url: file://{}
+"#,
+        root_dir.path().display()
+    ));
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    assert!(parse_manifest(&manifest_path, &qpctx).is_ok());
 }

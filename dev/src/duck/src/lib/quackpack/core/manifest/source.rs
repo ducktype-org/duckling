@@ -1,11 +1,58 @@
+use std::collections::HashSet;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 
 use git2::FetchOptions;
+use url::Url;
 
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, StrId, qp_bail};
 
-#[derive(Debug, Clone)]
+static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Interned version of [`Source`].
+pub struct InternedSource {
+    inner: &'static Source,
+}
+
+impl InternedSource {
+    pub fn new(source: Source) -> Self {
+        let mut cache = INTERNED_SOURCE_CACHE
+            .get_or_init(Default::default)
+            .lock()
+            .unwrap();
+        let reference = cache.get(&source).copied().unwrap_or_else(|| {
+            let static_ref = Box::leak(Box::new(source));
+            cache.insert(static_ref);
+            static_ref
+        });
+        Self { inner: reference }
+    }
+}
+
+impl From<Source> for InternedSource {
+    fn from(value: Source) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Deref for InternedSource {
+    type Target = Source;
+
+    fn deref(&self) -> &'static Self::Target {
+        self.inner
+    }
+}
+
+impl AsRef<Source> for InternedSource {
+    fn as_ref(&self) -> &'static Source {
+        self.inner
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// General dependency source.
 pub enum Source {
     /// A package from a registry.
@@ -51,25 +98,25 @@ impl From<Git> for Source {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
-    url: StrId,
+    url: Url,
 }
 
 impl Registry {
     /// Create a new registry source.
-    pub fn new(url: StrId) -> Self {
+    pub fn new(url: Url) -> Self {
         Self { url }
     }
 
     /// Get the registry URL.
-    pub fn url(&self) -> StrId {
-        self.url
+    pub fn url(&self) -> &Url {
+        &self.url
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
@@ -107,17 +154,17 @@ impl Local {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// Represents a source a dependency cloned from git.
 pub struct Git {
-    url: StrId,
+    url: Url,
     branch_or_tag: BranchOrTag,
     rev: Option<StrId>,
 }
 
 impl Git {
     /// Create a new git source.
-    pub fn new(url: StrId, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
+    pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
         Self {
             url,
             branch_or_tag,
@@ -126,8 +173,8 @@ impl Git {
     }
 
     /// Get the git repository URL.
-    pub fn url(&self) -> StrId {
-        self.url
+    pub fn url(&self) -> &Url {
+        &self.url
     }
 
     /// Get the git branch or tag.
@@ -145,14 +192,9 @@ impl Git {
     /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
     ///
     /// However, we always disallow shallow clones when commit is specified.
-    // @TODO: #1751 change `looks_like_remote_url` to `self.url.scheme() != "file"`.
     pub fn can_shallow_clone(&self) -> bool {
-        let looks_like_remote_url = self.url.starts_with("https://")
-            || self.url.starts_with("git@")
-            || self.url.starts_with("ssh://")
-            || self.url.starts_with("http://")
-            || self.url.starts_with("ftp://");
-        looks_like_remote_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
+        let is_local_repository_url = self.url.scheme() == "file";
+        !is_local_repository_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
     }
 
     /// Get [`FetchOptions`] for this source.
@@ -168,7 +210,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum BranchOrTag {
     /// The default branch.
@@ -196,13 +238,29 @@ impl BranchOrTag {
     }
 }
 
+impl TryFrom<registry::DependencySource> for InternedSource {
+    type Error = QuackError;
+
+    fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
+        Ok(Self::new(value.try_into()?))
+    }
+}
+
+impl TryFrom<InternedSource> for registry::DependencySource {
+    type Error = QuackError;
+
+    fn try_from(value: InternedSource) -> Result<Self, Self::Error> {
+        value.try_into()
+    }
+}
+
 impl TryFrom<registry::DependencySource> for Source {
     type Error = QuackError;
 
     fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
         let tmp = match value.inner {
             registry::SourceInner::Registry { registry_url } => Registry {
-                url: registry_url.into(),
+                url: registry_url.as_str().try_into()?,
             }
             .into(),
             registry::SourceInner::Local {
@@ -229,7 +287,7 @@ impl TryFrom<registry::DependencySource> for Source {
                     }
                 };
                 Git {
-                    url: git_url.into(),
+                    url: git_url.as_str().try_into()?,
                     branch_or_tag,
                     rev: commit.map(Into::into),
                 }
