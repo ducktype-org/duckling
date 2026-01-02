@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use git2::FetchOptions;
+
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, StrId, qp_bail};
 
@@ -151,6 +153,18 @@ impl Git {
             || self.url.starts_with("http://")
             || self.url.starts_with("ftp://");
         looks_like_remote_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
+    }
+
+    /// Get [`FetchOptions`] for this source.
+    ///
+    /// This if factored out so we can easily make small changes to the
+    /// [`FetchOptions`], such as setting depth to 0 to make a full fetch.
+    pub fn git_fetch_options(&self) -> FetchOptions<'_> {
+        let mut fetch_options = FetchOptions::new();
+        if self.can_shallow_clone() {
+            fetch_options.depth(1);
+        }
+        fetch_options
     }
 }
 

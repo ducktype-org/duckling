@@ -11,7 +11,7 @@ use crate::{
 };
 
 use async_scoped::TokioScope;
-use git2::{FetchOptions, Oid};
+use git2::Oid;
 use git2::{Repository, build::RepoBuilder};
 
 #[cfg(test)]
@@ -31,17 +31,25 @@ impl GitClient {
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
-        if source.can_shallow_clone() {
-            let mut fetch_options = FetchOptions::new();
-            fetch_options.depth(1);
-            builder.fetch_options(fetch_options);
-        }
+        builder.fetch_options(source.git_fetch_options());
         // git2-rs doesn't support cloning with a given tag :(.
         if let BranchOrTag::Branch(branch) = source.branch_or_tag() {
             builder.branch(branch.as_str());
         }
 
-        let repository = builder.clone(source.url().as_str(), destination)?;
+        let repository = match builder.clone(source.url().as_str(), destination) {
+            Ok(repository) => repository,
+            Err(e) => {
+                // We've failed to clone a repository, try to fallback to a non-shallow clone.
+                if !source.can_shallow_clone() {
+                    return Err(e.into());
+                }
+                let mut fetch_options = source.git_fetch_options();
+                fetch_options.depth(0);
+                builder.fetch_options(fetch_options);
+                builder.clone(source.url().as_str(), destination)?
+            }
+        };
 
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
