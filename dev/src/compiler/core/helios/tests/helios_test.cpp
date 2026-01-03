@@ -2000,7 +2000,7 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.hasError(),
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
 					"Logger should have recorded an error."
 				);
 
@@ -2023,7 +2023,7 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.hasError(),
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
 					"Logger should have recorded an error."
 				);
 
@@ -2257,7 +2257,7 @@ private:
 				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.hasError(),
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
 				"Logger should have recorded an error."
 			);
 
@@ -2277,7 +2277,7 @@ private:
 				result->hasFailed(), "Query should have failed due to ambiguous return type."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.hasError(),
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
 				"Logger should have recorded an error."
 			);
 

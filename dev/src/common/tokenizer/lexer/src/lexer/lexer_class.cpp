@@ -162,7 +162,7 @@ namespace lexer {
 		  file(file),
 		  logger(file->getIntLogger()),
 		  char_array(file->getChars()) {
-		if (logger->hasError()) {
+		if (logger->hasErrors()) {
 			logger->terminalPrint(std::cerr);
 			throw base::LogicError("Lexer initialized with existing error");
 		}

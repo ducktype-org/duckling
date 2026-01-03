@@ -33,7 +33,7 @@ namespace dia_int {
 
 	usize Logger::messageCount() const { return diagnostics.size(); }
 
-	bool Logger::hasError() const { return has_error; }
+	bool Logger::hasErrors() const { return has_error; }
 
 	void Logger::clear() {
 		diagnostics.clear();

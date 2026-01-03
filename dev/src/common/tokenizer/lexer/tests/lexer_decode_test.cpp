@@ -38,7 +38,7 @@ private:
 		auto        path = fs::FileManager::createRandomVirtualFile(content);
 		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<encoding>();
-		assertTrue(file->getIntLogger()->hasError(), "Encoding error not found");
+		assertTrue(file->getIntLogger()->hasErrors(), "Encoding error not found");
 	}
 
 	void badContinuations() {

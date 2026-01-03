@@ -174,7 +174,7 @@ namespace pst {
 		}
 
 		[[nodiscard]] bool hasErrors() const {
-			return file->getLogger()->bad() || file->getIntLogger()->hasError();
+			return file->getLogger()->bad() || file->getIntLogger()->hasErrors();
 		}
 
 		[[nodiscard]]

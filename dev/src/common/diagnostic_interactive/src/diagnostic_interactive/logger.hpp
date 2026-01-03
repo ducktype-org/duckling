@@ -32,7 +32,7 @@ namespace dia_int {
 		 * @brief Check if any error messages have been logged.
 		 * @TODO: #1750 change this to okBad.
 		 */
-		[[nodiscard]] bool hasError() const;
+		[[nodiscard]] bool hasErrors() const;
 
 		void terminalPrint(std::ostream& out = std::cerr);
 

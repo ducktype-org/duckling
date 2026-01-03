@@ -116,10 +116,10 @@ namespace tokenizer {
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {
 			decode<encoding>();
-			if (int_log.hasError()) return false;
+			if (int_log.hasErrors()) return false;
 			countLines();
 			runLexer();
-			return not int_log.hasError();
+			return not int_log.hasErrors();
 		}
 	};
 

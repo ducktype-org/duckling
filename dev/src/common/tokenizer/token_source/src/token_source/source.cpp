@@ -36,7 +36,7 @@ namespace tokenizer {
 	}
 
 	void TokenSource::countLines() {
-		if (int_log.hasError()) return;
+		if (int_log.hasErrors()) return;
 		usize line  = 1;
 		usize start = 0;
 		usize newline{};
@@ -100,7 +100,7 @@ namespace tokenizer {
 	Ref<dia::Logger> TokenSource::getLogger() { return &log; }
 
 	void TokenSource::runLexer() {
-		if (int_log.hasError()) return;
+		if (int_log.hasErrors()) return;
 		lexer::Lexer lexer{ Ref<TokenSource>(this) };
 		token_data.emplace(lexer.tokenize());
 	}
