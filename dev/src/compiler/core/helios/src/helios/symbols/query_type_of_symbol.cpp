@@ -96,9 +96,10 @@ namespace compiler::helios {
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
-						{ stmt->getValue().value().unlock(ctx)->getExpr() }
-					).valueOrThrow();
-					
+										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					)
+					                  .valueOrThrow();
+
 					const auto& expr_type = parsed->expression_type;
 					setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
 				} else {

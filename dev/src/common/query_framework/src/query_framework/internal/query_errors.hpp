@@ -2,6 +2,7 @@
 
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+
 #include <iostream>
 
 namespace query::internal {

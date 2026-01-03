@@ -69,8 +69,7 @@ namespace compiler::helios {
 							is_failed = true;
 							// std::cerr << "ehhhh?";
 							continue;
-						}
-						else {
+						} else {
 							out.functions.push_back(hout_function.valueOrPanic());
 						}
 					}
@@ -78,9 +77,7 @@ namespace compiler::helios {
 						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
-			if (is_failed) {
-				return query::Failed();
-			}
+			if (is_failed) return query::Failed();
 			return out;
 		}
 

@@ -49,11 +49,11 @@ namespace logger {
 	}
 
 	/**
-	* Checks if logging is enabled for the specified category.
-	* @note This function is intended mostly for internal use
-	* but can also be used externally to
-	* conditionally perform some log-like action based on log category state.
-	*/
+	 * Checks if logging is enabled for the specified category.
+	 * @note This function is intended mostly for internal use
+	 * but can also be used externally to
+	 * conditionally perform some log-like action based on log category state.
+	 */
 	bool isCategoryEnabled(DevLogCategories category);
 }
 
@@ -82,9 +82,9 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_DEV_LOG(category, ...)                                                      \
-	if (::logger::enable_dev_logs) [[unlikely]] {                                          \
+#define CORE_DEV_LOG(category, ...)                                              \
+	if (::logger::enable_dev_logs) [[unlikely]] {                                \
 		if (::logger::isCategoryEnabled(::logger::DevLogCategories::category)) { \
-			::logger::internal::logMessage(base::strConcat(__VA_ARGS__));                  \
-		}                                                                                \
+			::logger::internal::logMessage(base::strConcat(__VA_ARGS__));        \
+		}                                                                        \
 	}
