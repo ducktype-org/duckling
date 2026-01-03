@@ -3,6 +3,8 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
+#include <logger/logger.hpp>
+
 namespace query::internal {
 	/**
 	 * @brief Exception that can be thrown when accessing a result of a query that has failed.
@@ -18,7 +20,11 @@ namespace query::internal {
 
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
-				what_str += base::getCurrentStackTrace(6);
+				if (logger::isCategoryEnabled(logger::DevLogCategories::QueryStacktraces)) {
+					what_str += base::getCurrentStackTrace(18);
+				} else {
+					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` dev logs to see the stacktrace of the origin of the failure.\n";
+				}
 			});
 		}
 
