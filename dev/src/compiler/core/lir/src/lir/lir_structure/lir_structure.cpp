@@ -150,9 +150,7 @@ namespace compiler::lir {
 			output << output_value.str() << " ";
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation) << "  ";
-			if(!instruction.output.has_value()) {
-				output << std::left << std::setw(12);
-			}
+			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";
 			for (const auto& arg: instruction.arguments) {

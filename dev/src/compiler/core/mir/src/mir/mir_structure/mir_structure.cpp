@@ -198,7 +198,7 @@ namespace compiler::mir {
 	base::StrID MIRLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
-		}
+	}
 
 	void MIRLocal::setLifetimeScope(ScopeRef scope) {
 		CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
