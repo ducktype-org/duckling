@@ -12,9 +12,7 @@ use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_intern
 use paste::item;
 use toml::value::{Array, Datetime};
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug)]
 pub struct TomlConfig {
     content: Table,
     source: Option<PathBuf>,
