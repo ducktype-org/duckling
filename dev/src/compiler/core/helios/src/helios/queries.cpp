@@ -73,7 +73,7 @@ namespace compiler::helios {
 			}
 
 			if (is_failed) return query::Failed();
-			
+
 			return out;
 		}
 
