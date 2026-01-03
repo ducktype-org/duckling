@@ -70,6 +70,9 @@ namespace tokenizer {
 		return { begin, size };
 	}
 
+	/**
+	 * @brief Splits a range of characters [begin_char, end_char) into lines.
+	 */
 	std::vector<std::pair<usize, base::RawView>> TokenSource::viewSplitRange(
 		usize begin_char, usize end_char
 	) {

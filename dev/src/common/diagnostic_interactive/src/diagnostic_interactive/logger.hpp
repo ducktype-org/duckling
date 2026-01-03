@@ -21,6 +21,14 @@ namespace dia_int {
 
 		void log(Box<MessageBase> message);
 
+		/**
+		 * @brief Check if any error messages have been logged.
+		 * @TODO: #1750 change this to okBad.
+		 */
+		[[nodiscard]] bool bad() const;
+
 		void dumpLog(std::ostream& out = std::cout);
+
+		[[nodiscard]] u64 messageCount() const;
 	};
 }

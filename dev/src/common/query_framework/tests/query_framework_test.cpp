@@ -834,7 +834,7 @@ private:
 			"QueryFailedException not thrown as expected"
 		);
 
-		assertThrows<query::QueryFailedException>(
+		assertThrows<query::internal::QueryFailedException>(
 			[] {
 				query::QResult<u64> res = query::Failed();
 				res.valueOrThrow();

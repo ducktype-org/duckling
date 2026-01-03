@@ -1,10 +1,17 @@
 #pragma once
 
-#include <diagnostic_interactive/usage.hpp>
+#include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-namespace compiler::helios::errors {
+namespace compiler::helios {
+	/**
+	 * @brief This element adds the alias chain information to the message
+	 * in case of types that are aliases.
+	 * Is also responsible for displaying the type name in the intuitive way,
+	 * i.e. the same way the user wrote it in the source code.
+	 */
 	class InteractiveType: public dia_int::InteractiveElement {
 		tsh::SymbolType<>                             symbol_type;
 		base::Optional<pst::Access<pst::LangElement>> pst_expr;
@@ -15,24 +22,29 @@ namespace compiler::helios::errors {
 		InteractiveType(
 			tsh::SymbolType<>                             symbol_type,
 			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
-		);
+		):
+			  symbol_type(symbol_type),
+			  pst_expr(std::move(pst_expr)) {}
 	};
 
-	class VariableElement {};
+	/**
+	 * @brief This element adds the function declaration attachment to the message
+	 * in case of function and methods.
+	 * Is also responsible for displaying the function name in the intuitive way,
+	 * i.e. the same way the user wrote it in the source code.
+	 * It will support methods as well in the future.
+	 */
+	class InteractiveFunction final: public dia_int::InteractiveElement {
+		SymID                                         function_symbol;
+		base::Optional<pst::Access<pst::LangElement>> pst_expr;
 
-	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "type_check",
-				     .name          = "incompatible_types" };
-		}
+		Box<dia_int::dia_args::Component> getValue(dia_int::MessageBase& msg) final;
 
 	public:
-		IncompatibleTypesError(
-			dia::SourcePosition    source_position,
-			const InteractiveType& expected_type,
-			const InteractiveType& actual_type
-		);
+		InteractiveFunction(
+			SymID function_symbol, base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
+		):
+			  function_symbol(function_symbol),
+			  pst_expr(std::move(pst_expr)) {}
 	};
 }

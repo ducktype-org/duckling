@@ -8,6 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -102,15 +103,19 @@ namespace compiler::helios::code {
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
 				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-				if (result) {
-					auto [operation, lhs_coercion, rhs_coercion] = std::move(result).value();
 
-					auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-					auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, lhs_coercion, rhs_coercion] = value;
 
-					return makeBox<BinaryOperatorExpr>(
-						ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-					);
+						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
+						return makeBox<BinaryOperatorExpr>(
+							ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+						);
+					}
+					opt_none { return {}; }
 				}
 				return {};
 			}
@@ -190,12 +195,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
-				auto result = fromChainExpr(ctx, chain_expr);
-				if (result.hasFailed()) {
-					// Error has occurred.
-					return;
-				}
-				node = std::move(result.valueOrThrow());
+				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
@@ -463,12 +463,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
-			);
-
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
 		}
@@ -484,9 +478,10 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	ExprConstructionResult getHoutOfExprWithExpectedType(
-		query::Context&                                  ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		const tsh::SymbolType<>                          expected_type
+		query::Context&                                      ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
+		const tsh::SymbolType<>                              expected_type,
+		base::Optional<std::function<void(query::Context&)>> log_error
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -498,15 +493,18 @@ namespace compiler::helios {
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrPanic().getVariant()) {
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
 			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
 			variant_case(InvalidCoercion, _) {
-				ctx.log(makeBox<CannotCoerceError>(
-					pst_expr.element.unlock(ctx)->getSourcePosition(),
-					expr_hout->expression_type.getSymbolType(),
-					expected_type
-				));
-
+				if (log_error.has_value()) {
+					(*log_error)(ctx);
+				} else {
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						pst_expr.element.unlock(ctx)->getSourcePosition(),
+						InteractiveType{ expr_hout->expression_type.getSymbolType() },
+						InteractiveType{ expected_type }
+					));
+				}
 				return query::Failed();
 			}
 			variant_default { CORE_PANIC("Unhandled coercion result variant."); }

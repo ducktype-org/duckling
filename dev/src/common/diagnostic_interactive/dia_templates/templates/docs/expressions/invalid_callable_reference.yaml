@@ -1,0 +1,16 @@
+metadata:
+  type: "docs"
+  family: "expressions"
+  name: "invalid_callable_reference"
+  code: "1100"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+header_message:
+  - "Invalid callable reference."
+
+description:
+  - "In Duckling, an expression cannot refer to multiple callable symbols when at least one is not a function. "
+  - "It must refer either to a set of overloaded functions or to a single symbol with a defined (possibly overloaded) call operator."

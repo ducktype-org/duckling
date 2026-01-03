@@ -2,6 +2,8 @@ from typing import List
 import re
 from pathlib import Path
 
+import click
+
 from .cpp_linter import get_files_for_linter
 from .helpers import (
     log_info,
@@ -17,14 +19,33 @@ def duck_linter_impl(
     branch: str = "origin/main",
     verbose: bool = False,
     no_merge_base: bool = False,
+    no_fix: bool = False,
 ):
     passed_all = True
+    files_with_fixes = []
 
-    file = get_source_files(all, branch, no_merge_base)
-    for f in file:
+    files = get_source_files(all, branch, no_merge_base)
+    for f in files:
         passed = f.runAllChecks(verbose)
         if not passed:
             passed_all = False
+        if len(f.fixes) > 0:
+            files_with_fixes.append(f)
+
+    if len(files_with_fixes) > 0 and not no_fix:
+        total_fixes = sum(len(f.fixes) for f in files_with_fixes)
+        log_new_line()
+        log_info(
+            f"Can perform {total_fixes} automatic fixes across {len(files_with_fixes)} files."
+        )
+        try:
+            value = click.prompt('Do you want to apply these fixes? ', type=bool)
+            if value:
+                for f in files_with_fixes:
+                    f.applyFixes()
+                log_info("Fixes applied!")
+        except EOFError:
+            pass
 
     return passed_all
 
@@ -34,12 +55,13 @@ class SourceFile:
         self.path = Path(path)
         self.dir = self.path.parent
         self.errors = []
+        self.fixes = []
         with open(path, "r") as file:
             self.content = file.read()
+        self.lines = self.content.splitlines(keepends=True)
 
     def _relativeImportChecks(self):
-        lines = self.content.splitlines()
-        for i, line in enumerate(lines):
+        for i, line in enumerate(self.lines):
             imports = re.findall(_RELATIVE_IMPORT_REGEX, line)
             for imp in imports:
                 import_path = self.dir / imp
@@ -47,6 +69,20 @@ class SourceFile:
                     self.errors.append(
                         f"Relative import `{imp}` does not exist: {self.path}:{i + 1}"
                     )
+                    self.fixes.append(
+                        lambda i=i, imp=imp: self._fixRelativeImport(i, imp)
+                    )
+
+    def _fixRelativeImport(self, line_index, import_path):
+        self.lines[line_index] = self.lines[line_index].replace(
+            f'"{import_path}"', f"<{import_path}>"
+        )
+
+    def applyFixes(self):
+        for fix in self.fixes:
+            fix()
+        with open(self.path, "w") as f:
+            f.writelines(self.lines)
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""
