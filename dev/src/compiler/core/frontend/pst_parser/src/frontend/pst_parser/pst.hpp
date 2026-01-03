@@ -173,6 +173,10 @@ namespace pst {
 			return file->getLogger();
 		}
 
+		[[nodiscard]] bool hasErrors() const {
+			return file->getLogger()->bad() || file->getIntLogger()->hasError();
+		}
+
 		[[nodiscard]]
 		Ref<tokenizer::TokenSource> getFile() const {
 			return file.ref();

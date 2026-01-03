@@ -2000,7 +2000,8 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+					ctx.logger.bad() or ctx.int_logger.hasError(),
+					"Logger should have recorded an error."
 				);
 
 				std::stringstream non_detailed_log;
@@ -2022,7 +2023,8 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+					ctx.logger.bad() or ctx.int_logger.hasError(),
+					"Logger should have recorded an error."
 				);
 
 				std::stringstream non_detailed_log;
@@ -2255,7 +2257,8 @@ private:
 				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+				ctx.logger.bad() or ctx.int_logger.hasError(),
+				"Logger should have recorded an error."
 			);
 
 			std::stringstream non_detailed_log;
@@ -2274,7 +2277,8 @@ private:
 				result->hasFailed(), "Query should have failed due to ambiguous return type."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+				ctx.logger.bad() or ctx.int_logger.hasError(),
+				"Logger should have recorded an error."
 			);
 
 			std::stringstream non_detailed_log;
