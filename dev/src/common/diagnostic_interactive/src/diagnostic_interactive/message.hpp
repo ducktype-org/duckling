@@ -88,6 +88,7 @@ namespace dia_int {
 	};
 
 	class CodeLocationArgument final: public Argument {
+	public:
 		struct FileLocation {
 			std::string file;
 			u64         line;
@@ -101,6 +102,7 @@ namespace dia_int {
 			}
 		};
 
+	private:
 		FileLocation location;
 
 	public:

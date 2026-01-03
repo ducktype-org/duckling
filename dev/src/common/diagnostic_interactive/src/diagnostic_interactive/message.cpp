@@ -238,7 +238,7 @@ namespace dia_int {
 
 	bool MessageBase::isError() const {
 		auto meta = getMetadata();
-		return meta.family == "error";
+		return meta.type == "error";
 	}
 }
 

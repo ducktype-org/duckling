@@ -11,7 +11,7 @@
 namespace dia_int {
 
 	std::ostream* Logger::immediate_print_stream = nullptr;
-	bool          Logger::immediate_print        = false;
+	bool          Logger::immediate_print        = true;
 
 	void Logger::terminalPrint(std::ostream& out) {
 		for (auto& diagnostic: diagnostics) evaluateToTerminalMessage(diagnostic.refMut(), out);
@@ -21,7 +21,7 @@ namespace dia_int {
 		if (message->isError()) has_error = true;
 
 		diagnostics.emplace_back(message->buildDiagnosticFile());
-		if (immediate_print)
+		if (immediate_print && immediate_print_stream)
 			evaluateToTerminalMessage(diagnostics.back().refMut(), *immediate_print_stream);
 	}
 
