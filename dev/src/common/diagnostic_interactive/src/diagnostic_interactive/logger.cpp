@@ -10,25 +10,22 @@
 
 namespace dia_int {
 
-	void Logger::dumpLog(std::ostream& out) {
-		for (auto& msg: diagnostics) {
-			try {
-				auto diagnostic_args = msg->buildDiagnosticFile();
-				// std::cout << diagnostic_args->toJson().dump(4) << "\n\n";
-				auto state = dia_int::evaluateDiagnostic(*diagnostic_args);
-				// state.debugPrint(std::cout);
-				auto view = dia_int::constructTreeView(state);
-				term_ui::print(view, out);
-			} catch (const std::exception& e) {
-				out << "Error while printing diagnostic message: \n" << e.what() << "\n";
-			}
-		}
-		diagnostics.clear();
+	std::ostream* Logger::immediate_print_stream = nullptr;
+	bool          Logger::immediate_print        = false;
+
+	void Logger::terminalPrint(std::ostream& out) {
+		for (auto& diagnostic: diagnostics) evaluateToTerminalMessage(diagnostic.refMut(), out);
 	}
 
-	void Logger::log(Box<MessageBase> message) { diagnostics.push_back(std::move(message)); }
+	void Logger::log(Box<MessageBase> message) {
+		if (message->isError()) has_error = true;
 
-	Logger::Logger() {
+		diagnostics.emplace_back(message->buildDiagnosticFile());
+		if (immediate_print)
+			evaluateToTerminalMessage(diagnostics.back().refMut(), *immediate_print_stream);
+	}
+
+	Logger::Logger(): has_error(false) {
 		dia_int::TemplateRegistrySingleton::setInstance(
 			makeBox<dia_int::TemplateResistryMainProvider>()
 		);
@@ -36,5 +33,27 @@ namespace dia_int {
 
 	usize Logger::messageCount() const { return diagnostics.size(); }
 
-	bool Logger::bad() const { return diagnostics.size() > 0; }
+	bool Logger::hasError() const { return has_error; }
+
+	void Logger::clear() {
+		diagnostics.clear();
+		has_error = false;
+	}
+
+	void Logger::evaluateToTerminalMessage(
+		CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
+	) {
+		try {
+			// std::cout << diagnostic_args->toJson().dump(4) << "\n\n";
+			auto state = dia_int::evaluateDiagnostic(*diagnostic_args);
+			// state.debugPrint(std::cout);
+			auto view = dia_int::constructTreeView(state);
+			term_ui::print(view, out);
+		} catch (const std::exception& e) {
+			out << "Error while printing diagnostic message: \n" << e.what() << "\n";
+		}
+	}
+
+	void Logger::evaluateToLanguageServerMessage(CRef<dia_args::Diagnostic>, std::ostream&) {}
+
 }

@@ -220,8 +220,7 @@ namespace dia_int {
 	class MessageBase {
 	private:
 		std::vector<Box<Argument>> arguments;
-
-		std::vector<Box<Entity>> entities;
+		std::vector<Box<Entity>>   entities;
 
 		/**
 		 */
@@ -232,13 +231,15 @@ namespace dia_int {
 		 * @brief Messages that are directly attached to the this message and will be displayed
 		 * below it.
 		 */
-		std::vector<Box<MessageBase>> attached_messages;
+		std::vector<std::string> attached_messages;
 
 		/**
 		 * @brief Additional messages that are not attached directly to this diagnostic,
 		 * but may be the link destination or explore link target.
 		 */
 		base::HashMap<std::string, Box<MessageBase>> linked_messages;
+
+		bool has_been_built = false;
 
 		virtual Metadata getMetadata() const = 0;
 
@@ -302,6 +303,8 @@ namespace dia_int {
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
+		bool isError() const;
+
 		// ============================== ADDING MESSAGES ==============================
 
 		/**
@@ -314,18 +317,34 @@ namespace dia_int {
 		 * The pointer messages can also be linked here.
 		 */
 		void addLinkedMessage(std::string id, Box<MessageBase> message) {
-			linked_messages.insertOrAssign(std::move(id), std::move(message));
+			linked_messages.put(std::move(id), std::move(message));
 		}
 
 		/**
-		 * @brief Attachs a message that will be displayed below this message.
+		 * @brief Attachs a message that will always be displayed below this message.
+		 * (on the contrary to linked messages that will be displayed after clicking a link).
 		 */
-		void attachMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
+		std::string addAttachedMessage(Box<MessageBase> note) {
+			std::string id = MessageBase::getUniqueID();
+			this->addLinkedMessage(id, std::move(note));
+			attached_messages.push_back(id);
+			return id;
+		}
+
+		/**
+		 * @brief Same as above but with specified message id.
+		 */
+		void addAttachedMessage(const std::string& id, Box<MessageBase> note) {
+			this->addLinkedMessage(id, std::move(note));
+			attached_messages.push_back(id);
+		}
 
 		// ============================  BUILDING DIAGNOSTIC FILE =============================
 
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
+		 * @warning This method can only be called once because it modifies the arguments by using
+		 * getValue(msg&) on the arguments.
 		 */
 		Box<dia_args::Diagnostic> buildDiagnosticFile();
 

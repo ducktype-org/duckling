@@ -2168,7 +2168,7 @@ private:
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
-			ctx.int_logger.dumpLog(ss);
+			ctx.int_logger.terminalPrint(ss);
 			assertTrue(
 				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."

@@ -5,6 +5,10 @@
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
+#include "base/collections/maps.hpp"
+
+#include "query_framework/context.hpp"
+
 namespace compiler::helios {
 	/**
 	 * @brief This element adds the alias chain information to the message
@@ -13,18 +17,19 @@ namespace compiler::helios {
 	 * i.e. the same way the user wrote it in the source code.
 	 */
 	class InteractiveType: public dia_int::InteractiveElement {
-		tsh::SymbolType<>                             symbol_type;
-		base::Optional<pst::Access<pst::LangElement>> pst_expr;
+		tsh::SymbolType<>                                     symbol_type;
+		base::Optional<pst::Access<pst::LangElement>>         pst_expr;
+		base::HashMap<std::string, Box<dia_int::MessageBase>> linked_messages;
+		std::string                                           displayed_name;
 
 		Box<dia_int::dia_args::Component> getValue(dia_int::MessageBase& msg) final;
 
 	public:
 		InteractiveType(
+			query::Context&                               ctx,
 			tsh::SymbolType<>                             symbol_type,
 			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
-		):
-			  symbol_type(symbol_type),
-			  pst_expr(std::move(pst_expr)) {}
+		);
 	};
 
 	/**
@@ -35,16 +40,18 @@ namespace compiler::helios {
 	 * It will support methods as well in the future.
 	 */
 	class InteractiveFunction final: public dia_int::InteractiveElement {
-		SymID                                         function_symbol;
-		base::Optional<pst::Access<pst::LangElement>> pst_expr;
+		SymID                                                 function_symbol;
+		base::Optional<pst::Access<pst::LangElement>>         pst_expr;
+		base::HashMap<std::string, Box<dia_int::MessageBase>> linked_messages;
+		std::string                                           displayed_name;
 
 		Box<dia_int::dia_args::Component> getValue(dia_int::MessageBase& msg) final;
 
 	public:
 		InteractiveFunction(
-			SymID function_symbol, base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
-		):
-			  function_symbol(function_symbol),
-			  pst_expr(std::move(pst_expr)) {}
+			query::Context&                               ctx,
+			SymID                                         function_symbol,
+			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
+		);
 	};
 }
