@@ -21,9 +21,9 @@ namespace query::internal {
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
 				if (logger::isCategoryEnabled(logger::DevLogCategories::QueryStacktraces)) {
-					what_str += base::getCurrentStackTrace(30);
+					what_str += base::getCurrentStackTrace(18);
 				} else {
-					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` dev logs to see the origin of the failure.\n";
+					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` dev logs to see the stacktrace of the origin of the failure.\n";
 				}
 			});
 		}

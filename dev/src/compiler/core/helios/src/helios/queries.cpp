@@ -32,8 +32,6 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <iostream>
-
 namespace compiler::helios {
 
 	/**
@@ -43,7 +41,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cerr << "ehhhh0\n";
 			auto scopes = ctx.query<QueryScopesInModule>(key);
 
 			HOUTUnit out;
@@ -55,17 +52,16 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
-					// if (kind(sym) == SymbolKind::Const)
-					// 	out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
-					// if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-					// 	out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
+					if (kind(sym) == SymbolKind::Const)
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
+						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
 						// we "catch" failure here to continue gathering other functions:
 						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
 						if (hout_function.hasFailed()) {
 							is_failed = true;
-							// std::cerr << "ehhhh?";
 							continue;
 						} else {
 							out.functions.push_back(hout_function.valueOrPanic());
@@ -75,7 +71,9 @@ namespace compiler::helios {
 						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
+
 			if (is_failed) return query::Failed();
+			
 			return out;
 		}
 

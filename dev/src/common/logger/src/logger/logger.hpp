@@ -53,7 +53,7 @@ namespace logger {
 	 * Checks if logging is enabled for the specified category.
 	 * @note This function is intended mostly for internal use
 	 * but can also be used externally to
-	 * conditionally perform some log-like action based on log category state.
+	 * conditionally perform some logging-like action based on log category state.
 	 */
 	bool isCategoryEnabled(DevLogCategories category);
 }
