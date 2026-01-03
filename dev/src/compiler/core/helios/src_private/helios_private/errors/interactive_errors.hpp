@@ -5,9 +5,9 @@
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include "base/collections/maps.hpp"
+#include <base/collections/maps.hpp>
 
-#include "query_framework/context.hpp"
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 	/**
