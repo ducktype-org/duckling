@@ -34,10 +34,7 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) {
 					const auto class_type
 						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->throwOnFail(
-								  "Not handling errors here yet... "
-								  "(getting type of generated constructor symbol)"
-							  )
+					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::ClassAbstractType>();
 
@@ -66,10 +63,7 @@ namespace compiler::helios {
 				variant_case(Parameter, param) {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
-					          ->throwOnFail(
-								  "Not handling errors here yet... "
-								  "(getting type of generated parameter symbol)"
-							  )
+					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
 					return tsh::SymbolType{

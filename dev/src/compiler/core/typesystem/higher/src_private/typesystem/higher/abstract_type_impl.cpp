@@ -165,7 +165,7 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
-		return ctx.query<QueryInterfaceOfClass>(this);
+		return &ctx.query<QueryInterfaceOfClass>(this)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {
@@ -254,9 +254,7 @@ namespace compiler::tsh {
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
-		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                 ->throwOnFail("Not handling ERRORS in TS yet")
-		                 .base;
+		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
 	}
@@ -264,23 +262,21 @@ namespace compiler::tsh {
 	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
 		query::Context& ctx
 	) const {
-		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       ->throwOnFail("Not handling ERRORS in TS yet")
-		                       .implements;
+		auto& implements
+			= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().implements;
 		return { implements.begin(), implements.end() };
 	}
 
 	std::vector<compiler::helios::SymID> ClassAbstractTypeImpl::getImplementedInterfaceSymbols(
 		query::Context& ctx
 	) const {
-		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       ->throwOnFail("Not handling ERRORS in TS yet")
-		                       .implements;
+		auto& implements
+			= ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
-		constexpr auto transformer = [](const AbstractType& interface) {
+		constexpr auto TRANSFORMER = [](const AbstractType& interface) {
 			return ClassAbstractType(interface).getSymbol();
 		};
-		auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
+		auto view = std::ranges::ref_view(implements) | std::views::transform(TRANSFORMER);
 		return { view.begin(), view.end() };
 	}
 }
