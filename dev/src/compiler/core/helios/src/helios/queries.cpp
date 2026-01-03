@@ -50,8 +50,6 @@ namespace compiler::helios {
 
 			bool is_failed = false;
 
-			std::cerr << "ehhhh1\n";
-
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 

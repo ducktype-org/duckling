@@ -23,7 +23,7 @@ namespace query::internal {
 				if (logger::isCategoryEnabled(logger::DevLogCategories::QueryStacktraces)) {
 					what_str += base::getCurrentStackTrace(30);
 				} else {
-					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` stacktraces to see the origin of the failure.\n";
+					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` dev logs to see the origin of the failure.\n";
 				}
 			});
 		}
