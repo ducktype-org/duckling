@@ -8,6 +8,8 @@ use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
+use super::DescriptionWithAnArticle;
+
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 use paste::item;
 use toml::value::{Array, Datetime};
@@ -18,12 +20,8 @@ pub struct TomlConfig {
     source: Option<PathBuf>,
 }
 
-trait TypeWithAnArticle {
-    fn type_str_with_article(&self) -> &'static str;
-}
-
-impl TypeWithAnArticle for Value {
-    fn type_str_with_article(&self) -> &'static str {
+impl DescriptionWithAnArticle for Value {
+    fn desc_with_article(&self) -> &'static str {
         match self {
             Value::String(_) => "a string",
             Value::Integer(_) => "an integer",
@@ -52,7 +50,7 @@ macro_rules! delegate_getter {
                         // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
                         None => Err(qp_err!("{}", self.make_location_error()))
                                     .context(
-                                        format!("the key `{key}` expects {}, not {}", $human_type, value.type_str_with_article())
+                                        format!("the key `{key}` expects {}, not {}", $human_type, value.desc_with_article())
                                     )
                     }
                 }
@@ -152,7 +150,7 @@ impl TomlConfig {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next.type_str_with_article(),
+                    next.desc_with_article(),
                 )
             };
             current = next;
@@ -186,7 +184,7 @@ impl TomlConfig {
             let Some(next) = current.get_mut(part) else {
                 unreachable!("we've just inserted a new part into the current");
             };
-            let next_type = next.type_str_with_article();
+            let next_type = next.desc_with_article();
             let Some(next) = next.as_table_mut() else {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
