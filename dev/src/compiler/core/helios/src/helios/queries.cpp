@@ -45,6 +45,10 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
+			// We want to continue gathering other entities
+			// even if some function queries fail,
+			// so we store in this variable whether any failure occurred,
+			// and return failure at the end if so.
 			bool is_failed = false;
 
 			for (auto scope: *scopes) {
