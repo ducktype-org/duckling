@@ -26,7 +26,9 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
-			dia_int::Logger::configureImmediatePrint(true, std::cerr);
+			dia_int::Logger::configureImmediatePrint(
+				debug_options.immediate_print_diagnostics, std::cerr
+			);
 
 			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
 			driver::llvm_dump_asm = debug_options.dump_llvm_asm;

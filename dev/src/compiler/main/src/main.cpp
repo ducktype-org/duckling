@@ -88,9 +88,9 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                          .copyValueOr(std::vector<std::string>{}),
-
-		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
-		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
+		.immediate_print_diagnostics = true,
+		.dump_llvm_ir                = parsing_result.isFlag("dump-llvm-ir"),
+		.dump_llvm_asm               = parsing_result.isFlag("dump-llvm-asm"),
 	};
 }
 
