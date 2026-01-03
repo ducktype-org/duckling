@@ -57,9 +57,9 @@ namespace dia_int {
 			CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
 		);
 
-		static void evaluateToLanguageServerMessage(
-			CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
-		);
+		// static void evaluateToLanguageServerMessage(
+		// 	CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
+		// );
 
 		static void configureImmediatePrint(bool enabled, std::ostream& stream = std::cerr) {
 			immediate_print        = enabled;

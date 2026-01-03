@@ -54,6 +54,5 @@ namespace dia_int {
 		}
 	}
 
-	void Logger::evaluateToLanguageServerMessage(CRef<dia_args::Diagnostic>, std::ostream&) {}
-
+	// void Logger::evaluateToLanguageServerMessage(CRef<dia_args::Diagnostic>, std::ostream&) {}
 }
