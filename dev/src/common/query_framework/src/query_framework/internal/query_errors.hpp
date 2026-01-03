@@ -3,7 +3,7 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <iostream>
+#include <logger/logger.hpp>
 
 namespace query::internal {
 	/**
@@ -20,9 +20,11 @@ namespace query::internal {
 
 			IF_BUILD_TYPE_DEV({
 				what_str += "Stacktrace:\n";
-				what_str += base::getCurrentStackTrace(6);
-
-				// std::cerr << "stacktrace!\n";
+				if (logger::isCategoryEnabled(logger::DevLogCategories::QueryStacktraces)) {
+					what_str += base::getCurrentStackTrace(30);
+				} else {
+					what_str += "Stacktraces disabled!\nSet `QueryStacktraces` stacktraces to see the origin of the failure.\n";
+				}
 			});
 		}
 
