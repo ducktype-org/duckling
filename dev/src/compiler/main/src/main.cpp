@@ -260,7 +260,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTree(path_to_compile, package_name);
+					auto root = global_state::getMainPackage().root_module;
 
 					defer(printContextErrors());
 					auto output_artifact
