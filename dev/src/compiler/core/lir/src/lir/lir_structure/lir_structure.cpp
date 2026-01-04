@@ -147,7 +147,7 @@ namespace compiler::lir {
 				printOutput(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
-			output << output_value.str() << " ";
+			output << output_value.str() << ' ';
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation) << "  ";
 			if (!instruction.output.has_value()) output << std::left << std::setw(12);
@@ -174,7 +174,7 @@ namespace compiler::lir {
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
-				output << "\n";
+				output << '\n';
 			}
 			output << "{\n";
 
