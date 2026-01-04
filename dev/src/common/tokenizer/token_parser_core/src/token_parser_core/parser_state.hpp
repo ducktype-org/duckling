@@ -26,8 +26,8 @@ namespace tpc {
 		 * @brief Data needed to handle restoring to a fallback
 		 */
 		struct Fallback {
-			SubStreamType type;
-			Box<TokenStream>   saved_stream;
+			SubStreamType    type;
+			Box<TokenStream> saved_stream;
 			/**
 			 * @brief Jump done after restoring a fallback.
 			 */
@@ -102,7 +102,7 @@ namespace tpc {
 		virtual void goUpAndSkip();
 
 		/**
-		 * @brief Logs an error relatively to the current token. 
+		 * @brief Logs an error relatively to the current token.
 		 * @note This version is deprecated in favor of the diagnostic Message system.
 		 */
 		[[deprecated]]

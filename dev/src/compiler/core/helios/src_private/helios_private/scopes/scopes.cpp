@@ -386,7 +386,7 @@ namespace compiler::helios {
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
 					} else if (auto using_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
-						// Using has DeclType::Transparent if it ends in .* 
+						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);

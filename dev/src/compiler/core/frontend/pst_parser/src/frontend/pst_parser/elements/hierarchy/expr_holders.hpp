@@ -42,7 +42,9 @@ namespace pst {
 	/**
 	 * @brief Collects different parsing entries.
 	 *
-	 * @note The naming scheme `until_____` that is used for these functions can be viewed as `is____` when considering them in a vacuum. `until_____` is used for them to be more readable as template arguments in expression holders as this is their goal.
+	 * @note The naming scheme `until_____` that is used for these functions can be viewed as
+	 * `is____` when considering them in a vacuum. `until_____` is used for them to be more readable
+	 * as template arguments in expression holders as this is their goal.
 	 */
 	class ExprParserHelper {
 	public:

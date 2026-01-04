@@ -52,7 +52,8 @@ namespace tpc {
 		/**
 		 * @brief Returns a token relative to the current position
 		 *
-		 * @param fwd distance forward from the current position to checked token. negative value indicates backward position.
+		 * @param fwd distance forward from the current position to checked token. negative value
+		 * indicates backward position.
 		 */
 		[[nodiscard]]
 		const Token& peek(i64 fwd = 0) const;

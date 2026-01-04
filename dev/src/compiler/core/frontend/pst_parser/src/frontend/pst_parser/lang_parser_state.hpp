@@ -6,11 +6,10 @@
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
 
+#include <logger/logger.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
-
-#include <logger/logger.hpp>
 
 #include <utility>
 

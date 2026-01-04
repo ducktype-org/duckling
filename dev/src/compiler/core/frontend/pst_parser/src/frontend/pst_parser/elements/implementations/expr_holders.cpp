@@ -5,7 +5,6 @@
 #include "../hierarchy/expressions/ternary.hpp"
 #include "preamble.hpp"
 
-
 namespace pst {
 	void ExprHolder::dprint(std::ostream& out) const {
 		out << "{";
