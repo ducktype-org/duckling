@@ -1,7 +1,8 @@
 #pragma once
 
-#include <ostream>
 #include <base/pointers/ref.hpp>
+
+#include <ostream>
 
 namespace dia_int {
 	/**
