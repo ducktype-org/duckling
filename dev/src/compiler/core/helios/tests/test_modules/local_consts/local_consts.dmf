@@ -1,6 +1,6 @@
-const A: i32 = 1;
+const A: i32 = sum(0, 1);
 
-fun main() -> i32 = {
-	const myConst: i64 = 100;
-	return 0;
+fun sum(x: i32, y: i32) -> i32 = {
+	const sumConst = x + y;
+	return sumConst;
 }
