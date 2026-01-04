@@ -53,7 +53,6 @@ public:
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testLocalConsts);
-		TESTER_ADD_TEST(testLocalConsts);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
