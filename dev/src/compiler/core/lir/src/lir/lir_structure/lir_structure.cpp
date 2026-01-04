@@ -184,7 +184,7 @@ namespace compiler::lir {
 				for (const auto& instruction: block->instructions) {
 					output << "    ";
 					printInstruction(instruction);
-					output << "\n";
+					output << '\n';
 				}
 				printInstruction(block->terminator);
 				output << "\n";
