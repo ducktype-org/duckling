@@ -90,7 +90,7 @@ namespace lexer {
 
 		/**
 		 * @brief Makes a sentinel that copies the basic characteristics of the token. The copied
-		 * characteristics are string value and position.
+		 * characteristics are position.
 		 */
 		[[nodiscard]]
 		Token asSentinel() const;

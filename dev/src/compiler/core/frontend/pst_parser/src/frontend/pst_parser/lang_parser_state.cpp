@@ -11,7 +11,7 @@ namespace pst {
 			"No recursive token stream to go up from"
 		);
 		checkAllParsed();
-		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
+		current_stream = std::move(fallback_stack.back().saved_stream);
 		fallback_stack.pop_back();
 		skip_till_fallback = false;
 	}
@@ -23,7 +23,7 @@ namespace pst {
 		);
 		checkAllParsed();
 		u64 fwd        = fallback_stack.back().post_jump;
-		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
+		current_stream = std::move(fallback_stack.back().saved_stream);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 		skip_till_fallback = false;
@@ -32,7 +32,7 @@ namespace pst {
 	void LangParserState::setFallback(u64 length) {
 		auto new_stream = ctokens().getSubstream(length);
 		fallback_stack.emplace_back(Fallback{ .type         = NonRecursive,
-		                                      .saved_stream = std::move(*current_stream),
+		                                      .saved_stream = std::move(current_stream),
 		                                      .post_jump    = length });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
@@ -44,7 +44,7 @@ namespace pst {
 		);
 		checkAllParsed();
 		u64 fwd        = fallback_stack.back().post_jump;
-		current_stream = makeBox<TokenStream>(std::move(fallback_stack.back().saved_stream));
+		current_stream = std::move(fallback_stack.back().saved_stream);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));
 		skip_till_fallback = false;

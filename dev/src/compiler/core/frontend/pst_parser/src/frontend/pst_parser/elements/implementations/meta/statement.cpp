@@ -12,7 +12,7 @@ namespace pst {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Non empty statement expected.";
+			return "Statement expected.";
 		}
 
 	public:
@@ -28,13 +28,23 @@ namespace pst {
 
 		template<class T>
 		struct StmtClassifiers {
+			/**
+			 * @brief Function that checks heuristically for a potential end of a typical statement.
+			 * 
+			 * Sentinel just indicates there are no more tokens.
+			 * The typical valid ends are: 
+			 *  - `;` being the end of a statement.
+			 *  - `{}` being the end of a statement.
+			 * The heuristics that check that a new statement seems to start are:
+			 *  - `@` being the start of an attribute which can only be at the begining of a statement.
+			 *  - A keyword that is always at the start of a statement.
+			 *  - A keyword that is a specifier.
+			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsAction)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
 				    || Conditions::isBlockGroup(state, fwd - 1);
@@ -43,13 +53,16 @@ namespace pst {
 
 		template<>
 		struct StmtClassifiers<ExprStmt> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of an expression statement.
+			 * 
+			 * The difference from the general function is that `{}` doesn't indicate the end of an expression statement.
+			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsAction)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 			}
@@ -57,21 +70,34 @@ namespace pst {
 
 		template<>
 		struct StmtClassifiers<If> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of an if statement.
+			 * 
+			 * This function is a very rough placeholder that should work in most correct cases but a proper heuristic handling will be needed.
+			 *
+			 * @TODO: #1761 Add proper handling instead.
+			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel)
 				    || ((state[fwd - 1].is(Special::Semicolon)
 				         || Conditions::isBlockGroup(state, fwd - 1))
-				        && !state[fwd].is(Keyword::Else) && !state[fwd].is(Keyword::Elif));
+				        && !state[fwd].is(Keyword::Else));
 			}
 		};
 
 		template<>
 		struct StmtClassifiers<StmtSpecifier> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of a specifier statement.
+			 * 
+			 * This function is a very rough placeholder that will be replaced with the rework of how specifiers work
+			 *
+			 * @TODO: #1746 Will remove this part.
+			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
-				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else)
-				        && !state[fwd].is(Keyword::Elif));
+				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else));
 			}
 		};
 

@@ -22,7 +22,7 @@ namespace tpc {
 	class TokenStream {
 		const Tokens& tokens;          ///< Source list of tokens
 		usize         where;           ///< current position
-		usize         from, to;        ///< end position
+		usize         from, to;        ///< begin and end position.
 		const Token   sentinel_end;    ///< Token to return if out of bounds forward
 		const Token   sentinel_begin;  ///< Token to return if out of bounds backwards
 
@@ -52,7 +52,7 @@ namespace tpc {
 		/**
 		 * @brief Returns a token relative to the current position
 		 *
-		 * @param fwd distance forward from the current position to checked token
+		 * @param fwd distance forward from the current position to checked token. negative value indicates backward position.
 		 */
 		[[nodiscard]]
 		const Token& peek(i64 fwd = 0) const;

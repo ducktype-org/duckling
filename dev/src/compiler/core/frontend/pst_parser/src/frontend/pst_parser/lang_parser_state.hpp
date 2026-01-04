@@ -10,6 +10,8 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
 
+#include <logger/logger.hpp>
+
 #include <utility>
 
 namespace pst {
@@ -65,14 +67,14 @@ namespace pst {
 
 		/**
 		 * @brief deletes current stream and makes last stream the current stream. Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
 		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUp() override;
 		/**
 		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token(the recursive token that was the source of the deleted stream). Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * token (the recursive token that was the source of the deleted stream). Resets error
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
 		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void goUpAndSkip() override;
@@ -84,7 +86,7 @@ namespace pst {
 
 		/**
 		 * @brief Goes back from the fallback sub-stream to the fallback position. Resets error
-		 * bit(Additional errors are no longer ignored). This will produce an error if the whole
+		 * bit (additional errors are no longer ignored). This will produce an error if the whole
 		 * sub-stream wasn't parsed and an error wasn't emitted.
 		 */
 		void exitFallback();

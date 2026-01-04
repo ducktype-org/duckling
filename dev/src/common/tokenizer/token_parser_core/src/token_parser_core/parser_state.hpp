@@ -7,7 +7,6 @@
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
-#include <logger/logger.hpp>
 
 namespace tpc {
 
@@ -28,7 +27,7 @@ namespace tpc {
 		 */
 		struct Fallback {
 			SubStreamType type;
-			TokenStream   saved_stream;
+			Box<TokenStream>   saved_stream;
 			/**
 			 * @brief Jump done after restoring a fallback.
 			 */
@@ -103,8 +102,10 @@ namespace tpc {
 		virtual void goUpAndSkip();
 
 		/**
-		 * @brief Logs an error relatively to the current token
+		 * @brief Logs an error relatively to the current token. 
+		 * @note This version is deprecated in favor of the diagnostic Message system.
 		 */
+		[[deprecated]]
 		virtual void fail(i64 rel_pos, const std::string& message) {
 			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}

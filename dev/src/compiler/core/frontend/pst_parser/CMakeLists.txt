@@ -33,6 +33,7 @@ set_source_files_properties(${ClassElementsImplementationFiles}
 )
 
 file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
+	"${PST_SRC}/elements/implementations/expr_holders.cpp"
 	"${PST_SRC}/elements/implementations/meta/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"

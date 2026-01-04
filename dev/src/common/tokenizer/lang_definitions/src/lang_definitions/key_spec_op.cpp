@@ -42,13 +42,13 @@ namespace lang_def {
 			{ Keyword::Expand, "expand", KeywordFlagsOptions::IsStmtStart },
 
 			// These Keywords also indicate start of a statement.
-			{ Keyword::Return, "return", KeywordFlagsOptions::IsAction },
-			{ Keyword::Break, "break", KeywordFlagsOptions::IsAction },
-			{ Keyword::Continue, "continue", KeywordFlagsOptions::IsAction },
-			{ Keyword::Redo, "redo", KeywordFlagsOptions::IsAction },
-			{ Keyword::Restart, "restart", KeywordFlagsOptions::IsAction },
-			{ Keyword::Defer, "defer", KeywordFlagsOptions::IsAction },
-			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsAction },
+			{ Keyword::Return, "return", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction},
+			{ Keyword::Break, "break", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
+			{ Keyword::Continue, "continue", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
+			{ Keyword::Redo, "redo", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
+			{ Keyword::Restart, "restart", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
+			{ Keyword::Defer, "defer", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
+			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsStmtStart | KeywordFlagsOptions::IsAction },
 
 			// These Keywords also indicate start of a statement.
 			{ Keyword::Test, "test", KeywordFlagsOptions::IsSpecifier },
@@ -60,6 +60,9 @@ namespace lang_def {
 
 			// If doesn't always indicate statement start.
 			{ Keyword::If, "if", KeywordFlags() },
+			{ Keyword::Then, "then", KeywordFlags() },
+			{ Keyword::Else, "else", KeywordFlags() },
+			{ Keyword::Elif, "elif", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
@@ -76,9 +79,6 @@ namespace lang_def {
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 
-			{ Keyword::Then, "then", KeywordFlags() },
-			{ Keyword::Else, "else", KeywordFlags() },
-			{ Keyword::Elif, "elif", KeywordFlags() },
 			{ Keyword::With, "with", KeywordFlags() },
 			{ Keyword::Try, "try", KeywordFlags() },
 			{ Keyword::Catch, "catch", KeywordFlags() },

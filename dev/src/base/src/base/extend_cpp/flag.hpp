@@ -86,11 +86,11 @@
 			}                                                                                  \
 		};                                                                                     \
                                                                                                \
-		inline flag_name operator|(const enum_name& single_option, const flag_name& oth) {     \
+		constexpr inline flag_name operator|(const enum_name& single_option, const flag_name& oth) {     \
 			return flag_name(single_option) | oth;                                             \
 		}                                                                                      \
                                                                                                \
-		inline flag_name operator|(const enum_name& single_option, const enum_name& oth) {     \
+		constexpr inline flag_name operator|(const enum_name& single_option, const enum_name& oth) {     \
 			return flag_name(single_option) | oth;                                             \
 		}                                                                                      \
 	}
