@@ -1,6 +1,6 @@
 const A: i32 = 1;
 
-int main() {
+fun main() -> i32 = {
 	const myConst: i64 = 100;
 	return 0;
 }
