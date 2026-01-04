@@ -1,0 +1,6 @@
+const A: i32 = 1;
+
+int main() {
+	const myConst: i64 = 100;
+	return 0;
+}

@@ -53,6 +53,7 @@ public:
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testLocalConsts);
+		TESTER_ADD_TEST(testLocalConsts);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -151,17 +152,11 @@ private:
 	}
 
 	void testLocalConsts() {
-		// auto [_, root_scope] = getModule(fs::File(path("test_modules/local_consts")));
-
-		// ASSERT_EQUAL(100, getConstValueAs<i64>("myConst", root_scope));
-	
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/local_consts")));
 
-		// ASSERT_EQUAL(67, getConstValueAs<i64>("exited", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
-
 	}
-	
+
 	void testMetaCompTime() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
 
