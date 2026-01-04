@@ -3,8 +3,9 @@
 #include "access.hpp"
 #include "functors.hpp"
 #include "queries.hpp"
+#include "source_file.hpp"
 
-#include <base/collections/stable_container.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_cache_macros.hpp>
@@ -15,6 +16,10 @@
 #include <ranges>
 #include <regex>
 #include <sstream>
+
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+	#include <vector>
+#endif
 
 namespace {
 	/**
@@ -27,9 +32,18 @@ namespace {
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
 
 	/**
-	 * StableVector that stores all ModuleTree instances.
+	 * StableHashMap that stores all ModuleTree instances.
 	 */
-	base::StableVector<compiler::frontend::ModuleTree> modules;
+	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
+	usize                                                      next_module_storage_key = 0;
+
+/**
+ * Dangling reference tracking for ModuleTree instances.
+ * Used in DEV_DEBUG builds to track dangling references to ModuleTree instances.
+ */
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+	std::vector<base::Ref<compiler::frontend::ModuleTree>> dangling_module_refs;
+#endif
 
 	/**
 	 * Checks if a file name is valid according to the reject regex.
@@ -248,6 +262,45 @@ namespace compiler::frontend {
 		}
 	}
 
+	void ModuleTree::removeModuleFromStorage(Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			module->m_storage_handle.has_value(),
+			"Attempted to remove ModuleTree without storage handle"
+		);
+		const auto storage_key = module->m_storage_handle.value();
+		recordDanglingReference(module);
+		const bool erased = modules.erase(storage_key);
+		CORE_ASSERT(erased, "Failed to remove ModuleTree from storage");
+	}
+
+	void ModuleTree::checkDanglingReference(const base::Ref<ModuleTree>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		const auto it = std::ranges::find(dangling_module_refs, candidate);
+		if (it != dangling_module_refs.end())
+			CORE_PANIC("dangling reference used after removing ModuleTree");
+#else
+		(void) candidate;
+#endif
+	}
+
+	void ModuleTree::recordDanglingReference(const base::Ref<ModuleTree>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		const auto it = std::ranges::find(dangling_module_refs, candidate);
+		if (it == dangling_module_refs.end()) dangling_module_refs.push_back(candidate);
+#else
+		(void) candidate;
+#endif
+	}
+
+	void ModuleTree::clearDanglingReferenceRecord(const base::Ref<ModuleTree>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		auto it = std::ranges::find(dangling_module_refs, candidate);
+		if (it != dangling_module_refs.end()) dangling_module_refs.erase(it);
+#else
+		(void) candidate;
+#endif
+	}
+
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File&   directory,
 		std::string_view  package_id,
@@ -405,9 +458,12 @@ namespace compiler::frontend {
 		m_finalized = true;
 
 		// Create new ModuleTree instance
-		modules.pushBack(ModuleTree());
-		Ref<ModuleTree> module_ref = modules.last();
-		ModuleID        mod_id(module_ref);
+		const auto      storage_key  = next_module_storage_key++;
+		auto            inserted     = modules.put(storage_key, ModuleTree());
+		Ref<ModuleTree> module_ref   = &inserted->value;
+		module_ref->m_storage_handle = storage_key;
+		ModuleTree::clearDanglingReferenceRecord(module_ref);
+		ModuleID mod_id(module_ref);
 
 		module_ref->m_id = mod_id;
 
@@ -443,6 +499,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
@@ -461,7 +518,12 @@ namespace compiler::frontend {
 
 		// Remove file from source_files
 		source_files.erase(it);
-		// @TODO: remove SourceFile here #1252
+
+		// Update module hash
+		module->updateModuleHash();
+
+		// Remove SourceFile from storage. This invalidates the SourceFile instance!
+		SourceFile::removeSourceFile(file);
 	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -470,6 +532,7 @@ namespace compiler::frontend {
 			"Main source file is already set, remove it first"
 		);
 		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::addSubmodule(
@@ -523,6 +586,12 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the submodule and its children
 		submodule->invalidateHash();
+
+		// Update module hash for the parent module since the number of children changed
+		// Adding a submodule does not change the path component hash of the module so we do not
+		// need to invalidate hash For all SourceFiles and Submodules
+		// @TODO: #1253 every update and change to module should invalidate query caches
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -557,7 +626,10 @@ namespace compiler::frontend {
 				"Module ", module->getName().strView(), " does not have a main source file"
 			)
 		);
+		// Remove SourceFile from storage. This invalidates the SourceFile instance!
+		SourceFile::removeSourceFile(module->m_main_source_file.value());
 		module->m_main_source_file = {};
+		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -628,6 +700,9 @@ namespace compiler::frontend {
 
 		// Invalidate component hash for the module and its children as the parent changed
 		module->invalidateHash();
+
+		// Update module hash for the parent module since the number of children changed
+		parent->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::changePackageID(
@@ -660,8 +735,6 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
 		auto parent = module->m_parent;
 
-		// @TODO: we want to remove each SourceFile associated with this module #1252
-
 		// Update parent module if it exists
 		if (parent.has_value()) {
 			// Remove the submodule from the parent's submodules
@@ -683,7 +756,68 @@ namespace compiler::frontend {
 			submodules.erase(it);
 		}
 
-		// @TODO: we also want to remove the module from vector here #1252
+		// Chenge the parent of all submodules to the parent of the removed module
+		for (auto& [_, submodule]: module->m_submodules) {
+			if (parent.has_value()) {
+				parent.value()->m_submodules.put(submodule->getName(), submodule);
+				submodule->m_parent = parent.value();
+			} else {
+				submodule->m_parent = {};
+			}
+			submodule->invalidateHash();  // invalidate hash as parent changed
+		}
+
+		if (parent.has_value()) {
+			// Update module hash for the parent module since the number of children changed
+			parent.value()->updateModuleHash();
+		}
+
+		// Remove all source files from storage this will invalidate the SourceFile instances!
+		for (auto& source_file: module->m_source_files) SourceFile::removeSourceFile(source_file);
+
+		// Remove main source file. This will invalidate the SourceFile instance!
+		if (module->m_main_source_file.has_value())
+			SourceFile::removeSourceFile(module->m_main_source_file.value());
+
+		// Remove the module from storage. This will invalidate the ModuleTree instance!
+		ModuleTree::removeModuleFromStorage(module);
+	}
+
+	void ModuleTreeModifier::removeModuleRecursive(base::Ref<ModuleTree> module) {
+		auto parent = module->m_parent;
+
+		if (parent.has_value()) {
+			auto& submodules = parent.value()->m_submodules;
+			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
+                return pair.second == module;
+            });
+			CORE_ASSERT(
+				it != submodules.end(),
+				base::strConcat(
+					"Submodule with Name ",
+					module->getName(),
+					" and hash ",
+					ModuleID(module).queryUnstablePerfectHash(),
+					" does not exist in parent module ",
+					parent.value()->getName().strView()
+				)
+			);
+			submodules.erase(it);
+			parent.value()->updateModuleHash();
+		}
+
+		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
+			for (auto& [_, child]: current->m_submodules) self(self, child);
+
+			for (auto& source_file: current->m_source_files)
+				SourceFile::removeSourceFile(source_file);
+			if (current->m_main_source_file.has_value())
+				SourceFile::removeSourceFile(current->m_main_source_file.value());
+
+			ModuleTree::removeModuleFromStorage(current);
+		};
+
+		recursive_delete(recursive_delete, module);
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {

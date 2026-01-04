@@ -3,7 +3,11 @@
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <base/collections/stable_container.hpp>
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+	#include <vector>
+#endif
+
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>
@@ -15,9 +19,10 @@ namespace {
 	ContentMap to_content;
 
 	/**
-	 * StableVector that stores all SourceFile instances.
+	 * StableHashMap that stores all SourceFile instances.
 	 */
-	base::StableVector<compiler::frontend::SourceFile> files;
+	base::StableHashMap<usize, compiler::frontend::SourceFile> files;
+	usize                                                      next_storage_key = 0;
 
 	/*
 	 * Map that stores all SourceFile instances by their file path.
@@ -25,6 +30,10 @@ namespace {
 	 */
 	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
 		files_map;
+
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+	std::vector<base::Ref<compiler::frontend::SourceFile>> dangling_source_file_refs;
+#endif
 }
 
 namespace compiler::frontend {
@@ -42,10 +51,14 @@ namespace compiler::frontend {
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module));
-		files_map.at(abs_path).emplace_back(files.last());
-		files.last()->file_id = FileID(files.last());
-		return files.last();
+		const auto storage_key = next_storage_key++;
+		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
+		Ref<SourceFile> created_ref(&inserted->value);
+		created_ref->storage_handle = storage_key;
+		clearDanglingReferenceRecord(created_ref);
+		created_ref->file_id = FileID(created_ref);
+		files_map.at(abs_path).emplace_back(created_ref);
+		return created_ref;
 	}
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
@@ -104,4 +117,62 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
+
+	void SourceFile::removeSourceFile(Ref<SourceFile> source_file) {
+		auto abs_path = source_file->file.getFilePath().absolute().getPath();
+
+		if (files_map.contains(abs_path)) {
+			auto&      entries = files_map.at(abs_path);
+			const auto removal = std::ranges::remove_if(
+				entries.begin(),
+				entries.end(),
+				[source_file](const base::Ref<SourceFile>& candidate) {
+					return candidate == source_file;
+				}
+			);
+			entries.erase(removal.begin(), removal.end());
+
+			if (entries.empty()) {
+				files_map.erase(abs_path);
+				to_content.erase(abs_path);
+			}
+		}
+
+		CORE_ASSERT(
+			source_file->storage_handle.has_value(),
+			"Attempted to remove SourceFile without storage handle"
+		);
+		const auto storage_key = source_file->storage_handle.value();
+		recordDanglingReference(source_file);
+		const bool erased = files.erase(storage_key);
+		CORE_ASSERT(erased, "Failed to remove SourceFile from storage");
+	}
+
+	void SourceFile::checkDanglingReference(const base::Ref<SourceFile>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		const auto it = std::ranges::find(dangling_source_file_refs, candidate);
+		if (it != dangling_source_file_refs.end())
+			CORE_PANIC("dangling reference used after removing SourceFile");
+#else
+		(void) candidate;
+#endif
+	}
+
+	void SourceFile::recordDanglingReference(const base::Ref<SourceFile>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		const auto it = std::ranges::find(dangling_source_file_refs, candidate);
+		if (it == dangling_source_file_refs.end()) dangling_source_file_refs.push_back(candidate);
+#else
+		(void) candidate;
+#endif
+	}
+
+	void SourceFile::clearDanglingReferenceRecord(const base::Ref<SourceFile>& candidate) {
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		auto it = std::ranges::find(dangling_source_file_refs, candidate);
+		if (it != dangling_source_file_refs.end()) dangling_source_file_refs.erase(it);
+#else
+		(void) candidate;
+#endif
+	}
 }

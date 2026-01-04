@@ -2,6 +2,8 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
@@ -54,6 +56,8 @@ public:
 		TESTER_ADD_TEST(testModuleTreeModifierVariants);
 		TESTER_ADD_TEST(testManualModuleTreeBuilder);
 		TESTER_ADD_TEST(testModuleLoop);
+		TESTER_ADD_TEST(testModuleRemovalOperations);
+		TESTER_ADD_TEST(testModuleRecursiveRemoval);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
 	}
@@ -488,6 +492,124 @@ private:
 			ASSERT_EQUAL("new_package_id", root_mod->getPackageID().strView());
 			ASSERT_EQUAL("new_package_id", sub_mod->getPackageID().strView());
 		}
+	}
+
+	void testModuleRemovalOperations() {
+		std::vector<fs::File> cleanup_files;
+
+		auto root_builder = ModuleTreeBuilder::create();
+		root_builder->setName(base::StrID("removal_root"));
+		root_builder->setPackageID("removal_pkg");
+		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
+		cleanup_files.push_back(root_main);
+		root_builder->setMainSourceFile(root_main);
+		auto root = root_builder->finalize();
+
+		auto child_builder = ModuleTreeBuilder::create();
+		child_builder->setName(base::StrID("removal_child"));
+		child_builder->setPackageID("removal_pkg");
+		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
+		cleanup_files.push_back(child_main);
+		child_builder->setMainSourceFile(child_main);
+		auto child = child_builder->finalize();
+
+		auto grand_builder = ModuleTreeBuilder::create();
+		grand_builder->setName(base::StrID("removal_grand"));
+		grand_builder->setPackageID("removal_pkg");
+		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
+		cleanup_files.push_back(grand_main);
+		grand_builder->setMainSourceFile(grand_main);
+		auto grand = grand_builder->finalize();
+
+		ModuleTreeModifier::addSubmodule(child, grand);
+		ModuleTreeModifier::addSubmodule(root, child);
+
+		auto extra_source = fs::FileManager::createRandomVirtualFile("fn extra() {}");
+		cleanup_files.push_back(extra_source);
+		ModuleTreeModifier::addSourceFile(child, extra_source);
+
+		ASSERT_TRUE(hasSubmodule(root->getSubmodules(), base::StrID("removal_child")));
+		auto child_id = child->getModuleID();
+		auto grand_id = grand->getModuleID();
+
+		ModuleTreeModifier::removeModule(child);
+
+		ASSERT_TRUE(hasSubmodule(root->getSubmodules(), base::StrID("removal_grand")));
+		ASSERT_EQUAL(false, hasSubmodule(root->getSubmodules(), base::StrID("removal_child")));
+		auto promoted = getSubmodule(root->getSubmodules(), base::StrID("removal_grand"));
+		ASSERT_TRUE(getRef(promoted)->getParentModule().has_value());
+		ASSERT_EQUAL(
+			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
+		);
+
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		assertThrows<base::Panic>(
+			[&]() { (void) GetModuleID_Functor::get(child_id); },
+			"Dangling ModuleTree should panic after removeModule"
+		);
+#else
+		(void) child_id;
+#endif
+
+		auto grand_ref = GetModuleID_Functor::get(grand_id);
+		ASSERT_EQUAL(base::StrID("removal_grand"), grand_ref->getName());
+
+		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
+	}
+
+	void testModuleRecursiveRemoval() {
+		std::vector<fs::File> cleanup_files;
+
+		auto root_builder = ModuleTreeBuilder::create();
+		root_builder->setName(base::StrID("recursive_root"));
+		root_builder->setPackageID("recursive_pkg");
+		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
+		cleanup_files.push_back(root_main);
+		root_builder->setMainSourceFile(root_main);
+		auto root = root_builder->finalize();
+
+		auto child_builder = ModuleTreeBuilder::create();
+		child_builder->setName(base::StrID("recursive_child"));
+		child_builder->setPackageID("recursive_pkg");
+		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
+		cleanup_files.push_back(child_main);
+		child_builder->setMainSourceFile(child_main);
+		auto child = child_builder->finalize();
+
+		auto grand_builder = ModuleTreeBuilder::create();
+		grand_builder->setName(base::StrID("recursive_grand"));
+		grand_builder->setPackageID("recursive_pkg");
+		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
+		cleanup_files.push_back(grand_main);
+		grand_builder->setMainSourceFile(grand_main);
+		auto grand = grand_builder->finalize();
+
+		ModuleTreeModifier::addSubmodule(child, grand);
+		ModuleTreeModifier::addSubmodule(root, child);
+
+		auto child_id = child->getModuleID();
+		auto grand_id = grand->getModuleID();
+
+		ModuleTreeModifier::removeModuleRecursive(child);
+
+		ASSERT_EQUAL(false, hasSubmodule(root->getSubmodules(), base::StrID("recursive_child")));
+		ASSERT_TRUE(root->getSubmodules().empty());
+
+#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
+		assertThrows<base::Panic>(
+			[&]() { (void) GetModuleID_Functor::get(child_id); },
+			"Dangling ModuleTree should panic after removeModuleRecursive"
+		);
+		assertThrows<base::Panic>(
+			[&]() { (void) GetModuleID_Functor::get(grand_id); },
+			"Recursive removal should also invalidate grandchildren"
+		);
+#else
+		(void) child_id;
+		(void) grand_id;
+#endif
+
+		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
 
 	void testManualModuleTreeBuilder() {
