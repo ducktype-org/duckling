@@ -92,10 +92,11 @@ namespace pst {
 		template<>
 		struct StmtClassifiers<StmtSpecifier> {
 			/**
-			 * @brief Function that checks heuristically for a potential end of a specifier statement.
+			 * @brief Function that checks heuristically for a potential end of a
+			 * specifier statement.
 			 *
-			 * This function is a very rough placeholder that will be replaced with the rework of how
-			 * specifiers work
+			 * This function is a very rough placeholder that will be replaced
+			 * with the rework of how specifiers work
 			 *
 			 * @TODO: #1746 Will remove this part.
 			 */
