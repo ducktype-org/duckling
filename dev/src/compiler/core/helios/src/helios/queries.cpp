@@ -752,9 +752,29 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitConst(pst::Access<pst::Const>) override {
-				// @TODO: #1666 Support const statements in function bodies.
-				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
+			void visitConst(pst::Access<pst::Const> stmt) override {
+				auto symbol      = ctx.query<QuerySymbolOfSTMT>(stmt);
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+
+				// Constants must have an initial value.
+				if (stmt->getValue().empty()) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(),
+							base::strConcat("Constants must be initialized with a value")
+						)
+					);
+					return;
+				} else {
+					auto initial_value_coerced
+						= getHoutOfExprWithExpectedType(
+							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
+						)
+					          .valueOrThrow();
+
+					output(code::VariableStmt(std::move(initial_value_coerced), symbol_type, symbol)
+					);
+				}
 			}
 		};
 
