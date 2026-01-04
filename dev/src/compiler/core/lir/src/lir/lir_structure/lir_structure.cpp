@@ -187,7 +187,7 @@ namespace compiler::lir {
 					output << '\n';
 				}
 				printInstruction(block->terminator);
-				output << "\n";
+				output << '\n';
 			}
 
 			output << "}\n";
