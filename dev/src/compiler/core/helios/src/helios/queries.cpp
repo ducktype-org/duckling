@@ -761,7 +761,7 @@ namespace compiler::helios {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getSourcePosition(),
-							base::strConcat("Constants must be initialized with a value")
+							"Constants must be initialized with a value"
 						)
 					);
 					return;
