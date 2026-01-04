@@ -40,10 +40,7 @@
 /**
  * Simple function for showing compilation errors.
  */
-void printContextErrors() {
-	query::Context::logger.dumpLog(true, std::cerr);
-	// query::Context::int_logger.terminalPrint(std::cerr);
-}
+void printContextErrors() { query::Context::logger.dumpLog(true, std::cerr); }
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")

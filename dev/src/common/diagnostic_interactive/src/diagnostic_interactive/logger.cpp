@@ -8,10 +8,9 @@
 #include <diagnostic_interactive/core/view_constructors.hpp>
 #include <diagnostic_interactive/term_ui/printers.hpp>
 
-namespace dia_int {
+#include <base/collections/optional.hpp>
 
-	std::ostream* Logger::immediate_print_stream = nullptr;
-	bool          Logger::immediate_print        = true;
+namespace dia_int {
 
 	void Logger::terminalPrint(std::ostream& out) {
 		for (auto& diagnostic: diagnostics) evaluateToTerminalMessage(diagnostic.refMut(), out);
@@ -21,8 +20,10 @@ namespace dia_int {
 		if (message->isError()) has_error = true;
 
 		diagnostics.emplace_back(message->buildDiagnosticFile());
-		if (immediate_print && immediate_print_stream)
-			evaluateToTerminalMessage(diagnostics.back().refMut(), *immediate_print_stream);
+
+		if_opt_some(immediate_print_stream, stream) {
+			evaluateToTerminalMessage(diagnostics.back().refMut(), stream);
+		}
 	}
 
 	Logger::Logger(): has_error(false) {
@@ -54,5 +55,7 @@ namespace dia_int {
 		}
 	}
 
-	// void Logger::evaluateToLanguageServerMessage(CRef<dia_args::Diagnostic>, std::ostream&) {}
+	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
+		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
+	}
 }

@@ -2,6 +2,7 @@
 
 
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>  // IWYU pragma: export
 
 #include <base/pointers/box.hpp>
 
@@ -20,9 +21,6 @@ namespace dia_int {
 		std::vector<Box<dia_args::Diagnostic>> diagnostics;
 		bool                                   has_error;
 
-		static std::ostream* immediate_print_stream;
-		static bool          immediate_print;
-
 	public:
 		Logger();
 
@@ -40,9 +38,7 @@ namespace dia_int {
 		 * @brief Collect all logged diagnostics into the provided output vector.
 		 * @param[out] out_messages Vector to collect diagnostics into.
 		 */
-		void collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
-			for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
-		}
+		void collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages);
 
 		/**
 		 * @brief Use it for testing purposes only,
@@ -53,17 +49,18 @@ namespace dia_int {
 
 		[[nodiscard]] u64 messageCount() const;
 
+		/**
+		 * @brief Evaluate diagnostic to terminal message and print it to the given stream.
+		 * It is used internally by the Logger to print immediate messages, but also can be used
+		 * externally.
+		 */
 		static void evaluateToTerminalMessage(
 			CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
 		);
 
+		// Placeholder for future implementation
 		// static void evaluateToLanguageServerMessage(
 		// 	CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
 		// );
-
-		static void configureImmediatePrint(bool enabled, std::ostream& stream = std::cerr) {
-			immediate_print        = enabled;
-			immediate_print_stream = &stream;
-		}
 	};
 }
