@@ -339,8 +339,8 @@ namespace compiler::helios::mangler {
 						}
 					}
 					// The last case is that the symbol is a builtin function, which is handled
-					// in a separate branch of the switch by symbol kind.
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// in a separate branch of ImplementationOf_QueryMangledSymbol::provide.
+					// @TODO: #1700 Simplify this handling of builtin functions.
 				}
 				CORE_UNREACHABLE();
 			}
@@ -436,9 +436,10 @@ namespace compiler::helios::mangler {
 					return base::StrID{ "main" };
 				}
 
-				if (kind(sym_id) == SymbolKind::BuiltinFunction) {
+				if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(sym_id)->other)) {
 					// Builtin functions are not mangled
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// @TODO: #1700 Simplify this handling of builtin functions.
+					// i.e. probably make it similar to mangling regular functions.
 					return name(sym_id);
 				}
 

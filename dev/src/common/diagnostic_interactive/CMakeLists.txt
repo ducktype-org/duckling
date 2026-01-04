@@ -6,6 +6,7 @@ add_subdirectory(term_ui)
 add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/message.cpp
         src/diagnostic_interactive/logger.cpp
+        src/diagnostic_interactive/placeholder.cpp
 )
 make_module(DiagnosticInteractive USES  TerminalUI DiagnosticInteractiveCore Diagnostic )
 

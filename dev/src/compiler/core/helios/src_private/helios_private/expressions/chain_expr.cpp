@@ -5,7 +5,7 @@
 
 #include "chain_expr.hpp"
 
-#include <diagnostic_interactive/usage.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
@@ -27,6 +27,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context.hpp>
@@ -34,6 +35,51 @@
 #include <token_parser_core/common_elements.hpp>
 
 namespace compiler::helios::code {
+
+	/**
+	 * @brief Error messages
+	 * This error message is used when there are both function symbols and non-function valid
+	 * symbols found during the lookup (like function and class constructor with the same name).
+	 */
+	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_invalid_callables" };
+		}
+
+	public:
+		class InvaidCallableReferenceDocs final: public dia_int::MessageBase {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "docs",
+					     .family        = "expressions",
+					     .name          = "invalid_callable_reference" };
+			}
+
+		public:
+			InvaidCallableReferenceDocs(): MessageBase() {}
+		};
+
+		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "note",
+					     .family        = "type_check",
+					     .name          = "callable_candidate" };
+			}
+
+		public:
+			CandidateNote(dia::SourcePosition source_position):
+				  MessageWithCodeFragmentAndCause(source_position) {}
+		};
+
+		CallInvalidCallablesError(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			attachMessage(makeBox<InvaidCallableReferenceDocs>());
+		}
+	};
 
 	/**
 	 * State for the building of the chain expression in HOUT.
@@ -182,40 +228,6 @@ namespace compiler::helios::code {
 			return elem.value().dynamicCast<T>().has_value();
 		}
 
-		class AmbiguousCallableCandidates final: public dia::Error {
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "The expression could refer to multiple callable symbols, at least one of "
-					   "which is not a function.";
-			}
-
-			[[nodiscard]]
-			std::string toStringDetailed() const override {
-				return "The expression could refer to multiple callable symbols, at least one of "
-					   "which is not a function. It must either refer to a set of overloaded "
-					   "functions, or a single symbol with a defined (possibly overloaded) call "
-					   "operator.";
-			}
-
-		public:
-			[[nodiscard]] Domain getDomain() const override { return Domain::Lookup; }
-
-			explicit AmbiguousCallableCandidates(const dia::SourcePosition& source_position):
-				  Error(source_position) {}
-
-			class Candidate final: public dia::NoteWithPosition {
-			protected:
-				[[nodiscard]] std::string toStringBrief() const override {
-					return "Candidate defined here.";
-				}
-
-			public:
-				explicit Candidate(const dia::SourcePosition& source_position):
-					  NoteWithPosition(source_position) {}
-			};
-		};
-
 		/**
 		 * @brief Resolves a set of symbols which act as callees into a set of function symbols.
 		 *
@@ -239,22 +251,21 @@ namespace compiler::helios::code {
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
 					return kind(symbol) == SymbolKind::Function
-				        || kind(symbol) == SymbolKind::FunctionDeclaration
-				        || kind(symbol) == SymbolKind::BuiltinFunction;
+				        || kind(symbol) == SymbolKind::FunctionDeclaration;
 				}))
 				return looked_up_callees;
 
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
-				auto error = makeBox<AmbiguousCallableCandidates>(
+				auto error = makeBox<CallInvalidCallablesError>(
 					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
-					error->addNote(makeBox<AmbiguousCallableCandidates::Candidate>(
+					error->attachMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
 						stmt(query_ctx, candidate).value()->getSourcePosition()
 					));
 				}
-				query_ctx.log(std::move(error));
+				query_ctx.logInt(std::move(error));
 				return query::Failed();
 			}
 
@@ -265,12 +276,13 @@ namespace compiler::helios::code {
 				// Retrieve constructors of the class.
 				// @TODO: #1290 Handle auxiliary constructors.
 				auto class_type = query_ctx.query<QueryTypeFromDefinition>({ symbol })
-				                      ->throwOnFail("Class symbol did not yield a class type")
+				                      ->valueOrThrow()
 				                      .getType()
 				                      .as<tsh::ClassAbstractType>();
-				const auto ctor
-					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type });
-				return std::vector{ ctor->declaration->original_symbol };
+				const auto& ctor
+					= query_ctx.query<houtgen::QueryImplicitClassConstructor>({ class_type })
+				          ->valueOrThrow();
+				return std::vector{ ctor.declaration->original_symbol };
 			}
 			default:
 				CORE_PANIC("Not implemented yet (", name(symbol), ")");
@@ -300,23 +312,11 @@ namespace compiler::helios::code {
 
 			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-
-			if (callees_q_result.hasFailed()) return query::Failed();
-
-			const auto& callees = callees_q_result.valueOrThrow();
+			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 			auto res = processFunctionCall(query_ctx, callees, call_expr);
-
-			if (res.hasFailed()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						ident->getSourcePosition(),
-						base::strConcat("Failed to call: \"", ident->getName().value, "\"")
-					)
-				);
-				return query::Failed();
-			}
-			return ChainState::ofExpr(std::move(res.valueOrThrow()));
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		/**
@@ -329,37 +329,34 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
-			auto hout_expr = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			if (hout_expr.hasFailed()) return query::Failed();
+			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
+			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, hout_expr_result);
 
-			if (auto literal_type_expr
-			    = dynamic_cast<LiteralTypeExpr*>(hout_expr.valueOrThrow().get())) {
+			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
 				auto args = call_expr->getArgs().unlock(query_ctx);
 				if (args->size() != 1) {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-							call_expr->getSourcePosition(), "Type cast expects a single argument"
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Type cast must have exactly one argument.", call_expr->getSourcePosition()
+					));
 					return query::Failed();
 				}
 				// Iterating over a single argument list, because the pst arguments
 				// have only iterator accessor.
 				for (auto&& arg: *args) {
-					auto arg_expr = query_ctx.query<QueryHoutOfExpr>(
+					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
 						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
 					);
-					if (arg_expr.hasFailed()) return query::Failed();
+					UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
-						query_ctx, std::move(arg_expr.valueOrThrow()), literal_type_expr->value_type
+						query_ctx, std::move(arg_expr), literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}
 			}
 
-			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-				keyword->getSourcePosition(), "Unsupported keyword literal in call expression"
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
 			));
 			return query::Failed();
 		}
@@ -378,12 +375,9 @@ namespace compiler::helios::code {
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 				ident->getName().position, query_ctx, ident->getName().value
 			);
-			if (lookup_result.hasFailed()) return query::Failed();
-
 			// @TODO: #1412 handle dealias expressions:
-			const auto& sym = lookup_result.valueOrThrow().back();
-			// @TODO: #1412 handle dealias expressions:
-			return processNamespaceOrValue(sym);
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			return processNamespaceOrValue(sym_list.back());
 		}
 
 		/**
@@ -394,11 +388,8 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr) -> query::QResult<ChainState> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-
-			if (expr.hasFailed()) return query::Failed();
-
-			auto hout_expr = std::move(expr).valueOrThrow();
-			auto symbol    = getIdentifierExprSymID(hout_expr.ref());
+			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, expr);
+			auto symbol = getIdentifierExprSymID(hout_expr.ref());
 			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
 			return ChainState::ofExpr(std::move(hout_expr));
 		}
@@ -417,10 +408,9 @@ namespace compiler::helios::code {
 			// @TODO: #982 improve type lookup and provide correct
 			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
-			auto res = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
-
-			if (res.hasFailed()) return query::Failed();
-			return ChainState::ofExpr(std::move(res.valueOrThrow()));
+			auto expr_result = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		/**
@@ -429,15 +419,16 @@ namespace compiler::helios::code {
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
 			(void) namespace_like_symbol;
-			query_ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-				call_expr->getSourcePosition(), base::strConcat("Namespace is not callable")
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				base::strConcat("Namespace is not callable"), call_expr->getSourcePosition()
 			));
 			return query::Failed();
 		}
 
 		/**
-		 * Case when we have an access expression, for example "x().c" or "x.y.c",
-		 * not followed by a call expression.
+		 * Case when we have an access expression not followed by a call expression,
+		 * for example "not_namespace.y", "x.y.c"
+		 * and the current state is an expression (not a namespace e.x.).
 		 * Should check if accessed field is a namespace or not.
 		 */
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
@@ -446,14 +437,13 @@ namespace compiler::helios::code {
 			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
 			                         .lookup(query_ctx, expr_access->getName().value);
 
-			const auto& looked_up_symbols = lookup_result->getAsSingle();
+			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
 			// the following if statement. This is temporary, as symbol ambiguity should be
 			// handled differently than through dynamic field access.
+			UNPACK_QRESULT_MOVE(const auto& looked_up_symbols =, looked_up_symbols_result);
 
-			if (looked_up_symbols.hasFailed()) return query::Failed();
-
-			variant_match(looked_up_symbols.valueOrPanic()) {
+			variant_match(looked_up_symbols) {
 				variant_case(SymbolList, result) {
 					// @TODO: #1412 handle dealias expressions:
 					auto sym = result.back();
@@ -470,17 +460,20 @@ namespace compiler::helios::code {
 							"Handling of access to method without a call is not implemented yet"
 						);
 					}
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						base::strConcat(
+							"Unsupported symbol kind in type lookup for symbol: ",
+							prettyDebugPrint(sym, query_ctx)
+						),
+						expr_access->getName().position
+					));
 					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Ambiguous symbol in type lookup",
-						expr_access->getName().position,
-						"",
-						"here"
+						"Accessed value is ambiguous.", expr_access->getName().position
 					));
-
 					return query::Failed();
 				}
 				variant_case_novalue(errors::SymbolNotFound) {
@@ -490,9 +483,8 @@ namespace compiler::helios::code {
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Ambiguous not found in type", expr_access->getName().position, "", "here"
+						"Accessed value not found.", expr_access->getName().position
 					));
-
 					return query::Failed();
 				}
 
@@ -502,8 +494,8 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * Search for value that is not called in the namespace.
-		 * like "(...).NS.value"
+		 * When we have an access expression not followed by a call expression,
+		 * for example "NS.value" or "NS.value.y" amd the current state is a namespace.
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
@@ -512,10 +504,9 @@ namespace compiler::helios::code {
 			          .lookupExpectUnique(
 						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
 					  );
-			if (lookup_result.hasFailed()) return query::Failed();
 			// @TODO: #1412 handle dealias expressions:
-			const auto& sym = lookup_result.valueOrThrow().back();
-			return processNamespaceOrValue(sym);
+			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			return processNamespaceOrValue(sym_list.back());
 		}
 
 		/**
@@ -547,23 +538,11 @@ namespace compiler::helios::code {
 
 			// @TODO: #1412 fix dealias
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			if (callees_q_result.hasFailed()) return query::Failed();
-
-			const auto& callees = callees_q_result.valueOrThrow();
-
-			auto res = processFunctionCall(query_ctx, callees, call_expr);
-
-			if (res.hasFailed()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>::make(
-						expr_access->getName().position,
-						base::strConcat("Failed to call: \"", expr_access->getName().value, "\"")
-					)
-				);
-				return query::Failed();
-			}
-			return ChainState::ofExpr(std::move(res.valueOrThrow()));
+			auto expr_result = processFunctionCall(query_ctx, callees, call_expr);
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
@@ -587,6 +566,12 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat(
+						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
+					),
+					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+				));
 				return query::Failed();
 			}
 		}
@@ -612,9 +597,7 @@ namespace compiler::helios::code {
 				CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
 
-			if (res.hasFailed()) return query::Failed();
-
-			this->current_state = std::move(res.valueOrThrow());
+			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
 		}
 
@@ -640,10 +623,7 @@ namespace compiler::helios::code {
                 }
                 CORE_PANIC("Chain state is empty, but step() was called. This should not happen.");
 			}();
-
-			if (res.hasFailed()) return query::Failed();
-
-			this->current_state = std::move(res.valueOrThrow());
+			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
 		}
 
@@ -659,10 +639,7 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T>().value();
 
 			auto res = processPSTExpr(current_element_value);
-
-			if (res.hasFailed()) return query::Failed();
-
-			this->current_state = std::move(res.valueOrThrow());
+			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
 		}
 
@@ -678,10 +655,7 @@ namespace compiler::helios::code {
 			auto current_element_value = currentElem().value().dynamicCast<T1>().value();
 			auto next_element_value    = nextElem().value().dynamicCast<T2>().value();
 			auto res                   = processPSTExpr(current_element_value, next_element_value);
-
-			if (res.hasFailed()) return query::Failed();
-
-			this->current_state = std::move(res.valueOrThrow());
+			UNPACK_QRESULT_MOVE(this->current_state =, std::move(res));
 			return {};
 		}
 
@@ -729,12 +703,10 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-							currentElem().value()->getSourcePosition(),
-							"Expected access or call expression in chain expression"
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected access or call expression in chain expression",
+						currentElem().value()->getSourcePosition()
+					));
 					return query::Failed();
 				}
 			}

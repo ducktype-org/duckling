@@ -67,7 +67,7 @@
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"body": {
@@ -111,7 +111,7 @@
 								"sourceEnd": 75
 							},
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Field": {
 								"is mutable": "true",
@@ -230,7 +230,7 @@
 													}
 												}
 											}
-										}
+										},
 									]
 								},
 								"return": "unit",
@@ -299,7 +299,7 @@
 																									"sourceStart": 113,
 																									"sourceEnd": 113
 																								},
-																								"Top Level Expression": {
+																								"Expression Holder": {
 																									"expr": {
 																										"position": {
 																											"sourceStart": 113,
@@ -314,7 +314,7 @@
 																								}
 																							}
 																						}
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -324,7 +324,7 @@
 														}
 													}
 												}
-											}
+											},
 										]
 									}
 								}
@@ -336,7 +336,7 @@
 								"sourceEnd": 178
 							},
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Method": {
 								"name": {
@@ -377,7 +377,7 @@
 													}
 												}
 											}
-										}
+										},
 									]
 								},
 								"return": {
@@ -480,7 +480,7 @@
 														}
 													}
 												}
-											}
+											},
 										]
 									}
 								}
@@ -510,7 +510,7 @@
 												},
 												{
 													"Name": "math"
-												}
+												},
 											]
 										}
 									}
@@ -523,7 +523,7 @@
 								"sourceEnd": 373
 							},
 							"specifiers": [
-								"public"
+								"public",
 							],
 							"Access specification block": {
 								"specifier": "public",
@@ -539,7 +539,7 @@
 												"sourceEnd": 235
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Non Class Statement": {
 												"internal stmt": {
@@ -565,7 +565,7 @@
 																	},
 																	{
 																		"Name": "sqrt"
-																	}
+																	},
 																]
 															}
 														}
@@ -579,7 +579,7 @@
 												"sourceEnd": 282
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": "create",
@@ -618,7 +618,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												},
 												"inits": {
@@ -676,7 +676,7 @@
 																											"sourceStart": 263,
 																											"sourceEnd": 263
 																										},
-																										"Top Level Expression": {
+																										"Expression Holder": {
 																											"expr": {
 																												"position": {
 																													"sourceStart": 263,
@@ -691,7 +691,7 @@
 																										}
 																									}
 																								}
-																							}
+																							},
 																						]
 																					}
 																				}
@@ -700,7 +700,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												},
 												"body": {
@@ -753,7 +753,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												}
 											}
@@ -764,7 +764,7 @@
 												"sourceEnd": 316
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Copy Constructor": {
 												"name": "copy",
@@ -829,7 +829,7 @@
 																		}
 																	}
 																}
-															}
+															},
 														]
 													}
 												}
@@ -841,7 +841,7 @@
 												"sourceEnd": 348
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": "abc",
@@ -901,7 +901,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												}
 											}
@@ -912,7 +912,7 @@
 												"sourceEnd": 370
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Destructor": {
 												"body": {
@@ -923,14 +923,14 @@
 													"Code Block": []
 												}
 											}
-										}
+										},
 									]
 								}
 							}
-						}
+						},
 					]
 				}
 			}
-		}
+		},
 	]
 }

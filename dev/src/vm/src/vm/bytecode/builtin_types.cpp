@@ -6,6 +6,8 @@
 #include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
+	using BuiltinTypesMap = base::HashMap<base::StrID, TypeOfData>;
+
 	const SpecialTypes& SpecialTypes::get() {
 		static_assert(
 			sizeof(Type*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8"
@@ -16,31 +18,42 @@ namespace vm::code {
 		return instance;
 	}
 
-	TypeContext getBuiltinTypes() {
-		static const std::array builtin_types = {
-			TypeOfData(PrimitiveType(base::StrID("byte"), 1)),
-			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
-			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
-			TypeOfData(PrimitiveType(base::StrID("i64"), 8)),
-			TypeOfData(PointerType(base::StrID("ptr_i16"), base::StrID("i16"))),
-			TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))),
-			TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))),
-
+	const BuiltinTypesMap& rawBuiltins() {
+		const static BuiltinTypesMap types = {
+			{ base::StrID("byte"), TypeOfData(PrimitiveType(base::StrID("byte"), 1)) },
+			{ base::StrID("i8"), TypeOfData(PrimitiveType(base::StrID("i8"), 1)) },
+			{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), 2)) },
+			{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), 4)) },
+			{ base::StrID("i64"), TypeOfData(PrimitiveType(base::StrID("i64"), 8)) },
+			{ base::StrID("ptr_i16"),
+			  TypeOfData(PointerType(base::StrID("ptr_i16"), base::StrID("i16"))) },
+			{ base::StrID("ptr_i32"),
+			  TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))) },
+			{ base::StrID("ptr_i64"),
+			  TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))) },
 			// @TODO: #656 void size is a thing to discuss.
-			TypeOfData(PrimitiveType(base::StrID("void"), 1)),
-
-			TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))),
-			TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))),
-			TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))),
-			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))),
-			TypeOfData(OpaqueType(base::StrID("opaque_ptr"), 8)),
-
-			SpecialTypes::get().vtable_ptr,
+			{ base::StrID("void"), TypeOfData(PrimitiveType(base::StrID("void"), 1)) },
+			{ base::StrID("string"),
+			  TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))) },
+			{ base::StrID("ptr_string"),
+			  TypeOfData(PointerType(base::StrID("ptr_string"), base::StrID("string"))) },
+			{ base::StrID("argv"),
+			  TypeOfData(DynamicTableType(base::StrID("argv"), base::StrID("ptr_string"))) },
+			{ base::StrID("ptr_argv"),
+			  TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))) },
+			{ base::StrID("opaque_ptr"), TypeOfData(OpaqueType(base::StrID("opaque_ptr"), 8)) },
+			{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
 		};
+		return types;
+	}
+
+	TypeContext getBuiltinTypes() {
 		TypeContext type_context;
-
-		for (const auto& tp: builtin_types) type_context.insertType(tp);
-
+		for (const auto& tp: rawBuiltins() | std::views::values) type_context.insertType(tp);
 		return type_context;
+	}
+
+	base::Optional<TypeOfData> getBuiltinTypeByName(base::StrID type_name) {
+		return rawBuiltins().atMaybeCopy(type_name);
 	}
 }

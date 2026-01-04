@@ -59,9 +59,23 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
+	struct DVMExternCFunctionName {
+		base::StrID name;
+		bool        operator==(const DVMExternCFunctionName& other) const = default;
+
+		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+	};
+
+	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName>;
+
 	class DVMValue {
-		using StoredValueVariant
-			= std::variant<DVMLocal, DVMGlobal, DVMImmediate, DVMLabel, DVMFunctionName>;
+		using StoredValueVariant = std::variant<
+			DVMLocal,
+			DVMGlobal,
+			DVMImmediate,
+			DVMLabel,
+			DVMFunctionName,
+			DVMExternCFunctionName>;
 
 		StoredValueVariant stored_value;
 
