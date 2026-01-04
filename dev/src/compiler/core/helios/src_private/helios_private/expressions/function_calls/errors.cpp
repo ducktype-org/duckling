@@ -21,8 +21,6 @@
 namespace compiler::helios::code {
 	using namespace dia_int;
 
-	using ::compiler::helios::InteractiveType;
-
 	class PositionalAfterNamedArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -61,16 +59,13 @@ namespace compiler::helios::code {
 	public:
 		ArgumentIncompatibleTypeError(
 			dia::SourcePosition                      source_position,
-			InteractiveType                          expected_type,
-			InteractiveType                          actual_type,
+			Box<InteractiveType>                     expected_type,
+			Box<InteractiveType>                     actual_type,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			auto expected_type_box = makeBox<InteractiveType>(std::move(expected_type));
-			auto actual_type_box   = makeBox<InteractiveType>(std::move(actual_type));
-
-			addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type_box));
-			addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type_box));
+			addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+			addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
 			if (function_name.has_value())
 				addArgument<dia_int::InteractiveArgument>(
 					"function_name", std::move(function_name.value())
@@ -237,7 +232,7 @@ namespace compiler::helios::code {
 					if (is_for_candidate_function)
 						return std::nullopt;
 					else
-						return makeBox<InteractiveFunction>(function_symbol);
+						return makeBox<InteractiveFunction>(ctx, function_symbol);
 				};
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
@@ -267,8 +262,8 @@ namespace compiler::helios::code {
 							= get_interactive_function(data.function);
 						return makeBox<ArgumentIncompatibleTypeError>(
 							arg_expr->getSourcePosition(),
-							InteractiveType(data.expected_type),
-							InteractiveType(data.given_type),
+							makeBox<InteractiveType>(ctx, data.expected_type),
+							makeBox<InteractiveType>(ctx, data.given_type),
 							std::move(function_name)
 						);
 					}

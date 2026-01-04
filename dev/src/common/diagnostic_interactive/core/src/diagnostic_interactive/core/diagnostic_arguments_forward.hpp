@@ -26,3 +26,4 @@ namespace dia_int::dia_args {
 }
 
 DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::dia_args::Component);
+DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::dia_args::Diagnostic);
