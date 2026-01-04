@@ -10,6 +10,9 @@ namespace dia_int {
 	 * as they are logged. If left empty, no immediate printing will occur.
 	 */
 	extern constinit MRef<std::ostream> immediate_print_stream;
-
+	
+	/**
+	 * @brief Just a setter for the immediate print stream variable. 
+	 */
 	void configureImmediatePrint(MRef<std::ostream> stream);
 }
