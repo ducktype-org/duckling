@@ -319,7 +319,7 @@ namespace dia_int::dia_args {
 		Metadata                                   metadata;
 		base::HashMap<std::string, Box<Component>> arguments;
 		std::vector<ExploreLink>                   explore_links;
-		std::vector<MessageID>                     linked_messages;
+		std::vector<MessageID>                     attached_messages;
 
 		[[nodiscard]] json toJson() const;
 

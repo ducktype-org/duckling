@@ -187,13 +187,10 @@ namespace dia_int {
 		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
 		for (const auto& link: explore_links) msg.explore_links.push_back(link.getValue(*this));
 
-		msg.linked_messages.reserve(this->attached_messages.size());
+		msg.attached_messages.reserve(this->attached_messages.size());
 
-		for (const auto& attached_msg: attached_messages) {
-			auto id = MessageBase::getUniqueID();
-			msg.linked_messages.push_back(id);
-			additional_messages.put(id, attached_msg->buildMessages(additional_messages));
-		}
+		for (const auto& attached_msg: attached_messages)
+			msg.attached_messages.push_back(attached_msg);
 
 		for (const auto& [id, value]: this->linked_messages)
 			additional_messages.put(id, value->buildMessages(additional_messages));
@@ -202,6 +199,9 @@ namespace dia_int {
 	}
 
 	Box<dia_int::dia_args::Diagnostic> MessageBase::buildDiagnosticFile() {
+		if (has_been_built) CORE_PANIC("Message can only be built once!");
+		has_been_built = true;
+
 		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
 		base::HashMap<std::string, dia_args::Message> additional_messages;
 
@@ -234,6 +234,11 @@ namespace dia_int {
 		addArgument<CodeArgument>("code", source_position);
 		addArgument<CodeLocationArgument>("code_location", source_position);
 		addPointerMessage({ "cause", source_position });
+	}
+
+	bool MessageBase::isError() const {
+		auto meta = getMetadata();
+		return meta.type == "error";
 	}
 }
 
