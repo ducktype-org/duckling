@@ -96,16 +96,12 @@ namespace compiler::helios {
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
-						{ stmt->getValue().value().unlock(ctx)->getExpr() }
-					);
-					if (parsed.hasValue()) {
-						const auto& expr_type = parsed.valueOrThrow()->expression_type;
-						setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
-					} else
-						throw base::NotYetImplemented(
-							"Const declaration with value that does not evaluate to a type. This "
-							"should be a compilation error"
-						);
+										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					)
+					                  .valueOrThrow();
+
+					const auto& expr_type = parsed->expression_type;
+					setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "

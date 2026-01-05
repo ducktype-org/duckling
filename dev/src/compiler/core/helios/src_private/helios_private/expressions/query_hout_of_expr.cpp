@@ -501,8 +501,8 @@ namespace compiler::helios {
 				} else {
 					ctx.logInt(makeBox<IncompatibleTypesError>(
 						pst_expr.element.unlock(ctx)->getSourcePosition(),
-						InteractiveType{ expr_hout->expression_type.getSymbolType() },
-						InteractiveType{ expected_type }
+						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
+						makeBox<InteractiveType>(ctx, expected_type)
 					));
 				}
 				return query::Failed();

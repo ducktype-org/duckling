@@ -5,6 +5,7 @@
 #include <base/pointers/box.hpp>
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Component);
+DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Diagnostic);
 
 namespace dia_int::dia_args {
 	auto Component::fromJson(const json& elem) -> Box<Component> {
@@ -244,9 +245,9 @@ namespace dia_int::dia_args {
 			result["explore_links"] = json::array();
 			for (const auto& edge: explore_links) result["explore_links"].push_back(edge.toJson());
 		}
-		if (!linked_messages.empty()) {
+		if (!attached_messages.empty()) {
 			result["attached_messages"] = json::array();
-			for (const auto& info_id: linked_messages)
+			for (const auto& info_id: attached_messages)
 				result["attached_messages"].push_back(info_id);
 		}
 		return result;
@@ -270,7 +271,7 @@ namespace dia_int::dia_args {
 
 		if (msg_json.contains("attached_messages")) {
 			ASSUME_ARR(msg_json, "attached_messages");
-			result.linked_messages = msg_json["attached_messages"].get<std::vector<MessageID>>();
+			result.attached_messages = msg_json["attached_messages"].get<std::vector<MessageID>>();
 		}
 
 		return result;
