@@ -52,7 +52,6 @@ namespace lang_def {
 		Loop,
 		If,
 		Then,
-		Elif,
 		Else,
 
 		// Other block:

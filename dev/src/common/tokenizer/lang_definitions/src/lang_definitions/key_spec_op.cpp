@@ -76,7 +76,6 @@ namespace lang_def {
 			{ Keyword::If, "if", KeywordFlags() },
 			{ Keyword::Then, "then", KeywordFlags() },
 			{ Keyword::Else, "else", KeywordFlags() },
-			{ Keyword::Elif, "elif", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
