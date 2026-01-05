@@ -64,7 +64,7 @@ namespace compiler::helios {
 
 	private:
 		CRef<ScopeData> ref;
-
+		
 		ScopeID(const CRef<ScopeData> ref): ref(ref) {}
 		friend struct ScopeAccess_Functor;
 		friend struct ImplementationOf_QueryRootScopeOf;

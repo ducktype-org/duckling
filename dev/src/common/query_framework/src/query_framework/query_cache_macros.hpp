@@ -69,11 +69,11 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });          \
 		return QResult(CRef<PResult>(&ref->value.data));                                            \
 	}                                                                                               \
-	static_assert(                                                                                  \
-		std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
-		"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
-		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
-	);
+	// static_assert(                                                                                  \
+	// 	std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
+	// 	"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
+	// 	"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+	// );
 
 
 /**

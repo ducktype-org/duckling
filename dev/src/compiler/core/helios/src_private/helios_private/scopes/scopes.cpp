@@ -53,16 +53,6 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	namespace {
-		base::StableVector<ScopeData> scope_table;
-
-		template<class... T>
-		CRef<ScopeData> putInScopeTable(T&&... args) {
-			scope_table.emplaceBack(std::forward<T>(args)...);
-			return scope_table.last();
-		}
-	}
-
 	std::vector<ScopeID> getAllHeliosScopes() {
 		CORE_ASSERT(
 			query::Context::getState().queryStackSize() == 0,
@@ -200,23 +190,23 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
+	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
 		static auto provide(Context&, QKey key) -> PResult {
-			return putInScopeTable(ScopeData{
+			return ScopeData{
 				.parent              = {},
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
 				.depth               = 0,
-			});
+			};
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
-	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
+	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
@@ -238,7 +228,7 @@ namespace compiler::helios {
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
 
-			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
+			if (element_scope_kind == ElementScopeKind::Transparent) return parent.;
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -252,15 +242,15 @@ namespace compiler::helios {
 				parent_map.put(element->getID(), parent);
 			}
 
-			return putInScopeTable(ScopeData{
+			return ScopeData{
 				.parent              = parent,
 				.related_pst_element = element,
 				.parent_module       = module(parent),
 				.depth               = scopeDepth(parent) + 1,
-			});
+			};
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
