@@ -114,16 +114,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<HOUTUnit>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// For MVP, reuse QueryModuleHOUT logic to produce HOUTUnit for the in-memory REPL module.
-			// In the future this will handle REPL-specific scopes and incremental behaviour.
-		return ctx.query<QueryModuleHOUT>(key);
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<HOUTUnit>>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key).valueOrThrow() };
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);

@@ -107,7 +107,7 @@ namespace compiler::repl {
 						out.glob_data.emplace_back(sym, ctx, helios::HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (helios::kind(sym) == helios::SymbolKind::Function)
-						out.functions.push_back(ctx.query<helios::QueryCodeOfFun>(sym));
+						out.functions.push_back(ctx.query<helios::QueryCodeOfFun>(sym).valueOrThrow());
 					if (helios::kind(sym) == helios::SymbolKind::Class)
 						appendClassConstructors(out.functions, sym, ctx);
 				}
@@ -135,14 +135,14 @@ namespace compiler::repl {
 			// For now, we handle only the class's primary constructor.
 			// @TODO: #1290 Handle auxiliary constructors.
 
-			const auto class_type
-				= ctx.query<helios::QueryTypeFromDefinition>(class_sym)
-			          ->throwOnFail("Not handling errors here yet... (generating class constructor)")
-			          .getType()
-			          .as<tsh::ClassAbstractType>();
+			const auto class_type = ctx.query<helios::QueryTypeFromDefinition>(class_sym)
+			                          ->valueOrThrow()
+			                          .getType()
+			                          .as<tsh::ClassAbstractType>();
 			const auto implicit_ctor
-				= ctx.query<helios::houtgen::QueryImplicitClassConstructor>(class_type);
-			out_functions.push_back(*implicit_ctor);
+				= ctx.query<helios::houtgen::QueryImplicitClassConstructor>(class_type)
+			           ->valueOrThrow();
+			out_functions.push_back(implicit_ctor);
 		}
 
 		QUERY_AUTO_CACHE_COPY
