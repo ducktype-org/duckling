@@ -39,8 +39,6 @@ namespace compiler::tsh {
 	}
 
 	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
-		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->throwOnFail(
-			"Not handling errors yet"
-		);
+		return ctx.query<compiler::helios::QueryTypeOfSymbol>(symbol)->valueOrThrow();
 	}
 }

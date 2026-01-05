@@ -8,6 +8,16 @@
 #include <query_framework/context.hpp>
 
 namespace compiler::helios {
+	IncompatibleTypesError::IncompatibleTypesError(
+		dia::SourcePosition  source_position,
+		Box<InteractiveType> actual_type,
+		Box<InteractiveType> expected_type
+	):
+		  MessageWithCodeFragmentAndCause(source_position) {
+		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+	}
+
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
@@ -70,4 +80,5 @@ namespace compiler::helios {
 			}
 		);
 	}
+
 }

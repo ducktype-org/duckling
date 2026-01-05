@@ -3,7 +3,7 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
-#include <diagnostic_interactive/usage.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
@@ -32,7 +32,8 @@ namespace compiler::helios {
 		 */
 		struct CouldNotShortPath {};
 
-		using TreeEvalResult = query::QResult<std::variant<CompileTimeValue, CouldNotShortPath>>;
+		using TreeEvalValue  = std::variant<CompileTimeValue, CouldNotShortPath>;
+		using TreeEvalResult = query::QResult<TreeEvalValue>;
 
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
@@ -301,14 +302,14 @@ namespace compiler::helios {
 						result = query::Failed();
 						return;
 					}
-					result = sub_result.valueOrPanic();
+					result = sub_result.valueOrThrow();
 				} else {
 					auto sub_result = evalHoutExpr(ctx, expr.if_false.ref());
 					if (sub_result.hasFailed()) {
 						result = query::Failed();
 						return;
 					}
-					result = sub_result.valueOrPanic();
+					result = sub_result.valueOrThrow();
 				}
 			}
 
@@ -430,7 +431,7 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrPanic();
+				result = sub_result.valueOrThrow();
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
@@ -442,7 +443,7 @@ namespace compiler::helios {
 						result = query::Failed();
 						return;
 					}
-					ctv_elements.emplace_back(ctv_element_result.valueOrPanic());
+					ctv_elements.emplace_back(ctv_element_result.valueOrThrow());
 				}
 
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
@@ -462,7 +463,7 @@ namespace compiler::helios {
 						continue;
 					}
 
-					variant_match(coercion_qresult.valueOrPanic().getVariant()) {
+					variant_match(coercion_qresult.valueOrThrow().getVariant()) {
 						variant_case(Coercion, coercion) {
 							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
 
@@ -512,7 +513,7 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrPanic();
+				result = sub_result.valueOrThrow();
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
@@ -534,7 +535,7 @@ namespace compiler::helios {
 					result = query::Failed();
 					return;
 				}
-				result = sub_result.valueOrPanic();
+				result = sub_result.valueOrThrow();
 			}
 
 			/**
@@ -620,13 +621,10 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
-				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
+				auto  hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
+				auto& mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
 
-				auto mir_func_result = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
-				if (mir_func_result->hasFailed()) return query::Failed();
-
-				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
-				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
+				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
 
 				// When lowering the top level function, we store it's mangled name to know
 				// which function to call in the VM.
@@ -648,9 +646,8 @@ namespace compiler::helios {
 			ctv_arguments.reserve(args.size());
 
 			for (const auto& arg_expr: args) {
-				auto arg_result = evalHoutExpr(ctx, arg_expr.ref());
-				if (arg_result.hasFailed()) return query::Failed();
-				ctv_arguments.push_back(arg_result.valueOrThrow());
+				UNPACK_QRESULT(auto arg =, evalHoutExpr(ctx, arg_expr.ref()));
+				ctv_arguments.push_back(std::move(arg));
 			}
 
 			return ctv_arguments;
@@ -714,9 +711,9 @@ namespace compiler::helios {
 		 */
 		static auto evalHoutExpr(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			// Try evaluating with TreeEval(Short Path).
-			TreeEvalResult tree_eval_result = evaluateWithTreeEval(ctx, expr);
+			UNPACK_QRESULT(TreeEvalValue tree_eval =, evaluateWithTreeEval(ctx, expr));
 
-			variant_match(tree_eval_result.valueOrThrow()) {
+			variant_match(tree_eval) {
 				variant_case(CompileTimeValue, ctv) { return ctv; }
 				variant_case(CouldNotShortPath, _) {
 					// If TreeEval failed, try to evaluate with VM.
@@ -740,9 +737,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasFailed()) return query::Failed();
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr.valueOrThrow().ref() });
+			UNPACK_QRESULT_MOVE(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
+			return ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
 		}
 
 		QUERY_AUTO_NO_CACHE

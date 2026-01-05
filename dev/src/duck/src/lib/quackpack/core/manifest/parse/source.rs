@@ -8,7 +8,7 @@ use super::Scope;
 use crate::{
     QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::{
-        core::{Git, GitRevision, Local, Registry, Source},
+        core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
     },
 };
@@ -97,10 +97,10 @@ pub(crate) fn parse(
             debug!("found a git source");
             check_no_local(source, scope)?;
             check_no_registry(source, scope)?;
-            let rev = resolve_git_rev(source, scope)?;
+            let branch_or_tag = resolve_git_branch_or_tag(source, scope)?;
             Git::new(
                 git_url.into(),
-                rev,
+                branch_or_tag,
                 source.commit.as_ref().map(<&String>::into),
             )
             .into()
@@ -218,16 +218,16 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
     Ok(())
 }
 
-/// Resolve [`GitRevision`] from the given `source`.
-fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRevision> {
+/// Resolve [`BranchOrTag`] from the given `source`.
+fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackResult<BranchOrTag> {
     match (source.branch.as_ref(), source.tag.as_ref()) {
-        (None, None) => Ok(GitRevision::Main),
-        (None, Some(tag)) => Ok(GitRevision::Tag(tag.into())),
-        (Some(branch), None) => Ok(GitRevision::Branch(branch.into())),
+        (None, None) => Ok(BranchOrTag::Default),
+        (None, Some(tag)) => Ok(BranchOrTag::Tag(tag.into())),
+        (Some(branch), None) => Ok(BranchOrTag::Branch(branch.into())),
         (Some(_), Some(_)) => {
             let formatted = scope.format();
             qp_bail!(
-                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.commit`"
+                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.tag`"
             );
         }
     }

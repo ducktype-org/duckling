@@ -394,13 +394,6 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx),
-				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
-				"calling it)"
-			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
@@ -864,7 +857,7 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key);
+			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key).valueOrThrow();
 			const auto& function_body   = fun_hout_result.body;
 
 			HoutFunctionCallCollector visitor;

@@ -127,26 +127,25 @@ namespace query {
 		}
 
 		/**
-		 * @brief Access the value, throw on no value with a message.
-		 * Used when we always except a value to be present.
+		 * @brief Access the value, panic with given message on no value.
 		 */
-		constexpr const Value& throwOnFail(std::string_view message) const& {
-			if (!hasValue()) throw query::QueryFailedException(message);
+		constexpr const Value& valueOrPanicMsg(std::string_view message) const& {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr const Value&& throwOnFail(std::string_view message) const&& {
-			if (!hasValue()) throw query::QueryFailedException(message);
+		constexpr const Value&& valueOrPanicMsg(std::string_view message) const&& {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& throwOnFail(std::string_view message) & {
-			if (!hasValue()) throw query::QueryFailedException(message);
+		constexpr Value& valueOrPanicMsg(std::string_view message) & {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr Value&& throwOnFail(std::string_view message) && {
-			if (!hasValue()) throw query::QueryFailedException(message);
+		constexpr Value&& valueOrPanicMsg(std::string_view message) && {
+			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
 
@@ -156,22 +155,22 @@ namespace query {
 		 * If you are not handling query exceptions, use valueOrPanic instead.
 		 */
 		constexpr const Value& valueOrThrow() const& {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::get<Value>(storage);
 		}
 
 		constexpr const Value&& valueOrThrow() const&& {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
 		}
 
 		constexpr Value& valueOrThrow() & {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::get<Value>(storage);
 		}
 
 		constexpr Value&& valueOrThrow() && {
-			if (!hasValue()) throw query::QueryFailedException("Result is empty.");
+			if (!hasValue()) throwFailed("Result is empty.");
 			return std::move(std::get<Value>(storage));
 		}
 
@@ -210,3 +209,66 @@ namespace query {
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var std::move(RES_VAR_NAME).valueOrPanic()
+
+
+/**
+ * @brief Helper macros mirroring the optional helpers, but for QResult.
+ *
+ * Example:
+ * ```cpp
+ * auto getNumber() -> query::QResult<int>;
+ * match_qresult(getNumber()) {
+ *     qres_value(val) { std::cout << "value: " << val << '\n'; }
+ *     qres_failed      { std::cout << "query failed" << '\n'; }
+ * }
+ *
+ * if_qres_value(getNumber(), num) {
+ *     std::cout << "num squared: " << num * num;
+ * }
+ * ```
+ */
+#define match_qresult(qresult)                                          \
+	PUSH_DIAGNOSTIC                                                     \
+	NO_SHADOW                                                           \
+	if (bool _qres_perform_match = true)                                \
+		for (auto&& _internal_qresult = (qresult); _qres_perform_match; \
+		     _qres_perform_match      = false)                          \
+	POP_DIAGNOSTIC
+
+#define qres_value(_value_name)                                                       \
+	PUSH_DIAGNOSTIC                                                                   \
+	NO_SHADOW                                                                         \
+	if (bool _qres_perform_if = _internal_qresult.hasValue())                         \
+		for (auto&& _value_name = _internal_qresult.valueOrPanic(); _qres_perform_if; \
+		     _qres_perform_if   = false)                                              \
+	POP_DIAGNOSTIC
+
+#define qres_value_move(_value_name)                                                             \
+	PUSH_DIAGNOSTIC                                                                              \
+	NO_SHADOW                                                                                    \
+	if (bool _qres_perform_if = _internal_qresult.hasValue())                                    \
+		for (auto&& _value_name = std::move(_internal_qresult).valueOrPanic(); _qres_perform_if; \
+		     _qres_perform_if   = false)                                                         \
+	POP_DIAGNOSTIC
+
+#define qres_failed                                              \
+	PUSH_DIAGNOSTIC                                              \
+	NO_SHADOW                                                    \
+	if (bool _qres_failed_guard = _internal_qresult.hasFailed()) \
+		for (; _qres_failed_guard; _qres_failed_guard = false) POP_DIAGNOSTIC
+
+#define if_qres_value(qresult, _value_name)                                                   \
+	PUSH_DIAGNOSTIC                                                                           \
+	NO_SHADOW                                                                                 \
+	if (auto&& _internal_qresult = (qresult); _internal_qresult.hasValue())                   \
+		if (bool _if_qres_value_stop = true)                                                  \
+			for (auto&& _value_name  = _internal_qresult.valueOrPanic(); _if_qres_value_stop; \
+			     _if_qres_value_stop = false)                                                 \
+	POP_DIAGNOSTIC
+
+#define if_qres_failed(qresult)                                                                    \
+	PUSH_DIAGNOSTIC                                                                                \
+	NO_SHADOW                                                                                      \
+	if (auto&& _internal_qresult = (qresult); _internal_qresult.hasFailed())                       \
+		for (bool _if_qres_failed_stop = true; _if_qres_failed_stop; _if_qres_failed_stop = false) \
+	POP_DIAGNOSTIC

@@ -35,6 +35,7 @@
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -385,11 +386,12 @@ private:
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
-		const auto first_ctor
+		const auto& first_ctor
 			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
-				first_class_abstract_type
-			);
-		ASSERT_EQUAL(first_ctor->declaration->return_type.getType(), first_class_abstract_type);
+				  first_class_abstract_type
+			)
+		          ->valueOrPanic();
+		ASSERT_EQUAL(first_ctor.declaration->return_type.getType(), first_class_abstract_type);
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
@@ -416,17 +418,19 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.members.size());
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
-		const auto class_with_members_ctor
+		const auto& class_with_members_ctor
 			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
-				class_with_member_abstract_type
-			);
+				  class_with_member_abstract_type
+			)
+		          ->valueOrPanic();
 		ASSERT_EQUAL(
-			class_with_members_ctor->declaration->return_type.getType(),
+			class_with_members_ctor.declaration->return_type.getType(),
 			class_with_member_abstract_type
 		);
 
 		std::vector<compiler::helios::HOUTUnit> units
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
+		          .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -468,7 +472,8 @@ private:
 		// );
 
 		std::vector<compiler::helios::HOUTUnit> units
-			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id });
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
+		          .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		               // that it is successful
 	}
@@ -701,21 +706,23 @@ private:
 	void testSimpleHOUT() {
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		ASSERT_EQUAL(hout->functions.size(), 3);
-		ASSERT_EQUAL(hout->glob_data.size(), 3);
+		ASSERT_EQUAL(hout.functions.size(), 3);
+		ASSERT_EQUAL(hout.glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
 		});
 	}
 
 	void testSingleFileModuleHOUT() {
 		auto [module, _] = getModule(fs::File(path("test_modules/simple_scopes")));
 
-		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		auto houts
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -732,7 +739,8 @@ private:
 	void testModuleHOUT() {
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_module")));
 
-		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		auto houts
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
 
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
@@ -749,7 +757,8 @@ private:
 	void testDependencyHOUT() {
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
-		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		auto houts
+			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
 
 		for (const auto& hout: houts) {
 			for (const auto& fun: hout.functions) {
@@ -779,11 +788,12 @@ private:
 			fs::File(path("test_modules/visitor_test_module"))
 		);
 
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		ASSERT_EQUAL(hout->functions.size(), 1);
+		ASSERT_EQUAL(hout.functions.size(), 1);
 
-		auto the_function = hout->functions.at(0);
+		auto the_function = hout.functions.at(0);
 
 		auto& stmt_list = the_function.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 6);
@@ -871,11 +881,12 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto test_value = [&](auto str, i64 exp_val) {
 			auto name = base::StrID(str);
-			for (auto& gb: hout->glob_data) {
+			for (auto& gb: hout.glob_data) {
 				if (gb.original_name == name) {
 					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
 						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
@@ -1003,11 +1014,12 @@ private:
 	void testHoutVariables() {
 		auto [module, _] = getModule(fs::File(path("test_modules/variables")));
 
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		ASSERT_EQUAL(hout->functions.size(), 1);
+		ASSERT_EQUAL(hout.functions.size(), 1);
 
-		auto& function = hout->functions.at(0);
+		auto& function = hout.functions.at(0);
 
 		ASSERT_EQUAL(function.declaration->original_name, "foo");
 
@@ -1094,7 +1106,7 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
 		});
 	}
 
@@ -1180,10 +1192,10 @@ private:
 		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			ASSERT_EQUAL(hout->functions.size(), 2);
+			auto& hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			ASSERT_EQUAL(hout.functions.size(), 2);
 			{
-				auto function = hout->functions.at(0);
+				auto function = hout.functions.at(0);
 				ASSERT_EQUAL(function.declaration->original_name, "foo");
 
 				auto& a_param = function.declaration->parameters.at(0);
@@ -1217,7 +1229,7 @@ private:
 			}
 
 			{
-				auto function = hout->functions.at(1);
+				auto function = hout.functions.at(1);
 				ASSERT_EQUAL(function.declaration->original_name, "bar");
 				auto& abc_param    = function.declaration->parameters.at(0);
 				auto& second_param = function.declaration->parameters.at(1);
@@ -1299,9 +1311,10 @@ private:
 	void testFunctionCallExpr() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
 
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(4, hout->functions.size());
-		auto function = hout->functions.at(1);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		ASSERT_EQUAL(4, hout.functions.size());
+		auto function = hout.functions.at(1);
 		ASSERT_EQUAL(function.declaration->original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
 			function.body->statements.at(0).ref().get()
@@ -1318,18 +1331,19 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout->debugPrint(ctx);
+			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
 		});
 	}
 
 	void testFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
-		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		// modify it as needed:
-		ASSERT_EQUAL(1, hout->functions.size());
+		ASSERT_EQUAL(1, hout.functions.size());
 
-		for (auto& function: hout->functions) {
+		for (auto& function: hout.functions) {
 			if (function.declaration->original_name == base::StrID("stmtBody1")) {
 				ASSERT_EQUAL(1, function.body->statements.size());
 				auto stmt        = function.body->statements.at(0).ref();
@@ -1345,10 +1359,11 @@ private:
 
 	void testBuiltinFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
-		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout->functions.size());
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		ASSERT_EQUAL(1, hout.functions.size());
 
-		auto function = hout->functions.at(0);
+		auto function = hout.functions.at(0);
 		ASSERT_EQUAL(function.declaration->original_name, "main");
 
 		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
@@ -1374,31 +1389,33 @@ private:
 			getSymRef(call_expr_2_callee)->other
 		));
 		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
-		auto builtin_output_decl
-			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee);
+		auto& builtin_output_decl
+			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee)->valueOrPanic();
 		ASSERT_EQUAL(
-			builtin_output_decl->parameters.at(0).type.getType().getKind(),
+			builtin_output_decl.parameters.at(0).type.getType().getKind(),
 			compiler::tsh::Kind::Integral
 		);
 	}
 
 	void testFunctionReturnTypeDeduction() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/return_deduction")));
-		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
-		for (auto& function: hout->functions)
+		for (auto& function: hout.functions)
 			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
 	}
 
 	void testFunctionReturnTypeCheckAndCoercion() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/return_coercion")));
-		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
-		for (auto& function: hout->functions) {
+		for (auto& function: hout.functions) {
 			ASSERT_EQUAL(i64_type, function.declaration->return_type.getType());
 
 			if (function.declaration->original_name == base::StrID("big_example")) {
@@ -1444,7 +1461,8 @@ private:
 
 	void testMangler() {
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
-		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+		auto hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
 
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
@@ -1504,8 +1522,9 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
-		auto sub_module    = getModule(fs::File(path("test_modules/mangling/sub")));
-		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
+		auto sub_module = getModule(fs::File(path("test_modules/mangling/sub")));
+		auto sub_hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first).valueOrPanic();
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun.declaration->original_name.strView()
@@ -1597,7 +1616,8 @@ private:
 		{  // General global variable checks.
 
 			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/general")));
-			auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+			auto hout_unit
+				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
@@ -1630,7 +1650,8 @@ private:
 
 		{  // Global variable detections check (isGlobalVar function).
 			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/detection")));
-			auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+			auto hout_unit
+				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
@@ -1905,7 +1926,7 @@ private:
 			try {
 				ctx.query<compiler::helios::QuerySymbolABI>(invalid_abi_function)->valueOrThrow();
 				CORE_PANIC("Should throw for invalid ABI.");
-			} catch (query::QueryFailedException& err) {
+			} catch (query::internal::QueryFailedException& err) {
 				// Expected failure for invalid ABI
 			}
 		});
@@ -1916,10 +1937,11 @@ private:
 			auto [module, root_scope]
 				= getModule(fs::File(path("test_modules/overload_resolution")));
 
-			auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+			auto& hout
+				= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 			auto get_function_by_order = [&](usize index) {
-				return hout->functions.at(index).declaration->original_symbol;
+				return hout.functions.at(index).declaration->original_symbol;
 			};
 
 			// Store function symbols for each overload (order matches declaration order in file)
@@ -1971,13 +1993,16 @@ private:
 				= getModule(fs::File(path("test_modules/error_generating/ambiguous_exact_match")));
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
-				assertThrows<std::exception>(
-					[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
-					"Expected ambiguous callable candidates error"
+				auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
+				assertTrue(
+					result.hasFailed(),
+					"Expected overload resolution to fail due to ambiguous exact matches."
 				);
 
-				assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+				assertTrue(
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
+					"Logger should have recorded an error."
+				);
 
 				std::stringstream non_detailed_log;
 				ctx.logger.dumpLog(false, non_detailed_log);
@@ -1989,13 +2014,18 @@ private:
 			    );
 
 			query::utils::withContextDo([&](query::Context& ctx) {
-				// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
 				assertThrows<std::exception>(
-					[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
+					[&] {
+						ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id)
+							.valueOrPanic();
+					},
 					"Expected ambiguous callable candidates error"
 				);
 
-				assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+				assertTrue(
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
+					"Logger should have recorded an error."
+				);
 
 				std::stringstream non_detailed_log;
 				ctx.logger.dumpLog(false, non_detailed_log);
@@ -2008,8 +2038,9 @@ private:
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/casts")));
 
 		// Get HOUT for the module and find the function HOUT unit
-		auto  hout_unit = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		auto& function  = hout_unit->functions[0];
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions[0];
 
 		// Helper: find a VariableStmt by name in the function body and return its initializer expr
 		auto get_var_init_expr
@@ -2139,9 +2170,9 @@ private:
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
-			ctx.logger.dumpLog(false, ss);
+			ctx.int_logger.terminalPrint(ss);
 			assertTrue(
-				ss.str().contains("Cannot coerce"),
+				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
@@ -2165,14 +2196,14 @@ private:
 		try {
 			getConstValueAs<i64>("InvalidSym", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<i64>("C", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
@@ -2181,35 +2212,35 @@ private:
 		try {
 			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("InvalidCompFirst", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<f32>("INVALID_ADD", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getConstValueAs<bool>("INVALID_MODULO", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (query::QueryFailedException& err) {
+		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 	}
@@ -2220,13 +2251,15 @@ private:
 		    ));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// @FIXME: #412 Make the error more specific; properly handle `->expect()` in HELIoS.
-			assertThrows<std::exception>(
-				[&] { ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id); },
-				"Expected ambiguous callable candidates error"
-			);
+			auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
 
-			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+			assertTrue(
+				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
+			);
+			assertTrue(
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
+			);
 
 			std::stringstream non_detailed_log;
 			ctx.logger.dumpLog(false, non_detailed_log);
@@ -2239,12 +2272,14 @@ private:
 			= getModule(fs::File(path("test_modules/error_generating/ambiguous_return_type")));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertThrows<std::exception>(
-				[&] { ctx.query<compiler::helios::QueryTopLevelEntities>(module_id); },
-				"Expected ambiguous return type error"
+			auto result = ctx.query<compiler::helios::QueryTopLevelEntities>(module_id);
+			assertTrue(
+				result->hasFailed(), "Query should have failed due to ambiguous return type."
 			);
-
-			assertTrue(ctx.logger.bad(), "Logger should have recorded an error.");
+			assertTrue(
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
+			);
 
 			std::stringstream non_detailed_log;
 			ctx.logger.dumpLog(false, non_detailed_log);

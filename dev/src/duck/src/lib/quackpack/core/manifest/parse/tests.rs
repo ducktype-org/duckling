@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{GitRevision, Source},
+    quackpack::core::{BranchOrTag, Source},
     static_str_id,
 };
 
@@ -518,10 +518,10 @@ dependencies:
     if let Source::Git(git_source) = e.desc().source() {
         assert_eq!(git_source.url(), "git");
         assert_eq!(
-            git_source.rev(),
-            GitRevision::Branch(static_str_id!("branch"))
+            git_source.branch_or_tag(),
+            BranchOrTag::Branch(static_str_id!("branch"))
         );
-        assert_eq!(git_source.commit(), Some(static_str_id!("commit")));
+        assert_eq!(git_source.rev(), Some(static_str_id!("commit")));
     }
     assert!(e.desc().versions().is_empty());
     assert_eq!(e.real_name(), e.desc().manifest_name());
@@ -554,7 +554,7 @@ dependencies:
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
-                  `dependencies.a.source.branch`, `dependencies.a.source.commit`"
+                  `dependencies.a.source.branch`, `dependencies.a.source.tag`"
             ]
         )
     );

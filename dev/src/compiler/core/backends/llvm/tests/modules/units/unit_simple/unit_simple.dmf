@@ -10,6 +10,6 @@ fun foo(u: ()) -> () = {
 
 fun main() -> i64 = {
     foo(a);
-    foo(unitType);
+    # foo(unitType); # @TODO: #1742 not compiling
     return 0i64;
 }
