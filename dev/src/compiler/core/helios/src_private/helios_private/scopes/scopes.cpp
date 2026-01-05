@@ -57,7 +57,7 @@ namespace compiler::helios {
 		base::StableVector<ScopeData> scope_table;
 
 		template<class... T>
-		Ref<ScopeData> putInScopeTable(T&&... args) {
+		CRef<ScopeData> putInScopeTable(T&&... args) {
 			scope_table.emplaceBack(std::forward<T>(args)...);
 			return scope_table.last();
 		}
