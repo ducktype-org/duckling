@@ -27,7 +27,7 @@ namespace pst::expr {
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		while (fwd < length) {
+		PST_WHILE(fwd < length) {
 			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)
 			    || state[fwd].isBracketGroup(lexer::Token::Square)
@@ -51,7 +51,7 @@ namespace pst::expr {
 		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
 
-		while (length > 0) {
+		PST_WHILE(length > 0) {
 			fwd = toNextLink(state, length);
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }

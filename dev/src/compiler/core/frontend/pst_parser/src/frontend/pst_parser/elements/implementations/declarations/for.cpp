@@ -22,15 +22,9 @@ namespace pst {
 		ForBracketError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	namespace {
-		bool isForTypeEnd(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			    || state[fwd].is(Keyword::In);
-		}
-	}
-
-	MBox<ExprElement> ExprParserHelper::parseForType(LangParserState& state) {
-		return expr::parseUntil<expr::Comma, isForTypeEnd>(state);
+	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+		    || state[fwd].is(Keyword::In);
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
