@@ -86,8 +86,13 @@ namespace lang_def {
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
 
-			// Not isn't a general prefix operator, it has specific handling
+			// Not isn't a general prefix operator, it has specific handling together with the other
+	        // boolean operators
 			{ Keyword::Not, "not", KeywordFlags() },
+
+			{ Keyword::And, "and", KeywordFlags() },
+			{ Keyword::Or, "or", KeywordFlags() },
+			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::As, "as", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
@@ -136,9 +141,6 @@ namespace lang_def {
 			{ Keyword::False, "false", KeywordFlags() },
 
 			{ Keyword::Sizeof, "sizeof", KeywordFlags() },
-			{ Keyword::And, "and", KeywordFlags() },
-			{ Keyword::Or, "or", KeywordFlags() },
-			{ Keyword::Xor, "xor", KeywordFlags() },
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
