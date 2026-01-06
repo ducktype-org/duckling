@@ -193,13 +193,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
 		static auto provide(Context&, QKey key) -> PResult {
-			return ScopeData{
-				{},
-				true,
-				{},
-				key,
-				0
-			};
+			return ScopeData{ {}, true, {}, key, 0 };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
@@ -228,11 +222,12 @@ namespace compiler::helios {
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
-			
+
 			// here we essentially return the same scope as the parent
 			// scope, with the same unstable hash, but we still create a new ScopeData object
 			// that is kept in our cache:
-			if (element_scope_kind == ElementScopeKind::Transparent) return parent.ref->perfectClone();
+			if (element_scope_kind == ElementScopeKind::Transparent)
+				return parent.ref->perfectClone();
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -247,11 +242,7 @@ namespace compiler::helios {
 			}
 
 			return ScopeData{
-				parent,
-				false,
-				element,
-				module(parent),
-				scopeDepth(parent) + 1,
+				parent, false, element, module(parent), scopeDepth(parent) + 1,
 			};
 		}
 
