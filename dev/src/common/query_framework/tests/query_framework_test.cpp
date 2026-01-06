@@ -248,7 +248,7 @@ DECLARE_QUERY(
 struct IMPLEMENT_QUERY(ConstructFromCRefCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key.value }; }
 
-	QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ConstructFromCRefCacheTest);
