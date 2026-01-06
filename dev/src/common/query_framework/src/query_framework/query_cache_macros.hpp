@@ -56,6 +56,10 @@
  * from a CRef<PResult> on cache hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_CREF for the sake of transparency.
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
+ *
+ * @note static_assert uses a requires clause instead of std::is_constructible_v
+ *       so it can be evaluated within query implementation struct scope and in effect
+ *       respect friend declarations of the given query.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF                                               \
 	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
@@ -69,11 +73,11 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
 		return QResult(CRef<PResult>(&ref->value.data));                                   \
 	}                                                                                      \
-	// static_assert(                                                                                  \
-	// 	std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
-	// 	"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
-	// 	"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
-	// );
+	static_assert(                                                                                  \
+		requires(CRef<PResult> in) { QResult{in}; } && !std::is_same_v<QResult, CRef<PResult>>, \
+		"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
+		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+	);
 
 
 /**
