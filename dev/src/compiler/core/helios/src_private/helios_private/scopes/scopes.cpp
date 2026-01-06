@@ -54,13 +54,14 @@ namespace compiler::helios {
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
 	std::vector<ScopeID> getAllHeliosScopes() {
+		// @TODO: PR
 		CORE_ASSERT(
 			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosScopes called from within query!"
 		);
 		std::vector<ScopeID> out;
-		for (auto& scope_data: scope_table)
-			out.emplace_back(ScopeAccess_Functor::idOf(&scope_data));
+		// for (auto& scope_data: scope_table)
+		// 	out.emplace_back(ScopeAccess_Functor::idOf(&scope_data));
 		return out;
 	}
 
@@ -193,11 +194,11 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return ScopeData{
-				.parent              = {},
-				.is_root             = true,
-				.related_pst_element = {},
-				.parent_module       = key,
-				.depth               = 0,
+				{},
+				true,
+				{},
+				key,
+				0
 			};
 		}
 
@@ -227,8 +228,11 @@ namespace compiler::helios {
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
-
-			if (element_scope_kind == ElementScopeKind::Transparent) return parent.;
+			
+			// here we essentially return the same scope as the parent
+			// scope, with the same unstable hash, but we still create a new ScopeData object
+			// that is kept in our cache:
+			if (element_scope_kind == ElementScopeKind::Transparent) return parent.ref->perfectClone();
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -243,10 +247,11 @@ namespace compiler::helios {
 			}
 
 			return ScopeData{
-				.parent              = parent,
-				.related_pst_element = element,
-				.parent_module       = module(parent),
-				.depth               = scopeDepth(parent) + 1,
+				parent,
+				false,
+				element,
+				module(parent),
+				scopeDepth(parent) + 1,
 			};
 		}
 

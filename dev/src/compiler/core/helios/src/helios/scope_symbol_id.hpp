@@ -43,17 +43,14 @@ namespace compiler::helios {
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
 	struct ScopeID final {
-		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return reinterpret_cast<u64>(ref.get());
-		}
+		u64 queryUnstablePerfectHash() const;
 
-		bool operator==(const ScopeID&) const = default;
+		bool operator==(const ScopeID&) const;
 
-		bool operator<(const ScopeID& other) const { return ref < other.ref; }
+		bool operator<(const ScopeID& other) const;
 
-		auto operator<=>(const ScopeID& other) const { return ref.get() <=> other.ref.get(); }
+		std::strong_ordering operator<=>(const ScopeID& other) const;
 
 		/**
 		 * @brief Debug function to print scope and its parents IDs.
@@ -64,7 +61,7 @@ namespace compiler::helios {
 
 	private:
 		CRef<ScopeData> ref;
-		
+
 		ScopeID(const CRef<ScopeData> ref): ref(ref) {}
 		friend struct ScopeAccess_Functor;
 		friend struct ImplementationOf_QueryRootScopeOf;
