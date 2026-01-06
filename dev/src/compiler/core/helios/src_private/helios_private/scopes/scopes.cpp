@@ -196,7 +196,7 @@ namespace compiler::helios {
 			return ScopeData{ {}, true, {}, key, 0 };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(true)
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
@@ -246,7 +246,7 @@ namespace compiler::helios {
 			};
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(true)
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);

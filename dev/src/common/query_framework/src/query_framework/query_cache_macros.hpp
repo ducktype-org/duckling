@@ -57,11 +57,12 @@
  * @note Should not be used in place of QUERY_AUTO_CACHE_CREF for the sake of transparency.
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
  *
- * @note static_assert uses a requires clause instead of std::is_constructible_v
- *       so it can be evaluated within query implementation struct scope and in effect
- *       respect friend declarations of the given query.
+ * @param bypass_constructible_check If set to true, bypasses the static_assert checks
+ * ensuring that QResult is constructible from CRef<PResult>. Use with caution.
+ * This is useful in scenarios where the macro it works due to friendship but is_constructible_v
+ * fails, since it cannot see private constructors.
  */
-#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF                                               \
+#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(bypass_constructible_check)                                               \
 	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
@@ -74,7 +75,12 @@
 		return QResult(CRef<PResult>(&ref->value.data));                                   \
 	}                                                                                      \
 	static_assert(                                                                                  \
-		requires(CRef<PResult> in) { QResult{in}; } && !std::is_same_v<QResult, CRef<PResult>>, \
+		!std::is_same_v<QResult, CRef<PResult>>, \
+		"QResult should not be equal to CRef<PResult> for "                \
+		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+	); \
+	static_assert(                                                                                  \
+		bypass_constructible_check || std::is_constructible_v<QResult, CRef<PResult>>, \
 		"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
 		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
 	);
