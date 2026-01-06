@@ -13,13 +13,13 @@ namespace logger {
 		}
 	}
 
-	namespace internal {
-		bool isCategoryEnabled(DevLogCategories category) {
-			for (const auto& enabled_category: *getEnabledCategories())
-				if (enabled_category == category) return true;
-			return false;
-		}
+	bool isCategoryEnabled(DevLogCategories category) {
+		for (const auto& enabled_category: *getEnabledCategories())
+			if (enabled_category == category) return true;
+		return false;
+	}
 
+	namespace internal {
 		void logMessage(std::string_view message) {
 			// In the future this could be directed to a file or other streams.
 			std::cout << message;
@@ -46,9 +46,11 @@ namespace logger {
 		HANDLE_CATEGORY_NAME(Printer)
 		HANDLE_CATEGORY_NAME(Artifacts)
 		HANDLE_CATEGORY_NAME(Query)
+		HANDLE_CATEGORY_NAME(QueryStacktraces)
 		HANDLE_CATEGORY_NAME(Command)
 		HANDLE_CATEGORY_NAME(Diagnostics)
 		HANDLE_CATEGORY_NAME(Compiler)
+		HANDLE_CATEGORY_NAME(Parser)
 		HANDLE_CATEGORY_NAME(Backend)
 		HANDLE_CATEGORY_NAME(Linker)
 		HANDLE_CATEGORY_NAME(DVM)

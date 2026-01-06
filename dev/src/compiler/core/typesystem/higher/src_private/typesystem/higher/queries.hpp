@@ -3,6 +3,7 @@
 #include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::tsh {
 	class ClassAbstractTypeImpl;
@@ -28,5 +29,10 @@ namespace compiler::tsh {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
 	 */
-	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassAbstractTypeImplPtr, CRef<TypeInterface>, ({}))
+	DECLARE_QUERY(
+		QueryInterfaceOfClass,
+		WrappedClassAbstractTypeImplPtr,
+		CRef<query::QResult<TypeInterface>>,
+		({})
+	)
 }

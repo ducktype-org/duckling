@@ -205,8 +205,9 @@ namespace compiler::helios::mangler {
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
-				ret       = "F";
-				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+				ret = "F";
+				auto type
+					= ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->valueOrThrow().getType();
 				auto fun_type = tsh::FunctionAbstractType(type);
 
 				auto ret_type = fun_type.getResultType();
@@ -245,7 +246,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();  // "META" ?
@@ -277,7 +278,7 @@ namespace compiler::helios::mangler {
 							compiler::helios::ExprConstructionResult hout_expr
 								= ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-							auto type = hout_expr.value()
+							auto type = hout_expr.valueOrThrow()
 							                ->expression_type.getSymbolType()
 							                .getType()
 							                .toString();
@@ -332,8 +333,8 @@ namespace compiler::helios::mangler {
 						}
 					}
 					// The last case is that the symbol is a builtin function, which is handled
-					// in a separate branch of the switch by symbol kind.
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// in a separate branch of ImplementationOf_QueryMangledSymbol::provide.
+					// @TODO: #1700 Simplify this handling of builtin functions.
 				}
 				CORE_UNREACHABLE();
 			}
@@ -429,14 +430,15 @@ namespace compiler::helios::mangler {
 					return base::StrID{ "main" };
 				}
 
-				if (kind(sym_id) == SymbolKind::BuiltinFunction) {
+				if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(sym_id)->other)) {
 					// Builtin functions are not mangled
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// @TODO: #1700 Simplify this handling of builtin functions.
+					// i.e. probably make it similar to mangling regular functions.
 					return name(sym_id);
 				}
 
 				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-					variant_match(abi->value()) {
+					variant_match(abi->valueOrThrow()) {
 						variant_case_novalue(CAbi) { return name(sym_id); }
 						variant_case_novalue(DefaultAbi) { /* Handled below */ }
 						variant_default { CORE_UNREACHABLE(); }

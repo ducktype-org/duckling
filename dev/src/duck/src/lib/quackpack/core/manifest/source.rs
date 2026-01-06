@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use crate::StrId;
+use git2::FetchOptions;
+
+use crate::quackpack::schemas::registry;
+use crate::{QuackError, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
 /// General dependency source.
@@ -108,14 +111,18 @@ impl Local {
 /// Represents a source a dependency cloned from git.
 pub struct Git {
     url: StrId,
-    rev: GitRevision,
-    commit: Option<StrId>,
+    branch_or_tag: BranchOrTag,
+    rev: Option<StrId>,
 }
 
 impl Git {
     /// Create a new git source.
-    pub fn new(url: StrId, rev: GitRevision, commit: Option<StrId>) -> Self {
-        Self { url, rev, commit }
+    pub fn new(url: StrId, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
+        Self {
+            url,
+            branch_or_tag,
+            rev,
+        }
     }
 
     /// Get the git repository URL.
@@ -123,41 +130,160 @@ impl Git {
         self.url
     }
 
-    /// Get the git revision.
-    pub fn rev(&self) -> GitRevision {
+    /// Get the git branch or tag.
+    pub fn branch_or_tag(&self) -> BranchOrTag {
+        self.branch_or_tag
+    }
+
+    /// Get the specific revision (commit hash), if any.
+    pub fn rev(&self) -> Option<StrId> {
         self.rev
     }
 
-    /// Get the specific commit hash, if any.
-    pub fn commit(&self) -> Option<StrId> {
-        self.commit
+    /// Check whether we can perform a shallow clone of this dependency.
+    ///
+    /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
+    ///
+    /// However, we always disallow shallow clones when commit is specified.
+    // @TODO: #1751 change `looks_like_remote_url` to `self.url.scheme() != "file"`.
+    pub fn can_shallow_clone(&self) -> bool {
+        let looks_like_remote_url = self.url.starts_with("https://")
+            || self.url.starts_with("git@")
+            || self.url.starts_with("ssh://")
+            || self.url.starts_with("http://")
+            || self.url.starts_with("ftp://");
+        looks_like_remote_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
+    }
+
+    /// Get [`FetchOptions`] for this source.
+    ///
+    /// This if factored out so we can easily make small changes to the
+    /// [`FetchOptions`], such as setting depth to 0 to make a full fetch.
+    pub fn git_fetch_options(&self) -> FetchOptions<'_> {
+        let mut fetch_options = FetchOptions::new();
+        if self.can_shallow_clone() {
+            fetch_options.depth(1);
+        }
+        fetch_options
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
-pub enum GitRevision {
-    /// The main branch.
-    Main,
+pub enum BranchOrTag {
+    /// The default branch.
+    Default,
     /// A specific tag.
     Tag(StrId),
     /// A specific branch.
     Branch(StrId),
 }
 
-impl GitRevision {
-    /// Helper around `matches!(self, GitRevision::Main)`.
-    pub fn is_main(&self) -> bool {
-        matches!(self, GitRevision::Main)
+impl BranchOrTag {
+    /// Helper around `matches!(self, BranchOrTag::Default)`.
+    pub fn is_default(&self) -> bool {
+        matches!(self, BranchOrTag::Default)
     }
 
-    /// Helper around `matches!(self, GitRevision::Tag(..))`.
+    /// Helper around `matches!(self, BranchOrTag::Tag(..))`.
     pub fn is_tag(&self) -> bool {
-        matches!(self, GitRevision::Tag(..))
+        matches!(self, BranchOrTag::Tag(..))
     }
 
-    /// Helper around `matches!(self, GitRevision::Branch(..))`.
+    /// Helper around `matches!(self, BranchOrTag::Branch(..))`.
     pub fn is_branch(&self) -> bool {
-        matches!(self, GitRevision::Branch(..))
+        matches!(self, BranchOrTag::Branch(..))
+    }
+}
+
+impl TryFrom<registry::DependencySource> for Source {
+    type Error = QuackError;
+
+    fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
+        let tmp = match value.inner {
+            registry::SourceInner::Registry { registry_url } => Registry {
+                url: registry_url.into(),
+            }
+            .into(),
+            registry::SourceInner::Local {
+                absolute_dir_root,
+                dir_entry_in_manifest,
+            } => Local {
+                absolute: absolute_dir_root.into(),
+                entry_in_manifest: dir_entry_in_manifest.into(),
+                was_original_entry_relative: false,
+            }
+            .into(),
+            registry::SourceInner::Git {
+                git_url,
+                commit,
+                tag,
+                branch,
+            } => {
+                let branch_or_tag = match (tag, branch) {
+                    (None, None) => BranchOrTag::Default,
+                    (None, Some(branch)) => BranchOrTag::Branch(branch.into()),
+                    (Some(tag), None) => BranchOrTag::Tag(tag.into()),
+                    (Some(_), Some(_)) => {
+                        qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
+                    }
+                };
+                Git {
+                    url: git_url.into(),
+                    branch_or_tag,
+                    rev: commit.map(Into::into),
+                }
+                .into()
+            }
+        };
+        Ok(tmp)
+    }
+}
+
+impl TryFrom<Source> for registry::DependencySource {
+    type Error = QuackError;
+    fn try_from(value: Source) -> Result<Self, Self::Error> {
+        let inner = match value {
+            Source::Registry(registry) => registry::SourceInner::Registry {
+                registry_url: registry.url.into(),
+            },
+            Source::Local(local) => {
+                let Local {
+                    absolute,
+                    entry_in_manifest,
+                    ..
+                } = local;
+                let absolute_dir_root = match absolute.into_os_string().into_string() {
+                    Ok(absolute) => absolute,
+                    Err(original) => qp_bail!(
+                        "absolute path `{}` is not a utf-8 string",
+                        original.display()
+                    ),
+                };
+                registry::SourceInner::Local {
+                    absolute_dir_root,
+                    dir_entry_in_manifest: entry_in_manifest.into(),
+                }
+            }
+            Source::Git(git) => {
+                let Git {
+                    url,
+                    branch_or_tag,
+                    rev,
+                } = git;
+                let (tag, branch) = match branch_or_tag {
+                    BranchOrTag::Default => (None, None),
+                    BranchOrTag::Tag(tag) => (Some(tag.into()), None),
+                    BranchOrTag::Branch(branch) => (None, Some(branch.into())),
+                };
+                registry::SourceInner::Git {
+                    git_url: url.into(),
+                    commit: rev.map(Into::into),
+                    tag,
+                    branch,
+                }
+            }
+        };
+        Ok(Self { inner })
     }
 }

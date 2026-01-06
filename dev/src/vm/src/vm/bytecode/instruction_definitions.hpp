@@ -43,213 +43,316 @@
 
 // ========= MOV OPERATIONS ========
 
-DEF_INSTR(mov_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
-DEF_INSTR(mov_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(cmov_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(cmov_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_INSTR(mov_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(cmov_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(cmov_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(mov_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
-DEF_INSTR(mov_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
-DEF_INSTR(cmov_l16_l16, vm::opargs::StackLocal16, vm::opargs::StackLocal16)
-DEF_INSTR(cmov_l16_imm, vm::opargs::StackLocal16, vm::opargs::Immediate)
+DEF_INSTR(mov_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(cmov_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(cmov_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(mov_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-DEF_INSTR(mov_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(cmov_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(cmov_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_INSTR(mov_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(cmov_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(cmov_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(mov_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(mov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(cmov_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(cmov_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_INSTR(mov_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(cmov_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(cmov_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
 
 
-DEF_INSTR(mov_g64_g64, vm::opargs::Global64, vm::opargs::Global64)
-DEF_INSTR(mov_g64_l64, vm::opargs::Global64, vm::opargs::StackLocal64)
-DEF_INSTR(mov_g64_imm, vm::opargs::Global64, vm::opargs::Immediate)
-DEF_INSTR(mov_g32_g32, vm::opargs::Global32, vm::opargs::Global32)
-DEF_INSTR(mov_g32_l32, vm::opargs::Global32, vm::opargs::StackLocal32)
-DEF_INSTR(mov_g32_imm, vm::opargs::Global32, vm::opargs::Immediate)
-DEF_INSTR(mov_g16_g16, vm::opargs::Global16, vm::opargs::Global16)
-DEF_INSTR(mov_g16_l16, vm::opargs::Global16, vm::opargs::StackLocal16)
-DEF_INSTR(mov_g16_imm, vm::opargs::Global16, vm::opargs::Immediate)
-DEF_INSTR(mov_g8_g8, vm::opargs::Global8, vm::opargs::Global8)
-DEF_INSTR(mov_g8_l8, vm::opargs::Global8, vm::opargs::StackLocal8)
-DEF_INSTR(mov_g8_imm, vm::opargs::Global8, vm::opargs::Immediate)
-DEF_INSTR(mov_gptr_lptr, vm::opargs::GlobalPtr, vm::opargs::StackLocalPtr)
-DEF_INSTR(mov_l64_g64, vm::opargs::StackLocal64, vm::opargs::Global64)
-DEF_INSTR(mov_l32_g32, vm::opargs::StackLocal32, vm::opargs::Global32)
-DEF_INSTR(mov_l16_g16, vm::opargs::StackLocal16, vm::opargs::Global16)
-DEF_INSTR(mov_l8_g8, vm::opargs::StackLocal8, vm::opargs::Global8)
-DEF_INSTR(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
+DEF_INSTR(mov_g64_g64, (vm::opargs::Global64, dst), (vm::opargs::Global64, src))
+DEF_INSTR(mov_g64_l64, (vm::opargs::Global64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(mov_g64_imm, (vm::opargs::Global64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_g32_g32, (vm::opargs::Global32, dst), (vm::opargs::Global32, src))
+DEF_INSTR(mov_g32_l32, (vm::opargs::Global32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(mov_g32_imm, (vm::opargs::Global32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_g16_g16, (vm::opargs::Global16, dst), (vm::opargs::Global16, src))
+DEF_INSTR(mov_g16_l16, (vm::opargs::Global16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(mov_g16_imm, (vm::opargs::Global16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_g8_g8, (vm::opargs::Global8, dst), (vm::opargs::Global8, src))
+DEF_INSTR(mov_g8_l8, (vm::opargs::Global8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(mov_g8_imm, (vm::opargs::Global8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mov_gptr_lptr, (vm::opargs::GlobalPtr, dst), (vm::opargs::StackLocalPtr, src))
+DEF_INSTR(mov_l64_g64, (vm::opargs::StackLocal64, dst), (vm::opargs::Global64, src))
+DEF_INSTR(mov_l32_g32, (vm::opargs::StackLocal32, dst), (vm::opargs::Global32, src))
+DEF_INSTR(mov_l16_g16, (vm::opargs::StackLocal16, dst), (vm::opargs::Global16, src))
+DEF_INSTR(mov_l8_g8, (vm::opargs::StackLocal8, dst), (vm::opargs::Global8, src))
+DEF_INSTR(mov_lptr_gptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::GlobalPtr, src))
 
 // does a shallow pointer copy
-DEF_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_INSTR(mov_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
 
 // sets pointer to null
-DEF_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
+DEF_INSTR(setNull_lptr, (vm::opargs::StackLocalPtr, dst))
 
 // Copies an opaque value
-DEF_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
+DEF_INSTR(mov_lopq_lopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::StackLocalOpq, src))
 
 // Copies an opaque value between globals and locals
-DEF_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
-DEF_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
+DEF_INSTR(mov_gopq_lopq, (vm::opargs::GlobalOpq, dst), (vm::opargs::StackLocalOpq, src))
+DEF_INSTR(mov_lopq_gopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::GlobalOpq, src))
+DEF_INSTR(mov_lopq_imm, (vm::opargs::StackLocalOpq, dst), (vm::opargs::Immediate, src))
 
 
-// ========= ARITHMETIC OPERATIONS ========
+// ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 
-DEF_INSTR(add_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(add_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_INSTR(add_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(add_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(sub_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(sub_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mul_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(mul_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(div_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(div_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mod_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(mod_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(neg_l64, (vm::opargs::StackLocal64, dst))
 
-DEF_INSTR(add_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(add_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_INSTR(add_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(add_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(sub_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(sub_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mul_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(mul_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(div_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(div_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mod_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(mod_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(neg_l32, (vm::opargs::StackLocal32, dst))
 
+DEF_INSTR(add_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(add_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(sub_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(sub_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mul_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(mul_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(div_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(div_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mod_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(mod_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(neg_l16, (vm::opargs::StackLocal16, dst))
 
-DEF_INSTR(sub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(sub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_INSTR(add_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(add_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(sub_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(sub_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mul_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(mul_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(div_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(div_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(mod_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(mod_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(neg_l8, (vm::opargs::StackLocal8, dst))
 
-DEF_INSTR(sub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(sub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+// ========= UNSIGNED INTEGER ARITHMETIC OPERATIONS ========
+DEF_INSTR(umul_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(umul_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(umod_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(umod_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(udiv_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(udiv_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
 
+DEF_INSTR(umul_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(umul_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(umod_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(umod_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(udiv_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(udiv_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(mul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(mul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+DEF_INSTR(umul_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(umul_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(umod_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(umod_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(udiv_l16_l16, (vm::opargs::StackLocal16, dst), (vm::opargs::StackLocal16, src))
+DEF_INSTR(udiv_l16_imm, (vm::opargs::StackLocal16, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(mul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(mul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(mod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(mod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_INSTR(mod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(mod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(div_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(div_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_INSTR(div_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(div_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(neg_l64, vm::opargs::StackLocal64)
-DEF_INSTR(neg_l32, vm::opargs::StackLocal32)
+DEF_INSTR(umul_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(umul_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(umod_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(umod_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(udiv_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(udiv_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
 // ========= FLOATING POINT OPERATIONS ========
-DEF_INSTR(fadd_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(fadd_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(fadd_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(fadd_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_INSTR(fadd_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(fadd_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fsub_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(fsub_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fmul_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(fmul_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fdiv_l64_l64, (vm::opargs::StackLocal64, dst), (vm::opargs::StackLocal64, src))
+DEF_INSTR(fdiv_l64_imm, (vm::opargs::StackLocal64, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fneg_l64, (vm::opargs::StackLocal64, dst))
 
-DEF_INSTR(fsub_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(fsub_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(fsub_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(fsub_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(fmul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(fmul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(fmul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(fmul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(fdiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(fdiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(fdiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(fdiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(fneg_l64, vm::opargs::StackLocal64)
-DEF_INSTR(fneg_l32, vm::opargs::StackLocal32)
-
-DEF_INSTR(umul_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(umul_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_INSTR(umul_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(umul_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(umod_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(umod_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_INSTR(umod_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(umod_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-
-DEF_INSTR(udiv_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(udiv_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-
-DEF_INSTR(udiv_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(udiv_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+DEF_INSTR(fadd_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(fadd_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fsub_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(fsub_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fmul_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(fmul_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fdiv_l32_l32, (vm::opargs::StackLocal32, dst), (vm::opargs::StackLocal32, src))
+DEF_INSTR(fdiv_l32_imm, (vm::opargs::StackLocal32, dst), (vm::opargs::Immediate, src))
+DEF_INSTR(fneg_l32, (vm::opargs::StackLocal32, dst))
 
 // ========= BOOLEAN OPERATIONS ========
 
 // Evaluate logical operations (AND, OR, etc.) on operands as booleans (non-zero = true)
 // Result is 0 or 1 stored in the first argument
 
-DEF_INSTR(log_and_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(log_and_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_INSTR(log_and_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(log_and_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_or_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(log_or_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_INSTR(log_or_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(log_or_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_xor_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(log_xor_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+DEF_INSTR(log_xor_l8_l8, (vm::opargs::StackLocal8, dst), (vm::opargs::StackLocal8, src))
+DEF_INSTR(log_xor_l8_imm, (vm::opargs::StackLocal8, dst), (vm::opargs::Immediate, src))
 
-DEF_INSTR(log_not_l8, vm::opargs::StackLocal8)
+DEF_INSTR(log_not_l8, (vm::opargs::StackLocal8, dst))
 
 // ========= LOGICAL OPERATIONS ========
 
-DEF_INSTR(cmpEq_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(cmpEq_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(cmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(cmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(ucmpG_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(ucmpG_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(cmpL_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(cmpL_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
-DEF_INSTR(ucmpL_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
-DEF_INSTR(ucmpL_l64_imm, vm::opargs::StackLocal64, vm::opargs::Immediate)
+// --- 64-bit Integer Comparisons ---
+DEF_INSTR(cmpEq_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpEq_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpNeq_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpNeq_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpGt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpGe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(ucmpGt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(ucmpGe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpLt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(cmpLe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(ucmpLt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(ucmpLe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
 
-DEF_INSTR(cmpEq_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(cmpEq_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-DEF_INSTR(cmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(cmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-DEF_INSTR(ucmpG_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(ucmpG_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-DEF_INSTR(cmpL_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(cmpL_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
-DEF_INSTR(ucmpL_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
-DEF_INSTR(ucmpL_l32_imm, vm::opargs::StackLocal32, vm::opargs::Immediate)
+// --- 32-bit Integer Comparisons ---
+DEF_INSTR(cmpEq_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpEq_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpNeq_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpNeq_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpGt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpGe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(ucmpGt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(ucmpGe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpLt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(cmpLe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(ucmpLt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(ucmpLe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
 
-DEF_INSTR(cmpEq_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(cmpEq_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
-DEF_INSTR(cmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(cmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
-DEF_INSTR(ucmpG_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(ucmpG_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
-DEF_INSTR(cmpL_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(cmpL_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
-DEF_INSTR(ucmpL_l8_l8, vm::opargs::StackLocal8, vm::opargs::StackLocal8)
-DEF_INSTR(ucmpL_l8_imm, vm::opargs::StackLocal8, vm::opargs::Immediate)
+// --- 16-bit Integer Comparisons ---
+DEF_INSTR(cmpEq_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpEq_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpNeq_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpNeq_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGt_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpGt_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGe_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpGe_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGt_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(ucmpGt_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGe_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(ucmpGe_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLt_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpLt_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLe_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(cmpLe_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLt_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(ucmpLt_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLe_l16_l16, (vm::opargs::StackLocal16, lhs), (vm::opargs::StackLocal16, rhs))
+DEF_INSTR(ucmpLe_l16_imm, (vm::opargs::StackLocal16, lhs), (vm::opargs::Immediate, rhs))
+
+// --- 8-bit Integer Comparisons ---
+DEF_INSTR(cmpEq_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpEq_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpNeq_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpNeq_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGt_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpGt_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpGe_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpGe_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGt_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(ucmpGt_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpGe_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(ucmpGe_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLt_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpLt_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(cmpLe_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(cmpLe_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLt_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(ucmpLt_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(ucmpLe_l8_l8, (vm::opargs::StackLocal8, lhs), (vm::opargs::StackLocal8, rhs))
+DEF_INSTR(ucmpLe_l8_imm, (vm::opargs::StackLocal8, lhs), (vm::opargs::Immediate, rhs))
+
+// --- 64-bit Floating Point Comparisons ---
+DEF_INSTR(fcmpEq_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpEq_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpNeq_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpNeq_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpGt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpGt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpGe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpGe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpLt_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpLt_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpLe_l64_l64, (vm::opargs::StackLocal64, lhs), (vm::opargs::StackLocal64, rhs))
+DEF_INSTR(fcmpLe_l64_imm, (vm::opargs::StackLocal64, lhs), (vm::opargs::Immediate, rhs))
+
+// --- 32-bit Floating Point Comparisons ---
+DEF_INSTR(fcmpEq_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpEq_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpNeq_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpNeq_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpGt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpGt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpGe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpGe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpLt_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpLt_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
+DEF_INSTR(fcmpLe_l32_l32, (vm::opargs::StackLocal32, lhs), (vm::opargs::StackLocal32, rhs))
+DEF_INSTR(fcmpLe_l32_imm, (vm::opargs::StackLocal32, lhs), (vm::opargs::Immediate, rhs))
 
 // sets the flag if pointer is null
-DEF_INSTR(cmpNull_lptr, vm::opargs::StackLocalPtr)
+DEF_INSTR(cmpNull_lptr, (vm::opargs::StackLocalPtr, ptr))
 
 // ========= VARIANT OPERATIONS ========
 
 
 // Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to its data.
 DEF_INSTR(
-	variantSetInner_lvnt_type,
-	vm::opargs::StackLocalVnt /* variant */,
-	vm::opargs::Type /* 		 inner_type */
+	variantSetInner_lvnt_type, (vm::opargs::StackLocalVnt, variant), (vm::opargs::Type, inner_type)
 )
 /**
- * @brief Sets `destination` to point at `variant`'s data. Expects `variant` to has `expected_type`
+ * @brief Sets `dst_ptr` to point at `variant`'s data. Expects `variant` to has `expected_type`
  * set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
- * type information in the implementation.
+ * @note `expected_type` required to know which type is to be expected. There is no other way to
+ * obtain type information in the implementation.
  */
 DEF_INSTR(
 	variantGetInner_lptr_lvnt_type,
-	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalVnt /* variant */,
-	vm::opargs::Type /* expected_type */
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalVnt, variant),
+	(vm::opargs::Type, expected_type)
 )
 
 /**
@@ -258,158 +361,156 @@ DEF_INSTR(
  */
 DEF_INSTR(
 	variantSetInner_lptr_type,
-	vm::opargs::StackLocalPtr /* variant_ptr */,
-	vm::opargs::Type /* 		 inner_type */
+	(vm::opargs::StackLocalPtr, variant_ptr),
+	(vm::opargs::Type, inner_type)
 )
 
 /**
- * @brief Sets `destination` to point at data of variant under `variant_ptr`. Expects the variant to
+ * @brief Sets `dst_ptr` to point at data of variant under `variant_ptr`. Expects the variant to
  * have `expected_type` set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
- * type information in the implementation.
+ * @note `expected_type` required to know which type is to be expected. There is no other way to
+ * obtain type information in the implementation.
  */
 DEF_INSTR(
 	variantGetInner_lptr_lptr_type,
-	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalPtr /* variant_ptr */,
-	vm::opargs::Type /* expected_type */
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalPtr, variant_ptr),
+	(vm::opargs::Type, expected_type)
 )
 
 // ========= LABELS AND JUMPS ========
 
-DEF_INSTR(label, vm::opargs::Label)
+DEF_INSTR(label, (vm::opargs::Label, label))
 
-DEF_INSTR(jmp_label, vm::opargs::Label)
-DEF_INSTR(jmpIf_label, vm::opargs::Label)
-DEF_INSTR(jmpIfNot_label, vm::opargs::Label)
+DEF_INSTR(jmp_label, (vm::opargs::Label, label))
+DEF_INSTR(jmpIf_label, (vm::opargs::Label, label))
+DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_INSTR(call_func, vm::opargs::FunctionName)
-DEF_INSTR(call_builtinfunc, vm::opargs::BuiltinFunctionName)
-DEF_INSTR(call_cfunc, vm::opargs::ExtCFunctionName)
+DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
+DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
+DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
 
 // return while performing a tail call
-DEF_INSTR(ret_tailcall_func, vm::opargs::FunctionName)
+DEF_INSTR(ret_tailcall_func, (vm::opargs::FunctionName, function))
 // return
 DEF_INSTR(ret)
 
 // ========= STACK OPERATIONS ========
 
 // initialize local variable on local stack with given type
-DEF_INSTR(init_lany_type, vm::opargs::StackLocalAny, vm::opargs::Type)
+DEF_INSTR(init_lany_type, (vm::opargs::StackLocalAny, var), (vm::opargs::Type, type))
 // pop variable from local stack
 DEF_INSTR(deinit)
 
 // ========= IO OPERATIONS ========
 
-DEF_INSTR(input_l64, vm::opargs::StackLocal64)
-DEF_INSTR(output_l64, vm::opargs::StackLocal64)
+DEF_INSTR(input_l64, (vm::opargs::StackLocal64, dst))
+DEF_INSTR(output_l64, (vm::opargs::StackLocal64, src))
 
-DEF_INSTR(input_l32, vm::opargs::StackLocal32)
-DEF_INSTR(output_l32, vm::opargs::StackLocal32)
+DEF_INSTR(input_l32, (vm::opargs::StackLocal32, dst))
+DEF_INSTR(output_l32, (vm::opargs::StackLocal32, src))
 
 
 // ========= CLASS OPERATIONS ========
 
 // initialises vtable pointer
-DEF_INSTR(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+DEF_INSTR(setVTable_lptr_type, (vm::opargs::StackLocalPtr, object_ptr), (vm::opargs::Type, type))
 // casts pointed object to its superclass
-DEF_INSTR(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_INSTR(upcast_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
 // tries to cast pointed object to its subclass
 DEF_INSTR(
-	downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr, vm::opargs::Type
+	downcast_lptr_lptr_type,
+	(vm::opargs::StackLocalPtr, dst),
+	(vm::opargs::StackLocalPtr, src),
+	(vm::opargs::Type, target_type)
 )
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
-DEF_INSTR(virtual_call_lptr_method, vm::opargs::StackLocalPtr, vm::opargs::MethodName)
+DEF_INSTR(
+	virtual_call_lptr_method,
+	(vm::opargs::StackLocalPtr, object_ptr),
+	(vm::opargs::MethodName, method)
+)
 
 // ========= GENERAL POINTER OPERATIONS ========
 
 // allocates given type, stores pointer
-DEF_INSTR(alloc_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+DEF_INSTR(alloc_lptr_type, (vm::opargs::StackLocalPtr, ptr), (vm::opargs::Type, type))
 // frees block under pointer
-DEF_INSTR(free_lptr, vm::opargs::StackLocalPtr)
+DEF_INSTR(free_lptr, (vm::opargs::StackLocalPtr, ptr))
 
 
 // stores local data at pointer
-DEF_INSTR(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_INSTR(store_lptr_lany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::StackLocalAny, src))
 // dereferences pointer and stores into local
-DEF_INSTR(load_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+DEF_INSTR(load_lany_lptr, (vm::opargs::StackLocalAny, dst), (vm::opargs::StackLocalPtr, src_ptr))
 
 // stores reference to local object of any type T in pointer<T>
-DEF_INSTR(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_INSTR(ref_lptr_lany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::StackLocalAny, src))
 
 // ========= STRUCTURE OPERATIONS ========
 
-// expects `ext_field` to be the next instruction
 // loads effective address of struct field
 DEF_INSTR(
 	structLea_lptr_lptr_field,
-	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalPtr /* source */,
-	vm::opargs::Field /* field */
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalPtr, src_data_ptr),
+	(vm::opargs::Field, field)
 )
-// expects `ext_field` to be the next instruction
 DEF_INSTR(
 	structLoad_lany_lptr_field,
-	vm::opargs::StackLocalAny /* destination */,
-	vm::opargs::StackLocalPtr /* data_ptr */,
-	vm::opargs::Field /* field */
+	(vm::opargs::StackLocalAny, dst),
+	(vm::opargs::StackLocalPtr, src_data_ptr),
+	(vm::opargs::Field, field)
 )
-// expects `ext_field` to be the next instruction
 DEF_INSTR(
 	structStore_lptr_lany_field,
-	vm::opargs::StackLocalPtr /* data_ptr */,
-	vm::opargs::StackLocalAny /* source */,
-	vm::opargs::Field /*	 field */
+	(vm::opargs::StackLocalPtr, dst_data_ptr),
+	(vm::opargs::StackLocalAny, src),
+	(vm::opargs::Field, field)
 )
 
 // ========= TABLE OPERATIONS ========
 
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	fixedSizeTableLea_lptr_lptr_l64,
-	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalPtr, src_table_ptr),
+	(vm::opargs::StackLocal64, index)
 )
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	fixedSizeTableLoad_lany_lptr_l64,
-	vm::opargs::StackLocalAny /* destination */,
-	vm::opargs::StackLocalPtr /* table_ptr*/,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalAny, dst),
+	(vm::opargs::StackLocalPtr, src_table_ptr),
+	(vm::opargs::StackLocal64, index)
 )
 
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	fixedSizeTableStore_lptr_lany_l64,
-	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::StackLocalAny /* source*/,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalPtr, dst_table_ptr),
+	(vm::opargs::StackLocalAny, src),
+	(vm::opargs::StackLocal64, index)
 )
 
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	dynTableLea_lptr_lptr_l64,
-	vm::opargs::StackLocalPtr /* destination */,
-	vm::opargs::StackLocalPtr /* table_ptr*/,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalPtr, src_table_ptr),
+	(vm::opargs::StackLocal64, index)
 )
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	dynTableLoad_lany_lptr_l64,
-	vm::opargs::StackLocalAny /* destination */,
-	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalAny, dst),
+	(vm::opargs::StackLocalPtr, src_table_ptr),
+	(vm::opargs::StackLocal64, index)
 )
 
-// expects `ext_l64` to be the next instruction
 DEF_INSTR(
 	dynTableStore_lptr_lany_l64,
-	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::StackLocalAny /* source */,
-	vm::opargs::StackLocal64 /* index */
+	(vm::opargs::StackLocalPtr, dst_table_ptr),
+	(vm::opargs::StackLocalAny, src),
+	(vm::opargs::StackLocal64, index)
 )
 
 /**
@@ -419,30 +520,27 @@ DEF_INSTR(
  * `table_type` is type of the dynamic table itself, not the element type.
  * @note It's counter-intuitive, but if a reallocation has happened, this
  *  instruction will not modify pointer data (unlike in C).
- * @note `ext_l64` is required to tell the count of elements
  */
 DEF_INSTR(
 	dynTableReAlloc_lptr_type_l64,
-	vm::opargs::StackLocalPtr /* table_ptr */,
-	vm::opargs::Type /* table_type */,
-	vm::opargs::StackLocal64 /* new_elem_count */
+	(vm::opargs::StackLocalPtr, dst_table_ptr),
+	(vm::opargs::Type, table_type),
+	(vm::opargs::StackLocal64, new_elem_count)
 )
 
 /**
  * @brief Outputs a dynamic table of bytes as a string.
  */
-DEF_INSTR(
-	strOutput_lptr, vm::opargs::StackLocalPtr /* string_ptr */
-)
+DEF_INSTR(strOutput_lptr, (vm::opargs::StackLocalPtr, string_ptr))
 
 // ========= TYPE OPERATIONS ========
 
 // Casts a primitive type in-place. This does nothing at runtime, but is needed
 // for type checking.
-DEF_INSTR(cast_l8_type, vm::opargs::StackLocal8, vm::opargs::Type)
-DEF_INSTR(cast_l16_type, vm::opargs::StackLocal16, vm::opargs::Type)
-DEF_INSTR(cast_l32_type, vm::opargs::StackLocal32, vm::opargs::Type)
-DEF_INSTR(cast_l64_type, vm::opargs::StackLocal64, vm::opargs::Type)
+DEF_INSTR(cast_l8_type, (vm::opargs::StackLocal8, value), (vm::opargs::Type, target_type))
+DEF_INSTR(cast_l16_type, (vm::opargs::StackLocal16, value), (vm::opargs::Type, target_type))
+DEF_INSTR(cast_l32_type, (vm::opargs::StackLocal32, value), (vm::opargs::Type, target_type))
+DEF_INSTR(cast_l64_type, (vm::opargs::StackLocal64, value), (vm::opargs::Type, target_type))
 
 // ========= MISC ========
 

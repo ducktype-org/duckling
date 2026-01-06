@@ -6,11 +6,16 @@
 #include <backends/dvm/dvm_internal_fwd.hpp>
 
 #include "vm/bytecode/type_of_data.hpp"
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
+
+#include <algorithm>
+#include <ranges>
 
 using namespace compiler::backend_vm::internal;
 
-const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(
+	CRef<tsl::TypeLayout> layout
 ) {
 	if (tsl_type_to_dvm.contains(layout)) {
 		return tsl_type_to_dvm.at(layout);
@@ -22,10 +27,30 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 }
 
 const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
-	if (auto maybe_global = lir_global_to_dvm.atMaybe(global->mangled_name))
+	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
 		return **maybe_global;
 	else
 		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
+}
+
+const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
+	const base::StrID& func_name
+) const {
+	if (auto maybe_ext_func = extern_c_functions.atMaybe(func_name))
+		return **maybe_ext_func;
+	else
+		CORE_PANIC("Extern C function not found: ", func_name);
+}
+
+void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
+	for (const auto& global: bytecode.global_data) global_name_to_dvm_data.put(global.name, global);
+
+	for (const auto& ext_func: bytecode.external_c_functions)
+		extern_c_functions.put(ext_func.name.str, ext_func);
+
+	extra_bytecode_functions.insert(
+		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
+	);
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
@@ -33,14 +58,14 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	base::Optional<CRef<lir::Function>> global_ctor,
 	base::Optional<CRef<lir::Function>> global_dtor
 ) {
-	if (auto maybe_global = lir_global_to_dvm_data.atMaybe(lir_global.mangled_name))
+	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
 		return **maybe_global;
 
 	auto global_type = lowerAndKeepTslType(lir_global.layout);
 
 	// Register the global variable itself before inserting ctor/dtor to handle
 	// recursive references.
-	lir_global_to_dvm.put(
+	global_name_to_dvm.put(
 		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
 	);
 
@@ -66,11 +91,11 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	global_data.ctor_name = ctor_name;
 	global_data.dtor_name = dtor_name;
 
-	lir_global_to_dvm_data.put(lir_global.mangled_name, global_data);
-	return lir_global_to_dvm_data.at(lir_global.mangled_name);
+	global_name_to_dvm_data.put(lir_global.mangled_name, global_data);
+	return global_name_to_dvm_data.at(lir_global.mangled_name);
 }
 
-const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext::lowerAndKeepLirFunction(
+const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
 	if (auto maybe_lowered = lir_function_to_dvm.atMaybe(lir_function)) return **maybe_lowered;
@@ -107,9 +132,11 @@ const vm::code::Function& compiler::backend_vm::internal::ProgramLoweringContext
 	return lir_function_to_dvm.at(lir_function);
 }
 
-vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::lowerTslTypeInternal(
-	CRef<tsl::TypeLayout> layout
-) {
+void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunction& extern_func) {
+	extern_c_functions.put(extern_func.name.str, extern_func);
+}
+
+vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) {
 			return vm::code::PrimitiveType(base::StrID("void"), 1);
@@ -134,17 +161,24 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 			return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 		}
 		variant_case(tsl::ClassTypeLayout, klass) {
-			u64 num_fields = klass.getNumFields();
-			std::vector<vm::code::TypeOfData> field_types;
-			field_types.reserve(num_fields);
+			u64                          num_fields = klass.getNumFields();
+			std::vector<vm::code::Field> fields;
+			fields.reserve(num_fields);
 			for (u64 field_idx = 0; field_idx < num_fields; field_idx++) {
 				auto field_layout = klass.getFieldLayoutOfLayoutIndex(field_idx);
-				field_types.push_back(lowerAndKeepTslType(field_layout));
+				auto field        = lowerAndKeepTslType(field_layout);
+				auto field_symbol = klass.getFieldSymbolOfLayoutIndex(field_idx);
+				fields.push_back(
+					vm::code::Field{ .name = , .type = field }
+				);
 			}
-			return vm::code::ClassType {
-				.name = klass.mangled_name,
-				.fields = std::move(field_types),
-			};
+
+			return vm::code::ClassType(
+				klass.getMangledName(), std::move(fields), false, {}, {}, {}, {}
+			);
+		}
+		variant_case_novalue(tsl::MetaTypeLayout) {
+			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
 		}
 		variant_default {
 			CORE_PANIC(base::strConcat("Type not handled yet: ", layout->toStringIdentification()));
@@ -153,15 +187,19 @@ vm::code::TypeOfData compiler::backend_vm::internal::ProgramLoweringContext::low
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
-) {
-	auto collection        = vm::code::CodeCollection();
-	collection.functions   = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram() {
+	auto collection      = vm::code::CodeCollection();
+	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	collection.functions.insert(
+		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
+	);
 	collection.global_data = std::ranges::to<std::vector>(
-		lir_global_to_dvm_data | std::views::values
+		global_name_to_dvm_data | std::views::values
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);
+	collection.external_c_functions
+		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
 	try {
 		auto valid = vm::code::ValidProgram::withBuiltins();

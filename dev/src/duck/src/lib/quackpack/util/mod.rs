@@ -1,3 +1,4 @@
+pub mod async_helpers;
 pub mod paths;
 pub mod progress_bar;
 pub mod qp_ctx;

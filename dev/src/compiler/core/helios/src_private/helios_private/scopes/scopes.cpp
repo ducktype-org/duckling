@@ -57,7 +57,7 @@ namespace compiler::helios {
 		base::StableVector<ScopeData> scope_table;
 
 		template<class... T>
-		Ref<ScopeData> putInScopeTable(T&&... args) {
+		CRef<ScopeData> putInScopeTable(T&&... args) {
 			scope_table.emplaceBack(std::forward<T>(args)...);
 			return scope_table.last();
 		}
@@ -384,6 +384,14 @@ namespace compiler::helios {
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
+					} else if (auto using_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+						// Using has DeclType::Transparent if it ends in .*
+						// This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
+					} else {
+						CORE_PANIC("Not handled element with DeclKind::Transparent.");
 					}
 					break;
 				}
@@ -600,13 +608,10 @@ namespace compiler::helios {
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
-			if (pst_ref.getLogger()->good()) {
+			if (pst_ref.getLogger()->good())
 				return { pst_ref.getRootElement() };
-			} else {
-				return query::QError(
-					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
-				);
-			}
+			else
+				return ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger());
 		}
 
 		static auto load(KHash key) -> LoadResult {

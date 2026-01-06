@@ -2,7 +2,7 @@ metadata:
   type: "note"
   family: "type_check"
   name: "function_declared_here"
-  code: "5001"
+  code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"
@@ -26,4 +26,4 @@ pointer_messages:
   cause:
     priority: 1
     type: "note"
-    content: ""
+    content: "here"

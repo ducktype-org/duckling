@@ -1,0 +1,34 @@
+metadata:
+  type: "error"
+  family: "lexer"
+  name: "utf8_bad_byte_start"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code_location:
+    description: "The location of the error."
+  byte:
+    description: "The byte offset where the error occurred."
+  bad_byte:
+    description: "The invalid byte value."
+
+header_message:
+  - "At byte "
+  - param: "byte"
+  - ": UTF-8 decoding error: Invalid code-point starting byte "
+  - param: "bad_byte"
+
+description:
+  - codeblock: []
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "here"

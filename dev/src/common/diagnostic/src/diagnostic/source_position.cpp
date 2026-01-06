@@ -12,6 +12,7 @@
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
 
+#include <algorithm>
 #include <string>
 
 namespace dia {
@@ -107,6 +108,16 @@ namespace dia {
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):
 		  SourcePosition(other.location, other.source_start, source_end) {}
+
+	SourcePosition SourcePosition::merge(const SourcePosition& lhs, const SourcePosition& rhs) {
+		const auto* lhs_loc = &*lhs.location;
+		const auto* rhs_loc = &*rhs.location;
+		if (lhs_loc != rhs_loc) CORE_PANIC("Cannot merge SourcePositions from different locations");
+
+		const auto merged_start = std::min(lhs.source_start, rhs.source_start);
+		const auto merged_end   = std::max(lhs.source_end, rhs.source_end);
+		return { lhs.location, merged_start, merged_end };
+	}
 
 	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
 		return location->getSource()->getLineColumn(source_start);

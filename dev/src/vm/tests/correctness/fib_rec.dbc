@@ -4,7 +4,7 @@ function fib { i64 } -> i64 {
 	mov_l64_l64         ret_val, arg0;
 
 	# if !(n > 1): end
-	cmpG_l64_imm        arg0, 1;
+	cmpGt_l64_imm        arg0, 1;
 	jmpIfNot_label      End;
 
 	# fib(n - 1)

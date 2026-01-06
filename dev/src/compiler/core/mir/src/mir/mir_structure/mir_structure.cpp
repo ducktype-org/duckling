@@ -106,15 +106,15 @@ namespace compiler::mir {
 		for (const auto block_id: block_order) {
 			const auto& block = blocks[block_id];
 
-			os << "  block " << u64(block.id);
+			os << "  Block " << u64(block.id);
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {
-				os << "    ";
+				os << "     ";
 				instruction.debugPrint(os);
 				os << "\n";
 			}
-			os << "    ";
+			os << "     ";
 			block.terminator.debugPrint(os);
 			os << "\n";
 		}
@@ -137,7 +137,7 @@ namespace compiler::mir {
 		// save flags to restore
 		auto output_flags = os.flags();
 
-		os << std::left << std::setw(12);
+		os << std::left << std::setw(13);
 		if (output.has_value()) {
 			output.value().debugPrint(os);
 			os << " :=";
@@ -165,8 +165,8 @@ namespace compiler::mir {
 			os << separator;
 			flag.debugPrint(os);
 			separator = ", ";
+			os << "],";
 		}
-		os << "],";
 		debugPrintInstrParameters(os, extra_params);
 		os << " scope:" << scope->id;
 
@@ -175,6 +175,7 @@ namespace compiler::mir {
 	}
 
 	void MIRLocal::debugPrint(std::ostream& os, bool detailed) const {
+		os << std::setw(0);
 		os << "Local(" << u64(id) << ")";
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
@@ -207,7 +208,7 @@ namespace compiler::mir {
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
 		result.access_chain.push_back(field);
-		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->value();
+		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
 

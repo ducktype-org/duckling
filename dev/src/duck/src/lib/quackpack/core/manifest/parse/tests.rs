@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{GitRevision, Source},
+    quackpack::core::{BranchOrTag, Source},
     static_str_id,
 };
 
@@ -518,10 +518,10 @@ dependencies:
     if let Source::Git(git_source) = e.desc().source() {
         assert_eq!(git_source.url(), "git");
         assert_eq!(
-            git_source.rev(),
-            GitRevision::Branch(static_str_id!("branch"))
+            git_source.branch_or_tag(),
+            BranchOrTag::Branch(static_str_id!("branch"))
         );
-        assert_eq!(git_source.commit(), Some(static_str_id!("commit")));
+        assert_eq!(git_source.rev(), Some(static_str_id!("commit")));
     }
     assert!(e.desc().versions().is_empty());
     assert_eq!(e.real_name(), e.desc().manifest_name());
@@ -554,7 +554,7 @@ dependencies:
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
-                  `dependencies.a.source.branch`, `dependencies.a.source.commit`"
+                  `dependencies.a.source.branch`, `dependencies.a.source.tag`"
             ]
         )
     );
@@ -761,6 +761,65 @@ dependencies:
             [
                 "when parsing the field `dependencies.a.conditions`",
                 "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            ]
+        )
+    );
+}
+
+#[test]
+fn dep_features_with_invalid_conds() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      -
+        b:
+          package_features:
+            - a
+        c:
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 11 column 9",
+            ]
+        )
+    );
+
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      - {}
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 10 column 9",
             ]
         )
     );

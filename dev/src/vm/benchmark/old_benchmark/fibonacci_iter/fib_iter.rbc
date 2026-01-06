@@ -36,7 +36,7 @@ function main {
             sub_l64_imm     0, 1;
             
             # if x > 0 : end
-            cmpG_l64_imm    0, 0;
+            cmpGt_l64_imm    0, 0;
             jmpRelIf_label  Loop;
 
         output_l64      16;

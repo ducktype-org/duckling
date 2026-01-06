@@ -22,6 +22,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -39,13 +40,7 @@
 /**
  * Simple function for showing compilation errors.
  */
-void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
-		query::Context::int_logger.dumpLog(std::cerr);
-	}
-}
+void printContextErrors() { query::Context::logger.dumpLog(true, std::cerr); }
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -90,9 +85,9 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                          .copyValueOr(std::vector<std::string>{}),
-
-		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
-		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
+		.immediate_print_diagnostics = true,
+		.dump_llvm_ir                = parsing_result.isFlag("dump-llvm-ir"),
+		.dump_llvm_asm               = parsing_result.isFlag("dump-llvm-asm"),
 	};
 }
 
@@ -196,7 +191,8 @@ clah::Clah getClahForMain() {
 							   auto root
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
-								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
+		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
 									   std::cout << hout_unit.debugPrint(ctx);
@@ -261,7 +257,7 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTree(path_to_compile, package_name);
+					auto root = global_state::getMainPackage().root_module;
 
 					defer(printContextErrors());
 					auto output_artifact
@@ -350,7 +346,7 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compileEntirePackage(
+					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 
@@ -384,7 +380,7 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::exit();
 
-					return 0;
+					return result.isOk() ? 0 : 1;
 				})
 		)
 	    .addSubcommand(

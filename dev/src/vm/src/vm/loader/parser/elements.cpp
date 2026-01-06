@@ -308,9 +308,10 @@ namespace vm::loader::parser {
 
 #undef HANDLE_STR_ARG
 
-		template<typename ArgsHead = void, typename... ArgsTail>
+		// Dummy parameter to help with leading commas from macros.
+		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
 		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
-			// Separate case for no args passed (first arg defaulted)
+			// Separate case for no (non-dummy) args passed (first arg defaulted)
 			// to avoid a trailing comma.
 			if constexpr (std::same_as<ArgsHead, void>) {
 				return {};
@@ -321,14 +322,15 @@ namespace vm::loader::parser {
 			}
 		}
 
-#define HANDLE_INSTR_ARGS(NAME, ...) \
-	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<__VA_ARGS__>),
-
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/bytecode/instruction_definitions.hpp>
-		};
+#define ARG_TYPE(type, name) , type
+#define HANDLE_INSTR_ARGS(NAME, ...) \
+	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG_TYPE EXPAND, __VA_ARGS__)>),
 
+#include <vm/bytecode/instruction_definitions.hpp>
 #undef HANDLE_INSTR_ARGS
+#undef ARG_TYPE
+		};
 	}
 
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {

@@ -114,7 +114,8 @@ namespace compiler::lir {
 			  this->access_chain.size() == 0
 				  ? getBaseLayout()
 				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())->value()
+						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())
+							->valueOrThrow()
 					)
 		  ) {}
 
@@ -196,7 +197,23 @@ namespace compiler::lir {
 		case mir::Operation::FloatNeq:
 			return Operation::FloatNeq;
 
-		// Logic
+		/// Meta type operations ///
+		case mir::Operation::MetaCreateBox:
+			return Operation::MetaCreateBox;
+		case mir::Operation::MetaCreateRef:
+			return Operation::MetaCreateRef;
+		case mir::Operation::MetaCreateConst:
+			return Operation::MetaCreateConst;
+		case mir::Operation::MetaCreateTuple:
+			return Operation::MetaCreateTuple;
+		case mir::Operation::MetaCreateVariant:
+			return Operation::MetaCreateVariant;
+		case mir::Operation::MetaEq:
+			return Operation::MetaEq;
+		case mir::Operation::MetaNeq:
+			return Operation::MetaNeq;
+
+		/// Logic ///
 		case mir::Operation::BooleanAnd:
 			return Operation::BooleanAnd;
 		case mir::Operation::BooleanOr:
@@ -522,6 +539,14 @@ namespace compiler::lir {
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
 
+				case mir::Operation::MetaCreateBox:
+				case mir::Operation::MetaCreateRef:
+				case mir::Operation::MetaCreateConst:
+				case mir::Operation::MetaCreateTuple:
+				case mir::Operation::MetaCreateVariant:
+				case mir::Operation::MetaEq:
+				case mir::Operation::MetaNeq:
+
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
 				case mir::Operation::BooleanNot: {
@@ -647,7 +672,7 @@ namespace compiler::lir {
 				auto abi = [&]() -> helios::SymbolABI {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->expect(
+							return ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
 								"Handling errors in MIR is not supported yet"
 							);
 						}
@@ -764,11 +789,12 @@ namespace compiler::lir {
 	}
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
-		tsh::FunctionAbstractType type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		                                     ->expect("Handling errors in MIR is not supported yet")
-		                                     .getType();
+		tsh::FunctionAbstractType type
+			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+		          .getType();
 
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->expect(
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);

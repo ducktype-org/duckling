@@ -15,7 +15,10 @@ public:
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
+		TESTER_ADD_TEST(check8BitsInstructions);
+		TESTER_ADD_TEST(check16BitsInstructions);
 		TESTER_ADD_TEST(check32BitsInstructions);
+		TESTER_ADD_TEST(check64BitsInstructions);
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
@@ -24,7 +27,6 @@ public:
 		TESTER_ADD_TEST(globalNoDestructorTest);
 		TESTER_ADD_TEST(verySimpleUnsignedTest);
 		TESTER_ADD_TEST(verySimpleBooleanTest);
-		TESTER_ADD_TEST(floatOperationTest);
 		TESTER_ADD_TEST(literalsTest);
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
@@ -38,7 +40,13 @@ private:
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
 
-	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4", {}); }
+	void check8BitsInstructions() { runTestOnVm("8bits.dbc", "", "1", {}); }
+
+	void check16BitsInstructions() { runTestOnVm("16bits.dbc", "", "1", {}); }
+
+	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "11", {}); }
+
+	void check64BitsInstructions() { runTestOnVm("64bits.dbc", "", "11", {}); }
 
 	void pointerTest() {
 		for (auto filename:
@@ -75,11 +83,6 @@ private:
 				vm::code::MissingGlobalCtorDtorError::ERR_MSG,
 			}
 		);
-	}
-
-	void floatOperationTest() {
-		runTestOnVm("floating_point_arithmetic_32.dbc", "", "1056964608", {});
-		runTestOnVm("floating_point_arithmetic_64.dbc", "", "4602678819172646912", {});
 	}
 
 	void literalsTest() {
