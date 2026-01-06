@@ -147,6 +147,12 @@ namespace query::internal {
 		void setPreviousGraph(QueryGraph&& graph);
 
 		/**
+		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
+		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
+		 */
+		NodeID remapUnstableAndUnregisteredNodes(NodeID node);
+
+		/**
 		 * Performs a red-green sweep starting from the specified node in the current query graph.
 		 * This function propagates the red/green markings through the graph to determine which
 		 * nodes need to be recomputed.

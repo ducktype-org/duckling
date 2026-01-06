@@ -2,6 +2,7 @@
 
 #include "node_id.hpp"
 
+#include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
@@ -11,6 +12,7 @@
 #include <queue>
 #include <ranges>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace query::internal {
@@ -170,7 +172,10 @@ namespace query::internal {
 		return buffer;
 	}
 
-	QueryGraph QueryGraph::deserialize(std::span<const byte> data) {
+	QueryGraph QueryGraph::deserialize(
+		std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper
+	) {
+		if (!node_mapper) node_mapper = [](NodeID node) { return node; };
 		using HType   = decltype(NodeID::hash.val);
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
@@ -213,7 +218,8 @@ namespace query::internal {
 
 		// Deserialize each entry in the map
 		for (usize i = 0; i < map_size; ++i) {
-			NodeID node = read_node_id();
+			NodeID raw_node = read_node_id();
+			NodeID node     = node_mapper(raw_node);
 
 			// Deserialize the dependencies vector size
 			usize deps_size = 0;
@@ -226,7 +232,10 @@ namespace query::internal {
 			std::vector<NodeID> deps;
 			deps.reserve(deps_size);
 
-			for (usize j = 0; j < deps_size; ++j) deps.emplace_back(read_node_id());
+			for (usize j = 0; j < deps_size; ++j) {
+				NodeID raw_dep = read_node_id();
+				deps.emplace_back(node_mapper(raw_dep));
+			}
 
 			// Add the deserialized entry to the graph
 			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));

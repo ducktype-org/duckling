@@ -89,13 +89,16 @@ namespace query::internal {
 			usize  idx;  // next child index to process
 		};
 
-		std::vector<Frame>         stack;
+		std::vector<Frame> stack;
+#ifdef BUILD_TYPE_DEV
 		std::unordered_set<NodeID> in_stack;
+#endif
 		stack.push_back(Frame{ .node = start_node, .idx = 0 });
 
 		// This is used to detect back-edges (cycles) in the previous graph
 		// The previous graph should be acyclic, but we just check it to PANIC if not
-		in_stack.insert(start_node);
+		// This is packed in CORE ASSERT to avoid overhead in non-debug builds
+		CORE_ASSERT(in_stack.insert(start_node).second, "This should never happen");
 
 		while (!stack.empty()) {
 			auto& frame = stack.back();
@@ -103,7 +106,8 @@ namespace query::internal {
 
 			// If already colored (via another path), just pop and continue
 			if (node_colors.contains(node)) {
-				in_stack.erase(node);
+				CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+
 				stack.pop_back();
 				continue;
 			}
@@ -117,7 +121,9 @@ namespace query::internal {
 			// If node is not colored that means node is not input, so we can safely mark it Green
 			if (deps.empty()) {
 				node_colors.insert_or_assign(node, PrevColor::Green);
-				in_stack.erase(node);
+
+				CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+
 				stack.pop_back();
 				continue;
 			}
@@ -129,12 +135,13 @@ namespace query::internal {
 				// If child's color is known already, continue to next child
 				if (node_colors.contains(child)) continue;
 
-				if (in_stack.contains(child))
-					CORE_PANIC("Cycle detected in previous query graph during red-green sweep");
-
 				// Push child for processing
 				stack.push_back(Frame{ .node = child, .idx = 0 });
-				in_stack.insert(child);
+
+				CORE_ASSERT(
+					in_stack.insert(child).second,
+					"Cycle detected in previous query graph during red-green sweep"
+				);
 				continue;
 			}
 
@@ -148,18 +155,42 @@ namespace query::internal {
 				}
 			}
 			node_colors.insert_or_assign(node, all_green ? PrevColor::Green : PrevColor::Red);
-			in_stack.erase(node);
+
+			// This is in CORE ASSERT to avoid overhead in non-debug builds
+			// The error should never happen
+			CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+
 			stack.pop_back();
 		}
 
 		return node_colors.at(start_node);
 	}
 
+	NodeID QueryState::remapUnstableAndUnregisteredNodes(NodeID node) {
+		static base::VectorMap<QueryID, QueryID> old_to_new;
+
+		auto register_dummy = [&](QueryID source_qid) -> QueryID {
+			if (auto existing = old_to_new.atMaybe(source_qid); existing.has_value())
+				return **existing;
+
+			QueryData dummy_query_data(
+				QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+			);
+			QueryID new_qid = registerQuery(dummy_query_data);
+			old_to_new.put(source_qid, new_qid);
+			return new_qid;
+		};
+
+		if (!node.q_id.registered()) return { register_dummy(node.q_id), node.hash };
+		if (node.q_id.getData().usesStableHashing()) return node;
+		return { register_dummy(node.q_id), node.hash };
+	}
+
 	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
 		// NodeID with unstable hash might have diferent ID and graph in previous graph
 		// So merging from such NodeID is not allowed
 		CORE_ASSERT(
-			start_node.q_id.registered() && start_node.q_id.getData().usesStableHashing(),
+			start_node.q_id.getData().usesStableHashing(),
 			"Cannot merge previous graph starting from QueryID that does not have stable hash"
 		);
 
@@ -173,28 +204,6 @@ namespace query::internal {
 
 		// If the start node does not exist in previous graph, nothing to merge
 		if (!prev_graph.nodeExists(start_node)) return;
-
-		// If the QueryId from prev graph does not have stable hash
-		// We cannot just 'add' it to current graph as its NodeID
-		// may create unstable hash colision in current graph
-		// So we need to create a new query id for each of them
-		// to make sure that there will be no colision in current graph
-		static base::HashMap<QueryID, QueryID> old_to_new;
-
-		// Helper to get the corresponding NodeID in current graph for a NodeID in previous graph
-		// It handles QueryIDs mapping for nodes with unstable hashes
-		auto get_node_id_mapping = [&](NodeID node) -> NodeID {
-			if (node.q_id.registered() && node.q_id.getData().usesStableHashing())
-				return node;
-			else if (old_to_new.contains(node.q_id))
-				return { old_to_new.at(node.q_id), node.hash };
-			QueryData new_data(
-				QueryKind::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
-			);
-			QueryID new_qid = registerQuery(new_data);
-			old_to_new.insert_or_assign(node.q_id, new_qid);
-			return { new_qid, node.hash };
-		};
 
 		// Iterative DFS to copy nodes and their dependencies from previous graph
 		struct Frame {
@@ -212,11 +221,11 @@ namespace query::internal {
 			const NodeID node = frame.node;
 
 			// If we already created this node in current graph, skip
-			if (query_graph.node_deps.contains(get_node_id_mapping(node))) continue;
+			if (query_graph.node_deps.contains(node)) continue;
 
 			// Insert the node with an empty dependency list first (ensures parent exists for
 			// addDependency)
-			query_graph.node_deps.emplace(get_node_id_mapping(node), std::vector<NodeID>{});
+			query_graph.node_deps.emplace(node, std::vector<NodeID>{});
 
 			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(
@@ -227,11 +236,10 @@ namespace query::internal {
 			// For each child, add the dependency edge and ensure the child will be processed
 			for (const auto& child: prev_deps) {
 				// Add edge in current graph (child doesn't have to exist yet)
-				query_graph.addDependency(get_node_id_mapping(node), get_node_id_mapping(child));
+				query_graph.addDependency(node, child);
 
 				// If child is not in current graph yet, schedule it for creation
-				if (!query_graph.node_deps.contains(get_node_id_mapping(child)))
-					stack.push_back(Frame{ .node = child });
+				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
 			}
 		}
 	}

@@ -20,18 +20,10 @@ namespace query::internal {
 
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
-
-	public:
-		[[nodiscard]]
-		constexpr u64 asInt() const {
-			return val;
-		}
-
-		[[nodiscard]]
-		const QueryData& getData() const;
+		friend class QueryState;
 
 		/**
-		 * @TODO: #1514 determinate if we should keep this method
+		 * @note Unregistered queries occurs only during the deserialisation of previous graph
 		 * This method is used to determinate whether the query is registered - it points to query
 		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
 		 * All other queries should be registered.
@@ -42,6 +34,15 @@ namespace query::internal {
 		 */
 		[[nodiscard]] bool registered() const;
 
+	public:
+		[[nodiscard]]
+		constexpr u64 asInt() const {
+			return val;
+		}
+
+		[[nodiscard]]
+		const QueryData& getData() const;
+
 		[[nodiscard]]
 		constexpr bool operator==(const QueryID& other) const {
 			return val == other.val;
@@ -50,6 +51,11 @@ namespace query::internal {
 		[[nodiscard]]
 		constexpr bool operator<(const QueryID& other) const {
 			return val < other.val;
+		}
+
+		[[nodiscard]]
+		explicit constexpr operator usize() const {
+			return static_cast<usize>(val);
 		}
 	};
 

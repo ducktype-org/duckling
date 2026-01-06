@@ -9,6 +9,7 @@
 #include "query_data.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/pointers/ref.hpp>
 
 namespace query::internal {
 
@@ -30,7 +31,7 @@ namespace query::internal {
 		 */
 		constinit QueryID next = QueryIDMaker::make(1);
 
-		using DataMap = base::HashMap<QueryID, QueryData>;
+		using DataMap = base::VectorMap<QueryID, QueryData>;
 
 		/**
 		 * @note Access to data is done this way, to make it safe to use before main.
@@ -43,8 +44,14 @@ namespace query::internal {
 	}
 
 	const QueryData& QueryID::getData() const {
-		CORE_ASSERT(dataMap().contains(*this), "QueryID not found in dataMap: ", this->asInt());
-		return dataMap().at(*this);
+		auto opt = dataMap().atMaybe(*this);
+		// Only queries loaded from previous graph in incremental compilation might be unregistered
+		// (not converted to Dummy queries) so this is a mistake - they should be registered as
+		// Dummy before using.
+		CORE_ASSERT(
+			opt.has_value(), "QueryID not found in dataMap, so it wasn't registered", this->asInt()
+		);
+		return **opt;
 	}
 
 	bool QueryID::registered() const { return dataMap().contains(*this); }
