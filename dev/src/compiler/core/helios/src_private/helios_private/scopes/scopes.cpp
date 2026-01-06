@@ -198,9 +198,7 @@ namespace compiler::helios {
 
 			std::vector<ScopeID> out;
 
-			for (auto& [key, cache_entry]: cache) {
-				out.emplace_back(QResult{&cache_entry.data});
-			}
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
 	};
@@ -270,9 +268,7 @@ namespace compiler::helios {
 
 			std::vector<ScopeID> out;
 
-			for (auto& [key, cache_entry]: cache) {
-				out.emplace_back(QResult{&cache_entry.data});
-			}
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
 	};
@@ -708,7 +704,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed.
 
 		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();
-		auto pst_scopes = ImplementationOf_QueryPrimaryCodeScopeFor::getAllCachedScopes();
+		auto pst_scopes  = ImplementationOf_QueryPrimaryCodeScopeFor::getAllCachedScopes();
 
 		std::vector<ScopeID> out;
 		out.reserve(root_scopes.size() + pst_scopes.size());
