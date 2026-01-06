@@ -30,33 +30,36 @@
 // except for the lack of Op_label and Comment, since they do not make sense as a runtime instructions.
 
 #ifndef HANDLE_MICRO_INSTR
-#define DEFAULT_HANDLE_MICRO_INSTR
-#define HANDLE_MICRO_INSTR(instr)
+	#define DEFAULT_HANDLE_MICRO_INSTR
+	#define HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_0ARGS
-#define DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-#define HANDLE_MICRO_INSTR_0ARGS(instr) HANDLE_MICRO_INSTR(instr)
+	#define DEFAULT_HANDLE_MICRO_INSTR_0ARGS
+	#define HANDLE_MICRO_INSTR_0ARGS(instr) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_1ARGS
-#define DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-#define HANDLE_MICRO_INSTR_1ARGS(instr, arg0_type) HANDLE_MICRO_INSTR(instr)
+	#define DEFAULT_HANDLE_MICRO_INSTR_1ARGS
+	#define HANDLE_MICRO_INSTR_1ARGS(instr, arg0_type) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef HANDLE_MICRO_INSTR_2ARGS
-#define DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-#define HANDLE_MICRO_INSTR_2ARGS(instr, arg0_type, arg1_type) HANDLE_MICRO_INSTR(instr)
+	#define DEFAULT_HANDLE_MICRO_INSTR_2ARGS
+	#define HANDLE_MICRO_INSTR_2ARGS(instr, arg0_type, arg1_type) HANDLE_MICRO_INSTR(instr)
 #endif
 
 #ifndef DEF_MICRO_INSTR
-#define DEFAULT_DEF_MICRO_INSTR
-#define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
-#define DEF_MICRO_INSTR(...)                                                                      \
-	GET_MACRO(                                                                                    \
-		__VA_ARGS__, HANDLE_MICRO_INSTR_2ARGS, HANDLE_MICRO_INSTR_1ARGS, HANDLE_MICRO_INSTR_0ARGS \
-	)                                                                                             \
-	(__VA_ARGS__)
+	#define DEFAULT_DEF_MICRO_INSTR
+	#define GET_MACRO(_instr, _1, _2, NAME, ...) NAME
+	#define DEF_MICRO_INSTR(...)      \
+		GET_MACRO(                    \
+			__VA_ARGS__,              \
+			HANDLE_MICRO_INSTR_2ARGS, \
+			HANDLE_MICRO_INSTR_1ARGS, \
+			HANDLE_MICRO_INSTR_0ARGS  \
+		)                             \
+		(__VA_ARGS__)
 #endif
 
 
@@ -101,6 +104,11 @@ DEF_MICRO_INSTR(mov_l32_g32, vm::opargs::StackLocal32, vm::opargs::Global32)
 DEF_MICRO_INSTR(mov_l16_g16, vm::opargs::StackLocal16, vm::opargs::Global16)
 DEF_MICRO_INSTR(mov_l8_g8, vm::opargs::StackLocal8, vm::opargs::Global8)
 DEF_MICRO_INSTR(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
+
+DEF_MICRO_INSTR(mov_lstr_lstr, vm::opargs::StackLocalStr, vm::opargs::StackLocalStr)
+DEF_MICRO_INSTR(mov_lstr_gstr, vm::opargs::StackLocalStr, vm::opargs::GlobalStr)
+DEF_MICRO_INSTR(mov_gstr_lstr, vm::opargs::GlobalStr, vm::opargs::StackLocalStr)
+DEF_MICRO_INSTR(mov_gstr_gstr, vm::opargs::GlobalStr, vm::opargs::GlobalStr)
 
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
@@ -479,6 +487,32 @@ DEF_MICRO_INSTR(
     vm::opargs::Field 			 field */
 )
 
+// Same as above, but using struct from local stack
+
+// expects `ext_field` to be the next instruction
+DEF_MICRO_INSTR(
+	structLea_lptr_lstr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalStr /* source,
+    vm::opargs::Field 			 field */
+)
+
+// expects `ext_field` to be the next instruction
+DEF_MICRO_INSTR(
+	structLoad_lany_lstr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalStr /* data_struct,
+    vm::opargs::Field 			 field */
+)
+
+// expects `ext_field` to be the next instruction
+DEF_MICRO_INSTR(
+	structStore_lstr_lany,
+	vm::opargs::StackLocalStr /* data_struct */,
+	vm::opargs::StackLocalAny /* source ,
+    vm::opargs::Field 			 field */
+)
+
 // ========= TABLE OPERATIONS ========
 
 // expects `ext_l64` to be the next instruction
@@ -587,27 +621,27 @@ DEF_MICRO_INSTR(breakpoint)
 DEF_MICRO_INSTR(initFromVmValue)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
-#undef DEFAULT_HANDLE_MICRO_INSTR
-#undef HANDLE_MICRO_INSTR
+	#undef DEFAULT_HANDLE_MICRO_INSTR
+	#undef HANDLE_MICRO_INSTR
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-#undef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
-#undef HANDLE_MICRO_INSTR_0ARGS
+	#undef DEFAULT_HANDLE_MICRO_INSTR_0ARGS
+	#undef HANDLE_MICRO_INSTR_0ARGS
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-#undef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
-#undef HANDLE_MICRO_INSTR_1ARGS
+	#undef DEFAULT_HANDLE_MICRO_INSTR_1ARGS
+	#undef HANDLE_MICRO_INSTR_1ARGS
 #endif
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-#undef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
-#undef HANDLE_MICRO_INSTR_2ARGS
+	#undef DEFAULT_HANDLE_MICRO_INSTR_2ARGS
+	#undef HANDLE_MICRO_INSTR_2ARGS
 #endif
 
 #ifdef DEFAULT_DEF_MICRO_INSTR
-#undef DEFAULT_DEF_MICRO_INSTR
-#undef DEF_MICRO_INSTR
-#undef GET_MACRO
+	#undef DEFAULT_DEF_MICRO_INSTR
+	#undef DEF_MICRO_INSTR
+	#undef GET_MACRO
 #endif

@@ -41,9 +41,12 @@ namespace {
 	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
 
 	template<typename T>
+	concept VmType = base::IsVariantMember<T, TypeOfData>;
+
+	template<typename T>
 	concept CallingInstruction = base::IsTupleMember<T, CallingInstructions>;
 
-	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
+	template<VmType ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
 		const PointerType& pointer, const ObjIdNameMap<TypeOfData>& tod_map, Args&&... error_args
 	) {
@@ -429,6 +432,23 @@ class FunctionValidator {
 					}
 				}
 
+				variant_case(CRef<opargs::StackLocalStr>, local_struct) {
+					if (!current_stack.contains(local_struct->var_name))
+						throw UnknownLocalNameError(*local_struct);
+					CRef<TypeOfData> type = current_stack.at(local_struct->var_name);
+					if (!std::holds_alternative<DataType>(*type))
+						throw InvalidArgumentTypeError(*local_struct);
+				}
+
+				variant_case(CRef<opargs::StackLocalTbl>, local_table) {
+					if (!current_stack.contains(local_table->var_name))
+						throw UnknownLocalNameError(*local_table);
+					CRef<TypeOfData> type = current_stack.at(local_table->var_name);
+					if (!std::holds_alternative<FixedSizeTableType>(*type))
+						throw InvalidArgumentTypeError(*local_table);
+				}
+
+
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
 					CORE_PANIC("Unhandled argument case during validation: ", argumentToString(arg));
@@ -526,17 +546,102 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_g8_g8) {}
 			instr_case_novalue(Op_mov_g8_l8) {}
 			instr_case_novalue(Op_mov_g8_imm) {}
-			instr_case_novalue(Op_mov_gptr_lptr) {}
+			instr_case(Op_mov_gptr_lptr, instr) {
+				// Validate that pointer types match.
+				auto dst_ptr = std::get<PointerType>(
+					*tod_map.at(globals.at(instr.dst.global_data_name)->type.str)
+				);
+				auto src_ptr = std::get<PointerType>(
+					*tod_map.at(code::typeName(*current_stack.at(instr.src.var_name)))
+				);
+				if (dst_ptr.inner != src_ptr.inner) throw PointerTypeMismatchError(instr);
+			}
 			instr_case_novalue(Op_mov_l64_g64) {}
 			instr_case_novalue(Op_mov_l32_g32) {}
 			instr_case_novalue(Op_mov_l16_g16) {}
 			instr_case_novalue(Op_mov_l8_g8) {}
-			instr_case_novalue(Op_mov_lptr_gptr) {}
+			instr_case_novalue(Op_mov_lptr_gptr) {
+				// @TODO: #1771: Add pointer type validation here, but also are elsewhere.
+			}
 			instr_case_novalue(Op_mov_lptr_lptr) {}
 			instr_case_novalue(Op_mov_lopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_gopq) {}
 			instr_case_novalue(Op_mov_gopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_imm) {}
+
+			instr_case(Op_mov_lstr_lstr, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(code::typeName(*current_stack.at(instr.dst.var_name)))
+					),
+					tod_map,
+					instr
+				);
+				auto src_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(code::typeName(*current_stack.at(instr.src.var_name)))
+					),
+					tod_map,
+					instr
+				);
+				if (dst_type.name != src_type.name) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_lstr_gstr, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(code::typeName(*current_stack.at(instr.dst.var_name)))
+					),
+					tod_map,
+					instr
+				);
+				auto src_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(globals.at(instr.src.global_data_name)->type.str)
+					),
+					tod_map,
+					instr
+				);
+				if (dst_type.name != src_type.name) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_gstr_lstr, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(globals.at(instr.dst.global_data_name)->type.str)
+					),
+					tod_map,
+					instr
+				);
+				auto src_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(code::typeName(*current_stack.at(instr.src.var_name)))
+					),
+					tod_map,
+					instr
+				);
+				if (dst_type.name != src_type.name) throw StructTypeMismatchError(instr);
+			}
+			instr_case(Op_mov_gstr_gstr, instr) {
+				// Validate that both sides are the same structs.
+				auto dst_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(globals.at(instr.dst.global_data_name)->type.str)
+					),
+					tod_map,
+					instr
+				);
+				auto src_type = expectPointerType<ClassType>(
+					std::get<PointerType>(
+						*tod_map.at(globals.at(instr.src.global_data_name)->type.str)
+					),
+					tod_map,
+					instr
+				);
+				if (dst_type.name != src_type.name) throw StructTypeMismatchError(instr);
+			}
+
 			instr_case_novalue(Op_setNull_lptr) {}
 
 			instr_case_novalue(Op_add_l64_l64) {}
@@ -905,6 +1010,23 @@ class FunctionValidator {
 
 				validateStructFieldType(ztruct, instr.field, typeName(*source), instr);
 			}
+
+			instr_case(Op_structLea_lptr_lstr_field, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+
+				const auto& klass
+					= std::get<ClassType>(*current_stack.at(instr.src_data_struct.var_name));
+
+				validateStructFieldType(klass, instr.field, destination.inner, instr);
+			}
+			instr_case(Op_structLoad_lany_lstr_field, instr) {
+				throw base::NotYetImplemented("StructLoad_lany_lstr_field is not implemented yet.");
+			}
+			instr_case(Op_structStore_lstr_lany_field, instr) {
+				throw base::NotYetImplemented("StructStore_lstr_lany_field is not implemented yet.");
+			}
+
 			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
 				const auto& destination
 					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
@@ -1004,8 +1126,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 

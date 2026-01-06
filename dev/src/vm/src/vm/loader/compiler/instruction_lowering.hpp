@@ -112,6 +112,10 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lstr_lstr, i) { addLow<Op_mov_lstr_lstr>(i.dst, i.src); }
+			instr_case(high::Op_mov_lstr_gstr, i) { addLow<Op_mov_lstr_gstr>(i.dst, i.src); }
+			instr_case(high::Op_mov_gstr_lstr, i) { addLow<Op_mov_gstr_lstr>(i.dst, i.src); }
+			instr_case(high::Op_mov_gstr_gstr, i) { addLow<Op_mov_gstr_gstr>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_l32_l32, i) { addLow<Op_add_l32_l32>(i.dst, i.src); }
@@ -367,6 +371,18 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_structStore_lptr_lany_field, i) {
 				addLow<Op_structStore_lptr_lany>(i.dst_data_ptr, i.src);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLea_lptr_lstr_field, i) {
+				addLow<Op_structLea_lptr_lstr>(i.dst_ptr, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structLoad_lany_lstr_field, i) {
+				addLow<Op_structLoad_lany_lstr>(i.dst, i.src_data_struct);
+				addLow<Op_ext_field>(i.field);
+			}
+			instr_case(high::Op_structStore_lstr_lany_field, i) {
+				addLow<Op_structStore_lstr_lany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_lptr_lptr_l64, i) {

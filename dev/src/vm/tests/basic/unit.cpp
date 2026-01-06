@@ -31,6 +31,7 @@ public:
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
+		TESTER_ADD_TEST(structureOperations);
 	}
 
 private:
@@ -137,6 +138,10 @@ private:
 				vm::code::VoidTypeArgumentError::ERR_MSG,
 			}
 		);
+	}
+
+	void structureOperations() {
+		runTestOnVm("structure_operations.dbc", "", "50", {});
 	}
 };
 

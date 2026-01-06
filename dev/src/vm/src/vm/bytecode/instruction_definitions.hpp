@@ -83,6 +83,11 @@ DEF_INSTR(mov_l16_g16, (vm::opargs::StackLocal16, dst), (vm::opargs::Global16, s
 DEF_INSTR(mov_l8_g8, (vm::opargs::StackLocal8, dst), (vm::opargs::Global8, src))
 DEF_INSTR(mov_lptr_gptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::GlobalPtr, src))
 
+DEF_INSTR(mov_lstr_lstr, (vm::opargs::StackLocalStr, dst), (vm::opargs::StackLocalStr, src))
+DEF_INSTR(mov_gstr_gstr, (vm::opargs::GlobalStr, dst), (vm::opargs::GlobalStr, src))
+DEF_INSTR(mov_gstr_lstr, (vm::opargs::GlobalStr, dst), (vm::opargs::StackLocalStr, src))
+DEF_INSTR(mov_lstr_gstr, (vm::opargs::StackLocalStr, dst), (vm::opargs::GlobalStr, src))
+
 // does a shallow pointer copy
 DEF_INSTR(mov_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
 
@@ -467,6 +472,27 @@ DEF_INSTR(
 DEF_INSTR(
 	structStore_lptr_lany_field,
 	(vm::opargs::StackLocalPtr, dst_data_ptr),
+	(vm::opargs::StackLocalAny, src),
+	(vm::opargs::Field, field)
+)
+
+// These are the same as above, but for structs referenced via local stack
+
+DEF_INSTR(
+	structLea_lptr_lstr_field,
+	(vm::opargs::StackLocalPtr, dst_ptr),
+	(vm::opargs::StackLocalStr, src_data_struct),
+	(vm::opargs::Field, field)
+)
+DEF_INSTR(
+	structLoad_lany_lstr_field,
+	(vm::opargs::StackLocalAny, dst),
+	(vm::opargs::StackLocalStr, src_data_struct),
+	(vm::opargs::Field, field)
+)
+DEF_INSTR(
+	structStore_lstr_lany_field,
+	(vm::opargs::StackLocalStr, dst_data_struct),
 	(vm::opargs::StackLocalAny, src),
 	(vm::opargs::Field, field)
 )
