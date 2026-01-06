@@ -65,30 +65,21 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @TODO: #1553 -- const ctors will probably be added here
-<<<<<<< HEAD
-						fail(
-							base::strConcat(
-								"We fail here, because constants don't work on DVM as expected, "
-=======
 						// @TODO: #1709 For now, global meta type constants are skipped and not
 						// treated as failure for the code using compile time evaluated types to
 						// compile.
 						if (!cnst.value.has<tsh::SymbolType<>>()) {
-							fail(base::strConcat(
-								"We fail here, because constants don't work on DVM as "
-								"expected, "
->>>>>>> origin/main
-								"remove "
-								"the fail after #1553. ",
-								"Global constant: ",
-								hout_glob.original_name.strView()
-<<<<<<< HEAD
-							)
-						);
-=======
-							));
+							fail(
+								base::strConcat(
+									"We fail here, because constants don't work on DVM as "
+									"expected, "
+									"remove "
+									"the fail after #1553. ",
+									"Global constant: ",
+									hout_glob.original_name.strView()
+								)
+							);
 						}
->>>>>>> origin/main
 					}
 					variant_default {
 						fail(

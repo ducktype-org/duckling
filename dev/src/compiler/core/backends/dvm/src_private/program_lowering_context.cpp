@@ -1,15 +1,15 @@
 #include "program_lowering_context.hpp"
 
 #include "function_lowering_context.hpp"
-#include "typesystem/lower/type_layout.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
+#include <helios/symbols/simple.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
-#include <algorithm>
 #include <ranges>
 
 using namespace compiler::backend_vm::internal;
@@ -168,9 +168,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 				auto field_layout = klass.getFieldLayoutOfLayoutIndex(field_idx);
 				auto field        = lowerAndKeepTslType(field_layout);
 				auto field_symbol = klass.getFieldSymbolOfLayoutIndex(field_idx);
-				fields.push_back(
-					vm::code::Field{ .name = , .type = field }
-				);
+				fields.emplace_back(helios::name(field_symbol), typeName(field));
 			}
 
 			return vm::code::ClassType(

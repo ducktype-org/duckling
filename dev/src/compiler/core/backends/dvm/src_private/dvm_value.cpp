@@ -6,7 +6,7 @@
 
 using namespace compiler::backend_vm::internal;
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMLocal::asArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMLocal::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
 			if (primitive.size == 8) return vm::opargs::StackLocal64{ name };
@@ -23,7 +23,7 @@ using namespace compiler::backend_vm::internal;
 	CORE_UNREACHABLE();
 }
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMGlobal::asArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
 			if (primitive.size == 8) return vm::opargs::Global64{ name };
@@ -40,11 +40,11 @@ using namespace compiler::backend_vm::internal;
 	CORE_UNREACHABLE();
 }
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMValue::asArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMValue::asArgument() const {
 	return VISIT(stored_value, value, return value.asArgument());
 }
 
-[[nodiscard]] vm::opargs::OpCodeArg compiler::backend_vm::internal::DVMImmediate::asArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
 }
 
