@@ -119,7 +119,5 @@ namespace query::internal {
 		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
 
 		~QueryGraph() = default;
-
-	private:
 	};
 }

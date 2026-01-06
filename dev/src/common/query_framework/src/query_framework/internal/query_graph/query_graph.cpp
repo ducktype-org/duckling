@@ -12,7 +12,6 @@
 #include <queue>
 #include <ranges>
 #include <set>
-#include <utility>
 #include <vector>
 
 namespace query::internal {
