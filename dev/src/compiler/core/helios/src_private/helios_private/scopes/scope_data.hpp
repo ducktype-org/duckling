@@ -67,6 +67,10 @@ namespace compiler::helios {
 		/**
 		 * @brief Creates a perfect clone of this ScopeData,
 		 * with all data copied as-is, including unstable_id.
+		 *
+		 * @note It is used by the QueryPrimaryCodeScopeFor query
+		 * when the result is effectively the same as the parent scope,
+		 * but a new ScopeData object is still needed.
 		 */
 		[[nodiscard]]
 		ScopeData perfectClone() const;

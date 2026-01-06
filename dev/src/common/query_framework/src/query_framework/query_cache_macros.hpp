@@ -59,7 +59,7 @@
  *
  * @param bypass_constructible_check If set to true, bypasses the static_assert checks
  * ensuring that QResult is constructible from CRef<PResult>. Use with caution.
- * This is useful in scenarios when this macro works due to friendship but is_constructible_v
+ * This is useful in scenarios when this macro works due to friendship, but is_constructible_v
  * fails, since it cannot see private constructors.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(bypass_constructible_check)                   \

@@ -1,7 +1,6 @@
 #include "scope_data.hpp"
 
 namespace compiler::helios {
-
 	ScopeData ScopeData::perfectClone() const {
 		ScopeData out(parent, is_root, related_pst_element, parent_module, depth);
 
@@ -10,5 +9,4 @@ namespace compiler::helios {
 
 		return out;
 	}
-
 }

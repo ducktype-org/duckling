@@ -60,6 +60,14 @@ namespace compiler::helios {
 		void debugPrintScopeAndParents(std::ostream& os) const;
 
 	private:
+		/**
+		 * @brief Reference to scope data.
+		 * @note There might be multiple ScopeData objects in memory
+		 * for the same logical scope. ScopeData should be distinguished
+		 * using their unstable_id perfect hash, not their memory address.
+		 * See ScopeData::perfectClone() and the implementation of QueryPrimaryCodeScopeFor for more
+		 * details.
+		 */
 		CRef<ScopeData> ref;
 
 		ScopeID(const CRef<ScopeData> ref): ref(ref) {}
