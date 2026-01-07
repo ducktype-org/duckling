@@ -1,6 +1,7 @@
+#include "lang_parser_element.hpp"
+
 #include "access.hpp"
 #include "elements/includes/basic.hpp"
-#include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -9,8 +10,6 @@
 namespace pst {
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
-
-	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 

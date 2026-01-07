@@ -23,16 +23,23 @@
 #pragma once
 
 #include "access.hpp"
+#include "elements/lang_state_unmethods.hpp"
 #include "lang_parser_element.hpp"
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_state.hpp>
+
+#define PST_AUTOMATIC_SKIP(ret) \
+	if (state.isSkipping()) { return ret; }
 
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;
 	using lang_def::Special;
 	using lexer::Operator;
+
+	class LangParserState;
+	using TokenStreamCondition = bool(const TokenStream&, i64);
 
 	/**
 	 * @brief Forces pass by value. Sometimes usefull in parse templates
@@ -47,11 +54,16 @@ namespace pst {
 	protected:
 		State&                state;
 		Ref<pst::LangElement> el;
+		bool                  active_fallback = false;
 
 	public:
 		PSTAutomatic(State& state, Ref<pst::LangElement> caller): state(state), el(caller) {}
 
 		PSTAutomatic(const PSTAutomatic&) = delete;
+
+		~PSTAutomatic() {
+			if (active_fallback) exitFallback();
+		}
 
 		// Useful for debugging:
 		//
@@ -66,6 +78,7 @@ namespace pst {
 		 * @param key The expected keyword.
 		 */
 		PSTAutomatic& one(Keyword key, bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(key)) {
 				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) skipNotSemicolon();
@@ -80,6 +93,7 @@ namespace pst {
 		 * @param spec The expected special token.
 		 */
 		PSTAutomatic& one(Special spec, bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(spec)) {
 				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) skipNotSemicolon();
@@ -94,6 +108,7 @@ namespace pst {
 		 * @param op The expected operator.
 		 */
 		PSTAutomatic& one(Operator op, bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(op)) {
 				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) skipNotSemicolon();
@@ -108,6 +123,7 @@ namespace pst {
 		 * @param result The place to store the parsed identifier.
 		 */
 		PSTAutomatic& one(tpc::Keyword* result, bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
@@ -124,6 +140,7 @@ namespace pst {
 		 * @param result The place to store the parsed identifier.
 		 */
 		PSTAutomatic& one(tpc::Identifier* result, bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
@@ -141,6 +158,7 @@ namespace pst {
 		 * @param result The place to store the parsed identifier.
 		 */
 		PSTAutomatic& one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
 				result->position = state.getPosition();
@@ -154,6 +172,7 @@ namespace pst {
 		 * @param result The place to store the parsed string.
 		 */
 		PSTAutomatic& one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isString()) {
 				state.log(makeBox<tpc::NoStringError>(state.getPosition()));
 				result->value = base::StrID("<error>");
@@ -171,6 +190,7 @@ namespace pst {
 		 * @param result The place to store the parsed string.
 		 */
 		PSTAutomatic& one(tpc::NumericValue* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().is(lexer::Token::Type::NumLiteralGroup)) {
 				state.log(makeBox<tpc::NoNumericValueError>(state.getPosition()));
 				result->value = base::StrID("<error>");
@@ -198,6 +218,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> T>
 		PSTAutomatic& one(MBox<T>* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
 		}
@@ -208,6 +229,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
 		PSTAutomatic& one(AccessInternal<T, name>* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
 		}
@@ -220,6 +242,7 @@ namespace pst {
 		PSTAutomatic& one(
 			AccessInternalAnonymous<T>* result, [[maybe_unused]] bool ignorable = false
 		) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
 		}
@@ -230,6 +253,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> T>
 		PSTAutomatic& one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
 		}
@@ -242,6 +266,7 @@ namespace pst {
 		PSTAutomatic& one(
 			base::Optional<AccessInternal<T, name>>* result, [[maybe_unused]] bool ignorable = false
 		) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
 		}
@@ -254,6 +279,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
 		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El>&& sub_tree) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -271,6 +297,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
 		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El>&& sub_tree) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -288,6 +315,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El>
 		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El>&& sub_tree) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -304,6 +332,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El>
 		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El>&& sub_tree) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -320,6 +349,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename Sink>
 		PSTAutomatic& assign(Sink* sink, MBox<El>&& sub_tree) {
+			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) *sink = std::move(sub_tree);
 			return *this;
 		}
@@ -336,6 +366,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
 		PSTAutomatic& with(Sink* sink, MBox<El> fun(State&, Args...), Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			MBox<El> result = fun(state, std::forward<Args>(args)...);
 			assign(sink, std::move(result));
 			return *this;
@@ -352,6 +383,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
 		PSTAutomatic& withDef(Sink* sink, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			MBox<El> result = El::parse(state, std::forward<Args>(args)...);
 			assign(sink, std::move(result));
 			return *this;
@@ -362,6 +394,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename... Args>
 		PSTAutomatic& withDef(MBox<El>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -371,6 +404,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name, typename... Args>
 		PSTAutomatic& withDef(AccessInternal<El, name>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -380,6 +414,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename... Args>
 		PSTAutomatic& withDef(AccessInternalAnonymous<El>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -389,6 +424,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename... Args>
 		PSTAutomatic& withDef(base::Optional<MBox<El>>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -398,6 +434,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name, typename... Args>
 		PSTAutomatic& withDef(base::Optional<AccessInternal<El, name>>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -407,6 +444,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename... Args>
 		PSTAutomatic& withDef(base::Optional<AccessInternalAnonymous<El>>* result, Args&&... args) {
+			PST_AUTOMATIC_SKIP(*this);
 			with(result, El::parse, std::forward<Args>(args)...);
 			return *this;
 		}
@@ -418,6 +456,7 @@ namespace pst {
 		 */
 		template<typename T>
 		bool tryEat(T type) {
+			PST_AUTOMATIC_SKIP(false);
 			if (state.notEmpty() && state[0].is(type)) {
 				el->addToken(state.tokens().next());
 				return true;
@@ -429,6 +468,7 @@ namespace pst {
 		 * @brief Eats any token other then a semicolon
 		 */
 		PSTAutomatic& eatOne() {
+			PST_AUTOMATIC_SKIP(*this);
 			if (state.notEmpty() && !state[0].is(Special::Semicolon))
 				el->addToken(state.tokens().next());
 			return *this;
@@ -438,6 +478,7 @@ namespace pst {
 		 * @brief Skips any token other then a semicolon
 		 */
 		PSTAutomatic& skipNotSemicolon() {
+			PST_AUTOMATIC_SKIP(*this);
 			if (state.notEmpty() && !state[0].is(Special::Semicolon)) state.tokens().skip();
 			return *this;
 		}
@@ -446,6 +487,10 @@ namespace pst {
 		 * @brief Automatic version of the ParserState function
 		 */
 		PSTAutomatic& goDown() {
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
 			el->addToken(state[0].getSentinelBegin());
 			state.goDown();
 			return *this;
@@ -455,9 +500,91 @@ namespace pst {
 		 * @brief Automatic version of the ParserState function
 		 */
 		PSTAutomatic& goUpAndSkip() {
+			if (state.isSkipping()) {
+				if (!state.removeEntry()) return *this;
+			}
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());
 			skipNotSemicolon();
+			return *this;
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
+		 * PSTAutomatic is destructed at the end of the expression.
+		 *
+		 * Intended usage:
+		 * state.parse(el).autoFallbackLen(length).parseOne(...);
+		 *
+		 * @note Needed when the condition has to be calculated in an hpp file because of templates.
+		 * Normally in cpp files the until version should be used
+		 */
+		PSTAutomatic& autoFallbackLen(u64 length) {
+			CORE_ASSERT(
+				!active_fallback, "Only one active auto fallback supported in pst automatic"
+			);
+			active_fallback = true;
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
+			state.setFallback(length);
+			return *this;
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. The fallback is automatically exited when
+		 * PSTAutomatic is destructed at the end of the expression.
+		 *
+		 * Intended usage:
+		 * state.parse(el).autoFallbackUntil<condition>().parseOne(...);
+		 */
+		template<TokenStreamCondition until>
+		PSTAutomatic& autoFallbackUntil() {
+			CORE_ASSERT(
+				!active_fallback, "Only one active auto fallback supported in pst automatic"
+			);
+			active_fallback = true;
+			return fallbackUntil<until>();
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+		 * after-error parsing short-cutting when exited.
+		 */
+		PSTAutomatic& fallbackLen(u64 length) {
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
+			state.setFallback(length);
+			return *this;
+		}
+
+		/**
+		 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+		 * after-error parsing short-cutting when exited.
+		 */
+		template<TokenStreamCondition until>
+		PSTAutomatic& fallbackUntil() {
+			if (state.isSkipping()) {
+				state.skipEntry();
+				return *this;
+			}
+			u64 length = state.template countUntil<until>();
+			state.setFallback(length);
+			return *this;
+		}
+
+		/**
+		 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
+		 * exited.
+		 */
+		PSTAutomatic& exitFallback() {
+			if (state.isSkipping()) {
+				if (!state.removeEntry()) return *this;
+			}
+			state.exitFallback();
 			return *this;
 		}
 
@@ -467,6 +594,7 @@ namespace pst {
 		 */
 		template<typename T>
 		PSTAutomatic& all(T t) {
+			PST_AUTOMATIC_SKIP(*this);
 			one(t);
 			return *this;
 		}
@@ -477,6 +605,7 @@ namespace pst {
 		 */
 		template<typename T, typename... Q>
 		PSTAutomatic& all(T t, Q... q) {
+			PST_AUTOMATIC_SKIP(*this);
 			one(t);
 			parseRest(q...);
 			return *this;
@@ -500,4 +629,20 @@ namespace pst {
 			parseRest(q...);
 		}
 	};
+
+	/**
+	 * @brief Setup a fallback for parsing. It limits parsing until exited and resets the
+	 * after-error parsing short-cutting when exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void fallbackLen(LangParserState& state, u64 length);
+
+	/**
+	 * @brief Exit a fallback for parsing. It resets the after-error parsing short-cutting when
+	 * exited.
+	 * @note Should not be normally used, is used in situations where there is no elements that is
+	 * currently being parsed. For example in statement parsing.
+	 */
+	void exitFallback(LangParserState& state);
 }
