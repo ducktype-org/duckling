@@ -14,6 +14,18 @@ namespace time_stats {
 	 * correct, and as its underlying values are used for indexing time statistics arrays.
 	 */
 	enum class TimeCategories : u64 {
+
+		/**
+		 * Total compilation time.
+		 * @note Measures in the main.cpp
+		 */
+		TotalCompilationTime,
+
+		/**
+		 * Time spent on PST construction, tracked by the PST.
+		 */
+		PSTConstruction, 
+
 		/**
 		 * Time spent on backend compilation.
 		 * Used for time statistics collection.
@@ -32,12 +44,20 @@ namespace time_stats {
 
 	/**
 	 * RAII-like object to track time spent in a given category.
+	 * Time tracking ends when the object is destroyed or when end() is called.
 	 */
 	struct TrackCategoryTime final {
 		TimeCategories   category;
-		timer::AddToTime add_to_time_object;
+		timer::TimeMeasurement measurement;
+		bool 		     ended;
 
 		TrackCategoryTime(TimeCategories category);
+
+		/**
+		 * Explicitly ends time tracking for this object.
+		 * After calling this function, destructor will do nothing.
+		 */
+		void end();
 
 		~TrackCategoryTime();
 	};

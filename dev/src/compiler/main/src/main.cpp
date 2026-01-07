@@ -9,7 +9,6 @@
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
-#include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -17,7 +16,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <timer/timer.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
@@ -336,9 +335,10 @@ clah::Clah getClahForMain() {
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
-					timer::TimeMeasurement total_compilation_time;
-					total_compilation_time.startMeasurement();
 
+					time_stats::TrackCategoryTime total_compilation_time(
+						time_stats::TimeCategories::TotalCompilationTime
+					);
 
 					auto backend_type = options.isFlag("dvm-backend")
 		                                  ? compiler::driver::BackendType::DVM
@@ -350,7 +350,8 @@ clah::Clah getClahForMain() {
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 
-					total_compilation_time.endMeasurement();
+					total_compilation_time.end();
+
 
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
@@ -358,21 +359,7 @@ clah::Clah getClahForMain() {
 										 "No query statistics will be printed.\n";
 						}
 						query::printStats();
-
-						std::cerr << "\nTotal compilation time: ";
-						timer::printAs(
-							std::cerr,
-							total_compilation_time.duration(),
-							timer::TimeUnit::Milliseconds
-						);
-						std::cerr << "\n";
-						std::cerr << " - Backend compilation time: ";
-						timer::printAs(
-							std::cerr,
-							compiler::driver::getBackendCompilationTime(),
-							timer::TimeUnit::Milliseconds
-						);
-						std::cerr << "\n\n";
+						time_stats::prettyPrintTimeStatistics();
 					}
 
 					if (options.isFlag("print-graph"))

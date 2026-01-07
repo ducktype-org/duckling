@@ -3,6 +3,7 @@
 #include <timer/timer.hpp>
 
 #include <array>
+#include <iostream>
 #include <utility>
 
 namespace time_stats {
@@ -15,8 +16,7 @@ namespace time_stats {
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
-		  category(category),
-		  add_to_time_object(&time_statistics.at(std::to_underlying(category))) {
+		  category(category), ended(false) {
 		CORE_ASSERT(
 			not is_category_active.at(std::to_underlying(category)),
 			"Overlapping time tracking of category ",
@@ -24,9 +24,33 @@ namespace time_stats {
 			"."
 		);
 		is_category_active.at(std::to_underlying(category)) = true;
+		measurement.startMeasurement();
+	}
+	
+
+	void TrackCategoryTime::end() {
+		// multiple calls to end() do nothing:
+		if (ended) return;
+
+		measurement.endMeasurement();
+		
+		CORE_ASSERT(
+			is_category_active.at(std::to_underlying(category)),
+			"Ending time tracking of inactive category ",
+			std::to_underlying(category),
+			"."
+		);
+		is_category_active.at(std::to_underlying(category)) = false;
+		ended = true;
+
+		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
+
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
+		// we don't do anything if already ended:
+		if (ended) return;
+
 		CORE_ASSERT_NOEXCEPT(
 			is_category_active.at(std::to_underlying(category)),
 			"Ending time tracking of inactive category ",
@@ -35,12 +59,35 @@ namespace time_stats {
 		);
 		is_category_active.at(std::to_underlying(category)) = false;
 
-		// note that timer::AddToTime destructor is called after this,
-		// so time will be automatically added to the statistics
+		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
 	}
 
 
     void prettyPrintTimeStatistics() {
-        //...
+		std::cerr << "Time statistics collected by compiler time_stats module:\n";
+		
+		std::cerr << "\nTotal compilation time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::TotalCompilationTime)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+
+		std::cerr << " - PST construction time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::PSTConstruction)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+		
+		std::cerr << " - Backend compilation time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::BackendCompilation)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n\n";
     }
 }
