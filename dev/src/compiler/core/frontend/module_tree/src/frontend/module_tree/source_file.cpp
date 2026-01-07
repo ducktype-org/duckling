@@ -1,6 +1,7 @@
 #include "source_file.hpp"
 
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -142,6 +143,8 @@ namespace compiler::frontend {
 
 	void SourceFile::checkDanglingReference(const base::Ref<SourceFile>& candidate) {
 		IF_BUILD_TYPE_DEV({
+			// If we are not using module modifier, skip the check
+			if (!use_module_modifier) return;
 			const auto* candidate_ptr = candidate.get();
 			bool        is_tracked    = false;
 			for (const auto& entry: files) {

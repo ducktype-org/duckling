@@ -314,7 +314,7 @@ private:
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
 
-		auto source_path = fs::FileManager::createRandomTempFile("removal content");
+		auto source_path = fs::FileManager::createRandomVirtualFile("removal content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
 		ASSERT_EQUAL(1, module->getSourceFiles().size());
@@ -330,10 +330,7 @@ private:
 		auto after = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
-		for (auto& file: cleanup_files) {
-			if (file.getType() == fs::FileType::Virtual) continue;
-			fs::FileManager::deleteFile(file);
-		}
+		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
 
 	void testSourceFileDanglingReferenceDetection() {
@@ -346,7 +343,7 @@ private:
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
 
-		auto source_path = fs::FileManager::createRandomTempFile("dangling content");
+		auto source_path = fs::FileManager::createRandomVirtualFile("dangling content");
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
 		ASSERT_EQUAL(1, module->getSourceFiles().size());
@@ -355,14 +352,10 @@ private:
 
 		ModuleTreeModifier::removeSourceFile(sf_ref);
 
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		assertThrows<base::Panic>(
-			[&]() { (void) GetFileID_Functor::get(file_id); },
-			"Dangling SourceFile should panic after removal"
-		);
-#else
-		(void) file_id;
-#endif
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { (void) GetFileID_Functor::get(file_id); },
+							  "Dangling SourceFile should panic after removal"
+		);)
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}

@@ -544,14 +544,10 @@ private:
 			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
 		);
 
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		assertThrows<base::Panic>(
-			[&]() { (void) GetModuleID_Functor::get(child_id); },
-			"Dangling ModuleTree should panic after removeModule"
-		);
-#else
-		(void) child_id;
-#endif
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  "Dangling ModuleTree should panic after removeModule"
+		);)
 
 		auto grand_ref = GetModuleID_Functor::get(grand_child_id);
 		ASSERT_EQUAL(base::StrID("removal_grand"), grand_ref->getName());
@@ -597,19 +593,14 @@ private:
 		ASSERT_EQUAL(false, hasSubmodule(root->getSubmodules(), base::StrID("recursive_child")));
 		ASSERT_TRUE(root->getSubmodules().empty());
 
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		assertThrows<base::Panic>(
-			[&]() { (void) GetModuleID_Functor::get(child_id); },
-			"Dangling ModuleTree should panic after removeModuleRecursive"
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  "Dangling ModuleTree should panic after removeModuleRecursive"
 		);
-		assertThrows<base::Panic>(
-			[&]() { (void) GetModuleID_Functor::get(grand_child_id); },
-			"Recursive removal should also invalidate grandchildren"
-		);
-#else
-		(void) child_id;
-		(void) grand_child_id;
-#endif
+		                  assertThrows<base::Panic>(
+							  [&]() { (void) GetModuleID_Functor::get(grand_child_id); },
+							  "Recursive removal should also invalidate grandchildren"
+						  );)
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}

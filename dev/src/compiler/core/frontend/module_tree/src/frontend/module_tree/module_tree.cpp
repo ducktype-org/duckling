@@ -1,11 +1,12 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
-#include "frontend/pst_parser/pst_id.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
 #include "queries.hpp"
 #include "source_file.hpp"
+
+#include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
@@ -265,6 +266,8 @@ namespace compiler::frontend {
 
 	void ModuleTree::checkDanglingReference(const base::Ref<ModuleTree>& candidate) {
 		IF_BUILD_TYPE_DEV({
+			// If we are not using module modifier, skip the check
+			if (!use_module_modifier) return;
 			const auto* candidate_ptr = candidate.get();
 			bool        is_tracked    = false;
 			for (const auto& entry: modules) {
