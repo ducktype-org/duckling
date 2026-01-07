@@ -62,12 +62,10 @@ namespace compiler::frontend {
 		friend struct ImplementationOf_QueryFilePST;
 
 		/**
-		 * Dangling reference tracking for ModuleTree instances.
-		 * Used in DEV_DEBUG builds to track dangling references to ModuleTree instances.
+		 * Ensures a SourceFile reference still points to a tracked instance during development
+		 * builds.
 		 */
 		static void checkDanglingReference(const base::Ref<SourceFile>& candidate);
-		static void recordDanglingReference(const base::Ref<SourceFile>& candidate);
-		static void clearDanglingReferenceRecord(const base::Ref<SourceFile>& candidate);
 
 		bool operator==(const SourceFile& other) const {
 			CORE_ASSERT(

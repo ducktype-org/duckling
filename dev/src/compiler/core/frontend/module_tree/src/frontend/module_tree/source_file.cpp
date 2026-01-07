@@ -3,11 +3,8 @@
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-	#include <vector>
-#endif
-
 #include <base/collections/stable_hashmap.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>
@@ -31,9 +28,6 @@ namespace {
 	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
 		files_map;
 
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-	std::vector<base::Ref<compiler::frontend::SourceFile>> dangling_source_file_refs;
-#endif
 }
 
 namespace compiler::frontend {
@@ -55,8 +49,7 @@ namespace compiler::frontend {
 		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
 		Ref<SourceFile> created_ref(&inserted->value);
 		created_ref->storage_handle = storage_key;
-		clearDanglingReferenceRecord(created_ref);
-		created_ref->file_id = FileID(created_ref);
+		created_ref->file_id        = FileID(created_ref);
 		files_map.at(abs_path).emplace_back(created_ref);
 		return created_ref;
 	}
@@ -143,36 +136,21 @@ namespace compiler::frontend {
 			"Attempted to remove SourceFile without storage handle"
 		);
 		const auto storage_key = source_file->storage_handle.value();
-		recordDanglingReference(source_file);
-		const bool erased = files.erase(storage_key);
+		const bool erased      = files.erase(storage_key);
 		CORE_ASSERT(erased, "Failed to remove SourceFile from storage");
 	}
 
 	void SourceFile::checkDanglingReference(const base::Ref<SourceFile>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		const auto it = std::ranges::find(dangling_source_file_refs, candidate);
-		if (it != dangling_source_file_refs.end())
-			CORE_PANIC("dangling reference used after removing SourceFile");
-#else
-		(void) candidate;
-#endif
-	}
-
-	void SourceFile::recordDanglingReference(const base::Ref<SourceFile>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		const auto it = std::ranges::find(dangling_source_file_refs, candidate);
-		if (it == dangling_source_file_refs.end()) dangling_source_file_refs.push_back(candidate);
-#else
-		(void) candidate;
-#endif
-	}
-
-	void SourceFile::clearDanglingReferenceRecord(const base::Ref<SourceFile>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		auto it = std::ranges::find(dangling_source_file_refs, candidate);
-		if (it != dangling_source_file_refs.end()) dangling_source_file_refs.erase(it);
-#else
-		(void) candidate;
-#endif
+		IF_BUILD_TYPE_DEV({
+			const auto* candidate_ptr = candidate.get();
+			bool        is_tracked    = false;
+			for (const auto& entry: files) {
+				if (&entry.value == candidate_ptr) {
+					is_tracked = true;
+					break;
+				}
+			}
+			if (!is_tracked) CORE_PANIC("dangling reference used after removing SourceFile");
+		});
 	}
 }

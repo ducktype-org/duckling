@@ -1,4 +1,5 @@
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
@@ -24,6 +25,7 @@ class SourceFileTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		::compiler::frontend::use_module_modifier = true;
 		TESTER_ADD_TEST(testSourceFileCreation);
 		TESTER_ADD_TEST(testSourceFileProperties);
 		TESTER_ADD_TEST(testPSTGeneration);
@@ -316,16 +318,22 @@ private:
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
 		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		auto sf_ref = getRef(module->getSourceFiles().front());
+		const auto initial_source_count = module->getSourceFiles().size();
+		auto       sf_ref               = getRef(module->getSourceFiles().front());
 
 		auto before = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_EQUAL(1, before.size());
 
 		ModuleTreeModifier::removeSourceFile(sf_ref);
+		ASSERT_TRUE(initial_source_count > 0);
+		ASSERT_TRUE(module->getSourceFiles().size() < initial_source_count);
 		auto after = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
-		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
+		for (auto& file: cleanup_files) {
+			if (file.getType() == fs::FileType::Virtual) continue;
+			fs::FileManager::deleteFile(file);
+		}
 	}
 
 	void testSourceFileDanglingReferenceDetection() {

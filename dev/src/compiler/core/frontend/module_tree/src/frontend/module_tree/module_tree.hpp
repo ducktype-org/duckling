@@ -181,12 +181,10 @@ namespace compiler::frontend {
 		static void removeModuleFromStorage(base::Ref<ModuleTree> module);
 
 		/**
-		 * Dangling reference tracking for ModuleTree instances.
-		 * Used in DEV_DEBUG builds to track dangling references to ModuleTree instances.
+		 * Ensures a ModuleTree reference still points to a tracked instance during development
+		 * builds.
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
-		static void recordDanglingReference(const base::Ref<ModuleTree>& candidate);
-		static void clearDanglingReferenceRecord(const base::Ref<ModuleTree>& candidate);
 
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
@@ -458,10 +456,10 @@ namespace compiler::frontend {
 		 * Removes the module with the given ModuleID from the module map.
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
-		 * @note This will set the parent of all submodules to the parent of the removed module.
+		 * This will set the parent of all submodules to the parent of the removed module.
 		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
-		static void removeModule(base::Ref<ModuleTree> module);
+		static void removeSingleModule(base::Ref<ModuleTree> module);
 
 		/**
 		 * Removes the given module and all of its submodules recursively.

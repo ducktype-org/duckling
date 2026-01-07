@@ -1,12 +1,14 @@
 #include "module_tree.hpp"
 
 #include "access.hpp"
+#include "frontend/pst_parser/pst_id.hpp"
 #include "functors.hpp"
+#include "module_flags/module_flags.hpp"
 #include "queries.hpp"
 #include "source_file.hpp"
-#include "module_flags/module_flags.hpp"
 
 #include <base/collections/stable_hashmap.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_cache_macros.hpp>
@@ -17,10 +19,6 @@
 #include <ranges>
 #include <regex>
 #include <sstream>
-
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-	#include <vector>
-#endif
 
 namespace {
 	/**
@@ -37,14 +35,6 @@ namespace {
 	 */
 	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
 	usize                                                      next_module_storage_key = 0;
-
-/**
- * Dangling reference tracking for ModuleTree instances.
- * Used in DEV_DEBUG builds to track dangling references to ModuleTree instances.
- */
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-	std::vector<base::Ref<compiler::frontend::ModuleTree>> dangling_module_refs;
-#endif
 
 	/**
 	 * Checks if a file name is valid according to the reject regex.
@@ -269,37 +259,22 @@ namespace compiler::frontend {
 			"Attempted to remove ModuleTree without storage handle"
 		);
 		const auto storage_key = module->m_storage_handle.value();
-		recordDanglingReference(module);
-		const bool erased = modules.erase(storage_key);
+		const bool erased      = modules.erase(storage_key);
 		CORE_ASSERT(erased, "Failed to remove ModuleTree from storage");
 	}
 
 	void ModuleTree::checkDanglingReference(const base::Ref<ModuleTree>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		const auto it = std::ranges::find(dangling_module_refs, candidate);
-		if (it != dangling_module_refs.end())
-			CORE_PANIC("dangling reference used after removing ModuleTree");
-#else
-		(void) candidate;
-#endif
-	}
-
-	void ModuleTree::recordDanglingReference(const base::Ref<ModuleTree>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		const auto it = std::ranges::find(dangling_module_refs, candidate);
-		if (it == dangling_module_refs.end()) dangling_module_refs.push_back(candidate);
-#else
-		(void) candidate;
-#endif
-	}
-
-	void ModuleTree::clearDanglingReferenceRecord(const base::Ref<ModuleTree>& candidate) {
-#if defined(BUILD_TYPE_DEV_DEBUG) || defined(BUILD_TYPE_DEV)
-		auto it = std::ranges::find(dangling_module_refs, candidate);
-		if (it != dangling_module_refs.end()) dangling_module_refs.erase(it);
-#else
-		(void) candidate;
-#endif
+		IF_BUILD_TYPE_DEV({
+			const auto* candidate_ptr = candidate.get();
+			bool        is_tracked    = false;
+			for (const auto& entry: modules) {
+				if (&entry.value == candidate_ptr) {
+					is_tracked = true;
+					break;
+				}
+			}
+			if (!is_tracked) CORE_PANIC("dangling reference used after removing ModuleTree");
+		});
 	}
 
 	void ModuleTreeBuilder::buildFromDirectory(
@@ -463,7 +438,6 @@ namespace compiler::frontend {
 		auto            inserted     = modules.put(storage_key, ModuleTree());
 		Ref<ModuleTree> module_ref   = &inserted->value;
 		module_ref->m_storage_handle = storage_key;
-		ModuleTree::clearDanglingReferenceRecord(module_ref);
 		ModuleID mod_id(module_ref);
 
 		module_ref->m_id = mod_id;
@@ -499,13 +473,17 @@ namespace compiler::frontend {
 	 *********************/
 
 	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
 		module->updateModuleHash();
 	}
 
 	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 
 		Ref<ModuleTree> module
 			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
@@ -525,15 +503,23 @@ namespace compiler::frontend {
 
 		// Update module hash
 		module->updateModuleHash();
-		
-		//Remove entry from root_element_file_back_map if exists
+
+		// Remove entry from root_element_file_back_map if exists
+		auto root_id = file->getPST()->getRootElement().illegalAccess();
+		if (root_id.has_value()) {
+			auto iter = root_element_file_back_map.find(root_id.value()->getID());
+			if (iter != root_element_file_back_map.end() && iter->second == file->getFileID())
+				root_element_file_back_map.erase(iter);
+		}
 
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFile(file);
 	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		CORE_ASSERT(
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
@@ -545,7 +531,9 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		base::StrID name = submodule->getName();
 		CORE_ASSERT(
 			!module->m_submodules.contains(name),
@@ -603,7 +591,9 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
@@ -629,7 +619,9 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		CORE_ASSERT(
 			module->m_main_source_file.has_value(),
 			base::strConcat(
@@ -643,7 +635,9 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
@@ -680,13 +674,17 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::setParent(
 		base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
 	) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		CORE_ASSERT(parent.has_value(), "Parent module must be specified");
 		addSubmodule(parent.value(), module);
 	}
 
 	void ModuleTreeModifier::removeParent(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		CORE_ASSERT(
 			module->m_parent.has_value(),
 			base::strConcat("Module ", module->getName().strView(), " does not have a parent")
@@ -721,7 +719,9 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::changePackageID(
 		base::Ref<ModuleTree> module, std::string_view new_package_id
 	) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		CORE_ASSERT(
 			!module->m_parent.has_value(),
 			"Only root modules can have their package ID changed, the parent is: ",
@@ -746,8 +746,10 @@ namespace compiler::frontend {
 		change_package_id(module, new_package_id);
 	}
 
-	void ModuleTreeModifier::removeModule(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+	void ModuleTreeModifier::removeSingleModule(base::Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		auto parent = module->m_parent;
 
 		// Update parent module if it exists
@@ -799,7 +801,9 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::removeModuleRecursive(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		auto parent = module->m_parent;
 
 		if (parent.has_value()) {
@@ -837,7 +841,9 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		CORE_ASSERT(use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp");
+		CORE_ASSERT(
+			use_module_modifier, "Module modifier feature is disabled. See module_flags.hpp"
+		);
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(!source_files.empty(), "No source files found for modified file");
 		for (auto& source_file: source_files) source_file->update();

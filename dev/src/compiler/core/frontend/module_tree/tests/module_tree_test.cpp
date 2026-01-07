@@ -1,4 +1,5 @@
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
@@ -48,6 +49,7 @@ class ModuleTreeTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		::compiler::frontend::use_module_modifier = true;
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
 		TESTER_ADD_TEST(testQueries);
@@ -431,7 +433,7 @@ private:
 		ASSERT_EQUAL(mt, getRef(sub_mod->getParentModule().value()));
 
 		// Test removeModule
-		ModuleTreeModifier::removeModule(sub_mod);
+		ModuleTreeModifier::removeSingleModule(sub_mod);
 		ASSERT_EQUAL(false, hasSubmodule(mt->getSubmodules(), base::StrID("submod")));
 
 		// Test fileModified (should not throw)
@@ -467,7 +469,7 @@ private:
 				);
 
 			// Remove the submodule
-			ModuleTreeModifier::removeModule(removable_sub_mod);
+			ModuleTreeModifier::removeSingleModule(removable_sub_mod);
 			ASSERT_EQUAL(false, hasSubmodule(mt->getSubmodules(), base::StrID("removable")));
 		}
 
@@ -513,15 +515,15 @@ private:
 		child_builder->setMainSourceFile(child_main);
 		auto child = child_builder->finalize();
 
-		auto grand_builder = ModuleTreeBuilder::create();
-		grand_builder->setName(base::StrID("removal_grand"));
-		grand_builder->setPackageID("removal_pkg");
+		auto grand_child_builder = ModuleTreeBuilder::create();
+		grand_child_builder->setName(base::StrID("removal_grand"));
+		grand_child_builder->setPackageID("removal_pkg");
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
 		cleanup_files.push_back(grand_main);
-		grand_builder->setMainSourceFile(grand_main);
-		auto grand = grand_builder->finalize();
+		grand_child_builder->setMainSourceFile(grand_main);
+		auto grand_child = grand_child_builder->finalize();
 
-		ModuleTreeModifier::addSubmodule(child, grand);
+		ModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleTreeModifier::addSubmodule(root, child);
 
 		auto extra_source = fs::FileManager::createRandomVirtualFile("fn extra() {}");
@@ -529,10 +531,10 @@ private:
 		ModuleTreeModifier::addSourceFile(child, extra_source);
 
 		ASSERT_TRUE(hasSubmodule(root->getSubmodules(), base::StrID("removal_child")));
-		auto child_id = child->getModuleID();
-		auto grand_id = grand->getModuleID();
+		auto child_id       = child->getModuleID();
+		auto grand_child_id = grand_child->getModuleID();
 
-		ModuleTreeModifier::removeModule(child);
+		ModuleTreeModifier::removeSingleModule(child);
 
 		ASSERT_TRUE(hasSubmodule(root->getSubmodules(), base::StrID("removal_grand")));
 		ASSERT_EQUAL(false, hasSubmodule(root->getSubmodules(), base::StrID("removal_child")));
@@ -551,7 +553,7 @@ private:
 		(void) child_id;
 #endif
 
-		auto grand_ref = GetModuleID_Functor::get(grand_id);
+		auto grand_ref = GetModuleID_Functor::get(grand_child_id);
 		ASSERT_EQUAL(base::StrID("removal_grand"), grand_ref->getName());
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
@@ -576,19 +578,19 @@ private:
 		child_builder->setMainSourceFile(child_main);
 		auto child = child_builder->finalize();
 
-		auto grand_builder = ModuleTreeBuilder::create();
-		grand_builder->setName(base::StrID("recursive_grand"));
-		grand_builder->setPackageID("recursive_pkg");
+		auto grand_child_builder = ModuleTreeBuilder::create();
+		grand_child_builder->setName(base::StrID("recursive_grand"));
+		grand_child_builder->setPackageID("recursive_pkg");
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
 		cleanup_files.push_back(grand_main);
-		grand_builder->setMainSourceFile(grand_main);
-		auto grand = grand_builder->finalize();
+		grand_child_builder->setMainSourceFile(grand_main);
+		auto grand_child = grand_child_builder->finalize();
 
-		ModuleTreeModifier::addSubmodule(child, grand);
+		ModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleTreeModifier::addSubmodule(root, child);
 
-		auto child_id = child->getModuleID();
-		auto grand_id = grand->getModuleID();
+		auto child_id       = child->getModuleID();
+		auto grand_child_id = grand_child->getModuleID();
 
 		ModuleTreeModifier::removeModuleRecursive(child);
 
@@ -601,12 +603,12 @@ private:
 			"Dangling ModuleTree should panic after removeModuleRecursive"
 		);
 		assertThrows<base::Panic>(
-			[&]() { (void) GetModuleID_Functor::get(grand_id); },
+			[&]() { (void) GetModuleID_Functor::get(grand_child_id); },
 			"Recursive removal should also invalidate grandchildren"
 		);
 #else
 		(void) child_id;
-		(void) grand_id;
+		(void) grand_child_id;
 #endif
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
