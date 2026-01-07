@@ -142,8 +142,9 @@ namespace query::internal {
 				stack.push_back(Frame{ .node = child, .idx = 0 });
 
 				IF_BUILD_TYPE_DEV(
+					auto instert_result = in_stack.insert(child);
 					CORE_ASSERT(
-						in_stack.insert(child).second,
+						instert_result.second,
 						"Cycle detected in previous query graph during red-green sweep"
 					);
 				)
@@ -162,8 +163,6 @@ namespace query::internal {
 			}
 			node_colors.insert_or_assign(node, all_green ? PrevColor::Green : PrevColor::Red);
 
-			// This is in CORE ASSERT to avoid overhead in non-debug builds
-			// The error should never happen
 			IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
 			stack.pop_back();
