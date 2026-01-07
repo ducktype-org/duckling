@@ -16,7 +16,8 @@ namespace time_stats {
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
-		  category(category), ended(false) {
+		  category(category),
+		  ended(false) {
 		CORE_ASSERT(
 			not is_category_active.at(std::to_underlying(category)),
 			"Overlapping time tracking of category ",
@@ -26,14 +27,13 @@ namespace time_stats {
 		is_category_active.at(std::to_underlying(category)) = true;
 		measurement.startMeasurement();
 	}
-	
 
 	void TrackCategoryTime::end() {
 		// multiple calls to end() do nothing:
 		if (ended) return;
 
 		measurement.endMeasurement();
-		
+
 		CORE_ASSERT(
 			is_category_active.at(std::to_underlying(category)),
 			"Ending time tracking of inactive category ",
@@ -41,10 +41,9 @@ namespace time_stats {
 			"."
 		);
 		is_category_active.at(std::to_underlying(category)) = false;
-		ended = true;
+		ended                                               = true;
 
 		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
-
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
@@ -62,10 +61,9 @@ namespace time_stats {
 		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
 	}
 
-
-    void prettyPrintTimeStatistics() {
+	void prettyPrintTimeStatistics() {
 		std::cerr << "Time statistics collected by compiler time_stats module:\n";
-		
+
 		std::cerr << "\nTotal compilation time: ";
 		timer::printAs(
 			std::cerr,
@@ -81,7 +79,7 @@ namespace time_stats {
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
-		
+
 		std::cerr << " - Backend compilation time: ";
 		timer::printAs(
 			std::cerr,
@@ -89,5 +87,5 @@ namespace time_stats {
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n\n";
-    }
+	}
 }

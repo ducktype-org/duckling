@@ -14,9 +14,7 @@ namespace compiler::driver {
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, const LIRModuleData& lir_module
 	) {
-		time_stats::TrackCategoryTime __(
-			time_stats::TimeCategories::BackendCompilation
-		);
+		time_stats::TrackCategoryTime __(time_stats::TimeCategories::BackendCompilation);
 
 		backend_llvm::Module mod(lir_module.module_id);
 

@@ -1,14 +1,11 @@
 #include "compile_dvm.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
-
 #include <time_stats/time_stats.hpp>
 
 namespace compiler::driver {
 	vm::code::CodeCollection compileLIRModuleToDVM(const LIRModuleData& data) {
-		time_stats::TrackCategoryTime _(
-			time_stats::TimeCategories::BackendCompilation
-		);
+		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 		backend_vm::Module module(data.module_id);
 

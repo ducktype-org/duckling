@@ -24,7 +24,7 @@ namespace time_stats {
 		/**
 		 * Time spent on PST construction, tracked by the PST.
 		 */
-		PSTConstruction, 
+		PSTConstruction,
 
 		/**
 		 * Time spent on backend compilation.
@@ -41,15 +41,14 @@ namespace time_stats {
 
 	};
 
-
 	/**
 	 * RAII-like object to track time spent in a given category.
 	 * Time tracking ends when the object is destroyed or when end() is called.
 	 */
 	struct TrackCategoryTime final {
-		TimeCategories   category;
+		TimeCategories         category;
 		timer::TimeMeasurement measurement;
-		bool 		     ended;
+		bool                   ended;
 
 		TrackCategoryTime(TimeCategories category);
 
@@ -62,6 +61,6 @@ namespace time_stats {
 		~TrackCategoryTime();
 	};
 
-    void prettyPrintTimeStatistics();
+	void prettyPrintTimeStatistics();
 
 }
