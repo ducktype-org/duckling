@@ -144,7 +144,7 @@ namespace compiler::frontend {
 	void SourceFile::checkDanglingReference(const base::Ref<SourceFile>& candidate) {
 		IF_BUILD_TYPE_DEV({
 			// If we are not using module modifier, skip the check
-			if (!use_module_modifier) return;
+			if (!use_module_modifier_remove) return;
 			const auto* candidate_ptr = candidate.get();
 			bool        is_tracked    = false;
 			for (const auto& entry: files) {

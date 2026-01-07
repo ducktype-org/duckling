@@ -25,7 +25,7 @@ class SourceFileTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		::compiler::frontend::use_module_modifier = true;
+		::compiler::frontend::use_module_modifier_remove = true;
 		TESTER_ADD_TEST(testSourceFileCreation);
 		TESTER_ADD_TEST(testSourceFileProperties);
 		TESTER_ADD_TEST(testPSTGeneration);

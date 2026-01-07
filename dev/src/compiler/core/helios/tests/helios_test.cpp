@@ -1,4 +1,3 @@
-#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -94,8 +93,6 @@ public:
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
 		TESTER_ADD_TEST(testScopeSymbolsConsistency);
-
-		::compiler::frontend::use_module_modifier = true;
 	}
 
 private:

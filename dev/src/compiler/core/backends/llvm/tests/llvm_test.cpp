@@ -1,5 +1,4 @@
 #include <backends/llvm/llvm_backend.hpp>
-#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -37,7 +36,6 @@ public:
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(ffiTest);
-		::compiler::frontend::use_module_modifier = true;
 	}
 
 private:

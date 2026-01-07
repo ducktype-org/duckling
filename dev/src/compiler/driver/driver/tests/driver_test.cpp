@@ -3,7 +3,6 @@
 #include <driver/module_flags/module_flags.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/packages.hpp>
@@ -43,8 +42,6 @@ public:
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
-
-		::compiler::frontend::use_module_modifier = true;
 
 		compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
