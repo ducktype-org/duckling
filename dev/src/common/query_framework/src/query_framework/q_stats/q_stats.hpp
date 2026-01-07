@@ -1,6 +1,7 @@
 /**
  * Various statistics collected during query framework operation.
- * Statistics include time spent in queries, number of cache hits/misses, time spend in red-green sweeps etc.
+ * Statistics include time spent in queries, number of cache hits/misses, time spend in red-green
+ * sweeps etc.
  */
 
 #pragma once

@@ -63,12 +63,10 @@ namespace query {
 			timer::printAs(std::cerr, stat_data.total_call_time, timer::TimeUnit::Milliseconds);
 			std::cerr << "\n\n";
 		}
-			
+
 		std::cerr << "=== Query Framework Other Statistics ===\n\n";
 		std::cerr << "Total time spent in red-green sweeps: ";
-		timer::printAs(
-			std::cerr, total_red_green_sweep_time, timer::TimeUnit::Milliseconds
-		);
+		timer::printAs(std::cerr, total_red_green_sweep_time, timer::TimeUnit::Milliseconds);
 		std::cerr << "\n\n";
 	}
 }
