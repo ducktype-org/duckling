@@ -149,7 +149,8 @@ namespace query::internal {
 		/**
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
 		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
-		 * @note This is for internal use in QueryFramework only. It is used to map nodes when deserializnig previous graph in incremental compilation. 
+		 * @note This is for internal use in QueryFramework only. It is used to map nodes when
+		 * deserializnig previous graph in incremental compilation.
 		 */
 		NodeID remapUnstableOrUnregisteredNodes(NodeID node);
 

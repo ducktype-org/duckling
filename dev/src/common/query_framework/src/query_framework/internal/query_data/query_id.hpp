@@ -61,9 +61,9 @@ namespace query::internal {
 			return val < other.val;
 		}
 
-		/**  
-         * @note Used for VectorMap  
-         */
+		/**
+		 * @note Used for VectorMap
+		 */
 		[[nodiscard]]
 		explicit constexpr operator usize() const {
 			return static_cast<usize>(val);

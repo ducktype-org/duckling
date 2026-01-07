@@ -142,8 +142,7 @@ namespace query::internal {
 				stack.push_back(Frame{ .node = child, .idx = 0 });
 
 				IF_BUILD_TYPE_DEV(
-					auto instert_result = in_stack.insert(child);
-					CORE_ASSERT(
+					auto instert_result = in_stack.insert(child); CORE_ASSERT(
 						instert_result.second,
 						"Cycle detected in previous query graph during red-green sweep"
 					);
