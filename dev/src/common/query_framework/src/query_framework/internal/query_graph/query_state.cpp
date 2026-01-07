@@ -6,6 +6,7 @@
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
 #include <unordered_set>
@@ -69,6 +70,9 @@ namespace query::internal {
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
+		// measure time spent in red-green sweep:
+		timer::AddToTime _(&total_red_green_sweep_time);
+
 		// No previous compilation graph -> cannot decide incremental reuse, mark as needs recompute
 		if (!previous.has_value()) return PrevColor::Red;
 

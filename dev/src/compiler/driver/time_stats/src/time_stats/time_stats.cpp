@@ -71,7 +71,7 @@ namespace time_stats {
 	}
 
 	void prettyPrintTimeStatistics() {
-		std::cerr << "Time statistics collected by compiler time_stats module:\n\n";
+		std::cerr << "=== Time statistics collected by compiler time_stats module ===\n\n";
 
 		std::cerr << "Driver initialization time: ";
 		timer::printAs(

@@ -1,3 +1,8 @@
+/**
+ * Various statistics collected during query framework operation.
+ * Statistics include time spent in queries, number of cache hits/misses, time spend in red-green sweeps etc.
+ */
+
 #pragma once
 
 #include <timer/timer.hpp>  // @TODO #404: relax it, so query does not leak timer
@@ -6,6 +11,11 @@
 #include <query_framework/module_flags/module_flags.hpp>  // IWYU pragma: export (for USE_STATS)
 
 namespace query {
+
+	/**
+	 * Total time spent in red-green sweeps across all queries.
+	 */
+	extern timer::Duration total_red_green_sweep_time;
 
 	/**
 	 * RAII-like object to collect statistics about a single query call.
