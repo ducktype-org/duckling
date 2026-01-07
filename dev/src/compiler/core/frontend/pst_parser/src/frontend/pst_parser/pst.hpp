@@ -6,9 +6,9 @@
 #include "pst_state_forward.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
-#include <time_stats/time_stats.hpp>
 
 namespace pst {
 	// Used to not include full state definition
@@ -56,10 +56,7 @@ namespace pst {
 		 */
 		template<typename... Args>
 		void parse(Args&&... args) requires ParseAble<Args...> {
-
-			time_stats::TrackCategoryTime track_time(
-				time_stats::TimeCategories::PSTConstruction
-			);
+			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
 			auto                    state_box  = internal::makeState(
@@ -129,6 +126,7 @@ namespace pst {
 		 * @brief Construct a new Pst from tokenized file
 		 */
 		PST(Box<tokenizer::TokenSource> file, hashing::ComponentHash context = {})
+
 		requires ParseAble<>: file(std::move(file)), context_info(std::move(context)) {
 			if (getLogger()->bad()) return;
 			parse();
@@ -138,6 +136,7 @@ namespace pst {
 		 * @brief Construct a new Pst from file path
 		 */
 		PST(const fs::File& path, hashing::ComponentHash context = {})
+
 		requires ParseAble<>:
 			  file(tokenizer::makeTokenSource(path)),
 			  context_info(std::move(context)) {
