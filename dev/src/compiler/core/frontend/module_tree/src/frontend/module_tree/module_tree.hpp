@@ -1,6 +1,7 @@
 #pragma once
 
 #include "access.hpp"
+#include "module_id.hpp"
 #include "source_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -57,6 +58,7 @@ namespace compiler::frontend {
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
 		friend struct GetModuleID_Functor;
+		friend struct ModuleID;
 
 	public:
 		ModuleID getModuleID() const;

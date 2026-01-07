@@ -60,6 +60,7 @@ namespace compiler::frontend {
 		friend class ModuleTree;
 		friend struct GetFileID_Functor;
 		friend struct ImplementationOf_QueryFilePST;
+		friend struct FileID;
 
 		/**
 		 * Ensures a SourceFile reference still points to a tracked instance during development
