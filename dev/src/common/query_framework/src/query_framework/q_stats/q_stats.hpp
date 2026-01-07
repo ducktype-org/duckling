@@ -19,6 +19,11 @@ namespace query {
 	extern timer::Duration total_red_green_sweep_time;
 
 	/**
+	 * Total time spent in graph merges across all queries.
+	 */
+	extern timer::Duration total_graph_merge_time;
+
+	/**
 	 * RAII-like object to collect statistics about a single query call.
 	 * Should be used in a way that encapsulates the entire call to a query function.
 	 */
