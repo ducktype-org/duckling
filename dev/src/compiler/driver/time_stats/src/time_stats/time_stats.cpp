@@ -38,4 +38,9 @@ namespace time_stats {
 		// note that timer::AddToTime destructor is called after this,
 		// so time will be automatically added to the statistics
 	}
+
+
+    void prettyPrintTimeStatistics() {
+        //...
+    }
 }

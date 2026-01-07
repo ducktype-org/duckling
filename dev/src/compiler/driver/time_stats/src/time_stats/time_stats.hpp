@@ -29,9 +29,6 @@ namespace time_stats {
 
 	};
 
-	// namespace internal {
-
-	// }
 
 	/**
 	 * RAII-like object to track time spent in a given category.
@@ -44,5 +41,7 @@ namespace time_stats {
 
 		~TrackCategoryTime();
 	};
+
+    void prettyPrintTimeStatistics();
 
 }
