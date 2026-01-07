@@ -61,6 +61,8 @@ namespace time_stats {
 		~TrackCategoryTime();
 	};
 
+	/**
+	 * Pretty-prints collected time statistics to std::cerr.
+	 */
 	void prettyPrintTimeStatistics();
-
 }

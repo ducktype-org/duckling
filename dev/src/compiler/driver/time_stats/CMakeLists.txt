@@ -3,5 +3,3 @@ add_library(CompilerTimeStats
 )
 
 make_module(CompilerTimeStats USES Base Timer)
-
-

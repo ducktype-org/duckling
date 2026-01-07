@@ -66,7 +66,7 @@ namespace time_stats {
 	void prettyPrintTimeStatistics() {
 		std::cerr << "Time statistics collected by compiler time_stats module:\n";
 
-		std::cerr << "\nTotal compilation time: ";
+		std::cerr << "\nTotal compilation time (note that subcategories may overlap): ";
 		timer::printAs(
 			std::cerr,
 			time_statistics.at(std::to_underlying(TimeCategories::TotalCompilationTime)),
