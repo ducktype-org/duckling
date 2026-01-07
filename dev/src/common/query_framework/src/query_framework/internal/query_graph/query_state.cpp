@@ -163,7 +163,7 @@ namespace query::internal {
 		// measure time spent in graph merges:
 		timer::AddToTime _(&total_graph_merge_time);
 
-		
+
 		// NodeID with unstable hash might have diferent ID and graph in previous graph
 		// So merging from such NodeID is not allowed
 		CORE_ASSERT(
