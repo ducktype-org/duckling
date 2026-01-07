@@ -3,37 +3,33 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class PatternArgumentCountError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Pattern declarations must have exactly one parameter.";
+	class PatternArgumentCountError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "pattern_argument_count" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		PatternArgumentCountError(dia::SourcePosition pos): dia::Error(pos) {}
+		PatternArgumentCountError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class PatternBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
+	class PatternBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "pattern_bracket_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		PatternBracketError(dia::SourcePosition pos): dia::Error(pos) {}
+		PatternBracketError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<Pattern> Pattern::parse(LangParserState& state) {
@@ -47,20 +43,20 @@ namespace pst {
 		// Patterns take in only one argument, thus we don't use the parametr list and check for
 		// braces manually.
 		if (!state[0].isBracketGroup(Token::Round)) {
-			state.log(makeBox<PatternBracketError>(state.getPosition()));
+			state.logInt(makeBox<PatternBracketError>(state.getPosition()));
 			return nullptr;
 		}
 
 		auto bracket_group_token = state[0];
 		state.parse(out).goDown();
 		if (state.empty()) {
-			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
+			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 
 		state.parse(out).one(&out->param);
 		if (!state.empty()) {  // More than one argument.
-			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
+			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 

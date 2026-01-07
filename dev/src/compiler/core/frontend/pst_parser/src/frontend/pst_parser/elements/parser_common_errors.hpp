@@ -1,37 +1,29 @@
 #pragma once
 
-#include <diagnostic/message.hpp>
+#include <diagnostic_interactive/message.hpp>
 
 namespace pst::error {
-	class BlockStartError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a code block starting with `{`.";
+	class BlockStartError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "block_start_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
+		BlockStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class DuplicateSemicolon final: public dia::Warning {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Duplicate semicolon";
+	class DuplicateSemicolon final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "warning",
+				     .family        = "parser",
+				     .name          = "duplicate_semicolon" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		DuplicateSemicolon(dia::SourcePosition pos): dia::Warning(pos) {}
+		DuplicateSemicolon(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

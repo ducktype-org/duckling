@@ -3,21 +3,19 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class EmptyExprError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Empty expression where non-empty expected";
+	class EmptyExprError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "empty_expr_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
+		EmptyExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	void ExprElement::fastForward(LangParserState& state, i64 length) {
@@ -27,7 +25,7 @@ namespace pst {
 	bool ExprElement::checkLength(LangParserState& state, i64 length) {
 		if (length <= 0) {
 			// Empty expression error
-			state.log(makeBox<EmptyExprError>(state.getPosition()));
+			state.logInt(makeBox<EmptyExprError>(state.getPosition()));
 			fastForward(state, length);
 			return false;
 		}

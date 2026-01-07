@@ -1,21 +1,20 @@
 #include "../../../hierarchy/not_statements/patterns/patterns.hpp"
 #include "../preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class UnrecognizedPatternInCaseError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unrecognized pattern in case error";
+	class UnrecognizedPatternInCaseError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "unrecognized_pattern_in_case_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		UnrecognizedPatternInCaseError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnrecognizedPatternInCaseError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<AnalysisPattern> AnalysisPattern::parse(LangParserState& state) {
@@ -41,7 +40,7 @@ namespace pst {
 		// Binding pattern. Identifier which is not a destructor.
 		if (state[0].isIdentifier()) return BindingPattern::parse(state);
 
-		state.log(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
+		state.logInt(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
 		return nullptr;
 	}
 

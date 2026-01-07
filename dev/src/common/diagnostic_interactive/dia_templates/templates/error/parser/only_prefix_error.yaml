@@ -1,0 +1,29 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "only_prefix_error"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+
+header_message:
+  - "Expression has only prefix operators"
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "here"

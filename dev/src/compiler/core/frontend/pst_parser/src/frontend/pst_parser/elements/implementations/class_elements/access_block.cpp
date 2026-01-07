@@ -3,21 +3,19 @@
 #include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class NoSpecifierError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an access specifier.";
+	class NoSpecifierError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_access_specifier" };
 		}
 
 	public:
-		NoSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
+		NoSpecifierError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	LangElement::HashAlg& AccessBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
@@ -30,7 +28,7 @@ namespace pst {
 		auto out      = makeBox<AccessBlock>(position, ctx);
 
 		if (not ACCESS_SPECIFIERS.contains(state[0].asKeyword())) {
-			state.log(makeBox<NoSpecifierError>(position));
+			state.logInt(makeBox<NoSpecifierError>(position));
 		} else {
 			out->context.specifiers.emplace_back(&state[0]);
 			out->specifier = state[0].asKeyword();

@@ -5,21 +5,19 @@
 #include "../../hierarchy/expressions/call.hpp"    // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadChainExprError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected access or call expression expression";
+	class BadChainExprError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_chain_expr_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadChainExprError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadChainExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
@@ -61,7 +59,7 @@ namespace pst::expr {
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&extension, Call::parse, +fwd);
 			} else {
-				state.log(makeBox<BadChainExprError>(
+				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
 				fastForward(state, fwd);

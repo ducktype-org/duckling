@@ -2,41 +2,36 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
 	 * some situation where only a string value will be accepted in an expression.
 	 */
-	class BadCharValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a Char value";
+	class BadCharValueError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_char_value_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadCharValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadCharValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MoreThanCharValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected just a single Char value";
+	class MoreThanCharValueError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "more_than_char_value_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MoreThanCharValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		MoreThanCharValueError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> ExprCharValue::parse(LangParserState& state, i64 length) {
@@ -46,7 +41,7 @@ namespace pst::expr {
 
 		if (!state[0].isChar()) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadCharValueError>(pos));
+			state.logInt(makeBox<BadCharValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
@@ -55,7 +50,7 @@ namespace pst::expr {
 		state.parse(out).eatOne();
 
 		if (length > 1) {
-			state.log(makeBox<MoreThanCharValueError>(pos));
+			state.logInt(makeBox<MoreThanCharValueError>(pos));
 			fastForward(state, length);
 		}
 

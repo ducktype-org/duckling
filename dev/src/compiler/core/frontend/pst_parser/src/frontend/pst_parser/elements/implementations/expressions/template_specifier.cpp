@@ -3,21 +3,19 @@
 #include "../../hierarchy/lists/template_list.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadTemplateError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single template instantiation expression";
+	class BadTemplateError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_template_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadTemplateError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadTemplateError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
@@ -25,7 +23,7 @@ namespace pst::expr {
 
 		if (length != 2) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadTemplateError>(
+			state.logInt(makeBox<BadTemplateError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

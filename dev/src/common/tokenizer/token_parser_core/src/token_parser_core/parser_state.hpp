@@ -5,6 +5,7 @@
 #include <diagnostic_interactive/logger_fwd.hpp>
 
 #include <diagnostic/logger.hpp>
+#include <diagnostic_interactive/message.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
@@ -114,6 +115,9 @@ namespace tpc {
 		 * @brief Logs an error relatively to the current token.
 		 */
 		virtual void log(Box<dia::Message> message) { err->log(std::move(message)); }
+
+
+		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
 
 		template<TokenStreamCondition until>
 		[[nodiscard]]

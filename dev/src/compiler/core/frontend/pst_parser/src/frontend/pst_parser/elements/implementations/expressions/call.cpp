@@ -2,21 +2,19 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadCallError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single call expression";
+	class BadCallError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_call_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadCallError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> Call::parse(LangParserState& state, i64 length) {
@@ -26,7 +24,7 @@ namespace pst::expr {
 		        && (state[0].isBracketGroup(lexer::Token::Round)
 		            || state[0].isBracketGroup(lexer::Token::Square)))) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadCallError>(
+			state.logInt(makeBox<BadCallError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

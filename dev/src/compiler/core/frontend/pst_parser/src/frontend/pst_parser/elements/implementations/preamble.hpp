@@ -6,6 +6,8 @@
 #include "../includes/basic.hpp"        // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
 
+#include <diagnostic_interactive/message.hpp>
+
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -29,23 +31,18 @@ namespace pst {
 	 * @note This error that should generally not happen outside of our errors.
 	 */
 	template<typename Type>
-	class BadStatementChoice final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			std::stringstream ss;
-			ss << "Token doesn't match with chosen statement of `";
-			ss << base::typeName<Type>() << "`.";
-			return ss.str();
+	class BadStatementChoice final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_statement_choice" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		BadStatementChoice(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument(base::typeName<Type>());
 		}
-
-		BadStatementChoice(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<typename Type>
@@ -55,3 +52,4 @@ namespace pst {
 		return good;
 	}
 }
+Int

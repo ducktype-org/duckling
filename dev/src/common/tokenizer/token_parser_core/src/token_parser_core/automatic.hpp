@@ -32,6 +32,9 @@
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+
 #include <concepts>
 
 namespace tpc {
@@ -194,111 +197,84 @@ namespace tpc {
 		}
 	};
 
-	class BadKeywordError final: public dia::Error {
-	private:
-		Keyword expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected keyword `" + lang_def::keywordToStr(expected).str() + "` here.";
+	class BadKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "bad_keyword" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		BadKeywordError(dia::SourcePosition pos, Keyword key):
+			  MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("expected", lang_def::keywordToStr(key).str());
 		}
-
-		BadKeywordError(dia::SourcePosition pos, Keyword key): dia::Error(pos), expected(key) {}
 	};
 
-	class BadSpecialError final: public dia::Error {
-	private:
-		Special expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected special `" + lang_def::specialToStr(expected).str() + "` here.";
+	class BadSpecialError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "bad_special" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		BadSpecialError(dia::SourcePosition pos, Special spec):
+			  MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("expected", lang_def::specialToStr(spec).str());
 		}
-
-		BadSpecialError(dia::SourcePosition pos, Special spec): dia::Error(pos), expected(spec) {}
 	};
 
-	class BadOperatorError final: public dia::Error {
-	private:
-		Operator expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected operator `" + expected.str() + "` here.";
+	class BadOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "bad_operator" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		BadOperatorError(dia::SourcePosition pos, Operator opr):
+			  MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("expected", opr.str());
 		}
-
-		BadOperatorError(dia::SourcePosition pos, Operator opr): dia::Error(pos), expected(opr) {}
 	};
 
-	class NoIdentifierError final: public dia::Error {
-	public:
-		constexpr static std::string_view ERR_MSG = "Expected an identifier here.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return std::string(ERR_MSG);
+	class NoIdentifierError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "no_identifier" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
+		NoIdentifierError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NoStringError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a string here.";
+	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "no_string" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoStringError(dia::SourcePosition pos): dia::Error(pos) {}
+		NoStringError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NoNumericValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a numeric value.";
+	class NoNumericValueError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+					 .type          = "error",
+					 .family        = "token_parser",
+					 .name          = "no_numeric_value" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoNumericValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		NoNumericValueError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

@@ -4,21 +4,19 @@
 #include "../../hierarchy/expressions/unit_expr.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadRoundExprError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single round group expression";
+	class BadRoundExprError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_round_expr_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadRoundExprError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadRoundExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> RoundExpr::parse(LangParserState& state, i64 length) {
@@ -26,7 +24,7 @@ namespace pst::expr {
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadRoundExprError>(
+			state.logInt(makeBox<BadRoundExprError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

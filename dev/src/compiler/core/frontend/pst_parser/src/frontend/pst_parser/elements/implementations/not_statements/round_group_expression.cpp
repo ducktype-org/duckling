@@ -2,21 +2,19 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class RoundExprStartError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an expression starting with `(`.";
+	class RoundExprStartError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "round_expr_start_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		RoundExprStartError(dia::SourcePosition pos): dia::Error(pos) {}
+		RoundExprStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
@@ -24,7 +22,7 @@ namespace pst {
 		auto out      = makeBox<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.log(makeBox<RoundExprStartError>(state.getPosition()));
+			state.logInt(makeBox<RoundExprStartError>(state.getPosition()));
 			return nullptr;
 		}
 

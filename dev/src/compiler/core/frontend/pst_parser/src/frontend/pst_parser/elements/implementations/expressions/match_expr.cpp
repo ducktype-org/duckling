@@ -4,53 +4,43 @@
 #include "../../hierarchy/not_statements/match_case.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class MatchRoundBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
+	class MatchRoundBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "match_round_bracket_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchRoundBracketError(dia::SourcePosition pos): dia::Error(pos) {}
+		MatchRoundBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class NotACaseExpression final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Not a case expression";
+	class NotACaseExpression final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "not_a_case_expression" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NotACaseExpression(dia::SourcePosition pos): dia::Error(pos) {}
+		NotACaseExpression(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MatchCurlyBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
+	class MatchCurlyBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "match_curly_bracket_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchCurlyBracketError(dia::SourcePosition pos): dia::Error(pos) {}
+		MatchCurlyBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
@@ -65,7 +55,7 @@ namespace pst::expr {
 		state.parse(out).one(Keyword::Match);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
+			state.logInt(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
 
@@ -74,7 +64,7 @@ namespace pst::expr {
 		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<MatchCurlyBracketError>(state.getPosition()));
+			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
 		state.parse(out).goDown();
@@ -92,7 +82,7 @@ namespace pst::expr {
 			}
 		}
 		// A non-case in a match expression.
-		if (state.notEmpty()) state.log(makeBox<NotACaseExpression>(state.getPosition()));
+		if (state.notEmpty()) state.logInt(makeBox<NotACaseExpression>(state.getPosition()));
 
 		state.parse(out).goUpAndSkip();
 		return out;

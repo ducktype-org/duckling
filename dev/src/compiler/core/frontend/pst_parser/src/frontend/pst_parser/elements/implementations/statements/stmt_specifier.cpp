@@ -4,23 +4,32 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic/message.hpp>
+#include <diagnostic_interactive/message.hpp>
 
 namespace pst {
-	class BadCallError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a round bracket call expression";
+	class BadCallError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_specifier_call" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		BadCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class InvalidExternContentWarning final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "warning",
+				     .family        = "parser",
+				     .name          = "invalid_extern_content" };
 		}
 
-		BadCallError(dia::SourcePosition pos): dia::Error(pos) {}
+	public:
+		InvalidExternContentWarning(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	const std::set<Keyword> StmtSpecifier::SPECIFIERS(
@@ -44,7 +53,7 @@ namespace pst {
 			MBox<CallList> call_list;
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
-				state.log(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
+				state.logInt(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
 				return nullptr;
 			}
 
@@ -69,12 +78,9 @@ namespace pst {
 			for (auto&& stmt: *out->code_block_or_stmt.internal()) {
 				auto kind = stmt.illegalAccess().value()->getStmtKind();
 				if (kind != StmtKind::Fun && kind != StmtKind::Class && kind != StmtKind::FunDecl) {
-					state.log(
-						makeBox<dia::PlaceholderMessage<dia::Warning, dia::Message::Domain::Parser>>(
-							stmt.illegalAccess().value()->getSourcePosition(),
-							"Only function and class declarations are allowed inside extern()"
-						)
-					);
+					state.logInt(makeBox<InvalidExternContentWarning>(
+						stmt.illegalAccess().value()->getSourcePosition()
+					));
 				}
 			}
 		}

@@ -3,53 +3,45 @@
 #include "../../hierarchy/expressions/logic_or.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic/source_position.hpp>
+
 namespace pst::expr {
-	class MultipleTernaryError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Multiple repeating ternary components in a single expression";
+	class MultipleTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "multiple_ternary" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MultipleTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+		MultipleTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class PartialTernaryError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Partial ternary expression";
+	class PartialTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "partial_ternary" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		PartialTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+		PartialTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class ImproperTernaryError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Ternary expression starting in an improper place";
+	class ImproperTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "improper_ternary" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		ImproperTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+		ImproperTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
@@ -66,24 +58,24 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
-					state.log(makeBox<MultipleTernaryError>(pos));
+					state.logInt(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (i != 0) {
-					state.log(makeBox<ImproperTernaryError>(pos));
+					state.logInt(makeBox<ImproperTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (!if_found) if_found = true;
 			} else if (state[i].is(Keyword::Then)) {
 				if (!if_found) {
-					state.log(makeBox<PartialTernaryError>(pos));
+					state.logInt(makeBox<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (then_found) {
-					state.log(makeBox<MultipleTernaryError>(pos));
+					state.logInt(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -93,12 +85,12 @@ namespace pst::expr {
 				}
 			} else if (state[i].is(Keyword::Else)) {
 				if (!if_found || !then_found) {
-					state.log(makeBox<PartialTernaryError>(pos));
+					state.logInt(makeBox<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (else_found) {
-					state.log(makeBox<MultipleTernaryError>(pos));
+					state.logInt(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -110,7 +102,7 @@ namespace pst::expr {
 		}
 		if (!if_found) return Lower::parse(state, length);
 		if (if_found && !else_found) {
-			state.log(makeBox<PartialTernaryError>(pos));
+			state.logInt(makeBox<PartialTernaryError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}

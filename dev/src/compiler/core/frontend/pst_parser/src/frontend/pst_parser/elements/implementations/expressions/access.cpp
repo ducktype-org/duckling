@@ -3,28 +3,26 @@
 #include "../../hierarchy/expressions/template_specifier.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadAccessError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single access expression";
+	class BadAccessError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_access_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadAccessError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadAccessError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2 && length != 4) {
-			state.log(makeBox<BadAccessError>(
+			state.logInt(makeBox<BadAccessError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

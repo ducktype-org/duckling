@@ -3,23 +3,21 @@
 #include "../../hierarchy/expressions/general_suffix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 #include <stack>
 
 namespace pst::expr {
-	class OnlyPrefixError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expression has only prefix operators";
+	class OnlyPrefixError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "only_prefix_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		OnlyPrefixError(dia::SourcePosition pos): dia::Error(pos) {}
+		OnlyPrefixError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
@@ -73,7 +71,7 @@ namespace pst::expr {
 		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) fwd++;
 		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
 		reduced_length--;
-		if (fwd == reduced_length) state.log(makeBox<OnlyPrefixError>(pos));
+		if (fwd == reduced_length) state.logInt(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
 		i64              next = 0;

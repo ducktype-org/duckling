@@ -4,24 +4,22 @@
 #include "../../hierarchy/statements/all_statements.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
 
-	class EmptyStatementError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Statement expected.";
+	class EmptyStatementError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "empty_statement_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		EmptyStatementError(dia::SourcePosition pos): dia::Error(pos) {}
+		EmptyStatementError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	namespace internal {
@@ -149,7 +147,7 @@ namespace pst {
 			}
 
 			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
-				state.log(base::makeBox<EmptyStatementError>(state.getPosition()));
+				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
 				return nullptr;
 			}
 

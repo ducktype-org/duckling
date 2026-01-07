@@ -3,21 +3,19 @@
 #include "../../hierarchy/expressions/comma.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class MultipleAssignmentError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Multiple assignments in one expression";
+	class MultipleAssignmentError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "multiple_assignment_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MultipleAssignmentError(dia::SourcePosition pos): dia::Error(pos) {}
+		MultipleAssignmentError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
@@ -34,7 +32,7 @@ namespace pst::expr {
 					found = true;
 					place = i;
 				} else {
-					state.log(makeBox<MultipleAssignmentError>(pos));
+					state.logInt(makeBox<MultipleAssignmentError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}

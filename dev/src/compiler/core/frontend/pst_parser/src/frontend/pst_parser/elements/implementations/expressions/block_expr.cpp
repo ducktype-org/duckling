@@ -3,21 +3,19 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst::expr {
-	class BadBlockError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single block expression";
+	class BadBlockError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_block_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadBlockError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadBlockError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
@@ -25,7 +23,7 @@ namespace pst::expr {
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadBlockError>(
+			state.logInt(makeBox<BadBlockError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

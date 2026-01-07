@@ -3,21 +3,19 @@
 #include "../../hierarchy/not_statements/dotted_name.hpp"
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class AliasStarError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Alias declaration cannot use `.*`.";
+	class AliasStarError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "alias_star_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
+		AliasStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<Alias> Alias::parse(LangParserState& state) {
@@ -29,7 +27,7 @@ namespace pst {
 		state.parse(out).all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
 
 		if (out->points_to.internal()->getStar())
-			state.log(makeBox<AliasStarError>(out->source_position));
+			state.logInt(makeBox<AliasStarError>(out->source_position));
 
 		return out;
 	}

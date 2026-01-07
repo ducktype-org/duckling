@@ -2,53 +2,47 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class MatchCaseWithNoBodyError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Case branch with no body";
+	class MatchCaseWithNoBodyError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "match_case_no_body" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchCaseWithNoBodyError(dia::SourcePosition pos): dia::Error(pos) {}
+		MatchCaseWithNoBodyError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class DoubleDefaultBranchError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Case expression with two default branches";
+	class DoubleDefaultBranchError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "double_default_branch" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		DoubleDefaultBranchError(dia::SourcePosition pos): dia::Error(pos) {}
+		DoubleDefaultBranchError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnconditionedBranchAfterConditionedError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unconditioned case branch after a conditioned branch";
+	class UnconditionedBranchAfterConditionedError final:
+		  public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "unconditioned_branch_after_conditioned" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
@@ -72,7 +66,7 @@ namespace pst {
 				if_case = true;
 			} else if (state.parse(out).tryEat(NamedOperator::Assign)) {
 				if (if_case) {  // Unconditioned branch after a conditioned branch.
-					state.log(makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
+					state.logInt(makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
 					);
 					return nullptr;
 				}
@@ -88,7 +82,7 @@ namespace pst {
 		PST_WHILE(true);
 
 		if (out->branches.empty()) {  // Empty match expression.
-			state.log(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));
+			state.logInt(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));
 			return nullptr;
 		}
 		return out;

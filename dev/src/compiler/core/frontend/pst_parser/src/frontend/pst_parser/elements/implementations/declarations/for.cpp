@@ -5,21 +5,19 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class ForBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
+	class ForBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "for_bracket_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		ForBracketError(dia::SourcePosition pos): dia::Error(pos) {}
+		ForBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
@@ -36,7 +34,7 @@ namespace pst {
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
-			state.log(makeBox<ForBracketError>(state.getPosition()));
+			state.logInt(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();
 

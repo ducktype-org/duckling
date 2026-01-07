@@ -3,21 +3,19 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class NonEmptyError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected no arguments for destructor.";
+	class NonEmptyError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "destructor_arguments_error" };
 		}
 
 	public:
-		NonEmptyError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
+		NonEmptyError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
@@ -33,7 +31,7 @@ namespace pst {
 		out->kind = ident;
 
 		state.parse(out).goDown();
-		if (state.notEmpty()) state.log(makeBox<NonEmptyError>(state.getPosition()));
+		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
 		state.parse(out)

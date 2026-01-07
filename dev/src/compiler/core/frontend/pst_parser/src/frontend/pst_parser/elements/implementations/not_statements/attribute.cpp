@@ -2,21 +2,19 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
-	class AttrStarError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected `.*` in Attribute name";
+	class AttrStarError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "attr_star_error" };
 		}
 
 	public:
-		AttrStarError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
+		AttrStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
@@ -29,7 +27,7 @@ namespace pst {
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
 		if (out->name.internal() && out->name.internal()->getStar())
-			state.log(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
+			state.logInt(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
 		return out;

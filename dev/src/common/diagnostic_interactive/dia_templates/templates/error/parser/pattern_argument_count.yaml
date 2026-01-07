@@ -1,0 +1,29 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "pattern_argument_count"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code."
+  code_location:
+    description: "The location."
+
+header_message:
+  - "Pattern declarations must have exactly one parameter."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: []
