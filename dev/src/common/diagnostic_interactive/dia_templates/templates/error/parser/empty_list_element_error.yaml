@@ -16,7 +16,7 @@ params:
 
 header_message:
   - text: "This "
-  - arg: "list_type"
+  - argument: "list_type"
   - text: " list element shouldn't be empty."
 
 description:
