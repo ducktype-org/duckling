@@ -3,12 +3,10 @@ add_library(Driver
 	src_private/driver_private/backend_operations/compile_dvm.cpp
 
 	src_private/driver_private/operations.cpp
-	src_private/driver_private/statistics_private/statistics.cpp
 	src_private/driver_private/collect_input.cpp
 	src_private/driver_private/save_artifacts.cpp
 	
 	src/driver/module_flags/module_flags.cpp
-	src/driver/statistics/statistics.cpp
 	src/driver/backend_type.cpp
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
