@@ -49,6 +49,8 @@ namespace time_stats {
 	TrackCategoryTime::~TrackCategoryTime() {
 		// we don't do anything if already ended:
 		if (ended) return;
+		
+		measurement.endMeasurement();
 
 		CORE_ASSERT_NOEXCEPT(
 			is_category_active.at(std::to_underlying(category)),
