@@ -1,5 +1,7 @@
 #include "node_marking.hpp"
 
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
@@ -29,6 +31,10 @@ namespace query::internal {
 		std::vector<NodeID> prev_inputs;
 		prev_inputs.reserve(all_nodes.size());
 		for (const auto& node: all_nodes) {
+			// You should map unregistered nodes to Dummy first for correctness of query framework
+			// The function qury_state::remapUnstableOrUnregisteredNodes does it already
+			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
+
 			if (node.q_id.getData().kind != QueryKind::SideInput
 			    && node.q_id.getData().kind != QueryKind::Input) {
 				continue;

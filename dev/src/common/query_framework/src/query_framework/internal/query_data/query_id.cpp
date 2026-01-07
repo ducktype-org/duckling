@@ -9,6 +9,7 @@
 #include "query_data.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
 namespace query::internal {
@@ -57,6 +58,11 @@ namespace query::internal {
 	bool QueryID::registered() const { return dataMap().contains(*this); }
 
 	QueryID registerQuery(QueryData query_data) {
+		CORE_ASSERT(
+			query_data.kind != QueryKind::Dummy
+				|| query_data.tags.used_hashes == UsedHashes::UnstableHash,
+			"Dummy queries must use unstable hashes"
+		);
 		auto ret_id = next;
 		next        = QueryIDMaker::next(ret_id);
 		dataMap().put(ret_id, query_data);

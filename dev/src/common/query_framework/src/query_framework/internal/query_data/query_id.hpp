@@ -8,10 +8,17 @@
 
 #include <base/types/ints.hpp>
 
+#include <vector>
+
+namespace query::external {
+	struct InputData;
+}
+
 namespace query::internal {
 	/**
 	 * Unique identifier of query type.
 	 */
+
 	struct QueryID final {
 	private:
 		u64 val;
@@ -21,6 +28,7 @@ namespace query::internal {
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
 		friend class QueryState;
+		friend void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
 		/**
 		 * @note Unregistered queries occurs only during the deserialisation of previous graph

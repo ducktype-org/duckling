@@ -150,7 +150,7 @@ namespace query::internal {
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
 		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
 		 */
-		NodeID remapUnstableAndUnregisteredNodes(NodeID node);
+		NodeID remapUnstableOrUnregisteredNodes(NodeID node);
 
 		/**
 		 * Performs a red-green sweep starting from the specified node in the current query graph.

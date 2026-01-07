@@ -1,6 +1,7 @@
 #include "query_state.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/internal/query_data/query_data.hpp>
@@ -8,7 +9,10 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 
 #include <iostream>
-#include <unordered_set>
+
+#ifdef BUILD_TYPE_DEV
+	#include <unordered_set>
+#endif
 
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
@@ -90,15 +94,14 @@ namespace query::internal {
 		};
 
 		std::vector<Frame> stack;
-#ifdef BUILD_TYPE_DEV
-		std::unordered_set<NodeID> in_stack;
-#endif
+
+		IF_BUILD_TYPE_DEV(std::unordered_set<NodeID> in_stack);
+
 		stack.push_back(Frame{ .node = start_node, .idx = 0 });
 
 		// This is used to detect back-edges (cycles) in the previous graph
 		// The previous graph should be acyclic, but we just check it to PANIC if not
-		// This is packed in CORE ASSERT to avoid overhead in non-debug builds
-		CORE_ASSERT(in_stack.insert(start_node).second, "This should never happen");
+		IF_BUILD_TYPE_DEV(in_stack.insert(start_node);)
 
 		while (!stack.empty()) {
 			auto& frame = stack.back();
@@ -106,7 +109,7 @@ namespace query::internal {
 
 			// If already colored (via another path), just pop and continue
 			if (node_colors.contains(node)) {
-				CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
 				stack.pop_back();
 				continue;
@@ -122,7 +125,7 @@ namespace query::internal {
 			if (deps.empty()) {
 				node_colors.insert_or_assign(node, PrevColor::Green);
 
-				CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
 				stack.pop_back();
 				continue;
@@ -138,10 +141,13 @@ namespace query::internal {
 				// Push child for processing
 				stack.push_back(Frame{ .node = child, .idx = 0 });
 
-				CORE_ASSERT(
-					in_stack.insert(child).second,
-					"Cycle detected in previous query graph during red-green sweep"
-				);
+				IF_BUILD_TYPE_DEV(
+					CORE_ASSERT(
+						in_stack.insert(child).second,
+						"Cycle detected in previous query graph during red-green sweep"
+					);
+				)
+
 				continue;
 			}
 
@@ -158,7 +164,7 @@ namespace query::internal {
 
 			// This is in CORE ASSERT to avoid overhead in non-debug builds
 			// The error should never happen
-			CORE_ASSERT(in_stack.erase(node), "The element should be in the stack");
+			IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
 			stack.pop_back();
 		}
@@ -166,24 +172,22 @@ namespace query::internal {
 		return node_colors.at(start_node);
 	}
 
-	NodeID QueryState::remapUnstableAndUnregisteredNodes(NodeID node) {
+	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
 
-		auto register_dummy = [&](QueryID source_qid) -> QueryID {
-			if (auto existing = old_to_new.atMaybe(source_qid); existing.has_value())
-				return **existing;
+		if (node.q_id.registered() && node.q_id.getData().usesStableHashing()) return node;
 
-			QueryData dummy_query_data(
-				QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
-			);
-			QueryID new_qid = registerQuery(dummy_query_data);
-			old_to_new.put(source_qid, new_qid);
-			return new_qid;
-		};
+		// Here the QueryID is either unregistered or uses unstable hashing, so we do remapping
 
-		if (!node.q_id.registered()) return { register_dummy(node.q_id), node.hash };
-		if (node.q_id.getData().usesStableHashing()) return node;
-		return { register_dummy(node.q_id), node.hash };
+		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
+			return { **existing, node.hash };
+
+		QueryData dummy_query_data(
+			QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+		);
+		QueryID new_qid = registerQuery(dummy_query_data);
+		old_to_new.put(node.q_id, new_qid);
+		return { new_qid, node.hash };
 	}
 
 	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {

@@ -17,7 +17,7 @@ namespace query::external {
 		::query::internal::QueryGraph graph = ::query::internal::QueryGraph::deserialize(
 			graph_raw_bytes,
 			[state](::query::internal::NodeID node) {
-				return state->remapUnstableAndUnregisteredNodes(node);
+				return state->remapUnstableOrUnregisteredNodes(node);
 			}
 		);
 
