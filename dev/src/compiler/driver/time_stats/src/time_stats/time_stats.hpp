@@ -50,6 +50,11 @@ namespace time_stats {
 		 */
 		BackendCompilation,
 
+		/**
+		 * Time spent on linking object files into executables.
+		 */
+		Linking,
+
 
 		Sentinel,  ///< Sentinel value used to determine the number of categories.
 
