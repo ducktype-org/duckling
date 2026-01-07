@@ -1,2 +1,11 @@
-* @ducktype-org/dev
+
+# The repo is generally owned by the core-dev: 
+* @ducktype-org/core-dev
+
+# QuackPack is also owned by the:
+/dev/src/QuackPack/ @ducktype-org/core-dev @ducktype-org/
+
+# Only selected people can modify code owner file:
+/.github/CODEOWNERS @andr729
+
 
