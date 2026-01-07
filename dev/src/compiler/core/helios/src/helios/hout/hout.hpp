@@ -20,6 +20,10 @@
 #include <variant>
 #include <vector>
 
+namespace compiler::repl {
+	struct ImplementationOf_QueryReplExpressionWrapper;
+}
+
 namespace compiler::helios {
 
 	// for friend:
@@ -34,14 +38,7 @@ namespace compiler::helios {
 		struct CodeBlock;
 		struct Parameter;
 	}
-}
-
-namespace compiler::repl {
-	struct ImplementationOf_QueryReplExpressionWrapper;
-}
-
-namespace compiler::helios {
-
+	
 	/**
 	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
