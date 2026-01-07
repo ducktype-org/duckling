@@ -105,18 +105,18 @@ namespace time_stats {
 		);
 		std::cerr << "\n";
 
-		std::cerr << " - Linking time: ";
-		timer::printAs(
-			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::Linking)),
-			timer::TimeUnit::Milliseconds
-		);
-		std::cerr << "\n";
-
 		std::cerr << " - Backend compilation time: ";
 		timer::printAs(
 			std::cerr,
 			time_statistics.at(std::to_underlying(TimeCategories::BackendCompilation)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+
+		std::cerr << " - Linking time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::Linking)),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n\n";
