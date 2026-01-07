@@ -7,9 +7,7 @@
 namespace compiler::driver {
 
 	void exit() {
-		time_stats::TrackCategoryTime driver_exit_time(
-			time_stats::TimeCategories::DriverExit
-		);
+		time_stats::TrackCategoryTime driver_exit_time(time_stats::TimeCategories::DriverExit);
 
 		if (global_state::hasRootCollection()) saveArtifacts();
 	}

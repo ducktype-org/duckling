@@ -7,6 +7,7 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -14,7 +15,6 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
-#include <time_stats/time_stats.hpp>
 
 namespace compiler::driver {
 
