@@ -12,6 +12,8 @@ namespace time_stats {
 	 *
 	 * @important this enum should provide no explicit values, so the sentinel value is always
 	 * correct, and as its underlying values are used for indexing time statistics arrays.
+	 *
+	 * @note When adding new categories also update prettyPrintTimeStatistics()
 	 */
 	enum class TimeCategories : u64 {
 
@@ -20,6 +22,18 @@ namespace time_stats {
 		 * @note Measures in the main.cpp
 		 */
 		TotalCompilationTime,
+
+		/**
+		 * Time spend in Driver initialization functions.
+		 * @note TotalCompilationTime does not include this time.
+		 */
+		DriverInitialization,
+
+		/**
+		 * Time spend in Driver exit functions.
+		 * @note TotalCompilationTime does not include this time.
+		 */
+		DriverExit,
 
 		/**
 		 * Time spent on PST construction, tracked by the PST.

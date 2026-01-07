@@ -14,6 +14,7 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+#include <time_stats/time_stats.hpp>
 
 namespace compiler::driver {
 
@@ -93,6 +94,10 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+		time_stats::TrackCategoryTime driver_initialization_time(
+			time_stats::TimeCategories::DriverInitialization
+		);
+
 		CORE_ASSERT(
 			init::wasInitObject(),
 			"InitObject should be used before call to the initializeTheCompiler function!"

@@ -352,6 +352,7 @@ clah::Clah getClahForMain() {
 
 					total_compilation_time.end();
 
+					compiler::driver::exit();
 
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
@@ -365,7 +366,6 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
-					compiler::driver::exit();
 
 					return result.isOk() ? 0 : 1;
 				})

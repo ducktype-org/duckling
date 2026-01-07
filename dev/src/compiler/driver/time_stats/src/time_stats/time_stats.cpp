@@ -64,9 +64,25 @@ namespace time_stats {
 	}
 
 	void prettyPrintTimeStatistics() {
-		std::cerr << "Time statistics collected by compiler time_stats module:\n";
+		std::cerr << "Time statistics collected by compiler time_stats module:\n\n";
 
-		std::cerr << "\nTotal compilation time (note that subcategories may overlap): ";
+		std::cerr << "Driver initialization time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::DriverInitialization)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+
+		std::cerr << "Driver exit time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::DriverExit)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+
+		std::cerr << "Total compilation time (note that subcategories may overlap): ";
 		timer::printAs(
 			std::cerr,
 			time_statistics.at(std::to_underlying(TimeCategories::TotalCompilationTime)),
