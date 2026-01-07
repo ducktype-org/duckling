@@ -225,21 +225,18 @@ namespace query::internal {
 			// If we already created this node in current graph, skip
 			if (query_graph.node_deps.contains(node)) continue;
 
-			// Insert the node with an empty dependency list first (ensures parent exists for
-			// addDependency)
-			query_graph.node_deps.emplace(node, std::vector<NodeID>{});
-
-			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
+			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
 			CORE_ASSERT(
 				prev_graph.node_deps.contains(node), "Node to merge should exist in previous graph"
 			);
 			const auto& prev_deps = prev_graph.node_deps.at(node);
 
-			// For each child, add the dependency edge and ensure the child will be processed
-			for (const auto& child: prev_deps) {
-				// Add edge in current graph (child doesn't have to exist yet)
-				query_graph.addDependency(node, child);
+			auto [it, inserted]
+				= query_graph.node_deps.emplace(node, prev_deps);  // copy deps in a single pass
+			CORE_ASSERT(inserted, "Node should not exist in current graph during merge");
+			const auto& deps = it->second;
 
+			for (const auto& child: deps) {
 				// If child is not in current graph yet, schedule it for creation
 				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
 			}
