@@ -5,18 +5,14 @@ add_library(Repl STATIC
     src/repl/dvm_helpers.cpp
 )
 
-target_include_directories(Repl PUBLIC src)
 target_include_directories(Repl PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/../core/helios/src_private
     ${CMAKE_CURRENT_SOURCE_DIR}/../driver/driver/src_private
 )
 
-target_link_libraries(Repl 
-    PUBLIC
-        Base
+make_module(Repl USES Base
         Filesystem
         QueryFramework
         Driver
         HELIOS
-        ModuleTree
-)
+        ModuleTree)
