@@ -18,6 +18,7 @@
 #include <tester/tester.hpp>
 
 #include <array>
+#include <iostream>
 #include <sstream>
 #include <type_traits>
 #include <unordered_map>
@@ -813,7 +814,6 @@ private:
 	}
 
 	void optimizedGraphConsistencyTest() {
-#if defined(BUILD_TYPE_DEV)
 		const std::array<u64, 2> monitored_keys{ 5, 11 };
 		const u64               orphan_key = 99;
 
@@ -822,6 +822,8 @@ private:
 
 		auto  state = query::internal::ContextAccess::getState();
 		state->reduceOptimizeGraph();
+
+		std::cout<< "Graph reduced and optimized.\n";
 		const auto& graph = state->getGraph();
 
 		const auto orphan_id = query::internal::makeNodeID<OrphanUnstableRoot>({ orphan_key });
@@ -866,7 +868,6 @@ private:
 			for (const auto& [node, count]: parent_counts)
 				if (count == 0) ASSERT_TRUE(node.q_id.getData().usesStableHashing());
 		}
-#endif
 	}
 
 	void testQueryResultConcept() {
