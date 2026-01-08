@@ -38,14 +38,4 @@ namespace compiler::repl {
 		({ .uses_qresult = false })
 	);
 
-	/**
-	 * @brief Query to build a complete HOUTUnit for a REPL module
-	 *
-	 * Right now it's the same as QueryModuleHOUT. Expression wrapping is
-	 * handled separately in the REPL session logic. TODO: decide if this should change.
-	 */
-	DECLARE_QUERY(
-		QueryReplModuleHOUT, frontend::ModuleID, helios::HOUTUnit, ({ .uses_qresult = false })
-	);
-
 }  // namespace compiler::repl

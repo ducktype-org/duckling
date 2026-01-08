@@ -1,6 +1,5 @@
 #include "repl_queries.hpp"
 
-#include <driver_private/operations.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -14,8 +13,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
@@ -87,68 +84,4 @@ namespace compiler::repl {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplExpressionWrapper)
-
-	// Right now it's exactly the same as QueryModuleHOUT from helios,
-	// but in the future it might differ (e.g., include some REPL-specific functions).
-	struct IMPLEMENT_QUERY(QueryReplModuleHOUT, helios::HOUTUnit) {
-		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto scopes = ctx.query<helios::QueryScopesInModule>(key);
-
-			helios::HOUTUnit out;
-			for (auto scope: *scopes) {
-				auto symbols_in_scope = ctx.query<helios::QuerySymbolsInScope>(scope);
-
-				for (auto sym: *symbols_in_scope) {
-					// grab constants:
-					if (helios::kind(sym) == helios::SymbolKind::Const)
-						out.glob_data.emplace_back(sym, ctx, helios::HOUTGlobalDataType::Constant);
-					if (helios::kind(sym) == helios::SymbolKind::Variable
-					    and helios::isGlobalVar(ctx, sym))
-						out.glob_data.emplace_back(sym, ctx, helios::HOUTGlobalDataType::Variable);
-					// grab functions:
-					if (helios::kind(sym) == helios::SymbolKind::Function)
-						out.functions.push_back(ctx.query<helios::QueryCodeOfFun>(sym).valueOrThrow(
-						));
-					if (helios::kind(sym) == helios::SymbolKind::Class)
-						appendClassConstructors(out.functions, sym, ctx);
-				}
-			}
-
-			return out;
-		}
-
-		/**
-		 * Append the constructors of a class to the provided vector of functions.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose constructors are to be appended.
-		 * @param ctx The query context.
-		 */
-		static void appendClassConstructors(
-			std::vector<helios::HOUTFunction>& out_functions,
-			const helios::SymID                class_sym,
-			query::Context&                    ctx
-		) {
-			CORE_ASSERT(
-				helios::kind(class_sym) == helios::SymbolKind::Class,
-				"Invalid argument exception: expected class symbol"
-			);
-
-			// For now, we handle only the class's primary constructor.
-			// @TODO: #1290 Handle auxiliary constructors.
-
-			const auto class_type = ctx.query<helios::QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-			const auto implicit_ctor
-				= ctx.query<helios::houtgen::QueryImplicitClassConstructor>(class_type)
-			          ->valueOrThrow();
-			out_functions.push_back(implicit_ctor);
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplModuleHOUT)
-
 }  // namespace compiler::repl

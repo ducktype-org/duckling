@@ -196,7 +196,7 @@ namespace compiler::repl {
 		std::string error_message;
 		bool        had_error = false;
 
-		auto hout_unit = query::entryPoint<repl::QueryReplModuleHOUT>(module_id);
+		auto hout_unit = query::entryPoint<helios::QueryModuleHOUT>(module_id).valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			if (m_config.show_hout_debug) {
