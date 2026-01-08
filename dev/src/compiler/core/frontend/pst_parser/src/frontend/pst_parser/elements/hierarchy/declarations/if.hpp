@@ -24,6 +24,8 @@ namespace pst {
 		void            dprint(std::ostream& out) const final;
 		~If() final = default;
 
+		bool trailingSemicolon() final { return false; }
+
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "If";

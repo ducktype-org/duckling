@@ -1,5 +1,5 @@
-
 #pragma once
+
 #include "analysis_pattern.hpp"
 
 namespace pst {
@@ -8,7 +8,7 @@ namespace pst {
 	 * block expression or an identifier.
 	 */
 	class ValuePattern final: public AnalysisPattern {
-		NAMED_CHILD(expression, UniversalExprHolder);
+		NAMED_CHILD(expression, ValuePatternExprHolder);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
@@ -28,9 +28,8 @@ namespace pst {
 			return "Value Pattern";
 		}
 
-		[[nodiscard]] base::Optional<AccessLocked<UniversalExprHolder>> getExpression() const {
-			return expression.give();
-		}
+		[[nodiscard]]
+		AccessLocked<ValuePatternExprHolder> getExpression() const;
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};

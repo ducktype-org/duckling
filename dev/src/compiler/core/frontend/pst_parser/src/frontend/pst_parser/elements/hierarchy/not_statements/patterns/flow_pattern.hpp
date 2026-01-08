@@ -27,9 +27,7 @@ namespace pst {
 			return as_identifier->value;
 		}
 
-		[[nodiscard]] base::Optional<AccessLocked<UniversalExprHolder>> getTypeConstraint() const {
-			return type_constraint.map([](const auto& value) { return value.give(); });
-		}
+		[[nodiscard]] base::Optional<AccessLocked<UniversalExprHolder>> getTypeConstraint() const;
 
 		static MBox<FlowPattern> parse(LangParserState& state);
 		void                     dprint(std::ostream& out) const final;

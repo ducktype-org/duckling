@@ -18,9 +18,17 @@
 						"sourceStart": 20,
 						"sourceEnd": 22
 					},
-					"Identifier Expression": {
-						"name": {
-							"Name": "aaa"
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 20,
+								"sourceEnd": 22
+							},
+							"Identifier Expression": {
+								"name": {
+									"Name": "aaa"
+								}
+							}
 						}
 					}
 				},

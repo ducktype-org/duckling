@@ -39,6 +39,10 @@ namespace pst {
 		out << "}";
 	}
 
+	base::Optional<AccessLocked<UniversalExprHolder>> FlowPattern::getTypeConstraint() const {
+		return type_constraint.map([](const auto& value) { return value.give(); });
+	}
+
 	LangElement::HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, as_identifier.has_value());
 		if (as_identifier.has_value()) addToHash(partial_hash, as_identifier.value());

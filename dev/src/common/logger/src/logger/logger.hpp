@@ -25,6 +25,7 @@ namespace logger {
 
 		// Compiler:
 		Compiler,  ///< Logs related to compiler pipeline.
+		Parser,    ///< Logs related to parsing.
 		Backend,   ///< Logs related to the backend components.
 		Linker,    ///< Logs related to the linker component.
 

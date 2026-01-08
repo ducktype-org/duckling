@@ -16,6 +16,8 @@ namespace pst {
 			tpc::TokenStream&&, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger
 		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
+
+		void finalizeParsing(Ref<LangParserState>);
 	}
 
 	/**
@@ -66,9 +68,13 @@ namespace pst {
                 file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
-			imports = internal::extractState(std::move(state_box));
-			calcElementPathHash();
-			calcHashes();
+			internal::finalizeParsing(state_box.refMut());
+			bool is_good = internal::isGood(*state_box);
+			imports      = internal::extractState(std::move(state_box));
+			if (is_good) {
+				calcElementPathHash();
+				calcHashes();
+			}
 		}
 
 		/**

@@ -214,7 +214,7 @@ namespace lexer {
 			std::string(token_type),
 			"(",
 			std::string(file->getCharRange(begin, end + 1).stringView()),
-			")"
+			")\n"
 		)
 	}
 
