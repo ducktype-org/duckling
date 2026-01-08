@@ -74,7 +74,7 @@ namespace pst {
 		Constructor,
 		CopyConstructor,
 		Destructor,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt
 	};
 
@@ -202,7 +202,6 @@ namespace pst {
 	 */
 	struct ClassContext {
 		base::StrID                     name;
-		std::vector<CRef<lexer::Token>> specifiers;
 	};
 
 	/**
@@ -210,20 +209,7 @@ namespace pst {
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		inline static const std::set<lang_def::Keyword> class_specs = {
-			lang_def::Keyword::Public,
-			lang_def::Keyword::Private,
-			lang_def::Keyword::Protected,
-			lang_def::Keyword::Static,
-		};
 		ClassContext context;
-
-		void parseSpecifiers(LangParserState& state);
-
-		[[nodiscard]]
-		static i64 countSpecifiers(LangParserState& state);
-
-		void dprintPrefix(std::ostream& out) const override;
 
 		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
 			  Stmt(kind, pos),

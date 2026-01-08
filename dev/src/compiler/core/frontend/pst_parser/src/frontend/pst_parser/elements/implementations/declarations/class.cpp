@@ -23,7 +23,7 @@ namespace pst {
 			state.parse(out).one(&out->implements, true);
 
 		state.parse(out).with(
-			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
+			&out->body, ClassBlock::parse, { .name = out->name}
 		);
 
 		return out;

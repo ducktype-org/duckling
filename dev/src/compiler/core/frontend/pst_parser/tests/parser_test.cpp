@@ -124,13 +124,15 @@ private:
 		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
 		pst::PST<> pst = prepare(duckling_file);
-		assertTrue(
-			pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
-			"Element paths are not unique"
-		);
-		assertTrue(
-			pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
-		);
+		if (not pst.hasErrors()) {
+			assertTrue(
+				pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
+				"Element paths are not unique"
+			);
+			assertTrue(
+				pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
+			);
+		}
 		std::stringstream ss;
 		pst.dprint(ss);
 

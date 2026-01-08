@@ -234,11 +234,12 @@ namespace pst {
 		auto                   path       = getElementPathHash();
 		hashing::ComponentHash attrs_path = { path, "attributes" };
 		calcIndexedListChildPath<Attribute>({ prefixes.attributes }, attrs_path);
-		calcIndexedListChildPath<StmtSpecifier>({ prefixes.specifiers }, attrs_path);
+		hashing::ComponentHash spec_path = { path, "specifiers" };
+		calcIndexedListChildPath<StmtSpecifier>({ prefixes.specifiers }, spec_path);
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
-					if (child->getElementKind() == ElementKind::Attribute) continue;
+					if (child->getElementKind() == ElementKind::Attribute || child->getElementKind() == ElementKind::StmtSpecifier) continue;
 					CORE_PANIC(
 						"Default implementation of calculating element paths cannot handle unnamed "
 						"sub-elements. Encountered while calculating for: "
@@ -268,8 +269,8 @@ namespace pst {
 			out << "],";
 		}
 		if (not prefixes.specifiers.empty()) {
-			out << R"("attributes": [)";
-			for (auto& attribute: prefixes.attributes) {
+			out << R"("specifiers": [)";
+			for (auto& attribute: prefixes.specifiers) {
 				attribute.internal()->debugPrint(out);
 				out << ",";
 			}
@@ -293,8 +294,8 @@ namespace pst {
 		// Move specifiers
 		prefixes.specifiers.resize(specifiers.size());
 		i = 0;
-		for (auto&& attr_add: std::move(specifiers)) {
-			state.parse(Ref(this)).assign(&prefixes.specifiers[i], MBox(std::move(attr_add)));
+		for (auto&& spec_add: std::move(specifiers)) {
+			state.parse(Ref(this)).assign(&prefixes.specifiers[i], MBox(std::move(spec_add)));
 			i++;
 		}
 

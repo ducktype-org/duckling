@@ -1,14 +1,16 @@
-#include "../../hierarchy/statements/specifier_block.hpp"
-#include "../../hierarchy/not_statements/code_block.hpp"
 
 #include "preamble.hpp"
+#include "../../hierarchy/statements/specifier_block.hpp"
+#include "../../hierarchy/not_statements/code_block.hpp" // IWYU pragma: keep
 
 namespace pst {
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<SpecifierBlock>(position);
 
-		state.parse(out).one(&out->block);
+		// @TODO: #1535 Figure out ordering with context
+		state.parse(out).withDef(&out->block, CodeBlock::Unordered);
+
 		return out;
 	}
 

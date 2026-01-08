@@ -17,7 +17,8 @@ namespace compiler::helios {
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {
-			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+			// @TODO: #1746 changes incoming
+			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::ClassSpecifierBlock>()) {
 				auto access_block = access_block_opt.value();
 				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
 			} else

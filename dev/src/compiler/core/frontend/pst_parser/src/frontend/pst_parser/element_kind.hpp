@@ -66,7 +66,7 @@ namespace pst {
 		// classes:
 		ClassField,
 		ClassMethod,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt,
 		ClassSpecial,
 
@@ -74,7 +74,8 @@ namespace pst {
 		ClassConstructor,
 		ClassDestructor,
 
-		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
+		// @TODO: #1746 Figure out whether this comment makes sense after changes
+		// note: ClassSpecifierBlock is not here, since it should be invisible to HELIOS (at least for now)
 
 		// others:
 		Param,

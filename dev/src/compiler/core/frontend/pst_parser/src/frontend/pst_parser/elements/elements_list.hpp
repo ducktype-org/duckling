@@ -63,7 +63,7 @@ namespace pst {
 	class Throw;
 	class Break;
 	// Class Elements
-	class AccessBlock;
+	class ClassSpecifierBlock;
 	class ClassSpecial;
 	class Constructor;
 	class CopyConstructor;

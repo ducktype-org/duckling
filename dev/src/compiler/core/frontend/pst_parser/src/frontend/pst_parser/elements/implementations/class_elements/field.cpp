@@ -7,8 +7,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Field>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		if (state.parse(out).tryEat(Keyword::Const)) {
 			out->is_mutable = false;
 			state.parse(out).eatOne();

@@ -30,9 +30,11 @@ namespace pst {
 				no_symbol.push_back(stmt.give());
 				break;
 			case DeclKind::Symbol:
-				symbol = stmt.internal()->getDeclSymbolName().value();
-				if (!by_symbol.atMaybe(symbol)) by_symbol.put(symbol);
-				by_symbol[symbol].push_back(stmt.give());
+				if (auto opt = stmt.internal()->getDeclSymbolName()) {
+					symbol = opt.value();
+					if (!by_symbol.atMaybe(symbol)) by_symbol.put(symbol);
+					by_symbol[symbol].push_back(stmt.give());
+				}
 				break;
 			case DeclKind::Transparent:
 				transparent.push_back(stmt.give());

@@ -126,6 +126,7 @@ namespace compiler::helios {
 				return ElementScopeKind::Standard;
 		}
 		case pst::ElementKind::ClassBlock: {
+			// @TODO: #1746 changes incoming
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
 			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
@@ -151,9 +152,10 @@ namespace compiler::helios {
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
+		// @TODO: #1746 changes incoming
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
-		case pst::ElementKind::AccessBlock:
+		case pst::ElementKind::ClassSpecifierBlock:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:

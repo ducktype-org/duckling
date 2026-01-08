@@ -257,10 +257,10 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
-	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
-	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
-	ClassStmtExample<pst::AccessBlock, true>  protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::AccessBlock, false> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::ClassSpecifierBlock, true>  public_access_block{ "public {}" };
+	ClassStmtExample<pst::ClassSpecifierBlock, true>  private_access_block{ "private {}" };
+	ClassStmtExample<pst::ClassSpecifierBlock, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::ClassSpecifierBlock, false> multi_specifier_block{ "public private {}" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_specified_field{ "public static x: i32 = 5" };

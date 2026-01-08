@@ -279,7 +279,6 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
 		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El>&& sub_tree) {
-			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -297,7 +296,6 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
 		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El>&& sub_tree) {
-			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -315,7 +313,6 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El>
 		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El>&& sub_tree) {
-			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -332,7 +329,6 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El>
 		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El>&& sub_tree) {
-			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -349,7 +345,6 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> El, typename Sink>
 		PSTAutomatic& assign(Sink* sink, MBox<El>&& sub_tree) {
-			PST_AUTOMATIC_SKIP(*this);
 			if (sub_tree) *sink = std::move(sub_tree);
 			return *this;
 		}

@@ -37,7 +37,7 @@ namespace pst {
 		Constructor,
 		CopyConstructor,
 		Destructor,
-		AccessBlock,
+		ClassSpecifierBlock,
 		Param,
 		CallArgument,
 		FlowPattern,
