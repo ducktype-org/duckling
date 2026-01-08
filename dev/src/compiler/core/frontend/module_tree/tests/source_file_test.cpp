@@ -3,6 +3,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>

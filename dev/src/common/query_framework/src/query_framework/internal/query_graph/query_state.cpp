@@ -10,10 +10,7 @@
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
-
-#ifdef BUILD_TYPE_DEV
-	#include <unordered_set>
-#endif
+#include <unordered_set>
 
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {

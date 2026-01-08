@@ -3,6 +3,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_entry_point.hpp>
