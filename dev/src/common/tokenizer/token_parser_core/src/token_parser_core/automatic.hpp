@@ -28,10 +28,8 @@
 #include "base_element.hpp"
 #include "common_elements.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 
-#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 
