@@ -1,6 +1,6 @@
 #include "repl_session.hpp"
 
-#include "dvm_helpers.hpp"
+#include "driver/repl_utils/repl_dvm_helpers.hpp"
 
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>

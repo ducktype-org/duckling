@@ -1,4 +1,4 @@
-#include "dvm_helpers.hpp"
+#include "repl_dvm_helpers.hpp"
 
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_module_data.hpp>
