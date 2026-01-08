@@ -391,7 +391,7 @@ namespace compiler::frontend {
 		 * @param file The SourceFile to remove.
 		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
-		static void removeSourceFile(base::Ref<SourceFile> file);
+		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
 
 		/**
 		 * Sets the main source file for the given module.

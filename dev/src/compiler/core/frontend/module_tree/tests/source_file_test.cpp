@@ -318,15 +318,13 @@ private:
 		cleanup_files.push_back(source_path);
 		ModuleTreeModifier::addSourceFile(module, source_path);
 		ASSERT_EQUAL(1, module->getSourceFiles().size());
-		const auto initial_source_count = module->getSourceFiles().size();
-		auto       sf_ref               = getRef(module->getSourceFiles().front());
+		auto sf_ref = getRef(module->getSourceFiles().front());
 
 		auto before = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_EQUAL(1, before.size());
 
-		ModuleTreeModifier::removeSourceFile(sf_ref);
-		ASSERT_TRUE(initial_source_count > 0);
-		ASSERT_TRUE(module->getSourceFiles().size() < initial_source_count);
+		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
+		ASSERT_TRUE(module->getSourceFiles().size() == 0);
 		auto after = SourceFile::getSourceFilesfromFile(source_path);
 		ASSERT_TRUE(after.empty());
 
@@ -350,7 +348,7 @@ private:
 		auto sf_ref  = getRef(module->getSourceFiles().front());
 		auto file_id = sf_ref->getFileID();
 
-		ModuleTreeModifier::removeSourceFile(sf_ref);
+		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
 							  [&]() { (void) GetFileID_Functor::get(file_id); },

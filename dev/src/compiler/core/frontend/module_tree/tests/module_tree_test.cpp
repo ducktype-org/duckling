@@ -383,9 +383,9 @@ private:
 			if (getRef(sf)->getFileIllegalAccess().name() == "newsrc.duck") found_newsrc = true;
 		ASSERT_TRUE(found_newsrc);
 
-		// Test removeSourceFile
+		// Test removeSourceFileFromStorage
 		auto src_to_remove = mt->getSourceFiles().front();
-		ModuleTreeModifier::removeSourceFile(getRef(src_to_remove));
+		ModuleTreeModifier::removeSourceFileFromStorage(getRef(src_to_remove));
 		bool still_present = false;
 		for (auto& sf: mt->getSourceFiles())
 			if (sf.illegalAccess().getID() == src_to_remove.illegalAccess().getID())

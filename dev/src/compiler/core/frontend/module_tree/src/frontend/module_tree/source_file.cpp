@@ -112,7 +112,7 @@ namespace compiler::frontend {
 
 	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
 
-	void SourceFile::removeSourceFile(Ref<SourceFile> source_file) {
+	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
 
 		if (files_map.contains(abs_path)) {

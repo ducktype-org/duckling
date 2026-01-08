@@ -480,7 +480,7 @@ namespace compiler::frontend {
 		module->updateModuleHash();
 	}
 
-	void ModuleTreeModifier::removeSourceFile(base::Ref<SourceFile> file) {
+	void ModuleTreeModifier::removeSourceFileFromStorage(base::Ref<SourceFile> file) {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
@@ -513,7 +513,7 @@ namespace compiler::frontend {
 		}
 
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFile(file);
+		SourceFile::removeSourceFileFromStorage(file);
 	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
@@ -620,7 +620,7 @@ namespace compiler::frontend {
 			)
 		);
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFile(module->m_main_source_file.value());
+		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
 		module->updateModuleHash();
 	}
@@ -769,11 +769,12 @@ namespace compiler::frontend {
 		}
 
 		// Remove all source files from storage this will invalidate the SourceFile instances!
-		for (auto& source_file: module->m_source_files) SourceFile::removeSourceFile(source_file);
+		for (auto& source_file: module->m_source_files)
+			SourceFile::removeSourceFileFromStorage(source_file);
 
 		// Remove main source file. This will invalidate the SourceFile instance!
 		if (module->m_main_source_file.has_value())
-			SourceFile::removeSourceFile(module->m_main_source_file.value());
+			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
@@ -809,9 +810,9 @@ namespace compiler::frontend {
 			for (auto& [_, child]: current->m_submodules) self(self, child);
 
 			for (auto& source_file: current->m_source_files)
-				SourceFile::removeSourceFile(source_file);
+				SourceFile::removeSourceFileFromStorage(source_file);
 			if (current->m_main_source_file.has_value())
-				SourceFile::removeSourceFile(current->m_main_source_file.value());
+				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
 
 			ModuleTree::removeModuleFromStorage(current);
 		};

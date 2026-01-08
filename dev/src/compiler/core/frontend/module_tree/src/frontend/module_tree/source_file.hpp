@@ -63,8 +63,8 @@ namespace compiler::frontend {
 		friend struct FileID;
 
 		/**
-		 * Ensures a SourceFile reference still points to a tracked instance during development
-		 * builds.
+		 * Ensures a SourceFile reference still points to a tracked instance.
+		 * This function will work only in dev build if use_module_modifier_remove flag is enabled.
 		 */
 		static void checkDanglingReference(const base::Ref<SourceFile>& candidate);
 
@@ -145,7 +145,7 @@ namespace compiler::frontend {
 		 * @note This will invalidate all references!
 		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
 		 */
-		static void removeSourceFile(Ref<SourceFile> source_file);
+		static void removeSourceFileFromStorage(Ref<SourceFile> source_file);
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;
