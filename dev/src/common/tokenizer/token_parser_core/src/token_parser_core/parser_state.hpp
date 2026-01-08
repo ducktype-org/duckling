@@ -58,10 +58,10 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia::Logger>      err;      ///< Stores parsing errors
-		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
+		Ref<dia::Logger>     err;      ///< Stores parsing errors
+		Ref<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  err(err),
