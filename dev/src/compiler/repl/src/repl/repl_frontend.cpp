@@ -11,7 +11,8 @@
 #include <vector>
 
 namespace {
-	constexpr std::string_view CURSOR_LEFT_SEQ      = "\x1b[D";
+	constexpr std::string_view CURSOR_LEFT_SEQ
+		= "\x1b[D";  // \x1b is start of ANSI escape sequence - needed to control terminal
 	constexpr std::string_view CURSOR_RIGHT_SEQ     = "\x1b[C";
 	constexpr std::string_view CURSOR_DOWN_SEQ      = "\x1b[B";
 	constexpr std::string_view CURSOR_UP_SEQ        = "\x1b[A";

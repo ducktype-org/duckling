@@ -8,6 +8,12 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief RawTerminalMode
+ *
+ * Changes the operating mode of the terminal. Uses RAII to ensure terminal settings are untouched
+ * upon exiting repl.
+ */
 namespace {
 	class RawTerminalMode {
 	public:
@@ -33,7 +39,9 @@ namespace compiler::repl {
 			  m_history(history),
 			  m_config(config),
 			  m_cursor_align_to_multiline_prompt_end(
-				  std::format("\x1b[{}C", config.continuation.size())
+				  std::format(
+					  "\x1b[{}C", config.continuation.size()
+				  )  // \x1b is start of ANSI escape sequence - needed to control terminal
 			  ) {}
 
 		void printWelcome() const;
