@@ -11,7 +11,10 @@ class CompilerTimeStatsTests: public tester::TestSuite {
 #define TESTER_CLASS CompilerTimeStatsTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(prettyPrintTest);
+	}
 
 private:
 	void simpleTest() {
@@ -53,6 +56,11 @@ private:
 		// we only added time before the explicit end, so the time should be almost the same
 		// 20 miliseconds margin to capture cases where we lost cpu in just the right moment
 		ASSERT_TRUE(backend_comp_time_after - backend_comp_time < std::chrono::milliseconds(20));
+	}
+
+	void prettyPrintTest() {
+		// just call the pretty print function to ensure it doesn't crash
+		time_stats::prettyPrintTimeStatistics();
 	}
 
 
