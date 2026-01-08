@@ -1,38 +1,7 @@
 #include "../../hierarchy/expressions/string_value.hpp"
 
 #include "preamble.hpp"
-
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	/**
-	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
-	 * some situation where only a string value will be accepted in an expression.
-	 */
-	class BadStrValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_str_value_error" };
-		}
-
-	public:
-		BadStrValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class MoreThanStrValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "more_than_str_value_error" };
-		}
-
-	public:
-		MoreThanStrValueError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> ExprStrValue::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

@@ -2,37 +2,7 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	/**
-	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
-	 * some situation where only a number value will be accepted in an expression.
-	 */
-	class BadValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_value_error" };
-		}
-
-	public:
-		BadValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class MoreThanValueError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "more_than_value_error" };
-		}
-
-	public:
-		MoreThanValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	MBox<ExprElement> ExprValue::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 

@@ -4,24 +4,11 @@
 #include "../../hierarchy/statements/all_statements.hpp"
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
+#include "meta_errors.hpp"
 
 namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
-
-	class EmptyStatementError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "empty_statement_error" };
-		}
-
-	public:
-		EmptyStatementError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	namespace internal {
 
 		template<class T>

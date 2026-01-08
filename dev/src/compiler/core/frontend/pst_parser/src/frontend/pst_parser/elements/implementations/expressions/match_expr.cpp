@@ -4,44 +4,7 @@
 #include "../../hierarchy/not_statements/match_case.hpp"
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	class MatchRoundBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "match_round_bracket_error" };
-		}
-
-	public:
-		MatchRoundBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class NotACaseExpression final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "not_a_case_expression" };
-		}
-
-	public:
-		NotACaseExpression(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class MatchCurlyBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "match_curly_bracket_error" };
-		}
-
-	public:
-		MatchCurlyBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

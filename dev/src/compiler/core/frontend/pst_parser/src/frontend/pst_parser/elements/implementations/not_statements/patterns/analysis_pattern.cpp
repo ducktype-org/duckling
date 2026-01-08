@@ -1,21 +1,7 @@
 #include "../../../hierarchy/not_statements/patterns/patterns.hpp"
 #include "../preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class UnrecognizedPatternInCaseError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "unrecognized_pattern_in_case_error" };
-		}
-
-	public:
-		UnrecognizedPatternInCaseError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<AnalysisPattern> AnalysisPattern::parse(LangParserState& state) {
 		// Wildcard pattern: '_'

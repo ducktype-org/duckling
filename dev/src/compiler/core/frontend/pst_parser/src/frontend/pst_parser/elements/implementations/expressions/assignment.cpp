@@ -3,20 +3,8 @@
 #include "../../hierarchy/expressions/comma.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
 
 namespace pst::expr {
-	class MultipleAssignmentError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "multiple_assignment_error" };
-		}
-
-	public:
-		MultipleAssignmentError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

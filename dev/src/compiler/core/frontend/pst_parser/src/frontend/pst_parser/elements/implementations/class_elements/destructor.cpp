@@ -3,21 +3,7 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class NonEmptyError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "destructor_arguments_error" };
-		}
-
-	public:
-		NonEmptyError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<Destructor>(position, ctx);

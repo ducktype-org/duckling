@@ -2,21 +2,7 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class RoundExprStartError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "round_expr_start_error" };
-		}
-
-	public:
-		RoundExprStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<RoundGroupExpr>(position);

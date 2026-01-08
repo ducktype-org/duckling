@@ -3,20 +3,7 @@
 #include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class NoSpecifierError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "no_access_specifier" };
-		}
-
-	public:
-		NoSpecifierError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	LangElement::HashAlg& AccessBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, specifier);

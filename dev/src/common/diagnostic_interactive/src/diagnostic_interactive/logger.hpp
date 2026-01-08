@@ -76,7 +76,7 @@ namespace dia_int {
 		);
 
 		// Create the message
-		auto obj = base::makeBox<MsgClass>(std::forward<Args>(args)...);
+		auto obj = base::makeBox<MsgClass>(std::forward<Args>(args)...)->buildDiagnosticFile();
 
 		// Evaluate to terminal (or any other stream)
 		Logger::evaluateToTerminalMessage(obj.ref(), out, false);

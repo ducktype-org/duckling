@@ -2,20 +2,7 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	class BadCallError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_call_error" };
-		}
-
-	public:
-		BadCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> Call::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

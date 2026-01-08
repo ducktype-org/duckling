@@ -3,20 +3,7 @@
 #include "../../hierarchy/lists/template_list.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	class BadTemplateError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_template_error" };
-		}
-
-	public:
-		BadTemplateError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

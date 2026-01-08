@@ -2,20 +2,7 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class AttrStarError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "attr_star_error" };
-		}
-
-	public:
-		AttrStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
 		auto           position = state.getPosition();

@@ -2,48 +2,7 @@
 
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class MatchCaseWithNoBodyError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "match_case_no_body" };
-		}
-
-	public:
-		MatchCaseWithNoBodyError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class DoubleDefaultBranchError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "double_default_branch" };
-		}
-
-	public:
-		DoubleDefaultBranchError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class UnconditionedBranchAfterConditionedError final:
-		  public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "unconditioned_branch_after_conditioned" };
-		}
-
-	public:
-		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
 		auto position = state.getPosition();

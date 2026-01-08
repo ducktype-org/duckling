@@ -3,20 +3,7 @@
 #include "../../hierarchy/not_statements/dotted_name.hpp"
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class AliasStarError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "alias_star_error" };
-		}
-
-	public:
-		AliasStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<Alias> Alias::parse(LangParserState& state) {
 		auto position = state.getPosition();

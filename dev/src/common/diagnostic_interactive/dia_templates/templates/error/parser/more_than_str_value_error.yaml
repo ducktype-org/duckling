@@ -26,4 +26,4 @@ pointer_messages:
   cause:
     priority: 1
     type: "error"
-    content: []
+    content: "here"

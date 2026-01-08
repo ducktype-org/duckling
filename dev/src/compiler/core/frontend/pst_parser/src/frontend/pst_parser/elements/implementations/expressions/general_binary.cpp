@@ -8,17 +8,6 @@
 #include <stack>
 
 namespace pst::expr {
-	class OnlyPrefixError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "only_prefix_error" };
-		}
-
-	public:
-		OnlyPrefixError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;

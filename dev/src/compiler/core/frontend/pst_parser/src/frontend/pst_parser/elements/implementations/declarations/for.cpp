@@ -5,20 +5,7 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class ForBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "for_bracket_error" };
-		}
-
-	public:
-		ForBracketError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)

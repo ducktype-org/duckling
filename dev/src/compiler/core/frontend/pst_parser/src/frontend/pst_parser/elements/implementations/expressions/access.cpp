@@ -3,20 +3,9 @@
 #include "../../hierarchy/expressions/template_specifier.hpp"
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
+#include "expressions_errors.hpp"
 
 namespace pst::expr {
-	class BadAccessError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_access_error" };
-		}
-
-	public:
-		BadAccessError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

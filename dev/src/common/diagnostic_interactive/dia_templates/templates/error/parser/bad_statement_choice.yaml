@@ -16,9 +16,9 @@ params:
     description: "The name of the type expected."
 
 header_message:
-  - text: "Token doesn't match with chosen statement of `"
+  - "Token doesn't match with chosen statement of `"
   - param: "type_name"
-  - text: "`."
+  - "`."
 
 description:
   - codeblock:

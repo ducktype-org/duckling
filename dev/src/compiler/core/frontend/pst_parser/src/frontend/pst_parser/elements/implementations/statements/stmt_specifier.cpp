@@ -4,33 +4,7 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst {
-	class BadCallError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_specifier_call" };
-		}
-
-	public:
-		BadCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class InvalidExternContentWarning final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "warning",
-				     .family        = "parser",
-				     .name          = "invalid_extern_content" };
-		}
-
-	public:
-		InvalidExternContentWarning(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	const std::set<Keyword> StmtSpecifier::SPECIFIERS(
 		SPECIFIERS_ARRAY.begin(), SPECIFIERS_ARRAY.end()
@@ -53,7 +27,7 @@ namespace pst {
 			MBox<CallList> call_list;
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
-				state.logInt(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
+				state.logInt(makeBox<BadSpecifierCallError>(dia::SourcePosition(state.getPosition())));
 				return nullptr;
 			}
 

@@ -3,46 +3,7 @@
 #include "../../hierarchy/expressions/logic_or.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic/source_position.hpp>
-
 namespace pst::expr {
-	class MultipleTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "multiple_ternary" };
-		}
-
-	public:
-		MultipleTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class PartialTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "partial_ternary" };
-		}
-
-	public:
-		PartialTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
-	class ImproperTernaryError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "improper_ternary" };
-		}
-
-	public:
-		ImproperTernaryError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
 
 	MBox<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;

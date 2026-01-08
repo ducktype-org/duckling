@@ -5,21 +5,7 @@
 #include "../../hierarchy/expressions/call.hpp"    // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic_interactive/message.hpp>
-
 namespace pst::expr {
-	class BadChainExprError final: public dia_int::MessageWithCodeFragmentAndCause {
-		dia_int::Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "parser",
-				     .name          = "bad_chain_expr_error" };
-		}
-
-	public:
-		BadChainExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
-	};
-
 	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
 		CORE_ASSERT(length > 0, "Illegal max length to next link");
 

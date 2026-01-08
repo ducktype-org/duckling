@@ -165,6 +165,23 @@ namespace pst {
 			err->log(std::move(message));
 		}
 
+		void logInt(Box<dia_int::MessageBase> message) override {
+			if (isSkipping()) {
+				CORE_DEV_LOG(
+					Parser,
+					"Skipped parsing message `",
+					message->debugString(),
+					"`"
+				);
+				return;
+			}
+			if (message->isError()) {
+				skip_till_fallback    = true;
+				skipped_entries_depth = 1;
+			}
+			int_err->log(std::move(message));
+		}
+
 		/**
 		 * @brief Gives access to automatic parsing tools.
 		 */

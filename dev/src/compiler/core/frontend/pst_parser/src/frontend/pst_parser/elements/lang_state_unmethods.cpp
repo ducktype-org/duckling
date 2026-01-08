@@ -22,5 +22,5 @@ namespace pst::internal {
 
 	u64 streamSize(LangParserState& state) { return state.ctokens().size(); }
 
-	bool isGood(LangParserState& state) { return state.err->good(); }
+	bool isGood(LangParserState& state) { return state.err->good() and (not state.int_err->hasErrors()); }
 }
