@@ -1016,7 +1016,7 @@ namespace compiler::backend_llvm {
 		);
 
 		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
-			= parseBitcodeFile(buffer->getMemBufferRef(), getLLVMContext());
+			= llvm::parseBitcodeFile(buffer->getMemBufferRef(), getLLVMContext());
 
 		if (!mod_or_err)
 			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
