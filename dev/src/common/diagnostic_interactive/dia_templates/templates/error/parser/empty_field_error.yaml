@@ -16,9 +16,9 @@ params:
     description: "The type of the list."
 
 header_message:
-  - text: "Empty field in the "
+  - "Empty field in the "
   - param: "list_type"
-  - text: " list."
+  - " list."
 
 description:
   - codeblock:

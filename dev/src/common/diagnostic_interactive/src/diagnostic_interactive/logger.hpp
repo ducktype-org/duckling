@@ -31,7 +31,13 @@ namespace dia_int {
 		 */
 		[[nodiscard]] bool hasErrors() const;
 
+		[[nodiscard]] bool good() const;
+
+		[[nodiscard]] bool bad() const;
+
 		void terminalPrint(std::ostream& out = std::cerr);
+
+		void dumpLog(bool, std::ostream& out) { terminalPrint(out); }
 
 		/**
 		 * @brief Collect all logged diagnostics into the provided output vector.
@@ -47,6 +53,8 @@ namespace dia_int {
 		void clear();
 
 		[[nodiscard]] u64 messageCount() const;
+
+		[[nodiscard]] u64 errorCount() const;
 
 		/**
 		 * @brief Evaluate diagnostic to terminal message and print it to the given stream.

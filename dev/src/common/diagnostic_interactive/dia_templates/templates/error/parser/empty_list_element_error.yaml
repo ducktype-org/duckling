@@ -16,9 +16,9 @@ params:
     description: "The type of the list."
 
 header_message:
-  - text: "This "
-  - argument: "list_type"
-  - text: " list element shouldn't be empty."
+  - "This "
+  - param: "list_type"
+  - " list element shouldn't be empty."
 
 description:
   - codeblock:

@@ -1,8 +1,10 @@
 #include "diagnostic_interactive/logger.hpp"
+#include "frontend/pst_parser/elements/elements_common.hpp"
 #include "frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp"
 #include "frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp"
 #include "frontend/pst_parser/elements/implementations/declarations/var_parse.hpp"
 #include "frontend/pst_parser/elements/implementations/expressions/expressions_errors.hpp"
+#include "frontend/pst_parser/elements/implementations/lists/impl_template.hpp"
 #include "frontend/pst_parser/elements/implementations/meta/meta_errors.hpp"
 #include "frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp"
 #include "frontend/pst_parser/elements/implementations/preamble.hpp"
@@ -482,7 +484,24 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::InvalidExternContentWarning>(
 			ss, dia::SourcePosition::fakePosition()
 		);
-		// std::cerr << ss.str();
+
+		testDiagnosticMessage<
+			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition(), lexer::Token::BracketType::Round
+		);
+		testDiagnosticMessage<pst::EmptyListError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::EmptyListElementError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::EmptyFieldError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::NoSeparatorError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		std::cerr << ss.str();
 	}
 
 public:

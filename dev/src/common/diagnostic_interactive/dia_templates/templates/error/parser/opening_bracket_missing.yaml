@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "parser"
-  name: "opening_bracket_missing_error"
+  name: "opening_bracket_missing"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -12,9 +12,17 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  bracket:
+    description: "The expected opening bracket."
+  list_type:
+    description: "The type of list being parsed."
 
 header_message:
-  - "Opening bracket {0} of a {1} list expected after here."
+  - "Opening bracket "
+  - param: "bracket"
+  - " of a "
+  - param: "list_type"
+  - " list expected after here."
 
 description:
   - codeblock:

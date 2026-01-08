@@ -17,7 +17,7 @@ params:
 
 header_message:
   - param: "list_type"
-  - text: " list separator expected."
+  - " list separator expected."
 
 description:
   - codeblock:

@@ -190,28 +190,28 @@ private:
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
 		assertTrue(
-			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 4, "Expected 4 errors"
+			pst.getLogger()->errorCount() == 4, "Expected 4 errors"
 		);
 	}
 
 	void testUsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/using_err.duck"));
 		assertTrue(
-			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
+			pst.getLogger()->errorCount() == 2, "Expected 2 errors"
 		);
 	}
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
 		assertTrue(
-			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 10, "Expected 10 errors"
+			pst.getLogger()->errorCount() == 10, "Expected 10 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
 		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.duck"));
 		assertTrue(
-			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 3, "Expected 3 errors"
+			pst.getLogger()->errorCount() == 3, "Expected 3 errors"
 		);
 	}
 
