@@ -29,6 +29,7 @@ namespace pst {
 		FunDecl,
 		Pattern,
 		Block,
+		SpecifierBlock,
 
 		Using,
 		Alias,

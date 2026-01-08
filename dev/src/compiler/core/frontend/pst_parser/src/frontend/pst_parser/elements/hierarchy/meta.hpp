@@ -60,7 +60,7 @@ namespace pst {
 		Pattern,
 		Namespace,
 		CodeDecl,
-		StmtSpecifier,
+		SpecifierBlock,
 		Action,
 		ExprStmt,
 		Class,

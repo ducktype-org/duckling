@@ -206,13 +206,15 @@ namespace pst {
 		// Collect Attributes
 		auto prefixes = collectPrefixes(state);
 
+		MBox<Stmt> out;
+
 		// Specifier block handling
 		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
-			return internal::parseStmt<SpecifierBlock>(state);
+			out = internal::parseStmt<SpecifierBlock>(state);
+		} else {
+			// Parse Statement
+			out = internal::chooseStmt(state);
 		}
-
-		// Parse Statement
-		MBox<Stmt> out = internal::chooseStmt(state);
 
 		// Add Attributes
 		if (out) out->addPrefixes(state, std::move(prefixes));
