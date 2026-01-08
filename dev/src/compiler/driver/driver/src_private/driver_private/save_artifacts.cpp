@@ -3,7 +3,7 @@
 
 #include <base/types/ints.hpp>
 
-#include <query_framework/internal/context_access.hpp>
+#include <query_framework/external/api.hpp>
 #include <string_id/string_id.hpp>
 
 #include <vector>
@@ -17,9 +17,7 @@ namespace compiler::driver {
 
 		auto query_graph_blob = query_collection->blobArtifactAtOrNew(base::StrID("query_graph"));
 
-		// Serialize the query graph from the global query state.
-		auto              graph_ref = query::internal::ContextAccess::getState()->getGraphMutable();
-		std::vector<byte> serialized = graph_ref->serialize();
+		std::vector<byte> serialized = query::external::serializeQueryGraph();
 
 		if (!serialized.empty())
 			query_collection->setBlobData(query_graph_blob, serialized.data(), serialized.size());

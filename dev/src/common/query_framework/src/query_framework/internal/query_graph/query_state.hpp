@@ -177,5 +177,12 @@ namespace query::internal {
 		 * compilation will be unregistered.
 		 */
 		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
+
+		/**
+		 * @brief Removes redundant unstable nodes to shrink the graph prior to serialization.
+		 * This must be called after compilaton phase and only use it before actual serialization.
+		 * This is for internal use only.
+		 */
+		void reduceOptimizeGraph();
 	};
 }

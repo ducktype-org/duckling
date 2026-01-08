@@ -8,11 +8,9 @@
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 
+#include <algorithm>
 #include <iostream>
-
-#ifdef BUILD_TYPE_DEV
-	#include <unordered_set>
-#endif
+#include <unordered_set>
 
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
@@ -245,4 +243,232 @@ namespace query::internal {
 			}
 		}
 	}
+
+void QueryState::reduceOptimizeGraph() {
+	auto& deps = query_graph.node_deps;
+	if (deps.empty()) return;
+
+	base::HashMap<NodeID, std::vector<NodeID>> parents;
+	parents.reserve(deps.size());
+	for (const auto& [node, child_list]: deps) {
+		parents.try_emplace(node, std::vector<NodeID>{});
+		for (const auto& child: child_list) {
+			auto [it, _] = parents.try_emplace(child, std::vector<NodeID>{});
+			it->second.push_back(node);
+		}
+	}
+
+	const auto isStableNode = [&](const NodeID& node) -> bool {
+		return node.q_id.registered() && node.q_id.getData().usesStableHashing();
+	};
+
+	const auto isInputNode = [&](const NodeID& node) -> bool {
+		return node.q_id.registered() && node.q_id.getData().isInputQuery();
+	};
+
+	const auto canTrimNode = [&](const NodeID& node) -> bool {
+		if (isStableNode(node)) return false;
+		if (isInputNode(node)) return false;
+		return true;
+	};
+
+	// First optimization: remove unstable roots iteratively until only stable roots remain.
+	std::vector<NodeID> root_queue;
+	root_queue.reserve(deps.size());
+	for (const auto& [node, _]: deps) {
+		const auto parents_it = parents.find(node);
+		if (parents_it != parents.end() && parents_it->second.empty() && canTrimNode(node))
+			root_queue.push_back(node);
+	}
+
+	while (!root_queue.empty()) {
+		const NodeID node = root_queue.back();
+		root_queue.pop_back();
+
+		auto dep_it = deps.find(node);
+		if (dep_it == deps.end()) continue;
+		auto parents_it = parents.find(node);
+		if (parents_it != parents.end() && !parents_it->second.empty()) continue;
+
+		for (const auto& child: dep_it->second) {
+			auto child_parents_it = parents.find(child);
+			if (child_parents_it == parents.end()) continue;
+			auto& vec = child_parents_it->second;
+			vec.erase(std::remove(vec.begin(), vec.end(), node), vec.end());
+			if (vec.empty() && canTrimNode(child)) root_queue.push_back(child);
+		}
+
+		deps.erase(node);
+		parents.erase(node);
+	}
+
+	std::vector<NodeID> leaves;
+	leaves.reserve(deps.size());
+	for (const auto& [node, child_list]: deps)
+		if (child_list.empty() && canTrimNode(node)) leaves.push_back(node);
+
+	std::vector<NodeID> next_leaves;
+	std::vector<NodeID> dirty_parents;
+	std::unordered_set<NodeID> leaves_batch;
+	next_leaves.reserve(deps.size());
+	dirty_parents.reserve(deps.size());
+
+	while (!leaves.empty()) {
+		leaves_batch.clear();
+		dirty_parents.clear();
+		leaves_batch.reserve(leaves.size() * 2);
+
+		for (const auto& leaf: leaves) {
+			if (!deps.contains(leaf)) continue;
+			leaves_batch.insert(leaf);
+			if (auto it = parents.find(leaf); it != parents.end())
+				dirty_parents.insert(dirty_parents.end(), it->second.begin(), it->second.end());
+		}
+
+		if (leaves_batch.empty()) break;
+
+		std::sort(dirty_parents.begin(), dirty_parents.end());
+		dirty_parents.erase(std::unique(dirty_parents.begin(), dirty_parents.end()), dirty_parents.end());
+
+		next_leaves.clear();
+		for (const auto& parent: dirty_parents) {
+			auto parent_it = deps.find(parent);
+			if (parent_it == deps.end()) continue;
+
+			auto& dep_vec = parent_it->second;
+			auto  new_end = std::remove_if(dep_vec.begin(), dep_vec.end(), [&](const NodeID& dep) {
+				return leaves_batch.contains(dep);
+			});
+			if (new_end != dep_vec.end()) {
+				dep_vec.erase(new_end, dep_vec.end());
+				if (dep_vec.empty() && canTrimNode(parent)) next_leaves.push_back(parent);
+			}
+		}
+
+		for (const auto& leaf: leaves_batch) {
+			deps.erase(leaf);
+			parents.erase(leaf);
+		}
+
+		leaves.swap(next_leaves);
+	}
+
+	std::vector<NodeID> collapse_candidates;
+	collapse_candidates.reserve(deps.size());
+	for (const auto& [node, _]: deps) {
+		if (auto it = parents.find(node); it != parents.end()) {
+			auto& parent_vec = it->second;
+			parent_vec.erase(std::remove_if(parent_vec.begin(), parent_vec.end(), [&](const NodeID& parent) {
+				return !deps.contains(parent);
+			}), parent_vec.end());
+			if (parent_vec.size() == 1 && canTrimNode(node)) collapse_candidates.push_back(node);
+		}
+	}
+
+	std::vector<NodeID> chain;
+	std::vector<NodeID> new_children;
+	std::unordered_set<NodeID> chain_nodes;
+	chain.reserve(8);
+	new_children.reserve(8);
+
+	while (!collapse_candidates.empty()) {
+		NodeID start = collapse_candidates.back();
+		collapse_candidates.pop_back();
+
+		if (!deps.contains(start)) continue;
+
+		auto parents_entry = parents.find(start);
+		if (parents_entry == parents.end()) continue;
+		auto& start_parents = parents_entry->second;
+		start_parents.erase(std::remove_if(start_parents.begin(), start_parents.end(), [&](const NodeID& candidate) {
+			return !deps.contains(candidate);
+		}), start_parents.end());
+
+		if (start_parents.size() != 1) continue;
+		if (!canTrimNode(start)) continue;
+
+		NodeID anchor_candidate = start_parents.front();
+		if (!deps.contains(anchor_candidate)) continue;
+
+		chain.clear();
+		chain.push_back(start);
+
+		NodeID current_parent = anchor_candidate;
+		while (true) {
+			if (!canTrimNode(current_parent)) break;
+			auto parent_it = parents.find(current_parent);
+			if (parent_it == parents.end()) break;
+
+			auto& parent_vec = parent_it->second;
+			parent_vec.erase(std::remove_if(parent_vec.begin(), parent_vec.end(), [&](const NodeID& candidate) {
+				return !deps.contains(candidate);
+			}), parent_vec.end());
+
+			if (parent_vec.size() != 1) break;
+			chain.push_back(current_parent);
+			current_parent = parent_vec.front();
+			if (!deps.contains(current_parent)) break;
+		}
+
+		NodeID anchor = current_parent;
+		if (!deps.contains(anchor)) continue;
+
+		chain_nodes.clear();
+		chain_nodes.reserve(chain.size() * 2);
+		for (const auto& node: chain) chain_nodes.insert(node);
+
+		new_children.clear();
+		for (const auto& node: chain) {
+			auto node_it = deps.find(node);
+			if (node_it == deps.end()) continue;
+			for (const auto& child: node_it->second) {
+				if (chain_nodes.contains(child)) continue;
+				new_children.push_back(child);
+				if (auto child_parents_it = parents.find(child); child_parents_it != parents.end()) {
+					auto& vec = child_parents_it->second;
+					vec.erase(std::remove(vec.begin(), vec.end(), node), vec.end());
+				}
+			}
+		}
+
+		std::sort(new_children.begin(), new_children.end());
+		new_children.erase(std::unique(new_children.begin(), new_children.end()), new_children.end());
+
+		auto anchor_it = deps.find(anchor);
+		if (anchor_it == deps.end()) continue;
+		auto& anchor_deps = anchor_it->second;
+		anchor_deps.erase(
+			std::remove_if(anchor_deps.begin(), anchor_deps.end(), [&](const NodeID& child) {
+				return chain_nodes.contains(child);
+			}),
+			anchor_deps.end()
+		);
+
+		std::unordered_set<NodeID> anchor_child_set(anchor_deps.begin(), anchor_deps.end());
+		for (const auto& child: new_children) {
+			if (anchor_child_set.insert(child).second) {
+				anchor_deps.push_back(child);
+				auto [child_parents_it, _] = parents.try_emplace(child, std::vector<NodeID>{});
+				auto& vec = child_parents_it->second;
+				if (std::find(vec.begin(), vec.end(), anchor) == vec.end()) vec.push_back(anchor);
+			}
+		}
+
+		for (const auto& node: chain) {
+			deps.erase(node);
+			parents.erase(node);
+		}
+
+		for (const auto& child: new_children) {
+			auto child_parents_it = parents.find(child);
+			if (child_parents_it == parents.end()) continue;
+			auto& vec = child_parents_it->second;
+			vec.erase(std::remove_if(vec.begin(), vec.end(), [&](const NodeID& candidate) {
+				return !deps.contains(candidate);
+			}), vec.end());
+			if (vec.size() == 1 && canTrimNode(child)) collapse_candidates.push_back(child);
+		}
+	}
 }
+
+	}  // namespace query::internal

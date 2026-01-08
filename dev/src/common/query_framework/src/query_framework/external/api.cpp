@@ -3,6 +3,7 @@
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/node_marking.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/internal/query_graph/query_state.hpp>
 
 #include <vector>
 
@@ -24,5 +25,12 @@ namespace query::external {
 		state->setPreviousGraph(std::move(graph));
 
 		::query::internal::markPreviousGraphNodesInputs(std::move(inputs));
+	}
+
+	std::vector<byte> serializeQueryGraph() {
+		auto state = ::query::internal::ContextAccess::getState();
+		state->reduceOptimizeGraph();
+		auto graph_ref = state->getGraphMutable();
+		return graph_ref->serialize();
 	}
 }  // namespace query::external

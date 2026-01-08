@@ -38,4 +38,9 @@ namespace query::external {
 		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
 	);
 
+	/**
+	 * @brief Optimize and serialize the current query graph for persistence on disk.
+	 */
+	[[nodiscard]] std::vector<byte> serializeQueryGraph();
+
 }  // namespace query::external
