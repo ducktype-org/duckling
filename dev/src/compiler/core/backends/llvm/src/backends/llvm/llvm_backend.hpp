@@ -40,12 +40,12 @@ namespace compiler::backend_llvm {
 		static Module fromIRCode(std::string_view llvm_ir_code);
 
 		/**
-		 * @brief Creates an LLVM module from LLVM bitcode given as char array.
+		 * @brief Creates an LLVM module from LLVM bitcode given as char span.
 		 * Panics if the code is invalid.
 		 *
 		 * @return Module created by parsing the given bitcode.
 		 */
-		static Module fromLLVMBC(const unsigned char* llvm_bc_data, size_t llvm_bc_size);
+		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 

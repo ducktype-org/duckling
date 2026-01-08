@@ -22,11 +22,10 @@ namespace compiler::backend_llvm {
 	 * @brief Create a new LLVM module from the LLVM bitcode representation.
 	 * The input LLVM bitcode should include a complete module definition.
 	 *
-	 * @param llvm_bc_data A pointer to the LLVM bitcode data.
-	 * @param llvm_bc_size The size of the LLVM bitcode data in bytes.
+	 * @param llvm_bc_data The LLVM bitcode data.
 	 * @return Box<ModuleImpl> The created LLVM module object.
 	 */
-	Box<ModuleImpl> parseLLVMBCToModuleImpl(const unsigned char* llvm_bc_data, size_t llvm_bc_size);
+	Box<ModuleImpl> parseLLVMBCToModuleImpl(std::span<unsigned char> llvm_bc_data);
 
 	void addFunctionToModuleImpl(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function

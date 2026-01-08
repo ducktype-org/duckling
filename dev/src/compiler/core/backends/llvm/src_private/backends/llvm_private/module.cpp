@@ -22,8 +22,8 @@ namespace compiler::backend_llvm {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
-	Module Module::fromLLVMBC(const unsigned char* llvm_bc_data, size_t llvm_bc_size) {
-		return { parseLLVMBCToModuleImpl(llvm_bc_data, llvm_bc_size) };
+	Module Module::fromLLVMBC(const std::span<unsigned char> llvm_bc_data) {
+		return { parseLLVMBCToModuleImpl(llvm_bc_data) };
 	}
 
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {

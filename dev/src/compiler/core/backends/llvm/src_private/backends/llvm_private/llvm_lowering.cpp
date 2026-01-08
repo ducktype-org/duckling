@@ -1007,10 +1007,10 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	Box<ModuleImpl> parseLLVMBCToModuleImpl(const unsigned char* llvm_bc_data, size_t llvm_bc_size) {
+	Box<ModuleImpl> parseLLVMBCToModuleImpl(const std::span<unsigned char> llvm_bc_data) {
 		// Wrap the array in a MemoryBuffer
 		auto buffer = llvm::MemoryBuffer::getMemBuffer(
-			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data), llvm_bc_size),
+			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data.data()), llvm_bc_data.size()),
 			/*BufferName=*/"",
 			/*RequiresNullTerminator=*/false  // Maybe unnecessary, but BC files may not end with null
 		);
