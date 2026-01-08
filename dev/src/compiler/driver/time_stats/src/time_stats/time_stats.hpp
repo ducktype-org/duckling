@@ -24,13 +24,13 @@ namespace time_stats {
 		TotalCompilationTime,
 
 		/**
-		 * Time spend in Driver initialization functions.
+		 * Time spent in Driver initialization functions.
 		 * @note TotalCompilationTime does not include this time.
 		 */
 		DriverInitialization,
 
 		/**
-		 * Time spend in Driver exit functions.
+		 * Time spent in Driver exit functions.
 		 * @note TotalCompilationTime does not include this time.
 		 */
 		DriverExit,

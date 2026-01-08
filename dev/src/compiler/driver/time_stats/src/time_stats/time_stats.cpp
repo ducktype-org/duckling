@@ -15,7 +15,7 @@ namespace time_stats {
 		 * Following arrays are used to store time statistics and active status
 		 * of each category.
 		 *
-		 * \parallel They will have to be made thead-safe if time tracking from multiple threads
+		 * \parallel They will have to be made thread-safe if time tracking from multiple threads
 		 * is to be supported (perhaps via thread-local storage).
 		 */
 		constinit std::array<timer::Duration, TIME_CATEGORIES_COUNT> time_statistics{};
