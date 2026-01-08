@@ -1,10 +1,12 @@
 /**
-* @file builtins_source.cpp
-* @brief Implementation of built-ins for the Duckling programming language.
-* This file contains the definitions of built-in functions, including input and output,
-* in a human-friendly language (C++), instead of LLVM IR. It is then compiled to LLVM
-* bitcode, the bytes are embedded into the compiler, and linked into the final executable.
-*/
+ * @file builtins_source.cpp
+ * @brief Implementation of built-ins for the Duckling programming language.
+ * This file contains the definitions of built-in functions, including input and output,
+ * in a human-friendly language (C++), instead of LLVM IR. It is then compiled to LLVM
+ * bitcode, the bytes are embedded into the compiler, and linked into the final executable.
+ */
+
+// NOLINTBEGIN
 
 #include <cstdint>
 #include <cstdio>
@@ -42,7 +44,7 @@ extern "C" {
 	void           builtin_free_string(DucklingString& s);
 }
 
-// TODO: change return type to i32 when updating builtins in VM.
+// @TODO: #1782 change return type to i32 when updating builtins in VM.
 int64_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
 
 int64_t builtin_input_i64() {
@@ -126,3 +128,5 @@ void builtin_free_string(DucklingString& s) {
 		s.memory_end_offset   = 0;
 	}
 }
+
+// NOLINTEND
