@@ -10,6 +10,12 @@
 #include <utility>
 
 namespace compiler::repl {
+	/**
+	 * @brief Represents a single statement entered in the REPL session.
+	 *
+	 * Each statement maintains the original source code and associated module tree,
+	 * allowing the REPL to track and reference previously executed code.
+	 */
 	struct ReplStatement final {
 		std::string                      source_code;
 		base::CRef<frontend::ModuleTree> module;
@@ -21,12 +27,14 @@ namespace compiler::repl {
 			  module_id(mod_id) {}
 	};
 
+	/**
+	 * @brief Configuration options for REPL behavior and appearance.
+	 */
 	struct ReplConfig final {
-		std::string prompt          = "duckling> ";
-		std::string continuation    = "      |";
+		std::string prompt          = "duckling> ";  /// Primary prompt shown before each input
+		std::string continuation    = "      |";     /// Prompt for continuation lines
 		std::string multiline_start = R"(""")";
 		std::string multiline_end   = "/end";
-		bool        run_dvm         = true;
 	};
 
 	/**

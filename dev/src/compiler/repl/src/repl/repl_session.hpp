@@ -42,7 +42,26 @@ namespace compiler::repl {
 		 */
 		int run();
 
+		/**
+		 * @brief Process a single line of input from the user.
+		 *
+		 * Determines whether the line is a command (starts with '/') or code to execute,
+		 * and routes it to the appropriate handler.
+		 *
+		 * @param line The input line from the user
+		 * @return ReplResult indicating success, error, or exit status
+		 */
 		ReplResult processLine(const std::string& line);
+
+		/**
+		 * @brief Execute user-provided code as either an expression or definition.
+		 *
+		 * Creates a module from the input, parses it as PST, and determines whether
+		 * it's a single expression (to be evaluated) or a definition (to be loaded).
+		 *
+		 * @param input The code to execute
+		 * @return ReplResult with execution outcome and optional message
+		 */
 		ReplResult executeInput(const std::string& input);
 
 		[[nodiscard]]
@@ -66,21 +85,54 @@ namespace compiler::repl {
 		[[nodiscard]] bool isCommand(const std::string& line) const;
 		bool               handleCommand(const std::string& line);
 
+		/**
+		 * @brief Extracts a single expression statement from the PST root, if present.
+		 *
+		 * This determines whether the user input is a standalone expression that should
+		 * be evaluated and printed, versus a definition (function, variable, etc.) that
+		 * should be loaded into the environment.
+		 *
+		 * @param ctx Query context for PST access
+		 * @param root The PST root element to examine
+		 * @return Optional containing the ExprStmt if input is a single expression, empty otherwise
+		 */
 		[[nodiscard]] base::Optional<pst::AccessLocked<pst::ExprStmt>> extractSingleExpression(
 			query::Context& ctx, const pst::AccessLocked<pst::LangElement>& root
 		) const;
 
+		/**
+		 * @brief Compile and execute a single expression, then print its result.
+		 *
+		 * Wraps the expression in a function, compiles it to DVM bytecode, executes it,
+		 * and formats the return value for display.
+		 *
+		 * @param expr_stmt The expression statement to evaluate
+		 * @return ReplResult with formatted expression value or error
+		 */
 		ReplResult handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt);
+
+		/**
+		 * @brief Compile and load definitions (functions, variables, etc.) into the REPL environment.
+		 *
+		 * @param module_id The module containing the definitions to load
+		 * @return ReplResult indicating success or error
+		 */
 		ReplResult handleDefinition(frontend::ModuleID module_id);
 
+		/**
+		 * @brief Initialize the DVM process for code execution.
+		 *
+		 * Spawns a new DVM process and attaches I/O streams. Should be called
+		 * once during REPL session initialization.
+		 */
 		void initDVM();
 
-		ReplConfig                 m_config;
-		std::vector<ReplStatement> m_history;
-		bool                       m_should_exit;
-		u64                        m_line_counter;
-		vm::PID                    m_dvm_pid;
-		ReplFrontend               m_frontend;
+		ReplConfig                 m_config;       /// Configuration for REPL behavior
+		std::vector<ReplStatement> m_history;      /// All statements entered in this session
+		bool                       m_should_exit;  /// Flag to terminate the REPL loop
+		u64          m_line_counter;  /// Counter for generating unique wrapper function names
+		vm::PID      m_dvm_pid;       /// Process ID of the running DVM instance
+		ReplFrontend m_frontend;      /// Frontend for user interaction
 	};
 
 }  // namespace compiler::repl

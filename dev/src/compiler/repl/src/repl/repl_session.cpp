@@ -154,31 +154,29 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
-			if (m_config.run_dvm) {
-				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
-				if (!load_result.has_value()) {
-					error_message = "DVM load error: " + load_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
-					return;
-				}
+			CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+			auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+			if (!load_result.has_value()) {
+				error_message = "DVM load error: " + load_result.error();
+				std::cerr << error_message << "\n";
+				had_error = true;
+				return;
+			}
 
-				CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
+			CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
 
-				auto return_type = hout_unit.functions[0].declaration->return_type;
-				auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
-				if (run_result.has_value()) {
-					if (return_type.toString() == "void")
-						std::cout << "Function executed.\n";
-					else
-						std::cout << "=> " << run_result.value().result_string << "\n";
-				} else {
-					error_message = "Runtime error: " + run_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
-					return;
-				}
+			auto return_type = hout_unit.functions[0].declaration->return_type;
+			auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
+			if (run_result.has_value()) {
+				if (return_type.toString() == "void")
+					std::cout << "Function executed.\n";
+				else
+					std::cout << "=> " << run_result.value().result_string << "\n";
+			} else {
+				error_message = "Runtime error: " + run_result.error();
+				std::cerr << error_message << "\n";
+				had_error = true;
+				return;
 			}
 		});
 
@@ -197,17 +195,15 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
-			if (m_config.run_dvm) {
-				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
-				if (!load_result.has_value()) {
-					error_message = "DVM load error: " + load_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
-					return;
-				}
-
-				std::cout << "Definitions loaded.\n";
+			auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
+			if (!load_result.has_value()) {
+				error_message = "DVM load error: " + load_result.error();
+				std::cerr << error_message << "\n";
+				had_error = true;
+				return;
 			}
+
+			std::cout << "Definitions loaded.\n";
 		});
 
 		if (had_error) return ReplResult::error(error_message);
