@@ -19,7 +19,7 @@ namespace compiler::repl {
 	 */
 	struct QueryReplExpressionWrapper_Key {
 		pst::AccessLocked<pst::ExprStmt> expr_stmt;
-		u32                              counter;
+		u64                              counter;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

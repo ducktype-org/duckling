@@ -26,7 +26,7 @@
 #include <string_view>
 
 namespace compiler::repl {
-	// TODO: decide if we want to do it here or in the main.cpp.
+	// @TODO ##1784: decide if we want to do it here or in the main.cpp.
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
 		if (!spawn_result.has_value())

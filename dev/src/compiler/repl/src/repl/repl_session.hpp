@@ -78,7 +78,7 @@ namespace compiler::repl {
 		ReplConfig                 m_config;
 		std::vector<ReplStatement> m_history;
 		bool                       m_should_exit;
-		u32                        m_line_counter;
+		u64                        m_line_counter;
 		vm::PID                    m_dvm_pid;
 		ReplFrontend               m_frontend;
 	};
