@@ -1,7 +1,8 @@
 #pragma once
 
-#include "diagnostic_interactive/message.hpp"
 #include "preamble.hpp"  // IWYU pragma: keep
+
+#include <diagnostic_interactive/message.hpp>
 
 #include <unicode/unistr.h>
 

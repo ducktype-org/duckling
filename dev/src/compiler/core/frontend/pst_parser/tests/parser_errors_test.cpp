@@ -1,24 +1,23 @@
-#include "diagnostic_interactive/logger.hpp"
-#include "frontend/pst_parser/elements/elements_common.hpp"
-#include "frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp"
-#include "frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp"
-#include "frontend/pst_parser/elements/implementations/declarations/var_parse.hpp"
-#include "frontend/pst_parser/elements/implementations/expressions/expressions_errors.hpp"
-#include "frontend/pst_parser/elements/implementations/lists/impl_template.hpp"
-#include "frontend/pst_parser/elements/implementations/meta/meta_errors.hpp"
-#include "frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp"
-#include "frontend/pst_parser/elements/implementations/preamble.hpp"
-#include "frontend/pst_parser/elements/implementations/statements/statements_errors.hpp"
-#include "frontend/pst_parser/elements/parser_common_errors.hpp"
 
+#include <frontend/pst_parser/elements/elements_common.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/declarations/var_parse.hpp>
+#include <frontend/pst_parser/elements/implementations/expressions/expressions_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/lists/impl_template.hpp>
+#include <frontend/pst_parser/elements/implementations/meta/meta_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/preamble.hpp>
+#include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
+#include <frontend/pst_parser/elements/parser_common_errors.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
