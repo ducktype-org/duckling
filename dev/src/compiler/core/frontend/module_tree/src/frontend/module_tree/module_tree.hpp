@@ -271,7 +271,9 @@ namespace compiler::frontend {
 		 * Create a ModuleTree backed by a single virtual source file with provided content.
 		 * Used by REPL to feed dynamic content into module / query pipeline.
 		 */
-		static Ref<ModuleTree> createFromContents(std::string_view contents, std::string_view package_id = "");
+		static Ref<ModuleTree> createFromContents(
+			std::string_view contents, std::string_view package_id = ""
+		);
 
 		/**
 		 * Adds a source file to the module being built.
@@ -508,4 +510,17 @@ namespace compiler::frontend {
 	 * @return The ModuleID of the created module tree
 	 */
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file);
+
+	/**
+	 * Creates a module tree from a string containing source code contents.
+	 * This is primarily used for REPL sessions and testing.
+	 * Creates a virtual file from the provided contents and sets it as the main source file.
+	 * If no package_id is provided, a random one is generated.
+	 * @param contents The source code content as a string
+	 * @param package_id Optional package ID; if empty, a random one is generated
+	 * @return The ModuleID of the created module tree
+	 */
+	ModuleID createModuleTreeFromContents(
+		std::string_view contents, std::string_view package_id = ""
+	);
 }

@@ -230,10 +230,9 @@ namespace compiler::repl {
 			std::cout << "[DEBUG] Starting executeInput\n";
 
 			std::cout << "[DEBUG] Creating module\n";
-			auto module_ref = frontend::ModuleTreeBuilder::createFromContents(input);
-			auto module_id  = module_ref->getModuleID();
+			auto module_id = frontend::createModuleTreeFromContents(input);
 
-			m_history.emplace_back(input, module_ref);
+			m_history.emplace_back(input, module_id);
 			++m_line_counter;
 
 			std::cout << "[DEBUG] Extracting expression\n";

@@ -207,9 +207,13 @@ namespace fs {
 		return rand_path;
 	}
 
-	File FileManager::createRandomVirtualFile(std::string_view content) {
+	File FileManager::createRandomVirtualFile(
+		std::string_view content, base::Optional<std::string_view> extension
+	) {
 		FilePath root      = vfs->getRootPath();
 		auto     rand_path = randomName(root);
+		if (extension.has_value())
+			rand_path = FilePath(base::strConcat(rand_path.string(), extension.value()));
 		return createVirtualFile(rand_path, content);
 	}
 

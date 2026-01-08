@@ -1,6 +1,7 @@
 #pragma once
 
 #include "frontend/module_tree/file_id.hpp"
+#include "frontend/module_tree/functors.hpp"
 #include "frontend/module_tree/module_tree.hpp"
 
 #include "base/pointers/ref.hpp"
@@ -10,14 +11,14 @@
 
 namespace compiler::repl {
 	struct ReplStatement {
-		std::string                     source_code;
-		base::Ref<frontend::ModuleTree> module;
-		frontend::ModuleID              module_id;
+		std::string                      source_code;
+		base::CRef<frontend::ModuleTree> module;
+		frontend::ModuleID               module_id;
 
-		ReplStatement(std::string code, base::Ref<frontend::ModuleTree> mod):
+		ReplStatement(std::string code, frontend::ModuleID mod_id):
 			  source_code(std::move(code)),
-			  module(mod),
-			  module_id(module->getModuleID()) {}
+			  module(frontend::getModuleRef(mod_id)),
+			  module_id(mod_id) {}
 	};
 
 	struct ReplConfig {
