@@ -59,7 +59,7 @@ namespace query::internal {
 		struct PreviousCompilation final {
 			/**
 			 * The query graph from the previous compilation.
-			 * No not change it, unless you are moving vertices to the current graph.
+			 * Do not change it, unless you are moving vertices to the current graph.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
 			QueryGraph                       graph;
