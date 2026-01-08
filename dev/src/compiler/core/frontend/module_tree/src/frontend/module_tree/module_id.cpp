@@ -1,9 +1,7 @@
 #include "module_id.hpp"
 
 #include <base/config/build_type.hpp>
-#ifdef BUILD_TYPE_DEV
-	#include "module_tree.hpp"
-#endif
+#include "module_tree.hpp"
 
 namespace compiler::frontend {
 	void ModuleID::checkDanglingReference() const {

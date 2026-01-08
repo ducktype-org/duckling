@@ -1,9 +1,7 @@
 #include "file_id.hpp"
 
 #include <base/config/build_type.hpp>
-#ifdef BUILD_TYPE_DEV
-	#include "source_file.hpp"
-#endif
+#include "source_file.hpp"
 
 namespace compiler::frontend {
 	void FileID::checkDanglingReference() const {
