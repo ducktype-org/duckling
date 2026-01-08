@@ -120,6 +120,10 @@ jobs:
         # Must be the same version as llvm
         run: sudo apt -y install clang-19
 
+      - name: Install xxd
+        # Necessary to embed LLVM bitcode into duckc source files.
+        run: sudo apt -y install xxd
+
       - name: Install mold
         run: sudo apt -y install mold
 
