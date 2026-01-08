@@ -26,7 +26,7 @@ foreach (target IN LISTS BUILTIN_TARGETS)
     # Define output file names
     set (GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
     set(bc_file "${GENERATED_DIR}/builtins_${target}.bc")
-    set(header_file "${GENERATED_DIR}/builtins_${target}.h")
+    set(embedding_file "${GENERATED_DIR}/builtins_${target}.cpp")
 
     set(BUILTINS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src_private/driver_private/builtins")
 
@@ -50,16 +50,17 @@ foreach (target IN LISTS BUILTIN_TARGETS)
 
     # Add command to convert the LLVM bitcode to an embedded header file using xxd.
     add_custom_command(
-            OUTPUT ${header_file}
-            COMMAND xxd -i -n ${symbol_name} ${bc_file} > ${header_file}
+            OUTPUT ${embedding_file}
+            COMMAND xxd -i -n ${symbol_name} ${bc_file} > ${embedding_file}
             DEPENDS ${bc_file}
             COMMENT "Converting LLVM bitcode to embedded header for ${target}"
     )
 
-    list(APPEND BUILTIN_HEADERS ${header_file})
+    list(APPEND BUILTINS_EMBEDS ${embedding_file})
 endforeach ()
 
 add_custom_target(
-        builtins_headers ALL
-        DEPENDS ${BUILTIN_HEADERS}
+        builtins_embeds ALL
+        DEPENDS ${BUILTINS_EMBEDS}
 )
+

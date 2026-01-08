@@ -1,3 +1,11 @@
+/**
+* @file builtins_source.cpp
+* @brief Implementation of built-ins for the Duckling programming language.
+* This file contains the definitions of built-in functions, including input and output,
+* in a human-friendly language (C++), instead of LLVM IR. It is then compiled to LLVM
+* bitcode, the bytes are embedded into the compiler, and linked into the final executable.
+*/
+
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -21,7 +29,7 @@ struct DucklingString {
 // The definitions will be given below.
 extern "C" {
 	// Basic numeric I/O
-	int32_t  builtin_output_i64(int64_t v);
+	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
 	int32_t  builtin_output_u64(uint64_t v);
 	uint64_t builtin_input_u64();
@@ -29,12 +37,13 @@ extern "C" {
 	double   builtin_input_f64();
 
 	// String I/O
-	int32_t        builtin_output_string(DucklingString s);
+	int64_t        builtin_output_string(DucklingString s);
 	DucklingString builtin_input_string();
 	void           builtin_free_string(DucklingString& s);
 }
 
-int32_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
+// TODO: change return type to i32 when updating builtins in VM.
+int64_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
 
 int64_t builtin_input_i64() {
 	int64_t v;
@@ -95,7 +104,7 @@ DucklingString builtin_input_string() {
 	};
 }
 
-int32_t builtin_output_string(DucklingString s) {
+int64_t builtin_output_string(DucklingString s) {
 	if (s.data == NULL || s.length == 0) {
 		printf("\n");
 		return 0;
