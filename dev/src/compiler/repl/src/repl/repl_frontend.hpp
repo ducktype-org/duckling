@@ -32,6 +32,12 @@ namespace compiler::repl {
 	 * @brief Frontend interface for REPL session.
 	 *
 	 * Handles interactions in console.
+	 * Prints prompts, reads user input, allows single- and multi-line editing. Allows to browse
+	 * history.
+	 * Example usage:
+	 *  after entering repl with:
+	 *  	duckc repl
+	 *  type /help to see available commands.
 	 */
 	class ReplFrontend {
 	public:
