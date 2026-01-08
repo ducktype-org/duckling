@@ -17,6 +17,7 @@ namespace compiler::frontend {
 
 	class ModuleTreeModifier;
 	class ModuleTree;
+	struct GetFileID_Functor;
 
 	/**
 	 * @brief Represents a source file in the Duckling compiler.
@@ -26,6 +27,7 @@ namespace compiler::frontend {
 		base::StrID                lang_file_name;
 		ModuleID                   linked_module;
 		base::Optional<pst::PST<>> parse_tree;
+		base::Optional<usize>      storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
 		mutable base::Optional<hashing::ComponentHash>
@@ -56,7 +58,15 @@ namespace compiler::frontend {
 
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
+		friend struct GetFileID_Functor;
 		friend struct ImplementationOf_QueryFilePST;
+		friend struct FileID;
+
+		/**
+		 * Ensures a SourceFile reference still points to a tracked instance.
+		 * This function will work only in dev build if use_module_modifier_remove flag is enabled.
+		 */
+		static void checkDanglingReference(const base::Ref<SourceFile>& candidate);
 
 		bool operator==(const SourceFile& other) const {
 			CORE_ASSERT(
@@ -129,6 +139,13 @@ namespace compiler::frontend {
 		[[nodiscard]] base::SharedView getCachedContentIllegalAcess();
 
 		[[nodiscard]] const hashing::ComponentHash& getComponentHash() const;
+
+		/**
+		 * @brief Remove SourceFile.
+		 * @note This will invalidate all references!
+		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
+		 */
+		static void removeSourceFileFromStorage(Ref<SourceFile> source_file);
 
 		SourceFile(const SourceFile&)            = delete;
 		SourceFile& operator=(const SourceFile&) = delete;
