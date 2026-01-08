@@ -5,7 +5,6 @@ add_library(Repl STATIC
 )
 
 target_include_directories(Repl PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../core/helios/src_private
     ${CMAKE_CURRENT_SOURCE_DIR}/../driver/driver/src_private
 )
 
