@@ -3,6 +3,7 @@
 #include <base/misc/anycast.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -16,8 +17,11 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
 #include <sstream>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 
 struct Key1 {
 	u64            v;
@@ -353,6 +357,46 @@ struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
 
+DECLARE_QUERY(
+	StableAggregatorQuery,
+	query::U64Key,
+	u64,
+	({
+		.used_hashes  = query::UsedHashes::StableHash,
+		.uses_qresult = false,
+	})
+);
+
+DECLARE_QUERY(TrimmableAggregationNode, query::U64Key, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(OrphanUnstableRoot, query::U64Key, u64, ({ .uses_qresult = false }));
+
+struct IMPLEMENT_QUERY(StableAggregatorQuery, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return ctx.query<TrimmableAggregationNode>(key);
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+struct IMPLEMENT_QUERY(TrimmableAggregationNode, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		ctx.query<SideInput>({ key.value });
+		return key.value;
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+struct IMPLEMENT_QUERY(OrphanUnstableRoot, u64) {
+	static auto provide(Context&, QKey key) -> PResult { return key.value; }
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(StableAggregatorQuery);
+QUERY_IMPLEMENTATION_BOILERPLATE(TrimmableAggregationNode);
+QUERY_IMPLEMENTATION_BOILERPLATE(OrphanUnstableRoot);
+
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
@@ -530,6 +574,7 @@ public:
 		TESTER_ADD_TEST(debugPrintTest);
 		TESTER_ADD_TEST(testContextSanityCheck);
 		TESTER_ADD_TEST(serializeDeserializeGraphTest);
+		TESTER_ADD_TEST(optimizedGraphConsistencyTest);
 		TESTER_ADD_TEST(testQueryResultConcept);
 		TESTER_ADD_TEST(testQueryResult);
 		TESTER_ADD_TEST(testNoKeyCopy);
@@ -765,6 +810,63 @@ private:
 		ASSERT_TRUE(serialized_data3.size() != serialized_data2.size());
 		ASSERT_TRUE(graph2.compare(deserialized_graph3));
 		ASSERT_TRUE(!deserialized_graph3.compare(deserialized_graph2));
+	}
+
+	void optimizedGraphConsistencyTest() {
+#if defined(BUILD_TYPE_DEV)
+		const std::array<u64, 2> monitored_keys{ 5, 11 };
+		const u64               orphan_key = 99;
+
+		for (auto key: monitored_keys) query::entryPoint<StableAggregatorQuery>({ key });
+		query::entryPoint<OrphanUnstableRoot>({ orphan_key });
+
+		auto  state = query::internal::ContextAccess::getState();
+		state->reduceOptimizeGraph();
+		const auto& graph = state->getGraph();
+
+		const auto orphan_id = query::internal::makeNodeID<OrphanUnstableRoot>({ orphan_key });
+		ASSERT_TRUE(!graph.nodeExists(orphan_id));
+
+		for (auto key: monitored_keys) {
+			const auto root_id = query::internal::makeNodeID<StableAggregatorQuery>({ key });
+			ASSERT_TRUE(graph.nodeExists(root_id));
+
+			auto reachable_nodes = graph.getNodeDeps(root_id);
+			ASSERT_TRUE(!reachable_nodes.empty());
+
+			std::unordered_set<query::internal::NodeID> node_set(
+				reachable_nodes.begin(), reachable_nodes.end()
+			);
+			std::unordered_map<query::internal::NodeID, usize> parent_counts;
+			parent_counts.reserve(node_set.size());
+			for (const auto& node: node_set) parent_counts.emplace(node, 0);
+
+			for (const auto& node: node_set) {
+				const auto& direct_children = graph.getDirectDependencies(node);
+				if (direct_children.empty()) {
+					ASSERT_TRUE(node.q_id.getData().isInputQuery());
+					continue;
+				}
+
+				const bool is_stable_node = node.q_id.getData().usesStableHashing();
+				if (!is_stable_node) ASSERT_TRUE(direct_children.size() > 1);
+
+				if (direct_children.size() == 1) {
+					ASSERT_TRUE(is_stable_node);
+					const auto& single_child = direct_children.front();
+					ASSERT_TRUE(single_child.q_id.getData().isInputQuery());
+				}
+
+				for (const auto& child: direct_children) {
+					ASSERT_TRUE(node_set.contains(child));
+					parent_counts[child] += 1;
+				}
+			}
+
+			for (const auto& [node, count]: parent_counts)
+				if (count == 0) ASSERT_TRUE(node.q_id.getData().usesStableHashing());
+		}
+#endif
 	}
 
 	void testQueryResultConcept() {

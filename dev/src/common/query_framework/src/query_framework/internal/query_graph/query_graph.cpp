@@ -71,6 +71,14 @@ namespace query::internal {
 		     | std::ranges::to<std::vector<NodeID>>();
 	}
 
+	const std::vector<NodeID>& QueryGraph::getDirectDependencies(const NodeID& node_id) const {
+		CORE_ASSERT(
+			node_deps.contains(node_id),
+			"Node not found in dep graph when requesting direct dependencies."
+		);
+		return node_deps.at(node_id);
+	}
+
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
 		std::vector<NodeID> all_nodes;

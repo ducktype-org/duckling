@@ -53,6 +53,9 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
+		/** @brief Returns the immediate dependencies of a node. */
+		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
+
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
 
