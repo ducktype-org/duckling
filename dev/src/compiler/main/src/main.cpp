@@ -426,7 +426,8 @@ clah::Clah getClahForMain() {
 							exit_code = 1;
 						}
 					});
-
+					
+					compiler::driver::exit();
 					return exit_code;
 				})
 		)
