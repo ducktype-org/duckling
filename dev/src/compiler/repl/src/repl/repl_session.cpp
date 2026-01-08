@@ -1,7 +1,6 @@
 #include "repl_session.hpp"
 
 #include "dvm_helpers.hpp"
-#include "repl_queries.hpp"
 
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -9,6 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
+#include <helios/repl_utils/repl_queries.hpp>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>

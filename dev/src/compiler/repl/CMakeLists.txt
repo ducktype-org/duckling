@@ -1,7 +1,6 @@
 add_library(Repl STATIC
     src/repl/repl_frontend.cpp
     src/repl/repl_session.cpp
-    src/repl/repl_queries.cpp
     src/repl/dvm_helpers.cpp
 )
 
