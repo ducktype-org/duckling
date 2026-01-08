@@ -1,3 +1,5 @@
+#include <base/config/build_type.hpp>
+
 #include "file_id.hpp"
 #ifdef BUILD_TYPE_DEV
 	#include "source_file.hpp"

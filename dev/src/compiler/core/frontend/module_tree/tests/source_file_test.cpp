@@ -4,6 +4,7 @@
 #include <frontend/module_tree/source_file.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/config/build_type.hpp>
 
 #include <filesystem/file.hpp>
 #include <hashing/add_to_hash.hpp>

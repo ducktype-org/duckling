@@ -1,3 +1,5 @@
+#include <base/config/build_type.hpp>
+
 #include "module_id.hpp"
 #ifdef BUILD_TYPE_DEV
 	#include "module_tree.hpp"

@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/config/build_type.hpp>
 
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
