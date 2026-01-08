@@ -1,3 +1,8 @@
+include(builtins.cmake)
+# ^ This exposes:
+# - GENERATED_DIR: the directory of the generated builtin sources, and
+# - BUILTINS_EMBEDS: the list of generated source filenames in GENERATED_DIR
+
 add_library(Driver
 	src_private/driver_private/backend_operations/compile_llvm.cpp
 	src_private/driver_private/backend_operations/compile_dvm.cpp
@@ -11,7 +16,11 @@ add_library(Driver
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
 	src/driver/exit.cpp
+
+	${BUILTINS_EMBEDS}
 )
+
+add_dependencies(Driver builtins_embeds)
 
 make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats)
 
