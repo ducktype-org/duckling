@@ -18,7 +18,8 @@ private:
 		// we start at 0 for all categories:
 		for (u64 i = 0; i < std::to_underlying(time_stats::TimeCategories::Sentinel); ++i) {
 			ASSERT_EQUAL(
-				time_stats::getTimeStatistic(static_cast<time_stats::TimeCategories>(i)).value, timer::Duration::zero().value
+				time_stats::getTimeStatistic(static_cast<time_stats::TimeCategories>(i)).value,
+				timer::Duration::zero().value
 			);
 		}
 
