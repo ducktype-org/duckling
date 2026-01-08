@@ -48,10 +48,6 @@ function Child_I1_impl {pointer_child} -> i64 {
     ret;
 }
 
-type data: POD {
-	abc: i64,
-}
-
 type interface: I1 {
     virtual_methods: {
         foo: method_I1_int,

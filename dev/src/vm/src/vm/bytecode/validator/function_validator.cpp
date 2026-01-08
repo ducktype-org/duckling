@@ -1012,13 +1012,14 @@ class FunctionValidator {
 			}
 
 			instr_case(Op_structLea_lptr_lstr_field, instr) {
-				const auto& destination
-					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
+				throw base::NotYetImplemented("StructLea_lptr_lstr_field is not implemented yet.");
+				// const auto& destination
+				// 	= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
 
-				const auto& klass
-					= std::get<ClassType>(*current_stack.at(instr.src_data_struct.var_name));
+				// const auto& klass
+				// 	= std::get<ClassType>(*current_stack.at(instr.src_data_struct.var_name));
 
-				validateStructFieldType(klass, instr.field, destination.inner, instr);
+				// validateStructFieldType(klass, instr.field, destination.inner, instr);
 			}
 			instr_case(Op_structLoad_lany_lstr_field, instr) {
 				throw base::NotYetImplemented("StructLoad_lany_lstr_field is not implemented yet.");
