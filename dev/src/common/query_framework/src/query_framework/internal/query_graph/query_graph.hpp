@@ -83,9 +83,14 @@ namespace query::internal {
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
 		 * @param data The vector of bytes to deserialize from.
+		 * @param node_mapper Optional mapper that can transform NodeIDs read from disk into the
+		 *        NodeIDs that should be stored inside the graph. By default it is an identity
+		 *        function, but callers can override it to keep the query framework state consistent.
 		 * @return A deserialized QueryGraph object.
 		 */
-		static QueryGraph deserialize(std::span<const byte> data);
+		static QueryGraph deserialize(
+			std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper = {}
+		);
 
 		/**
 		 * @brief Compares this QueryGraph with another for equality. For testing purposes.
