@@ -254,6 +254,26 @@ namespace tpc {
 		NoIdentifierError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
 
+	class NoIdentifierErrorOld final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Expected an identifier here.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return std::string(ERR_MSG);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoIdentifierErrorOld(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
