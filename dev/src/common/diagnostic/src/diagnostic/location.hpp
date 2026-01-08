@@ -7,6 +7,7 @@
 #include <printer/printer_content.hpp>
 
 #include <utility>
+#include "base/pointers/box.hpp"
 
 namespace dia {
 	/**
@@ -115,9 +116,10 @@ namespace dia {
 
 	class FakeLocation final: public Location {
 	private:
-		FakeLocation() = default;
+		FakeLocation();
 
-		static FakeLocation instance;
+		fs::File                    virtual_file;
+		Box<tokenizer::TokenSource> source;
 
 	protected:
 		void printPrefixInfo(printer::PrinterOStream&) const override;

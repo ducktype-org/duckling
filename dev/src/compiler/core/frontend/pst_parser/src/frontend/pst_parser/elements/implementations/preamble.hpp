@@ -41,14 +41,14 @@ namespace pst {
 
 	public:
 		BadStatementChoice(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
-			addArgument(base::typeName<Type>());
+			addArgument<dia_int::TextArgument>("type_name", std::string(base::typeName<Type>()));
 		}
 	};
 
 	template<typename Type>
 	bool assertStmtChoice(LangParserState& state, bool good) {
 		if (!good)
-			state.log(makeBox<BadStatementChoice<Type>>(state.ctokens().peek().getPosition()));
+			state.logInt(makeBox<BadStatementChoice<Type>>(state.ctokens().peek().getPosition()));
 		return good;
 	}
 }
