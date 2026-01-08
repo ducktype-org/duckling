@@ -38,29 +38,35 @@ namespace compiler::repl {
 					CRef mir_function
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })->valueOrThrow();
 					auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-					globals.emplace_back(driver::LIRModuleGlobal{
-						.lir_global = lir_global,
-						// @TODO: #929 add legit dtors when implemented
-						.global_ctor = lir_function,
-						.global_dtor = std::nullopt,
-					});
+					globals.emplace_back(
+						driver::LIRModuleGlobal{
+							.lir_global = lir_global,
+							// @TODO: #929 add legit dtors when implemented
+							.global_ctor = lir_function,
+							.global_dtor = std::nullopt,
+						}
+					);
 				}
 				variant_case(helios::HOUTGlobalConst, global_const) {
 					// @future #1554 -- const ctors will probably be added here
 					// Note: The CTV initial value for constants is already set in lir_global (by
 					// the fromHOUT function used above). Backends should handle constant
 					// initialization appropriately.
-					globals.emplace_back(driver::LIRModuleGlobal{
-						.lir_global  = lir_global,
-						.global_ctor = std::nullopt,
-						.global_dtor = std::nullopt,
-					});
+					globals.emplace_back(
+						driver::LIRModuleGlobal{
+							.lir_global  = lir_global,
+							.global_ctor = std::nullopt,
+							.global_dtor = std::nullopt,
+						}
+					);
 				}
 				variant_default {
-					CORE_PANIC(base::strConcat(
-						"Unexpected global data type in module: ",
-						hout_global.original_name.strView()
-					));
+					CORE_PANIC(
+						base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_global.original_name.strView()
+						)
+					);
 				}
 			}
 		}
@@ -112,8 +118,9 @@ namespace compiler::repl {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[&type_str](Ref<vm::VmValue> exit_value
-		        ) -> std::expected<ExpressionResult, std::string> {
+				[&type_str](
+					Ref<vm::VmValue> exit_value
+				) -> std::expected<ExpressionResult, std::string> {
 					std::string result_str;
 
 					if (type_str == "i32")
