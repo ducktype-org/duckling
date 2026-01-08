@@ -19,6 +19,7 @@
 #include <tester/tester.hpp>
 
 #include <filesystem>
+#include <iostream>
 #include <unordered_set>
 
 namespace {
@@ -162,6 +163,9 @@ private:
 		// Get the graph before optimization
 		auto graph_before_opt = query::internal::ContextAccess::getState()->getGraphMutable();
 
+		// std::cout << "Graph before optimization:\n\n";
+		// graph_before_opt->debugPrint(std::cout);
+
 		// Collect stable nodes and input nodes BEFORE optimization
 		std::vector<query::internal::NodeID>        stable_nodes_before;
 		std::vector<query::internal::NodeID>        input_nodes_before;
@@ -194,6 +198,9 @@ private:
 
 		// Get the graph AFTER optimization
 		auto graph = query::internal::ContextAccess::getState()->getGraphMutable();
+
+		// std::cout << "\nGraph after optimization:\n\n";
+		// graph->debugPrint(std::cout);
 
 		// Build parent map for the optimized graph
 		auto parents = buildParentMap(*graph);
