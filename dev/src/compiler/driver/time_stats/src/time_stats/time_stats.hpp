@@ -65,10 +65,12 @@ namespace time_stats {
 	 * Time tracking ends when the object is destroyed or when end() is called.
 	 */
 	struct TrackCategoryTime final {
+	private:
 		TimeCategories         category;
 		timer::TimeMeasurement measurement;
 		bool                   ended;
 
+	public:
 		TrackCategoryTime(TimeCategories category);
 
 		// note: move and copy operations are deleted to avoid accidental misuse
@@ -87,6 +89,14 @@ namespace time_stats {
 
 		~TrackCategoryTime();
 	};
+
+	/**
+	 * Retrieves total time currently collected for the given category.
+	 *
+	 * @param category Category to retrieve the statistic for.
+	 * @return Collected duration for the given category.
+	 */
+	timer::Duration getTimeStatistic(TimeCategories category);
 
 	/**
 	 * Pretty-prints collected time statistics to std::cerr.

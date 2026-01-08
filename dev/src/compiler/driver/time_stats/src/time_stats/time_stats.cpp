@@ -70,6 +70,10 @@ namespace time_stats {
 		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
 	}
 
+	timer::Duration getTimeStatistic(TimeCategories category) {
+		return time_statistics.at(std::to_underlying(category));
+	}
+
 	void prettyPrintTimeStatistics() {
 		std::cerr << "=== Time statistics collected by compiler time_stats module ===\n\n";
 

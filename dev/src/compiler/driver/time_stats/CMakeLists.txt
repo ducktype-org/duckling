@@ -3,3 +3,5 @@ add_library(CompilerTimeStats
 )
 
 make_module(CompilerTimeStats USES Base Timer)
+
+duck_add_test(compiler time_stats tests/time_stats_test.cpp USES CompilerTimeStats)
