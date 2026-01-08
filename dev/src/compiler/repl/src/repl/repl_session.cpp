@@ -15,6 +15,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -37,7 +38,7 @@ namespace compiler::repl {
 		if (!attach_result.has_value())
 			throw base::Panic("ReplSession::initDVM", "Failed to attach I/O to DVM process");
 
-		std::cout << "[DVM initialized with PID " << m_dvm_pid << "]\n";
+		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}
 
 	ReplSession::ReplSession():
@@ -131,35 +132,30 @@ namespace compiler::repl {
 		base::Optional<helios::HOUTFunction> expr_wrapper;
 		std::string                          wrapper_func_name;
 
-		std::cout << "[DEBUG] Starting handleExpression\n";
+		CORE_DEV_LOG(REPL, "Starting handleExpression\n");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			std::cout << "[DEBUG] Querying QueryReplExpressionWrapper\n";
+			CORE_DEV_LOG(REPL, "Querying QueryReplExpressionWrapper\n");
 			expr_wrapper = ctx.query<QueryReplExpressionWrapper>({ .expr_stmt = expr_stmt,
 			                                                       .counter   = m_line_counter });
 
-			std::cout << "[DEBUG] Getting mangled name\n";
+			CORE_DEV_LOG(REPL, "Getting mangled name\n");
 			auto mangled_name = helios::mangler::getSimpleMangledName(
 				ctx, expr_wrapper->declaration->original_symbol
 			);
 			wrapper_func_name = mangled_name.strView();
-			std::cout << "[DEBUG] Wrapper function name: " << wrapper_func_name << "\n";
+			CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
 		});
 
-		std::cout << "[DEBUG] Creating HOUT unit\n";
+		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		helios::HOUTUnit hout_unit;
 		hout_unit.functions.push_back(std::move(expr_wrapper.value()));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			if (m_config.show_hout_debug) {
-				std::cout << "[DEBUG] Printing HOUT debug\n";
-				auto hout_debug = hout_unit.debugPrint(ctx);
-				std::cout << hout_debug << "\n";
-				output_message = hout_debug;
-			}
+			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			if (m_config.run_dvm) {
-				std::cout << "[DEBUG] Compiling and loading to DVM\n";
+				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
@@ -168,7 +164,7 @@ namespace compiler::repl {
 					return;
 				}
 
-				std::cout << "[Expression compiled and loaded to DVM]\n";
+				CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
 
 				auto return_type = hout_unit.functions[0].declaration->return_type;
 				auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
@@ -199,11 +195,7 @@ namespace compiler::repl {
 		auto hout_unit = query::entryPoint<helios::QueryModuleHOUT>(module_id).valueOrThrow();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			if (m_config.show_hout_debug) {
-				auto hout_debug = hout_unit.debugPrint(ctx);
-				std::cout << hout_debug << "\n";
-				output_message = hout_debug;
-			}
+			CORE_DEV_LOG(REPL, "HOUT unit:\n", hout_unit.debugPrint(ctx), "\n");
 
 			if (m_config.run_dvm) {
 				auto load_result = compileAndLoad(ctx, hout_unit, m_dvm_pid);
@@ -227,22 +219,25 @@ namespace compiler::repl {
 		if (input.empty()) return ReplResult::success();
 
 		try {
-			std::cout << "[DEBUG] Starting executeInput\n";
+			CORE_DEV_LOG(REPL, "Starting executeInput\n");
 
-			std::cout << "[DEBUG] Creating module\n";
+			CORE_DEV_LOG(REPL, "Creating module\n");
 			auto module_id = frontend::createModuleTreeFromContents(input);
 
 			m_history.emplace_back(input, module_id);
 			++m_line_counter;
 
-			std::cout << "[DEBUG] Extracting expression\n";
+			CORE_DEV_LOG(REPL, "Extracting expression\n");
 			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 				auto pst       = ctx.query<frontend::QueryFilePST>(main_file);
 
-				pst->dprint(std::cout);
-				std::cout << "\n\n";
+				CORE_DEV_LOG(REPL, "PST:\n");
+				if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
+					pst->dprint(std::cout);
+					std::cout << "\n\n";
+				}
 
 				if (pst->getLogger()->bad()) {
 					std::cerr << "Parse errors:\n";
@@ -255,16 +250,16 @@ namespace compiler::repl {
 			});
 
 			if (expr_stmt_opt.has_value()) {
-				std::cout << "[DEBUG] Processing as expression\n";
+				CORE_DEV_LOG(REPL, "Processing as expression\n");
 				return handleExpression(expr_stmt_opt.value());
 			} else {
-				std::cout << "[DEBUG] Processing as definition\n";
+				CORE_DEV_LOG(REPL, "Processing as definition\n");
 				return handleDefinition(module_id);
 			}
 		} catch (const std::out_of_range& e) {
 			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
 			std::cerr << error_msg << "\n";
-			std::cerr << "[DEBUG] This typically means a lookup in a map/vector failed\n";
+			CORE_DEV_LOG(REPL, "This typically means a lookup in a map/vector failed\n");
 			return ReplResult::error(error_msg);
 		} catch (const std::exception& e) {
 			std::string error_msg = std::string("Error: ") + e.what();

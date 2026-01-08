@@ -26,7 +26,6 @@ namespace compiler::repl {
 		std::string continuation    = "      |";
 		std::string multiline_start = R"(""")";
 		std::string multiline_end   = "/end";
-		bool        show_hout_debug = true;
 		bool        run_dvm         = true;
 	};
 

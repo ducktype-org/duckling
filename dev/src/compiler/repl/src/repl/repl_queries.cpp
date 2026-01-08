@@ -17,6 +17,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
@@ -33,7 +34,7 @@ namespace compiler::repl {
 
 			auto expr_holder = expr_stmt->getExpr().unlock(ctx);
 
-			std::cout << "[DEBUG] Converting expression to HOUT...\n";
+			CORE_DEV_LOG(REPL, "Converting expression to HOUT...\n");
 			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
 
 			CORE_ASSERT(
@@ -45,22 +46,22 @@ namespace compiler::repl {
 			auto hout_expr   = std::move(hout_expr_result).valueOrPanic();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
-			std::cout << "[DEBUG] Expression return type: " << return_type.toString() << "\n";
+			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
 
 			auto code_block = std::make_shared<helios::code::CodeBlock>();
 
 			if (return_type.toString() == "void") {
-				std::cout << "[DEBUG] Creating ExprStmt for void expression\n";
+				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
 				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(std::move(hout_expr));
 				code_block->statements.emplace_back(std::move(void_expr_stmt));
 			} else {
-				std::cout << "[DEBUG] Creating ReturnStmt for value expression\n";
+				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
 				auto return_stmt = base::makeBox<helios::code::ReturnStmt>(std::move(hout_expr));
 				code_block->statements.emplace_back(std::move(return_stmt));
 			}
 
 			// This below is just to create a unique symbol for the REPL expression wrapper
-			std::cout << "[DEBUG] Creating synthetic symbol for wrapper function\n";
+			CORE_DEV_LOG(REPL, "Creating synthetic symbol for wrapper function\n");
 			auto synthetic_symbol = ctx.query<helios::houtgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_expr_wrapper__"),
 			      .generated_symbol_data
@@ -68,13 +69,13 @@ namespace compiler::repl {
 					  .counter = key.counter, .return_type = return_type } } }
 			);
 
-			std::cout << "[DEBUG] Creating function declaration\n";
+			CORE_DEV_LOG(REPL, "Creating function declaration\n");
 			auto decl_ptr = new helios::HOUTFunctionDeclaration(
 				synthetic_symbol, return_type, std::vector<helios::code::Parameter>{}
 			);
 			auto decl = base::CRef<helios::HOUTFunctionDeclaration>(decl_ptr);
 
-			std::cout << "[DEBUG] QueryReplExpressionWrapper completed successfully\n";
+			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
 			return helios::HOUTFunction{ decl, code_block };
 		}
 
