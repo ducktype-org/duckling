@@ -225,6 +225,10 @@ namespace query::internal {
 
 			const NodeID node = frame.node;
 
+			// Node may already have been merged if it was scheduled multiple times (e.g. duplicate
+			// deps) This can happen when some Node has multiple parents in the previous graph
+			if (query_graph.node_deps.contains(node)) continue;
+
 			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
 			// Node should exist in previous graph at this point (because its not in current graph yet)
 			CORE_ASSERT(
@@ -245,10 +249,7 @@ namespace query::internal {
 			CORE_ASSERT(inserted, "Node should not exist in current graph during merge");
 			const auto& deps = it->second;
 
-			for (const auto& child: deps) {
-				// If child is not in current graph yet, schedule it for creation
-				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
-			}
+			for (const auto& child: deps) stack.push_back(Frame{ .node = child });
 		}
 	}
 }
