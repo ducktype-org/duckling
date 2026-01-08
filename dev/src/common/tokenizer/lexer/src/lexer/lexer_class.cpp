@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/message.hpp>
 
+#include "diagnostic/source_position.hpp"
 #include <logger/logger.hpp>
 #include <unicode_classification/classifications.hpp>
 

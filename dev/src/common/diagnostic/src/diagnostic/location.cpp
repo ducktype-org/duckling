@@ -68,5 +68,7 @@ namespace dia {
 
 	FakeLocation::FakeLocation():
 		  virtual_file(fs::FileManager::createRandomVirtualFile("some example content here\n")),
-		  source(tokenizer::makeTokenSource(virtual_file)) {}
+		  source(tokenizer::makeTokenSource(virtual_file)) {
+		source->tokenize();
+	}
 }

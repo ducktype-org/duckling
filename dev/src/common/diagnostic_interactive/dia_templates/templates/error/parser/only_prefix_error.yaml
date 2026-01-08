@@ -2,6 +2,7 @@ metadata:
   type: "error"
   family: "parser"
   name: "only_prefix_error"
+  code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"

@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "parser"
-  name: "not_a_case_expression"
+  name: "bad_special"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -12,9 +12,13 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  special:
+    description: "The unexpected special."
 
 header_message:
-  - "Not a case expression"
+  - "Expected special `"
+  - param: "special"
+  - "` here."
 
 description:
   - codeblock:

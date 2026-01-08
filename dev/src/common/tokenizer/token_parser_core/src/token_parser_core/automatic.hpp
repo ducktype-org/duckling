@@ -201,14 +201,14 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "bad_keyword" };
 		}
 
 	public:
 		BadKeywordError(dia::SourcePosition pos, Keyword key):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("expected", lang_def::keywordToStr(key).str());
+			addArgument<dia_int::TextArgument>("keyword", lang_def::keywordToStr(key).str());
 		}
 	};
 
@@ -216,14 +216,14 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "bad_special" };
 		}
 
 	public:
 		BadSpecialError(dia::SourcePosition pos, Special spec):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("expected", lang_def::specialToStr(spec).str());
+			addArgument<dia_int::TextArgument>("special", lang_def::specialToStr(spec).str());
 		}
 	};
 
@@ -231,14 +231,14 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "bad_operator" };
 		}
 
 	public:
 		BadOperatorError(dia::SourcePosition pos, Operator opr):
 			  MessageWithCodeFragmentAndCause(pos) {
-			addArgument<dia_int::TextArgument>("expected", opr.str());
+			addArgument<dia_int::TextArgument>("operator", opr.str());
 		}
 	};
 
@@ -246,7 +246,7 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "no_identifier" };
 		}
 
@@ -278,7 +278,7 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "no_string" };
 		}
 
@@ -290,11 +290,12 @@ namespace tpc {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 					 .type          = "error",
-					 .family        = "token_parser",
+					 .family        = "parser",
 					 .name          = "no_numeric_value" };
 		}
 
 	public:
 		NoNumericValueError(dia::SourcePosition pos): MessageWithCodeFragmentAndCause(pos) {}
 	};
+
 }

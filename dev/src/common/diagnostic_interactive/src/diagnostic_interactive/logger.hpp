@@ -54,7 +54,9 @@ namespace dia_int {
 		 * externally.
 		 */
 		static void evaluateToTerminalMessage(
-			CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
+			CRef<dia_args::Diagnostic> diagnostic_args,
+			std::ostream&              out,
+			bool                       catch_exceptions = true
 		);
 
 		// Placeholder for future implementation
@@ -62,4 +64,22 @@ namespace dia_int {
 		// 	CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
 		// );
 	};
+
+	/**
+	 * @brief Helper function to create a message and evaluate it to an output stream using terminal
+	 * printer.
+	 */
+	template<typename MsgClass, typename... Args>
+	void testDiagnosticMessage(std::ostream& out, Args&&... args) {
+		static_assert(
+			std::is_base_of_v<MessageBase, MsgClass>, "MsgClass must derive from MessageBase"
+		);
+
+		// Create the message
+		auto obj = base::makeBox<MsgClass>(std::forward<Args>(args)...);
+
+		// Evaluate to terminal (or any other stream)
+		Logger::evaluateToTerminalMessage(obj.ref(), out, false);
+	}
+
 }

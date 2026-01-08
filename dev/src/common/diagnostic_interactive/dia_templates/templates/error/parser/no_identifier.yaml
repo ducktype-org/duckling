@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "parser"
-  name: "not_a_case_expression"
+  name: "no_identifier"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Not a case expression"
+  - "Expected an identifier here."
 
 description:
   - codeblock:

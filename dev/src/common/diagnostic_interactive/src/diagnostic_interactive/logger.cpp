@@ -42,7 +42,7 @@ namespace dia_int {
 	}
 
 	void Logger::evaluateToTerminalMessage(
-		CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
+		CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out, bool catch_exceptions
 	) {
 		try {
 			// std::cout << diagnostic_args->toJson().dump(4) << "\n\n";
@@ -52,6 +52,7 @@ namespace dia_int {
 			term_ui::print(view, out);
 		} catch (const std::exception& e) {
 			out << "Error while printing diagnostic message: \n" << e.what() << "\n";
+			if (not catch_exceptions) throw;
 		}
 	}
 
