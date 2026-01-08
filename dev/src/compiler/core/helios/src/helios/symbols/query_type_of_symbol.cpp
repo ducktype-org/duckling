@@ -96,16 +96,12 @@ namespace compiler::helios {
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
-						{ stmt->getValue().value().unlock(ctx)->getExpr() }
-					);
-					if (parsed.hasValue()) {
-						const auto& expr_type = parsed.valueOrThrow()->expression_type;
-						setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
-					} else
-						throw base::NotYetImplemented(
-							"Const declaration with value that does not evaluate to a type. This "
-							"should be a compilation error"
-						);
+										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					)
+					                  .valueOrThrow();
+
+					const auto& expr_type = parsed->expression_type;
+					setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
@@ -144,13 +140,13 @@ namespace compiler::helios {
 
 		static auto handleFunction(Context& ctx, SymID sym) {
 			// @note: this crates false dependency of default parameter expressions
-			auto                           declaration = ctx.query<QueryDeclOfFun>(sym);
+			auto& declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
 			std::vector<tsh::SymbolType<>> param_types{};
-			param_types.reserve(declaration->parameters.size());
-			for (auto& param: declaration->parameters) param_types.emplace_back(param.type);
+			param_types.reserve(declaration.parameters.size());
+			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ param_types, declaration->return_type }),
+				ctx.query<tsh::QueryFunctionType>({ param_types, declaration.return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};

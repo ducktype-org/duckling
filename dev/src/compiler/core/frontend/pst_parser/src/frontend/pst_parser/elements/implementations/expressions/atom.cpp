@@ -29,10 +29,9 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length))
-			return nullptr;
+		if (!checkLength(state, length)) return nullptr;
 
-		else if (state[0].isKeyword()) {
+		if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state, length);
 		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state, length);

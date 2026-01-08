@@ -52,7 +52,6 @@ namespace lang_def {
 		Loop,
 		If,
 		Then,
-		Elif,
 		Else,
 
 		// Other block:
@@ -200,8 +199,10 @@ namespace lang_def {
 		NotAnOperator,
 
 		Period,
+		PeriodQuestion,
 		PeriodStar,
 		Colon,
+		Reflect,
 		Assign,
 		QuestionMark,
 		SingleArrow,
@@ -253,7 +254,7 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp, IsStmtStart, IsSpecifier)
 
 namespace lang_def {
 	namespace key_spec_op {

@@ -68,17 +68,18 @@ namespace pst::expr {
 			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
+
 		state.goDown();
 		state.parse(out).one(&out->value_to_match);
 		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
+			state.log(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
 		state.parse(out).goDown();
 
-		while (true) {
+		PST_WHILE(true) {
 			if (state[0].is(Keyword::Case)) {
 				MBox<MatchCase> match_case;
 				state.parse(out).one(&match_case);
@@ -94,7 +95,6 @@ namespace pst::expr {
 		if (state.notEmpty()) state.log(makeBox<NotACaseExpression>(state.getPosition()));
 
 		state.parse(out).goUpAndSkip();
-		state.parse(out).one(Special::Semicolon);
 		return out;
 	}
 

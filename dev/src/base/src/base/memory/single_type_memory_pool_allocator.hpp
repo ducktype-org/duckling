@@ -188,7 +188,9 @@ namespace base {
 		IF_BUILD_TYPE_DEV(~SingleTypeMemoryPoolAllocator() {
 			CORE_ASSERT_NOEXCEPT(
 				allocated_count == 0,
-				"Not all allocated objects were deallocated before destruction of the allocator"
+				"Not all allocated objects were deallocated before destruction of the allocator. ",
+				"Leaked objects count: ",
+				allocated_count
 			);
 		})
 		IF_BUILD_TYPE_RELEASE(~SingleTypeMemoryPoolAllocator() = default;)

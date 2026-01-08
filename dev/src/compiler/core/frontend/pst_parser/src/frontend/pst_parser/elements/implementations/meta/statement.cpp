@@ -8,19 +8,151 @@ namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
 
+	class EmptyStatementError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Statement expected.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyStatementError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	namespace internal {
+
+		template<class T>
+		struct StmtClassifiers {
+			/**
+			 * @brief Function that checks heuristically for a potential end of a typical statement.
+			 *
+			 * Sentinel just indicates there are no more tokens.
+			 * The typical valid ends are:
+			 *  - `;` being the end of a statement.
+			 *  - `{}` being the end of a statement.
+			 * The heuristics that check that a new statement seems to start are:
+			 *  - `@` being the start of an attribute which can only be at the begining of a
+			 * statement.
+			 *  - A keyword that is always at the start of a statement.
+			 *  - A keyword that is a specifier.
+			 */
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+				    || Conditions::isBlockGroup(state, fwd - 1);
+			}
+		};
+
+		template<>
+		struct StmtClassifiers<ExprStmt> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of an expression
+			 * statement.
+			 *
+			 * The difference from the general function is that `{}` doesn't indicate the end of an
+			 * expression statement.
+			 */
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+				    || keywordFlags(state[fwd].asKeyword())
+				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			}
+		};
+
+		template<>
+		struct StmtClassifiers<If> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of an if statement.
+			 *
+			 * This function is a very rough placeholder that should work in most correct cases but
+			 * a proper heuristic handling will be needed.
+			 *
+			 * @TODO: #1761 Add proper handling instead.
+			 */
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel)
+				    || ((state[fwd - 1].is(Special::Semicolon)
+				         || Conditions::isBlockGroup(state, fwd - 1))
+				        && !state[fwd].is(Keyword::Else));
+			}
+		};
+
+		template<>
+		struct StmtClassifiers<StmtSpecifier> {
+			/**
+			 * @brief Function that checks heuristically for a potential end of a
+			 * specifier statement.
+			 *
+			 * This function is a very rough placeholder that will be replaced
+			 * with the rework of how specifiers work
+			 *
+			 * @TODO: #1746 Will remove this part.
+			 */
+			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
+				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else));
+			}
+		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
+			// We skip the first token as its the keyword we already found
+			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+
+			fallbackLen(state, length);
+
 			MBox<T> out = T::parse(state);
-			auto    opt = out.toOpt();
+
+			auto opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
+
+			exitFallback(state);
+
+			return out;
+		}
+
+		template<>
+		MBox<StmtSpecifier> parseStmt(LangParserState& state) {
+			// We skip the first token as its the keyword we already found
+			i64 length = 1;
+
+			PST_WHILE(!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
+
+			fallbackLen(state, base::safeIntConv<u64>(length));
+
+			MBox<StmtSpecifier> out = StmtSpecifier::parse(state);
+
+			exitFallback(state);
+
 			return out;
 		}
 
 		MBox<Stmt> chooseStmt(LangParserState& state) {
-			Special as_special = state[0].asSpecial();
+			if (state[0].is(Special::Semicolon)
+			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+				state.tokens().skip();
+				return nullptr;
+			}
+
+			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
+				state.log(base::makeBox<EmptyStatementError>(state.getPosition()));
+				return nullptr;
+			}
+
 			Keyword as_keyword = state[0].asKeyword();
 
 			switch (as_keyword) {
@@ -79,11 +211,6 @@ namespace pst {
 			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
 				return internal::parseStmt<Action>(state);
 
-			if (as_special == Special::Semicolon) {
-				state.tokens().skip();
-				return nullptr;
-			}
-
 			// Expr as stmt have semicolon at the end:
 			return internal::parseStmt<ExprStmt>(state);
 		}
@@ -93,7 +220,7 @@ namespace pst {
 		auto        as_special = state[0].asSpecial();
 		AttrBoxList attributes;
 
-		while (as_special == Special::AtSign) {
+		PST_WHILE(as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
 			auto            opt  = std::move(attr).toOptBox();
 			if (opt) attributes.emplace_back(std::move(opt.value()));

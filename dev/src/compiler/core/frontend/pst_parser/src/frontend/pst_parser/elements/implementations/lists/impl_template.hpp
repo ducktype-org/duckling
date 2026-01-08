@@ -104,6 +104,12 @@ namespace pst {
 	public:
 		ListParsingTemplate() = delete;
 
+		template<TokenStreamCondition isSeparator, TokenStreamCondition isEnding>
+		static bool isSeparatorOrEnding(const TokenStream& state, i64 fwd) {
+			return isSeparator(state, fwd) || isEnding(state, fwd)
+			    || internal::Conditions::isSentinel(state, fwd);
+		}
+
 		/**
 		 * @brief General Element representing a list of Elements.
 		 *
@@ -121,8 +127,8 @@ namespace pst {
 			typename Self,
 			bool                      NON_EMPTY,
 			lexer::Token::BracketType BRACKETS,
-			StateCondition            isSeparator,
-			StateCondition            isEnding,
+			TokenStreamCondition      isSeparator,
+			TokenStreamCondition      isEnding,
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
@@ -142,34 +148,33 @@ namespace pst {
 			}
 
 			usize expr_length{};
-			if (state.empty() || isEnding(state, 0)) {
+			if (state.empty() || isEnding(state.ctokens(), 0)) {
 				// Handle empty expression
 				if constexpr (NON_EMPTY)
 					state.log(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
 			} else {
-				while (true) {
+				PST_WHILE(true) {
 					expr_length = 0;
 
-					// Find next separator or end
-					while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
-					       && !isSeparator(state, (i64) expr_length)
-					       && !isEnding(state, (i64) expr_length)) {
+					PST_WHILE(
+						(!isSeparatorOrEnding<isSeparator, isEnding>(state.ctokens(), expr_length))
+					) {
 						expr_length++;
 					}
+
+					state.setFallback(expr_length);
+
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
-						if (state.empty() || isEnding(state, 0)) {
+						if (state.empty() || isEnding(state.ctokens(), 0)) {
 							auto pos = state.getPosition(-1);
 							if (!state.isEOF()) {
 								auto other = state.getPosition();
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}
 							state.log(makeBox<EmptyFieldError<getName>>(pos));
-							break;
 						} else {
 							state.log(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0)));
-							state.parse(out).eatOne();
-							continue;
 						}
 					}
 
@@ -180,8 +185,10 @@ namespace pst {
 						state.parse(out).assign(&out->elements.back(), std::move(box));
 					}
 
-					if (isEnding(state, 0)) break;
-					if (isSeparator(state, 0))
+					state.exitFallback();
+
+					if (isEnding(state.ctokens(), 0)) break;
+					if (isSeparator(state.ctokens(), 0))
 						state.parse(out).eatOne();
 					else
 						state.log(makeBox<NoSeparatorError<getName>>(state.getPosition()));

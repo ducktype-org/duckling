@@ -184,7 +184,9 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(
+		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
+	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -258,7 +260,12 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name        = using_stmt->getDeclSymbolName().value(),
+					.name
+					= base::StrID(base::strConcat(
+									  "<USING> ",
+									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+					)
+			                          .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -387,16 +394,9 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx),
-				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
-				"calling it)"
-			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -893,7 +893,7 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key);
+			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key).valueOrThrow();
 			const auto& function_body   = fun_hout_result.body;
 
 			HoutFunctionCallCollector visitor;

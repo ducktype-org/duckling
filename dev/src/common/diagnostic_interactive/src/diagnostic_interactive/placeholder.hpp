@@ -19,34 +19,6 @@
 
 namespace dia_int {
 	/**
-	 * @brief This is a helper base class for messages.
-	 * This is the same as MessageWithCodeFragmentAndCause, but without the cause pointer message.
-	 */
-	class MessageWithCodeFragment: public MessageBase {
-	protected:
-		MessageWithCodeFragment(dia::SourcePosition source_position) {
-			addArgument<CodeArgument>("code", source_position);
-			addArgument<CodeLocationArgument>("code_location", source_position);
-		}
-	};
-
-	/**
-	 * @brief This is a helper base class for messages.
-	 * The `code` and `code_location` arguments are the same arguments as any other,
-	 * they are not special in any way.
-	 * But they are very commonly used together with the `cause` pointer message,
-	 * so this base class adds them both based on the provided source position.
-	 */
-	class MessageWithCodeFragmentAndCause: public MessageBase {
-	protected:
-		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position) {
-			addArgument<CodeArgument>("code", source_position);
-			addArgument<CodeLocationArgument>("code_location", source_position);
-			addPointerMessage({ "cause", source_position });
-		}
-	};
-
-	/**
 	 * @brief A Placeholder message with a header only and no code snippet.
 	 *
 	 * Used when the developer is lazy and want's to have a fast error message.
@@ -60,9 +32,7 @@ namespace dia_int {
 		}
 
 	public:
-		PlaceholderHeaderError(std::string header_message): MessageBase() {
-			addArgument<TextArgument>("header_message", std::move(header_message));
-		}
+		PlaceholderHeaderError(std::string header_message, std::string description = "");
 	};
 
 	/**
@@ -89,25 +59,7 @@ namespace dia_int {
 			std::string                 header_message,
 			dia::SourcePosition         source_position,
 			std::string                 description             = "",
-			base::Optional<std::string> pointer_message_content = {}
-		):
-			  MessageBase() {
-			addArgument<TextArgument>("header_message", std::move(header_message));
-			addArgument<TextArgument>("description", std::move(description));
-
-			addArgument<CodeArgument>("code", source_position);
-			addArgument<CodeLocationArgument>("code_location", source_position);
-
-			if_opt_some(pointer_message_content, val) {
-				addArgument<TextArgument>("pointer_message_content", std::move(val));
-			}
-			if_opt_none(pointer_message_content) {
-				addArgument<TextArgument>("pointer_message_content", "");
-			}
-
-			addPointerMessage("cause", source_position);
-		}
+			base::Optional<std::string> pointer_message_content = "here"
+		);
 	};
-
-	class FunctionOverloadResolutionFailed {};
 }
