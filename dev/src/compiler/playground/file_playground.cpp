@@ -1,11 +1,14 @@
 
 #include <filesystem/file.hpp>
+#include <init/init.hpp>
 
 #include <iostream>
 
 using namespace fs;
 
 int main(int argc, char** argv) {
+	init::InitObject _;
+
 	if (argc != 2) {
 		std::cerr << "usage: ./file_testing file_name\n";
 		return 1;
