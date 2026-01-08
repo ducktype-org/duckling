@@ -5,6 +5,7 @@
 #include "class_block.hpp"              // IWYU pragma: export
 #include "code_block.hpp"               // IWYU pragma: export
 #include "code_block_or_statement.hpp"  // IWYU pragma: export
+#include "stmt_specifier.hpp"  // IWYU pragma: export
 #include "dotted_name.hpp"              // IWYU pragma: export
 #include "expr_element.hpp"             // IWYU pragma: export
 #include "param.hpp"                    // IWYU pragma: export

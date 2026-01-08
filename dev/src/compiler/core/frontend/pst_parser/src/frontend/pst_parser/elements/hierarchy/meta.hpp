@@ -85,23 +85,40 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
+
 		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
 		using AttrBoxList = std::vector<Box<Attribute>>;
 
-		AttrList attributes;
+		using SpecList    = std::vector<AccessInternalAnonymous<StmtSpecifier>>;
+		using SpecBoxList = std::vector<Box<StmtSpecifier>>;
+
+		struct Prefixes {
+			AttrList attributes;
+			SpecList specifiers;
+		};
+
+		struct PrefixBoxes {
+			AttrBoxList attributes;
+			SpecBoxList specifiers;
+		};
+
+		Prefixes prefixes;
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrBoxList collectAttributes(LangParserState& state);
+		static PrefixBoxes collectPrefixes(LangParserState& state);
 
 		/**
-		 * @brief Prepends attributes after parsing handling sub elements and position.
+		 * @brief Prepends prefixes after parsing handling sub elements and position.
 		 */
-		void addAttributes(LangParserState& state, AttrBoxList&& additions);
+		void addPrefixes(LangParserState& state, PrefixBoxes&& additions);
 
-		void dprintAttributes(std::ostream& out) const;
+		/**
+		 * @brief Prints prefixes(attributes and specifiers)
+		 */
+		void dprintPrefixes(std::ostream& out) const;
 
 		void dprintPrefix(std::ostream& out) const override;
 
@@ -119,12 +136,14 @@ namespace pst {
 
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
-		/**
-		 * @note This might need to return a vector of borrow pointers instead
-		 */
 		[[nodiscard]]
 		auto& getAttributes() const {
-			return attributes;
+			return prefixes.attributes;
+		}
+
+		[[nodiscard]]
+		auto& getSpecifiers() const {
+			return prefixes.specifiers;
 		}
 
 		[[nodiscard]]

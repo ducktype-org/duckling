@@ -89,24 +89,6 @@ namespace pst {
 			}
 		};
 
-		template<>
-		struct StmtClassifiers<StmtSpecifier> {
-			/**
-			 * @brief Function that checks heuristically for a potential end of a
-			 * specifier statement.
-			 *
-			 * This function is a very rough placeholder that will be replaced
-			 * with the rework of how specifiers work
-			 *
-			 * @TODO: #1746 Will remove this part.
-			 */
-			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || (Conditions::isBlockGroup(state, fwd - 1) && !state[fwd].is(Keyword::Else));
-			}
-		};
-
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			// We skip the first token as its the keyword we already found
@@ -119,22 +101,6 @@ namespace pst {
 			auto opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
-
-			exitFallback(state);
-
-			return out;
-		}
-
-		template<>
-		MBox<StmtSpecifier> parseStmt(LangParserState& state) {
-			// We skip the first token as its the keyword we already found
-			i64 length = 1;
-
-			PST_WHILE(!StmtClassifiers<StmtSpecifier>::isStmtEnd(state.ctokens(), length)) length++;
-
-			fallbackLen(state, base::safeIntConv<u64>(length));
-
-			MBox<StmtSpecifier> out = StmtSpecifier::parse(state);
 
 			exitFallback(state);
 
@@ -201,11 +167,7 @@ namespace pst {
 
 			case Keyword::Expand:
 				return internal::parseStmt<Expand>(state);
-
 			default:
-				if (StmtSpecifier::SPECIFIERS.contains(as_keyword))
-					return internal::parseStmt<StmtSpecifier>(state);
-				break;
 			}
 
 			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
@@ -216,34 +178,51 @@ namespace pst {
 		}
 	}
 
-	Stmt::AttrBoxList Stmt::collectAttributes(LangParserState& state) {
+	Stmt::PrefixBoxes Stmt::collectPrefixes(LangParserState& state) {
 		auto        as_special = state[0].asSpecial();
-		AttrBoxList attributes;
+		auto        as_keyword = state[0].asKeyword();
+		PrefixBoxes collect;
 
-		PST_WHILE(as_special == Special::AtSign) {
-			MBox<Attribute> attr = Attribute::parse(state);
-			auto            opt  = std::move(attr).toOptBox();
-			if (opt) attributes.emplace_back(std::move(opt.value()));
+		PST_WHILE(
+				as_special == Special::AtSign 
+				|| lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+			if (as_special == Special::AtSign) {
+				MBox<Attribute> attr = Attribute::parse(state);
+				auto            opt  = std::move(attr).toOptBox();
+				if (opt) collect.attributes.emplace_back(std::move(opt.value()));
+			} else if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+				MBox<StmtSpecifier> spec = StmtSpecifier::parse(state);
+				auto            opt  = std::move(spec).toOptBox();
+				if (opt) collect.specifiers.emplace_back(std::move(opt.value()));
+			}
+
 			as_special = state[0].asSpecial();
+			as_keyword = state[0].asKeyword();
 		}
-		return attributes;
+		return collect;
 	}
 
 	MBox<Stmt> Stmt::parse(LangParserState& state) {
 		// Collect Attributes
-		auto attributes = collectAttributes(state);
+		auto prefixes = collectPrefixes(state);
+
+		// Specifier block handling
+		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			return internal::parseStmt<SpecifierBlock>(state);
+		}
 
 		// Parse Statement
 		MBox<Stmt> out = internal::chooseStmt(state);
 
 		// Add Attributes
-		if (out) out->addAttributes(state, std::move(attributes));
+		if (out) out->addPrefixes(state, std::move(prefixes));
 
 		return out;
 	}
 
 	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, attributes.size());
+		addToHash(partial_hash, prefixes.attributes.size());
+		addToHash(partial_hash, prefixes.specifiers.size());
 		// note: Value of Kind should be strictly implied by elementType, that is added to hash for
 		// each element
 		return partial_hash;
@@ -252,7 +231,8 @@ namespace pst {
 	void Stmt::calcElementPathHashRecursive() {
 		auto                   path       = getElementPathHash();
 		hashing::ComponentHash attrs_path = { path, "attributes" };
-		calcIndexedListChildPath<Attribute>({ attributes }, attrs_path);
+		calcIndexedListChildPath<Attribute>({ prefixes.attributes }, attrs_path);
+		calcIndexedListChildPath<StmtSpecifier>({ prefixes.specifiers }, attrs_path);
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
@@ -273,13 +253,21 @@ namespace pst {
 
 	void Stmt::dprintPrefix(std::ostream& out) const {
 		LangElement::dprintPrefix(out);
-		dprintAttributes(out);
+		dprintPrefixes(out);
 	}
 
-	void Stmt::dprintAttributes(std::ostream& out) const {
-		if (not attributes.empty()) {
+	void Stmt::dprintPrefixes(std::ostream& out) const {
+		if (not prefixes.attributes.empty()) {
 			out << R"("attributes": [)";
-			for (auto& attribute: attributes) {
+			for (auto& attribute: prefixes.attributes) {
+				attribute.internal()->debugPrint(out);
+				out << ",";
+			}
+			out << "],";
+		}
+		if (not prefixes.specifiers.empty()) {
+			out << R"("attributes": [)";
+			for (auto& attribute: prefixes.attributes) {
 				attribute.internal()->debugPrint(out);
 				out << ",";
 			}
@@ -287,15 +275,28 @@ namespace pst {
 		}
 	}
 
-	void Stmt::addAttributes(LangParserState& state, AttrBoxList&& additions) {
-		attributes.resize(additions.size());
+	void Stmt::addPrefixes(LangParserState& state, PrefixBoxes&& additions) {
+		auto [attributes, specifiers] = std::move(additions);
+		// Move attributes
+		prefixes.attributes.resize(attributes.size());
 		usize i = 0;
-		for (auto&& attr_add: std::move(additions)) {
-			state.parse(Ref(this)).assign(&attributes[i], MBox(std::move(attr_add)));
+		for (auto&& attr_add: std::move(attributes)) {
+			state.parse(Ref(this)).assign(&prefixes.attributes[i], MBox(std::move(attr_add)));
 			i++;
 		}
 
-		if (attributes.size() > 0)
-			setFirstToken(attributes.front().internal()->getSourcePosition());
+		if (prefixes.attributes.size() > 0)
+			setFirstToken(prefixes.attributes.front().internal()->getSourcePosition());
+
+		// Move specifiers
+		prefixes.specifiers.resize(specifiers.size());
+		i = 0;
+		for (auto&& attr_add: std::move(specifiers)) {
+			state.parse(Ref(this)).assign(&prefixes.specifiers[i], MBox(std::move(attr_add)));
+			i++;
+		}
+
+		if (prefixes.specifiers.size() > 0)
+			setFirstToken(prefixes.specifiers.front().internal()->getSourcePosition());
 	}
 }
