@@ -58,10 +58,11 @@ namespace query::internal {
 		 */
 		struct PreviousCompilation final {
 			/**
-			 * The immutable query graph from the previous compilation.
+			 * The query graph from the previous compilation.
+			 * No not change it, unless you are moving vertices to the current graph.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			const QueryGraph                 graph;
+			QueryGraph                       graph;
 			base::HashMap<NodeID, PrevColor> node_colors;
 
 			PreviousCompilation() = delete;
