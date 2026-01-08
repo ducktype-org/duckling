@@ -1,6 +1,8 @@
 #pragma once
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <helios/hout/hout.hpp>
+#include <typesystem/higher/type_interface.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -11,7 +13,6 @@
 #include <string_view>
 
 namespace compiler::repl {
-
 	/**
 	 * @brief Compile a HOUT unit to DVM bytecode and load it into a running DVM process.
 	 *
@@ -19,13 +20,15 @@ namespace compiler::repl {
 	 * @param hout_unit    The HOUT unit to compile.
 	 * @param module_name  Used for identification and symbol resolution.
 	 * @param pid          Process ID of the target DVM instance.
+	 * @param lowering_context Persistent lowering context for REPL statement compilation.
 	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&         ctx,
-		const helios::HOUTUnit& hout_unit,
-		std::string_view        module_name,
-		vm::PID                 pid
+		query::Context&                  ctx,
+		const helios::HOUTUnit&          hout_unit,
+		std::string_view                 module_name,
+		vm::PID                          pid,
+		backend_vm::ReplLoweringContext& lowering_context
 	);
 
 	/**

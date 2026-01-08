@@ -11,6 +11,7 @@
 #include "frontend.hpp"
 #include "helper_structs.hpp"
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
@@ -182,9 +183,10 @@ namespace compiler::repl {
 
 		bool                       m_should_exit;  /// Flag to terminate the REPL loop
 		std::vector<ReplStatement> m_history;      /// All statements entered in this session
-		u64          m_inputs_counter;  /// Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;         /// Process ID of the running DVM instance
-		ReplFrontend m_frontend;        /// Frontend for user interaction
+		u64          m_line_counter;  /// Counter for generating unique wrapper function names
+		vm::PID      m_dvm_pid;       /// Process ID of the running DVM instance
+		ReplFrontend m_frontend;      /// Frontend for user interaction
+		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
 	};
 
 }  // namespace compiler::repl

@@ -1,0 +1,84 @@
+#pragma once
+
+#include <lir/lir_structure/lir_structure.hpp>
+#include <typesystem/lower/type_layout.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
+
+#include <query_framework/context/context.hpp>
+
+#include <vm/bytecode/bytecode.hpp>
+
+namespace compiler::backend_vm::internal {
+	class ProgramLoweringContext;
+}
+
+namespace compiler::backend_vm {
+	/**
+	 * @brief Wrapper for REPL-specific program lowering context.
+	 *
+	 * This class is a convenience wrapper that owns and manages a ProgramLoweringContext
+	 * for use in REPL sessions. The underlying context maintains state across multiple
+	 * REPL statement compilations, allowing later statements to reference symbols
+	 * (functions, globals, types) defined in earlier statements.
+	 */
+	class ReplLoweringContext {
+	public:
+		explicit ReplLoweringContext(query::Context& query_ctx);
+		~ReplLoweringContext();
+
+		// Non-copyable, movable
+		ReplLoweringContext(const ReplLoweringContext&)            = delete;
+		ReplLoweringContext& operator=(const ReplLoweringContext&) = delete;
+		ReplLoweringContext(ReplLoweringContext&&) noexcept;
+		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
+
+		/**
+		 * @brief Get the underlying persistent program lowering context.
+		 *
+		 * This context accumulates all lowered functions, globals, and types across
+		 * all REPL modules in this session.
+		 */
+		internal::ProgramLoweringContext& getContext();
+
+		/**
+		 * @brief Lower a LIR function into DVM bytecode function.
+		 * @note If the function was already lowered, this is a no-op.
+		 */
+		const vm::code::Function& lowerAndKeepLirFunction(base::CRef<lir::Function> lir_function);
+
+		/**
+		 * @brief Lower a LIR global with its constructor and destructor.
+		 */
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(
+			const lir::LIRGlobal&                     lir_global,
+			base::Optional<base::CRef<lir::Function>> global_ctor,
+			base::Optional<base::CRef<lir::Function>> global_dtor
+		);
+
+		/**
+		 * @brief Lower a LIR type layout into VM bytecode type representation.
+		 * It caches the result, so inserts the type into the program only if needed.
+		 */
+		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
+
+	private:
+		// Pimpl: store pointer to complete type, with details in CPP
+		base::Box<internal::ProgramLoweringContext> m_context;
+	};
+
+	/**
+	 * @brief Create a new persistent program lowering context for REPL.
+	 *
+	 * The returned context maintains state across multiple REPL statement compilations,
+	 * allowing later statements to reference symbols (functions, globals, types) defined
+	 * in earlier statements without recompiling everything into a single module.
+	 *
+	 * @param query_ctx The query context used for error reporting.
+	 * @return A box-managed ProgramLoweringContext. The context is owned by the caller
+	 *         and must be kept alive for the duration of the REPL session.
+	 */
+	base::Box<internal::ProgramLoweringContext> createReplLoweringContext(query::Context& query_ctx);
+}
