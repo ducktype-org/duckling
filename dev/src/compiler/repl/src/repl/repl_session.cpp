@@ -29,14 +29,14 @@ namespace compiler::repl {
 	// @TODO ##1784: decide if we want to do it here or in the main.cpp.
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
-		if (!spawn_result.has_value())
-			throw base::Panic("ReplSession::initDVM", "Failed to spawn DVM process");
+		CORE_ASSERT(spawn_result.has_value(), "ReplSession::initDVM: Failed to spawn DVM process");
 
 		m_dvm_pid = spawn_result->pid;
 
 		auto attach_result = vm::api::attach(m_dvm_pid, std::cin, std::cout);
-		if (!attach_result.has_value())
-			throw base::Panic("ReplSession::initDVM", "Failed to attach I/O to DVM process");
+		CORE_ASSERT(
+			attach_result.has_value(), "ReplSession::initDVM: Failed to attach I/O to DVM process"
+		);
 
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}

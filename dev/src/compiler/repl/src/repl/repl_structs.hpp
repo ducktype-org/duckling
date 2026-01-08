@@ -10,7 +10,7 @@
 #include <utility>
 
 namespace compiler::repl {
-	struct ReplStatement {
+	struct ReplStatement final {
 		std::string                      source_code;
 		base::CRef<frontend::ModuleTree> module;
 		frontend::ModuleID               module_id;
@@ -21,7 +21,7 @@ namespace compiler::repl {
 			  module_id(mod_id) {}
 	};
 
-	struct ReplConfig {
+	struct ReplConfig final {
 		std::string prompt          = "duckling> ";
 		std::string continuation    = "      |";
 		std::string multiline_start = R"(""")";
@@ -34,7 +34,7 @@ namespace compiler::repl {
 	 *
 	 * Contains the status of the operation and an optional message.
 	 */
-	struct ReplResult {
+	struct ReplResult final {
 		enum class Status { Success, Error, Exit, IncompleteInput };
 
 		Status      status;

@@ -31,7 +31,7 @@ namespace compiler::repl {
 	 * Maintains history of all submitted statements, configuration, and handles
 	 * input accumulation for multiline statements.
 	 */
-	class ReplSession {
+	class ReplSession final {
 	public:
 		ReplSession();
 		explicit ReplSession(ReplConfig config);
