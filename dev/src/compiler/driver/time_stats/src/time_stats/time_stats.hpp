@@ -71,6 +71,14 @@ namespace time_stats {
 
 		TrackCategoryTime(TimeCategories category);
 
+		// note: move and copy operations are deleted to avoid accidental misuse
+		// that could lead to incorrect time tracking.
+		// Move might be implemented in the future if needed.
+		TrackCategoryTime(TrackCategoryTime&&) = delete;
+		TrackCategoryTime(const TrackCategoryTime&) = delete;
+		TrackCategoryTime& operator=(const TrackCategoryTime&) = delete;
+		TrackCategoryTime& operator=(TrackCategoryTime&&) = delete;
+
 		/**
 		 * Explicitly ends time tracking for this object.
 		 * After calling this function, destructor will do nothing.
