@@ -1,7 +1,7 @@
 include(builtins.cmake)
 # ^ This exposes:
-# - GENERATED_DIR: the directory of the generated builtin headers, and
-# - BUILTINS_EMBEDS: the list of generated header filenames in GENERATED_DIR
+# - GENERATED_DIR: the directory of the generated builtin sources, and
+# - BUILTINS_EMBEDS: the list of generated source filenames in GENERATED_DIR
 
 add_library(Driver
 	src_private/driver_private/backend_operations/compile_llvm.cpp
@@ -21,12 +21,6 @@ add_library(Driver
 )
 
 add_dependencies(Driver builtins_embeds)
-
-# To tell the compiler where to look for the generated files
-target_include_directories(Driver PRIVATE ${GENERATED_DIR})
-
-# To tell CLion where to look for the generated files
-target_sources(Driver PRIVATE ${BUILTIN_HEADERS})
 
 make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats)
 

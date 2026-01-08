@@ -20,11 +20,12 @@ find_program(CLANG_BIN
     REQUIRED
 )
 
+set (GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+
 # For each target, add command to generate the LLVM bitcode
 # and convert it to an embedded header file.
 foreach (target IN LISTS BUILTIN_TARGETS)
     # Define output file names
-    set (GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
     set(bc_file "${GENERATED_DIR}/builtins_${target}.bc")
     set(embedding_file "${GENERATED_DIR}/builtins_${target}.cpp")
 

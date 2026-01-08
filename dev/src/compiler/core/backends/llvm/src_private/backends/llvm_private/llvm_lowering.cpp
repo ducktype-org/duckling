@@ -1015,13 +1015,14 @@ namespace compiler::backend_llvm {
 			/*RequiresNullTerminator=*/false  // Maybe unnecessary, but BC files may not end with null
 		);
 
+		// Parse the bitcode.
 		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
 			= llvm::parseBitcodeFile(buffer->getMemBufferRef(), getLLVMContext());
 
 		if (!mod_or_err)
 			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
 
-		// Compile module to object file
+		// If bitcode was parsed successfully, wrap the module in ModuleImpl and return it.
 		auto result
 			= makeBox<ModuleImpl>(Box<llvm::Module>::fromPointer(std::move(*mod_or_err).release()));
 		return result;

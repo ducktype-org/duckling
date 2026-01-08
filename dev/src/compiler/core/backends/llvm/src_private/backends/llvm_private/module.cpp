@@ -10,9 +10,6 @@
 
 #include <logger/logger.hpp>
 
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Support/MemoryBuffer.h>
-
 #include <iostream>
 
 namespace compiler::backend_llvm {
