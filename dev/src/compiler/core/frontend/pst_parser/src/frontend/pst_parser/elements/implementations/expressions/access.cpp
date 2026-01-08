@@ -1,9 +1,8 @@
 #include "../../hierarchy/expressions/access.hpp"
 
 #include "../../hierarchy/expressions/template_specifier.hpp"
-#include "preamble.hpp"
-
 #include "expressions_errors.hpp"
+#include "preamble.hpp"
 
 namespace pst::expr {
 

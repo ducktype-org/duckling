@@ -1,6 +1,7 @@
 #include "../../hierarchy/expressions/string_value.hpp"
 
 #include "preamble.hpp"
+
 namespace pst::expr {
 
 	MBox<ExprElement> ExprStrValue::parse(LangParserState& state, i64 length) {

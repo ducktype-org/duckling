@@ -11,7 +11,6 @@
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-
 namespace pst::expr {
 
 	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {

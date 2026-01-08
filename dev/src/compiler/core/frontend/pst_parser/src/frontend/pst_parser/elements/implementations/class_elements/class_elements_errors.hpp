@@ -1,8 +1,8 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-
 #include "class_elements_errors.hpp"
+
+#include <diagnostic_interactive/message.hpp>
 
 namespace pst {
 	class NonEmptyError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -16,7 +16,6 @@ namespace pst {
 	public:
 		NonEmptyError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
-
 
 	class NoSpecifierError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {

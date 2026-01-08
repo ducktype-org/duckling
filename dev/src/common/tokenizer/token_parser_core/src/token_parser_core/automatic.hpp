@@ -28,12 +28,12 @@
 #include "base_element.hpp"
 #include "common_elements.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/message.hpp>
+
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
-
-#include <diagnostic_interactive/message.hpp>
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 
 #include <concepts>
 
@@ -200,9 +200,9 @@ namespace tpc {
 	class BadKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "bad_keyword" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_keyword" };
 		}
 
 	public:
@@ -215,9 +215,9 @@ namespace tpc {
 	class BadSpecialError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "bad_special" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_special" };
 		}
 
 	public:
@@ -230,9 +230,9 @@ namespace tpc {
 	class BadOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "bad_operator" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_operator" };
 		}
 
 	public:
@@ -245,9 +245,9 @@ namespace tpc {
 	class NoIdentifierError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "no_identifier" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_identifier" };
 		}
 
 	public:
@@ -273,13 +273,12 @@ namespace tpc {
 		NoIdentifierErrorOld(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "no_string" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_string" };
 		}
 
 	public:
@@ -289,9 +288,9 @@ namespace tpc {
 	class NoNumericValueError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
-					 .type          = "error",
-					 .family        = "parser",
-					 .name          = "no_numeric_value" };
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_numeric_value" };
 		}
 
 	public:

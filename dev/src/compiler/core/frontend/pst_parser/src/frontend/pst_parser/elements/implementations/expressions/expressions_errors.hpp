@@ -2,7 +2,6 @@
 
 #include <diagnostic_interactive/message.hpp>
 
-
 namespace pst {
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
@@ -29,7 +28,8 @@ namespace pst {
 		}
 
 	public:
-		MoreThanValueError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		MoreThanValueError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class BadUnitExprError final: public dia_int::MessageWithCodeFragmentAndCause {

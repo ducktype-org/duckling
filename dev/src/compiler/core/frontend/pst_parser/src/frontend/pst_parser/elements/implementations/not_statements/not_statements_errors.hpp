@@ -2,7 +2,6 @@
 
 #include <diagnostic_interactive/message.hpp>
 
-
 namespace pst {
 	class UnrecognizedPatternInCaseError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -16,7 +15,7 @@ namespace pst {
 		UnrecognizedPatternInCaseError(dia::SourcePosition pos):
 			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
-    
+
 	class RoundExprStartError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -26,7 +25,8 @@ namespace pst {
 		}
 
 	public:
-		RoundExprStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		RoundExprStartError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class MatchCaseWithNoBodyError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -80,6 +80,7 @@ namespace pst {
 	public:
 		AttrStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
 	class EmptyExprError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",

@@ -167,12 +167,7 @@ namespace pst {
 
 		void logInt(Box<dia_int::MessageBase> message) override {
 			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing message `",
-					message->debugString(),
-					"`"
-				);
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
 			}
 			if (message->isError()) {

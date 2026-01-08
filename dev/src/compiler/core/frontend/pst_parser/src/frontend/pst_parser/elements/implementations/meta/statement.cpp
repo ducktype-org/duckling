@@ -2,13 +2,13 @@
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
-#include "preamble.hpp"
-
 #include "meta_errors.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
+
 	namespace internal {
 
 		template<class T>

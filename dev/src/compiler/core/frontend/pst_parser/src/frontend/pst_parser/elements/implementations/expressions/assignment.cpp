@@ -3,7 +3,6 @@
 #include "../../hierarchy/expressions/comma.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-
 namespace pst::expr {
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {

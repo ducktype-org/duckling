@@ -1,8 +1,8 @@
 #pragma once
 
-#include <diagnostic_interactive/message.hpp>
-
 #include "declarations_errors.hpp"
+
+#include <diagnostic_interactive/message.hpp>
 
 namespace pst {
 	class PatternArgumentCountError final: public dia_int::MessageWithCodeFragmentAndCause {

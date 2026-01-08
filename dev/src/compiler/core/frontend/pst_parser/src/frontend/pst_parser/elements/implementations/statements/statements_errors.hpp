@@ -2,7 +2,6 @@
 
 #include <diagnostic_interactive/message.hpp>
 
-
 namespace pst {
 	class AliasStarError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -16,7 +15,6 @@ namespace pst {
 		AliasStarError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-
 	class BadSpecifierCallError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -26,7 +24,8 @@ namespace pst {
 		}
 
 	public:
-		BadSpecifierCallError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadSpecifierCallError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	class InvalidExternContentWarning final: public dia_int::MessageWithCodeFragmentAndCause {

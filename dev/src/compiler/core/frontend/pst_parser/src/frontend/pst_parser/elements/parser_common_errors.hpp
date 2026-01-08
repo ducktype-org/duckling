@@ -24,6 +24,7 @@ namespace pst::error {
 		}
 
 	public:
-		DuplicateSemicolon(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		DuplicateSemicolon(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

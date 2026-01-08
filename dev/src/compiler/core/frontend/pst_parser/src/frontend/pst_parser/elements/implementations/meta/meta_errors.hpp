@@ -2,7 +2,6 @@
 
 #include <diagnostic_interactive/message.hpp>
 
-
 namespace pst {
 
 
@@ -15,7 +14,8 @@ namespace pst {
 		}
 
 	public:
-		EmptyStatementError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		EmptyStatementError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }

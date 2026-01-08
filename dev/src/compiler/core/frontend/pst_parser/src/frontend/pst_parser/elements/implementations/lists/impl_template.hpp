@@ -50,7 +50,8 @@ namespace pst {
 		}
 
 	public:
-		EmptyListElementError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
+		EmptyListElementError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {
 			addArgument<dia_int::TextArgument>("list_type", type());
 		}
 	};
@@ -159,7 +160,8 @@ namespace pst {
 							}
 							state.logInt(makeBox<EmptyFieldError<getName>>(pos));
 						} else {
-							state.logInt(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0)));
+							state.logInt(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0))
+							);
 						}
 					}
 

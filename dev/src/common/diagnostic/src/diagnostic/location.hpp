@@ -3,11 +3,12 @@
 #include "location_types.hpp"
 #include "source_position.hpp"
 
+#include "base/pointers/box.hpp"
+
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 
 #include <utility>
-#include "base/pointers/box.hpp"
 
 namespace dia {
 	/**
