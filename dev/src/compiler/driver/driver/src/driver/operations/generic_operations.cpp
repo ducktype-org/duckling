@@ -4,7 +4,6 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/statistics_private/statistics.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -13,7 +12,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <timer/timer.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/types/ok_bad.hpp>
@@ -111,7 +110,8 @@ namespace compiler::driver {
 				{
 					// compileLIRModuleToLLVM time is added on its own,
 					// but tracking time of the actual compilation to object file is done here
-					timer::AddToTime _(&backend_compilation_time);
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
 					llvm_module.compile(
 						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);

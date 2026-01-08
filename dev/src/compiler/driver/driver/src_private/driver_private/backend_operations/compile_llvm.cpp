@@ -1,6 +1,5 @@
 #include "compile_llvm.hpp"
 
-#include "../statistics_private/statistics.hpp"
 #include "llvm_ir_lib.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
@@ -8,13 +7,14 @@
 #include <helios/mangler/mangler.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/function_forward.hpp>
+#include <time_stats/time_stats.hpp>
 
 namespace compiler::driver {
 
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, const LIRModuleData& lir_module
 	) {
-		timer::AddToTime _(&backend_compilation_time);
+		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 		backend_llvm::Module mod(lir_module.module_id);
 
