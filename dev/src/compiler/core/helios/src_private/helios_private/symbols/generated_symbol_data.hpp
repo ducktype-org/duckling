@@ -54,6 +54,8 @@ namespace compiler::helios::houtgen {
 		/**
 		 * Represents a compiler-generated function wrapper for REPL expressions.
 		 * This is used to wrap single REPL expressions in a synthetic function.
+		 * @note this does not store any function data, since this symbol is created when
+		 * programmatically generating the function HOUT via QueryReplExpressionWrapper.
 		 */
 		struct ReplExpressionWrapper final {
 			u64 counter;  // A unique counter to distinguish different REPL expression wrappers.

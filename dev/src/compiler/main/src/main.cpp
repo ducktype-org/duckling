@@ -433,27 +433,14 @@ clah::Clah getClahForMain() {
 		)
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   // Initialize compiler in PackageCompilationMode to enable
-		                       // incremental compilation across REPL sessions.
 							   compiler::driver::initializeTheCompiler(
-					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-						.main_package_info = {
-							.package_name = "duckling_repl_session",
-							.package_path = fs::FilePath("."),
-						},
-						.compilation_artifacts = {
-							.artifacts_path = fs::FilePath("./duck_repl_build/"),
-						},
-						.debug_options = getDebugOptionsFromClap(options),
-						.incremental   = { .enabled = true },
-					}
-				);
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
 
 							   compiler::repl::ReplSession session;
 							   int                         result = session.run();
-							   // Exiting the compiler saves compilation artifacts if incremental
-		                       // compilation is enabled. TODO: decide if we want this behavior.
-		                       // It saves this in the same directory from which the REPL was launched.
 							   compiler::driver::exit();
 							   return result;
 						   }))
