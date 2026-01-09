@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -29,7 +29,7 @@ namespace compiler::helios {
 
 	using SymbolABI = std::variant<DefaultAbi, CAbi>;
 
-	using QuerySymbolABI_Result = query::QResult<SymbolABI, errors::Failed>;
+	using QuerySymbolABI_Result = query::QResult<SymbolABI>;
 
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.

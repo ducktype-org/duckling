@@ -6,9 +6,8 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{GitRevision, Source},
+    quackpack::core::{BranchOrTag, Source},
     static_str_id,
-    util_common::error::ErrorExt,
 };
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -19,14 +18,14 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     (dir, manifest)
 }
 
-fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> Vec<String> {
+fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> String {
     let mut vec = [format!(
         "when trying to parse the user manifest at `{}/x`",
         root.path().display()
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
-    vec
+    vec.join("\n")
 }
 
 #[test]
@@ -126,7 +125,7 @@ dependencies:
     let ctx = DuckCtx::default();
     let err = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             ["dependencies.a.version: invalid digit found in string at line 8 column 14"]
@@ -220,7 +219,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
@@ -250,7 +249,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
@@ -281,12 +280,12 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
                 "couldn't determine the type of the dependency `dependencies.a`
-hint: remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
+remove one of the fields `dependencies.a.version` or `dependencies.a.source.path`"
             ]
         )
     )
@@ -307,7 +306,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(&dir, ["missing the obligatory section `metadata`"])
     )
 }
@@ -330,7 +329,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(&dir, ["missing the obligatory key `metadata.name`"])
     )
 }
@@ -353,7 +352,7 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(&dir, ["missing the obligatory key `metadata.version`"])
     )
 }
@@ -519,10 +518,10 @@ dependencies:
     if let Source::Git(git_source) = e.desc().source() {
         assert_eq!(git_source.url(), "git");
         assert_eq!(
-            git_source.rev(),
-            GitRevision::Branch(static_str_id!("branch"))
+            git_source.branch_or_tag(),
+            BranchOrTag::Branch(static_str_id!("branch"))
         );
-        assert_eq!(git_source.commit(), Some(static_str_id!("commit")));
+        assert_eq!(git_source.rev(), Some(static_str_id!("commit")));
     }
     assert!(e.desc().versions().is_empty());
     assert_eq!(e.real_name(), e.desc().manifest_name());
@@ -550,12 +549,12 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
-                  `dependencies.a.source.branch`, `dependencies.a.source.commit`"
+                  `dependencies.a.source.branch`, `dependencies.a.source.tag`"
             ]
         )
     );
@@ -756,12 +755,71 @@ dependencies:
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert_eq!(
-        err.all_errors_to_vec(),
+        err.to_string(),
         make_errors_message(
             &dir,
             [
                 "when parsing the field `dependencies.a.conditions`",
                 "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            ]
+        )
+    );
+}
+
+#[test]
+fn dep_features_with_invalid_conds() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      -
+        b:
+          package_features:
+            - a
+        c:
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 11 column 9",
+            ]
+        )
+    );
+
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    version: 0.1
+    features:
+      - {}
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 10 column 9",
             ]
         )
     );

@@ -29,7 +29,7 @@ namespace pst::expr {
 		bool found = false;
 		i64  place = 0;
 		for (i64 i = 0; i < length; i++) {
-			if (ExprClassify::isAssignment(state, (i64) i)) {
+			if (ExprClassify::isAssignment(state.ctokens(), (i64) i)) {
 				if (!found) {
 					found = true;
 					place = i;

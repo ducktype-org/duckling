@@ -50,7 +50,7 @@ function collatz {
 			label afterIf;
 
 			# if n > j: # j := n
-			cmpG_l64_l64     0, 8;
+			cmpGt_l64_l64     0, 8;
 			cmov_l64_l64     8, 0;
 
 			cmpEq_l64_imm         0, 1;
@@ -95,7 +95,7 @@ function main {
 			mov_l64_r0         24;
 
 			# if tmp > s:
-			cmpG_l64_l64       24, 8;
+			cmpGt_l64_l64       24, 8;
 			jmpRelNotIf_label  EndIF;
 				mov_l64_l64    8, 24;
 
@@ -107,7 +107,7 @@ function main {
 			# output_l64       0;
 			# output_l64       16;
 			# if x > i : end
-			cmpG_l64_l64     0, 16;
+			cmpGt_l64_l64     0, 16;
 			jmpRelIf_label   Loop;
 
 		output_l64      8;

@@ -1,11 +1,10 @@
 use std::{marker::PhantomData, path::Path};
 
-use anyhow::bail;
 use rustvil::fs::PathExt;
 use tracing::{debug, trace};
 
 use crate::{
-    InternalError, QpCtx, QuackResult,
+    QpCtx, QuackResult, qp_bail, qp_internal,
     quackpack::{core::PackageCtx, util::paths::MANIFEST_FILENAME},
 };
 
@@ -42,7 +41,7 @@ impl PackageLoader {
 
     /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
-        Err(InternalError::from("@TODO: #1394 it needs the EditableManifest").into())
+        Err(qp_internal!("@TODO: #1394 it needs the EditableManifest"))
     }
 
     /// Find a [`PackageCtx`] from a given `start`.
@@ -56,7 +55,7 @@ impl PackageLoader {
     ) -> QuackResult<PackageCtx<'duck>> {
         let start = start.expand_user()?.resolve()?;
         if !start.is_dir() {
-            bail!("the path `{}` is not a directory", start.display())
+            qp_bail!("the path `{}` is not a directory", start.display())
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
@@ -71,10 +70,10 @@ impl PackageLoader {
         if allow_global_package.allows() {
             PackageLoader::global_package(ctx)
         } else {
-            bail!(
+            qp_bail!(
                 "no manifest has been found from the `{}` to the `{}`",
                 start.display(),
-                current.display()
+                current.display(),
             )
         }
     }
@@ -88,11 +87,11 @@ impl PackageLoader {
         ctx: &'duck QpCtx<'duck>,
     ) -> QuackResult<PackageCtx<'duck>> {
         if !path.is_dir() {
-            bail!("the path `{}` is not a directory", path.display())
+            qp_bail!("the path `{}` is not a directory", path.display())
         }
         let manifest_path = path.join(PackageLoader::MANIFEST_NAME);
         if !manifest_path.is_file() {
-            bail!("the directory `{}` has no manifest", path.display())
+            qp_bail!("the directory `{}` has no manifest", path.display())
         }
         PackageCtx::new(path.to_path_buf(), ctx)
     }
@@ -112,7 +111,7 @@ mod tests {
     use rustvil::fs::{MkdirOptions, PathExt};
     use tempfile::tempdir;
 
-    use crate::{DuckCtx, QpCtx, quackpack::core::PackageLoader, util_common::error::ErrorExt};
+    use crate::{DuckCtx, QpCtx, quackpack::core::PackageLoader};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
@@ -128,11 +127,11 @@ metadata:
             PackageLoader::find_from_directory(tmp_file.path(), &QpCtx::new(&ctx), false.into())
                 .unwrap_err();
         assert_eq!(
-            err.all_errors_to_vec(),
-            [format!(
+            format!("{err}"),
+            format!(
                 "no manifest has been found from the `{}` to the `/`",
                 tmp_file.path().resolve().unwrap().display()
-            )]
+            )
         );
     }
 
@@ -144,11 +143,11 @@ metadata:
         let err =
             PackageLoader::find_from_directory(&file, &QpCtx::new(&ctx), false.into()).unwrap_err();
         assert_eq!(
-            err.all_errors_to_vec(),
-            [format!(
+            format!("{err}"),
+            format!(
                 "the path `{}` is not a directory",
                 file.resolve().unwrap().display()
-            )]
+            )
         );
     }
 
@@ -210,8 +209,8 @@ metadata:
         let qpctx = QpCtx::new(&ctx);
         let err = PackageLoader::find_at_exact_directory(&file, &qpctx).unwrap_err();
         assert_eq!(
-            err.all_errors_to_vec(),
-            [format!("the path `{}` is not a directory", file.display())]
+            format!("{err}"),
+            format!("the path `{}` is not a directory", file.display())
         );
 
         file.touch().unwrap();
@@ -219,8 +218,8 @@ metadata:
 
         let err = PackageLoader::find_at_exact_directory(&file, &qpctx).unwrap_err();
         assert_eq!(
-            err.all_errors_to_vec(),
-            [format!("the path `{}` is not a directory", file.display())]
+            format!("{err}"),
+            format!("the path `{}` is not a directory", file.display())
         );
     }
 }

@@ -14,6 +14,7 @@
 
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::driver {
 
@@ -22,7 +23,7 @@ namespace compiler::driver {
 	 * It compiler every module into the .o/.dbc files (via queries),
 	 * and also for LLVM backend it links them into a single binary.
 	 */
-	void compileEntirePackage(
+	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
@@ -56,10 +57,7 @@ namespace compiler::driver {
 	DECLARE_QUERY(
 		CompileModule,
 		KeyOf_CompileModule,
-		artifacts::FileArtifact,
-		({
-			.used_hashes             = query::UsedHashes::StableHash,
-			.can_be_loaded_from_disk = true,
-		})
+		query::QResult<artifacts::FileArtifact>,
+		({ .used_hashes = query::UsedHashes::StableHash, .can_be_loaded_from_disk = true })
 	);
 }

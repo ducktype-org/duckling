@@ -329,7 +329,7 @@ namespace base {
 		 */
 		template<class Function, class Self>
 		requires std::invocable<Function&&, QualifiedT<Self>>
-		constexpr auto map(this Self&& self, Function&& function) noexcept
+		constexpr auto map(this Self&& self, Function&& function)
 			-> Optional<std::invoke_result_t<Function, QualifiedT<Self>>> {
 			if (self.has_value()) {
 				return std::invoke(
@@ -350,7 +350,7 @@ namespace base {
 		 */
 		template<class Function, class Self>
 		requires std::invocable<Function&&, QualifiedT<Self>>
-		constexpr auto flatMap(this Self&& self, Function&& function) noexcept
+		constexpr auto flatMap(this Self&& self, Function&& function)
 			-> std::invoke_result_t<Function, QualifiedT<Self>> {
 			using result_type = std::invoke_result_t<Function&&, QualifiedT<Self>>;
 			static_assert(IsOfSameClass<result_type, Optional>);

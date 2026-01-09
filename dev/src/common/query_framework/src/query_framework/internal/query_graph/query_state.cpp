@@ -1,11 +1,13 @@
 #include "query_state.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
 #include <unordered_set>
@@ -69,6 +71,9 @@ namespace query::internal {
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
+		// measure time spent in red-green sweep:
+		timer::AddToTime _(&total_red_green_sweep_time);
+
 		// No previous compilation graph -> cannot decide incremental reuse, mark as needs recompute
 		if (!previous.has_value()) return PrevColor::Red;
 
@@ -89,13 +94,15 @@ namespace query::internal {
 			usize  idx;  // next child index to process
 		};
 
-		std::vector<Frame>         stack;
-		std::unordered_set<NodeID> in_stack;
+		std::vector<Frame> stack;
+
+		IF_BUILD_TYPE_DEV(std::unordered_set<NodeID> in_stack);
+
 		stack.push_back(Frame{ .node = start_node, .idx = 0 });
 
 		// This is used to detect back-edges (cycles) in the previous graph
 		// The previous graph should be acyclic, but we just check it to PANIC if not
-		in_stack.insert(start_node);
+		IF_BUILD_TYPE_DEV(in_stack.insert(start_node);)
 
 		while (!stack.empty()) {
 			auto& frame = stack.back();
@@ -103,7 +110,8 @@ namespace query::internal {
 
 			// If already colored (via another path), just pop and continue
 			if (node_colors.contains(node)) {
-				in_stack.erase(node);
+				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
+
 				stack.pop_back();
 				continue;
 			}
@@ -117,7 +125,9 @@ namespace query::internal {
 			// If node is not colored that means node is not input, so we can safely mark it Green
 			if (deps.empty()) {
 				node_colors.insert_or_assign(node, PrevColor::Green);
-				in_stack.erase(node);
+
+				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
+
 				stack.pop_back();
 				continue;
 			}
@@ -129,12 +139,16 @@ namespace query::internal {
 				// If child's color is known already, continue to next child
 				if (node_colors.contains(child)) continue;
 
-				if (in_stack.contains(child))
-					CORE_PANIC("Cycle detected in previous query graph during red-green sweep");
-
 				// Push child for processing
 				stack.push_back(Frame{ .node = child, .idx = 0 });
-				in_stack.insert(child);
+
+				IF_BUILD_TYPE_DEV(
+					auto instert_result = in_stack.insert(child); CORE_ASSERT(
+						instert_result.second,
+						"Cycle detected in previous query graph during red-green sweep"
+					);
+				)
+
 				continue;
 			}
 
@@ -148,18 +162,42 @@ namespace query::internal {
 				}
 			}
 			node_colors.insert_or_assign(node, all_green ? PrevColor::Green : PrevColor::Red);
-			in_stack.erase(node);
+
+			IF_BUILD_TYPE_DEV(in_stack.erase(node);)
+
 			stack.pop_back();
 		}
 
 		return node_colors.at(start_node);
 	}
 
+	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
+		static base::VectorMap<QueryID, QueryID> old_to_new;
+
+		if (node.q_id.registered() && node.q_id.getData().usesStableHashing()) return node;
+
+		// Here the QueryID is either unregistered or uses unstable hashing, so we do remapping
+
+		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
+			return { **existing, node.hash };
+
+		QueryData dummy_query_data(
+			QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+		);
+		QueryID new_qid = registerQuery(dummy_query_data);
+		old_to_new.put(node.q_id, new_qid);
+		return { new_qid, node.hash };
+	}
+
 	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
+		// measure time spent in graph merges:
+		timer::AddToTime _(&total_graph_merge_time);
+
+
 		// NodeID with unstable hash might have diferent ID and graph in previous graph
 		// So merging from such NodeID is not allowed
 		CORE_ASSERT(
-			start_node.q_id.registered() && start_node.q_id.getData().usesStableHashing(),
+			start_node.q_id.getData().usesStableHashing(),
 			"Cannot merge previous graph starting from QueryID that does not have stable hash"
 		);
 
@@ -173,28 +211,6 @@ namespace query::internal {
 
 		// If the start node does not exist in previous graph, nothing to merge
 		if (!prev_graph.nodeExists(start_node)) return;
-
-		// If the QueryId from prev graph does not have stable hash
-		// We cannot just 'add' it to current graph as its NodeID
-		// may create unstable hash colision in current graph
-		// So we need to create a new query id for each of them
-		// to make sure that there will be no colision in current graph
-		static base::HashMap<QueryID, QueryID> old_to_new;
-
-		// Helper to get the corresponding NodeID in current graph for a NodeID in previous graph
-		// It handles QueryIDs mapping for nodes with unstable hashes
-		auto get_node_id_mapping = [&](NodeID node) -> NodeID {
-			if (node.q_id.registered() && node.q_id.getData().usesStableHashing())
-				return node;
-			else if (old_to_new.contains(node.q_id))
-				return { old_to_new.at(node.q_id), node.hash };
-			QueryData new_data(
-				QueryKind::Dummy, "Dummed Query for unstable hash merge from prev graph", {}
-			);
-			QueryID new_qid = registerQuery(new_data);
-			old_to_new.insert_or_assign(node.q_id, new_qid);
-			return { new_qid, node.hash };
-		};
 
 		// Iterative DFS to copy nodes and their dependencies from previous graph
 		struct Frame {
@@ -212,11 +228,11 @@ namespace query::internal {
 			const NodeID node = frame.node;
 
 			// If we already created this node in current graph, skip
-			if (query_graph.node_deps.contains(get_node_id_mapping(node))) continue;
+			if (query_graph.node_deps.contains(node)) continue;
 
 			// Insert the node with an empty dependency list first (ensures parent exists for
 			// addDependency)
-			query_graph.node_deps.emplace(get_node_id_mapping(node), std::vector<NodeID>{});
+			query_graph.node_deps.emplace(node, std::vector<NodeID>{});
 
 			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(
@@ -227,11 +243,10 @@ namespace query::internal {
 			// For each child, add the dependency edge and ensure the child will be processed
 			for (const auto& child: prev_deps) {
 				// Add edge in current graph (child doesn't have to exist yet)
-				query_graph.addDependency(get_node_id_mapping(node), get_node_id_mapping(child));
+				query_graph.addDependency(node, child);
 
 				// If child is not in current graph yet, schedule it for creation
-				if (!query_graph.node_deps.contains(get_node_id_mapping(child)))
-					stack.push_back(Frame{ .node = child });
+				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
 			}
 		}
 	}

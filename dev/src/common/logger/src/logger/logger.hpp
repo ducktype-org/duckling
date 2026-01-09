@@ -15,15 +15,17 @@ namespace logger {
 	enum class DevLogCategories {
 
 		// Common modules:
-		Lexer,        ///< Logs related to lexical analysis.
-		Printer,      ///< Logs related to printing operations.
-		Artifacts,    ///< Logs related to artifacts.
-		Query,        ///< Logs related to query framework.
-		Command,      ///< Logs related to system commands.
-		Diagnostics,  ///< Logs related to the diagnostic messages.
+		Lexer,             ///< Logs related to lexical analysis.
+		Printer,           ///< Logs related to printing operations.
+		Artifacts,         ///< Logs related to artifacts.
+		Query,             ///< Logs related to query framework.
+		QueryStacktraces,  ///< Logs related to query framework stacktraces.
+		Command,           ///< Logs related to system commands.
+		Diagnostics,       ///< Logs related to the diagnostic messages.
 
 		// Compiler:
 		Compiler,  ///< Logs related to compiler pipeline.
+		Parser,    ///< Logs related to parsing.
 		Backend,   ///< Logs related to the backend components.
 		Linker,    ///< Logs related to the linker component.
 
@@ -45,13 +47,16 @@ namespace logger {
 	void enableDevCategoryByStringName(std::string_view category_name);
 
 	namespace internal {
-		/**
-		 * Checks if logging is enabled for the specified category.
-		 */
-		bool isCategoryEnabled(DevLogCategories category);
-
 		void logMessage(std::string_view message);
 	}
+
+	/**
+	 * Checks if logging is enabled for the specified category.
+	 * @note This function is intended mostly for internal use
+	 * but can also be used externally to
+	 * conditionally perform some logging-like action based on log category state.
+	 */
+	bool isCategoryEnabled(DevLogCategories category);
 }
 
 /**
@@ -79,9 +84,9 @@ namespace logger {
  * @note Message is a variadic list of arguments that will be concatenated into a single string by
  * base::strConcat.
  */
-#define CORE_DEV_LOG(category, ...)                                                      \
-	if (logger::enable_dev_logs) [[unlikely]] {                                          \
-		if (logger::internal::isCategoryEnabled(::logger::DevLogCategories::category)) { \
-			logger::internal::logMessage(base::strConcat(__VA_ARGS__));                  \
-		}                                                                                \
+#define CORE_DEV_LOG(category, ...)                                              \
+	if (::logger::enable_dev_logs) [[unlikely]] {                                \
+		if (::logger::isCategoryEnabled(::logger::DevLogCategories::category)) { \
+			::logger::internal::logMessage(base::strConcat(__VA_ARGS__));        \
+		}                                                                        \
 	}

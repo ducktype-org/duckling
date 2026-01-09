@@ -52,7 +52,7 @@ namespace compiler::helios {
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({}));
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
@@ -80,6 +80,7 @@ namespace compiler::helios {
 			case pst::ElementKind::CodeBlock:
 			case pst::ElementKind::CodeBlockOrStmt:
 			case pst::ElementKind::Variable:
+			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
 				return global_variable_pst_context(el->getParent().value().unlock(ctx));
 
@@ -183,7 +184,9 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(
+		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
+	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -257,7 +260,12 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name        = using_stmt->getDeclSymbolName().value(),
+					.name
+					= base::StrID(base::strConcat(
+									  "<USING> ",
+									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+					)
+			                          .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -386,16 +394,9 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx),
-				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
-				"calling it)"
-			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -411,12 +412,24 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>, ({}));
+			DECLARE_QUERY(
+				QueryGlobalBuiltinSymbols,
+				query::EmptyKey,
+				CRef<std::vector<SymID>>,
+				({ .uses_qresult = false })
+			);
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymID> output;
 
+					auto i32_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>(
+							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
 					auto i64_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
@@ -424,6 +437,19 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
+					auto u64_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>(
+							{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+						),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+					auto f64_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryFloatType>({ 64 }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
@@ -432,7 +458,7 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 6> function_data
 						= {
 							  {
 								  {
@@ -442,6 +468,22 @@ namespace compiler::helios {
 								  {
 									  base::StrID("builtin_output_i64"),
 									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
+								  },
+								  {
+									  base::StrID("builtin_input_u64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
+								  },
+								  {
+									  base::StrID("builtin_output_u64"),
+									  ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
+								  },
+								  {
+									  base::StrID("builtin_input_f64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
+								  },
+								  {
+									  base::StrID("builtin_output_f64"),
+									  ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
 								  },
 							  },
 						  };
@@ -528,10 +570,10 @@ namespace compiler::helios {
 				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
-					lookup_res.hasValue() && not lookup_res.value().empty(),
+					lookup_res.hasValue() && not lookup_res.valueOrThrow().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.valueOrThrow().back() });
 				output(ret);
 			}
 
@@ -600,7 +642,7 @@ namespace compiler::helios {
 				return SymbolList{ { key } };
 			}
 
-			UNPACK_RESULT_MOVE(
+			UNPACK_QRESULT_MOVE(
 				auto lookup_chain =,
 				lookupChain(
 					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
@@ -615,7 +657,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue COMMA errors::Failed>) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -629,12 +671,13 @@ namespace compiler::helios {
 			const auto hout_qresult = getHoutOfExprWithExpectedType(
 				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
 			);
-			if (hout_qresult.hasError()) return query::QError(errors::Failed());
+			if (hout_qresult.hasFailed()) return query::Failed();
 
 			// Evaluate the HOUT expression at compile-time
-			auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.value().ref() });
-			if (ctv.hasError()) return query::QError(errors::Failed());
-			return ctv.value();
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			if (ctv.hasFailed()) return query::Failed();
+			return ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -682,7 +725,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 
-			if (kind(key) == SymbolKind::BuiltinFunction) {
+			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other)) {
 				// Builtin functions have no specifiers
 				return {};
 			}
@@ -838,6 +881,10 @@ namespace compiler::helios {
 			) override {
 				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
 			}
+
+			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
+				expr.value_expr->acceptVisitor(*this);
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -846,7 +893,7 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key);
+			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key).valueOrThrow();
 			const auto& function_body   = fun_hout_result.body;
 
 			HoutFunctionCallCollector visitor;

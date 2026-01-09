@@ -1,26 +1,14 @@
 #include "../../hierarchy/declarations/class.hpp"
 
-#include "../../hierarchy/expressions/chain_expr.hpp"
+#include "../../hierarchy/expressions/ternary.hpp"
 #include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
 namespace pst {
-	/**
-	 * @brief Expr parser for the extends class expression.
-	 */
-	class ClassExtendsExpr: public NotStmt {
-	public:
-		static bool end(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);
-		}
-
-		static MBox<ExprElement> parse(LangParserState& state) {
-			return expr::parseUntil<expr::ChainExpr, end>(state);
-		}
-
-		ClassExtendsExpr() = delete;
-	};
+	bool ExprParserHelper::untilExtendsEnd(const TokenStream& state, i64 fwd = 0) {
+		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+		    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);
+	}
 
 	MBox<Class> Class::parse(LangParserState& state) {
 		auto position = state.getPosition();
@@ -30,12 +18,13 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends))
-			state.parse(out).with(&out->base, ClassExtendsExpr::parse);
+		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
-		state.parse(out).with(&out->body, ClassBlock::parse, { out->name, {} });
+		state.parse(out).with(
+			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
+		);
 
 		return out;
 	}

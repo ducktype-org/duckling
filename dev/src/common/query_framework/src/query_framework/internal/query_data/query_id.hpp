@@ -8,10 +8,17 @@
 
 #include <base/types/ints.hpp>
 
+#include <vector>
+
+namespace query::external {
+	struct InputData;
+}
+
 namespace query::internal {
 	/**
 	 * Unique identifier of query type.
 	 */
+
 	struct QueryID final {
 	private:
 		u64 val;
@@ -20,18 +27,11 @@ namespace query::internal {
 
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
-
-	public:
-		[[nodiscard]]
-		constexpr u64 asInt() const {
-			return val;
-		}
-
-		[[nodiscard]]
-		const QueryData& getData() const;
+		friend class QueryState;
+		friend void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
 		/**
-		 * @TODO: #1514 determinate if we should keep this method
+		 * @note Unregistered queries occurs only during the deserialisation of previous graph
 		 * This method is used to determinate whether the query is registered - it points to query
 		 * actually implemented in the system. Dummy queries from previous graph aren't registered.
 		 * All other queries should be registered.
@@ -42,6 +42,15 @@ namespace query::internal {
 		 */
 		[[nodiscard]] bool registered() const;
 
+	public:
+		[[nodiscard]]
+		constexpr u64 asInt() const {
+			return val;
+		}
+
+		[[nodiscard]]
+		const QueryData& getData() const;
+
 		[[nodiscard]]
 		constexpr bool operator==(const QueryID& other) const {
 			return val == other.val;
@@ -50,6 +59,14 @@ namespace query::internal {
 		[[nodiscard]]
 		constexpr bool operator<(const QueryID& other) const {
 			return val < other.val;
+		}
+
+		/**
+		 * @note Used for VectorMap
+		 */
+		[[nodiscard]]
+		explicit constexpr operator usize() const {
+			return static_cast<usize>(val);
 		}
 	};
 

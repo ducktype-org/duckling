@@ -21,6 +21,8 @@ pub use metadata::*;
 pub use root_description::*;
 pub use source::*;
 
+use crate::{QuackError, quackpack::schemas::registry};
+
 #[derive(Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
@@ -80,5 +82,74 @@ impl Manifest {
     /// Get the compiler specific options for profile.
     pub fn profiles(&self) -> &Profiles {
         &self.profiles
+    }
+}
+
+impl TryFrom<registry::Manifest> for Manifest {
+    type Error = QuackError;
+
+    fn try_from(value: registry::Manifest) -> Result<Self, Self::Error> {
+        let registry::Manifest {
+            metadata,
+            dependencies,
+            dev_dependencies,
+            features,
+            profiles,
+        } = value;
+        let registry::Metadata {
+            version,
+            authors,
+            license,
+            name,
+            description,
+        } = metadata;
+        let root_description = RootDescription::new(name.into(), version);
+        let authors = authors.into_iter().map(Into::into).collect();
+        let metadata =
+            PackageMetadata::new(authors, Some(license.into()), Some(description.into()));
+        Ok(Manifest::new(
+            root_description,
+            features.try_into()?,
+            metadata,
+            dependencies.try_into()?,
+            dev_dependencies.try_into()?,
+            profiles.into(),
+        ))
+    }
+}
+
+impl TryFrom<Manifest> for registry::Manifest {
+    type Error = QuackError;
+
+    fn try_from(value: Manifest) -> Result<Self, Self::Error> {
+        let Manifest {
+            root_description,
+            features,
+            metadata,
+            dependencies,
+            dev_dependencies,
+            profiles,
+        } = value;
+        let license = metadata.license().map(Into::into).unwrap_or_default();
+        let description = metadata.description().map(Into::into).unwrap_or_default();
+        let authors = metadata
+            .into_authors()
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        let metadata = registry::Metadata {
+            version: root_description.version(),
+            authors,
+            license,
+            name: root_description.name().into(),
+            description,
+        };
+        Ok(Self {
+            metadata,
+            dependencies: dependencies.try_into()?,
+            dev_dependencies: dev_dependencies.try_into()?,
+            features: features.into(),
+            profiles: profiles.into(),
+        })
     }
 }

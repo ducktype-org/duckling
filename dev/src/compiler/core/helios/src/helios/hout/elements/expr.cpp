@@ -156,9 +156,7 @@ namespace compiler::helios::code {
 		  Expr(
 
 			  tsh::ExpressionType<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-					  "Handling errors in HOUT is not supported yet 1 — " + name(symbol).str()
-				  ),
+				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),
@@ -206,6 +204,8 @@ namespace compiler::helios::code {
 		case FloatGteq:
 		case FloatEq:
 		case FloatNeq:
+		case MetaEq:
+		case MetaNeq:
 			return ctx.query<tsh::QueryBoolType>({});
 		case BooleanAnd:
 		case BooleanOr:
@@ -541,10 +541,7 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(query::Context& ctx, Box<Expr> base, const SymID field):
 		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(tsh::ExpressionType(
-			  ctx.query<QueryTypeOfSymbol>(field)->expect(
-				  "Handling errors here is not supported yet -- this will probably have to be "
-				  "refactored to some kind of static method.."
-			  ),
+			  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
 			  tsh::ValueCategory(tsh::PrimaryCategory::Local)
 		  )),
 		  base(std::move(base)),
@@ -637,9 +634,11 @@ namespace compiler::helios::code {
 				return ">=";
 			case IntegerEq:
 			case FloatEq:
+			case MetaEq:
 				return "==";
 			case IntegerNeq:
 			case FloatNeq:
+			case MetaNeq:
 				return "!=";
 			default:
 				CORE_UNREACHABLE();

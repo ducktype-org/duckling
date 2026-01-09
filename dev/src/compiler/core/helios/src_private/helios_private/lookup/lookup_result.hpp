@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
@@ -17,7 +16,19 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Possible errors during lookupExpectUnique.
+	 */
+	namespace errors {
+		class Ambiguity final {};
+
+		class SymbolNotFound final {};
+	}
+
 	struct NestedResult;
+
+	using GetAsSingleLookupQResult
+		= query::QResult<std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound>>;
 
 	/**
 	 * @brief Tree like structure storing lookup result.
@@ -57,7 +68,7 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		GetAsSingleLookupQResult getAsSingle() const;
 
 		/**
 		 * Adds another LookupResult to self (leaves to leaves, children ot children).

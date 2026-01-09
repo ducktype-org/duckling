@@ -2,7 +2,7 @@ metadata:
   type: "error"
   family: "type_check"
   name: "call_arg_unknown_named"
-  code: "6005"
+  code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"
@@ -15,20 +15,8 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
-  function_name:
-    description: "The name of the function being called."
-    optional: true
-
 
 header_message:
-  - case:
-      is_param_provided: "function_name"
-    of:
-      true:
-        - "Failed to call `"
-        - param: "function_name"
-        - "`. "
-      false: []
   - "Named argument `"
   - param: "argument_name"
   - "` is not defined in the callee's parameter list."

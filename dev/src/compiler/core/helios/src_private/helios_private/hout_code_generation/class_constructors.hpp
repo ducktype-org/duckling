@@ -4,6 +4,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios::houtgen {
 	/**
@@ -12,5 +13,10 @@ namespace compiler::helios::houtgen {
 	 * The implicit constructor is a function that takes parameters for each field of the class
 	 * and returns an instance of the class with those fields initialised accordingly.
 	 */
-	DECLARE_QUERY(QueryImplicitClassConstructor, tsh::ClassAbstractType, CRef<HOUTFunction>, ({}));
+	DECLARE_QUERY(
+		QueryImplicitClassConstructor,
+		tsh::ClassAbstractType,
+		CRef<query::QResult<HOUTFunction>>,
+		({})
+	);
 }
