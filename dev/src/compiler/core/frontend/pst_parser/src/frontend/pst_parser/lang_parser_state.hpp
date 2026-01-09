@@ -123,24 +123,8 @@ namespace pst {
 			return skipped_entries_depth == 0;
 		}
 
-		/**
-		 * @brief Logs an error relatively to the current token
-		 */
-		void fail(i64 rel_pos, const std::string& message) override {
-			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing error at pos(",
-					ctokens().peek(rel_pos).getPosition().getStartLineColumn(),
-					"): ",
-					message,
-					"\n\n"
-				);
-				return;
-			}
-			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-			skip_till_fallback    = true;
-			skipped_entries_depth = 1;
+		void fail([[maybe_unused]]i64 rel_pos, [[maybe_unused]]const std::string& message) override {
+			CORE_PANIC("old fail is unsupported for language parsing");
 		}
 
 		/**
