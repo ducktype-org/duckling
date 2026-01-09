@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Expression has only prefix operators"
+  - "Expression has only prefix operators."
 
 description:
   - codeblock:

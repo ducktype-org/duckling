@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Partial ternary expression"
+  - "Partial ternary expression."
 
 description:
   - codeblock:

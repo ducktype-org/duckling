@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Case branch with no body"
+  - "Case branch with no body."
 
 description:
   - codeblock:

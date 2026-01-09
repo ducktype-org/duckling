@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Expected a round bracket call expression"
+  - "Expected a round bracket call expression."
 
 description:
   - codeblock:

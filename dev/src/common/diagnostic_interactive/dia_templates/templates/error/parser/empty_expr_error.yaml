@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Empty expression where non-empty expected"
+  - "Empty expression where non-empty expected."
 
 description:
   - codeblock:

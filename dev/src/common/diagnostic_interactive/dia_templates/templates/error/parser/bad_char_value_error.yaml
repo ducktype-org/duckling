@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Expected a Char value"
+  - "Expected a Char value."
 
 description:
   - codeblock:

@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Unconditioned case branch after a conditioned branch"
+  - "Unconditioned case branch after a conditioned branch."
 
 description:
   - codeblock:

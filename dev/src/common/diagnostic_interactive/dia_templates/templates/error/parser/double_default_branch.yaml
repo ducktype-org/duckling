@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Case expression with two default branches"
+  - "Case expression with two default branches."
 
 description:
   - codeblock:

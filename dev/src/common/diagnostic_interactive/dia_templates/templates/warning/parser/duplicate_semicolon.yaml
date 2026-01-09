@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Duplicate semicolon"
+  - "Duplicate semicolon."
 
 description:
   - codeblock:

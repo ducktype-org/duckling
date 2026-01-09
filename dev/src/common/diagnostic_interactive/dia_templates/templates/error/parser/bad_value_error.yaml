@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Expected a value"
+  - "Expected a value."
 
 description:
   - codeblock:

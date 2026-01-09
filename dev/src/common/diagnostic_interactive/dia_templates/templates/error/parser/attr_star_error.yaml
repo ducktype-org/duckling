@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Unexpected `.*` in Attribute name"
+  - "Unexpected `.*` in Attribute name."
 
 description:
   - codeblock:

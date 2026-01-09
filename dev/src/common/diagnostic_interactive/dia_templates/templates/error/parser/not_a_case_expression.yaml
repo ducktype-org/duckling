@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Not a case expression"
+  - "Not a case expression."
 
 description:
   - codeblock:

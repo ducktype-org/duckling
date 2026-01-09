@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Only function and class declarations are allowed inside extern()"
+  - "Only function and class declarations are allowed inside extern()."
 
 description:
   - codeblock:

@@ -14,7 +14,7 @@ params:
     description: "The location of the code snippet."
 
 header_message:
-  - "Multiple assignments in one expression"
+  - "Multiple assignments in one expression."
 
 description:
   - codeblock:

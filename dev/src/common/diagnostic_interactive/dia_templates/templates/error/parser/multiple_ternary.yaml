@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "Multiple repeating ternary components in a single expression"
+  - "Multiple repeating ternary components in a single expression."
 
 description:
   - codeblock:
