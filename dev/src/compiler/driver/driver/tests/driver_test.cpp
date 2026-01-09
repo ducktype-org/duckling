@@ -18,9 +18,9 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
+#include <array>
 #include <filesystem>
 #include <iostream>
-#include <unordered_set>
 
 namespace {
 	std::string package_name = "driver_test_package";
@@ -71,72 +71,31 @@ private:
 		// Helper lambdas for this test
 		// ================================================================================
 
-		// Checks if a node's query is registered (needed before calling getData())
-		auto isRegisteredNode = [](const query::internal::NodeID& node) -> bool {
-			// For unregistered (dummy) nodes from previous graph, getData() will throw.
-			// We use a try-catch approach since there's no direct public API.
-			try {
-				(void) node.q_id.getData();
-				return true;
-			} catch (...) { return false; }
-		};
+		// Collects (all) stable dependencies of NodeID
+		auto collect_stable_dependencies
+			= [](const query::internal::QueryGraph& graph,
+		         const query::internal::NodeID&     node) -> std::vector<query::internal::NodeID> {
+			std::vector<query::internal::NodeID> result;
 
-		// Checks if a node uses stable hashing
-		auto isStableNode = [&isRegisteredNode](const query::internal::NodeID& node) -> bool {
-			if (!isRegisteredNode(node)) return false;
-			return node.q_id.getData().usesStableHashing();
-		};
-
-		// Checks if a node is an Input or SideInput query
-		auto isInputNode = [&isRegisteredNode](const query::internal::NodeID& node) -> bool {
-			if (!isRegisteredNode(node)) return false;
-			return node.q_id.getData().isInputQuery();
-		};
-
-		// Collects SideInput/Input dependencies for a node (direct dependencies only)
-		auto collectInputDependencies
-			= [&isInputNode](
-				  const query::internal::QueryGraph& graph, const query::internal::NodeID& node
-			  ) -> std::unordered_set<query::internal::NodeID> {
-			std::unordered_set<query::internal::NodeID> result;
-			if (!graph.nodeExists(node)) return result;
-
-			const auto& deps = graph.getDirectDependencies(node);
-			for (const auto& dep: deps) {
-				if (isInputNode(dep)) { result.insert(dep); }
-			}
-			return result;
-		};
-
-		// Collects Stable node dependencies for a node (direct dependencies only)
-		auto collectStableDependencies
-			= [&isStableNode](
-				  const query::internal::QueryGraph& graph, const query::internal::NodeID& node
-			  ) -> std::unordered_set<query::internal::NodeID> {
-			std::unordered_set<query::internal::NodeID> result;
-			if (!graph.nodeExists(node)) return result;
-
-			const auto& deps = graph.getDirectDependencies(node);
-			for (const auto& dep: deps) {
-				if (isStableNode(dep)) { result.insert(dep); }
-			}
+			const auto& deps = graph.getNodeDeps(node);
+			for (const auto& dep: deps)
+				if (dep.q_id.getData().usesStableHashing()) result.push_back(dep);
 			return result;
 		};
 
 		// Build parent map: for each node, list nodes that have it as a child (dependency)
-		auto buildParentMap =
-			[](const query::internal::QueryGraph& graph)
-			-> base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
+		auto build_parent_map
+			= [](const query::internal::QueryGraph& graph
+		      ) -> base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
 			base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
 
-			for (const auto& node: graph.getAllNodes()) {
-				parents.try_emplace(node, std::vector<query::internal::NodeID>{});
-			}
+			for (const auto& node: graph.getAllNodes())
+				parents.emplace(node, std::vector<query::internal::NodeID>{});
 
 			for (const auto& node: graph.getAllNodes()) {
 				for (const auto& child: graph.getDirectDependencies(node)) {
-					auto [it, _]
-						= parents.try_emplace(child, std::vector<query::internal::NodeID>{});
+					auto it = parents.find(child);
+					CORE_ASSERT(it != parents.end(), "Node not it the map, graph is inconsistent");
 					it->second.push_back(node);
 				}
 			}
@@ -144,51 +103,93 @@ private:
 			return parents;
 		};
 
-		// ================================================================================
-		// Test setup: Compile a package with a unique package_id
-		// ================================================================================
-		const std::string unique_package_id = "graph_consistency_test_package";
+		auto compare_nodes = [](query::internal::NodeID first,
+		                        query::internal::NodeID second) -> bool { return first < second; };
 
-		global_state::PackageInfo package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/import_simple")), unique_package_id),
+		// Compare if two vectors have the same NodeIDs inside
+		auto are_node_vectors_same = [&compare_nodes](
+										 std::vector<query::internal::NodeID>& first,
+										 std::vector<query::internal::NodeID>& second
+									 ) -> bool {
+			std::ranges::sort(first, compare_nodes);
+			std::ranges::sort(second, compare_nodes);
+			return first == second;
 		};
 
-		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::LLVM,
-			{ .external_static_libraries = {}, .link_c_standard_library = true }
+		// ================================================================================
+		// Sanity check: this test must run before any other tests
+		// ================================================================================
+		auto ctx_state          = query::internal::ContextAccess::getState();
+		auto initial_graph_view = ctx_state->getGraphMutable();
+		assertTrue(
+			initial_graph_view->getAllNodes().empty(),
+			"graphConsistencyAfterOptimizationTest must run before other driver tests to keep the"
+			" compilation graph clean"
 		);
+
+		// ================================================================================
+		// Precompile all modules used across other driver tests with unique package names
+		// This is done to test the graph optimization as good as possible
+		// ================================================================================
+		struct PrecompileInfo {
+			const char* module_path;
+			const char* package_prefix;
+		};
+
+		constexpr std::array PRECOMPILE_MODULES{
+			PrecompileInfo{ .module_path    = "modules/functions_1",
+			                .package_prefix = "graph_consistency_functions_1" },
+			PrecompileInfo{ .module_path    = "modules/functions_2",
+			                .package_prefix = "graph_consistency_functions_2" },
+			PrecompileInfo{ .module_path    = "modules/functions_3",
+			                .package_prefix = "graph_consistency_functions_3" },
+			PrecompileInfo{ .module_path    = "modules/functions_4",
+			                .package_prefix = "graph_consistency_functions_4" },
+			PrecompileInfo{ .module_path    = "modules/globals",
+			                .package_prefix = "graph_consistency_globals" },
+			PrecompileInfo{ .module_path    = "modules/globals_initialization",
+			                .package_prefix = "graph_consistency_globals_init" },
+			PrecompileInfo{ .module_path    = "modules/import_simple",
+			                .package_prefix = "graph_consistency_import_simple" }
+		};
+
+		std::size_t precompile_suffix = 0;
+		for (const auto& info: PRECOMPILE_MODULES) {
+			std::string package_id = info.package_prefix;
+			package_id += "_";
+			package_id += std::to_string(precompile_suffix++);
+
+			global_state::PackageInfo package_info{
+				.root_module
+				= frontend::createModuleTree(fs::File(path(info.module_path)), package_id),
+			};
+
+			driver::compileEntirePackage(
+				package_info,
+				driver::BackendType::LLVM,
+				{ .external_static_libraries = {}, .link_c_standard_library = true }
+			);
+		}
+
+		// ================================================================================
+		// Test setup
+		// ================================================================================
 
 		// Get the graph before optimization
 		auto graph_before_opt = query::internal::ContextAccess::getState()->getGraphMutable();
 
-		// std::cout << "Graph before optimization:\n\n";
-		// graph_before_opt->debugPrint(std::cout);
-
-		// Collect stable nodes and input nodes BEFORE optimization
-		std::vector<query::internal::NodeID>        stable_nodes_before;
-		std::vector<query::internal::NodeID>        input_nodes_before;
-		for (const auto& node: graph_before_opt->getAllNodes()) {
-			if (isStableNode(node)) { stable_nodes_before.push_back(node); }
-			if (isInputNode(node)) { input_nodes_before.push_back(node); }
-		}
-
-		// Collect input dependencies for each stable node BEFORE optimization
-		base::HashMap<query::internal::NodeID, std::unordered_set<query::internal::NodeID>>
-			stable_input_deps_before;
-		for (const auto& stable_node: stable_nodes_before) {
-			stable_input_deps_before.put(
-				stable_node, collectInputDependencies(*graph_before_opt, stable_node)
-			);
-		}
+		// Collect stable nodes BEFORE optimization (note then Input nodes are included)
+		std::vector<query::internal::NodeID> stable_nodes_before;
+		for (const auto& node: graph_before_opt->getAllNodes())
+			if (node.q_id.getData().usesStableHashing()) stable_nodes_before.push_back(node);
 
 		// Collect stable dependencies for each stable node BEFORE optimization
-		base::HashMap<query::internal::NodeID, std::unordered_set<query::internal::NodeID>>
-			stable_stable_deps_before;
+		// This also include input dependencies
+		base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
+			stable_deps_before;
 		for (const auto& stable_node: stable_nodes_before) {
-			stable_stable_deps_before.put(
-				stable_node, collectStableDependencies(*graph_before_opt, stable_node)
+			stable_deps_before.put(
+				stable_node, collect_stable_dependencies(*graph_before_opt, stable_node)
 			);
 		}
 
@@ -199,17 +200,15 @@ private:
 		// Get the graph AFTER optimization
 		auto graph = query::internal::ContextAccess::getState()->getGraphMutable();
 
-		// std::cout << "\nGraph after optimization:\n\n";
-		// graph->debugPrint(std::cout);
-
 		// Build parent map for the optimized graph
-		auto parents = buildParentMap(*graph);
+		auto parents = build_parent_map(*graph);
 
 		// Get all nodes in the graph
 		auto all_nodes = graph->getAllNodes();
 
 		// ================================================================================
-		// CHECK 1: All children referenced in the graph must exist as keys in the graph
+		// CHECK 1: - Graph consistency - all children referenced in the graph must exist as keys in
+		// the graph
 		// ================================================================================
 		for (const auto& node: all_nodes) {
 			const auto& deps = graph->getDirectDependencies(node);
@@ -226,154 +225,79 @@ private:
 
 		// ================================================================================
 		// CHECK 2: Only stable nodes can have no parents (be roots)
-		// All non-stable nodes must have at least one parent
+		// All non-stable nodes must have at least two parents
+		// This is because unstable Node with one (or zero) parents can be removed
 		// ================================================================================
 		for (const auto& node: all_nodes) {
-			auto parent_opt = parents.atMaybe(node);
-			bool has_no_parents
-				= !parent_opt.has_value() || parent_opt.value()->empty();
+			CORE_ASSERT(parents.contains(node), "Node not found in parents map");
+			const auto& parent_opt = parents.at(node);
 
-			if (has_no_parents) {
+			if (!node.q_id.getData().usesStableHashing()) {
 				assertTrue(
-					isStableNode(node),
-					base::strConcat(
-						"Graph inconsistency: non-stable node has no parents (is a root). "
-						"Only stable nodes can be roots."
-					)
+					parent_opt.size() > 1,
+					base::strConcat("Graph not-optimal: non-stable node has less than a two parents"
+				                    "Only stable nodes can be roots or have only one parent")
 				);
 			}
 		}
 
 		// ================================================================================
-		// CHECK 3: All non-stable nodes must either:
-		// - Be SideInput/Input (and have no children), OR
-		// - Have MORE than one child (cannot have 0 or 1 children)
-		// This is because nodes with 0 or 1 children should be trimmed/collapsed during optimization
+		// CHECK 3: All non-stable nodes must have MORE than one child (cannot have 0 or 1 children)
+		// This is because nodes with 0 or 1 children should be trimmed/collapsed during
+		// optimization As they can be easy optimised
 		// ================================================================================
 		for (const auto& node: all_nodes) {
-			if (isStableNode(node)) { continue; }  // Skip stable nodes
+			if (node.q_id.getData().usesStableHashing()) { continue; }  // Skip stable nodes
 
-			const auto& deps          = graph->getDirectDependencies(node);
-			bool        is_input_node = isInputNode(node);
-
-			if (is_input_node) {
-				// SideInput/Input nodes must have no children (they are leaves)
-				assertTrue(
-					deps.empty(),
-					base::strConcat(
-						"Graph inconsistency: SideInput/Input node has children. "
-						"Input nodes should have no dependencies."
-					)
-				);
-			} else {
-				// Non-stable, non-input nodes must have MORE than one child
-				// Nodes with 0 children are leaves and should be trimmed
-				// Nodes with 1 child should be collapsed into their parent
-				assertTrue(
-					deps.size() > 1,
-					base::strConcat(
-						"Graph inconsistency: non-stable, non-input node '",
-						node.q_id.getData().name,
-						"' has ",
-						std::to_string(deps.size()),
-						" children. Such nodes must have more than 1 child after optimization."
-					)
-				);
-			}
+			const auto& deps = graph->getDirectDependencies(node);
+			// Non-stable, non-input nodes must have MORE than one child
+			// Nodes with 0 children are leaves and should be trimmed
+			// Nodes with 1 child should be collapsed into their parent
+			assertTrue(
+				deps.size() > 1,
+				base::strConcat(
+					"Graph not-optimal: non-stable node '",
+					node.q_id.getData().name,
+					"' has ",
+					std::to_string(deps.size()),
+					" children. Such nodes must have more than 1 child after optimization."
+				)
+			);
 		}
 
 		// ================================================================================
-		// CHECK 4: All stable nodes and input nodes from before optimization
+		// CHECK 4: All stable nodes from before optimization
 		// must still exist in the graph after optimization
 		// ================================================================================
 		for (const auto& stable_node: stable_nodes_before) {
 			assertTrue(
 				graph->nodeExists(stable_node),
-				base::strConcat(
-					"Graph inconsistency: stable node was removed during optimization. "
-					"Stable nodes must be preserved."
-				)
-			);
-		}
-
-		for (const auto& input_node: input_nodes_before) {
-			assertTrue(
-				graph->nodeExists(input_node),
-				base::strConcat(
-					"Graph inconsistency: input node (SideInput/Input) was removed during "
-					"optimization. Input nodes must be preserved."
-				)
+				base::strConcat("Graph inconsistency: stable node was removed during optimization. "
+			                    "Stable nodes must be preserved.")
 			);
 		}
 
 		// ================================================================================
-		// CHECK 5: For each stable node, its SideInput/Input dependencies
-		// must be the same before and after optimization
-		// ================================================================================
-		for (const auto& stable_node: stable_nodes_before) {
-			auto input_deps_after = collectInputDependencies(*graph, stable_node);
-			auto input_deps_before_opt = stable_input_deps_before.atMaybe(stable_node);
-
-			ASSERT_TRUE(input_deps_before_opt.has_value());
-
-			const auto& input_deps_before_set = *input_deps_before_opt.value();
-
-			// Check that both sets are equal (same elements, order doesn't matter)
-			assertTrue(
-				input_deps_before_set.size() == input_deps_after.size(),
-				base::strConcat(
-					"Graph inconsistency: stable node has different number of input dependencies "
-					"before (",
-					std::to_string(input_deps_before_set.size()),
-					") and after (",
-					std::to_string(input_deps_after.size()),
-					") optimization."
-				)
-			);
-
-			for (const auto& dep: input_deps_before_set) {
-				assertTrue(
-					input_deps_after.contains(dep),
-					base::strConcat(
-						"Graph inconsistency: stable node lost an input dependency after "
-						"optimization."
-					)
-				);
-			}
-
-			for (const auto& dep: input_deps_after) {
-				assertTrue(
-					input_deps_before_set.contains(dep),
-					base::strConcat(
-						"Graph inconsistency: stable node gained an unexpected input dependency "
-						"after optimization."
-					)
-				);
-			}
-		}
-
-		// ================================================================================
-		// CHECK 6: For each stable node, its stable dependencies
+		// CHECK 5: For each stable node, its stable dependencies (this includes inputs)
 		// must be preserved after optimization (stable-to-stable edges are never removed)
 		// ================================================================================
 		for (const auto& stable_node: stable_nodes_before) {
-			auto stable_deps_after = collectStableDependencies(*graph, stable_node);
-			auto stable_deps_before_opt = stable_stable_deps_before.atMaybe(stable_node);
+			auto stable_deps_after      = collect_stable_dependencies(*graph, stable_node);
+			auto stable_deps_before_opt = stable_deps_before.atMaybe(stable_node);
 
+			// Nodes should not be added - if in the fueature we allow that, this test needs to be
+			// updated
 			ASSERT_TRUE(stable_deps_before_opt.has_value());
 
-			const auto& stable_deps_before_set = *stable_deps_before_opt.value();
-
 			// All stable dependencies from before must still exist after optimization
-			for (const auto& dep: stable_deps_before_set) {
-				assertTrue(
-					stable_deps_after.contains(dep),
-					base::strConcat(
-						"Graph inconsistency: stable node lost a stable dependency after "
-						"optimization. Stable-to-stable edges must be preserved."
-					)
-				);
-			}
+			// hthissi include input nodes
+			assertTrue(
+				are_node_vectors_same(*stable_deps_before_opt.value(), stable_deps_after),
+				base::strConcat(
+					"Graph inconsistency: stable dependencies of stable node '",
+					stable_node.q_id.getData().name
+				)
+			);
 		}
 	}
 
