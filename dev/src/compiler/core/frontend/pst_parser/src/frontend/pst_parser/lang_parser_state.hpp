@@ -123,7 +123,8 @@ namespace pst {
 			return skipped_entries_depth == 0;
 		}
 
-		void fail([[maybe_unused]]i64 rel_pos, [[maybe_unused]]const std::string& message) override {
+		void fail([[maybe_unused]] i64 rel_pos, [[maybe_unused]] const std::string& message)
+			override {
 			CORE_PANIC("old fail is unsupported for language parsing");
 		}
 
