@@ -726,7 +726,6 @@ namespace compiler::helios {
 				} else {
 					break;
 				}
-				specifiers.emplace_back(pst_element.dynamicCast<pst::StmtSpecifier>().value());
 			}
 
 			return specifiers;
