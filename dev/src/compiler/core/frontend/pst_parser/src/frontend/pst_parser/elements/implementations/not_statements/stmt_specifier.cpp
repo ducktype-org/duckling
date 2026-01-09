@@ -32,14 +32,19 @@ namespace pst {
 		auto out      = makeBox<StmtSpecifier>(position);
 
 		auto keyword = state[0].asKeyword();
-		if (!assertStmtChoice<StmtSpecifier>(state, lang_def::keywordFlags(keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)))
+		if (!assertStmtChoice<StmtSpecifier>(
+				state,
+				lang_def::keywordFlags(keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+			))
 			return nullptr;
 
 		if (SPECIFIEIRS_CALL_LIST_REQUIRED.contains(keyword)) {
 			state.parse(out).one(&out->specifier);
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
-				state.logSafeError(makeBox<NoExternArgumentError>(dia::SourcePosition(state.getPosition())));
+				state.logSafeError(
+					makeBox<NoExternArgumentError>(dia::SourcePosition(state.getPosition()))
+				);
 				return out;
 			}
 

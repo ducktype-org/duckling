@@ -1,7 +1,8 @@
 
-#include "preamble.hpp"
 #include "../../hierarchy/statements/specifier_block.hpp"
-#include "../../hierarchy/not_statements/code_block.hpp" // IWYU pragma: keep
+
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
@@ -31,9 +32,9 @@ namespace pst {
 		return partial_hash;
 	}
 
-	bool SpecifierBlock::trailingSemicolon() {
-		return false;
-	}
+	bool SpecifierBlock::trailingSemicolon() { return false; }
 
-	void SpecifierBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitSpecifierBlock(*this); }
+	void SpecifierBlock::acceptVisitor(PstVisitor& visitor) const {
+		visitor.visitSpecifierBlock(*this);
+	}
 }

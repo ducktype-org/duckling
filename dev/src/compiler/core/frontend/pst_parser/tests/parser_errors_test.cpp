@@ -101,11 +101,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID("unnamed")} {}
+			  context{ .name = base::StrID("unnamed") } {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID(class_name.c_str())} {}
+			  context{ .name = base::StrID(class_name.c_str()) } {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
@@ -257,11 +257,11 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
-	ClassStmtExample<pst::ClassStmt, true>  public_access_block{ "public {}" };
-	ClassStmtExample<pst::ClassStmt, true>  private_access_block{ "private {}" };
-	ClassStmtExample<pst::ClassStmt, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::ClassStmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::ClassStmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::ClassStmt, true> protected_access_block{ "protected {}" };
 	ClassStmtExample<pst::ClassStmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::ClassStmt, true>  simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };

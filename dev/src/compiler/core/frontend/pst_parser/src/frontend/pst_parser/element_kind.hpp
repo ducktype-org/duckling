@@ -75,7 +75,8 @@ namespace pst {
 		ClassDestructor,
 
 		// @TODO: #1746 Figure out whether this comment makes sense after changes
-		// note: ClassSpecifierBlock is not here, since it should be invisible to HELIOS (at least for now)
+		// note: ClassSpecifierBlock is not here, since it should be invisible to HELIOS (at least
+		// for now)
 
 		// others:
 		Param,

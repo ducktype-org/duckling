@@ -707,13 +707,12 @@ namespace compiler::helios {
 			// @TODO: #1746 Fix/figure out class handling
 			while (true) {
 				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
-					specifiers.append_range(pst_element.dynamicCast<pst::Stmt>().value()->getSpecifiers());
+					specifiers.append_range(
+						pst_element.dynamicCast<pst::Stmt>().value()->getSpecifiers()
+					);
 				}
 				if (auto result_stmt = getAncestor(
-						ctx,
-						pst_element,
-						pst::ElementKind::CodeBlock,
-						pst::ElementKind::SpecifierBlock
+						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
 					)) {
 					pst_element = *std::move(result_stmt);
 				} else if (auto result_block = getAncestor(

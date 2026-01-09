@@ -166,7 +166,8 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Logs an error that doesn't require skipping to a fallback relatively to the current token.
+		 * @brief Logs an error that doesn't require skipping to a fallback relatively to the
+		 * current token.
 		 */
 		void logSafeError(Box<dia::Message> message) {
 			if (isSkipping()) {

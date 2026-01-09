@@ -4,11 +4,14 @@
 #include "preamble.hpp"
 
 namespace pst {
-	LangElement::HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash
+	) const {
 		return partial_hash;
 	}
 
-	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(
+		LangParserState& state, const ClassContext& ctx
+	) {
 		auto position = state.getPosition();
 		auto out      = makeBox<ClassSpecifierBlock>(position, ctx);
 
@@ -26,5 +29,7 @@ namespace pst {
 		out << "}";
 	}
 
-	void ClassSpecifierBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitClassSpecifierBlock(*this); }
+	void ClassSpecifierBlock::acceptVisitor(PstVisitor& visitor) const {
+		visitor.visitClassSpecifierBlock(*this);
+	}
 }

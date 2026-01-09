@@ -10,7 +10,6 @@ namespace pst {
 	 * They are used to change the visibility of multiple definitions in a class
 	 */
 	class ClassSpecifierBlock final: public ClassStmt {
-
 		NAMED_CHILD(block, ClassBlock);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

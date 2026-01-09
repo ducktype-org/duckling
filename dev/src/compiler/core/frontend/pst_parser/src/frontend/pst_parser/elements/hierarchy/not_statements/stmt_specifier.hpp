@@ -26,6 +26,7 @@ namespace pst {
 		explicit StmtSpecifier(const dia::SourcePosition& position): NotStmt(position) {
 			this->element_kind = ElementKind::StmtSpecifier;
 		}
+
 		static MBox<StmtSpecifier> parse(LangParserState& state);
 
 		~StmtSpecifier() final = default;

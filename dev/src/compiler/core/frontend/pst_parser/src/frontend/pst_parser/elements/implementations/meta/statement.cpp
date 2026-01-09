@@ -184,15 +184,17 @@ namespace pst {
 		PrefixBoxes collect;
 
 		PST_WHILE(
-				as_special == Special::AtSign 
-				|| lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+			as_special == Special::AtSign
+			|| lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+		) {
 			if (as_special == Special::AtSign) {
 				MBox<Attribute> attr = Attribute::parse(state);
 				auto            opt  = std::move(attr).toOptBox();
 				if (opt) collect.attributes.emplace_back(std::move(opt.value()));
-			} else if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
+			} else if (lang_def::keywordFlags(as_keyword)
+			               .contains(lang_def::KeywordFlagsOptions::IsSpecifier)) {
 				MBox<StmtSpecifier> spec = StmtSpecifier::parse(state);
-				auto            opt  = std::move(spec).toOptBox();
+				auto                opt  = std::move(spec).toOptBox();
 				if (opt) collect.specifiers.emplace_back(std::move(opt.value()));
 			}
 
@@ -239,7 +241,9 @@ namespace pst {
 		for (auto& el: sub_elements) {
 			variant_match(el) {
 				variant_case(InternalChild, child) {
-					if (child->getElementKind() == ElementKind::Attribute || child->getElementKind() == ElementKind::StmtSpecifier) continue;
+					if (child->getElementKind() == ElementKind::Attribute
+					    || child->getElementKind() == ElementKind::StmtSpecifier)
+						continue;
 					CORE_PANIC(
 						"Default implementation of calculating element paths cannot handle unnamed "
 						"sub-elements. Encountered while calculating for: "

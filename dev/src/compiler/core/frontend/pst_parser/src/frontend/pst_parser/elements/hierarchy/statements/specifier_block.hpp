@@ -21,16 +21,16 @@ namespace pst {
 		}
 
 		static MBox<SpecifierBlock> parse(LangParserState& state);
-		void             dprint(std::ostream& out) const final;
+		void                        dprint(std::ostream& out) const final;
 		~SpecifierBlock() final = default;
-		bool              trailingSemicolon() override;
+		bool trailingSemicolon() override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Specifier block";
 		}
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		DeclKind isDeclaration() const final {
 			return DeclKind::Transparent;
 		}

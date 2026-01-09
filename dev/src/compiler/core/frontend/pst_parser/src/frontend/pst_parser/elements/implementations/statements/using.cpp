@@ -30,7 +30,7 @@ namespace pst {
 	base::Optional<base::StrID> Using::getDeclSymbolName() const {
 		if (auto child = names.internal()) {
 			if (child->getNames().empty()) return {};
-			return child->getNames().back().value; 
+			return child->getNames().back().value;
 		} else {
 			return {};
 		}

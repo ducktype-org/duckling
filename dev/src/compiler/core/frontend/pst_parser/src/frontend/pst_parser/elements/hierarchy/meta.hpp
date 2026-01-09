@@ -85,7 +85,6 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-
 		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
 		using AttrBoxList = std::vector<Box<Attribute>>;
 
@@ -139,9 +138,7 @@ namespace pst {
 		[[nodiscard]]
 		auto getAttributes() const {
 			std::vector<AccessLocked<Attribute>> attributes;
-			for(auto& attr: prefixes.attributes) {
-				attributes.push_back(attr.give());
-			}
+			for (auto& attr: prefixes.attributes) attributes.push_back(attr.give());
 			return attributes;
 		}
 
@@ -151,9 +148,7 @@ namespace pst {
 		[[nodiscard]]
 		auto getSpecifiers() const {
 			std::vector<AccessLocked<StmtSpecifier>> specifiers;
-			for(auto& spec: prefixes.specifiers) {
-				specifiers.push_back(spec.give());
-			}
+			for (auto& spec: prefixes.specifiers) specifiers.push_back(spec.give());
 			std::ranges::reverse(specifiers);
 			return specifiers;
 		}
@@ -213,7 +208,7 @@ namespace pst {
 	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                     name;
+		base::StrID name;
 	};
 
 	/**

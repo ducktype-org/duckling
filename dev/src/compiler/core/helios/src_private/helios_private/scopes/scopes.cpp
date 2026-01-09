@@ -115,12 +115,13 @@ namespace compiler::helios {
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
 			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::CodeBlockOrStmt || parent_kind == pst::ElementKind::SpecifierBlock)
+			if (parent_kind == pst::ElementKind::CodeBlockOrStmt
+			    || parent_kind == pst::ElementKind::SpecifierBlock)
 				return ElementScopeKind::Transparent;
 			else
 				return ElementScopeKind::Standard;
 		}
-		case pst::ElementKind::CodeBlockOrStmt: 
+		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ClassBlock: {
@@ -394,7 +395,11 @@ namespace compiler::helios {
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					} else {
-						CORE_PANIC("Not handled element ", stmt.unlock(ctx)->elementType()," with DeclKind::Transparent.");
+						CORE_PANIC(
+							"Not handled element ",
+							stmt.unlock(ctx)->elementType(),
+							" with DeclKind::Transparent."
+						);
 					}
 					break;
 				}
