@@ -1107,6 +1107,13 @@ namespace vm::loader::compiler::detail {
 	}
 
 	template<>
+	void MicroBytecodeBuilder::lower<high::Op_resetVTable_lptr>(
+		vm::opargs::StackLocalPtr arg0
+	) {
+		addLow<Op_resetVTable_lptr>(arg0);
+	}
+
+	template<>
 	void MicroBytecodeBuilder::lower<high::Op_upcast_lptr_lptr>(
 		vm::opargs::StackLocalPtr arg0, vm::opargs::StackLocalPtr arg1
 	) {

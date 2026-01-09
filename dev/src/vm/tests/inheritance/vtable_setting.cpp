@@ -1,8 +1,5 @@
 #include <vm_tester_utils.hpp>
 
-#include <base/optional.hpp>
-#include <base/variant.hpp>
-
 #include <vm/api/api.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
