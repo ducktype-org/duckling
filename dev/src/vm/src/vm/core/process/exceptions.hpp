@@ -22,6 +22,7 @@ namespace vm::exceptions {
 
 	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
+	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
 	VM_RUNTIME_EXCEPTION(VMStackOverflowException, "VM stack overflow");
