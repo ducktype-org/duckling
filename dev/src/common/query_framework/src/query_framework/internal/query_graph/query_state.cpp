@@ -234,8 +234,6 @@ namespace query::internal {
 			// deps) This can happen when some Node has multiple parents in the previous graph
 			if (query_graph.node_deps.contains(node)) continue;
 
-			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
-			// Node should exist in previous graph at this point (because its not in current graph yet)
 			CORE_ASSERT(
 				prev_graph.node_deps.contains(node), "Node to merge should exist in previous graph"
 			);
@@ -246,11 +244,19 @@ namespace query::internal {
 				"Node to merge should have color assigned in previous graph"
 			);
 
-			auto prev_handle = prev_graph.node_deps.extract(node);
-			CORE_ASSERT(prev_handle, "Failed to extract node from previous graph during merge");
+			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
+			// Node should exist in previous graph at this point (because its not in current graph yet)
 
-			auto [it, inserted]
-				= query_graph.node_deps.emplace(node, std::move(prev_handle.mapped()));
+			auto prev_it = prev_graph.node_deps.find(node);
+			CORE_ASSERT(
+				prev_it != prev_graph.node_deps.end(),
+				"Failed to find node in previous graph during merge"
+			);
+
+			auto prev_deps = std::move(prev_it->second);
+			prev_graph.node_deps.erase(prev_it);
+
+			auto [it, inserted] = query_graph.node_deps.emplace(node, std::move(prev_deps));
 			CORE_ASSERT(inserted, "Node should not exist in current graph during merge");
 			const auto& deps = it->second;
 

@@ -59,7 +59,10 @@ namespace query::internal {
 		struct PreviousCompilation final {
 			/**
 			 * The query graph from the previous compilation.
-			 * Do not change it, unless you are moving vertices to the current graph.
+			 * Do not assume that this graph will remain unchanged.
+			 * We steal nodes from this graph into the current graph during merging (only green
+			 * nodes can be merged) So you have to be careful when using it. Also do not change
+			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
 			QueryGraph                       graph;
