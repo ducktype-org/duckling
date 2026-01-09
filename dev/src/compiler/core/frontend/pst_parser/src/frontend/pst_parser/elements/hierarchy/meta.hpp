@@ -137,13 +137,25 @@ namespace pst {
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 		[[nodiscard]]
-		auto& getAttributes() const {
-			return prefixes.attributes;
+		auto getAttributes() const {
+			std::vector<AccessLocked<Attribute>> attributes;
+			for(auto& attr: prefixes.attributes) {
+				attributes.push_back(attr.give());
+			}
+			return attributes;
 		}
 
+		/**
+		 * @brief Returns a list of specifiers from last to first.
+		 */
 		[[nodiscard]]
-		auto& getSpecifiers() const {
-			return prefixes.specifiers;
+		auto getSpecifiers() const {
+			std::vector<AccessLocked<StmtSpecifier>> specifiers;
+			for(auto& spec: prefixes.specifiers) {
+				specifiers.push_back(spec.give());
+			}
+			std::ranges::reverse(specifiers);
+			return specifiers;
 		}
 
 		[[nodiscard]]

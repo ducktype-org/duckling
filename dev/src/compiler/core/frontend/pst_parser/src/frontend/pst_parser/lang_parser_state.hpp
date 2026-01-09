@@ -166,6 +166,24 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Logs an error that doesn't require skipping to a fallback relatively to the current token.
+		 */
+		void logSafeError(Box<dia::Message> message) {
+			if (isSkipping()) {
+				CORE_DEV_LOG(
+					Parser,
+					"Skipped parsing message at pos(",
+					message->getSourcePosition().getStartLineColumn(),
+					"): ",
+					message->toString(true),
+					"\n\n"
+				);
+				return;
+			}
+			err->log(std::move(message));
+		}
+
+		/**
 		 * @brief Gives access to automatic parsing tools.
 		 */
 		template<std::derived_from<LangElement> El>

@@ -119,7 +119,15 @@
 								"sourceEnd": 75
 							},
 							"specifiers": [
-								"private",
+								{
+									"position": {
+										"sourceStart": 57,
+										"sourceEnd": 63
+									},
+									"StmtSpecifier": {
+										"specifier": "private",
+									}
+								},
 							],
 							"Class Field": {
 								"is mutable": "true",
@@ -344,7 +352,15 @@
 								"sourceEnd": 178
 							},
 							"specifiers": [
-								"private",
+								{
+									"position": {
+										"sourceStart": 121,
+										"sourceEnd": 127
+									},
+									"StmtSpecifier": {
+										"specifier": "private",
+									}
+								},
 							],
 							"Class Method": {
 								"name": {
@@ -531,10 +547,17 @@
 								"sourceEnd": 373
 							},
 							"specifiers": [
-								"public",
+								{
+									"position": {
+										"sourceStart": 200,
+										"sourceEnd": 205
+									},
+									"StmtSpecifier": {
+										"specifier": "public",
+									}
+								},
 							],
 							"Access specification block": {
-								"specifier": "public",
 								"code block": {
 									"position": {
 										"sourceStart": 207,
@@ -546,9 +569,6 @@
 												"sourceStart": 211,
 												"sourceEnd": 235
 											},
-											"specifiers": [
-												"public",
-											],
 											"Non Class Statement": {
 												"internal stmt": {
 													"position": {
@@ -586,9 +606,6 @@
 												"sourceStart": 240,
 												"sourceEnd": 282
 											},
-											"specifiers": [
-												"public",
-											],
 											"Class Constructor": {
 												"name": "create",
 												"params": {
@@ -771,9 +788,6 @@
 												"sourceStart": 288,
 												"sourceEnd": 316
 											},
-											"specifiers": [
-												"public",
-											],
 											"Copy Constructor": {
 												"name": "copy",
 												"params": {
@@ -848,9 +862,6 @@
 												"sourceStart": 321,
 												"sourceEnd": 348
 											},
-											"specifiers": [
-												"public",
-											],
 											"Class Constructor": {
 												"name": "abc",
 												"params": {
@@ -919,9 +930,6 @@
 												"sourceStart": 353,
 												"sourceEnd": 370
 											},
-											"specifiers": [
-												"public",
-											],
 											"Class Destructor": {
 												"body": {
 													"position": {

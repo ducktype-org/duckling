@@ -7,11 +7,11 @@
 #include <diagnostic/message.hpp>
 
 namespace pst {
-	class BadCallError final: public dia::Error {
+	class NoExternArgumentError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected a round bracket call expression";
+			return "Expected an extern argument";
 		}
 
 	public:
@@ -20,7 +20,7 @@ namespace pst {
 			return Domain::Parser;
 		}
 
-		BadCallError(dia::SourcePosition pos): dia::Error(pos) {}
+		NoExternArgumentError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	const std::set<Keyword> StmtSpecifier::SPECIFIEIRS_CALL_LIST_REQUIRED(
@@ -39,8 +39,8 @@ namespace pst {
 			state.parse(out).one(&out->specifier);
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
-				state.log(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
-				return nullptr;
+				state.logSafeError(makeBox<NoExternArgumentError>(dia::SourcePosition(state.getPosition())));
+				return out;
 			}
 
 			state.parse(out).goDown();

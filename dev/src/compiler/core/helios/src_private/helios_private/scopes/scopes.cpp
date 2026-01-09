@@ -7,7 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
@@ -107,24 +107,22 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Import:
 		case pst::ElementKind::DottedName:
+		// I don't know if this is correct
+		case pst::ElementKind::StmtSpecifier:
 			return ElementScopeKind::Invalid;
 
 
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
 			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::CodeBlockOrStmt)
+			if (parent_kind == pst::ElementKind::CodeBlockOrStmt || parent_kind == pst::ElementKind::SpecifierBlock)
 				return ElementScopeKind::Transparent;
 			else
 				return ElementScopeKind::Standard;
 		}
-		case pst::ElementKind::CodeBlockOrStmt: {
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::StmtSpecifier)
-				return ElementScopeKind::Transparent;
-			else
-				return ElementScopeKind::Standard;
-		}
+		case pst::ElementKind::CodeBlockOrStmt: 
+			return ElementScopeKind::Standard;
+
 		case pst::ElementKind::ClassBlock: {
 			// @TODO: #1746 changes incoming
 			// This is because AccessBlocks store a ClassBlock inside.
@@ -135,6 +133,10 @@ namespace compiler::helios {
 			else
 				return ElementScopeKind::Transparent;
 		}
+
+		// I don't know if this is correct
+		case pst::ElementKind::SpecifierBlock:
+			return ElementScopeKind::Transparent;
 
 
 		case pst::ElementKind::Namespace:
@@ -147,7 +149,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
-		case pst::ElementKind::StmtSpecifier:
 		case pst::ElementKind::FunDecl:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
@@ -380,10 +381,10 @@ namespace compiler::helios {
 				}
 				case pst::DeclKind::Transparent: {
 					if (auto stmt_specifier_opt
-					    = stmt.unlock(ctx).template dynamicCast<pst::StmtSpecifier>()) {
+					    = stmt.unlock(ctx).template dynamicCast<pst::SpecifierBlock>()) {
 						auto stmt_specifier = stmt_specifier_opt.value();
 						auto inner_symbols  = filterSymbolsFromStmtList(
-                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
+                            ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getBlock())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
 					} else if (auto using_opt
@@ -393,7 +394,7 @@ namespace compiler::helios {
 						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 						symbols.emplace_back(sym_id);
 					} else {
-						CORE_PANIC("Not handled element with DeclKind::Transparent.");
+						CORE_PANIC("Not handled element ", stmt.unlock(ctx)->elementType()," with DeclKind::Transparent.");
 					}
 					break;
 				}

@@ -701,26 +701,26 @@ namespace compiler::helios {
 
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
-			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
-			// or "Stmt" child.
+			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//
-			// So single statement can have a specifier when it is wrapped in
-			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
-			// "StmtSpecifier".
+			// The Class situation is a bit more complicated
+			// @TODO: #1746 Fix/figure out class handling
 			while (true) {
+				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
+					specifiers.append_range(pst_element.dynamicCast<pst::Stmt>().value()->getSpecifiers());
+				}
 				if (auto result_stmt = getAncestor(
 						ctx,
 						pst_element,
-						pst::ElementKind::CodeBlockOrStmt,
-						pst::ElementKind::StmtSpecifier
+						pst::ElementKind::CodeBlock,
+						pst::ElementKind::SpecifierBlock
 					)) {
 					pst_element = *std::move(result_stmt);
 				} else if (auto result_block = getAncestor(
 							   ctx,
 							   pst_element,
-							   pst::ElementKind::CodeBlock,
-							   pst::ElementKind::CodeBlockOrStmt,
-							   pst::ElementKind::StmtSpecifier
+							   pst::ElementKind::ClassBlock,
+							   pst::ElementKind::ClassSpecifierBlock
 						   )) {
 					pst_element = *std::move(result_block);
 				} else {

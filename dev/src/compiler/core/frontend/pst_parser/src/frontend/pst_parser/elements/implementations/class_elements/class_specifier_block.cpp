@@ -20,7 +20,7 @@ namespace pst {
 	void ClassSpecifierBlock::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"(, "code block": )";
+		out << R"("code block": )";
 		nullAwareDprint(block, out);
 
 		out << "}";

@@ -23,6 +23,7 @@ namespace pst {
 		static MBox<SpecifierBlock> parse(LangParserState& state);
 		void             dprint(std::ostream& out) const final;
 		~SpecifierBlock() final = default;
+		bool              trailingSemicolon() override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

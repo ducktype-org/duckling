@@ -8,7 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/symbols/symbol_data.hpp>

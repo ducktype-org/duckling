@@ -9,455 +9,451 @@
 				"sourceStart": 0,
 				"sourceEnd": 233
 			},
-			"StmtSpecifier": {
-				"specifier": "public",
-				"stmt": {
+			"specifiers": [
+				{
 					"position": {
-						"sourceStart": 7,
+						"sourceStart": 0,
+						"sourceEnd": 5
+					},
+					"StmtSpecifier": {
+						"specifier": "public",
+					}
+				},
+			],
+			"Function": {
+				"name": {
+					"Name": "foo"
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 14,
+						"sourceEnd": 15
+					},
+					"function parameter list": []
+				},
+				"return": "unit",
+				"body": {
+					"position": {
+						"sourceStart": 19,
 						"sourceEnd": 233
 					},
 					"Code Block or Statement": {
 						"position": {
-							"sourceStart": 7,
+							"sourceStart": 19,
 							"sourceEnd": 233
 						},
-						"Function": {
-							"name": {
-								"Name": "foo"
-							},
-							"parameters": {
+						"Code Block": [
+							{
 								"position": {
-									"sourceStart": 14,
-									"sourceEnd": 15
+									"sourceStart": 22,
+									"sourceEnd": 34
 								},
-								"function parameter list": []
-							},
-							"return": "unit",
-							"body": {
-								"position": {
-									"sourceStart": 19,
-									"sourceEnd": 233
-								},
-								"Code Block or Statement": {
-									"position": {
-										"sourceStart": 19,
-										"sourceEnd": 233
+								"Let": {
+									"name": {
+										"Name": "a"
 									},
-									"Code Block": [
-										{
-											"position": {
-												"sourceStart": 22,
-												"sourceEnd": 34
-											},
-											"Let": {
-												"name": {
-													"Name": "a"
+									"mutable": false,
+									"type": {
+										"position": {
+											"sourceStart": 29,
+											"sourceEnd": 29
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 29,
+													"sourceEnd": 29
 												},
-												"mutable": false,
-												"type": {
-													"position": {
-														"sourceStart": 29,
-														"sourceEnd": 29
-													},
-													"Top Level Expression": {
-														"expr": {
-															"position": {
-																"sourceStart": 29,
-																"sourceEnd": 29
-															},
-															"Identifier Expression": {
-																"name": {
-																	"Name": "T"
-																}
-															}
-														}
-													}
-												},
-												"value": {
-													"position": {
-														"sourceStart": 33,
-														"sourceEnd": 33
-													},
-													"Top Level Expression": {
-														"expr": {
-															"position": {
-																"sourceStart": 33,
-																"sourceEnd": 33
-															},
-															"Value Expr": {
-																"number": "5"
-															}
-														}
+												"Identifier Expression": {
+													"name": {
+														"Name": "T"
 													}
 												}
 											}
+										}
+									},
+									"value": {
+										"position": {
+											"sourceStart": 33,
+											"sourceEnd": 33
 										},
-										{
-											"position": {
-												"sourceStart": 37,
-												"sourceEnd": 52
-											},
-											"Action": {
-												"kind": "Defer",
-												"value": {
-													"position": {
-														"sourceStart": 43,
-														"sourceEnd": 51
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 33,
+													"sourceEnd": 33
+												},
+												"Value Expr": {
+													"number": "5"
+												}
+											}
+										}
+									}
+								}
+							},
+							{
+								"position": {
+									"sourceStart": 37,
+									"sourceEnd": 52
+								},
+								"Action": {
+									"kind": "Defer",
+									"value": {
+										"position": {
+											"sourceStart": 43,
+											"sourceEnd": 51
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 43,
+													"sourceEnd": 51
+												},
+												"Chain Expression": {
+													"atom": {
+														"position": {
+															"sourceStart": 43,
+															"sourceEnd": 43
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "a"
+															}
+														}
 													},
-													"Top Level Expression": {
-														"expr": {
+													"chain": [
+														{
 															"position": {
-																"sourceStart": 43,
+																"sourceStart": 44,
+																"sourceEnd": 49
+															},
+															"Access Expression": {
+																"type": ".",
+																"name": {
+																	"Name": "close"
+																}
+															}
+														},
+														{
+															"position": {
+																"sourceStart": 50,
 																"sourceEnd": 51
 															},
-															"Chain Expression": {
-																"atom": {
+															"Call Expression": {
+																"type": "()",
+																"arguments": {
 																	"position": {
-																		"sourceStart": 43,
-																		"sourceEnd": 43
+																		"sourceStart": 51,
+																		"sourceEnd": 51
 																	},
-																	"Identifier Expression": {
-																		"name": {
-																			"Name": "a"
-																		}
-																	}
-																},
-																"chain": [
-																	{
-																		"position": {
-																			"sourceStart": 44,
-																			"sourceEnd": 49
-																		},
-																		"Access Expression": {
-																			"type": ".",
-																			"name": {
-																				"Name": "close"
-																			}
-																		}
-																	},
-																	{
-																		"position": {
-																			"sourceStart": 50,
-																			"sourceEnd": 51
-																		},
-																		"Call Expression": {
-																			"type": "()",
-																			"arguments": {
-																				"position": {
-																					"sourceStart": 51,
-																					"sourceEnd": 51
-																				},
-																				"call list": []
-																			}
-																		}
-																	}
-																]
-															}
-														}
-													}
-												}
-											}
-										},
-										{
-											"position": {
-												"sourceStart": 56,
-												"sourceEnd": 218
-											},
-											"While": {
-												"name": {
-													"Name": "A"
-												},
-												"condition": {
-													"position": {
-														"sourceStart": 64,
-														"sourceEnd": 69
-													},
-													"Round Group Expression": {
-														"position": {
-															"sourceStart": 65,
-															"sourceEnd": 68
-														},
-														"Top Level Expression": {
-															"expr": {
-																"position": {
-																	"sourceStart": 65,
-																	"sourceEnd": 68
-																},
-																"Keyword Expression": {
-																	"keyword": "true"
+																	"call list": []
 																}
 															}
 														}
-													}
-												},
-												"body": {
+													]
+												}
+											}
+										}
+									}
+								}
+							},
+							{
+								"position": {
+									"sourceStart": 56,
+									"sourceEnd": 218
+								},
+								"While": {
+									"name": {
+										"Name": "A"
+									},
+									"condition": {
+										"position": {
+											"sourceStart": 64,
+											"sourceEnd": 69
+										},
+										"Round Group Expression": {
+											"position": {
+												"sourceStart": 65,
+												"sourceEnd": 68
+											},
+											"Top Level Expression": {
+												"expr": {
 													"position": {
-														"sourceStart": 71,
-														"sourceEnd": 218
+														"sourceStart": 65,
+														"sourceEnd": 68
 													},
-													"Code Block or Statement": {
-														"position": {
-															"sourceStart": 71,
-															"sourceEnd": 218
+													"Keyword Expression": {
+														"keyword": "true"
+													}
+												}
+											}
+										}
+									},
+									"body": {
+										"position": {
+											"sourceStart": 71,
+											"sourceEnd": 218
+										},
+										"Code Block or Statement": {
+											"position": {
+												"sourceStart": 71,
+												"sourceEnd": 218
+											},
+											"Code Block": [
+												{
+													"position": {
+														"sourceStart": 75,
+														"sourceEnd": 215
+													},
+													"While": {
+														"name": {
+															"Name": "B"
 														},
-														"Code Block": [
-															{
+														"condition": {
+															"position": {
+																"sourceStart": 83,
+																"sourceEnd": 88
+															},
+															"Round Group Expression": {
 																"position": {
-																	"sourceStart": 75,
+																	"sourceStart": 84,
+																	"sourceEnd": 87
+																},
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 84,
+																			"sourceEnd": 87
+																		},
+																		"Keyword Expression": {
+																			"keyword": "true"
+																		}
+																	}
+																}
+															}
+														},
+														"body": {
+															"position": {
+																"sourceStart": 90,
+																"sourceEnd": 215
+															},
+															"Code Block or Statement": {
+																"position": {
+																	"sourceStart": 90,
 																	"sourceEnd": 215
 																},
-																"While": {
-																	"name": {
-																		"Name": "B"
-																	},
-																	"condition": {
+																"Code Block": [
+																	{
 																		"position": {
-																			"sourceStart": 83,
-																			"sourceEnd": 88
+																			"sourceStart": 95,
+																			"sourceEnd": 102
 																		},
-																		"Round Group Expression": {
-																			"position": {
-																				"sourceStart": 84,
-																				"sourceEnd": 87
-																			},
-																			"Top Level Expression": {
-																				"expr": {
-																					"position": {
-																						"sourceStart": 84,
-																						"sourceEnd": 87
-																					},
-																					"Keyword Expression": {
-																						"keyword": "true"
+																		"Action": {
+																			"kind": "Break",
+																			"value": {
+																				"position": {
+																					"sourceStart": 101,
+																					"sourceEnd": 101
+																				},
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 101,
+																							"sourceEnd": 101
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "A"
+																							}
+																						}
 																					}
 																				}
 																			}
 																		}
 																	},
-																	"body": {
+																	{
 																		"position": {
-																			"sourceStart": 90,
-																			"sourceEnd": 215
+																			"sourceStart": 107,
+																			"sourceEnd": 112
 																		},
-																		"Code Block or Statement": {
-																			"position": {
-																				"sourceStart": 90,
-																				"sourceEnd": 215
-																			},
-																			"Code Block": [
-																				{
-																					"position": {
-																						"sourceStart": 95,
-																						"sourceEnd": 102
-																					},
-																					"Action": {
-																						"kind": "Break",
-																						"value": {
-																							"position": {
-																								"sourceStart": 101,
-																								"sourceEnd": 101
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 101,
-																										"sourceEnd": 101
-																									},
-																									"Identifier Expression": {
-																										"name": {
-																											"Name": "A"
-																										}
-																									}
-																								}
-																							}
-																						}
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 107,
-																						"sourceEnd": 112
-																					},
-																					"Action": {
-																						"kind": "Break"
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 118,
-																						"sourceEnd": 128
-																					},
-																					"Action": {
-																						"kind": "Continue",
-																						"value": {
-																							"position": {
-																								"sourceStart": 127,
-																								"sourceEnd": 127
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 127,
-																										"sourceEnd": 127
-																									},
-																									"Identifier Expression": {
-																										"name": {
-																											"Name": "B"
-																										}
-																									}
-																								}
-																							}
-																						}
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 133,
-																						"sourceEnd": 141
-																					},
-																					"Action": {
-																						"kind": "Continue"
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 150,
-																						"sourceEnd": 156
-																					},
-																					"Action": {
-																						"kind": "Redo",
-																						"value": {
-																							"position": {
-																								"sourceStart": 155,
-																								"sourceEnd": 155
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 155,
-																										"sourceEnd": 155
-																									},
-																									"Identifier Expression": {
-																										"name": {
-																											"Name": "A"
-																										}
-																									}
-																								}
-																							}
-																						}
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 161,
-																						"sourceEnd": 165
-																					},
-																					"Action": {
-																						"kind": "Redo"
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 174,
-																						"sourceEnd": 183
-																					},
-																					"Action": {
-																						"kind": "Restart",
-																						"value": {
-																							"position": {
-																								"sourceStart": 182,
-																								"sourceEnd": 182
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 182,
-																										"sourceEnd": 182
-																									},
-																									"Identifier Expression": {
-																										"name": {
-																											"Name": "B"
-																										}
-																									}
-																								}
-																							}
-																						}
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 188,
-																						"sourceEnd": 195
-																					},
-																					"Action": {
-																						"kind": "Restart"
-																					}
-																				},
-																				{
-																					"position": {
-																						"sourceStart": 201,
-																						"sourceEnd": 210
-																					},
-																					"Action": {
-																						"kind": "Throw",
-																						"value": {
-																							"position": {
-																								"sourceStart": 207,
-																								"sourceEnd": 209
-																							},
-																							"Top Level Expression": {
-																								"expr": {
-																									"position": {
-																										"sourceStart": 207,
-																										"sourceEnd": 209
-																									},
-																									"Value Expr": {
-																										"number": "123"
-																									}
-																								}
-																							}
-																						}
-																					}
-																				},
-																			]
+																		"Action": {
+																			"kind": "Break"
 																		}
-																	}
-																}
-															},
-														]
-													}
-												}
-											}
-										},
-										{
-											"position": {
-												"sourceStart": 222,
-												"sourceEnd": 231
-											},
-											"Action": {
-												"kind": "Return",
-												"value": {
-													"position": {
-														"sourceStart": 229,
-														"sourceEnd": 230
-													},
-													"Top Level Expression": {
-														"expr": {
-															"position": {
-																"sourceStart": 229,
-																"sourceEnd": 230
-															},
-															"Value Expr": {
-																"number": "12"
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 118,
+																			"sourceEnd": 128
+																		},
+																		"Action": {
+																			"kind": "Continue",
+																			"value": {
+																				"position": {
+																					"sourceStart": 127,
+																					"sourceEnd": 127
+																				},
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 127,
+																							"sourceEnd": 127
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "B"
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 133,
+																			"sourceEnd": 141
+																		},
+																		"Action": {
+																			"kind": "Continue"
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 150,
+																			"sourceEnd": 156
+																		},
+																		"Action": {
+																			"kind": "Redo",
+																			"value": {
+																				"position": {
+																					"sourceStart": 155,
+																					"sourceEnd": 155
+																				},
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 155,
+																							"sourceEnd": 155
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "A"
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 161,
+																			"sourceEnd": 165
+																		},
+																		"Action": {
+																			"kind": "Redo"
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 174,
+																			"sourceEnd": 183
+																		},
+																		"Action": {
+																			"kind": "Restart",
+																			"value": {
+																				"position": {
+																					"sourceStart": 182,
+																					"sourceEnd": 182
+																				},
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 182,
+																							"sourceEnd": 182
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "B"
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 188,
+																			"sourceEnd": 195
+																		},
+																		"Action": {
+																			"kind": "Restart"
+																		}
+																	},
+																	{
+																		"position": {
+																			"sourceStart": 201,
+																			"sourceEnd": 210
+																		},
+																		"Action": {
+																			"kind": "Throw",
+																			"value": {
+																				"position": {
+																					"sourceStart": 207,
+																					"sourceEnd": 209
+																				},
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 207,
+																							"sourceEnd": 209
+																						},
+																						"Value Expr": {
+																							"number": "123"
+																						}
+																					}
+																				}
+																			}
+																		}
+																	},
+																]
 															}
 														}
 													}
+												},
+											]
+										}
+									}
+								}
+							},
+							{
+								"position": {
+									"sourceStart": 222,
+									"sourceEnd": 231
+								},
+								"Action": {
+									"kind": "Return",
+									"value": {
+										"position": {
+											"sourceStart": 229,
+											"sourceEnd": 230
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 229,
+													"sourceEnd": 230
+												},
+												"Value Expr": {
+													"number": "12"
 												}
 											}
-										},
-									]
+										}
+									}
 								}
-							}
-						}
+							},
+						]
 					}
 				}
 			}

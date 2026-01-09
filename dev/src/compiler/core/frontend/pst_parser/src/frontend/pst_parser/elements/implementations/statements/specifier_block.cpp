@@ -20,15 +20,19 @@ namespace pst {
 	void SpecifierBlock::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("block": ")";
+		out << R"("block": )";
 		nullAwareDprint(block, out);
-		out << R"(",)";
+		out << R"(,)";
 
 		out << "}";
 	}
 
 	LangElement::HashAlg& SpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
+	}
+
+	bool SpecifierBlock::trailingSemicolon() {
+		return false;
 	}
 
 	void SpecifierBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitSpecifierBlock(*this); }
