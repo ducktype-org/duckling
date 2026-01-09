@@ -19,6 +19,10 @@ namespace compiler::backend_llvm {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
+	Module Module::fromLLVMBC(const std::span<unsigned char> llvm_bc_data) {
+		return { parseLLVMBCToModuleImpl(llvm_bc_data) };
+	}
+
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
