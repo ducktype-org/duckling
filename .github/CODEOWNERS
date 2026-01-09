@@ -4,6 +4,7 @@
 
 # QuackPack is also owned by the quackpack-dev:
 /dev/src/QuackPack/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
+/dev/src/duck/ @ducktype-org/core-dev @ducktype-org/quackpack-dev
 
 # Only selected people can modify code owner file:
 /.github/CODEOWNERS @andr729
