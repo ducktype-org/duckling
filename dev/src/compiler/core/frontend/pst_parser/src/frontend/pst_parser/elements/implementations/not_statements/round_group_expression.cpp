@@ -3,28 +3,12 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class RoundExprStartError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an expression starting with `(`.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		RoundExprStartError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeBox<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.log(makeBox<RoundExprStartError>(state.getPosition()));
+			state.logInt(makeBox<RoundExprStartError>(state.getPosition()));
 			return nullptr;
 		}
 

@@ -85,6 +85,7 @@ namespace dia_int {
 
 		usize begin_char = source->getLine(first_line).first;
 		usize end_char   = source->getLine(last_line).second;
+		if (begin_char == 0 && end_char == 0) return base::makeBox<dia_args::ConcatComponent>();
 
 		auto code_list = std::vector<Box<dia_args::Component>>();
 

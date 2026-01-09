@@ -2,102 +2,89 @@
 
 #include "preamble.hpp"  // IWYU pragma: keep
 
+#include <diagnostic_interactive/message.hpp>
+
 #include <unicode/unistr.h>
 
 namespace pst {
 	template<GetName type>
-	class OpeningBracketMissingError final: public dia::Error {
-	private:
-		lexer::Token::BracketType bracket;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			std::string str_bracket{};
-			icu::UnicodeString(bracket).toUTF8String(str_bracket);
-			std::stringstream ss;
-			ss << "Opening bracket " << str_bracket << " of a " << type()
-			   << " list expected after here.";
-			return ss.str();
+	class OpeningBracketMissingError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "opening_bracket_missing" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
 		OpeningBracketMissingError(dia::SourcePosition pos, lexer::Token::BracketType bracket):
-			  dia::Error(pos),
-			  bracket(bracket) {}
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {
+			std::string s;
+			icu::UnicodeString(bracket).toUTF8String(s);
+			addArgument<dia_int::TextArgument>("bracket", s);
+			addArgument<dia_int::TextArgument>("list_type", type());
+		}
 	};
 
 	template<GetName type>
-	class EmptyListError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "This " + type() + " list shouldn't be empty.";
+	class EmptyListError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "empty_list_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		EmptyListError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("list_type", type());
 		}
-
-		EmptyListError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<GetName type>
-	class EmptyListElementError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "This " + type() + " list element shouldn't be empty.";
+	class EmptyListElementError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "empty_list_element_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		EmptyListElementError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("list_type", type());
 		}
-
-		EmptyListElementError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<GetName type>
-	class EmptyFieldError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Empty field in the " + type() + " list.";
+	class EmptyFieldError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "empty_field_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		EmptyFieldError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("list_type", type());
 		}
-
-		EmptyFieldError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<GetName type>
-	class NoSeparatorError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return type() + " list separator expected.";
+	class NoSeparatorError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_separator_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		NoSeparatorError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("list_type", type());
 		}
-
-		NoSeparatorError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class ListParsingTemplate {
@@ -139,7 +126,7 @@ namespace pst {
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 				if (!state[0].isBracketGroup(BRACKETS)) {
-					state.log(makeBox<OpeningBracketMissingError<getName>>(
+					state.logInt(makeBox<OpeningBracketMissingError<getName>>(
 						state.getPosition(-1), BRACKETS
 					));
 					return nullptr;
@@ -151,7 +138,7 @@ namespace pst {
 			if (state.empty() || isEnding(state.ctokens(), 0)) {
 				// Handle empty expression
 				if constexpr (NON_EMPTY)
-					state.log(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
+					state.logInt(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
 			} else {
 				PST_WHILE(true) {
 					expr_length = 0;
@@ -172,9 +159,10 @@ namespace pst {
 								auto other = state.getPosition();
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}
-							state.log(makeBox<EmptyFieldError<getName>>(pos));
+							state.logInt(makeBox<EmptyFieldError<getName>>(pos));
 						} else {
-							state.log(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0)));
+							state.logInt(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0))
+							);
 						}
 					}
 
@@ -191,7 +179,7 @@ namespace pst {
 					if (isSeparator(state.ctokens(), 0))
 						state.parse(out).eatOne();
 					else
-						state.log(makeBox<NoSeparatorError<getName>>(state.getPosition()));
+						state.logInt(makeBox<NoSeparatorError<getName>>(state.getPosition()));
 				}
 			}
 
