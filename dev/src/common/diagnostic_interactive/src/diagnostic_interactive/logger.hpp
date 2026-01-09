@@ -89,5 +89,4 @@ namespace dia_int {
 		// Evaluate to terminal (or any other stream)
 		Logger::evaluateToTerminalMessage(obj.ref(), out, false);
 	}
-
 }
