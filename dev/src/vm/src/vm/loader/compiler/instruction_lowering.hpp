@@ -4,7 +4,7 @@
 
 #include <base/preproc/for_each.hpp>
 
-#include "vm/bytecode/instructions.hpp"
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
