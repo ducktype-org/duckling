@@ -43,12 +43,6 @@ namespace vm {
 		 */
 		u64 refcount = 0;
 
-		/**
-		 * @brief Pointer to the mutex.
-		 * To avoid double dereference through the Memory class object.
-		 */
-		Ref<std::recursive_mutex> mutex_ref;
-
 		// For future:
 		// allocated at ...
 		// freed at ...
@@ -61,9 +55,6 @@ namespace vm {
 		MRef<Block>                  parent = nullptr;
 
 	public:
-		Block(BlockID id, BlockData data, Ref<std::recursive_mutex> mutex):
-			  id(id),
-			  data(data),
-			  mutex_ref(mutex) {}
+		Block(BlockID id, BlockData data): id(id), data(data) {}
 	};
 }

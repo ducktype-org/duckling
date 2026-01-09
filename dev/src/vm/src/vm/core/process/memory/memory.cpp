@@ -9,7 +9,6 @@
 #include <vm/utils/interpret.hpp>
 
 #include <iostream>
-#include <mutex>
 
 namespace vm {
 
@@ -18,12 +17,12 @@ namespace vm {
 
 		if (free_ids.empty()) {
 			auto id = BlockID(blocks.size());
-			blocks.emplace_back(id, data, &mutex);
+			blocks.emplace_back(id, data);
 			return &blocks.back();
 		} else {
 			BlockID id = free_ids.back();
 			free_ids.pop_back();
-			blocks[usize(id)] = Block(id, data, &mutex);
+			blocks[usize(id)] = Block(id, data);
 			return &blocks[static_cast<u64>(id)];
 		}
 	}
@@ -41,36 +40,31 @@ namespace vm {
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
-		std::lock_guard lock(mutex);
 		threads_frame_stacks.emplace_back();
 		return &threads_frame_stacks.back();
 	}
 
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
-		std::lock_guard lock(mutex);
 		return createBlock(heap_allocator.allocate(type));
 	}
 
 	auto Memory::allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
-		std::lock_guard lock(mutex);
 		return createBlock(dummy_allocator.allocate(type, stack_pointer));
 	}
 
 	auto Memory::dynTableAllocateHeapN(TypeCRef tbl_type, u64 n) -> Ref<Block> {
-		std::lock_guard lock(mutex);
-		auto            inner_type = tbl_type->getInnerType().value();
+		auto inner_type = tbl_type->getInnerType().value();
 		return createBlock(heap_allocator.dynTableAllocateN(tbl_type, inner_type, n));
 	}
 
 	auto Memory::dynTableReallocateBlockDataN(Ref<Block> block, u64 n) -> void {
-		std::lock_guard lock(mutex);
-		auto            tbl_type       = block->data.element_type;
-		auto            inner_type     = tbl_type->getInnerType().value();
-		BlockData       new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-		auto            old_view_size  = block->data.view.size();
-		auto            new_view_size  = new_block_data.view.size();
+		auto      tbl_type       = block->data.element_type;
+		auto      inner_type     = tbl_type->getInnerType().value();
+		BlockData new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+		auto      old_view_size  = block->data.view.size();
+		auto      new_view_size  = new_block_data.view.size();
 
-		Block mock_block{ BlockID{ 0 }, new_block_data, &mutex };
+		Block mock_block{ BlockID{ 0 }, new_block_data };
 
 		moveBlockDataAndEraseSuffix(&mock_block, block, std::min(old_view_size, new_view_size));
 
@@ -80,7 +74,6 @@ namespace vm {
 	}
 
 	void Memory::freeBlockData(Ref<Block> block) {
-		std::lock_guard lock(mutex);
 		for (const auto child: block->children_blocks | std::views::values) freeBlockData(child);
 
 		runDataDestructors(block);
@@ -107,7 +100,6 @@ namespace vm {
 	}
 
 	bool Memory::tryInsertGlobalData(GlobalDataID id, TypeCRef type) {
-		std::lock_guard lock(mutex);
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
@@ -141,7 +133,6 @@ namespace vm {
 
 	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
 		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
-		std::lock_guard lock(*parent_pointer.block->mutex_ref);
 		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
 			if ((*nested)->data.element_type == type) return *nested;
 		}
@@ -150,8 +141,7 @@ namespace vm {
 
 	void Memory::setNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
 		if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
-		std::lock_guard lock(mutex);
-		auto&           children = parent_pointer.block->children_blocks;
+		auto& children = parent_pointer.block->children_blocks;
 		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
 			freeBlockData(*nested);
 			children.erase(parent_pointer.offset);
@@ -189,9 +179,6 @@ namespace vm {
 	}
 
 	void Memory::moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count) {
-		std::lock_guard lock_dst{ *dst->mutex_ref };
-		std::lock_guard lock_src{ *src->mutex_ref };
-
 		// Free all child blocks on suffix.
 		auto& dst_child_blocks = dst->children_blocks;
 		for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
@@ -222,8 +209,6 @@ namespace vm {
 
 		if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
-		std::lock_guard lock_dst(*dst.block->mutex_ref);
-		std::lock_guard lock_src(*src.block->mutex_ref);
 
 		// Free child blocks.
 		auto& dst_child_blocks = dst.getBlock()->children_blocks;
@@ -254,10 +239,7 @@ namespace vm {
 	}
 
 	auto Memory::destroyBlockReference(Pointer pointer) -> void {
-		if_opt_some(pointer.block.toOpt(), block) {
-			std::lock_guard lock(*block->mutex_ref);
-			decreaseBlockRefcount(block);
-		}
+		if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 	}
 
 	auto Memory::updatePointerAssignment(Pointer dst, Pointer src) -> Pointer {
@@ -274,18 +256,11 @@ namespace vm {
 		return { block, offset };
 	}
 
-	auto Memory::getBlockType(Ref<Block> block) -> TypeCRef {
-		std::lock_guard lock(*block->mutex_ref);
-		return block->data.element_type;
-	}
+	auto Memory::getBlockType(Ref<Block> block) -> TypeCRef { return block->data.element_type; }
 
-	void Memory::increaseBlockRefcount(Ref<Block> block) {
-		std::lock_guard lock(*block->mutex_ref);
-		block->refcount++;
-	}
+	void Memory::increaseBlockRefcount(Ref<Block> block) { block->refcount++; }
 
 	void Memory::decreaseBlockRefcount(Ref<Block> block) {
-		std::lock_guard lock(*block->mutex_ref);
 		CORE_ASSERT(
 			block->refcount > 0, "Deleting an unreferenced block"
 		);  // This should never be possible, even in a faulty program

@@ -100,7 +100,7 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 			if (thread.execution_request_break)                                       \
 				return handle_execution_break(&instr[i], local_stack, frame, thread); \
 		}                                                                             \
-		return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);              \
+		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);    \
 	})                                                                                \
 	IF_NOT_TC({                                                                       \
 		instr += i;                                                                   \
