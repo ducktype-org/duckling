@@ -32,8 +32,19 @@ set(exec_sources
 # as they depend on each other.
 
 set(vm_dependencies
-  Base Clah Crow::Crow Filesystem TPC JSON Init Logger llvm_helpers
+  Base Clah Crow::Crow Filesystem TPC JSON Init Logger Diagnostic
 )
+
+set(vm_not_header_deps
+  Base Clah Filesystem TPC Init Logger Diagnostic
+)
+
+set(vm_dep_objects "")
+foreach(dep ${vm_not_header_deps})
+    if(TARGET ${dep})
+        list(APPEND vm_dep_objects "$<TARGET_OBJECTS:${dep}>")
+    endif()
+endforeach()
 
 llvm_map_components_to_libnames(llvm_libs
     Core
@@ -44,43 +55,21 @@ llvm_map_components_to_libnames(llvm_libs
     Support
     nativecodegen)
 
+add_library(JitDep OBJECT
+    ${jit_dependency}
+)
+make_module(JitDep USES llvm_helpers Base Diagnostic) # TODO update
+target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(JitDep ${llvm_libs})
+
 add_library(LibCommonVM OBJECT ${vm_common_sources})
-target_include_directories(LibCommonVM PRIVATE ${LLVM_INCLUDE_DIRS})
-make_module(LibCommonVM USES ${vm_dependencies})
-target_link_libraries(LibCommonVM ${llvm_libs})
+make_module(LibCommonVM USES ${vm_dependencies} ${JitDep})
 
 add_library(MainVM OBJECT ${exec_sources})
-make_module(MainVM USES ${vm_dependencies})
+make_module(MainVM USES ${vm_dependencies} ${JitDep})
+target_link_libraries(MainVM PUBLIC ${JitDep})
+target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
 
-# Prepares the bitcode implementation of opcodes for JIT.
-function(prepare_JIT_opcodes suffix lib_thread_vm_name compile_def)
-    set(opcodes_exec_name "ExecOpcodesDebug${suffix}")
-    add_library(${opcodes_exec_name} OBJECT
-        src/vm/core/thread/opcode_functions/opcodes_functions_impl_exec.cpp
-    )
-    target_include_directories(${opcodes_exec_name} PRIVATE 
-        $<TARGET_PROPERTY:${lib_thread_vm_name},INCLUDE_DIRECTORIES>
-    )
-    target_compile_definitions(${opcodes_exec_name} PRIVATE 
-        $<TARGET_PROPERTY:${lib_thread_vm_name},COMPILE_DEFINITIONS>
-        "${compile_def}"
-    )
-    target_compile_options(${opcodes_exec_name} PRIVATE -flto -fPIC -fomit-frame-pointer -O3 -g0 -emit-llvm)
-    find_program(LLVM_LINK_PATH "llvm-link-19" REQUIRED)
-
-    set(bitcode_exec "${CMAKE_CURRENT_BINARY_DIR}/opcodes_exec_${suffix}.bc")
-
-    add_custom_command(
-        OUTPUT ${bitcode_exec}
-        COMMAND ${LLVM_LINK_PATH} 
-                    $<TARGET_OBJECTS:${opcodes_exec_name}> 
-                    -o ${bitcode_exec}
-        DEPENDS ${opcodes_exec_name}
-        COMMENT "Linking optimized exec bitcode: ${bitcode_exec}"
-    )
-
-    add_custom_target(GenerateJitObject_${suffix} ALL DEPENDS ${bitcode_exec})
-endfunction()
 
 # Create the LibVM_{sc/tc} static libraries and the VM_{sc/tc} executables.
 # In the middle it creates the LibThreadVM_{sc/tc} object libraries.
@@ -90,36 +79,54 @@ function(add_vm_variant suffix compile_def)
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
     make_module(${lib_thread_vm_name} USES ${vm_dependencies})
 
-    target_include_directories(${lib_thread_vm_name} PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_link_libraries(${lib_thread_vm_name} ${llvm_libs})
-
     if (compile_def)
         target_compile_definitions(${lib_thread_vm_name} PRIVATE "${compile_def}")
     endif()
 
-    prepare_JIT_opcodes(${suffix} ${lib_thread_vm_name} "${compile_def}")
 
-    set_source_files_properties(${bitcode_exec} PROPERTIES GENERATED TRUE)
+    set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/"common_${suffix}.bc")
 
-    target_sources(LibCommonVM PRIVATE ${bitcode_exec})
+    add_custom_command(
+        OUTPUT ${common_bc}
+        COMMAND llvm-link-19
+            $<TARGET_OBJECTS:LibCommonVM>
+            $<TARGET_OBJECTS:${lib_thread_vm_name}>
+            ${vm_dep_objects}
+            -o ${common_bc}.tmp
+        
+        COMMAND opt-19
+            -O3
+            --enable-lto-internalization
+            #--inline-threshold=20000 # mozna dobra stala
+            --module-summary
+            ${common_bc}.tmp
+            -o ${common_bc}
+
+        COMMAND_EXPAND_LISTS
+        DEPENDS LibCommonVM ${lib_thread_vm_name} ${vm_dep_objects}
+        COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
+    )
+
+    add_custom_target(CommonVMBitcode_${suffix} ALL
+        DEPENDS ${common_bc} ${lib_thread_vm_name}
+    )
+    add_dependencies(JitDep CommonVMBitcode_${suffix})
 
     set(lib_vm_name "LibVM_${suffix}")
     add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}>)
+    
     target_link_libraries(${lib_vm_name} ${llvm_libs})
 
+    make_module(${lib_vm_name} USES ${vm_dependencies})
+    
     target_compile_options(${lib_vm_name} PRIVATE
         -fembed-dir=${CMAKE_CURRENT_BINARY_DIR}
     )
 
-    make_module(${lib_vm_name} USES ${vm_dependencies} )
-    
     set(exec_name "VM_${suffix}")
-    add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
+    add_executable(${exec_name} $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
     target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
     target_link_libraries(${lib_vm_name} ${llvm_libs})
-
-    add_dependencies(${exec_name} GenerateJitObject_${suffix})
-
 endfunction()
 
 # Define suffixes and their respective compile definitions
@@ -128,10 +135,12 @@ add_vm_variant(sc "USE_SWITCH_CASE")
 
 # Default alias to "sc"
 add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
-target_link_libraries(LibVM ${llvm_libs})
+target_link_libraries(LibVM ${llvm_libs} ${JitDep})
 make_module(LibVM USES ${vm_dependencies})
-add_executable(VM $<TARGET_OBJECTS:MainVM>)
-target_link_libraries(VM LibVM ${llvm_libs})
+add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
+target_link_libraries(VM LibVM ${llvm_libs} ${JitDep})
+
+
 
 add_subdirectory(playground)
 add_subdirectory(tests)

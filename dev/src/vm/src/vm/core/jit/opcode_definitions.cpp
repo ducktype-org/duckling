@@ -24,9 +24,9 @@ using namespace llvm;
 
 inline constexpr char opcodes[] = {
 #ifdef USE_TAIL_CALLS
-#embed "src/vm/opcodes_exec_tc.bc"
+#embed "src/vm/common_tc.bc"
 #else
-#embed "src/vm/opcodes_exec_sc.bc"
+#embed "src/vm/common_sc.bc"
 #endif
 };
 
@@ -64,27 +64,26 @@ void llvm_init() {
 	auto buffer = MemoryBuffer::getMemBuffer(StringRef(opcodes, sizeof(opcodes)), "", false);
 
 	auto modOrErr = parseBitcodeFile(buffer->getMemBufferRef(), *gContext);
-	if (!modOrErr) llvm::report_fatal_error("Failed to parse embedded BC");
+	if (!modOrErr)
+		llvm::report_fatal_error("Aborting due to parse error");
 
 	gModule = std::move(*modOrErr);
 
 	for (auto& F: gModule->functions()) {
 		if (!F.isDeclaration()) {
-            // Here I assume that demangling works for opcodes. Maybe use itaniumDemangle?
+            //  Here I assume that demangling works for opcodes. Maybe use itaniumDemangle?
 			auto demangled = llvm::demangle(F.getName().str());
 
             // One opcode doesn't have op prefix but it is marked to be deleted.
-			if (demangled.starts_with("vm::OpFuns::op_")) {
+			if (demangled.starts_with("vm::OpFuns::op_") and !demangled.starts_with("vm::OpFuns::op_debug")) {
 				auto name = extract_function_name(demangled);
 				name      = name.substr(3);  // delete op_
-
 				auto opcode = getOpcode(name);
 				if (FuncMap.contains(opcode))
 					CORE_PANIC("Duplicate opcode function name: ", name);
 				else
 					// Sanity check, that instructions sizes make sense.
-					// std::cout<<"found "<<name<<" with " << F.getInstructionCount()<<"
-					// instructions\n";
+					std::cout<<"found "<<name<<" with " << F.getInstructionCount()<< "instructions\n";
 					FuncMap[opcode] = &F;
 			}
 		}

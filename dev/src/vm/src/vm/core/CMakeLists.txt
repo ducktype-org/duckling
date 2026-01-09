@@ -6,7 +6,6 @@ add_files(
 		process/type_metadata/type_metadata.cpp
 		process/type_metadata/type.cpp
 		process/memory/memory.cpp
-		jit/opcode_definitions.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
@@ -20,3 +19,9 @@ add_files(
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
+
+add_files(
+	jit/opcode_definitions.cpp
+)
+
+set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE) 

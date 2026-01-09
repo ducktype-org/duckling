@@ -51,3 +51,7 @@ add_subdirectory(src/playground)
 add_subdirectory(scripts/cmake)
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureDocs.cmake)
+
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    message(FATAL_ERROR "JIT requires clang for now")
+endif()
