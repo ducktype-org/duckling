@@ -373,9 +373,7 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
 	);
-	DEFINE_INSTRUCTION_ERROR(
-		NotAClassTypeError, "This type does not represent a class."
-	);
+	DEFINE_INSTRUCTION_ERROR(NotAClassTypeError, "This type does not represent a class.");
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);

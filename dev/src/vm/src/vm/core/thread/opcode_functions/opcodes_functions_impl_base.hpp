@@ -720,7 +720,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_lptr)(FUNCTION_ARGS) {
 		{
 			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
 			writeToView<const Type*>(view, nullptr);
 		}
 		FUNCTION_CONT(1);

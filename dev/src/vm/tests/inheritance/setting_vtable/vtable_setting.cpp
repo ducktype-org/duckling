@@ -13,7 +13,7 @@ public:
 private:
 	void settingVtableCorrectness() {
 		runTestOnVm("setting_vtable/table_of_virtual.dbc", {}, { "0\n" }, {}, 0);
-		runTestOnVm("setting_vtable/resetting_vtable.dbc", {}, { "1\n0\n" }, {}, 0);
+		runTestOnVm("setting_vtable/changing_vtable.dbc", {}, { "1\n0\n" }, {}, 0);
 		runTestOnVm("setting_vtable/variant_of_virtual.dbc", {}, { "0\n" }, {}, 0);
 
 		using namespace vm::exceptions;
@@ -28,6 +28,10 @@ private:
 			},
 			{
 				"setting_vtable/unset_table_of_virtual.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+			{
+				"setting_vtable/resetting_vtable.dbc",
 				VMVtableUnset::ERR_MSG,
 			},
 		});
