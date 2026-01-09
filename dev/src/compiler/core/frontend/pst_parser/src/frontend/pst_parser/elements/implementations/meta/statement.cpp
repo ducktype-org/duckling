@@ -168,6 +168,7 @@ namespace pst {
 			case Keyword::Expand:
 				return internal::parseStmt<Expand>(state);
 			default:
+				break;
 			}
 
 			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
