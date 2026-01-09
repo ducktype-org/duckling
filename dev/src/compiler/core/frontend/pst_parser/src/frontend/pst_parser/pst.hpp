@@ -178,8 +178,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const Ref<dia::Logger> getLogger() const {
-			return file->getLogger();
+		const Ref<dia_int::Logger> getLogger() const {
+			return file->getIntLogger();
 		}
 
 		[[nodiscard]] bool hasErrors() const {
