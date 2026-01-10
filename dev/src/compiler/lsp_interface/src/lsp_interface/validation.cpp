@@ -63,6 +63,8 @@ namespace lsp {
 		const dia_int::lsp::EvaluationContext&                  ctx,
 		std::ostream&                                           out
 	) {
+		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>> previous_diag_by_file_opt{};
+
 		base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 		for (const auto& diag: diagnostics) {
 			dia_int::lsp::LSPDiagnosticResult lsp_diag
@@ -77,19 +79,35 @@ namespace lsp {
 		}
 
 		out << "{\n";
-		usize file_idx = 0;
+		bool first_list_elem = true;
 		for (const auto& [file_uri, diags]: diagnostics_by_file) {
+			if (not first_list_elem) out << ",\n";
+			first_list_elem = false;
+
 			out << "\"" << file_uri << "\": [\n";
 			for (usize i = 0; i < diags.size(); i++) {
 				dia_int::lsp::LSPDiagnosticResult::jsonSerializeDiagnostic(diags[i].ref(), out);
 				if (i + 1 < diags.size()) out << ",\n";
 			}
 			out << "]";
-			if (file_idx + 1 < diagnostics_by_file.size()) out << ",";
 			out << "\n";
-			file_idx++;
+		}
+
+		// We have to send empty arrays for files that had diagnostics previously
+		// but do not have any diagnostics now, to clear them in the client.
+		if_opt_some(previous_diag_by_file_opt, previous_diag_by_file) {
+			for (const auto& [old_file_uri, old_diags]: previous_diag_by_file) {
+				if (not diagnostics_by_file.contains(old_file_uri)) {
+					if (not first_list_elem) out << ",\n";
+					first_list_elem = false;
+
+					out << "\"" << old_file_uri << "\": []\n";
+				}
+			}
 		}
 		out << "}\n";
+
+		previous_diag_by_file_opt = std::move(diagnostics_by_file);
 	}
 
 	std::string getDiagnosticJsonFromCompiler(fs::File& file) {
