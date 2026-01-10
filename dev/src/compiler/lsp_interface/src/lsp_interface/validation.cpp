@@ -1,14 +1,14 @@
 #include "validation.hpp"
 
-#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
-#include "diagnostic_interactive/lsp_ui/lsp_ui.hpp"
-#include "frontend/module_tree/functors.hpp"
-#include "frontend/module_tree/module_tree.hpp"
-#include "frontend/module_tree/source_file.hpp"
-#include "helios/queries.hpp"
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
+#include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/source_file.hpp>
+#include <helios/queries.hpp>
 
-#include "query_framework/context.hpp"
-#include "query_framework/query_entry_point.hpp"
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 
 namespace lsp {
 	using namespace compiler;

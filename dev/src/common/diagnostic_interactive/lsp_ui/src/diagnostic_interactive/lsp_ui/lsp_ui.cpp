@@ -1,12 +1,12 @@
 #include "lsp_ui.hpp"
 
-#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
-#include "diagnostic_interactive/core/template_evaluation.hpp"
-#include "diagnostic_interactive/core/view_constructors.hpp"
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/core/template_evaluation.hpp>
+#include <diagnostic_interactive/core/view_constructors.hpp>
 
-#include "base/extend_cpp/variant_match.hpp"
-#include "base/pointers/box.hpp"
-#include "base/pointers/default_deleter.hpp"
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
+#include <base/pointers/default_deleter.hpp>
 
 #include <any>
 #include <string>
@@ -272,7 +272,7 @@ namespace dia_int::lsp {
 		term_ui_view::Diagnostic view;
 		try {
 			auto state = dia_int::evaluateDiagnostic(*diagnostic_args);
-			view = dia_int::constructTreeView(state);
+			view       = dia_int::constructTreeView(state);
 		} catch (const std::exception& e) { return failedResult(e.what(), ctx); }
 
 		Box<Diagnostic> diag     = makeBox<Diagnostic>();
@@ -295,7 +295,9 @@ namespace dia_int::lsp {
 		return { std::move(diag), std::move(loc.uri) };
 	}
 
-	void LSPDiagnosticResult::jsonSerializeDiagnostic(CRef<Diagnostic> diagnostic, std::ostream& out) {
+	void LSPDiagnosticResult::jsonSerializeDiagnostic(
+		CRef<Diagnostic> diagnostic, std::ostream& out
+	) {
 		out << "{\n";
 		out << R"("range": )";
 		diagnostic->range.serialize(out);

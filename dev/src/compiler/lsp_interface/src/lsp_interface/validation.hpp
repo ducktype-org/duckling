@@ -1,6 +1,6 @@
 #pragma once
 
-#include "filesystem/file.hpp"
+#include <filesystem/file.hpp>
 
 #include <string>
 
@@ -12,9 +12,10 @@ namespace lsp {
 	 * 2. Runs HELIOS compilation on the package to get the semantic diagnostics.
 	 * 3. Serializes all the diagnostics to JSON format.
 	 *
-	 * @param file The file to get diagnostics for. 
-	 * Note that all the package related diagnostics will be returned. The file is used to identify the package.
-	 * 
+	 * @param file The file to get diagnostics for.
+	 * Note that all the package related diagnostics will be returned. The file is used to identify
+	 * the package.
+	 *
 	 * @return std::string The JSON serialized
 	 */
 	std::string getDiagnosticJsonFromCompiler(fs::File& file);
