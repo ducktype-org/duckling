@@ -3,42 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	/**
-	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
-	 * some situation where only a number value will be accepted in an expression.
-	 */
-	class BadValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a value";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadValueError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class MoreThanValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected just a single value";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MoreThanValueError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	MBox<ExprElement> ExprValue::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
@@ -46,7 +10,7 @@ namespace pst::expr {
 
 		if (!state[0].is(lexer::Token::Type::NumLiteralGroup)) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadValueError>(pos));
+			state.logInt(makeBox<BadValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
@@ -55,7 +19,7 @@ namespace pst::expr {
 		state.parse(out).one(&out->value);
 
 		if (length > 1) {
-			state.log(makeBox<MoreThanValueError>(pos));
+			state.logInt(makeBox<MoreThanValueError>(pos));
 			fastForward(state, length);
 		}
 

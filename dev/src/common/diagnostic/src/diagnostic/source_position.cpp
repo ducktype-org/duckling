@@ -80,8 +80,8 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition():
-		  source_start(0),
-		  source_end(0),
+		  source_start(5),
+		  source_end(11),
 		  location_type(LocationType::FakeLocationType),
 		  location(FakeLocation::getInstance()) {}
 

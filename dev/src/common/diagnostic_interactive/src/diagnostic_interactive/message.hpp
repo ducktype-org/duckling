@@ -307,6 +307,11 @@ namespace dia_int {
 
 		bool isError() const;
 
+		std::string debugString() const {
+			auto meta = getMetadata();
+			return meta.template_type + "::" + meta.type + "::" + meta.family + "::" + meta.name;
+		}
+
 		// ============================== ADDING MESSAGES ==============================
 
 		/**

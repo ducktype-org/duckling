@@ -5,53 +5,6 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	class MatchRoundBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchRoundBracketError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class NotACaseExpression final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Not a case expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NotACaseExpression(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class MatchCurlyBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchCurlyBracketError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<ExprElement> MatchExpr::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
@@ -65,7 +18,7 @@ namespace pst::expr {
 		state.parse(out).one(Keyword::Match);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.log(makeBox<MatchRoundBracketError>(state.getPosition()));
+			state.logInt(makeBox<MatchRoundBracketError>(state.getPosition()));
 			return nullptr;
 		}
 
@@ -74,7 +27,7 @@ namespace pst::expr {
 		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<MatchCurlyBracketError>(state.getPosition()));
+			state.logInt(makeBox<MatchCurlyBracketError>(state.getPosition()));
 			return nullptr;
 		}
 		state.parse(out).goDown();
@@ -92,7 +45,7 @@ namespace pst::expr {
 			}
 		}
 		// A non-case in a match expression.
-		if (state.notEmpty()) state.log(makeBox<NotACaseExpression>(state.getPosition()));
+		if (state.notEmpty()) state.logInt(makeBox<NotACaseExpression>(state.getPosition()));
 
 		state.parse(out).goUpAndSkip();
 		return out;

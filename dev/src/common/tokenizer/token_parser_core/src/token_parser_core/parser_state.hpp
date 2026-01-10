@@ -3,6 +3,7 @@
 #include "token_stream.hpp"
 
 #include <diagnostic_interactive/logger_fwd.hpp>
+#include <diagnostic_interactive/message.hpp>
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -57,10 +58,10 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia::Logger>      err;      ///< Stores parsing errors
-		MRef<dia_int::Logger> int_err;  ///< Stores parsing errors
+		Ref<dia::Logger>     err;      ///< Stores parsing errors
+		Ref<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, MRef<dia_int::Logger> int_err = {}):
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
 			  err(err),
@@ -114,6 +115,8 @@ namespace tpc {
 		 * @brief Logs an error relatively to the current token.
 		 */
 		virtual void log(Box<dia::Message> message) { err->log(std::move(message)); }
+
+		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
 
 		template<TokenStreamCondition until>
 		[[nodiscard]]

@@ -281,7 +281,6 @@ dependencies = [
  "serde_ignored",
  "serde_json",
  "serde_yaml_ng",
- "shellexpand",
  "symbol_table",
  "tempfile",
  "tokio",
