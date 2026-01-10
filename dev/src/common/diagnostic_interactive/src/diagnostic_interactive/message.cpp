@@ -38,9 +38,10 @@ namespace dia_int {
 
 		auto char_range = source->getCharRange(start, start + 1).stringView();
 
-		// This is a bit of a hack, we don't want empty lines to be empty. That would mean no highlighting for empty lines.
-		// This hack should replace ONLY empty lines with spaces with the current usage but might need to be improved.
-		constexpr auto NORMALIZE = [] (const std::string& s) {return s == "" ? " " : s;};
+		// This is a bit of a hack, we don't want empty lines to be empty. That would mean no
+		// highlighting for empty lines. This hack should replace ONLY empty lines with spaces with
+		// the current usage but might need to be improved.
+		constexpr auto NORMALIZE = [](const std::string& s) { return s == "" ? " " : s; };
 
 		// The start can be at the first character of the line
 		// but also at the last character of the previous line (like '\n').
@@ -51,11 +52,15 @@ namespace dia_int {
 		    or source->getLineColumn(start).second == 1)
 			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[0].first));
 
-		code_list.emplace_back(makeBox<dia_args::CodeComponent>(NORMALIZE(lines[0].second.stdString())));
+		code_list.emplace_back(
+			makeBox<dia_args::CodeComponent>(NORMALIZE(lines[0].second.stdString()))
+		);
 
 		for (usize i = 1; i < lines.size(); i++) {
 			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[i].first));
-			code_list.emplace_back(makeBox<dia_args::CodeComponent>(NORMALIZE(lines[i].second.stdString())));
+			code_list.emplace_back(
+				makeBox<dia_args::CodeComponent>(NORMALIZE(lines[i].second.stdString()))
+			);
 		}
 	}
 
@@ -81,11 +86,12 @@ namespace dia_int {
 	Box<dia_args::Component> CodeArgument::getValue(MessageBase& diag) {
 		auto source = position.getSource();
 
-		// [start_line, end_line] is the minimal range of lines containing the code. 
+		// [start_line, end_line] is the minimal range of lines containing the code.
 		usize start_line = position.getStartLineColumn().first;
 		usize end_line   = position.getEndLineColumn().first;
 
-		// [first_line, last_line] is the range of lines containing the code extended by additional context lines. 
+		// [first_line, last_line] is the range of lines containing the code extended by additional
+		// context lines.
 		usize first_line = std::max(1 + lines_before, start_line) - lines_before;
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
 
