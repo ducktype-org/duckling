@@ -1,4 +1,4 @@
-#include "diagnostic.hpp"
+#include "lsp_ui.hpp"
 
 #include "diagnostic_interactive/core/diagnostic_arguments.hpp"
 #include "diagnostic_interactive/core/template_evaluation.hpp"
@@ -251,6 +251,10 @@ namespace dia_int::lsp {
 			                             .end   = Position{ .line = 0, .character = 0 } } };
 	}
 
+	/**
+	 * @brief If the evaluation of the diagsnotic failed, return a diagnostic
+	 * indicating the failure.
+	 */
 	LSPDiagnosticResult failedResult(const std::string& error_msg, const EvaluationContext& ctx) {
 		Box<Diagnostic> diag = makeBox<Diagnostic>();
 		diag->range          = Range{ .start = Position{ .line = 0, .character = 0 },
@@ -267,10 +271,8 @@ namespace dia_int::lsp {
 	) {
 		term_ui_view::Diagnostic view;
 		try {
-			std::cout << diagnostic_args->toJson().dump(4) << "\n\n";
 			auto state = dia_int::evaluateDiagnostic(*diagnostic_args);
-			state.debugPrint(std::cerr);
-			view       = dia_int::constructTreeView(state);
+			view = dia_int::constructTreeView(state);
 		} catch (const std::exception& e) { return failedResult(e.what(), ctx); }
 
 		Box<Diagnostic> diag     = makeBox<Diagnostic>();
@@ -293,7 +295,7 @@ namespace dia_int::lsp {
 		return { std::move(diag), std::move(loc.uri) };
 	}
 
-	void LSPDiagnosticResult::serializeDiagnostic(CRef<Diagnostic> diagnostic, std::ostream& out) {
+	void LSPDiagnosticResult::jsonSerializeDiagnostic(CRef<Diagnostic> diagnostic, std::ostream& out) {
 		out << "{\n";
 		out << R"("range": )";
 		diagnostic->range.serialize(out);

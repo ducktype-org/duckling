@@ -1,7 +1,7 @@
 #include "validation.hpp"
 
 #include "diagnostic_interactive/core/diagnostic_arguments.hpp"
-#include "diagnostic_interactive/lsp_ui/diagnostic.hpp"
+#include "diagnostic_interactive/lsp_ui/lsp_ui.hpp"
 #include "frontend/module_tree/functors.hpp"
 #include "frontend/module_tree/module_tree.hpp"
 #include "frontend/module_tree/source_file.hpp"
@@ -58,7 +58,7 @@ namespace lsp {
 		return diagnostics;
 	}
 
-	void serializeDiagnostics(
+	void jsonSerializeDiagnostics(
 		const std::vector<CRef<dia_int::dia_args::Diagnostic>>& diagnostics,
 		const dia_int::lsp::EvaluationContext&                  ctx,
 		std::ostream&                                           out
@@ -81,20 +81,18 @@ namespace lsp {
 		for (const auto& [file_uri, diags]: diagnostics_by_file) {
 			out << "\"" << file_uri << "\": [\n";
 			for (usize i = 0; i < diags.size(); i++) {
-				dia_int::lsp::LSPDiagnosticResult::serializeDiagnostic(diags[i].ref(), out);
+				dia_int::lsp::LSPDiagnosticResult::jsonSerializeDiagnostic(diags[i].ref(), out);
 				if (i + 1 < diags.size()) out << ",\n";
 			}
 			out << "]";
-			if (file_idx + 1 < diagnostics_by_file.size()) {
-				out << ",";
-			}
+			if (file_idx + 1 < diagnostics_by_file.size()) out << ",";
 			out << "\n";
 			file_idx++;
 		}
 		out << "}\n";
 	}
 
-	std::string getDiagnosticFromCompiler(fs::File& file) {
+	std::string getDiagnosticJsonFromCompiler(fs::File& file) {
 		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
 		auto module       = source_files[0]->getModule().illegalAccess().getID();
 		auto root_module  = getRootModule(module);
@@ -119,7 +117,7 @@ namespace lsp {
 		});
 
 		std::stringstream out;
-		serializeDiagnostics(diagnostics, ctx, out);
+		jsonSerializeDiagnostics(diagnostics, ctx, out);
 		return out.str();
 	}
 }

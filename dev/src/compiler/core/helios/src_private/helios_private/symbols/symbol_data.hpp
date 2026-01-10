@@ -90,9 +90,8 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
-			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr) {
+			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr)
 				return CRef<PstSymbolData>(ptr);
-			}
 			return std::nullopt;
 		}
 

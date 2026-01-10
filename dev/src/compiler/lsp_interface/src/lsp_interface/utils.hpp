@@ -61,5 +61,5 @@ namespace lsp {
 	 */
 	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content);
 
-	
+
 }
