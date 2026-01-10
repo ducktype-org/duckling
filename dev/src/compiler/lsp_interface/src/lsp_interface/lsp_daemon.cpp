@@ -18,6 +18,7 @@ POP_DIAGNOSTIC;
 #include "export_keywords.hpp"
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
+#include "validation.hpp"
 #include "utils.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
@@ -121,17 +122,19 @@ void server(i32 port) {
 	([&virtual_root](const std::string& base64_path) {
 		try {
 			const auto path = base64::decode_into<std::string>(base64_path);
-
-			if (!virtual_root.getFilePath().join(path).exists())
+			auto file = fs::File(virtual_root.getFilePath().join(path));
+			if (not file.exists())
 				return crow::response(404, "File not found");
-
-			auto              file   = fs::File(virtual_root.getFilePath().join(path));
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
-			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
-			return crow::response(200, ss.str());
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+			
+			auto json_str = lsp::getDiagnosticFromCompiler(file);
+			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
+			crow::response res(200, json_str);
+			res.set_header("Content-Type", "application/json");
+			return res;
+		} catch (const std::exception& e) {
+			CROW_LOG_ERROR << e.what(); 
+			return crow::response(400, e.what()); 
+		}
 	});
 
 	/**

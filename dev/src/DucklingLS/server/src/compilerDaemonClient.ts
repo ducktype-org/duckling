@@ -1,6 +1,5 @@
 import { spawn, ChildProcess } from "child_process";
-import { DucklingParserError, toErrors } from "./errors";
-import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
+import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
 import { initPromise, initComplete } from './server';
@@ -205,27 +204,26 @@ export class CompilerDaemonClient {
 	}
 
 	// This function is called to get the errors from the daemon for a file
-	public async getErrors(filePath: string, connection: Connection): Promise<DucklingParserError[]> {
+	public async getErrors(filePath: string, connection: Connection): Promise<Record<string, Diagnostic[]>> {
 		await this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
-		const response = fetch(`${DAEMON_ADRESS}/get_errors/${base64FilePath}`);
+		try {
+			const response = await fetch(`${DAEMON_ADRESS}/get_errors/${base64FilePath}`);
 
-		function handleResponse(res: Response) {
-			return res.text();
-		}
+			if (!response.ok) {
+				console.log("getErrors response not ok");
+				throw new Error(`Error: ${response.status} ${response.statusText}`);
+			}
 
-		function handleText(text: string): DucklingParserError[] {
-			return toErrors(text); // Errors are created here from text
-		}
-
-		function handleCatch(error: any): DucklingParserError[] {
+			const jsonResponse = await response.json();
+			
+			return jsonResponse as Record<string, Diagnostic[]>;
+		} catch (error) {
 			console.error(error);
-			return [];
+			return {};
 		}
-
-		return response.then(handleResponse).then(handleText).catch(handleCatch);
 	}
 
 	// This function is called to get all of the keywords from the daemon

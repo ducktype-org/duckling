@@ -88,6 +88,14 @@ namespace compiler::helios {
 			return getData<PstSymbolData>();
 		}
 
+		[[nodiscard]]
+		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
+			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr) {
+				return CRef<PstSymbolData>(ptr);
+			}
+			return std::nullopt;
+		}
+
 		/**
 		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement or if symbol is not associated with PST element.

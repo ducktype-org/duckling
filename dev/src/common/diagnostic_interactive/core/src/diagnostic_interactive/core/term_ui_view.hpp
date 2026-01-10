@@ -36,6 +36,17 @@ namespace dia_int::term_ui_view {
 		std::string                        file;
 		u64                                line;
 		u64                                col;
+
+		/**
+		 * The end line of the error span (not entire code block).
+		 * Typically this is the highlighted portion of the code block.
+		 */
+		base::Optional<u64>                end_line;
+		/**
+		 * Same as end_line.
+		 */
+		base::Optional<u64>                end_col;
+
 		std::vector<CodeLine>              lines;
 		base::HashMap<u64, PointerMessage> pointers;
 	};

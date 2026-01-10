@@ -77,11 +77,19 @@ namespace lsp {
 		}
 
 		if (vfile.isDirectory()) {
+			const auto name = vfile.name();
+			for (const auto& sub_path: vfile.listFilePaths()) {
+				if (sub_path.extension() == ".dmf" && sub_path.stem() == name) {
+					compiler::frontend::createModuleTreeWithRandomPackageID(vfile);
+					std::cout << "Initialized module from directory: " << path.string() << "\n";
+					return;
+				}
+			}
+
 			for (const auto& sub_path: vfile.listFilePaths()) initModules(sub_path);
-			return;
 		}
 
-		CORE_UNREACHABLE();
+		return;
 	}
 
 	void initPSTs(const fs::FilePath& path) {
@@ -113,12 +121,6 @@ namespace lsp {
 
 		auto file = fs::File(virtual_root.getFilePath().join(path));
 		file.writeToFile(content);
-
 		compiler::frontend::ModuleTreeModifier::fileModified(file);
-		query::utils::withContextDo([&file](query::Context& ctx) {
-			auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
-			for (auto& src_file: src_files)
-				ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
-		});
 	}
 }

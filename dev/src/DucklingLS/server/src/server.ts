@@ -175,12 +175,6 @@ documents.onDidClose(e => {
 documents.onDidChangeContent(change => {
 	// The document has changed, so we need to update it in the compiler daemon
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
-		// Get the LSPTree for the document
-		compilerDaemonClient.getSemanticTokens(change.document.uri, connection).then((LSPTree) => {
-			console.log("SERVER: semantic tokens received");
-			console.log(LSPTree);
-		});
-
 		// Revalidate the document
 		validateDuckling(change.document, connection, compilerDaemonClient);
 	});
