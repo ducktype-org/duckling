@@ -1,11 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
-
 use crate::{QuackResult, util_common::toml_config::TomlConfig};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug, Default)]
 /// Configuration of a package's venv.
 pub struct VenvConfig {
     config: TomlConfig,

@@ -416,7 +416,7 @@ namespace vm::loader::parser {
 				}
 			} else {
 				if (!logged) {
-					state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+					state.log(makeBox<tpc::NoIdentifierErrorOld>(state.getPosition()));
 					logged = true;
 				}
 				state.tokens().skip();

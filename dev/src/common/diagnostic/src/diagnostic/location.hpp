@@ -3,6 +3,8 @@
 #include "location_types.hpp"
 #include "source_position.hpp"
 
+#include <base/pointers/box.hpp>
+
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 
@@ -115,9 +117,10 @@ namespace dia {
 
 	class FakeLocation final: public Location {
 	private:
-		FakeLocation() = default;
+		FakeLocation();
 
-		static FakeLocation instance;
+		fs::File                    virtual_file;
+		Box<tokenizer::TokenSource> source;
 
 	protected:
 		void printPrefixInfo(printer::PrinterOStream&) const override;

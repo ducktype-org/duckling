@@ -2,27 +2,12 @@
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
+#include "meta_errors.hpp"
 #include "preamble.hpp"
 
 namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
-
-	class EmptyStatementError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Statement expected.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		EmptyStatementError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	namespace internal {
 
@@ -149,7 +134,7 @@ namespace pst {
 			}
 
 			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
-				state.log(base::makeBox<EmptyStatementError>(state.getPosition()));
+				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
 				return nullptr;
 			}
 
