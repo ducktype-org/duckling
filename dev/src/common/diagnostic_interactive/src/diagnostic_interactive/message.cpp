@@ -38,8 +38,8 @@ namespace dia_int {
 
 		auto char_range = source->getCharRange(start, start + 1).stringView();
 
-		// This is a bit of a hack, we don't want empty lines to be empty. That would mean no
-		// highlighting for empty lines. This hack should replace ONLY empty lines with spaces with
+		// This is a bit of a hack, we don't want empty lines to be empty because the highlighting doesn't
+		// work for empty lines. This hack should replace ONLY empty lines with spaces with
 		// the current usage but might need to be improved.
 		constexpr auto NORMALIZE = [](const std::string& s) { return s == "" ? " " : s; };
 
