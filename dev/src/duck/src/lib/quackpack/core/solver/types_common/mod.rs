@@ -3,8 +3,8 @@ mod expanded;
 mod not_expanded;
 
 pub use dependency_edge::DependencyEdge;
-pub use expanded::{ExpandedLocation, ExpandedPackage};
-pub use not_expanded::{Location, Package};
+pub use expanded::{ExpandedLocation, ExpandedLocGit, ExpandedLocLocal, ExpandedLocRegistry, ExpandedPackage};
+pub use not_expanded::{Location, LocGit, LocLocal, LocRegistry, Package};
 
 use crate::quackpack::core::FeatureName;
 

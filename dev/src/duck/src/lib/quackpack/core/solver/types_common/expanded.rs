@@ -14,19 +14,19 @@ pub enum ExpandedLocation {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedLocRegistry {
-    url: StrId,
-    real_name: StrId,
+    pub url: StrId,
+    pub real_name: StrId,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedLocGit {
-    url: StrId,
-    commit: StrId,
+    pub url: StrId,
+    pub commit: StrId,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedLocLocal {
-    absolute_path: PathBuf,
+    pub absolute_path: PathBuf,
 }
 
 impl ExpandedLocation {
