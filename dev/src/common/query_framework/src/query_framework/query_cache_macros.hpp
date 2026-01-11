@@ -57,12 +57,25 @@
  * @note Should not be used in place of QUERY_AUTO_CACHE_CREF for the sake of transparency.
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
  *
- * @param bypass_constructible_check If set to true, bypasses the static_assert checks
- * ensuring that QResult is constructible from CRef<PResult>. Use with caution.
- * This is useful in scenarios when this macro works due to friendship, but is_constructible_v
- * fails, since it cannot see private constructors.
+ * @note Implementation uses QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+ * defined below, which is all backwards, but it avoids code duplication.
  */
-#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(bypass_constructible_check)                   \
+#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF                                         \
+	QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK               \
+	static_assert(                                                                   \
+		std::is_constructible_v<QResult, CRef<PResult>>,                             \
+		"QResult should be constructible from (but not equal to) CRef<PResult> for " \
+		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                       \
+	);
+
+
+/**
+ * @brief Same as QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF, but it doesn't include the static_assert
+ * checks ensuring that QResult is constructible from CRef<PResult>. Use with caution. This is
+ * useful in scenarios when this macro works due to friendship, but is_constructible_v fails, since
+ * it cannot see private constructors.
+ */
+#define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK                 \
 	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
@@ -77,12 +90,7 @@
 	static_assert(                                                                         \
 		!std::is_same_v<QResult, CRef<PResult>>,                                           \
 		"QResult should not be equal to CRef<PResult> for "                                \
-		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                             \
-	);                                                                                     \
-	static_assert(                                                                         \
-		bypass_constructible_check || std::is_constructible_v<QResult, CRef<PResult>>,     \
-		"QResult should be constructible from (but not equal to) CRef<PResult> for "       \
-		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                             \
+		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK"               \
 	);
 
 

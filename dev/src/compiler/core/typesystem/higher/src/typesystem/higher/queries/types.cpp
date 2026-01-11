@@ -207,7 +207,7 @@ namespace compiler::tsh {
 			return PointerAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
@@ -226,7 +226,7 @@ namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
@@ -234,7 +234,7 @@ namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult { return { key.components }; }
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
@@ -244,7 +244,7 @@ namespace compiler::tsh {
 			return VariantAbstractTypeImpl(key.underlying_types);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
@@ -255,7 +255,7 @@ namespace compiler::tsh {
 			return { params, result, pure, free };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
@@ -265,7 +265,7 @@ namespace compiler::tsh {
 			return ClassAbstractTypeImpl(key);
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(false)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)

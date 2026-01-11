@@ -184,8 +184,9 @@ namespace compiler::helios {
 			return ScopeData{ {}, true, {}, key, 0 };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(true)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
 
+	private:
 		/**
 		 * @brief This is a helper function for getAllHeliosScopes.
 		 * Use only inside that function (and only for debug/test purposes)!
@@ -201,6 +202,9 @@ namespace compiler::helios {
 			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
+
+		// for getAllCachedScopes:
+		friend std::vector<ScopeID> getAllHeliosScopes();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
@@ -254,8 +258,9 @@ namespace compiler::helios {
 			};
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF(true)
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
 
+	private:
 		/**
 		 * @brief This is a helper function for getAllHeliosScopes.
 		 * Use only inside that function (and only for debug/test purposes)!
@@ -271,6 +276,9 @@ namespace compiler::helios {
 			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
+
+		// for getAllCachedScopes:
+		friend std::vector<ScopeID> getAllHeliosScopes();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
