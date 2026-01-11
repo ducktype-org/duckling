@@ -66,3 +66,4 @@ impl<'duck> Solver<'duck, Prepared> {
 }
 pub mod solving;
 pub mod types_common;
+pub mod util;

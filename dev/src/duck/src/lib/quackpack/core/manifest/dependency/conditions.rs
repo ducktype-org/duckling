@@ -9,7 +9,7 @@ use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 /// This is enabled for `any(system) and any(arch) and any(flags)`.
 pub struct Conditions {
     /// Required root package features for this condition.
-    required_root_package_features: Option<Vec<FeatureName>>,
+    pub required_root_package_features: Option<Vec<FeatureName>>,
 }
 
 impl Conditions {

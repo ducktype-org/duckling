@@ -220,7 +220,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum BranchOrTag {
     /// The default branch.

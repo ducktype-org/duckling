@@ -80,6 +80,16 @@ impl Dependency {
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
 
+    pub fn enableing_features(&self) -> Vec<FeatureName> {
+        let Some(conditions) = &self.conditions else {
+            return vec![];
+        };
+        let Some(features) = &conditions.required_root_package_features else {
+            return vec![];
+        };
+        features.clone()
+    }
+
     /// Get an iterator over features that are enabled for the given features.
     // NOTE: We take `Vec`, because it has trivially a copyable iterator (iterator over a slice).
     pub fn enabled_features(&self, enabled_features: Vec<FeatureName>) -> Vec<FeatureName> {

@@ -16,7 +16,7 @@ use crate::{
         FeatureName, Version,
         solver::{
             solving::scip_ext::BinModelExt,
-            types_common::{ExpandedPackage, ParentWithDependencyLoc, PresentFeature},
+            types_common::{DependencyEdge, ExpandedPackage, PresentFeature},
         },
     },
 };
@@ -32,7 +32,7 @@ fn package_with_feature_var_name(pkg: &ExpandedPackage, feature: FeatureName) ->
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child feature) to its variable name.
-fn dependency_feature_var_name(dep: &ParentWithDependencyLoc, feature: FeatureName) -> StrId {
+fn dependency_feature_var_name(dep: &DependencyEdge, feature: FeatureName) -> StrId {
     StrId::new(format!(
         "{}->{:?}@_@{:?}",
         package_var_name(&dep.parent),
@@ -42,7 +42,7 @@ fn dependency_feature_var_name(dep: &ParentWithDependencyLoc, feature: FeatureNa
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child version) to its variable name.
-fn dependency_version_var_name(dep: &ParentWithDependencyLoc, version: Option<Version>) -> StrId {
+fn dependency_version_var_name(dep: &DependencyEdge, version: Option<Version>) -> StrId {
     StrId::new(format!(
         "{}->{:?}@{:?}@_",
         package_var_name(&dep.parent),
@@ -57,14 +57,16 @@ type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 /// Wrapper of russcip::Model, adding mappings from appropriate variable identifiers to their variables.
 pub struct SolverModel<'a, State> {
     model: Model<State>,
+
     // Packages already placed in the previous freeze.
     preexisting_packages: &'a HashSet<ExpandedPackage>,
     // With what features they were placed there.
     preexisting_features: &'a HashMap<ExpandedPackage, HashSet<FeatureName>>,
+
     package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
     package_to_feature_vars: HashMap<ExpandedPackage, FeaturesToVars>,
-    dependency_to_feature_vars: HashMap<ParentWithDependencyLoc, ChildFeaturesToVars>,
-    dependency_to_version_vars: HashMap<ParentWithDependencyLoc, ChildVersionsToVars>,
+    dependency_to_feature_vars: HashMap<DependencyEdge, ChildFeaturesToVars>,
+    dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
@@ -106,7 +108,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the mapping from child features to variables, associated with the given dependency.
     fn get_feature_to_var_map_for_dep(
         &self,
-        dep: &ParentWithDependencyLoc,
+        dep: &DependencyEdge,
     ) -> QuackResult<&ChildFeaturesToVars> {
         self.dependency_to_feature_vars.get(&dep).context_internal(
             "Dependency and feature variable not added to the model before retrieval attempt",
@@ -116,7 +118,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the variable associated with the given (dependency, child feature) pair.
     fn get_dependency_feature_variable(
         &self,
-        dep: &ParentWithDependencyLoc,
+        dep: &DependencyEdge,
         feature: FeatureName,
     ) -> QuackResult<Rc<Variable>> {
         let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep)?;
@@ -128,7 +130,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the mapping from child versions to variables, associated with the given dependency.
     fn get_version_to_var_map_for_dep(
         &self,
-        dep: &ParentWithDependencyLoc,
+        dep: &DependencyEdge,
     ) -> QuackResult<&ChildVersionsToVars> {
         self.dependency_to_version_vars.get(&dep).context_internal(
             "Dependency and version variable not added to the model before retrieval attempt",
@@ -138,7 +140,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the variable associated with the given (dependency, child version) pair.
     fn get_dependency_version_variable(
         &self,
-        dep: &ParentWithDependencyLoc,
+        dep: &DependencyEdge,
         version: Option<Version>,
     ) -> QuackResult<Rc<Variable>> {
         let version_to_var_map = self.get_version_to_var_map_for_dep(dep)?;
@@ -182,7 +184,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Creates a variable associated with the (dependency, child feature) pair and adds it to the model.
     pub fn add_dependency_feature_realisation_var(
         &mut self,
-        dep: ParentWithDependencyLoc,
+        dep: DependencyEdge,
         feature: FeatureName,
     ) -> QuackResult<()> {
         let var_name = dependency_feature_var_name(&dep, feature);
@@ -197,7 +199,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Creates a variable associated with the (dependency, child version) pair and adds it to the model.
     pub fn add_dependency_version_realisation_var(
         &mut self,
-        dep: ParentWithDependencyLoc,
+        dep: DependencyEdge,
         version: Option<Version>,
     ) -> QuackResult<()> {
         let var_name = dependency_version_var_name(&dep, version);
@@ -230,14 +232,14 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that forces the child to be present with all of the required features.
     pub fn require_satisfying_dep_feature(
         &mut self,
-        dep: &ParentWithDependencyLoc,
+        edge: &DependencyEdge,
         parent_feature: PresentFeature,
-        child_features: HashSet<FeatureName>,
+        child_features: &HashSet<FeatureName>,
     ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(&dep.parent, parent_feature)?;
+        let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
         let feature_vars = child_features
             .iter()
-            .map(|feature| self.get_dependency_feature_variable(&dep, *feature))
+            .map(|feature| self.get_dependency_feature_variable(&edge, *feature))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         self.model.implies_one_all(parent_var, feature_vars);
         Ok(())
@@ -246,12 +248,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that forces the child to be present in at least one of the required versions.
     pub fn require_satisfying_dep_version(
         &mut self,
-        dep: &ParentWithDependencyLoc,
+        edge: &DependencyEdge,
         parent_feature: PresentFeature,
     ) -> QuackResult<()> {
-        let parent_var = self.get_package_variable(&dep.parent, parent_feature)?;
+        let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
         let version_vars = self
-            .get_version_to_var_map_for_dep(&dep)?
+            .get_version_to_var_map_for_dep(&edge)?
             .values()
             .cloned()
             .collect();
@@ -262,13 +264,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Adds a constraint that if the variable associated with a pair (dependency, child version)
     /// was chosen by the model to be present, the underlying package variable of the child in that version
     /// has to be present.
-    pub fn require_substantiate_dep(&mut self, dep: &ParentWithDependencyLoc) -> QuackResult<()> {
+    pub fn require_substantiate_dep(&mut self, edge: &DependencyEdge) -> QuackResult<()> {
         for (pkg_version, version_realization_var) in
-            self.get_version_to_var_map_for_dep(&dep)?.clone()
+            self.get_version_to_var_map_for_dep(&edge)?.clone()
         {
             let pkg_var = self.get_package_variable(
                 &ExpandedPackage {
-                    location: dep.dependency_loc.clone(),
+                    location: edge.dependency_loc.clone(),
                     version: pkg_version,
                 },
                 None,
@@ -283,7 +285,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// then the underlying package variable of the child in that version with that feature has to be present.
     pub fn require_substantiate_dep_features(
         &mut self,
-        dep: &ParentWithDependencyLoc,
+        dep: &DependencyEdge,
         possible_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
         possible_dep_realisations: Vec<ExpandedPackage>,
     ) -> QuackResult<()> {
