@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{BranchOrTag, Source},
+    quackpack::core::{BranchOrTag, Source, Version},
     static_str_id,
 };
 
@@ -34,7 +34,7 @@ fn parse_metadata() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -53,11 +53,11 @@ fn parse_with_deps() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -84,11 +84,11 @@ fn parse_with_integer_dep_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 1
+    version: '1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -115,11 +115,11 @@ fn parse_with_negative_dep_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: -1
+    version: '-1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -139,11 +139,11 @@ fn parse_with_dep_or_versions() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1 or 2
+    version: 0.1 or 2 # Here it's not needed, because `or` makes it implicitly a string...
 "#,
     );
     let ctx = DuckCtx::default();
@@ -170,7 +170,7 @@ fn parse_with_git_dep() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -205,7 +205,7 @@ fn parse_with_extra_fields_fail() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -236,7 +236,7 @@ fn fail_registry_without_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -266,11 +266,11 @@ fn parse_local_dep_with_versions() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     source:
       path: xd
 "#,
@@ -316,7 +316,7 @@ fn fail_no_metadata_name() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -363,7 +363,7 @@ fn parse_deps_sources() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -379,13 +379,13 @@ dependencies:
     source:
       path: /xd
   b:
-    version: 0.1
+    version: '0.1'
   c:
-    version: 0.1
+    version: '0.1'
     source:
       name: alias
   d:
-    version: 0.1
+    version: '0.1'
     source:
       name: alias
       registry_url: https://google.com
@@ -402,7 +402,6 @@ dependencies:
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 8);
 
-    // Test dependency a - local path
     let a = summary
         .dependencies()
         .get_dependency(static_str_id!("a"))
@@ -424,7 +423,6 @@ dependencies:
     assert!(a.desc().versions().is_empty());
     assert_eq!(a.real_name(), a.desc().manifest_name());
 
-    // Test dependency a1 - relative parent path
     let a1 = summary
         .dependencies()
         .get_dependency(static_str_id!("a1"))
@@ -446,7 +444,6 @@ dependencies:
         assert_eq!(local_source.entry_in_manifest(), "../xd");
     }
 
-    // Test dependency a2 - home path
     let a2 = summary
         .dependencies()
         .get_dependency(static_str_id!("a2"))
@@ -459,7 +456,6 @@ dependencies:
         assert_eq!(local_source.entry_in_manifest(), "~/xd");
     }
 
-    // Test dependency a3 - absolute path
     let a3 = summary
         .dependencies()
         .get_dependency(static_str_id!("a3"))
@@ -471,7 +467,6 @@ dependencies:
         assert_eq!(local_source.entry_in_manifest(), "/xd");
     }
 
-    // Test dependency b - registry
     let b = summary
         .dependencies()
         .get_dependency(static_str_id!("b"))
@@ -485,7 +480,6 @@ dependencies:
     assert_eq!(b.desc().versions()[0].to_string(), "0.1.0");
     assert_eq!(b.real_name(), b.desc().manifest_name());
 
-    // Test dependency c - registry with alias
     let c = summary
         .dependencies()
         .get_dependency(static_str_id!("c"))
@@ -496,7 +490,6 @@ dependencies:
     assert_eq!(c.desc().manifest_name().to_string(), "c");
     assert_ne!(c.real_name(), c.desc().manifest_name());
 
-    // Test dependency d - custom registry with alias
     let d = summary
         .dependencies()
         .get_dependency(static_str_id!("d"))
@@ -509,7 +502,6 @@ dependencies:
     assert_eq!(d.real_name().to_string(), "alias");
     assert_eq!(d.desc().manifest_name().to_string(), "d");
 
-    // Test dependency e - git
     let e = summary
         .dependencies()
         .get_dependency(static_str_id!("e"))
@@ -533,11 +525,11 @@ fn fail_exclusive_git_fields() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     source:
       git_url: git
       tag: tag
@@ -566,7 +558,7 @@ fn features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 features:
   a: []
@@ -592,7 +584,7 @@ fn features_expansion() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 features:
   a: [b]
@@ -659,11 +651,11 @@ fn dep_features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features: [a, b]
 "#,
     );
@@ -695,11 +687,11 @@ fn dep_features_with_conds() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features:
       - a
       -
@@ -728,10 +720,8 @@ dependencies:
     assert!(feature_names.contains(&"b".to_string()));
     assert!(feature_names.contains(&"c".to_string()));
 
-    // Test conditional enablement based on platform
     let enabled_features = dep.enabled_features(vec![]);
 
-    // Feature 'a' should always be enabled (unconditional)
     assert!(enabled_features.contains(&static_str_id!("a")));
 }
 
@@ -741,11 +731,11 @@ fn empty_conditions_features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     conditions:
       package_features: []
 "#,
@@ -772,11 +762,11 @@ fn dep_features_with_invalid_conds() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features:
       -
         b:
@@ -802,11 +792,11 @@ dependencies:
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features:
       - {}
 "#,
@@ -880,4 +870,89 @@ dependencies:
     let ctx = DuckCtx::default();
     let qpctx = QpCtx::new(&ctx);
     assert!(parse_manifest(&manifest_path, &qpctx).is_ok());
+}
+
+#[test]
+fn floats_explicit_string_work() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '0.10'
+  b:
+    version: ['0.10', 0.10]
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+    assert_eq!(
+        summary
+            .dependencies()
+            .get_dependency("a".into())
+            .unwrap()
+            .desc()
+            .versions()[0],
+        Version::new(0, 10, 0)
+    );
+
+    assert_eq!(
+        summary
+            .dependencies()
+            .get_dependency("b".into())
+            .unwrap()
+            .desc()
+            .versions(),
+        [Version::new(0, 10, 0), Version::new(0, 10, 0)]
+    );
+}
+
+#[test]
+fn floats_dont_parse() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: 0.10
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.version: invalid type: floating point `0.1`, expected an ored semver string or a list of semver strings at line 8 column 14"
+            ]
+        )
+    );
+}
+
+#[test]
+fn floats_root_version_parses() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
 }

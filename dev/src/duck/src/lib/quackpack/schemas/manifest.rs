@@ -1,6 +1,5 @@
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
-use paste::item;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
@@ -43,25 +42,6 @@ pub struct Dependency {
 #[derive(Debug)]
 pub struct OredSemver(pub Vec<Version>);
 
-macro_rules! forward_to_visit_string {
-    (
-        $(
-            $ty:ty $(,)?
-        ),*
-    ) => {
-        item! {
-            $(
-                fn [<visit_ $ty>]<E>(self, v: $ty) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
-                {
-                    self.visit_string(v.to_string())
-                }
-            )*
-        }
-    };
-}
-
 impl<'de> Deserialize<'de> for OredSemver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -83,13 +63,6 @@ impl<'de> Deserialize<'de> for OredSemver {
                     .map(|x| x.trim().parse())
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|e| de::Error::custom(e))
-            }
-
-            // HACK: parser treats `0.1` as a float.
-            forward_to_visit_string! {
-                f32, f64,
-                i8, i16, i32, i64,
-                u8, u16, u32, u64
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
