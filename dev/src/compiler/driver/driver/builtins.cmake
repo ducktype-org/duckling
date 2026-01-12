@@ -43,7 +43,6 @@ file(GLOB POTENTIAL_CLANG_PATHS
         LIST_DIRECTORIES true
         "${CMAKE_SOURCE_DIR}/scripts/downloads/llvm_lib*/bin"
 )
-message(STATUS "POTENTIAL_CLANG_PATHS: ${POTENTIAL_CLANG_PATHS}")
 
 # Find the actual clang binary
 find_program(CLANG_BIN
