@@ -18,7 +18,6 @@
 #include <linker/link.hpp>
 #include <repl/repl_session.hpp>
 #include <time_stats/time_stats.hpp>
-#include <timer/timer.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
@@ -237,20 +236,20 @@ clah::Clah getClahForMain() {
                     );
 
 					compiler::driver::initializeTheCompiler(
-					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-						.main_package_info = {
-							.package_name = package_name,
-							.package_path = path_to_compile.getFilePath(),
-						},
-						.compilation_artifacts = {
-							.artifacts_path = fs::FilePath("./duck_build/"),
-						},
-						.debug_options = getDebugOptionsFromClap(options),
-						.incremental = {.enabled = options.isFlag("no-incremental")
-																  ? false
-																  : true },
-					}
-				);
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_package_info = {
+								.package_name = package_name,
+								.package_path = path_to_compile.getFilePath(),
+							},
+							.compilation_artifacts = {
+								.artifacts_path = fs::FilePath("./duck_build/"),
+							},
+							.debug_options = getDebugOptionsFromClap(options),
+							.incremental   = { .enabled = options.isFlag("no-incremental")
+																? false
+																: true },
+						}
+					);
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
@@ -320,21 +319,21 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					compiler::driver::initializeTheCompiler(
-					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-						.main_package_info = {
-							.package_name = package_name,
-							.package_path = path_to_compile.getFilePath(),
-						},
-						.compilation_artifacts = {
-							.artifacts_path =
-								options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
-						},
-						.debug_options = getDebugOptionsFromClap(options),
-						.incremental = {.enabled = options.isFlag("no-incremental")
-																  ? false
-																  : true },
-					}
-				);
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_package_info = {
+								.package_name = package_name,
+								.package_path = path_to_compile.getFilePath(),
+							},
+							.compilation_artifacts = {
+								.artifacts_path =
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.debug_options = getDebugOptionsFromClap(options),
+							.incremental   = { .enabled = options.isFlag("no-incremental")
+																	 ? false
+																	 : true },
+						}
+					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 
@@ -399,20 +398,20 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-					compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-								.main_package_info = {
-									.package_name = package_name,
-									.package_path = path_to_compile.getFilePath(),
-								},
-								.compilation_artifacts = {
-									.artifacts_path = fs::FilePath("./duck_build/"),
-								},
-								.debug_options = getDebugOptionsFromClap(options),
-								.incremental = {.enabled = options.isFlag("no-incremental")
-																		  ? false
-																		  : true },
-					}
-				);
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+									.main_package_info = {
+										.package_name = package_name,
+										.package_path = path_to_compile.getFilePath(),
+									},
+									.compilation_artifacts = {
+										.artifacts_path = fs::FilePath("./duck_build/"),
+									},
+									.debug_options = getDebugOptionsFromClap(options),
+									.incremental = {.enabled = options.isFlag("no-incremental")
+																			? false
+																			: true },
+						}
+					);
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -426,6 +425,7 @@ clah::Clah getClahForMain() {
 							exit_code = 1;
 						}
 					});
+
 
 					compiler::driver::exit();
 					return exit_code;
@@ -444,9 +444,14 @@ clah::Clah getClahForMain() {
 							   compiler::driver::exit();
 							   return result;
 						   }))
-	    .addSubcommand(clah::Clah("throw", "Throws exception (testing command).")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   throw base::LogicError("Command `throw` thrown successfully!");
+	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+							   return 0;
 						   }));
 }
 
