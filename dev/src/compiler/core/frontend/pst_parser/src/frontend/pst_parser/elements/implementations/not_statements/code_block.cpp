@@ -16,14 +16,14 @@ namespace pst {
 		out->type = order_type;
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<error::BlockStartError>(state.getPosition()));
+			state.logInt(makeBox<error::BlockStartError>(state.getPosition()));
 			return nullptr;
 		}
 
 		state.parse(out).goDown();
 
 		// @TODO: #1484 Rethink parser errors
-		while (state.notEmpty()) {
+		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
 
@@ -32,8 +32,8 @@ namespace pst {
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));
 			}
 
-			while (state[0].is(Special::Semicolon)) {
-				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+			PST_WHILE(state[0].is(Special::Semicolon)) {
+				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
 				state.tokens().skip();
 			}
 		}

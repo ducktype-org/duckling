@@ -1,53 +1,39 @@
 #pragma once
 
+#include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
-	class CannotCoerceError final: public dia::Error {
-		tsh::SymbolType<> from, to;
 
-	protected:
-		[[nodiscard]] std::string toStringBrief() const override {
-			return "Cannot coerce from type '" + from.toString() + "' to type '" + to.toString()
-			     + "'.";
+
+	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "incompatible_types" };
 		}
 
 	public:
-		[[nodiscard]] Domain getDomain() const override { return Domain::TypeCheck; }
-
-		CannotCoerceError(
-			const dia::SourcePosition& source_position,
-			const tsh::SymbolType<>&   from,
-			const tsh::SymbolType<>&   to
-		):
-			  Error(source_position),
-			  from(from),
-			  to(to) {}
+		IncompatibleTypesError(
+			dia::SourcePosition  source_position,
+			Box<InteractiveType> actual_type,
+			Box<InteractiveType> expected_type
+		);
 	};
 
+	/**
+	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
+	 */
 	struct InvalidCoercion final {};
-	class Coercion;
 
-	/**
-	 * @brief Checks if a coercion from `from` to `to` is possible and returns
-	 * a function performing the coercion if it is.
-	 */
-	query::QResult<Coercion, InvalidCoercion> canCoerce(
-		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
-	);
-
-	/**
-	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
-	 * a function performing the coercion if it is.
-	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
-	 */
-	query::QResult<Coercion, InvalidCoercion> canCoerceToMeta(
-		query::Context& ctx, tsh::SymbolType<> from
-	);
+	class CoercionResult;
+	using CoercionQResult = query::QResult<CoercionResult>;
 
 	/**
 	 * @brief This struct represents a function that performs a coercion from one expression to
@@ -55,7 +41,7 @@ namespace compiler::helios {
 	 * `canCoerce` first), and it checks if the expression being coerced and desired type
 	 * is the same as the one validated.
 	 */
-	class Coercion {
+	class Coercion final {
 	public:
 		/**
 		 * Main function that creates a coerced expression from the old one.
@@ -79,7 +65,7 @@ namespace compiler::helios {
 			return expr->expression_type.getSymbolType() == validated_from;
 		}
 
-		friend query::QResult<Coercion, InvalidCoercion> canCoerce(
+		friend CoercionQResult canCoerce(
 			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 		);
 
@@ -96,4 +82,67 @@ namespace compiler::helios {
 			  validated_from(validated_from),
 			  to(to) {}
 	};
+
+	/**
+	 * @brief The result of a coercion check, either a valid Coercion or an InvalidCoercion.
+	 * This is mostly a utility wrapper around std::variant, that helps in avoiding boilerplate code.
+	 */
+	class CoercionResult final {
+	public:
+		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
+
+		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
+
+		[[nodiscard]]
+		constexpr bool isValid() const noexcept {
+			return std::holds_alternative<Coercion>(storage);
+		}
+
+		[[nodiscard]]
+		constexpr bool isInvalid() const noexcept {
+			return std::holds_alternative<InvalidCoercion>(storage);
+		}
+
+		[[nodiscard]]
+		const Coercion& getCoercion() const& {
+			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
+			return std::get<Coercion>(storage);
+		}
+
+		[[nodiscard]]
+		Coercion&& getCoercion() && {
+			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
+			return std::move(std::get<Coercion>(storage));
+		}
+
+		/**
+		 * Main function that creates a coerced expression from the old one.
+		 */
+		[[nodiscard]] Box<code::Expr> coerce(query::Context& ctx, Box<code::Expr> from) const {
+			CORE_ASSERT(isValid(), "Attempting to get Coercion from an invalid CoercionResult.");
+			return std::get<Coercion>(storage).coerce(ctx, std::move(from));
+		}
+
+		[[nodiscard]]
+		const std::variant<Coercion, InvalidCoercion>& getVariant() const {
+			return storage;
+		}
+
+
+	private:
+		std::variant<Coercion, InvalidCoercion> storage;
+	};
+
+	/**
+	 * @brief Checks if a coercion from `from` to `to` is possible and returns
+	 * a function performing the coercion if it is.
+	 */
+	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
+
+	/**
+	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
+	 * a function performing the coercion if it is.
+	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
+	 */
+	CoercionQResult canCoerceToMeta(query::Context& ctx, tsh::SymbolType<> from);
 }

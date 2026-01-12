@@ -254,6 +254,9 @@ namespace compiler::helios::code {
 		FloatEq,      // Equal
 		FloatNeq,     // Not equal
 
+		MetaEq,
+		MetaNeq,
+
 		BooleanAnd,
 		BooleanOr,
 	};

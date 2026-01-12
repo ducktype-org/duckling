@@ -117,7 +117,7 @@ namespace dia_int {
 			auto diagnostic_template = template_file::DiagnosticTemplate::fromYaml(yaml_node);
 
 			if (!checkMetadataMatch(diagnostic_template, metadata)) {
-				throw TemplateEvaluationException(
+				throw ParsingTemplateFileError(
 					"Loaded template metadata does not match requested metadata."
 				);
 			}

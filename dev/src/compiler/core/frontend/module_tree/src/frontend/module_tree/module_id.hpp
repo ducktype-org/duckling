@@ -28,6 +28,12 @@ namespace compiler::frontend {
 	private:
 		ModuleID(base::Ref<ModuleTree> ref): ref(ref) {}
 
+		/**
+		 * @brief Ensures the referenced SourceFile is still valid during development builds.
+		 * This function will work only if use_module_modifier_remove is enabled.
+		 */
+		void checkDanglingReference() const;
+
 		base::Ref<ModuleTree> ref;
 
 		friend class ModuleTree;

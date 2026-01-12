@@ -1,4 +1,5 @@
 add_subdirectory(clah)
+add_subdirectory(concurrent)
 add_subdirectory(diagnostic)
 add_subdirectory(diagnostic_interactive)
 add_subdirectory(filesystem)

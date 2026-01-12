@@ -58,10 +58,14 @@ namespace query::internal {
 		 */
 		struct PreviousCompilation final {
 			/**
-			 * The immutable query graph from the previous compilation.
+			 * The query graph from the previous compilation.
+			 * Do not assume that this graph will remain unchanged.
+			 * We steal nodes from this graph into the current graph during merging (only green
+			 * nodes can be merged) So you have to be careful when using it. Also do not change
+			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			const QueryGraph                 graph;
+			QueryGraph                       graph;
 			base::HashMap<NodeID, PrevColor> node_colors;
 
 			PreviousCompilation() = delete;
@@ -145,6 +149,14 @@ namespace query::internal {
 		 * @brief Sets the previous query graph.
 		 */
 		void setPreviousGraph(QueryGraph&& graph);
+
+		/**
+		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
+		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
+		 * @note This is for internal use in QueryFramework only. It is used to map nodes when
+		 * deserializnig previous graph in incremental compilation.
+		 */
+		NodeID remapUnstableOrUnregisteredNodes(NodeID node);
 
 		/**
 		 * Performs a red-green sweep starting from the specified node in the current query graph.

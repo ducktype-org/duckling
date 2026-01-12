@@ -17,8 +17,8 @@ function main { i64, ptr_argv } -> i64 {
     cmpEq_l64_imm tmp, 0;
     jmpIfNot_label Finish;
     add_l64_imm tmp, 1;
-    ucmpG_l64_l64 tmp, tmp2;
-    ucmpG_l64_imm tmp, 0;
+    ucmpGt_l64_l64 tmp, tmp2;
+    ucmpGt_l64_imm tmp, 0;
     jmpIfNot_label Finish;
     mov_l64_imm tmp, 1228;
 
@@ -32,7 +32,7 @@ function main { i64, ptr_argv } -> i64 {
     sub_l32_imm tmp3, 1;
     umul_l32_imm tmp3, 2;
     udiv_l32_imm tmp3, 2;
-    ucmpG_l32_imm tmp3, 0;
+    ucmpGt_l32_imm tmp3, 0;
     jmpIfNot_label Finish;
 
     mov_l32_imm tmp4, 2;
@@ -43,15 +43,15 @@ function main { i64, ptr_argv } -> i64 {
     umod_l32_l32 tmp3, tmp4;
     umod_l32_imm tmp3, 1231231;
     mov_l32_imm tmp4, 1;
-    ucmpG_l32_l32 tmp3, tmp4;
+    ucmpGt_l32_l32 tmp3, tmp4;
     jmpIfNot_label Finish;
 
     output_l64 tmp;
 
     label Finish;
     init_lany_type bajt, byte;
-    ucmpG_l8_l8 bajt, bajt;
-    ucmpG_l8_imm bajt, 1;
+    ucmpGt_l8_l8 bajt, bajt;
+    ucmpGt_l8_imm bajt, 1;
     deinit;
     deinit; # tmp4
     deinit; # tmp3

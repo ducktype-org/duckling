@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
+		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -43,9 +44,9 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			auto& functions = unit->functions;
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).declaration->original_name);
 			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).declaration->original_name);
@@ -85,12 +86,12 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
-			auto globals = unit->glob_data;
+			auto globals = unit.glob_data;
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
 
@@ -102,7 +103,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
-			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 
 			auto i64_type = ctx.query<QueryIntegralType>(64);
 
@@ -121,7 +122,6 @@ private:
 				ASSERT_EQUAL(b->getName(), "b");
 				ASSERT_EQUAL(b->type.getType(), i64_type);
 			}
-
 			// Test code generation:
 
 			ASSERT_EQUAL(foo_mir.block_order.size(), 8);
@@ -169,32 +169,22 @@ private:
 			ASSERT_EQUAL(goo_mir.block_order.size(), 1);
 
 			auto first_block_id = goo_mir.block_order[0];
-			/**
-		Local(8) := Cast             23               Flags[], Params{from:i32, to:i32}, scope:40
-			        Nop                               Flags[], Params{}, scope:40
-		Local(8) := Cast             24               Flags[], Params{from:i32, to:i32}, scope:39
-			        Nop                               Flags[], Params{}, scope:39
-		Local(9) := Call             Function(hoo)    Flags[Construct Local(9)], Params{}, scope:38
-		Local(9) := Cast             15               Flags[], Params{from:i32, to:i64}, scope:38
-			        Nop                               Flags[], Params{}, scope:38
-			        FunctionEnd                       Flags[], Params{}, scope:36
-			 */
 
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 7);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 5);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
-				compiler::mir::Operation::Cast
+				compiler::mir::Operation::Assign
+			);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(1).operation,
+				compiler::mir::Operation::Assign
 			);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(2).operation,
-				compiler::mir::Operation::Cast
-			);
-			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(4).operation,
 				compiler::mir::Operation::Call
 			);
 			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(5).operation,
+				goo_mir.blocks[first_block_id].instructions.at(3).operation,
 				compiler::mir::Operation::Cast
 			);
 		});
@@ -204,8 +194,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
@@ -214,7 +204,7 @@ private:
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
@@ -249,8 +239,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).declaration->original_name);
 
@@ -258,7 +248,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 4);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 		});
 	}
 
@@ -266,8 +256,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/booleans")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(2, functions.size());
 
 			auto& foo_mir
@@ -296,8 +286,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(3, functions.size());
 
 			auto& foo_mir
@@ -333,8 +323,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/numeric_literals")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit     = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& main_fun = unit->functions.at(0);
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& main_fun = unit.functions.at(0);
 			ASSERT_EQUAL(main_fun.declaration->original_name, base::StrID("main"));
 			auto& main_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ main_fun })->valueOrThrow();
@@ -381,8 +371,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/function_with_parameters")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(1, functions.size());
 
 			auto& foo_mir
@@ -447,8 +437,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/function_end_test")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(functions.at(0).declaration->original_name, base::StrID("missing_return"));
 			ASSERT_EQUAL(
@@ -457,7 +447,8 @@ private:
 			ASSERT_EQUAL(functions.at(2).declaration->original_name, base::StrID("unreachable_end"));
 			ASSERT_EQUAL(functions.at(3).declaration->original_name, base::StrID("empty"));
 
-			ASSERT_TRUE(ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasError()
+			ASSERT_TRUE(
+				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasFailed()
 			);
 
 			auto& should_add_retvoid_fun
@@ -483,6 +474,117 @@ private:
 		});
 	}
 
+	void metaFunctionsTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/meta_functions")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
+
+			compiler::tsh::SymbolType<> meta_type{
+				ctx.query<QueryMetaType>({}),
+				compiler::tsh::ReferenceKind::Direct,
+				compiler::tsh::Mutability::Mutable,
+			};
+
+			using enum compiler::mir::Operation;
+
+			for (const compiler::helios::HOUTFunction& fun: functions) {
+				if (fun.declaration->original_name.str() == "createBox") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateBox);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+
+				} else if (fun.declaration->original_name.str() == "createRef") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateRef);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createConst") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateConst);
+					ASSERT_EQUAL(instr.arguments.size(), 1);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createVariant") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateVariant);
+					ASSERT_EQUAL(instr.arguments.size(), 4);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "createTuple") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					const auto& instr = block.instructions[0];
+					ASSERT_TRUE(instr.operation == MetaCreateTuple);
+					ASSERT_EQUAL(instr.arguments.size(), 4);
+					ASSERT_TRUE(instr.arguments[0].isLocal());
+					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+				} else if (fun.declaration->original_name.str() == "megaType") {
+					auto& mir_fun
+						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+
+					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+
+					int  create_variant_count     = 0;
+					int  create_tuple_count       = 0;
+					bool create_tuple_5_arg_found = false;
+					bool call_found               = false;
+					for (const auto& instr: block.instructions) {
+						if (instr.operation == MetaCreateTuple) {
+							if (instr.arguments.size() == 5) {
+								// When a big tuple instruction is found, it should be preceeded
+								// with two inner tuple create instructions and one inner variant
+								// create instruction.
+								ASSERT_TRUE(create_tuple_count == 2);
+								ASSERT_TRUE(create_variant_count == 1);
+								create_tuple_5_arg_found = true;
+							}
+							create_tuple_count++;
+						} else if (instr.operation == MetaCreateVariant) {
+							// If variant is created, two preceding tuple creating instructions
+							// should exist.
+							ASSERT_TRUE(create_tuple_count == 2);
+							create_variant_count++;
+
+						} else if (instr.operation == Call) {
+							call_found = true;
+						}
+					}
+
+					ASSERT_EQUAL(create_variant_count, 1);
+					ASSERT_EQUAL(create_tuple_count, 3);
+					ASSERT_TRUE(create_tuple_5_arg_found);
+					ASSERT_TRUE(call_found);
+				}
+			}
+		});
+	}
+
 	void moveValidation() {
 		// @note This test is very fragile and may require hotfixes even after unrelated changes.
 		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
@@ -490,8 +592,8 @@ private:
 		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit->functions;
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& functions = unit.functions;
 
 			for (const compiler::helios::HOUTFunction& fun: functions) {
 				if (fun.declaration->original_name.str() == "good1") {
@@ -513,9 +615,6 @@ private:
 					auto& mir_rep_good2 = (compiler::mir::Function&) ctx
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
-
-					mir_rep_good2.debugPrint(std::cout);
-
 
 					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[2]);
 					compiler::mir::Instruction&   assignment

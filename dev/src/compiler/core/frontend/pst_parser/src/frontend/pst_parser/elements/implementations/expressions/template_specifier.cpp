@@ -4,28 +4,13 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	class BadTemplateError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single template instantiation expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadTemplateError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadTemplateError>(
+			state.logInt(makeBox<BadTemplateError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

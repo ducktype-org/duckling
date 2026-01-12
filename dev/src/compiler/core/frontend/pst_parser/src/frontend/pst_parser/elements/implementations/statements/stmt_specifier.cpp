@@ -4,24 +4,7 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic/message.hpp>
-
 namespace pst {
-	class BadCallError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a round bracket call expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadCallError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	const std::set<Keyword> StmtSpecifier::SPECIFIERS(
 		SPECIFIERS_ARRAY.begin(), SPECIFIERS_ARRAY.end()
@@ -44,7 +27,8 @@ namespace pst {
 			MBox<CallList> call_list;
 
 			if (!state[0].isBracketGroup(lexer::Token::Round)) {
-				state.log(makeBox<BadCallError>(dia::SourcePosition(state.getPosition())));
+				state.logInt(makeBox<BadSpecifierCallError>(dia::SourcePosition(state.getPosition())
+				));
 				return nullptr;
 			}
 
@@ -62,18 +46,16 @@ namespace pst {
 				.withDef(&out->code_block_or_stmt, CodeBlock::CodeBlockType::Unordered);
 		}
 
+		// @TODO: #1739 Move this handling outside of parser.
 		// Check if only legal elements are present in the extern block or statement
 		// (for example "print();" is illegal, only function and classes are allowed)
 		if (out->specifier == Keyword::Extern) {
 			for (auto&& stmt: *out->code_block_or_stmt.internal()) {
 				auto kind = stmt.illegalAccess().value()->getStmtKind();
 				if (kind != StmtKind::Fun && kind != StmtKind::Class && kind != StmtKind::FunDecl) {
-					state.log(
-						makeBox<dia::PlaceholderMessage<dia::Warning, dia::Message::Domain::Parser>>(
-							stmt.illegalAccess().value()->getSourcePosition(),
-							"Only function and class declarations are allowed inside extern()"
-						)
-					);
+					state.logInt(makeBox<InvalidExternContentWarning>(
+						stmt.illegalAccess().value()->getSourcePosition()
+					));
 				}
 			}
 		}

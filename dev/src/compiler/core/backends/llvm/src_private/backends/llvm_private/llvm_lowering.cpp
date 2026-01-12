@@ -108,6 +108,12 @@ namespace {
 				}
 				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
 			}
+			variant_case_novalue(compiler::tsh::SymbolType<>) {
+				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
+				// using compile time operations on types to compile. This should never be used in
+				// runtime.
+				return llvm::ConstantInt::get(llvm_type, 0, false);
+			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "
@@ -273,6 +279,14 @@ namespace compiler::backend_llvm {
 			}
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(llvm_context);
+			}
+			variant_case(tsl::MetaTypeLayout, meta_layout) {
+				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
+				// using compile time operations on types to compile. This should never be used in
+				// runtime.
+				return llvm::Type::getIntNTy(
+					llvm_context, base::safeIntConv<unsigned>(static_cast<usize>(layout->getSize()))
+				);
 			}
 			variant_default {
 				CORE_PANIC(
@@ -991,6 +1005,27 @@ namespace compiler::backend_llvm {
 
 		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
 		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
+
+	Box<ModuleImpl> parseLLVMBCToModuleImpl(const std::span<unsigned char> llvm_bc_data) {
+		// Wrap the array in a MemoryBuffer
+		auto buffer = llvm::MemoryBuffer::getMemBuffer(
+			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data.data()), llvm_bc_data.size()),
+			/*BufferName=*/"",
+			/*RequiresNullTerminator=*/false  // Maybe unnecessary, but BC files may not end with null
+		);
+
+		// Parse the bitcode.
+		llvm::Expected<std::unique_ptr<llvm::Module>> mod_or_err
+			= llvm::parseBitcodeFile(buffer->getMemBufferRef(), getLLVMContext());
+
+		if (!mod_or_err)
+			CORE_PANIC("Error parsing bitcode: ", llvm::toString(mod_or_err.takeError()));
+
+		// If bitcode was parsed successfully, wrap the module in ModuleImpl and return it.
+		auto result
+			= makeBox<ModuleImpl>(Box<llvm::Module>::fromPointer(std::move(*mod_or_err).release()));
+		return result;
 	}
 
 	llvm::Function* addFunctionToModuleInternal(

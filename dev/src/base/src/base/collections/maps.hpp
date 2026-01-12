@@ -158,13 +158,13 @@ namespace base {
 
 		Optional<Ref<DATA_T>> atMaybe(KEY_T key) {
 			auto idx = static_cast<usize>(key);
-			if (idx < map.size()) return &*map.at(idx);
+			if (idx < map.size() && map.at(idx).has_value()) return &*map.at(idx);
 			return {};
 		}
 
 		Optional<CRef<DATA_T>> atMaybe(KEY_T key) const {
 			auto idx = static_cast<usize>(key);
-			if (idx < map.size()) return &*map.at(idx);
+			if (idx < map.size() && map.at(idx).has_value()) return &*map.at(idx);
 			return {};
 		}
 

@@ -25,6 +25,10 @@ namespace pst {
 		out << "}";
 	}
 
+	AccessLocked<ValuePatternExprHolder> ValuePattern::getExpression() const {
+		return expression.give();
+	}
+
 	LangElement::HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}

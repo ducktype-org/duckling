@@ -28,7 +28,8 @@ namespace compiler::helios {
 
 			void visitClass(pst::Access<pst::Class> stmt) final {
 				name = stmt->getName();
-				if (auto base = stmt->getBase().unlockOpt(ctx)) base_class = base.value();
+				if (auto base = stmt->getBase().unlockOpt(ctx))
+					base_class = base.value()->getExpr().unlock(ctx);
 				if (auto implements = stmt->getImplements().unlockOpt(ctx))
 					this->implements = implements.value();
 			}
@@ -70,25 +71,21 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto ctv = getTypeCTVFromPST(ctx, base);
-				if (ctv.hasError()) return query::QError(query::Failed());
+				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
 				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 				// type of the base class has any specifiers.
-				class_info.base = ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(
-					ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
-				);
+				class_info.base = ctv.get<tsh::SymbolType<>>()->getType();
+				class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					auto ctv = getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr());
-					if (ctv.hasError()) return query::QError(query::Failed());
+					UNPACK_QRESULT(
+						auto ctv =, getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr())
+					);
 					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 					// type of the base class has any specifiers.
-					class_info.implements.push_back(
-						ctv.valueOrThrow().get<tsh::SymbolType<>>()->getType()
-					);
+					class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
 				}
 			}
 

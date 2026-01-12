@@ -2,7 +2,7 @@ metadata:
   type: "note"
   family: "lookup"
   name: "is_alias_code"
-  code: "5001"
+  code: "0"
   active_from: "0.0.1"
   active_until: "now"
   template_type: "message"

@@ -31,6 +31,11 @@ impl<'duck> PackageCtx<'duck> {
         &self.package
     }
 
+    /// Consume self, returning the underlying package.
+    pub fn into_package(self) -> Package {
+        self.package
+    }
+
     /// Get [`VenvConfig`] of this [`PackageCtx`]
     pub fn venv_config(&self) -> &VenvConfig {
         &self.venv_config

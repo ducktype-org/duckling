@@ -2,6 +2,7 @@
 
 #include "symbol_abi.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -14,56 +15,82 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 
 
-	query::QResult<base::StrID, query::Failed> getStrFromExternCallArg(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> arg
+	/**
+	 * @brief Extracts a string literal from an extern() call argument.
+	 * @param ctx The query context.
+	 * @param arg The call argument to extract the string from.
+	 * @return The string literal value, or a query::Failed if extraction fails (there is no string
+	 * literal there).
+	 */
+	query::QResult<base::StrID> getStrFromCallArg(
+		query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
 	) {
-		// Add proper helios error handling once we have new error logging system
-		auto call_arg_opt = arg.unlock(ctx).dynamicCast<pst::CallArgument>();
-		if (!call_arg_opt) return query::QError(query::Failed());
+		auto call_arg = arg.unlock(ctx);
 
-		if (call_arg_opt.value()->getArgName().value.has_value())
+		if (call_arg->getArgName().value.has_value())
 			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
 
-		auto expr_holder_opt
-			= call_arg_opt.value()->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>();
-		if (!expr_holder_opt) return query::QError(query::Failed());
+		auto expr_holder = call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
 
 		auto str_lit_opt
-			= expr_holder_opt.value()->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-		if (!str_lit_opt) return query::QError(query::Failed());
+			= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 
-		return str_lit_opt.value()->getValue().value;
+		match_optional(str_lit_opt) {
+			opt_none {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected string literal in extern() call argument",
+					arg.unlock(ctx)->getSourcePosition()
+				));
+				return query::Failed();
+			}
+			opt_some(str_lit) { return str_lit->getValue().value; }
+		}
+		return query::Failed();  // unreachable
 	}
 
 	QuerySymbolABI_Result getSymbolABI(
 		query::Context& ctx, pst::AccessLocked<pst::CallList> extern_args
 	) {
-		std::vector<pst::AccessLocked<pst::LangElement>> args{ extern_args.unlock(ctx)->begin(),
-			                                                   extern_args.unlock(ctx)->end() };
+		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args.unlock(ctx)->begin(),
+			                                                    extern_args.unlock(ctx)->end() };
 
-		if (args.empty()) return query::QError(query::Failed());
+		if (args.empty()) {
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"extern() requires at least one argument specifying the ABI",
+				extern_args.unlock(ctx)->getSourcePosition()
+			));
+			return query::Failed();
+		}
 
-		auto first_arg_result = getStrFromExternCallArg(ctx, args[0]);
-		if (first_arg_result.hasError()) return query::QError(first_arg_result.error());
+		UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
 
-		if (first_arg_result.valueOrThrow() == base::StrID("C")) {
+		if (first_arg == base::StrID("C")) {
 			if (args.size() == 2) {  // `extern("C" "mylib")` case
-				auto lib_str_lit_opt = getStrFromExternCallArg(ctx, args[1]);
-				if (lib_str_lit_opt.hasError()) return query::QError(lib_str_lit_opt.error());
-
-				return CAbi{ .library = lib_str_lit_opt.valueOrThrow() };
+				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
+				return CAbi{ .library = lib_str_lit };
+			} else if (args.size() == 1) {  // `extern("C")` case
+				return CAbi{};
+			} else {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Too many arguments for C ABI in extern()",
+					extern_args.unlock(ctx)->getSourcePosition()
+				));
+				return query::Failed();
 			}
-			return CAbi{};
 		} else {
-			// @TODO add proper diagnostic here for invalid ABI
-			return query::QError(query::Failed());
+			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getSourcePosition()
+			));
+			return query::Failed();
 		}
 	}
 
@@ -72,10 +99,16 @@ namespace compiler::helios {
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
 				if (specifier.unlock(ctx)->getSpecifier() == pst::Keyword::Extern) {
-					auto args = specifier.unlock(ctx)->getArgs();
-					if (not args) return query::QError(query::Failed());
-
-					return getSymbolABI(ctx, args.value());
+					match_optional(specifier.unlock(ctx)->getArgs()) {
+						opt_some(args) { return getSymbolABI(ctx, args); }
+						opt_none {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"extern symbol requires ABI specification passed as an argument",
+								specifier.unlock(ctx)->getSourcePosition()
+							));
+							return query::Failed();
+						}
+					}
 				}
 			}
 			return DefaultAbi{};

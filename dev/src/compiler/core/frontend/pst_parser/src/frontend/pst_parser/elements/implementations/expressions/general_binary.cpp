@@ -3,34 +3,27 @@
 #include "../../hierarchy/expressions/general_suffix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 #include <stack>
 
 namespace pst::expr {
-	class OnlyPrefixError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expression has only prefix operators";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		OnlyPrefixError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
-		while (fwd < length
-		       && !(
-				   state[fwd].isOperatorSymbol()
-				   && state[fwd].asBinaryOperator().value().isNotReserved()
-			   )
-		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(NamedOperator::Period))) {
+		PST_WHILE(
+			fwd < length
+			&& !(
+				state[fwd].isOperatorSymbol()
+				&& state[fwd].asBinaryOperator().value().isNotReserved()
+			)
+			&& !(
+				state[fwd].isIdentifier()
+				&& !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
+		        ).copyValueOr(false)
+			)
+		) {
 			fwd++;
 		}
 		return fwd;
@@ -64,14 +57,14 @@ namespace pst::expr {
 		i64 fwd            = 0;
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
-		while (fwd < length && state[fwd].isPrefixOperator()) fwd++;
-		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
-			reduced_length--;
-		if (fwd == reduced_length) state.log(makeBox<OnlyPrefixError>(pos));
+		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) fwd++;
+		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
+		reduced_length--;
+		if (fwd == reduced_length) state.logInt(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
 		i64              next = 0;
-		while (fwd < reduced_length) {
+		PST_WHILE(fwd < reduced_length) {
 			next = skipAtom(state, fwd, reduced_length);
 			if (fwd == next) makeBox<tpc::NoIdentifierError>(state.getPosition(fwd));
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
@@ -95,7 +88,7 @@ namespace pst::expr {
 			fwd                   = operators[i];
 			i64         curr_prec = state[fwd].asBinaryOperator().value().getGenBinOpPrecedence();
 			BuilderExpr lhs       = operators[i] - operators[i - 1] - 1;
-			while (!stack.empty() && stack.top().op_prec <= curr_prec) {
+			PST_WHILE(!stack.empty() && stack.top().op_prec <= curr_prec) {
 				Partial partial = std::move(stack.top());
 				stack.pop();
 				lhs = makeBox<OperatorBuilder>(
@@ -108,7 +101,7 @@ namespace pst::expr {
 		}
 
 		BuilderExpr rhs = length - operators.back() - 1;
-		while (!stack.empty()) {
+		PST_WHILE(!stack.empty()) {
 			Partial partial = std::move(stack.top());
 			stack.pop();
 			rhs = makeBox<OperatorBuilder>(

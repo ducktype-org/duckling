@@ -13,7 +13,7 @@
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::houtgen {
-	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, HOUTFunction) {
+	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
 			const SymID class_symbol    = class_type.getSymbol();
@@ -36,7 +36,7 @@ namespace compiler::helios::houtgen {
 				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
 			});
 
-			const auto ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol);
+			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
 			// Prepare the body of the constructor.
 			std::vector<Box<code::Stmt>> body{};
@@ -45,7 +45,7 @@ namespace compiler::helios::houtgen {
 			body.reserve(1 + num_fields + 1);
 
 			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl->return_type;
+			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
 					 .name = base::StrID("result"),
 					 .generated_symbol_data
@@ -63,7 +63,7 @@ namespace compiler::helios::houtgen {
 						makeBox<code::IdentifierExpr>(ctx, result_symbol),
 						fields.at(i).getSymbol()
 					),
-					makeBox<code::IdentifierExpr>(ctx, ctor_decl->parameters.at(i).helios_symbol)
+					makeBox<code::IdentifierExpr>(ctx, ctor_decl.parameters.at(i).helios_symbol)
 				));
 			}
 
@@ -73,7 +73,7 @@ namespace compiler::helios::houtgen {
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction{
-				ctor_decl,
+				&ctor_decl,
 				std::make_shared<const code::CodeBlock>(code::CodeBlock{
 					.statements = std::move(body),
 				}),
