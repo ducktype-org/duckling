@@ -146,19 +146,6 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::vector<SymID> getAllHeliosSymbols() {
-		// @TODO PR fix – the same way as in scopes!
-		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
-			"getAllHeliosSymbols called from within query!"
-		);
-		std::vector<SymID> output;
-		output.reserve(symbol_table.size());
-
-		for (auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(&symbol));
-		return output;
-	}
-
 	/**
 	 * @brief SymbolData Factory.
 	 * Make symbols from PST statements.
@@ -387,7 +374,27 @@ namespace compiler::helios {
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
-		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+	private:
+		/**
+		 * @brief This is a helper function for getAllHeliosSymbols.
+		 * Use only inside that function (and only for debug/test purposes)!
+		 */
+		static std::vector<SymID> getAllCachedSymbols() {
+			// \parallel this implementation must be made thread safe
+			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+			// This implementation is fragile, adjust if needed.
+
+			std::vector<SymID> out;
+
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			return out;
+		}
+
+		// for getAllCachedSymbols:
+		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
@@ -503,6 +510,27 @@ namespace compiler::helios {
 				QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> p_result) -> QResult {
 					return &p_result->data_refs;
 				})
+
+			private:
+				/**
+				 * @brief This is a helper function for getAllHeliosSymbols.
+				 * Use only inside that function (and only for debug/test purposes)!
+				 */
+				static std::vector<SymID> getAllCachedSymbols() {
+					// \parallel this implementation must be made thread safe
+					// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+					// This implementation is fragile, adjust if needed.
+
+					std::vector<SymID> out;
+
+					for (auto& [key, cache_entry]: cache)
+						for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
+					return out;
+				}
+
+				// for getAllCachedSymbols:
+				friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -789,7 +817,28 @@ namespace compiler::helios {
 				return SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
 			}
 
-			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+		private:
+			/**
+			 * @brief This is a helper function for getAllHeliosSymbols.
+			 * Use only inside that function (and only for debug/test purposes)!
+			 */
+			static std::vector<SymID> getAllCachedSymbols() {
+				// \parallel this implementation must be made thread safe
+				// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+				// This implementation is fragile, adjust if needed.
+
+				std::vector<SymID> out;
+
+				for (auto& [key, cache_entry]: cache)
+					out.emplace_back(QResult{ &cache_entry.data });
+				return out;
+			}
+
+			// for getAllCachedSymbols:
+			friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 		};
 
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
@@ -944,4 +993,28 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
+
+	std::vector<SymID> getAllHeliosSymbols() {
+		// this implementation is fragile, adjust if needed
+
+		CORE_ASSERT(
+			query::Context::getState().queryStackSize() == 0,
+			"getAllHeliosSymbols called from within query!"
+		);
+
+		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto builtin_symbols
+			= builtin::ImplementationOf_QueryGlobalBuiltinSymbols::getAllCachedSymbols();
+		auto generated_symbols
+			= houtgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
+
+		std::vector<SymID> output;
+		output.reserve(pst_symbols.size() + builtin_symbols.size() + generated_symbols.size());
+
+		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
+		output.insert(output.end(), builtin_symbols.begin(), builtin_symbols.end());
+		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
+
+		return output;
+	}
 }
