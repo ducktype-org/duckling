@@ -411,13 +411,13 @@ namespace compiler::helios {
 			 */
 			struct QueryGlobalBuiltinSymbols_PResult {
 				std::vector<SymbolData> data;
-				std::vector<SymID> data_refs;
+				std::vector<SymID>      data_refs;
 			};
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, QueryGlobalBuiltinSymbols_PResult) {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
-					std::vector<SymID> output_symbol_data_refs;
+					std::vector<SymID>      output_symbol_data_refs;
 
 					auto i32_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>(
@@ -485,8 +485,8 @@ namespace compiler::helios {
 						  };
 
 					for (auto& [name, type]: function_data) {
-						auto sym_data = 
-							SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type });
+						auto sym_data
+							= SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type });
 
 						output_symbol_data.emplace_back(sym_data);
 						output_symbol_data_refs.push_back(
@@ -503,7 +503,6 @@ namespace compiler::helios {
 				QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> p_result) -> QResult {
 					return &p_result->data_refs;
 				})
-					
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -787,8 +786,7 @@ namespace compiler::helios {
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
 			static auto provide(Context&, QKey key) -> PResult {
-				return 
-					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
+				return SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
 			}
 
 			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

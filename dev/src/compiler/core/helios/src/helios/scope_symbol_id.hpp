@@ -12,6 +12,7 @@ namespace compiler::helios {
 	// Forwards:
 	struct SymbolData;
 	struct ScopeData;
+
 	namespace houtgen {
 		struct ImplementationOf_QueryGeneratedSymbol;
 	}
