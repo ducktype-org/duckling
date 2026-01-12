@@ -111,3 +111,8 @@ HTML_COLORSTYLE        = LIGHT
 # To customize layout
 # Currently the only change is to make "Detailed Description" appear at the top of documentation website of every "file"
 LAYOUT_FILE = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/DoxygenLayout.xml"
+
+# Enable anonymous namespaces
+EXTRACT_ANON_NSPACE = YES
+EXTRACT_PRIVATE     = YES
+EXTRACT_STATIC      = YES
