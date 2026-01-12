@@ -1,5 +1,5 @@
 /**
- * @file generic_operation.cpp
+ * @file generic_operations.cpp
  * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
  */
 
