@@ -50,6 +50,31 @@ namespace lsp {
 		}
 	}
 
+	bool hasErrorsInModuleTree(base::CRef<frontend::ModuleTree> module) {
+		auto main_file
+			= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				module->getMainSourceFile().illegalAccess().getID()
+			);
+		auto main_pst = main_file->getPST();
+		if (main_pst->getLogger()->hasErrors()) return true;
+
+		for (const auto& file_ref: module->getSourceFiles()) {
+			auto file
+				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					file_ref.illegalAccess().getID()
+				);
+			auto pst = file->getPST();
+			if (pst->getLogger()->hasErrors()) return true;
+		}
+
+		// Recurse into submodules
+		for (const auto& submodule_id_locked: module->getSubmodules()) {
+			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
+			if (hasErrorsInModuleTree(submodule)) return true;
+		}
+		return false;
+	}
+
 	std::vector<CRef<dia_int::dia_args::Diagnostic>> getParserDiagnosticsFromModuleTree(
 		base::CRef<frontend::ModuleTree> module
 	) {
@@ -63,7 +88,8 @@ namespace lsp {
 		const dia_int::lsp::EvaluationContext&                  ctx,
 		std::ostream&                                           out
 	) {
-		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>> previous_diag_by_file_opt{};
+		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>>
+			previous_diag_by_file_opt{};
 
 		base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 		for (const auto& diag: diagnostics) {
@@ -121,10 +147,12 @@ namespace lsp {
 		std::vector<CRef<dia_int::dia_args::Diagnostic>> diagnostics
 			= getParserDiagnosticsFromModuleTree(root_module);
 
-		query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
-		query::Context::int_logger.collectDiagnostics(diagnostics);
+		if (not hasErrorsInModuleTree(root_module)) {
+			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
+			query::Context::int_logger.collectDiagnostics(diagnostics);
+		}
 
-		dia_int::lsp::EvaluationContext ctx(main_path.string(), [](const std::string& path) {
+		auto fs_path_to_uri = [](const std::string& path) {
 			auto first = path.find('/');
 			if (first == std::string::npos) return "file://" + path;
 
@@ -132,7 +160,9 @@ namespace lsp {
 			if (second == std::string::npos) return "file://" + path;
 
 			return "file://" + path.substr(second);
-		});
+		};
+
+		dia_int::lsp::EvaluationContext ctx(main_path.string(), fs_path_to_uri);
 
 		std::stringstream out;
 		jsonSerializeDiagnostics(diagnostics, ctx, out);
