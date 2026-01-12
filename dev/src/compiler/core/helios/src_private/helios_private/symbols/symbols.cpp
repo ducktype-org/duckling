@@ -415,16 +415,33 @@ namespace compiler::helios {
 			 * @brief PResult for QueryGlobalBuiltinSymbols.
 			 * It stores both SymbolData and SymID references to them,
 			 * to avoid recomputing SymIDs on each query call.
+			 *
+			 * @importnat Once the PResult is constructed, the data inside vectors
+			 *            should remain stable, so that SymIDs references remain valid.
+			 *            For this reason we delete copy constructor and copy assignment.
 			 */
 			struct QueryGlobalBuiltinSymbols_PResult {
 				std::vector<SymbolData> data;
 				std::vector<SymID>      data_refs;
+
+				QueryGlobalBuiltinSymbols_PResult(std::vector<SymbolData>&& data):
+					  data(std::move(data)),
+					  data_refs() {
+					// we construct data_refs here to ensure stability of references:
+					for (auto& sym_data: this->data)
+						data_refs.push_back(GetSymRef_Functor::make(&sym_data));
+				}
+
+				QueryGlobalBuiltinSymbols_PResult(const QueryGlobalBuiltinSymbols_PResult&)
+					= delete;
+				QueryGlobalBuiltinSymbols_PResult(QueryGlobalBuiltinSymbols_PResult&&) = default;
+				QueryGlobalBuiltinSymbols_PResult& operator=(const QueryGlobalBuiltinSymbols_PResult&)
+					= delete;
 			};
 
 			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, QueryGlobalBuiltinSymbols_PResult) {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
-					std::vector<SymID>      output_symbol_data_refs;
 
 					auto i32_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>(
@@ -496,15 +513,9 @@ namespace compiler::helios {
 							= SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type });
 
 						output_symbol_data.emplace_back(sym_data);
-						output_symbol_data_refs.push_back(
-							GetSymRef_Functor::make(&output_symbol_data.back())
-						);
 					}
 
-					return QueryGlobalBuiltinSymbols_PResult{
-						.data      = std::move(output_symbol_data),
-						.data_refs = std::move(output_symbol_data_refs),
-					};
+					return QueryGlobalBuiltinSymbols_PResult{ std::move(output_symbol_data) };
 				}
 
 				QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> p_result) -> QResult {
