@@ -53,7 +53,8 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query PST of given file.
 	 *
-	 * \parallel reads file content and creates PST; PST creation must be thread-safe; also uses \ref root_element_file_back_map (no cache)
+	 * \parallel reads file content and creates PST; PST creation must be thread-safe; also uses
+	 * \ref root_element_file_back_map (no cache)
 	 * @ingroup query_not_thread_safe
 	 */
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({ .uses_qresult = false }))

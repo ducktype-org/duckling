@@ -29,7 +29,8 @@ namespace {
 	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
 	 * information from this map into PST nodes.
 	 *
-	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used during PST construction/association; must be safe if PST is built concurrently.
+	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
+	 * during PST construction/association; must be safe if PST is built concurrently.
 	 */
 	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
 

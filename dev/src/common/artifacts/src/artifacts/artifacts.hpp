@@ -170,7 +170,8 @@ namespace artifacts {
 		/**
 		 * @{
 		 * \parallel
-		 * @brief Global artifacts hierarchy for build/query outputs (files and blobs), persisted to disk.
+		 * @brief Global artifacts hierarchy for build/query outputs (files and blobs), persisted to
+		 * disk.
 		 * @note Written by CompileModule and other driver operations; concurrent writes can race.
 		 * @note Accessed by \ref getRootCollection and \ref setRootCollection
 		 */

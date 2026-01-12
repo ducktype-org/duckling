@@ -33,7 +33,8 @@ namespace query {
 	 * a way to hack-in the query model. This however will most likely be
 	 * discarded.
 	 *
-	 * \parallel Current implementation uses a global vector; not thread-safe; serialize or buffer per-thread.
+	 * \parallel Current implementation uses a global vector; not thread-safe; serialize or buffer
+	 * per-thread.
 	 */
 	struct Context final {
 	private:
