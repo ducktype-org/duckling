@@ -102,7 +102,7 @@ namespace lsp {
 			query::utils::withContextDo([&vfile](query::Context& ctx) {
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(vfile);
 				for (auto& src_file: src_files)
-					ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					src_file->getPST();
 			});
 			return;
 		}

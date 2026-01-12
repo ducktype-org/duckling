@@ -179,7 +179,7 @@ void server(i32 port) {
 			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 				for (auto& src_file: src_files) {
-					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					auto pst = src_file->getPST();
 					auto pst_root   = pst->getRootElement();
 					auto element    = lsp::findElement(pst_root, offset, true);
 					auto definition = lsp::findDefinition(element, ctx);
