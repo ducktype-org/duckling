@@ -168,20 +168,22 @@ namespace artifacts {
 		const std::filesystem::path PATH;
 
 		/**
-		 * @{
-		 * \parallel
+		 * @name  Artifacts storage
 		 * @brief Global artifacts hierarchy for build/query outputs (files and blobs), persisted to
 		 * disk.
-		 * @note Written by CompileModule and other driver operations; concurrent writes can race.
+		 * \parallel Written by CompileModule and other driver operations; concurrent writes can race.
 		 * @note Accessed by \ref getRootCollection and \ref setRootCollection
+		 * @{
 		 */
 		base::HashMap<base::StrID, FileArtifact> file_artifacts;
 		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
 		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
 
-		base::HashMap<base::StrID, Box<ArtifactCollection>>
-			sub_collections;  /// Box, because we may need stable refs. Cannot be base::StableHashMap,
-		                      /// because we are using a private constructor of collection.
+		/**
+		 * Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using
+		 * a private constructor of collection.
+		 */
+		base::HashMap<base::StrID, Box<ArtifactCollection>> sub_collections;
 		/**
 		 * @}
 		 */
