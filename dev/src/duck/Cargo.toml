@@ -26,7 +26,7 @@ openssl = "0.10.75"
 openssl-sys = "0.9.111"
 ordered-float = "5.1.0" # We have to add it, because saphyr (YAML library) exposes this type explicitly, so we have to pull it in order to use it.
 paste = "1.0.15"
-reqwest = "0.13.1"
+reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipart", "stream"] }
 rusqlite = "0.37.0"
 rustvil = { version = "0.9", features = ["full"] }
 saphyr = "0.0.6"
@@ -45,6 +45,7 @@ url = { version = "2.5.8", features = ["serde"] }
 
 [dev-dependencies]
 tempfile = "3.24.0"
+wiremock = "0.6.5"
 
 [features]
 shell-completion = ["dep:clap_complete"]
