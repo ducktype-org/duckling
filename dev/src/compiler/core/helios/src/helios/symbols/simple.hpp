@@ -1,4 +1,5 @@
 /**
+ * @file simple.hpp
  * File for various simple, non-query operations on SymID.
  * Implements it inside symbols.cpp in src_private.
  */
