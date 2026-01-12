@@ -54,7 +54,7 @@ find_program(CLANG_BIN
 if (CLANG_BIN)
     message(STATUS "Using Clang for built-ins source generation: ${CLANG_BIN}")
 else ()
-    message(FATAL_ERROR "Clang version ${LLVM_VERSION_MAJOR} not found. A version which matches the used LLVM version. It is required to generate sources of the built-in library.")
+    message(FATAL_ERROR "Clang version ${LLVM_VERSION_MAJOR} not found. A version which matches the used LLVM version is required to generate sources of the built-in library.")
 endif ()
 
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
