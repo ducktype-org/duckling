@@ -71,8 +71,10 @@ namespace concurrent {
 					return;
 				}
 			}
+			// NOLINTBEGIN(concurrency-mt-unsafe)
 			// If no free thread is found, push to a random thread
-			threads[std::rand() % NUM_THREADS]->pushTask(std::move(task));
+			threads[static_cast<usize>(std::rand()) % NUM_THREADS]->pushTask(std::move(task));
+			// NOLINTEND(concurrency-mt-unsafe)
 		}
 
 	private:
