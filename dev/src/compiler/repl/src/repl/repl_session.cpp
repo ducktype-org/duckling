@@ -166,12 +166,13 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
 
 			auto return_type = hout_unit.functions[0].declaration->return_type;
-			auto run_result  = executeExpression(m_dvm_pid, wrapper_func_name, return_type);
+			auto run_result
+				= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 			if (run_result.has_value()) {
 				if (return_type.toString() == "void")
 					std::cout << "Function executed.\n";
 				else
-					std::cout << "=> " << run_result.value().result_string << "\n";
+					std::cout << "=> " << run_result.value() << "\n";
 			} else {
 				error_message = "Runtime error: " + run_result.error();
 				std::cerr << error_message << "\n";

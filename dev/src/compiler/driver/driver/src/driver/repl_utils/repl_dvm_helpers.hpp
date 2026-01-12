@@ -12,13 +12,6 @@
 namespace compiler::repl {
 
 	/**
-	 * @brief Output from evaluating a REPL expression on the DVM
-	 */
-	struct ExpressionResult final {
-		std::string result_string;
-	};
-
-	/**
 	 * @brief Compile HOUT unit to DVM bytecode and load it into a running DVM process
 	 */
 	std::expected<void, std::string> compileAndLoad(
@@ -26,19 +19,19 @@ namespace compiler::repl {
 	);
 
 	/**
-	 * @brief Execute a wrapped REPL expression on the DVM and capture its return value
+	 * @brief Execute a previously loaded function on the DVM and capture its return value
 	 *
-	 * Runs a previously loaded function (typically a REPL expression wrapper) on the DVM,
-	 * waits for completion, and extracts the return value as a formatted string based on
-	 * the expression's type.
+	 * Runs any previously loaded function on the DVM, waits for completion, and extracts
+	 * the return value as a formatted string. Primarily used for executing REPL expression
+	 * wrappers, but can execute any loaded function with a supported return type.
 	 *
 	 * @param pid Process ID of the target DVM instance
 	 * @param func_name Mangled name of the function to execute
-	 * @param return_type Return type of the expression, used to format the output
-	 * @return ExpressionResult with formatted output on success, error message on failure
+	 * @param return_type Return type of the function, used to format the output
+	 * @return Formatted output string on success, error message on failure
 	 */
-	std::expected<ExpressionResult, std::string> executeExpression(
-		vm::PID pid, const std::string& func_name, const tsh::SymbolType<>& return_type
+	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
+		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	);
 
 }  // namespace compiler::repl

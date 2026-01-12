@@ -27,52 +27,46 @@ namespace compiler::repl {
 		auto lir_data
 			= ctx.query<driver::compileHOUTUnitToLIRModuleData>({ &hout_unit,
 		                                                          base::StrID("repl_module") })
-		          .valueOrThrow();
+		          .valueOrPanic();
 		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
 
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
 	}
 
-	std::expected<ExpressionResult, std::string> executeExpression(
-		vm::PID pid, const std::string& func_name, const tsh::SymbolType<>& return_type
+	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
+		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
 		auto type_str = return_type.toString();
 
 		if (type_str == "void") {
-			auto run_result = vm::api::runFunction(pid, func_name, {})
+			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})
 			                      .and_then([&] { return vm::api::join(pid); })
 			                      .transform_error(vm::api::errorToString);
 
 			if (run_result.has_value())
-				return ExpressionResult{ .result_string = "" };
+				return std::string("");
 			else
 				return std::unexpected(run_result.error());
 		}
 
-		return vm::api::runFunction(pid, func_name, {})
+		return vm::api::runFunction(pid, std::string(func_name), {})
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[&type_str](
-					Ref<vm::VmValue> exit_value
-				) -> std::expected<ExpressionResult, std::string> {
-					std::string result_str;
-
+				[&type_str](Ref<vm::VmValue> exit_value) -> std::expected<std::string, std::string> {
 					if (type_str == "i32")
-						result_str = std::to_string(exit_value->readBytes<i32>());
+						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")
-						result_str = std::to_string(exit_value->readBytes<i64>());
+						return std::to_string(exit_value->readBytes<i64>());
 					else if (type_str == "f32")
-						result_str = std::to_string(exit_value->readBytes<f32>());
+						return std::to_string(exit_value->readBytes<f32>());
 					else if (type_str == "f64")
-						result_str = std::to_string(exit_value->readBytes<f64>());
+						return std::to_string(exit_value->readBytes<f64>());
 					else if (type_str == "bool")
-						result_str = exit_value->readBytes<bool>() ? "true" : "false";
+						return exit_value->readBytes<bool>() ? "true" : "false";
 					else
 						return std::unexpected("Unsupported return type for REPL: " + type_str);
-
-					return ExpressionResult{ .result_string = result_str };
 				}
 			);
 	}
