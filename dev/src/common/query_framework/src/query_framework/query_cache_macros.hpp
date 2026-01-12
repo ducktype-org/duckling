@@ -52,7 +52,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::HashMap and returns QResults constructed
+ * It caches PResults using base::StableHashMap and returns QResults constructed
  * from a CRef<PResult> on cache hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_CREF for the sake of transparency.
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
@@ -119,7 +119,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::HashMap and returns QResults constructed
+ * It caches PResults using base::StableHashMap and returns QResults constructed
  * from a CRef<PResult> by a provided lambda function.
  *
  * @important lambda is called on both cache hit (load) and cache miss (store).
