@@ -147,7 +147,7 @@ namespace compiler::helios {
 	}
 
 	std::vector<SymID> getAllHeliosSymbols() {
-		// @TODO PR fix
+		// @TODO PR fix – the same way as in scopes!
 		CORE_ASSERT(
 			query::Context::getState().queryStackSize() == 0,
 			"getAllHeliosSymbols called from within query!"
