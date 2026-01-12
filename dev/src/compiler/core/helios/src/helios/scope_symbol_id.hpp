@@ -53,7 +53,7 @@ namespace compiler::helios {
 		bool operator==(const ScopeID&) const;
 
 		/**
-		 * @note == is needed despite the existence of <=> because
+		 * @note < is needed despite the existence of <=> because
 		 * only defaulted <=> generates all 6 comparison operators.
 		 */
 		bool operator<(const ScopeID& other) const;
