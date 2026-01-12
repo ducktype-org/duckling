@@ -55,8 +55,17 @@ namespace query {
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
+		/**
+		 * @{
+		 * @brief Global/vector-backed logging facility.
+		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
+		 * buffer per-thread.
+		 */
 		static dia::Logger     logger;
 		static dia_int::Logger int_logger;
+		/**
+		 * @}
+		 */
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
