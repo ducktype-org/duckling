@@ -6,7 +6,7 @@ from .helpers import (
     verbose,
 )
 from ..impl.helpers import exit_with_error
-from click import command
+from click import command, option
 
 
 @command()
@@ -20,6 +20,11 @@ from click import command
     help="On no-merge-base: compare against the latest commit on `branch` "
     "instead of the commit which is the LCA of `branch` and current branch. "
     "This feature allows to run the checker on a shallow clone.",
+)
+@option(
+    "--no-fix",  
+    is_flag=True, 
+    help="Apply fixes automatically instead of prompting."
 )
 @verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):

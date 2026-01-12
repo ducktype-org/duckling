@@ -468,13 +468,11 @@ namespace vm {
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
 			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
-			const auto  inh_metadata     = (*inh_meta_pointer)
-			                              ->getInheritanceMetadata()
-			                              .expect(
-											  "setVTable_lptr_type not called on the object, hence "
-											  "no inheritance metadata."
-										  );
-			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
+
+			if (*inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
+
+			const auto inh_metadata = (*inh_meta_pointer)->getInheritanceMetadata().value();
+			const auto method_name  = thread.executing_program->getMethodNamePool()[instr->arg1];
 			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
@@ -685,6 +683,15 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+		{
+			// @TODO: #1728 remove this evil instruction
+			const void* value = safeReadBytes<void*>(instr->arg1);
+			writeToStack(local_stack, instr->arg0, value);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -702,9 +709,19 @@ namespace vm {
                 TypeID(base::safeIntConv<usize>(instr->arg1))
             );
 
-			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
+			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			// This writes a pointer to the type at object's first field.
 			writeToView<const Type*>(view, type.get());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_lptr)(FUNCTION_ARGS) {
+		{
+			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			writeToView<const Type*>(view, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}

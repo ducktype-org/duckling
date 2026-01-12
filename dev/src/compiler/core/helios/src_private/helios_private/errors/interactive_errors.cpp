@@ -1,9 +1,11 @@
 #include "interactive_errors.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/usage.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -14,7 +16,7 @@
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-namespace compiler::helios::errors {
+namespace compiler::helios {
 	using namespace dia_int;
 
 	std::string getStr(dia::SourcePosition pos) {
@@ -51,11 +53,16 @@ namespace compiler::helios::errors {
 		}
 	};
 
+	/**
+	 * @brief Adds the "... is alias of ..." notes for all the aliases in the chain.
+	 * @param ctx Query context.
+	 * @param[out] linked_messages The resulting linked messages we should add to the message.
+	 * @param elem PST element of the original type identifier in the parse tree.
+	 */
 	void checkForAliases(
-		query::Context&               ctx,
-		MessageBase&                  msg,
-		pst::Access<pst::LangElement> elem,
-		std::vector<std::string>&     linked_messages
+		query::Context&                                        ctx,
+		base::HashMap<std::string, Box<dia_int::MessageBase>>& linked_messages,
+		pst::Access<pst::LangElement>                          elem
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
 		if (!ident_opt.has_value()) return;
@@ -79,13 +86,12 @@ namespace compiler::helios::errors {
 						  = getStr(alias_stmt->getPointed().unlock(ctx)->getSourcePosition());
 
 					  auto id = MessageBase::getUniqueID();
-					  msg.addLinkedMessage(
+					  linked_messages.put(
 						  id,
 						  makeBox<IsAliasCodeNote>(
 							  alias_stmt->getSourcePosition(), alias_name, underlying_chain
 						  )
 					  );
-					  linked_messages.push_back(std::move(id));
 
 					  emit_alias_note(nested.inner, underlying_chain);
 				  };
@@ -94,39 +100,84 @@ namespace compiler::helios::errors {
 		emit_alias_note(*lookup_result, ident->getName().value.str());
 	}
 
-	Box<dia_args::Component> InteractiveType::getValue(MessageBase& msg) {
-		std::string              displayed_name;
-		std::vector<std::string> linked_messages;
-
+	InteractiveType::InteractiveType(
+		query::Context&                               ctx,
+		tsh::SymbolType<>                             symbol_type,
+		base::Optional<pst::Access<pst::LangElement>> pst_expr
+	):
+		  symbol_type(symbol_type),
+		  pst_expr(std::move(pst_expr)) {
 		if (pst_expr.has_value()) {
-			displayed_name = getStr(pst_expr.value()->getSourcePosition());
-			query::utils::withContextDo([&](query::Context& ctx) {
-				checkForAliases(ctx, msg, pst_expr.value(), linked_messages);
-			});
+			this->displayed_name = getStr(pst_expr.value()->getSourcePosition());
+			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
-			displayed_name = symbol_type.toString();
+			this->displayed_name = symbol_type.toString();
+	}
 
-		msg.addEntity<TextBasedEntity>(linked_messages, displayed_name);
+	Box<dia_args::Component> InteractiveType::getValue(MessageBase& msg) {
+		// In the future, we should divide this method into two methods,
+		// first to add the linked messages,
+		// second to create the link component.
 
-		auto content = makeBox<dia_args::TextComponent>(displayed_name);
+		std::vector<std::string> linked_messages_ids;
+		for (auto& [id, linked_msg]: this->linked_messages) {
+			msg.addLinkedMessage(id, std::move(linked_msg));
+			linked_messages_ids.push_back(id);
+		}
+
+		msg.addEntity<TextBasedEntity>(linked_messages_ids, this->displayed_name);
+		auto content = makeBox<dia_args::TextComponent>(this->displayed_name);
 		auto link
-			= makeBox<dia_args::LinkComponent>(std::move(linked_messages), std::move(content));
+			= makeBox<dia_args::LinkComponent>(std::move(linked_messages_ids), std::move(content));
 		return link;
 	}
 
-	IncompatibleTypesError::IncompatibleTypesError(
-		dia::SourcePosition    source_position,
-		const InteractiveType& expected_type,
-		const InteractiveType& actual_type
+	class FunctionDeclaredHereNote final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "function_declared_here" };
+		}
+
+	public:
+		FunctionDeclaredHereNote(dia::SourcePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	InteractiveFunction::InteractiveFunction(
+		query::Context&                               ctx,
+		SymID                                         function_symbol,
+		base::Optional<pst::Access<pst::LangElement>> pst_expr
 	):
-		  MessageWithCodeFragmentAndCause(source_position) {
-		addArgument<InteractiveArgument>("expected_type", makeBox<InteractiveType>(expected_type));
-		addArgument<InteractiveArgument>("given_type", makeBox<InteractiveType>(actual_type));
+		  function_symbol(function_symbol),
+		  pst_expr(std::move(pst_expr)) {
+		auto maybe_function = getSymRef(function_symbol)->getPSTData()->pst_element.unlock(ctx);
+		if (maybe_function->getElementKind() == pst::ElementKind::Fun) {
+			auto function  = maybe_function.dynamicCast<pst::Fun>().value();
+			auto fun_decl  = function->getParams().unlock(ctx);
+			auto fun_ident = function->getNameIdentifier();
+			auto position
+				= dia::SourcePosition::merge(fun_ident.position, fun_decl->getSourcePosition());
+			auto id = MessageBase::getUniqueID();
+			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));
+		}
+		this->displayed_name = name(function_symbol).str();
 	}
 
-	InteractiveType::InteractiveType(
-		tsh::SymbolType<> symbol_type, base::Optional<pst::Access<pst::LangElement>> pst_expr
-	):
-		  symbol_type(symbol_type),
-		  pst_expr(std::move(pst_expr)) {}
+	Box<dia_args::Component> InteractiveFunction::getValue(MessageBase& msg) {
+		std::vector<std::string> linked_messages_ids;
+		for (auto& [id, linked_msg]: this->linked_messages) {
+			msg.addAttachedMessage(id, std::move(linked_msg));
+			linked_messages_ids.push_back(id);
+		}
+
+		msg.addEntity<TextBasedEntity>(linked_messages_ids, this->displayed_name);
+
+		auto content = makeBox<dia_args::TextComponent>(this->displayed_name);
+		auto link
+			= makeBox<dia_args::LinkComponent>(std::move(linked_messages_ids), std::move(content));
+		return link;
+	}
+
 }

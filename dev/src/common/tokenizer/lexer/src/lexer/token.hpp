@@ -88,6 +88,13 @@ namespace lexer {
 		static Token makeNumLiteralGroup(base::RawView full_view, Token&& value, const dia::SourcePosition&);
 		/**@}*/
 
+		/**
+		 * @brief Makes a sentinel that copies the basic characteristics of the token. The copied
+		 * characteristics are only the position.
+		 */
+		[[nodiscard]]
+		Token asSentinel() const;
+
 		virtual ~Token() = default;
 		Token()          = delete;
 
@@ -108,6 +115,7 @@ namespace lexer {
 
 		friend void swap(Token& first, Token& second) noexcept;
 		Token&      operator=(Token&& other) noexcept;
+
 
 		[[nodiscard]]
 		Type getType() const;

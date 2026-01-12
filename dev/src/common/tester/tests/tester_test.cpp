@@ -149,6 +149,7 @@ private:
 };
 
 int main(int argc, const char**) {
+	init::InitObject _;
 	if (argc != 1) CORE_PANIC("Test expects no arguments");
 
 	auto config = tester::getTestConfig("/common/tester/tests/");

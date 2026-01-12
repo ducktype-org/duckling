@@ -5,15 +5,15 @@
 namespace pst {
 	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
 		auto out = makeBox<TopLevel>(state.getPosition());
-		while (state.notEmpty()) {
+		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));
 			}
-			while (state[0].is(Special::Semicolon)) {
-				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+			PST_WHILE(state[0].is(Special::Semicolon)) {
+				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
 				state.tokens().skip();
 			}
 		}

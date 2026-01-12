@@ -4,6 +4,7 @@
 
 #include <base/preproc/for_each.hpp>
 
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/thread/low_program/utils.hpp>
@@ -110,6 +111,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_setNull_lptr, i) { addLow<Op_setNull_lptr>(i.dst); }
 			instr_case(high::Op_mov_lopq_lopq, i) { addLow<Op_mov_lopq_lopq>(i.dst, i.src); }
 			instr_case(high::Op_mov_lopq_gopq, i) { addLow<Op_mov_lopq_gopq>(i.dst, i.src); }
+			instr_case(high::Op_mov_lopq_imm, i) { addLow<Op_mov_lopq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_gopq_lopq, i) { addLow<Op_mov_gopq_lopq>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_l64, i) { addLow<Op_add_l64_l64>(i.dst, i.src); }
 			instr_case(high::Op_add_l64_imm, i) { addLow<Op_add_l64_imm>(i.dst, i.src); }
@@ -341,6 +343,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_setVTable_lptr_type, i) {
 				addLow<Op_setVTable_lptr_type>(i.object_ptr, i.type);
 			}
+			instr_case(high::Op_resetVTable_lptr, i) { addLow<Op_resetVTable_lptr>(i.object_ptr); }
 			instr_case(high::Op_upcast_lptr_lptr, i) { addLow<Op_upcast_lptr_lptr>(i.dst, i.src); }
 			instr_case(high::Op_downcast_lptr_lptr_type, i) {
 				addLow<Op_downcast_lptr_lptr>(i.dst, i.src);

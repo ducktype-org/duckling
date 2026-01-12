@@ -111,6 +111,7 @@ DEF_MICRO_INSTR(setNull_lptr, vm::opargs::StackLocalPtr)
 DEF_MICRO_INSTR(mov_lopq_lopq, vm::opargs::StackLocalOpq, vm::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_gopq_lopq, vm::opargs::GlobalOpq, vm::opargs::StackLocalOpq)
 DEF_MICRO_INSTR(mov_lopq_gopq, vm::opargs::StackLocalOpq, vm::opargs::GlobalOpq)
+DEF_MICRO_INSTR(mov_lopq_imm, vm::opargs::StackLocalOpq, vm::opargs::Immediate)
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
@@ -430,6 +431,8 @@ DEF_MICRO_INSTR(output_l32, vm::opargs::StackLocal32)
 
 // initialises vtable pointer
 DEF_MICRO_INSTR(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+// deinitialises vtable pointer
+DEF_MICRO_INSTR(resetVTable_lptr, vm::opargs::StackLocalPtr)
 // casts pointed object to its superclass
 DEF_MICRO_INSTR(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next

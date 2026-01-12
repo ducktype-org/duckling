@@ -1,16 +1,18 @@
 #include "parser_state.hpp"
 
-namespace tpc {
-	TokenStream& ParserState::tokens() { return stream_stack.back(); }
+#include <base/except/exceptions.hpp>
 
-	const TokenStream& ParserState::ctokens() const { return stream_stack.back(); }
+namespace tpc {
+	TokenStream& ParserState::tokens() { return *current_stream; }
+
+	const TokenStream& ParserState::ctokens() const { return *current_stream; }
 
 	bool ParserState::empty() const { return ctokens().size() == 0; }
 
 	bool ParserState::notEmpty() const { return ctokens().size() > 0; }
 
 	bool ParserState::isEOF(i64 fwd) const {
-		return stream_stack.size() == 1 && ctokens().size() <= fwd;
+		return fallback_stack.empty() && ctokens().size() <= fwd;
 	}
 
 	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) const {
@@ -25,13 +27,30 @@ namespace tpc {
 		return { base, end };
 	}
 
-	void ParserState::goDown() { stream_stack.emplace_back(tokens().getRecursive()); }
-
-	void ParserState::goUp() { stream_stack.pop_back(); }
-
-	void ParserState::goUpAndSkip() {
-		goUp();
-		tokens().skip();
+	void ParserState::goDown() {
+		auto new_stream = ctokens().getRecursive();
+		fallback_stack.emplace_back(Fallback{
+			.type = Recursive, .saved_stream = std::move(current_stream), .post_jump = 1 });
+		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
 
+	void ParserState::goUp() {
+		CORE_ASSERT(
+			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
+			"No recursive token stream to go up from"
+		);
+		current_stream = std::move(fallback_stack.back().saved_stream);
+		fallback_stack.pop_back();
+	}
+
+	void ParserState::goUpAndSkip() {
+		CORE_ASSERT(
+			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
+			"No recursive token stream to go up from"
+		);
+		u64 fwd        = fallback_stack.back().post_jump;
+		current_stream = std::move(fallback_stack.back().saved_stream);
+		fallback_stack.pop_back();
+		tokens().skip(base::safeIntConv<i64>(fwd));
+	}
 }

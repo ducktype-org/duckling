@@ -92,9 +92,9 @@ private:
 		LIRModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
-			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
-			for (const auto& hout_func: unit->functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+			auto& unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			for (const auto& hout_func: unit.functions) {
+				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrPanic();
 				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -105,7 +105,7 @@ private:
 					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
 				);
 			}
-			for (const auto& hout_glob: unit->glob_data) {
+			for (const auto& hout_glob: unit.glob_data) {
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
@@ -349,7 +349,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+		auto hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
@@ -402,6 +403,14 @@ private:
 				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
 				const auto& block = create_ref->block_order[0];
 				ASSERT_TRUE(block->instructions[0].operation == MetaCreateRef);
+			}
+
+			{
+				auto create_ref = module.lirFunc("createConst");
+				ASSERT_TRUE(create_ref->validateParameters().isOk());
+				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
+				const auto& block = create_ref->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateConst);
 			}
 
 			{

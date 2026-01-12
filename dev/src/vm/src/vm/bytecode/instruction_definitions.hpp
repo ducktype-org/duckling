@@ -95,6 +95,7 @@ DEF_INSTR(mov_lopq_lopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::StackLoc
 // Copies an opaque value between globals and locals
 DEF_INSTR(mov_gopq_lopq, (vm::opargs::GlobalOpq, dst), (vm::opargs::StackLocalOpq, src))
 DEF_INSTR(mov_lopq_gopq, (vm::opargs::StackLocalOpq, dst), (vm::opargs::GlobalOpq, src))
+DEF_INSTR(mov_lopq_imm, (vm::opargs::StackLocalOpq, dst), (vm::opargs::Immediate, src))
 
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
@@ -416,6 +417,8 @@ DEF_INSTR(output_l32, (vm::opargs::StackLocal32, src))
 
 // initialises vtable pointer
 DEF_INSTR(setVTable_lptr_type, (vm::opargs::StackLocalPtr, object_ptr), (vm::opargs::Type, type))
+// deinitialises vtable pointer
+DEF_INSTR(resetVTable_lptr, (vm::opargs::StackLocalPtr, object_ptr))
 // casts pointed object to its superclass
 DEF_INSTR(upcast_lptr_lptr, (vm::opargs::StackLocalPtr, dst), (vm::opargs::StackLocalPtr, src))
 // tries to cast pointed object to its subclass

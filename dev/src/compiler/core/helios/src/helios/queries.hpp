@@ -10,8 +10,10 @@
 #include "scope_symbol_id.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
+#include <helios/hout/hout.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
@@ -23,7 +25,7 @@ namespace compiler::helios {
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * @ingroup query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, HOUTUnit, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, query::QResult<HOUTUnit>, ({}))
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
@@ -31,10 +33,7 @@ namespace compiler::helios {
 	 * @ingroup query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryModuleHOUTRecursively,
-		frontend::ModuleID,
-		std::vector<HOUTUnit>,
-		({ .uses_qresult = false })
+		QueryModuleHOUTRecursively, frontend::ModuleID, query::QResult<std::vector<HOUTUnit>>, ({})
 	)
 
 	/**
@@ -43,9 +42,7 @@ namespace compiler::helios {
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * @ingroup query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryTopLevelEntities, frontend::ModuleID, CRef<HOUTUnit>, ({ .uses_qresult = false })
-	)
+	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 
 	/**
 	 * @brief Query declaration of function: types, args and its names.
@@ -54,7 +51,7 @@ namespace compiler::helios {
 	 *
 	 * @ingroup query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<HOUTFunctionDeclaration>, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<query::QResult<HOUTFunctionDeclaration>>, ({}));
 
 	/**
 	 * @brief Query code of a function.
@@ -62,5 +59,5 @@ namespace compiler::helios {
 	 *
 	 * @ingroup query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryCodeOfFun, SymID, HOUTFunction, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryCodeOfFun, SymID, query::QResult<HOUTFunction>, ({}));
 }

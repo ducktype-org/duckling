@@ -4,6 +4,7 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -11,6 +12,8 @@
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_int.hpp>
@@ -174,7 +177,7 @@ namespace compiler::mir {
 	 * * if block is reachable and function returns value, throws missing return error
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	query::QResult<Function> finalizeFunctionEnd(query::Context&, Function function) {
+	query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
@@ -192,8 +195,9 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			// @todo there should be logging here of missing return value / control reaches the
-			// end of non-void function
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("The function `", function.name, "` is missing a return statement")
+			));
 			return query::Failed();
 		}
 	}

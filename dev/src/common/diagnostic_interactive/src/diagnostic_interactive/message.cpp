@@ -36,19 +36,38 @@ namespace dia_int {
 		auto lines = source->viewSplitRange(start, end);
 		if (lines.empty()) return;
 
-		if (source->getLineColumn(start).second
-		    == 1)  // First  character in line, we need a start line.
-			code_list.emplace_back(
-				makeBox<dia_args::StartLineComponent>(source->getLineColumn(start).first)
-			);
-		code_list.emplace_back(makeBox<dia_args::CodeComponent>(lines[0].second.stdString()));
+		auto char_range = source->getCharRange(start, start + 1).stringView();
+
+		// This is a bit of a hack, we don't want empty lines to be empty because the highlighting
+		// doesn't work for empty lines. This hack should replace ONLY empty lines with spaces with
+		// the current usage but might need to be improved.
+		constexpr auto NORMALIZE = [](const std::string& s) { return s == "" ? " " : s; };
+
+		// The start can be at the first character of the line
+		// but also at the last character of the previous line (like '\n').
+		// This is because the source positions are inclusive and offsets count the '\n' characters,
+		// so the `pos_end + 1` points
+		// to the '\n' char of the same line instead of the first character of the next line.
+		if (char_range[0] == '\n' or char_range[0] == '\r'
+		    or source->getLineColumn(start).second == 1)
+			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[0].first));
+
+		code_list.emplace_back(
+			makeBox<dia_args::CodeComponent>(NORMALIZE(lines[0].second.stdString()))
+		);
 
 		for (usize i = 1; i < lines.size(); i++) {
 			code_list.emplace_back(makeBox<dia_args::StartLineComponent>(lines[i].first));
-			code_list.emplace_back(makeBox<dia_args::CodeComponent>(lines[i].second.stdString()));
+			code_list.emplace_back(
+				makeBox<dia_args::CodeComponent>(NORMALIZE(lines[i].second.stdString()))
+			);
 		}
 	}
 
+	/**
+	 * @brief Return pointer messages that are within the given snippet position.
+	 * dia::SourcePosition is inclusive as always.
+	 */
 	std::vector<PointerMessage> filterMessages(
 		const std::vector<PointerMessage>& messages, dia::SourcePosition snippet_position
 	) {
@@ -67,17 +86,26 @@ namespace dia_int {
 	Box<dia_args::Component> CodeArgument::getValue(MessageBase& diag) {
 		auto source = position.getSource();
 
+		// [start_line, end_line] is the minimal range of lines containing the code.
 		usize start_line = position.getStartLineColumn().first;
 		usize end_line   = position.getEndLineColumn().first;
 
+		// [first_line, last_line] is the range of lines containing the code extended by additional
+		// context lines.
 		usize first_line = std::max(1 + lines_before, start_line) - lines_before;
 		usize last_line  = std::min(source->getLines().size(), end_line + lines_after);
 
+		// [begin_char, end_char] is the range of characters in lines [first_line, last_line].
 		usize begin_char = source->getLine(first_line).first;
-		usize end_char   = source->getLine(last_line).second + 1;
+		usize end_char   = source->getLine(last_line).second;
 
+		// This should only happen for an empty location.
+		if (begin_char == 0 && end_char == 0) return base::makeBox<dia_args::ConcatComponent>();
+
+		// The list where we collect the code components
 		auto code_list = std::vector<Box<dia_args::Component>>();
 
+		// @TODO: #1792 Fix the handling of message pointer to EOF.
 		const auto pointer_messages = filterMessages(
 			diag.getPointerMessages(),
 			dia::SourcePosition(position.getLocation(), begin_char, end_char - 1)
@@ -177,13 +205,10 @@ namespace dia_int {
 		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
 		for (const auto& link: explore_links) msg.explore_links.push_back(link.getValue(*this));
 
-		msg.linked_messages.reserve(this->attached_messages.size());
+		msg.attached_messages.reserve(this->attached_messages.size());
 
-		for (const auto& attached_msg: attached_messages) {
-			auto id = MessageBase::getUniqueID();
-			msg.linked_messages.push_back(id);
-			additional_messages.put(id, attached_msg->buildMessages(additional_messages));
-		}
+		for (const auto& attached_msg: attached_messages)
+			msg.attached_messages.push_back(attached_msg);
 
 		for (const auto& [id, value]: this->linked_messages)
 			additional_messages.put(id, value->buildMessages(additional_messages));
@@ -192,6 +217,9 @@ namespace dia_int {
 	}
 
 	Box<dia_int::dia_args::Diagnostic> MessageBase::buildDiagnosticFile() {
+		if (has_been_built) CORE_PANIC("Message can only be built once!");
+		has_been_built = true;
+
 		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
 		base::HashMap<std::string, dia_args::Message> additional_messages;
 
@@ -211,6 +239,24 @@ namespace dia_int {
 		for (const auto& arg: arguments) edge.params.put(arg->getName(), arg->getValue(message));
 		edge.name = message_id;
 		return edge;
+	}
+
+	MessageWithCodeFragment::MessageWithCodeFragment(dia::SourcePosition source_position) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+	}
+
+	MessageWithCodeFragmentAndCause::MessageWithCodeFragmentAndCause(
+		dia::SourcePosition source_position
+	) {
+		addArgument<CodeArgument>("code", source_position);
+		addArgument<CodeLocationArgument>("code_location", source_position);
+		addPointerMessage({ "cause", source_position });
+	}
+
+	bool MessageBase::isError() const {
+		auto meta = getMetadata();
+		return meta.type == "error";
 	}
 }
 

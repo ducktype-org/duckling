@@ -1,16 +1,20 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use crate::{StrId, quackpack::schemas::registry};
+use crate::quackpack::{
+    schemas::registry,
+    util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
+};
 use async_scoped::TokioScope;
 use tracing::debug;
+use url::Url;
 
 use super::types;
 
 #[cfg(test)]
 mod tests;
 
-use crate::{QuackResult, QuackResultContext, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub enum CacheLocation<'a> {
@@ -138,7 +142,9 @@ impl ManifestCache {
                     .await
             });
         });
-        let maybe_json = unpack_results_vec(results)?;
+        let maybe_json = unpack_tokio_scoped_vector(results)?;
+        let maybe_json =
+            extract_single_item_from_vec(maybe_json)?.context_internal("invalid SQL")?;
         maybe_json
             .map(|json| {
                 serde_json::from_str(&json)
@@ -166,7 +172,8 @@ impl ManifestCache {
                     .await
             });
         });
-        let jsons = unpack_results_vec(results)?;
+        let jsons = unpack_tokio_scoped_vector(results)?;
+        let jsons = extract_single_item_from_vec(jsons)?.context_internal("invalid SQL")?;
         jsons
             .into_iter()
             .map(|json| serde_json::from_str(&json))
@@ -192,7 +199,9 @@ impl ManifestCache {
                     .await
             });
         });
-        unpack_results_vec(results)
+        let result = unpack_tokio_scoped_vector(results)?;
+        extract_single_item_from_vec(result)?.context_internal("invalid SQL")?;
+        Ok(())
     }
 
     /// Add or replace multiple manifest for package `package`.
@@ -204,7 +213,7 @@ impl ManifestCache {
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
     pub async fn add_or_replace_multiple_manifests(
         &self,
-        registry_url: StrId,
+        registry_url: Url,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
         let package_manifest_pairs = multi_manifest
@@ -215,7 +224,7 @@ impl ManifestCache {
                 let package = types::Package {
                     id: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
-                    url: registry_url,
+                    url: registry_url.clone(),
                 };
                 Ok((package, json))
             })
@@ -229,28 +238,10 @@ impl ManifestCache {
                     .await
             });
         });
-        unpack_results_vec(results)
+        let result = unpack_tokio_scoped_vector(results)?;
+        extract_single_item_from_vec(result)?.context_internal("SQLit thread panicked")?;
+        Ok(())
     }
-}
-
-/// Extract a single item stored in this vector.
-fn extract_single<T>(vec: Vec<T>) -> Option<T> {
-    let [single]: [T; 1] = vec.try_into().ok()?;
-    Some(single)
-}
-
-/// Unpack a single result from a vec returned by [`TokioScope`] on
-/// [`Connection`](tokio_rusqlite::Connection).
-fn unpack_results_vec<T>(
-    vec: Vec<Result<tokio_rusqlite::Result<T>, tokio::task::JoinError>>,
-) -> QuackResult<T> {
-    let Some(first) = extract_single(vec) else {
-        qp_bail_internal!("we've given exactly one closure, we should have got exactly one result")
-    };
-
-    first
-        .context_internal("SQLite thread panicked")?
-        .context_internal("failed to execute an internal SQL query")
 }
 
 trait ConnectionExt {

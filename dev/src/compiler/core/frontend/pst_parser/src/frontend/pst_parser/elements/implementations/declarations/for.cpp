@@ -6,31 +6,10 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class ForBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
-		}
 
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		ForBracketError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	namespace {
-		bool isForTypeEnd(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
-			    || state[fwd].is(Keyword::In);
-		}
-	}
-
-	MBox<ExprElement> ExprParserHelper::parseForType(LangParserState& state) {
-		return expr::parseUntil<expr::Comma, isForTypeEnd>(state);
+	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
+		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+		    || state[fwd].is(Keyword::In);
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
@@ -42,7 +21,7 @@ namespace pst {
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
-			state.log(makeBox<ForBracketError>(state.getPosition()));
+			state.logInt(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();
 
