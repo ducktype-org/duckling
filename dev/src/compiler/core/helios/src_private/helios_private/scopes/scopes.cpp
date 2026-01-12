@@ -710,6 +710,11 @@ namespace compiler::helios {
 
 	std::vector<ScopeID> getAllHeliosScopes() {
 		// this implementation is fragile, adjust if needed.
+		
+		CORE_ASSERT(
+			query::Context::getState().queryStackSize() == 0,
+			"getAllHeliosScopes called from within query!"
+		);
 
 		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();
 		auto pst_scopes  = ImplementationOf_QueryPrimaryCodeScopeFor::getAllCachedScopes();
