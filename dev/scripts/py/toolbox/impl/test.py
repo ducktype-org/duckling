@@ -1,4 +1,5 @@
 import os
+import shlex
 from .helpers import (
     bash_command,
 )
@@ -38,23 +39,23 @@ def test_impl(
     
     # Add parallel execution
     if parallel is not None:
-        ctest_cmd += f" -j {parallel}"
+        ctest_cmd += f" -j {int(parallel)}"
     elif not memcheck:
         # Default to parallel execution with all available CPUs when not doing memcheck
         cpu_count = os.cpu_count() or 1
         ctest_cmd += f" -j {cpu_count}"
     
-    # Add label filtering
+    # Add label filtering (properly escaped)
     if label_regex:
-        ctest_cmd += f" -L {label_regex}"
+        ctest_cmd += f" -L {shlex.quote(label_regex)}"
     
-    # Add test name filtering
+    # Add test name filtering (properly escaped)
     if tests_regex:
-        ctest_cmd += f" -R {tests_regex}"
+        ctest_cmd += f" -R {shlex.quote(tests_regex)}"
     
-    # Add test name exclusion
+    # Add test name exclusion (properly escaped)
     if exclude_regex:
-        ctest_cmd += f" -E {exclude_regex}"
+        ctest_cmd += f" -E {shlex.quote(exclude_regex)}"
     
     # Add verbose output
     if verbose:
@@ -80,5 +81,5 @@ def test_impl(
     if memcheck:
         ctest_cmd += " --force-new-ctest-process --test-action memcheck"
     
-    # Execute in build directory
-    bash_command(f"cd {build_dir} && {ctest_cmd}")
+    # Execute in build directory (build_dir is also escaped for safety)
+    bash_command(f"cd {shlex.quote(build_dir)} && {ctest_cmd}")
