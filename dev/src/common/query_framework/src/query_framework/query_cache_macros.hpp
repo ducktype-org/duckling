@@ -120,7 +120,7 @@
 /**
  * @brief Macro defining typical hash based cache.
  * It caches PResults using base::StableHashMap and returns QResults constructed
- * from a CRef<PResult> by a provided lambda function.
+ * from a CRef<PResult> by the provided lambda function.
  *
  * @important lambda is called on both cache hit (load) and cache miss (store).
  *
