@@ -9,10 +9,12 @@
 #include <base/pointers/ref.hpp>
 
 namespace compiler::helios {
-	// Forward:
-	// @TODO: put in internal namespace
+	// Forwards:
 	struct SymbolData;
 	struct ScopeData;
+	namespace houtgen {
+		struct ImplementationOf_QueryGeneratedSymbol;
+	}
 
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
@@ -34,6 +36,7 @@ namespace compiler::helios {
 		SymID(const CRef<SymbolData> ref): ref(ref) {}
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
+		friend struct houtgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;

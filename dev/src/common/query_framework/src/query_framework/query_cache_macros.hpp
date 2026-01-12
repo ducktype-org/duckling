@@ -69,10 +69,44 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });          \
 		return QResult(CRef<PResult>(&ref->value.data));                                            \
 	}                                                                                               \
+	// static_assert(                                                                                  \
+	// 	std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
+	// 	"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
+	// 	"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+	// );
+	// TODO PR: wait for merge
+
+
+
+/**
+ * @brief Macro defining typical hash based cache.
+ * It caches PResults using base::HashMap and returns QResults constructed
+ * from a CRef<PResult> by a provided lambda function.
+ *
+ * @important lambda is called on both cache hit (load) and cache miss (store). 
+ *
+ * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls provided lambda.
+ */
+#define QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(lambda)                                                        \
+	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;                     \
+	static auto load(KHash key_hash) -> LoadResult {                                                \
+		static constexpr auto construct_lambda = lambda; 											 \
+		                                                                                              \
+		if (auto value = cache.atMaybe(key_hash)) {                                                 \
+			return QResWithACD{ construct_lambda(CRef<PResult>(&(*value)->data)), (*value)->acd };           \
+		}                                                                                           \
+		return {};                                                                                  \
+	}                                                                                               \
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {                     \
+		static constexpr auto construct_lambda = lambda;                                               \
+		                                                                                              \
+		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });          \
+		return construct_lambda(&ref->value.data);                                            \
+	}                                                                                               \
 	static_assert(                                                                                  \
-		std::is_constructible_v<QResult, CRef<PResult>> && !std::is_same_v<QResult, CRef<PResult>>, \
-		"QResult should be constructible from (but not equal to) CRef<PResult> for "                \
-		"QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF"                                                      \
+		not std::is_same_v<QResult, CRef<PResult>>, \
+		"QResult should not be equal to CRef<PResult> for "                \
+		"QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA"                                                      \
 	);
 
 
