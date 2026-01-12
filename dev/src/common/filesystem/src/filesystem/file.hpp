@@ -226,11 +226,11 @@ namespace fs {
 		/**
 		 * Creates a random-named virtual file in the virtual filesystem's root directory.
 		 * @param content The content to write to the file.
-		 * @param extension Optional extension to append to the filename (e.g., ".dmf").
+		 * @param suffix Optional suffix to append to the filename (e.g., ".dmf").
 		 * @return The created File object.
 		 */
 		static File createRandomVirtualFile(
-			std::string_view content = "", base::Optional<std::string_view> extension = {}
+			std::string_view content = "", base::Optional<std::string_view> suffix = {}
 		);
 
 		/**

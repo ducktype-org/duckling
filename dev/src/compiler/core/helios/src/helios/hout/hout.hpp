@@ -21,6 +21,7 @@
 #include <vector>
 
 namespace compiler::repl {
+	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
 }
 
@@ -38,7 +39,7 @@ namespace compiler::helios {
 		struct CodeBlock;
 		struct Parameter;
 	}
-	
+
 	/**
 	 * @brief Storage of information coming from function declaration without processing its body.
 	 */

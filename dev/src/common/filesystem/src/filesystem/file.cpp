@@ -208,12 +208,12 @@ namespace fs {
 	}
 
 	File FileManager::createRandomVirtualFile(
-		std::string_view content, base::Optional<std::string_view> extension
+		std::string_view content, base::Optional<std::string_view> suffix
 	) {
 		FilePath root      = vfs->getRootPath();
 		auto     rand_path = randomName(root);
-		if (extension.has_value())
-			rand_path = FilePath(base::strConcat(rand_path.string(), extension.value()));
+		if (suffix.has_value())
+			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()));
 		return createVirtualFile(rand_path, content);
 	}
 

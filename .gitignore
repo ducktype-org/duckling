@@ -10,4 +10,3 @@
 compile_commands.json
 package-lock.json
 *.tsbuildinfo
-duck_repl_build
