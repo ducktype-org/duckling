@@ -119,6 +119,12 @@ connection.onRequest("textDocument/semanticTokens/full", (params) =>
 	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
 );
 
+connection.onRequest("duckling/restart", async () => {
+    connection.window.showInformationMessage("Restarting Duckling Daemon...");
+    await compilerDaemonClient.restart(connection);
+    connection.window.showInformationMessage("Duckling Daemon Restarted");
+});
+
 connection.onDefinition(
 	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
         return await handleDefinition(params, documents, compilerDaemonClient, connection);

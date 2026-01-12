@@ -19,6 +19,26 @@ export interface Token {
 	tokenModifiers: number;
 }
 
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 5000
+): Promise<Response | undefined> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (err: any) {
+    return undefined;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 
 /**
  * @brief A client for the compiler daemon.
@@ -33,29 +53,48 @@ export class CompilerDaemonClient {
 	private process: ChildProcess;
 
 	constructor() {
+		this.process = this.startProcess();
+	}
+
+	private startProcess(): ChildProcess {
 		const logPath = path.join(__dirname, 'daemon.log');
 		const logStream = fs.createWriteStream(logPath);
-		this.process = spawn(
+		const childProcess = spawn(
 			BINARY_PATH + "lsp_daemon", 
 			["start", "-p", DAEMON_PORT], 
 			{stdio: ["ignore", "pipe", "pipe"], detached: false} // This is necessary for the server to remain responsive
 		);
-		this.process.stdout?.on("data", (data) => {
+		childProcess.stdout?.on("data", (data) => {
 			process.stdout.write(data);
 			logStream.write(data);
 		});
 
 		// Mirror stderr to console and log file
-		this.process.stderr?.on("data", (data) => {
+		childProcess.stderr?.on("data", (data) => {
 			process.stderr.write(data);
 			logStream.write(data);
 		});
 
-		this.process.on("close", (code) => {
+		childProcess.on("close", (code) => {
 			console.log(`Compiler daemon exited with code ${code}`);
 			logStream.end();
 		});
+		return childProcess;
+	}
+	
+	public async restart(connection: Connection): Promise<void> {
+		this.process.kill();
 
+		// Wait max 2 seconds for the process to exit
+		for (let i = 0; i < 20; i++) {
+			if (this.process.exitCode !== null) break;
+			console.log("Waiting for compiler daemon to exit...");
+			await new Promise(resolve => setTimeout(resolve, 100));
+		}
+		
+		this.process = this.startProcess();
+		await this.waitForReady(connection);
+		await this.putWorkspace(connection);
 	}
 
 	// This function is called when the server is closed
@@ -65,13 +104,16 @@ export class CompilerDaemonClient {
 
 	// This function is called to make sure the daemon is ready
 	private async waitForReady(connection: Connection): Promise<void> {
-		for (let i = 0; i < 10; i++){  
-			const response = await fetch(`${DAEMON_ADRESS}/status`);
+		for (let i = 0; i < 20; i++){  
+			console.log("Checking if compiler daemon is ready...");
+			const response = await fetchWithTimeout(`${DAEMON_ADRESS}/status`, {}, 200);
 
-			if (response.status == 200) {
+			if (response && response.status == 200) {
+				console.log("Compiler daemon is ready.");
 				return;
 			} else {
-				await new Promise(resolve => setTimeout(resolve, 1000));
+				console.log("Compiler daemon not ready yet, retrying...");
+				await new Promise(resolve => setTimeout(resolve, 500));
 			}
 		}
 
