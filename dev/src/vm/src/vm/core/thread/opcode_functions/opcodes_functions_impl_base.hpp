@@ -89,17 +89,11 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                            \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
-		{                                                                                           \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                    \
-		}                                                                                           \
+		{ writeToStack<TYPE>(local_stack, instr->arg0, safeReadBytes<TYPE>(instr->arg1)); }         \
 		FUNCTION_CONT(1);                                                                           \
 	}                                                                                               \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
-		{                                                                                           \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                              \
-		}                                                                                           \
+		{ WRITE_TO_GLOBAL(TYPE, instr->arg0, safeReadBytes<TYPE>(instr->arg1)); }                   \
 		FUNCTION_CONT(1);                                                                           \
 	}                                                                                               \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {               \
@@ -148,10 +142,10 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                           \
 	}
 
-	DEFINE_MOVE_OPS(64, i64)
-	DEFINE_MOVE_OPS(32, i32)
-	DEFINE_MOVE_OPS(16, i16)
-	DEFINE_MOVE_OPS(8, i8)
+	DEFINE_MOVE_OPS(64, u64)
+	DEFINE_MOVE_OPS(32, u32)
+	DEFINE_MOVE_OPS(16, u16)
+	DEFINE_MOVE_OPS(8, u8)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
