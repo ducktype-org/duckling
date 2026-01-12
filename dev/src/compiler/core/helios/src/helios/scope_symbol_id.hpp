@@ -46,8 +46,16 @@ namespace compiler::helios {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
+		/**
+		 * @note == is needed despite the existence of <=> because
+		 * only defaulted <=> generates all 6 comparison operators.
+		 */
 		bool operator==(const ScopeID&) const;
 
+		/**
+		 * @note == is needed despite the existence of <=> because
+		 * only defaulted <=> generates all 6 comparison operators.
+		 */
 		bool operator<(const ScopeID& other) const;
 
 		std::strong_ordering operator<=>(const ScopeID& other) const;
