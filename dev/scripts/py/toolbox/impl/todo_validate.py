@@ -256,7 +256,7 @@ def print_newly_added_todos(branch: str = "origin/main", no_merge_base: bool = F
                             matches = todo_pattern.findall(line)
                             for issue_num in matches:
                                 found_issues.add(issue_num)
-        except Exception:
+        except (IOError, OSError, UnicodeDecodeError):
             # Skip files that can't be read
             continue
     
