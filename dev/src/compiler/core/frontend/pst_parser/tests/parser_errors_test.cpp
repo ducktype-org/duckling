@@ -149,8 +149,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Attribute, true> simple_attr{ "@pretty(5)" };
 
 	Example<pst::Block, true>  simple_block{ "block {}" };
-	Example<pst::Block, false> no_block{ "block;" };
+	Example<pst::Block, false> no_block{ "block" };
 	Example<pst::Block, false> no_block_eof{ "block" };
+
+	Example<pst::Stmt, false> not_all_parsed{ "call(3, 5 + 3 = 7);" };
 
 	Example<pst::CodeBlockOrStmt, true> just_block{ "{}" };
 	Example<pst::CodeBlockOrStmt, true> just_stmt{ "x=y;" };
