@@ -75,7 +75,7 @@ namespace pst {
 			imports = internal::extractState(std::move(state_box));
 			if (not hasErrors()) {
 				calcElementPathHash();
-				calcHashes();	
+				calcHashes();
 			}
 		}
 

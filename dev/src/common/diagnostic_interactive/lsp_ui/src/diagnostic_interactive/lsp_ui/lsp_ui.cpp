@@ -216,6 +216,7 @@ namespace dia_int::lsp {
 
 						related_information.push_back(DiagnosticRelatedInformation{
 							.location = section_loc, .message = content });
+						content = "";
 					}
 				}
 			}
@@ -226,29 +227,6 @@ namespace dia_int::lsp {
 				                            .end   = Position{ .line = 0, .character = 0 } } };
 		}
 		return loc;
-	}
-
-	/**
-	 * @brief Fetch the location of the message from the first code section found.
-	 * If no code section is found, return a default location.
-	 */
-	Location getLocationFromMessage(
-		const dia_int::term_ui_view::Message& message, const EvaluationContext& ctx
-	) {
-		for (const auto& section: message.sections) {
-			variant_match(section) {
-				variant_case(dia_int::term_ui_view::CodeSection, code_section) {
-					return extractLocation(code_section);
-				}
-				variant_case_novalue(dia_int::term_ui_view::TextSection) {
-					// continue searching
-				}
-			}
-		}
-		// If no code section found, return a default location
-		return Location{ .uri   = ctx.default_error_location_uri,
-			             .range = Range{ .start = Position{ .line = 0, .character = 0 },
-			                             .end   = Position{ .line = 0, .character = 0 } } };
 	}
 
 	/**
@@ -286,10 +264,19 @@ namespace dia_int::lsp {
 
 
 		for (u64 i = 1; i < view.messages.size(); i++) {
-			const auto& msg     = view.messages[i];
-			Location    msg_loc = getLocationFromMessage(msg, ctx);
+			const auto& msg = view.messages[i];
+
+			// These are code sections from single message (useful if the message has multiple locations)
+			std::vector<DiagnosticRelatedInformation> related_info;
+			Location msg_loc = getMessageLocation(msg, related_info, ctx);
 			diag->related_information.push_back(DiagnosticRelatedInformation{
 				.location = msg_loc, .message = msg.header });
+
+			diag->related_information.insert(
+				diag->related_information.end(),
+				std::make_move_iterator(related_info.begin()),
+				std::make_move_iterator(related_info.end())
+			);
 		}
 
 		return { std::move(diag), std::move(loc.uri) };

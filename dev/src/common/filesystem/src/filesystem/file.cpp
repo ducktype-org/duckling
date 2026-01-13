@@ -361,4 +361,6 @@ namespace fs {
 
 		return result;
 	}
+
+	File FileManager::getVirtualRootDirectory() { return { vfs->getRootPath() }; }
 }

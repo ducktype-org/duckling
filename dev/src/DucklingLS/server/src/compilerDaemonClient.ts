@@ -104,9 +104,9 @@ export class CompilerDaemonClient {
 
 	// This function is called to make sure the daemon is ready
 	private async waitForReady(connection: Connection): Promise<void> {
-		for (let i = 0; i < 20; i++){  
-			console.log("Checking if compiler daemon is ready...");
-			const response = await fetchWithTimeout(`${DAEMON_ADRESS}/status`, {}, 200);
+		console.log("Checking if compiler daemon is ready...");
+		for (let i = 0; i < 10; i++){
+			const response = await fetchWithTimeout(`${DAEMON_ADRESS}/status`, {}, 500);
 
 			if (response && response.status == 200) {
 				console.log("Compiler daemon is ready.");

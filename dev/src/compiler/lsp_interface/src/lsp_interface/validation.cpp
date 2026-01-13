@@ -172,10 +172,11 @@ namespace lsp {
 			= getParserDiagnosticsFromModuleTree(root_module);
 
 		// We run the semantic analysis on modules without parsing errors
+		// @TODO: #1804 parsing errors and ls compilation
 		auto parsed_modules = getParsedModulesFromModuleTree(root_module);
 		for (const auto module_id: parsed_modules)
 			query::entryPoint<helios::QueryModuleHOUT>(module_id);
-		
+
 		query::Context::int_logger.collectDiagnostics(diagnostics);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());

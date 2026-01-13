@@ -237,6 +237,9 @@ namespace fs {
 		 */
 		static File createRandomTempFile(std::string_view content = "");
 
+
+		static File getVirtualRootDirectory();
+
 		/**
 		 * @brief Creates a physical file in the physical filesystem's root directory or at the
 		 * given absolute path. If the file already exists and override is false, throws an error.
