@@ -1,8 +1,9 @@
 from ..impl.test import test_impl
 from .helpers import (
     build_dir,
+    get_cpu_count,
 )
-from click import command, option, BOOL, INT
+from click import command, option, INT
 
 
 @command()
@@ -14,16 +15,16 @@ from click import command, option, BOOL, INT
     "-m",
     "--memcheck",
     help="Whether or not to perform memcheck with valgrind",
-    type=BOOL,
+    is_flag=True,
     default=False,
-    show_default=True,
 )
 @option(
     "-j",
     "--parallel",
     help="Run tests in parallel with optional number of jobs (default: number of CPU cores)",
     type=INT,
-    default=None,
+    default=get_cpu_count(),
+    show_default=True,
 )
 @option(
     "-L",

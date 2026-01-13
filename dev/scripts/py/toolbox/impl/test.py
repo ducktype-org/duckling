@@ -7,7 +7,7 @@ from .helpers import (
 def test_impl(
     build_dir,
     memcheck,
-    parallel=None,
+    parallel,
     label_regex=None,
     tests_regex=None,
     exclude_regex=None,
@@ -21,12 +21,7 @@ def test_impl(
     ctest_cmd = "ctest"
     
     # Add parallel execution
-    if parallel is not None:
-        ctest_cmd += f" -j {int(parallel)}"
-    elif not memcheck:
-        # Default to parallel execution with all available CPUs when not doing memcheck
-        cpu_count = os.cpu_count() or 1
-        ctest_cmd += f" -j {cpu_count}"
+    ctest_cmd += f" -j {int(parallel)}"
     
     # Add label filtering
     if label_regex:
