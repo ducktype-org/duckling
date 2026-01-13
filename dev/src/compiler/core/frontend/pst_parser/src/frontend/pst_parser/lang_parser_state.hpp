@@ -131,23 +131,8 @@ namespace pst {
 		/**
 		 * @brief Logs an error relatively to the current token.
 		 */
-		void log(Box<dia::Message> message) override {
-			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing message at pos(",
-					message->getSourcePosition().getStartLineColumn(),
-					"): ",
-					message->toString(true),
-					"\n\n"
-				);
-				return;
-			}
-			if (message->getSeverity() == dia::Message::Severity::Error) {
-				skip_till_fallback    = true;
-				skipped_entries_depth = 1;
-			}
-			err->log(std::move(message));
+		void log(Box<dia::Message>) override {
+			CORE_PANIC("old logger is unsupported for language parsing");
 		}
 
 		void logInt(Box<dia_int::MessageBase> message) override {
