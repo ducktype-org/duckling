@@ -15,11 +15,8 @@ namespace lsp {
 
 	base::CRef<frontend::ModuleTree> getRootModule(frontend::ModuleID module_id) {
 		base::CRef<frontend::ModuleTree> module = frontend::getModuleRef(module_id);
-		while (true) {
-			auto parent = module->getParentModule();
-			if (!parent.has_value()) break;
+		while (auto parent = module->getParentModule())
 			module = getModuleRef(parent.value().illegalAccess().getID());
-		}
 		return module;
 	}
 
@@ -50,37 +47,48 @@ namespace lsp {
 		}
 	}
 
-	bool hasErrorsInModuleTree(base::CRef<frontend::ModuleTree> module) {
-		auto main_file
-			= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-				module->getMainSourceFile().illegalAccess().getID()
-			);
-		auto main_pst = main_file->getPST();
-		if (main_pst->getLogger()->hasErrors()) return true;
-
-		for (const auto& file_ref: module->getSourceFiles()) {
-			auto file
-				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file_ref.illegalAccess().getID()
-				);
-			auto pst = file->getPST();
-			if (pst->getLogger()->hasErrors()) return true;
-		}
-
-		// Recurse into submodules
-		for (const auto& submodule_id_locked: module->getSubmodules()) {
-			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
-			if (hasErrorsInModuleTree(submodule)) return true;
-		}
-		return false;
-	}
-
 	std::vector<CRef<dia_int::dia_args::Diagnostic>> getParserDiagnosticsFromModuleTree(
 		base::CRef<frontend::ModuleTree> module
 	) {
 		std::vector<CRef<dia_int::dia_args::Diagnostic>> diagnostics;
 		collectErrorsFromModuleTree(module, diagnostics);
 		return diagnostics;
+	}
+
+	void getParsedModulesFromModuleTree(
+		base::CRef<frontend::ModuleTree> module, std::vector<frontend::ModuleID>& out
+	) {
+		bool is_module_parsed = true;
+		auto main_file
+			= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				module->getMainSourceFile().illegalAccess().getID()
+			);
+
+		if (main_file->getPST()->getLogger()->hasErrors()) is_module_parsed = false;
+
+		for (const auto& file_ref: module->getSourceFiles()) {
+			auto file
+				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					file_ref.illegalAccess().getID()
+				);
+			if (file->getPST()->getLogger()->hasErrors()) is_module_parsed = false;
+		}
+
+		if (is_module_parsed) out.push_back(module->getModuleID());
+
+		// Recurse into submodules
+		for (const auto& submodule_id_locked: module->getSubmodules()) {
+			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
+			getParsedModulesFromModuleTree(submodule, out);
+		}
+	}
+
+	std::vector<frontend::ModuleID> getParsedModulesFromModuleTree(
+		base::CRef<frontend::ModuleTree> module
+	) {
+		std::vector<frontend::ModuleID> parsed_modules;
+		getParsedModulesFromModuleTree(module, parsed_modules);
+		return parsed_modules;
 	}
 
 	void jsonSerializeDiagnostics(
@@ -91,7 +99,16 @@ namespace lsp {
 		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>>
 			previous_diag_by_file_opt{};
 
+		std::vector<Box<dia_int::lsp::Diagnostic>> x{};
+
 		base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
+
+		// We always want to have at least an entry for the queried file for better experience
+		diagnostics_by_file.emplace(
+			ctx.queried_file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{}
+		);
+
+		// Iterate over diagnostics and group them by file URI
 		for (const auto& diag: diagnostics) {
 			dia_int::lsp::LSPDiagnosticResult lsp_diag
 				= dia_int::lsp::evaluateToLanguageServerMessage(diag, ctx);
@@ -104,6 +121,8 @@ namespace lsp {
 			diagnostics_by_file[lsp_diag.file_uri].push_back(std::move(lsp_diag.diagnostic));
 		}
 
+
+		// Serialize them
 		out << "{\n";
 		bool first_list_elem = true;
 		for (const auto& [file_uri, diags]: diagnostics_by_file) {
@@ -138,31 +157,28 @@ namespace lsp {
 
 	std::string getDiagnosticJsonFromCompiler(fs::File& file) {
 		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
-		auto module       = source_files[0]->getModule().illegalAccess().getID();
-		auto root_module  = getRootModule(module);
+		CORE_ASSERT(
+			not source_files.empty(),
+			"File must be associated with at least one SourceFile in the ModuleTree"
+		);
+
+		auto root_module = getRootModule(source_files[0]->getModule().illegalAccess().getID());
 		auto main_source_file
 			= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
-		auto main_path = main_source_file->getFileIllegalAccess().getFilePath();
+		auto main_path    = main_source_file->getFileIllegalAccess().getFilePath().toPhysicalPath();
+		auto queried_path = file.getFilePath().toPhysicalPath();
 
 		std::vector<CRef<dia_int::dia_args::Diagnostic>> diagnostics
 			= getParserDiagnosticsFromModuleTree(root_module);
 
-		if (not hasErrorsInModuleTree(root_module)) {
-			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
-			query::Context::int_logger.collectDiagnostics(diagnostics);
-		}
+		// We run the semantic analysis on modules without parsing errors
+		auto parsed_modules = getParsedModulesFromModuleTree(root_module);
+		for (const auto module_id: parsed_modules)
+			query::entryPoint<helios::QueryModuleHOUT>(module_id);
+		
+		query::Context::int_logger.collectDiagnostics(diagnostics);
 
-		auto fs_path_to_uri = [](const std::string& path) {
-			auto first = path.find('/');
-			if (first == std::string::npos) return "file://" + path;
-
-			auto second = path.find('/', first + 1);
-			if (second == std::string::npos) return "file://" + path;
-
-			return "file://" + path.substr(second);
-		};
-
-		dia_int::lsp::EvaluationContext ctx(main_path.string(), fs_path_to_uri);
+		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 
 		std::stringstream out;
 		jsonSerializeDiagnostics(diagnostics, ctx, out);

@@ -8,6 +8,8 @@
 #include <base/pointers/box.hpp>
 #include <base/pointers/default_deleter.hpp>
 
+#include <filesystem/file_path.hpp>
+
 #include <any>
 #include <string>
 #include <utility>
@@ -166,9 +168,7 @@ namespace dia_int::lsp {
 		return DiagnosticSeverity::Information;  // Default case
 	}
 
-	Location extractLocation(
-		const dia_int::term_ui_view::CodeSection& section, const EvaluationContext& ctx
-	) {
+	Location extractLocation(const dia_int::term_ui_view::CodeSection& section) {
 		Range range;
 
 		range.start.line      = section.line - 1;
@@ -180,7 +180,7 @@ namespace dia_int::lsp {
 		} else {
 			range.end = range.start;
 		}
-		return Location{ .uri = ctx.convert_path_to_uri(section.file), .range = range };
+		return Location{ .uri = fs::FilePath(section.file).toPhysicalPath().uri(), .range = range };
 	}
 
 	/**
@@ -208,11 +208,11 @@ namespace dia_int::lsp {
 				variant_case(dia_int::term_ui_view::TextSection, text) { content += text + "\n"; }
 				variant_case(dia_int::term_ui_view::CodeSection, section) {
 					if (not found_code_section) {
-						loc                = extractLocation(section, ctx);
+						loc                = extractLocation(section);
 						found_code_section = true;
 					} else {
 						if (content.empty()) continue;
-						Location section_loc = extractLocation(section, ctx);
+						Location section_loc = extractLocation(section);
 
 						related_information.push_back(DiagnosticRelatedInformation{
 							.location = section_loc, .message = content });
@@ -221,7 +221,7 @@ namespace dia_int::lsp {
 			}
 		}
 		if (not found_code_section) {
-			loc = Location{ .uri   = ctx.defaultUri(),
+			loc = Location{ .uri   = ctx.default_error_location_uri,
 				            .range = Range{ .start = Position{ .line = 0, .character = 0 },
 				                            .end   = Position{ .line = 0, .character = 0 } } };
 		}
@@ -238,7 +238,7 @@ namespace dia_int::lsp {
 		for (const auto& section: message.sections) {
 			variant_match(section) {
 				variant_case(dia_int::term_ui_view::CodeSection, code_section) {
-					return extractLocation(code_section, ctx);
+					return extractLocation(code_section);
 				}
 				variant_case_novalue(dia_int::term_ui_view::TextSection) {
 					// continue searching
@@ -246,7 +246,7 @@ namespace dia_int::lsp {
 			}
 		}
 		// If no code section found, return a default location
-		return Location{ .uri   = ctx.defaultUri(),
+		return Location{ .uri   = ctx.default_error_location_uri,
 			             .range = Range{ .start = Position{ .line = 0, .character = 0 },
 			                             .end   = Position{ .line = 0, .character = 0 } } };
 	}
@@ -263,7 +263,7 @@ namespace dia_int::lsp {
 		diag->code           = 0;
 		diag->source         = "Duckling";
 		diag->message        = "Failed to evaluate diagnostic: " + error_msg;
-		return { std::move(diag), ctx.defaultUri() };
+		return { std::move(diag), ctx.default_error_location_uri };
 	}
 
 	LSPDiagnosticResult evaluateToLanguageServerMessage(

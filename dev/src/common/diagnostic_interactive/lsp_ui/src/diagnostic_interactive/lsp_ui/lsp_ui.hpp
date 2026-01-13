@@ -51,30 +51,20 @@ namespace dia_int::lsp {
 	 * default location information and also the mapping from the VFS paths to URIs.
 	 */
 	class EvaluationContext {
+	public:
 		/**
 		 * @brief The default file location to use for diagnostics without location.
 		 */
-		std::string default_file_location;
+		std::string default_error_location_uri;
 
-	public:
 		/**
-		 * @brief Function pointer to convert a (typically virtual fs) file path to a URI.
+		 * @brief The location of the file we are querying diagnostics for.
 		 */
-		std::string (*convert_path_to_uri)(const std::string&);
+		std::string queried_file_uri;
 
-		EvaluationContext(
-			std::string default_file_location, std::string (*path_to_uri)(const std::string&)
-		):
-			  default_file_location(std::move(default_file_location)),
-			  convert_path_to_uri(path_to_uri) {
-			CORE_ASSERT(
-				this->convert_path_to_uri != nullptr, "path_to_uri function pointer cannot be null"
-			);
-		}
-
-		[[nodiscard]] std::string defaultUri() const {
-			return convert_path_to_uri(default_file_location);
-		}
+		EvaluationContext(std::string default_error_location, std::string query_file):
+			  default_error_location_uri(std::move(default_error_location)),
+			  queried_file_uri(std::move(query_file)) {}
 	};
 
 	/**
