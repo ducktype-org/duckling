@@ -107,39 +107,41 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 
     /// Returns the mapping from child features to variables, associated with the given dependency.
     fn get_feature_to_var_map_for_dep(
-        &self,
+        &mut self,
         dep: &DependencyEdge,
     ) -> QuackResult<&ChildFeaturesToVars> {
-        self.dependency_to_feature_vars.get(&dep).context_internal(
-            "Dependency and feature variable not added to the model before retrieval attempt",
-        )
+        if matches!(self.dependency_to_feature_vars.get(dep), None) {
+            self.dependency_to_feature_vars.insert(dep.clone(), HashMap::new());
+        }
+        self.dependency_to_feature_vars.get(dep).context_internal("We have just added an empty map")
     }
 
     /// Returns the variable associated with the given (dependency, child feature) pair.
     fn get_dependency_feature_variable(
-        &self,
+        &mut self,
         dep: &DependencyEdge,
         feature: FeatureName,
     ) -> QuackResult<Rc<Variable>> {
         let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep)?;
         feature_to_var_map.get(&feature).cloned().context_internal(
-            "Dependency and feature variable not added to the model before retrieval attempt",
+            "Dependency and feature variable not added to the model before retrieval of variable attempt",
         )
     }
 
     /// Returns the mapping from child versions to variables, associated with the given dependency.
     fn get_version_to_var_map_for_dep(
-        &self,
+        &mut self,
         dep: &DependencyEdge,
     ) -> QuackResult<&ChildVersionsToVars> {
-        self.dependency_to_version_vars.get(&dep).context_internal(
-            "Dependency and version variable not added to the model before retrieval attempt",
-        )
+        if matches!(self.dependency_to_version_vars.get(dep), None) {
+            self.dependency_to_version_vars.insert(dep.clone(), HashMap::new());
+        }
+        self.dependency_to_version_vars.get(dep).context_internal("We have just added an empty map")
     }
 
     /// Returns the variable associated with the given (dependency, child version) pair.
     fn get_dependency_version_variable(
-        &self,
+        &mut self,
         dep: &DependencyEdge,
         version: Option<Version>,
     ) -> QuackResult<Rc<Variable>> {

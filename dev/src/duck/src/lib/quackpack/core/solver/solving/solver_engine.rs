@@ -215,7 +215,7 @@ mod test {
     #[test]
     fn implication() {
         // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
-        let (_, path_a) = prepare_manifest(r#"
+        let (_dir_a, path_a) = prepare_manifest(r#"
 metadata:
   name: a
   version: 1
@@ -224,7 +224,7 @@ dependencies:
   b:
     version: 2
 "#);
-        let (_, path_b) = prepare_manifest(r#"
+        let (_dir_b, path_b) = prepare_manifest(r#"
 metadata:
   name: b
   version: 2
@@ -234,16 +234,16 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let location_a = Location::Registry(
-            LocRegistry { url: StrId::from("localhost://8000"), real_name: StrId::from("a") }
+            LocRegistry { url: StrId::from("http://localhost:9001"), real_name: StrId::from("a") }
         );
         let location_b = Location::Registry(
-            LocRegistry { url: StrId::from("localhost://8000"), real_name: StrId::from("b") }
+            LocRegistry { url: StrId::from("http://localhost:9001"), real_name: StrId::from("b") }
         );
         let exp_location_a = ExpandedLocation::Registry(
-            ExpandedLocRegistry { url: StrId::from("localhost://8000"), real_name: StrId::from("a") }
+            ExpandedLocRegistry { url: StrId::from("http://localhost:9001"), real_name: StrId::from("a") }
         );
         let exp_location_b = ExpandedLocation::Registry(
-            ExpandedLocRegistry { url: StrId::from("localhost://8000"), real_name: StrId::from("b") }
+            ExpandedLocRegistry { url: StrId::from("http://localhost:9001"), real_name: StrId::from("b") }
         );
         let exp_pkg_a = ExpandedPackage { location: exp_location_a.clone(), version: Some(Version::new(1, 0, 0))};
         let exp_pkg_b = ExpandedPackage { location: exp_location_b.clone(), version: Some(Version::new(2, 0, 0))};
