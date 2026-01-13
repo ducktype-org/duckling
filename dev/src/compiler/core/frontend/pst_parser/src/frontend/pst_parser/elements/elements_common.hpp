@@ -2,7 +2,7 @@
 
 #include "../access.hpp"
 #include "../pst_state_forward.hpp"
-#include "../utility.hpp"  // IWYU pragma: export
+#include "../utility.hpp"     // IWYU pragma: export
 #include "elements_list.hpp"  // IWYU pragma: export
 
 #include <base/types/ints.hpp>

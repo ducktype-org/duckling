@@ -77,8 +77,7 @@ namespace pst {
 		}
 
 	public:
-		NotAllParsedError(dia::SourcePosition pos):
-			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		NotAllParsedError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 }
