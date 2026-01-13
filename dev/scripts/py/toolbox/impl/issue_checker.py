@@ -13,7 +13,7 @@ from .list_files import list_files_impl
 
 
 def issue_checker_impl(
-    issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False
+    issues: list[str] | None, branch: str = "origin/main", no_merge_base: bool = False, print_todos: bool = False
 ) -> bool:
     """
     Checks if specified GitHub issue numbers appear in the codebase.
@@ -22,10 +22,16 @@ def issue_checker_impl(
         issues: List of issue numbers to search for in the code
         branch: Git branch to check against (default: origin/main)
         no_merge_base: If True, skip merge base calculation
+        print_todos: If True, print newly added TODOs with issue numbers
 
     Returns:
         bool: True if no issue references found, False if issues were found in code
     """
+    # Handle --print-todos flag
+    if print_todos:
+        print_newly_added_todos(branch, no_merge_base)
+        return True
+    
     if not issues:
         issues = get_issues_from_github()
         if not issues:
@@ -170,3 +176,55 @@ def get_issues_from_github() -> list[str]:
     except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
+
+
+def print_newly_added_todos(branch: str = "origin/main", no_merge_base: bool = False):
+    """
+    Prints newly added TODOs with issue numbers in modified files.
+    
+    Scans modified files for TODO/FIXME comments that contain issue numbers 
+    and prints them in a format suitable for the quacker bot.
+    
+    Args:
+        branch: Git branch to check against (default: origin/main)
+        no_merge_base: If True, skip merge base calculation
+    """
+    # Pattern to match @TODO: #<number> or @FIXME: #<number> format
+    todo_pattern = re.compile(r"@(?:TODO|FIXME):\s+#(\d+)", re.IGNORECASE)
+    
+    # Get modified files and line ranges
+    files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
+        only_modified=True, lines=True, branch=branch, no_merge_base=no_merge_base
+    ) # type: ignore
+    
+    found_issues = set()
+    
+    for file, line_ranges in files_and_lines.items():
+        if os.path.isdir(file):
+            continue
+        
+        try:
+            with open(file, "r", encoding="utf-8", errors="ignore") as f:
+                file_lines = f.readlines()
+                
+                for start_line, end_line in line_ranges:
+                    for line_num in range(start_line, end_line):
+                        if line_num <= len(file_lines):
+                            line = file_lines[line_num - 1]  # Convert to 0-based indexing
+                            
+                            # Search for TODO/FIXME with issue numbers
+                            matches = todo_pattern.findall(line)
+                            for issue_num in matches:
+                                found_issues.add(issue_num)
+        except Exception:
+            # Skip files that can't be read
+            continue
+    
+    # Print the issue numbers in a format suitable for quacker bot
+    if found_issues:
+        # Sort numerically for consistent output
+        sorted_issues = sorted(found_issues, key=lambda x: int(x))
+        print(" ".join(f"#{issue}" for issue in sorted_issues))
+    else:
+        print("No new TODOs with issue numbers found.")
+
