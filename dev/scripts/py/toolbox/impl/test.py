@@ -1,5 +1,4 @@
 import os
-import shlex
 from .helpers import (
     bash_command,
 )
@@ -18,22 +17,6 @@ def test_impl(
     rerun_failed=False,
     quiet=False,
 ):
-    """
-    Run tests using ctest with various options.
-    
-    Args:
-        build_dir: Build directory path
-        memcheck: Whether to run with valgrind memcheck
-        parallel: Number of parallel jobs (None = use all CPUs)
-        label_regex: Filter tests by label
-        tests_regex: Filter tests by name regex
-        exclude_regex: Exclude tests by name regex
-        verbose: Enable verbose output
-        output_on_failure: Show output only on failure
-        stop_on_failure: Stop after first failure
-        rerun_failed: Rerun only previously failed tests
-        quiet: Quiet mode
-    """
     # Build ctest command
     ctest_cmd = "ctest"
     
@@ -45,17 +28,17 @@ def test_impl(
         cpu_count = os.cpu_count() or 1
         ctest_cmd += f" -j {cpu_count}"
     
-    # Add label filtering (properly escaped)
+    # Add label filtering
     if label_regex:
-        ctest_cmd += f" -L {shlex.quote(label_regex)}"
+        ctest_cmd += f" -L {label_regex}"
     
-    # Add test name filtering (properly escaped)
+    # Add test name filtering
     if tests_regex:
-        ctest_cmd += f" -R {shlex.quote(tests_regex)}"
+        ctest_cmd += f" -R {tests_regex}"
     
-    # Add test name exclusion (properly escaped)
+    # Add test name exclusion
     if exclude_regex:
-        ctest_cmd += f" -E {shlex.quote(exclude_regex)}"
+        ctest_cmd += f" -E {exclude_regex}"
     
     # Add verbose output
     if verbose:
@@ -81,5 +64,5 @@ def test_impl(
     if memcheck:
         ctest_cmd += " --force-new-ctest-process --test-action memcheck"
     
-    # Execute in build directory (build_dir is also escaped for safety)
-    bash_command(f"cd {shlex.quote(build_dir)} && {ctest_cmd}")
+    # Execute in build directory
+    bash_command(f"cd {build_dir} && {ctest_cmd}")
