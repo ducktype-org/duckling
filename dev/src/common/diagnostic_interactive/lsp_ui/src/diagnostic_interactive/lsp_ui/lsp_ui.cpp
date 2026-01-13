@@ -112,37 +112,37 @@ namespace dia_int::lsp {
 		/**
 		 * Identifier code of the diagnostic.
 		 */
-		u64 code;
+		u64 code{};
 
 		/**
 		 * Some extra information about the diagnostic code identifier.
 		 */
-		base::Optional<CodeDescription> code_description;
+		base::Optional<CodeDescription> code_description{};
 
 		/**
 		 * A human-readable string describing the source of this
 		 * diagnostic, e.g. 'typescript' or 'super lint'. It usually
 		 * appears in the user interface.
 		 */
-		std::string source;
+		std::string source{};
 
 		/**
 		 * The diagnostic's message. It usually appears in the user interface
 		 */
-		std::string message;
+		std::string message{};
 
 		/**
 		 * Additional metadata about the diagnostic.
 		 *
 		 * @since 3.15.0
 		 */
-		base::Optional<std::vector<DiagnosticTag>> tags;
+		base::Optional<std::vector<DiagnosticTag>> tags{};
 
 		/**
 		 * An array of related diagnostic information, e.g. when symbol-names within
 		 * a scope collide all definitions can be marked via this property.
 		 */
-		std::vector<DiagnosticRelatedInformation> related_information;
+		std::vector<DiagnosticRelatedInformation> related_information{};
 
 		/**
 		 * A data entry field that is preserved between a `textDocument/publishDiagnostics`
@@ -150,7 +150,7 @@ namespace dia_int::lsp {
 		 *
 		 * @since 3.16.0
 		 */
-		base::Optional<std::any> data;
+		base::Optional<std::any> data{};
 	};
 
 	DiagnosticSeverity convertSeverity(dia_int::term_ui_view::StyleType severity) {
@@ -168,6 +168,12 @@ namespace dia_int::lsp {
 		return DiagnosticSeverity::Information;  // Default case
 	}
 
+	/**
+	 * @brief The term ui convention (as well as for example vs code for display)
+	 * is to calculate the columns and lines from 1. The end_line and end_col
+	 * are inclusive. But the LSP protocol uses 0-based indexing and the end
+	 * position is exclusive.
+	 */
 	Location extractLocation(const dia_int::term_ui_view::CodeSection& section) {
 		Range range;
 

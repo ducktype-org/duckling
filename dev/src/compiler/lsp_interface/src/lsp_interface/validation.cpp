@@ -55,40 +55,29 @@ namespace lsp {
 		return diagnostics;
 	}
 
-	void getParsedModulesFromModuleTree(
-		base::CRef<frontend::ModuleTree> module, std::vector<frontend::ModuleID>& out
-	) {
-		bool is_module_parsed = true;
+	bool isModuleTreeParsedSuccessfully(base::CRef<frontend::ModuleTree> module) {
 		auto main_file
 			= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				module->getMainSourceFile().illegalAccess().getID()
 			);
 
-		if (main_file->getPST()->getLogger()->hasErrors()) is_module_parsed = false;
+		if (main_file->getPST()->getLogger()->hasErrors()) return false;
 
 		for (const auto& file_ref: module->getSourceFiles()) {
 			auto file
 				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					file_ref.illegalAccess().getID()
 				);
-			if (file->getPST()->getLogger()->hasErrors()) is_module_parsed = false;
+			if (file->getPST()->getLogger()->hasErrors()) return false;
 		}
 
-		if (is_module_parsed) out.push_back(module->getModuleID());
-
+		bool all_submodules_parsed_successfully = true;
 		// Recurse into submodules
 		for (const auto& submodule_id_locked: module->getSubmodules()) {
 			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
-			getParsedModulesFromModuleTree(submodule, out);
+			all_submodules_parsed_successfully &= isModuleTreeParsedSuccessfully(submodule);
 		}
-	}
-
-	std::vector<frontend::ModuleID> getParsedModulesFromModuleTree(
-		base::CRef<frontend::ModuleTree> module
-	) {
-		std::vector<frontend::ModuleID> parsed_modules;
-		getParsedModulesFromModuleTree(module, parsed_modules);
-		return parsed_modules;
+		return all_submodules_parsed_successfully;
 	}
 
 	void jsonSerializeDiagnostics(
@@ -171,11 +160,10 @@ namespace lsp {
 		std::vector<CRef<dia_int::dia_args::Diagnostic>> diagnostics
 			= getParserDiagnosticsFromModuleTree(root_module);
 
-		// We run the semantic analysis on modules without parsing errors
+		// We run the semantic analysis if there is no parsing errors.
 		// @TODO: #1804 parsing errors and ls compilation
-		auto parsed_modules = getParsedModulesFromModuleTree(root_module);
-		for (const auto module_id: parsed_modules)
-			query::entryPoint<helios::QueryModuleHOUT>(module_id);
+		if (isModuleTreeParsedSuccessfully(root_module))
+			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
 		query::Context::int_logger.collectDiagnostics(diagnostics);
 
