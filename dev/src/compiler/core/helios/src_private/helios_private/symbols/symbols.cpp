@@ -146,33 +146,6 @@ namespace compiler::helios {
 		return out;
 	}
 
-	namespace {
-		/**
-		 * @brief Global Symbol Table
-		 * @note: in the future it might not be needed once
-		 * we will move toward more pure Query Model
-		 */
-		base::StableVector<const SymbolData> symbol_table;
-
-		template<class... T>
-		CRef<SymbolData> putInSymtable(T&&... args) {
-			symbol_table.emplaceBack(std::forward<T>(args)...);
-			return symbol_table.last();
-		}
-	}
-
-	std::vector<SymID> getAllHeliosSymbols() {
-		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
-			"getAllHeliosSymbols called from within query!"
-		);
-		std::vector<SymID> output;
-		output.reserve(symbol_table.size());
-
-		for (auto& symbol: symbol_table) output.push_back(GetSymRef_Functor::make(&symbol));
-		return output;
-	}
-
 	/**
 	 * @brief SymbolData Factory.
 	 * Make symbols from PST statements.
@@ -184,7 +157,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(
+	SymbolData makeSymbolFromStatement(
 		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
@@ -197,68 +170,68 @@ namespace compiler::helios {
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto function = stmt.dynamicCast<pst::Fun>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = function->getName(),
 					.kind = SymbolKind::Function,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::FunDecl: {
 			auto function = stmt.dynamicCast<pst::FunDecl>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = function->getName(),
 					.kind = SymbolKind::FunctionDeclaration,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Namespace: {
 			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = namespace_stmt->getName(),
 					.kind = SymbolKind::Namespace,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Const: {
 			auto const_stmt = stmt.dynamicCast<pst::Const>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = const_stmt->getName(),
 					.kind = SymbolKind::Const,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Class: {
 			auto class_stmt = stmt.dynamicCast<pst::Class>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = class_stmt->getName(),
 					.kind = SymbolKind::Class,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Alias: {
 			auto alias = stmt.dynamicCast<pst::Alias>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name     = alias->getName(),
 					.kind     = SymbolKind::Alias,
 					.is_alias = true,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Using: {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name
 					= base::StrID(base::strConcat(
@@ -271,11 +244,11 @@ namespace compiler::helios {
 					.is_alias    = true,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Variable: {
 			auto variable = stmt.dynamicCast<pst::Variable>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name        = variable->getName(),
 					.kind        = SymbolKind::Variable,
@@ -283,12 +256,12 @@ namespace compiler::helios {
 					.is_alias    = false,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Import: {
 			// For now only non-wildcard import exist
 			auto import = stmt.dynamicCast<pst::Import>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name        = import->getAlias(),
 					.kind        = SymbolKind::Import,
@@ -296,57 +269,57 @@ namespace compiler::helios {
 					.is_alias    = false,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Method: {
 			auto method = stmt.dynamicCast<pst::Method>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = method->getName(),
 					.kind = SymbolKind::Method,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Field: {
 			auto field = stmt.dynamicCast<pst::Field>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name      = field->getName(),
 					.kind      = SymbolKind::Field,
 					.dependent = true,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Constructor: {
 			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::CopyConstructor: {
 			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
-			));
+			);
 		}
 		case pst::StmtKind::Destructor: {
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = base::StrID("destroy"),
 					.kind = SymbolKind::Destructor,
 				},
 				pst_data
-			));
+			);
 		}
 		default:
 			break;
@@ -363,10 +336,10 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+	SymbolData makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
 		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
-			return putInSymtable(SymbolData::makePSTSymbolData(
+			return SymbolData::makePSTSymbolData(
 				{
 					.name = parameter->getName(),
 					.kind = SymbolKind::Parameter,
@@ -375,12 +348,12 @@ namespace compiler::helios {
 					.scope       = scope,
 					.pst_element = element,
 				}
-			));
+			);
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
+	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymbolData) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -401,8 +374,27 @@ namespace compiler::helios {
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
-		// @OPT: opt it?
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+	private:
+		/**
+		 * @brief This is a helper function for getAllHeliosSymbols.
+		 * Use only inside that function (and only for debug/test purposes)!
+		 */
+		static std::vector<SymID> getAllCachedSymbols() {
+			// \parallel this implementation must be made thread safe
+			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+			// This implementation is fragile, adjust if needed.
+
+			std::vector<SymID> out;
+
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			return out;
+		}
+
+		// for getAllCachedSymbols:
+		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
@@ -419,10 +411,45 @@ namespace compiler::helios {
 				({ .uses_qresult = false })
 			);
 
-			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
-				static auto provide(Context& ctx, QKey) -> PResult {
-					std::vector<SymID> output;
+			/**
+			 * @brief PResult for QueryGlobalBuiltinSymbols.
+			 * It stores both SymbolData and SymID references to them,
+			 * to avoid recomputing SymIDs on each query call.
+			 *
+			 * @importnat Once the PResult is constructed, the data inside vectors
+			 *            should remain stable, so that SymIDs references remain valid.
+			 *            For this reason we delete copy constructor and copy assignment.
+			 */
+			struct QueryGlobalBuiltinSymbols_PResult {
+				std::vector<SymbolData> data;
+				std::vector<SymID>      data_refs;
 
+				QueryGlobalBuiltinSymbols_PResult(std::vector<SymbolData>&& data):
+					  data(std::move(data)),
+					  data_refs() {
+					// we construct data_refs here to ensure stability of references:
+					for (auto& sym_data: this->data)
+						data_refs.push_back(GetSymRef_Functor::make(&sym_data));
+				}
+
+				QueryGlobalBuiltinSymbols_PResult(const QueryGlobalBuiltinSymbols_PResult&)
+					= delete;
+				QueryGlobalBuiltinSymbols_PResult(QueryGlobalBuiltinSymbols_PResult&&) = default;
+				QueryGlobalBuiltinSymbols_PResult& operator=(const QueryGlobalBuiltinSymbols_PResult&)
+					= delete;
+			};
+
+			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, QueryGlobalBuiltinSymbols_PResult) {
+				static auto provide(Context& ctx, QKey) -> PResult {
+					std::vector<SymbolData> output_symbol_data;
+
+					auto i32_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>(
+							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
 					auto i64_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>(
 							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
@@ -430,6 +457,19 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
+					auto u64_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>(
+							{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+						),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+					auto f64_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryFloatType>({ 64 }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
@@ -438,7 +478,7 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 6> function_data
 						= {
 							  {
 								  {
@@ -449,20 +489,59 @@ namespace compiler::helios {
 									  base::StrID("builtin_output_i64"),
 									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
 								  },
+								  {
+									  base::StrID("builtin_input_u64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
+								  },
+								  {
+									  base::StrID("builtin_output_u64"),
+									  ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
+								  },
+								  {
+									  base::StrID("builtin_input_f64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
+								  },
+								  {
+									  base::StrID("builtin_output_f64"),
+									  ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
+								  },
 							  },
 						  };
 
 					for (auto& [name, type]: function_data) {
-						auto sym_data_ref = putInSymtable(
-							SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type })
-						);
-						output.push_back(GetSymRef_Functor::make(sym_data_ref));
+						auto sym_data
+							= SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type });
+
+						output_symbol_data.emplace_back(sym_data);
 					}
 
-					return output;
+					return QueryGlobalBuiltinSymbols_PResult{ std::move(output_symbol_data) };
 				}
 
-				QUERY_AUTO_CACHE_CREF
+				QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> p_result) -> QResult {
+					return &p_result->data_refs;
+				})
+
+			private:
+				/**
+				 * @brief This is a helper function for getAllHeliosSymbols.
+				 * Use only inside that function (and only for debug/test purposes)!
+				 */
+				static std::vector<SymID> getAllCachedSymbols() {
+					// \parallel this implementation must be made thread safe
+					// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+					// This implementation is fragile, adjust if needed.
+
+					std::vector<SymID> out;
+
+					for (auto& [key, cache_entry]: cache)
+						for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
+					return out;
+				}
+
+				// for getAllCachedSymbols:
+				friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 			};
 
 			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
@@ -744,14 +823,33 @@ namespace compiler::helios {
 			);
 		}
 
-		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymID) {
+		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
 			static auto provide(Context&, QKey key) -> PResult {
-				return GetSymRef_Functor::make(putInSymtable(
-					SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data)
-				));
+				return SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
 			}
 
-			QUERY_AUTO_CACHE_COPY
+			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+		private:
+			/**
+			 * @brief This is a helper function for getAllHeliosSymbols.
+			 * Use only inside that function (and only for debug/test purposes)!
+			 */
+			static std::vector<SymID> getAllCachedSymbols() {
+				// \parallel this implementation must be made thread safe
+				// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+				// This implementation is fragile, adjust if needed.
+
+				std::vector<SymID> out;
+
+				for (auto& [key, cache_entry]: cache)
+					out.emplace_back(QResult{ &cache_entry.data });
+				return out;
+			}
+
+			// for getAllCachedSymbols:
+			friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 		};
 
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
@@ -906,4 +1004,28 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
+
+	std::vector<SymID> getAllHeliosSymbols() {
+		// this implementation is fragile, adjust if needed
+
+		CORE_ASSERT(
+			query::Context::getState().queryStackSize() == 0,
+			"getAllHeliosSymbols called from within query!"
+		);
+
+		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto builtin_symbols
+			= builtin::ImplementationOf_QueryGlobalBuiltinSymbols::getAllCachedSymbols();
+		auto generated_symbols
+			= houtgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
+
+		std::vector<SymID> output;
+		output.reserve(pst_symbols.size() + builtin_symbols.size() + generated_symbols.size());
+
+		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
+		output.insert(output.end(), builtin_symbols.begin(), builtin_symbols.end());
+		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
+
+		return output;
+	}
 }

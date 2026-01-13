@@ -16,7 +16,7 @@ namespace pst {
 		out->type = order_type;
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<error::BlockStartError>(state.getPosition()));
+			state.logInt(makeBox<error::BlockStartError>(state.getPosition()));
 			return nullptr;
 		}
 
@@ -33,7 +33,7 @@ namespace pst {
 			}
 
 			PST_WHILE(state[0].is(Special::Semicolon)) {
-				state.log(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
 				state.tokens().skip();
 			}
 		}

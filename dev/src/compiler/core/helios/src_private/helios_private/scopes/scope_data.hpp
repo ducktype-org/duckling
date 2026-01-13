@@ -6,18 +6,22 @@
 #include <helios/utils/symbol_list.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/strongly_typed_id.hpp>
 
 namespace compiler::helios {
 
+	STRONG_TYPEDEF_ID(ScopeInternalID);
+
 	/**
 	 * Structure holding all data directly stored for each created scope.
+	 * @note This structure is only used to store data inside query cache,
+	 * and should not be used directly outside of it.
+	 * The main way to interact with scopes is through ScopeID and related functions/queries.
 	 */
 	struct ScopeData final {
-		// created on startup:
 		std::optional<ScopeID> parent;
 
-		// base::StrID name; ///< for debug
-		bool is_root = false;
+		bool is_root;
 
 		/**
 		 * @brief PST element for which the scope was created.
@@ -36,11 +40,44 @@ namespace compiler::helios {
 		 */
 		u64 depth;
 
-		// We would like the function bellow to be deleted to prevent any copy of scope data.
-		// Unfortunately that would break the aggregate initialization which is super cool.
-		// ScopeData is local to this file only, so we just need to be careful.
-		// ScopeData(const ScopeData&)            = delete;
-		// ScopeData& operator=(const ScopeData&) = delete;
+		/**
+		 * @brief ID used for unstable perfect hashing of scopes.
+		 */
+		ScopeInternalID unstable_id;
+
+		ScopeData(
+			std::optional<ScopeID>                              parent,
+			bool                                                is_root,
+			base::Optional<pst::AccessLocked<pst::LangElement>> related_pst_element,
+			frontend::ModuleID                                  parent_module,
+			u64                                                 depth
+		):
+			  parent(parent),
+			  is_root(is_root),
+			  related_pst_element(std::move(related_pst_element)),
+			  parent_module(parent_module),
+			  depth(depth),
+			  unstable_id(ScopeInternalID::next()) {
+			CORE_ASSERT(
+				related_pst_element.empty() == is_root,
+				"Non-root scope must have related pst element."
+			);
+		}
+
+		/**
+		 * @brief Creates a perfect clone of this ScopeData,
+		 * with all data copied as-is, including unstable_id.
+		 *
+		 * @note It is used by the QueryPrimaryCodeScopeFor query
+		 * when the result is effectively the same as the parent scope,
+		 * but a new ScopeData object is still needed.
+		 */
+		[[nodiscard]]
+		ScopeData perfectClone() const;
+
+		ScopeData(ScopeData&&)                 = default;
+		ScopeData(const ScopeData&)            = delete;
+		ScopeData& operator=(const ScopeData&) = delete;
 	};
 
 }

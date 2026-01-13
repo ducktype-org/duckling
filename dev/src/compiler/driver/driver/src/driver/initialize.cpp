@@ -7,6 +7,7 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -92,6 +93,10 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+		time_stats::TrackCategoryTime driver_initialization_time(
+			time_stats::TimeCategories::DriverInitialization
+		);
+
 		CORE_ASSERT(
 			init::wasInitObject(),
 			"InitObject should be used before call to the initializeTheCompiler function!"
