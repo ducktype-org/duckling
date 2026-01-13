@@ -52,13 +52,13 @@ namespace {
 	template<class T>
 	u64 translateToU64(T value) {
 		if constexpr (sizeof(T) == 8)
-			return vm::safeReadBytes<u64>(value);
+			return vm::safeReadObjectBytes<u64>(value);
 		else if constexpr (sizeof(T) == 4)
-			return vm::safeReadBytes<u32>(value);
+			return vm::safeReadObjectBytes<u32>(value);
 		else if constexpr (sizeof(T) == 2)
-			return vm::safeReadBytes<u16>(value);
+			return vm::safeReadObjectBytes<u16>(value);
 		else if constexpr (sizeof(T) == 1)
-			return static_cast<u64>(vm::safeReadBytes<u8>(value));
+			return static_cast<u64>(vm::safeReadObjectBytes<u8>(value));
 		else
 			CORE_PANIC("Unsupported immediate size: ", sizeof(T));
 	}

@@ -343,7 +343,7 @@ namespace vm {
 	void Memory::runObjectDestructor(base::ModRawView data, TypeCRef type) {
 		switch (type->getKind()) {
 		case Type::Kind::Pointer: {
-			const auto ptr = safeReadBytes<Pointer>(data.getBegin());
+			const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
 			destroyBlockReference(ptr);
 			break;
 		}
@@ -366,7 +366,7 @@ namespace vm {
 	void Memory::runObjectCopyConstructor(base::ModRawView data, TypeCRef type) {
 		switch (type->getKind()) {
 		case Type::Kind::Pointer: {
-			const auto ptr = safeReadBytes<Pointer>(data.getBegin());
+			const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
 			if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
 			break;
 		}

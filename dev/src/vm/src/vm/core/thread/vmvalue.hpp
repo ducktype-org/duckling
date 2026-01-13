@@ -82,7 +82,7 @@ namespace vm {
 				type->getName() != base::StrID("void"), "Interpreting VmValue bytes of type void!"
 			);
 			CORE_ASSERT(offset + sizeof(T) <= data.size(), "VmValue: Out of bounds read");
-			return vm::safeReadBytes<T>(data.data() + offset);
+			return vm::safeReadPointerBytes<T>(data.data(), offset);
 		}
 
 		/**
