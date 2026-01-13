@@ -18,8 +18,9 @@ namespace compiler::helios {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
+		// @TODO #1807
 		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
-			return { counter };
+			return { return_type.queryUnstablePerfectHash(), counter };
 		}
 
 		GeneratedSymbolData::GeneratedSymbolData(
