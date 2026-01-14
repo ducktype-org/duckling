@@ -356,12 +356,13 @@ def infer_gcov_from_compiler(cxx_compiler):
     
     # First, try to infer from compiler name pattern (e.g., g++-14, clang++-19)
     # Use regex to extract compiler type and version from the path/name
-    # This handles cases like /usr/bin/clang++-19, clang++-19, some-wrapper-clang++-19
-    clang_match = re.search(r'clang\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    # Pattern matches compiler names at word boundaries or after '/' to avoid false matches
+    # like 'libclang++' or 'debug-g++'
+    clang_match = re.search(r'(?:^|/)clang\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
     if clang_match:
         return f"llvm-cov-{clang_match.group(1)}"
     
-    gcc_match = re.search(r'g\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    gcc_match = re.search(r'(?:^|/)g\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
     if gcc_match:
         return f"gcov-{gcc_match.group(1)}"
     
@@ -374,9 +375,10 @@ def infer_gcov_from_compiler(cxx_compiler):
             
             # Check if it's GCC or Clang by looking at the binary basename
             compiler_name = cxx_compiler.split('/')[-1]
-            if compiler_name.startswith('clang++') or 'clang++' in compiler_name:
+            # Use exact prefix matching to avoid false positives
+            if compiler_name.startswith('clang++'):
                 return f"llvm-cov-{major_version}"
-            elif compiler_name.startswith('g++') or 'g++' in compiler_name:
+            elif compiler_name.startswith('g++'):
                 return f"gcov-{major_version}"
     except (FileNotFoundError, sp.SubprocessError, OSError):
         # If compiler doesn't exist or can't get version, fall through to default
