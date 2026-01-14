@@ -64,6 +64,9 @@ namespace compiler::driver {
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
 
+		auto str = mod.dumpLLVMToString();
+		std::cout << str << '\n';
+
 		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
 
 		return mod;

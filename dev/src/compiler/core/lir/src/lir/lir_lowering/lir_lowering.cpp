@@ -25,7 +25,6 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/collections/optional.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -245,11 +244,9 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(
-				base::strConcat(
-					"Operation without direct counterpart", base::enumToStr(mir_operation)
-				)
-			);
+			CORE_PANIC(base::strConcat(
+				"Operation without direct counterpart", base::enumToStr(mir_operation)
+			));
 		}
 	}
 
@@ -646,13 +643,11 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"instruction ",
-							base::enumToStr(mir_instruction.operation),
-							" in LowerToLIRFunction"
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLIRFunction"
+					));
 				}
 			}
 
@@ -810,15 +805,13 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(
-				Instruction{
-					Operation::Call,
-					{},
-					{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
+			entry_block.instructions.push_back(Instruction{
+				Operation::Call,
+				{},
+				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
 
-					,
-				}
-			);
+				,
+			});
 		}
 
 		base::StableVector<Block> blocks;

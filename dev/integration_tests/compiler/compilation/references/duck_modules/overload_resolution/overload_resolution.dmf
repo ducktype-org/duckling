@@ -1,0 +1,16 @@
+fun printer(a: i64) -> () = {
+    builtin_output_i64(a);
+}
+
+fun printer(a: ref i64) -> () = {
+    builtin_output_i64(a);
+}
+
+# TODOP: Figure out
+fun main() -> i64 = {
+    let a: i64 = 123;
+    let ref_a: ref i64 = refof a;
+    printer(ref_a);
+
+    return 0;
+}

@@ -1,13 +1,11 @@
 #pragma once
 
-#include "helios/scope_symbol_id.hpp"
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
 
 #include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
