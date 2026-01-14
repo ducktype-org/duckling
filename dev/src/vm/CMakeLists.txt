@@ -39,10 +39,12 @@ set(vm_not_header_deps
   Base Clah Filesystem TPC Init Logger Diagnostic
 )
 
-set(vm_dep_objects "")
+set(vm_dep_objects_bc "")
 foreach(dep ${vm_not_header_deps})
     if(TARGET ${dep})
-        list(APPEND vm_dep_objects "$<TARGET_OBJECTS:${dep}>")
+        add_library(${dep}_bc OBJECT $<TARGET_OBJECTS:${dep}>)
+        target_compile_options(${dep}_bc PRIVATE -emit-llvm)
+        list(APPEND vm_dep_objects_bc $<TARGET_OBJECTS:${dep}_bc>)
     endif()
 endforeach()
 
@@ -70,6 +72,10 @@ make_module(MainVM USES ${vm_dependencies} ${JitDep})
 target_link_libraries(MainVM PUBLIC ${JitDep})
 target_include_directories(MainVM PRIVATE $<TARGET_PROPERTY:JitDep,INTERFACE_INCLUDE_DIRECTORIES>)
 
+#create llvm files for sources of opcodes, to link them
+add_library(LibCommonVM_bc OBJECT ${vm_common_sources})
+make_module(LibCommonVM_bc USES ${vm_dependencies} ${JitDep})
+target_compile_options(LibCommonVM_bc PRIVATE -emit-llvm)
 
 # Create the LibVM_{sc/tc} static libraries and the VM_{sc/tc} executables.
 # In the middle it creates the LibThreadVM_{sc/tc} object libraries.
@@ -79,19 +85,26 @@ function(add_vm_variant suffix compile_def)
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
     make_module(${lib_thread_vm_name} USES ${vm_dependencies})
 
+    add_library(${lib_thread_vm_name}_bc OBJECT ${vm_config_dependent_sources})
+    make_module(${lib_thread_vm_name}_bc USES ${vm_dependencies})
+    target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
+
     if (compile_def)
         target_compile_definitions(${lib_thread_vm_name} PRIVATE "${compile_def}")
+        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE "${compile_def}")
     endif()
 
-
     set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/"common_${suffix}.bc")
+
+
+
 
     add_custom_command(
         OUTPUT ${common_bc}
         COMMAND llvm-link-19
-            $<TARGET_OBJECTS:LibCommonVM>
-            $<TARGET_OBJECTS:${lib_thread_vm_name}>
-            ${vm_dep_objects}
+            $<TARGET_OBJECTS:LibCommonVM_bc>
+            $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
+            ${vm_dep_objects_bc}
             -o ${common_bc}.tmp
         
         COMMAND opt-19
@@ -103,12 +116,15 @@ function(add_vm_variant suffix compile_def)
             -o ${common_bc}
 
         COMMAND_EXPAND_LISTS
-        DEPENDS LibCommonVM ${lib_thread_vm_name} ${vm_dep_objects}
+        DEPENDS
+            LibCommonVM_bc
+            ${lib_thread_vm_name}_bc
+            ${vm_dep_objects_bc}
         COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
     )
 
     add_custom_target(CommonVMBitcode_${suffix} ALL
-        DEPENDS ${common_bc} ${lib_thread_vm_name}
+        DEPENDS ${common_bc}
     )
     add_dependencies(JitDep CommonVMBitcode_${suffix})
 
