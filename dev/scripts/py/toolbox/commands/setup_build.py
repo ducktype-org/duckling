@@ -101,7 +101,7 @@ from click import Choice, option, command
 )
 @option(
     "--enable-link-time-optimization",
-    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires a lot of resources.",
+    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires Clang compiler and LLD linker (auto-configured).",
     type=bool,
     default=False,
     is_flag=True,
