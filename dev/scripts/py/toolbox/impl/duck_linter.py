@@ -1,4 +1,4 @@
-from typing import List
+from typing import Callable, List
 import re
 from pathlib import Path
 
@@ -19,65 +19,59 @@ def duck_linter_impl(
     verbose: bool = False,
     no_merge_base: bool = False,
     no_fix: bool = False,
-):
-    passed_all = True
-    files_with_fixes = []
-    files_with_errors = []
+) -> bool:
+    """
+    Main implementation of the duck linter.
+    Returns True if all files passed the linter, False otherwise.
 
-    files = get_source_files(all, branch, no_merge_base)
-    for f in files:
-        passed = f.runAllChecks(verbose)
-        if not passed:
-            passed_all = False
-            files_with_errors.append(f)
-        if len(f.fixes) > 0:
-            files_with_fixes.append(f)
+    Parameters:
+    - all: If True, lint all source files. If False, lint only changed files.
+    - branch: The branch to compare against when linting changed files.
+    - verbose: If True, print detailed output for each file.
+    - no_merge_base: If True, do not use the merge base for determining changed files.
+    - no_fix: If True, do not apply automatic fixes.
+    """
 
-    if len(files_with_fixes) > 0 and not no_fix:
-        total_fixes = sum(len(f.fixes) for f in files_with_fixes)
+    failed_files: set[SourceFile] = set(
+        filter(
+            lambda f: not f.verify(verbose), get_source_files(all, branch, no_merge_base)
+        )
+    )
+
+    if failed_files and not no_fix:
+        total_fixes = sum(f.getFixCount() for f in failed_files)
         log_new_line()
         log_info(
-            f"Can perform {total_fixes} automatic fixes across {len(files_with_fixes)} files."
+            f"Can perform {total_fixes} automatic fix(es) across {len(failed_files)} file(s)."
         )
-        try:
-            response = get_input("Do you want to apply these fixes? [Y/n]")
-            # Default to yes if empty response or any input except explicit 'n'/'no'
-            # This makes 'yes' the default as requested
-            if (response or '').lower() not in ['n', 'no']:
-                for f in files_with_fixes:
-                    f.applyFixes()
-                log_info("Fixes applied!")
-                # Re-check files that had fixes applied
-                # Convert to set for O(1) membership checking
-                files_with_fixes_set = set(files_with_fixes)
-                passed_all = True
-                for f in files_with_errors:
-                    if f in files_with_fixes_set:
-                        # This file was fixed, reload and re-check
-                        if not f.reloadAndReset():
-                            # Failed to reload, treat as failure
-                            passed_all = False
-                        elif not f.runAllChecks(verbose):
-                            # Reload succeeded but still has errors
-                            passed_all = False
-                    else:
-                        # This file had errors but no automatic fix
-                        passed_all = False
-        except EOFError:
-            pass
 
-    return passed_all
+        response = get_input("Do you want to apply these fixes? [Y/n]")
+        if response.lower() in ["y", "yes", ""]:
+            for f in failed_files:
+                f.applyFixes()
+            log_info("Fixes applied!")
+
+            fixed_files: set[SourceFile] = set()
+            for f in failed_files:
+                # This file was fixed, reload and re-check
+                f.reloadAndReset()
+                if f.verify(False):
+                    fixed_files.add(f)
+            failed_files.difference_update(fixed_files)
+
+    return len(failed_files) == 0
 
 
 class SourceFile:
     def __init__(self, path: str):
         self.path = Path(path)
         self.dir = self.path.parent
-        self.errors = []
-        self.fixes = []
-        with open(path, "r") as file:
-            self.content = file.read()
-        self.lines = self.content.splitlines(keepends=True)
+
+        self.errors: List[str] = []
+        self.fixes: List[Callable[[], None]] = []
+        self.content: str = ""
+        self.lines: List[str] = []
+        self.reloadAndReset()
 
     def _relativeImportChecks(self):
         for i, line in enumerate(self.lines):
@@ -88,42 +82,36 @@ class SourceFile:
                     self.errors.append(
                         f"Relative import `{imp}` does not exist: {self.path}:{i + 1}"
                     )
-                    self.fixes.append(
-                        lambda i=i, imp=imp: self._fixRelativeImport(i, imp)
-                    )
+                    self.fixes.append(lambda i=i, imp=imp: self._fixRelativeImport(i, imp))
 
-    def _fixRelativeImport(self, line_index, import_path):
+    def _fixRelativeImport(self, line_index: int, import_path: str):
         self.lines[line_index] = self.lines[line_index].replace(
             f'"{import_path}"', f"<{import_path}>"
         )
 
-    def applyFixes(self):
-        for fix in self.fixes:
-            fix()
-        with open(self.path, "w") as f:
-            f.writelines(self.lines)
+    def applyFixes(self) -> None:
+        if self.fixes:
+            for fix in self.fixes:
+                fix()
+            with open(self.path, "w") as f:
+                f.writelines(self.lines)
 
-    def reload(self):
-        """Reload file content from disk. Returns True on success, False on failure."""
-        try:
-            with open(self.path, "r") as file:
-                self.content = file.read()
-            self.lines = self.content.splitlines(keepends=True)
-            return True
-        except (FileNotFoundError, PermissionError, OSError) as e:
-            # If file can't be read, keep the old content
-            # This allows the linter to continue processing other files
-            log_warning(f"Failed to reload {self.path}: {e}")
-            return False
-    
+    def getFixCount(self):
+        return len(self.fixes)
+
+    def _loadFromDisk(self) -> None:
+        """Load file content from disk."""
+        with open(self.path, "r") as file:
+            self.content = file.read()
+        self.lines = self.content.splitlines(keepends=True)
+
     def reloadAndReset(self):
         """Reload file content from disk and reset error/fix lists. Returns True on success."""
-        success = self.reload()
+        self._loadFromDisk()
         self.errors = []
         self.fixes = []
-        return success
 
-    def runAllChecks(self, verbose):
+    def verify(self, verbose: bool) -> bool:
         """Returns True if all checks passed, False otherwise"""
 
         self._relativeImportChecks()
@@ -140,9 +128,11 @@ class SourceFile:
             return True
 
 
-def get_source_files(all, relative_to, no_merge_base) -> List[SourceFile]:
+def get_source_files(
+    all: bool, relative_to: str, no_merge_base: bool
+) -> List[SourceFile]:
     files = get_files_for_linter(all, relative_to, no_merge_base).keys()
-    source_files = []
+    source_files: List[SourceFile] = []
     for file in files:
         if file.endswith(".cpp") or file.endswith(".hpp"):
             source_files.append(SourceFile(file))
