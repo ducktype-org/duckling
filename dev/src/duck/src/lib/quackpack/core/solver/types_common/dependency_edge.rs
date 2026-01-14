@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
 use crate::quackpack::core::{
-    Dependency, Source, solver::types_common::{ExpandedLocation, ExpandedPackage}, types_common::{
+    Dependency, Source,
+    solver::types_common::{ExpandedLocation, ExpandedPackage},
+    types_common::{
         Location,
         not_expanded::{LocGit, LocLocal, LocRegistry},
-    }
+    },
 };
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

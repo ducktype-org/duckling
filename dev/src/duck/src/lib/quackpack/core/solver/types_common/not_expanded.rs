@@ -5,7 +5,9 @@ use url::Url;
 use crate::{
     QuackResult, StrId, qp_bail_internal,
     quackpack::core::{
-        BranchOrTag, Dependency, Source, Version, types_common::{ExpandedLocation, ExpandedPackage}, version::CompatibilityCheck
+        BranchOrTag, Dependency, Source, Version,
+        types_common::{ExpandedLocation, ExpandedPackage},
+        version::CompatibilityCheck,
     },
 };
 
