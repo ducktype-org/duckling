@@ -366,7 +366,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             if let Some(features) = self.preexisting_features.get(pkg) {
                 pkg_features = pkg_features.difference(features).cloned().collect();
             }
-            new_features.insert(pkg.clone(), pkg_features);
+            if !pkg_features.is_empty() {
+                new_features.insert(pkg.clone(), pkg_features);
+            }
         }
         FoundSolution {
             new_packages,

@@ -33,7 +33,7 @@ impl BinModelExt for Model<ProblemCreated> {
                 then_any.iter().map(|v| v.as_ref()).collect(),
                 vec![-1.0; then_any_len],
             )
-            .le((then_any_len - 1) as f64);
+            .le((when_all_len - 1) as f64);
         self.add(constraint);
     }
 
