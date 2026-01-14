@@ -8,6 +8,7 @@ from .helpers import (
     check_if_compilers_are_compatible,
     supports_cmake_linker_type,
     should_add_linker_flags,
+    exit_with_error,
 )
 
 
@@ -30,6 +31,18 @@ def setup_build_impl(
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+    
+    # If LTO is enabled, ensure we're using Clang and LLD
+    if enable_link_time_optimization:
+        if "clang++" not in cxx_compiler:
+            exit_with_error(
+                f"Link-time optimization (LTO) requires Clang compiler. "
+                f"Current compiler: {cxx_compiler}. "
+                f"Please use --cxx-compiler to specify a Clang compiler (e.g., clang++-19)."
+            )
+        if linker != "lld":
+            log_info("LTO enabled: Setting linker to lld")
+            linker = "lld"
 
     bld = Path(build_dir)
     if bld.exists():
