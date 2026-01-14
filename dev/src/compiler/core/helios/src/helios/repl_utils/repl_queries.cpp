@@ -25,7 +25,9 @@
 namespace compiler::repl {
 
 	base::Bit256 QueryReplExpressionWrapper_Key::queryUnstablePerfectHash() const {
-		return { counter };
+		auto expr_hash = expr_stmt.illegalAccess().value()->getHash();
+
+		return hashing::justHash<hashing::SHA256>(expr_hash, counter);
 	}
 
 	struct IMPLEMENT_QUERY(QueryReplExpressionWrapper, helios::HOUTFunction) {
@@ -50,6 +52,9 @@ namespace compiler::repl {
 
 			auto code_block = std::make_shared<helios::code::CodeBlock>();
 
+			// @TODO #1817: Instead of returning the value, we should call a generic
+			// print() function here that works for any type. This would eliminate the need
+			// to return values and manually convert them based on type in repl_dvm_helpers.cpp
 			if (return_type.toString() == "void") {
 				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
 				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(std::move(hout_expr));
@@ -79,9 +84,7 @@ namespace compiler::repl {
 			return helios::HOUTFunction{ decl, code_block };
 		}
 
-		// When counter is used as part of the key, caching is not very useful.
-		// TODO: decide if we want to cache expressions based on their content instead.
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplExpressionWrapper)

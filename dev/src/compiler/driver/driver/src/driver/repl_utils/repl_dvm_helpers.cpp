@@ -33,6 +33,9 @@ namespace compiler::repl {
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
 	}
 
+	// @TODO #1817: This approach is hacky.
+	// Instead of extracting the exit value manually based on type,
+	// print would be called inside the DVM execution.
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
 		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
