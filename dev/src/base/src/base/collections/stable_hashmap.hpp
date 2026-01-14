@@ -64,10 +64,9 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		u64 hashToBucket(KeyHash hash) const
-			noexcept {
+		u64 hashToBucket(KeyHash hash) const noexcept {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
-			auto res  = hash % buckets.size();
+			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
 		}
@@ -124,7 +123,6 @@ namespace base {
 				rehash();
 		}
 
-
 		/*****************************************************************************************\
 		|  Bellow is the map interface functions that take, calculated hash of key as parameters. |
 		|  It is used to ensure that hash is only calculated once when needed.                    |
@@ -140,7 +138,8 @@ namespace base {
 
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
-				not this->containsAssumingHash(new_node->key_value.key, key_hash), "Key already exists in StableHashMap"
+				not this->containsAssumingHash(new_node->key_value.key, key_hash),
+				"Key already exists in StableHashMap"
 			);
 
 			addToBucket(hashToBucket(key_hash), new_node);
@@ -152,7 +151,8 @@ namespace base {
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
-		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash) RELEASE_NOEXCEPT {
+		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash)
+			RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
@@ -170,9 +170,9 @@ namespace base {
 			return &new_node->key_value;
 		}
 
-
 		[[nodiscard]]
-		base::Optional<CRef<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) const RELEASE_NOEXCEPT {
+		base::Optional<CRef<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) const
+			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
@@ -182,7 +182,8 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		base::Optional<Ref<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) RELEASE_NOEXCEPT {
+		base::Optional<Ref<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash)
+			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
@@ -192,7 +193,8 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		base::Optional<DATA_T> atMaybeCopyAssumingHash(const KEY_T& key, KeyHash key_hash) const RELEASE_NOEXCEPT {
+		base::Optional<DATA_T> atMaybeCopyAssumingHash(const KEY_T& key, KeyHash key_hash) const
+			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
 				if (current_node->key_value.key == key) return current_node->key_value.value;
