@@ -34,7 +34,8 @@ def duck_linter_impl(
 
     failed_files: set[SourceFile] = set(
         filter(
-            lambda f: not f.verify(verbose), get_source_files(all, branch, no_merge_base)
+            lambda f: not f.verify(verbose),
+            get_source_files(all, branch, no_merge_base),
         )
     )
 
@@ -82,7 +83,9 @@ class SourceFile:
                     self.errors.append(
                         f"Relative import `{imp}` does not exist: {self.path}:{i + 1}"
                     )
-                    self.fixes.append(lambda i=i, imp=imp: self._fixRelativeImport(i, imp))
+                    self.fixes.append(
+                        lambda i=i, imp=imp: self._fixRelativeImport(i, imp)
+                    )
 
     def _fixRelativeImport(self, line_index: int, import_path: str):
         self.lines[line_index] = self.lines[line_index].replace(
