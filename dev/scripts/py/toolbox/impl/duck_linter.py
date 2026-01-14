@@ -38,8 +38,9 @@ def duck_linter_impl(
             f"Can perform {total_fixes} automatic fixes across {len(files_with_fixes)} files."
         )
         try:
-            response = get_input("Do you want to apply these fixes? [y/N]")
-            if response.lower() in ['y', 'yes']:
+            response = get_input("Do you want to apply these fixes? [Y/n]")
+            # Default to yes if empty response
+            if response.lower() not in ['n', 'no']:
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
