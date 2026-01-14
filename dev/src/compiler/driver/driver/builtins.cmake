@@ -45,21 +45,11 @@ file(GLOB POTENTIAL_CLANG_PATHS
 )
 
 # Find the actual clang binary
-# If CLANG_FOR_BUILTINS_PATH is provided, use it directly
-if (DEFINED CLANG_FOR_BUILTINS_PATH AND CLANG_FOR_BUILTINS_PATH)
-    set(CLANG_BIN ${CLANG_FOR_BUILTINS_PATH})
-    # Validate that the provided path is a valid clang binary matching LLVM version
-    check_clang_version(is_valid ${CLANG_BIN})
-    if (NOT is_valid)
-        message(FATAL_ERROR "The provided CLANG_FOR_BUILTINS_PATH '${CLANG_BIN}' is not a valid Clang ${LLVM_VERSION_MAJOR} binary.")
-    endif ()
-else ()
-    find_program(CLANG_BIN
-            NAMES clang clang-19
-            PATHS ${POTENTIAL_CLANG_PATHS}
-            VALIDATOR check_clang_version
-    )
-endif ()
+find_program(CLANG_BIN
+        NAMES clang clang-19
+        PATHS ${POTENTIAL_CLANG_PATHS}
+        VALIDATOR check_clang_version
+)
 
 if (CLANG_BIN)
     message(STATUS "Using Clang for built-ins source generation: ${CLANG_BIN}")

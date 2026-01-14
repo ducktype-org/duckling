@@ -371,7 +371,16 @@ def infer_gcov_from_compiler(cxx_compiler):
     if gcc_match:
         return f"gcov-{gcc_match.group(1)}"
     
-    # If no pattern match, try to get the version by running the compiler
+    # Check if it's an unversioned compiler (g++, clang++)
+    # by looking at the binary basename
+    compiler_name = cxx_compiler.split('/')[-1]
+    if compiler_name == 'clang++':
+        return "llvm-cov"
+    elif compiler_name == 'g++':
+        return "gcov"
+    
+    # If no pattern match and not an unversioned compiler,
+    # try to get the version by running the compiler
     try:
         version = get_program_version(cxx_compiler)
         if version:
@@ -379,7 +388,6 @@ def infer_gcov_from_compiler(cxx_compiler):
             major_version = version.split(".")[0]
             
             # Check if it's GCC or Clang by looking at the binary basename
-            compiler_name = cxx_compiler.split('/')[-1]
             # Check if the basename starts with the compiler name
             if compiler_name.startswith('clang++'):
                 return f"llvm-cov-{major_version}"

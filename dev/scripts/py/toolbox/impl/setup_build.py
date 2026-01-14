@@ -56,7 +56,7 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
     ]
     if clang_for_builtins:
-        cmd_parts.append(f"-D CLANG_FOR_BUILTINS_PATH={clang_for_builtins}")
+        cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
