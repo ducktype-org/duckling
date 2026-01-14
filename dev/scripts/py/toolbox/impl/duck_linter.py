@@ -54,8 +54,11 @@ def duck_linter_impl(
                 for f in files_with_errors:
                     if f in files_with_fixes_set:
                         # This file was fixed, reload and re-check
-                        f.reloadAndReset()
-                        if not f.runAllChecks(verbose):
+                        if not f.reloadAndReset():
+                            # Failed to reload, treat as failure
+                            passed_all = False
+                        elif not f.runAllChecks(verbose):
+                            # Reload succeeded but still has errors
                             passed_all = False
                     else:
                         # This file had errors but no automatic fix
@@ -99,23 +102,26 @@ class SourceFile:
             fix()
         with open(self.path, "w") as f:
             f.writelines(self.lines)
-    
+
     def reload(self):
-        """Reload file content from disk"""
+        """Reload file content from disk. Returns True on success, False on failure."""
         try:
             with open(self.path, "r") as file:
                 self.content = file.read()
             self.lines = self.content.splitlines(keepends=True)
+            return True
         except (FileNotFoundError, PermissionError, OSError) as e:
             # If file can't be read, keep the old content
             # This allows the linter to continue processing other files
             log_warning(f"Failed to reload {self.path}: {e}")
+            return False
     
     def reloadAndReset(self):
-        """Reload file content from disk and reset error/fix lists"""
-        self.reload()
+        """Reload file content from disk and reset error/fix lists. Returns True on success."""
+        success = self.reload()
         self.errors = []
         self.fixes = []
+        return success
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""
