@@ -22,12 +22,14 @@ def duck_linter_impl(
 ):
     passed_all = True
     files_with_fixes = []
+    files_with_errors = []
 
     files = get_source_files(all, branch, no_merge_base)
     for f in files:
         passed = f.runAllChecks(verbose)
         if not passed:
             passed_all = False
+            files_with_errors.append(f)
         if len(f.fixes) > 0:
             files_with_fixes.append(f)
 
@@ -44,11 +46,16 @@ def duck_linter_impl(
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
-                # Re-run checks to update passed_all status
+                # Re-check files that had fixes applied
                 passed_all = True
-                for f in files_with_fixes:
-                    f.reloadAndReset()
-                    if not f.runAllChecks(verbose):
+                for f in files_with_errors:
+                    if f in files_with_fixes:
+                        # This file was fixed, reload and re-check
+                        f.reloadAndReset()
+                        if not f.runAllChecks(verbose):
+                            passed_all = False
+                    else:
+                        # This file had errors but no automatic fix
                         passed_all = False
         except EOFError:
             pass
