@@ -7,6 +7,7 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -80,9 +81,8 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  graph  = query::external::deserialize(span);
 					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
-					query::external::setPreviousGraph(std::move(graph), std::move(inputs));
+					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
 				}
 			}
 		}
@@ -93,6 +93,10 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+		time_stats::TrackCategoryTime driver_initialization_time(
+			time_stats::TimeCategories::DriverInitialization
+		);
+
 		CORE_ASSERT(
 			init::wasInitObject(),
 			"InitObject should be used before call to the initializeTheCompiler function!"

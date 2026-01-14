@@ -1,3 +1,5 @@
+#include <diagnostic_interactive/logger.hpp>
+
 #include <lexer/lexer.hpp>
 #include <token_source/source.hpp>
 
@@ -12,11 +14,15 @@ namespace vm::loader::parser {
 		return lexer::tokenizeFile(path);
 	}
 
-	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
+	MBox<ParsedFile> parseFile(
+		Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log, Ref<dia_int::Logger> int_log
+	) {
 		const lexer::TokenData& td = file->getTokenData();
 
 		F8ParserState state(
-			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
+			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()),
+			log,
+			int_log
 		);
 		return ParsedFile::parse(state);
 	}
@@ -25,13 +31,14 @@ namespace vm::loader::parser {
 		// @TODO: Decide on a better position
 		// So that they dont't die
 		static std::vector<Box<tokenizer::TokenSource>> tokenized_files;
-		auto                                            log = dia::Logger();
+		auto                                            log     = dia::Logger();
+		auto                                            int_log = dia_int::Logger();
 		std::vector<ParsedFile>                         parsed_files;
 
 		for (const auto& file: files) {
 			tokenized_files.emplace_back(tokenizeFile(file));
-			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), &log);
-			if (log.bad()) return std::unexpected(std::move(log));
+			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), &log, &int_log);
+			if (log.bad() or int_log.bad()) return std::unexpected(std::move(log));
 			parsed_files.push_back(std::move(*maybe_parsed));
 		}
 

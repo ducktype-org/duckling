@@ -34,7 +34,16 @@ namespace dia_int {
 
 	usize Logger::messageCount() const { return diagnostics.size(); }
 
+	u64 Logger::errorCount() const {
+		u64 count = 0;
+		for (const auto& diag: diagnostics)
+			if (diag->main_message.metadata.type == "error") count++;
+		return count;
+	}
+
 	bool Logger::hasErrors() const { return has_error; }
+
+	bool Logger::good() const { return not hasErrors(); }
 
 	void Logger::clear() {
 		diagnostics.clear();
@@ -42,7 +51,7 @@ namespace dia_int {
 	}
 
 	void Logger::evaluateToTerminalMessage(
-		CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
+		CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out, bool catch_exceptions
 	) {
 		try {
 			// std::cout << diagnostic_args->toJson().dump(4) << "\n\n";
@@ -52,10 +61,13 @@ namespace dia_int {
 			term_ui::print(view, out);
 		} catch (const std::exception& e) {
 			out << "Error while printing diagnostic message: \n" << e.what() << "\n";
+			if (not catch_exceptions) throw;
 		}
 	}
 
 	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
 		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
 	}
+
+	bool Logger::bad() const { return has_error; }
 }

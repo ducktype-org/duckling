@@ -959,6 +959,13 @@ class FunctionValidator {
 				if (pointer_type.inner != instr.type.type_name)
 					throw VTableTypeMismatchError(instr);
 			}
+			instr_case(Op_resetVTable_lptr, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.object_ptr.var_name));
+				auto type_meta = type_metadata.at(pointer_type.inner);
+				if (!type_meta->getInheritanceMetadata().has_value())
+					throw NotAClassTypeError(instr);
+			}
 			instr_case_novalue(Op_downcast_lptr_lptr_type) {}
 			instr_case_novalue(Op_free_lptr) {}
 			instr_case(Op_store_lptr_lany, instr) {
