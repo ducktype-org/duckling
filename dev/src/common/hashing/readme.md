@@ -21,9 +21,14 @@ Hooking up hashing for a class
 ==============================
 
 This is the most common use case and also the simplest one.
+
 The way you should think about it, is that you will, based on the state of the object to hash,
 define a sequence of bytes that will be hashed with some independently chosen hashing algorithm,
 and the hash obtained will be the actual hash of the object.
+
+This means that it is possible for hashes of different types that are represented by the same sequence of bytes
+to be the same (e.g. `pair<int, int>{1, 2}` and `struct{x=1, y=2}` might end up hashing to the same value).
+One must be careful when using hashing for different types.
 
 There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
 
@@ -162,18 +167,17 @@ There is one template parameters that can be specified: `HashAlgorithm`.
 Using different hashing algorithms:
 ~~~~~cpp
 // `Hash` is the same as `Hash<Fnv1a_64>`
-bool b = Hash{}(42) == Hash<Fnv1a_64, void>{}(42); // true
+bool b = Hash{}(42) == Hash<Fnv1a_64>{}(42); // true
+
 // If many hashes are stored we can use shorter ones:
 u32 hash = Hash<Fnv1a_32>{}(42);
 ~~~~~
 
-Different hash type code lengths used:
 ~~~~~cpp
-std::cout << Hash<DebugHash, void>{}(42) << '\n'
-          << Hash<DebugHash>{}(42) << '\n'
-          << Hash<DebugHash, TypeCodeBase<u64>>{}(42) << '\n';
+std::cout << Hash<DebugHash>{}(42) << '\n';
 // prints:
 ~~~~~
+<!-- @TODO update the output bellow! -->
 <html>
 <body>
 <!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00                                                                                                                                                                                                           </span></div><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>19 </span><span>65 94 2A                                                                                                                                                                                               </span></div><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>F5 </span><span>DD 91 3F 7A 2E 2B 44 </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
