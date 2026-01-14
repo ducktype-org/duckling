@@ -150,11 +150,6 @@ def todo_validate_impl(
         bool: True if all TODOs are properly formatted, False if any violations are found.
     """
     
-    # Handle --print-todos flag
-    if print_todos:
-        print_newly_added_todos(branch, no_merge_base)
-        return True
-
     if exclude_files is None:
         exclude_files = []
 
@@ -171,6 +166,11 @@ def todo_validate_impl(
                 files_and_lines.pop(file)
         except KeyError:
             pass
+
+    # Handle --print-todos flag
+    if print_todos:
+        print_newly_added_todos(files_and_lines)
+        return True
 
     # Check only modified files and lines
     violations_found = False
@@ -240,7 +240,7 @@ def todo_validate_impl(
     return not violations_found
 
 
-def print_newly_added_todos(branch: str = "origin/main", no_merge_base: bool = False):
+def print_newly_added_todos(files_and_lines: dict[str, list[tuple[int, int]]]):
     """
     Prints newly added TODOs with issue numbers in modified files.
     
@@ -248,14 +248,8 @@ def print_newly_added_todos(branch: str = "origin/main", no_merge_base: bool = F
     and prints them in a format suitable for the quacker bot.
     
     Args:
-        branch: Git branch to check against (default: origin/main)
-        no_merge_base: If True, skip merge base calculation
+        files_and_lines: Dictionary mapping file paths to line ranges to scan
     """
-    # Get modified files and line ranges
-    files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
-        only_modified=True, lines=True, branch=branch, no_merge_base=no_merge_base
-    ) # type: ignore
-    
     found_issues = set()
 
     def _skip_error_handler(_path: str, _exc: BaseException) -> None:
