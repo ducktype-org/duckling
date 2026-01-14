@@ -2,13 +2,12 @@ from typing import List
 import re
 from pathlib import Path
 
-import click
-
 from .cpp_linter import get_files_for_linter
 from .helpers import (
     log_info,
     log_warning,
     log_new_line,
+    get_input,
 )
 
 _RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
@@ -39,11 +38,19 @@ def duck_linter_impl(
             f"Can perform {total_fixes} automatic fixes across {len(files_with_fixes)} files."
         )
         try:
-            value = click.prompt('Do you want to apply these fixes? ', type=bool)
-            if value:
+            response = get_input("Do you want to apply these fixes? [y/N]")
+            if response.lower() in ['y', 'yes']:
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
+                # Re-run checks to update passed_all status
+                passed_all = True
+                for f in files_with_fixes:
+                    f.reload()
+                    f.errors = []
+                    f.fixes = []
+                    if not f.runAllChecks(verbose):
+                        passed_all = False
         except EOFError:
             pass
 
@@ -83,6 +90,12 @@ class SourceFile:
             fix()
         with open(self.path, "w") as f:
             f.writelines(self.lines)
+    
+    def reload(self):
+        """Reload file content from disk"""
+        with open(self.path, "r") as file:
+            self.content = file.read()
+        self.lines = self.content.splitlines(keepends=True)
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""
