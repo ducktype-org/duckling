@@ -16,20 +16,17 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <deque>
-#include <mutex>
 
 namespace vm {
 	/**
 	 * @brief A memory module for a process.
+	 * @note Memory is single threaded!
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
 	 */
 	class Memory final {
 	private:
-		// We either have recursive_mutex or a shared_mutex.
-		// https://stackoverflow.com/questions/36619715/a-shared-recursive-mutex-in-standard-c
-		std::recursive_mutex mutex;
-		HeapAllocator        heap_allocator;
-		DummyAllocator       dummy_allocator;
+		HeapAllocator  heap_allocator;
+		DummyAllocator dummy_allocator;
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
@@ -206,7 +203,6 @@ namespace vm {
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
 			GlobalDataID id
 		) -> base::ModRawView {
-			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!")->modView();
 		}
 
@@ -216,7 +212,6 @@ namespace vm {
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getBlockViewUnsafe(
 			Ref<Block> block
 		) -> base::ModRawView {
-			std::lock_guard lock(mutex);
 			return block->data.view;
 		}
 
@@ -226,7 +221,6 @@ namespace vm {
 		 */
 		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
 			-> Ref<Block> {
-			std::lock_guard lock(mutex);
 			return *global_blocks.atMaybe(id).expect("Id not stored!");
 		}
 
@@ -264,7 +258,6 @@ namespace vm {
 			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 				-> base::ModRawView {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
-			std::lock_guard lock(*pointer.block->mutex_ref);
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
