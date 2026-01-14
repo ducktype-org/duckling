@@ -107,24 +107,24 @@ def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
     )
 
 
-def log_info(msg, file=sys.stdout):
+def log_info(msg: str, file=sys.stdout) -> None:
     click_log("INFO", msg, fg="yellow", file=file)
 
 
-def log_bash(msg, file=sys.stdout):
+def log_bash(msg: str, file=sys.stdout) -> None:
     click_log("BASH", msg, fg="bright_cyan", file=file)
 
 
-def log_warning(msg, file=sys.stdout):
+def log_warning(msg: str, file=sys.stdout) -> None:
     click_log("WARNING", msg, fg="magenta", bold=True, file=file)
 
 
-def get_input(msg, nl=False):
+def get_input(msg: str, nl: bool = False) -> str:
     click_log("INPUT", msg, fg="blue", nl=nl)
     return input()
 
 
-def log_new_line(file=sys.stdout):
+def log_new_line(file=sys.stdout) -> None:
     click.echo("", file=file)
 
 
