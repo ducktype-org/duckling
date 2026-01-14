@@ -139,7 +139,12 @@ The installed library is placed in the `scripts/downloads` directory.
 ./toolbox.py setup-build
 ```
 
-Press "enter" on every prompt to leave default options.
+Press "enter" on every prompt to leave default options. The setup now automatically:
+- Detects and uses the best available linker (mold/lld if available)
+- Infers GCOV version from your compiler version
+- Disables documentation building by default (use `--docs` flag to enable)
+
+Advanced options like unity compilation, LTO, and symbol stripping are available as command-line flags only (use `--help` to see all options).
 
 
 #### MacOS caveats
@@ -187,10 +192,8 @@ ninja all
 
 ## Building the docs
 
-If you want to build the docs make sure that in the previous step 
-the build directory was created with the `docs` option enabled.
-For building the documentation python virtual environment 
-created in the `init` step is used.
+If you want to build the docs, make sure to enable the `--docs` flag when creating the build directory with `setup-build` command (e.g., `./toolbox.py setup-build --docs`).
+For building the documentation, the Python virtual environment created in the `init` step is used.
 
 ```bash
 ./toolbox.py docs
