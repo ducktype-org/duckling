@@ -13,7 +13,7 @@
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromStack(std::byte* stack, u64 position) {
-	return vm::safeReadBytes<T>(stack, position);
+	return vm::safeReadPointerBytes<T>(stack, position);
 }
 
 /**
@@ -31,7 +31,7 @@ inline static void writeToStack(std::byte* stack, u64 position, const T& value) 
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromView(base::ModRawView view) {
-	return vm::safeReadBytes<T>(view.getBegin());
+	return vm::safeReadPointerBytes<T>(view.getBegin());
 }
 
 /**
@@ -100,7 +100,7 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 			if (thread.execution_request_break)                                       \
 				return handle_execution_break(&instr[i], local_stack, frame, thread); \
 		}                                                                             \
-		return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);              \
+		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);    \
 	})                                                                                \
 	IF_NOT_TC({                                                                       \
 		instr += i;                                                                   \
