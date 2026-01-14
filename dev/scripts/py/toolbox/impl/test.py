@@ -17,6 +17,14 @@ def test_impl(
     rerun_failed=False,
     quiet=False,
 ):
+    # Build tests first
+    if label_regex:
+        # Build specific test pack if label is provided
+        bash_command(f"cmake --build {build_dir} --target build_{label_regex}_tests -j {int(parallel)}")
+    else:
+        # Build all tests
+        bash_command(f"cmake --build {build_dir} --target build_all_tests -j {int(parallel)}")
+    
     # Build ctest command
     ctest_cmd = "ctest"
     
