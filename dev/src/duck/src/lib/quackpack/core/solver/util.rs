@@ -69,6 +69,7 @@ mod test {
 
     use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
+    use url::Url;
 
     use crate::{
         DuckCtx, QpCtx, StrId,
@@ -112,11 +113,11 @@ dependencies:
             .get(&StrId::new("b"))
             .unwrap();
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
@@ -165,11 +166,11 @@ dependencies:
             .get(&StrId::new("b"))
             .unwrap();
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);

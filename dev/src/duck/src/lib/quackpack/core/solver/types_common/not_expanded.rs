@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
+use url::Url;
+
 use crate::{
     QuackResult, StrId, qp_bail_internal,
     quackpack::core::{
-        Dependency, GitRevision, Source, Version,
-        types_common::{ExpandedLocation, ExpandedPackage},
-        version::CompatibilityCheck,
+        BranchOrTag, Dependency, Source, Version, types_common::{ExpandedLocation, ExpandedPackage}, version::CompatibilityCheck
     },
 };
 
@@ -18,18 +18,18 @@ pub enum Location {
 
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.desc().source() {
+        match &dependency.desc().source().inner {
             Source::Registry(registry) => Self::Registry(LocRegistry {
-                url: registry.url(),
+                url: registry.url().clone(),
                 real_name: dependency.real_name(),
             }),
             Source::Local(local) => Self::Local(LocLocal {
                 path: local.entry_in_manifest(),
             }),
             Source::Git(git) => Self::Git(LocGit {
-                url: git.url(),
+                url: git.url().clone(),
+                branch_or_tag: git.branch_or_tag(),
                 rev: git.rev(),
-                commit: git.commit(),
             }),
         }
     }
@@ -37,15 +37,15 @@ impl From<&Dependency> for Location {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct LocRegistry {
-    pub url: StrId,
+    pub url: Url,
     pub real_name: StrId,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct LocGit {
-    pub url: StrId,
-    pub rev: GitRevision,
-    pub commit: Option<StrId>,
+    pub url: Url,
+    pub branch_or_tag: BranchOrTag,
+    pub rev: Option<StrId>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

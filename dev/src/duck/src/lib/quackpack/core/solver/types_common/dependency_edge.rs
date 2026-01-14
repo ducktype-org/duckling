@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
 use crate::quackpack::core::{
-    Dependency, Source,
-    solver::types_common::{ExpandedLocation, ExpandedPackage},
-    types_common::{
+    Dependency, Source, solver::types_common::{ExpandedLocation, ExpandedPackage}, types_common::{
         Location,
         not_expanded::{LocGit, LocLocal, LocRegistry},
-    },
+    }
 };
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -21,18 +19,18 @@ impl DependencyEdge {
         manifest_dependency: &Dependency,
         location_resolver: &HashMap<Location, ExpandedLocation>,
     ) -> Option<Self> {
-        let child_loc = match &manifest_dependency.desc().source() {
+        let child_loc = match &manifest_dependency.desc().source().inner {
             Source::Registry(registry) => Location::Registry(LocRegistry {
-                url: registry.url(),
+                url: registry.url().clone(),
                 real_name: manifest_dependency.real_name(),
             }),
             Source::Local(local) => Location::Local(LocLocal {
                 path: local.entry_in_manifest(),
             }),
             Source::Git(git) => Location::Git(LocGit {
-                url: git.url(),
+                url: git.url().clone(),
+                branch_or_tag: git.branch_or_tag(),
                 rev: git.rev(),
-                commit: git.commit(),
             }),
         };
         location_resolver.get(&child_loc).map(|child_loc| Self {

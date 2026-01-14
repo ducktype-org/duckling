@@ -208,6 +208,7 @@ mod test {
 
     use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
+    use url::Url;
 
     use crate::{
         DuckCtx, QpCtx,
@@ -234,18 +235,18 @@ mod test {
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
-    version: 2
+    version: '2'
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
             r#"
 metadata:
   name: b
-  version: 2
+  version: '2'
 "#,
         );
         let ctx = DuckCtx::default();
@@ -253,19 +254,19 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let location_a = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_pkg_a = ExpandedPackage {
@@ -315,11 +316,11 @@ metadata:
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
-    version: 2
+    version: '2'
 
 features:
   xd: []
@@ -329,11 +330,11 @@ features:
             r#"
 metadata:
   name: b
-  version: 2
+  version: '2'
 
 dependencies:
   a:
-    version: 1
+    version: '1'
     features:
     - xd
 "#,
@@ -343,19 +344,19 @@ dependencies:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let location_a = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_pkg_a = ExpandedPackage {
@@ -409,11 +410,11 @@ dependencies:
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
-    version: 2
+    version: '2'
     features:
     - xd
 "#,
@@ -422,7 +423,7 @@ dependencies:
             r#"
 metadata:
   name: b
-  version: 2
+  version: '2'
 
 features:
   xd: []
@@ -434,19 +435,19 @@ features:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let location_a = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_pkg_a = ExpandedPackage {
@@ -504,11 +505,11 @@ features:
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
-    version: 2
+    version: '2'
     features:
     - xd
 "#,
@@ -517,7 +518,7 @@ dependencies:
             r#"
 metadata:
   name: b
-  version: 2
+  version: '2'
 
 features:
   xd: []
@@ -529,19 +530,19 @@ features:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let location_a = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let location_b = Location::Registry(LocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
         });
         let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: StrId::from("http://localhost:9001"),
+            url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
         });
         let exp_pkg_a = ExpandedPackage {

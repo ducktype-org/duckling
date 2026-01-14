@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use url::Url;
+
 use crate::{
     QuackResult, StrId, qp_bail_internal,
     quackpack::core::{Version, version::CompatibilityCheck},
@@ -14,7 +16,7 @@ pub enum ExpandedLocation {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedLocRegistry {
-    pub url: StrId,
+    pub url: Url,
     pub real_name: StrId,
 }
 
