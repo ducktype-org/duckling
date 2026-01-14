@@ -40,16 +40,14 @@ def duck_linter_impl(
         try:
             response = get_input("Do you want to apply these fixes? [Y/n]")
             # Default to yes if empty response
-            if response.lower() not in ['n', 'no']:
+            if (response or '').lower() not in ['n', 'no']:
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
                 # Re-run checks to update passed_all status
                 passed_all = True
                 for f in files_with_fixes:
-                    f.reload()
-                    f.errors = []
-                    f.fixes = []
+                    f.reloadAndReset()
                     if not f.runAllChecks(verbose):
                         passed_all = False
         except EOFError:
@@ -97,6 +95,12 @@ class SourceFile:
         with open(self.path, "r") as file:
             self.content = file.read()
         self.lines = self.content.splitlines(keepends=True)
+    
+    def reloadAndReset(self):
+        """Reload file content from disk and reset error/fix lists"""
+        self.reload()
+        self.errors = []
+        self.fixes = []
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""
