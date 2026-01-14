@@ -35,13 +35,9 @@ impl DependencyEdge {
                 commit: git.commit(),
             }),
         };
-        if let Some(child_loc) = location_resolver.get(&child_loc) {
-            Some(Self {
-                parent,
-                dependency_loc: child_loc.clone(),
-            })
-        } else {
-            None
-        }
+        location_resolver.get(&child_loc).map(|child_loc| Self {
+            parent,
+            dependency_loc: child_loc.clone(),
+        })
     }
 }

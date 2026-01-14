@@ -18,11 +18,11 @@ pub fn get_possible_realisations(
         let version = dependency_description
             .desc()
             .versions()
-            .get(0)
+            .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
         let only_package = Package {
             location: Location::from(dependency_description),
-            version: Some(version.clone()),
+            version: Some(*version),
         }
         .resolve(location_resolver);
         Ok(only_package.iter().cloned().collect())
@@ -38,10 +38,10 @@ pub fn get_possible_realisations(
                 .versions()
                 .iter()
                 .copied()
-                .map(|v| Some(v))
+                .map(Some)
                 .collect()
         };
-        let Some(possible_versions) = versions_for_location.get(&location) else {
+        let Some(possible_versions) = versions_for_location.get(location) else {
             return Ok(vec![]);
         };
         let good_versions: Vec<Option<Version>> = possible_versions
