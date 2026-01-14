@@ -531,7 +531,8 @@ namespace compiler::backend_llvm {
 			// If there is no access chain, we can return the base pointer directly.
 			if (not place.hasAccess()) return current_ptr;
 
-			llvm::Type* current_type = typeFromLayout(module, place.getBaseLayout());
+			llvm::Type*           current_type   = typeFromLayout(module, place.getBaseLayout());
+			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
 
 			// Otherwise, we need to get the layout indices of the accessed fields.
 			// - First, collect the subsequent layout indices.
@@ -544,7 +545,7 @@ namespace compiler::backend_llvm {
 			auto flush_gep = [&]() {
 				if (access_indices.size() > 1) {
 					// Create a GEP if needed.
-					current_ptr = builder.CreateGEP(current_type, current_ptr, access_indices);
+					current_ptr  = builder.CreateGEP(current_type, current_ptr, access_indices);
 					current_type = typeFromLayout(module, current_layout);
 				}
 				access_indices.clear();
@@ -552,8 +553,6 @@ namespace compiler::backend_llvm {
 				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 			};
 
-
-			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
 
 			for (const auto& projection: place.access_chain) {
 				variant_match(projection.storage) {
@@ -852,7 +851,8 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case AddressOf: {
-				const auto& src_place = std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
+				const auto& src_place
+					= std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
 				llvm::Value* address = gepPointerFromLIRPlace(src_place, builder);
 				storeOutput(lir_instruction.output.value(), address, builder);
 				break;

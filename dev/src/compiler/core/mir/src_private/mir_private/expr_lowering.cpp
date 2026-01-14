@@ -397,6 +397,20 @@ namespace compiler::mir {
 			);
 		}
 
+		void visitMakeReferenceExpr(const hc::MakeReferenceExpr& expr) override {
+			auto       hole          = continuation->addHole();
+			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			const auto res_inner     = lowered_inner.getResult(function);
+			const auto result_type   = expr.expression_type.getSymbolType();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+				result_type
+			);
+		}
+
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));

@@ -343,8 +343,8 @@ namespace compiler::helios::code {
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasFailed()) return;  // failed
+				auto inner_res = fromPST(ctx, stmt->getExpr());
+				if (inner_res.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -354,8 +354,14 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto expr_type = inner.valueOrThrow()->expression_type.getType();
-				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.valueOrThrow()));
+				auto inner = std::move(inner_res).valueOrThrow();
+				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
+					node = makeBox<MakeReferenceExpr>(ctx, std::move(inner));
+					return;
+				}
+
+				auto expr_type = inner->expression_type.getType();
+				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();

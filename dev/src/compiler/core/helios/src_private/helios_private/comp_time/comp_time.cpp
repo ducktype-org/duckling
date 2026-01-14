@@ -538,6 +538,10 @@ namespace compiler::helios {
 				result = sub_result.valueOrThrow();
 			}
 
+			void visitMakeReferenceExpr(const code::MakeReferenceExpr&) final {
+				result = CouldNotShortPath{};
+			}
+
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.

@@ -34,6 +34,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
+	EXPR_VISITOR(MakeReferenceExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
@@ -681,6 +682,26 @@ namespace compiler::helios::code {
 
 	Box<Expr> CastExpr::clone() const {
 		return makeBox<CastExpr>(expression_type, source_expr->clone(), target_type);
+	}
+
+	MakeReferenceExpr::MakeReferenceExpr(query::Context&, Box<Expr> inner):
+		  Expr(tsh::ExpressionType<>(
+			  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  inner(std::move(inner)) {}
+
+	MakeReferenceExpr::MakeReferenceExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner):
+		  Expr(expression_type),
+		  inner(std::move(inner)) {}
+
+	void MakeReferenceExpr::debugPrint(std::ostream& out) const {
+		out << "refof ";
+		inner->debugPrint(out);
+	}
+
+	Box<Expr> MakeReferenceExpr::clone() const {
+		return makeBox<MakeReferenceExpr>(expression_type, inner->clone());
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr):
