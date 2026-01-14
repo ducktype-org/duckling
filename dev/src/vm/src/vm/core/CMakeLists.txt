@@ -18,7 +18,6 @@ add_files(
     thread/vmvalue.cpp
 )
 
-<<<<<<< HEAD
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
 
 add_files(
@@ -26,6 +25,3 @@ add_files(
 )
 
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE) 
-=======
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
->>>>>>> c33eee918 ([DVM] Fix, Remove: Remove mutex from memory module, simplify mov_* operations, fix bugs (#1808))
