@@ -331,9 +331,8 @@ def detect_available_linker():
     """Detect and return the best available linker (mold > lld > default)"""
     if shutil.which("mold") is not None:
         return "mold"
-    if shutil.which("lld") is not None:
-        return "lld"
-    if shutil.which("ld.lld") is not None:
+    # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)
+    if shutil.which("lld") is not None or shutil.which("ld.lld") is not None:
         return "lld"
     return "default"
 
@@ -359,45 +358,45 @@ def infer_gcov_from_compiler(cxx_compiler):
     if cxx_compiler is None:
         return "gcov"
     
-    # First, try to infer from compiler name pattern (e.g., g++-14, clang++-19)
-    # Use strict regex to extract compiler type and version from the path/name
-    # Pattern matches compiler names at start or after '/' to avoid false matches
-    # like 'libclang++' or 'debug-g++'
-    clang_match = CLANG_VERSION_PATTERN.search(cxx_compiler)
-    if clang_match:
-        return f"llvm-cov-{clang_match.group(1)}"
-    
-    gcc_match = GCC_VERSION_PATTERN.search(cxx_compiler)
-    if gcc_match:
-        return f"gcov-{gcc_match.group(1)}"
-    
-    # Check if it's an unversioned compiler (g++, clang++)
-    # by looking at the binary basename
+    # Get the compiler basename
     compiler_name = cxx_compiler.split('/')[-1]
+    
+    # Determine compiler type and extract version if present
+    is_clang = compiler_name.startswith('clang++')
+    is_gcc = compiler_name.startswith('g++')
+    
+    if not is_clang and not is_gcc:
+        # Unknown compiler type, default to gcov
+        return "gcov"
+    
+    # Try to extract version from compiler name (e.g., clang++-19, g++-14)
+    if is_clang:
+        match = CLANG_VERSION_PATTERN.search(cxx_compiler)
+        if match:
+            return f"llvm-cov-{match.group(1)}"
+    else:  # is_gcc
+        match = GCC_VERSION_PATTERN.search(cxx_compiler)
+        if match:
+            return f"gcov-{match.group(1)}"
+    
+    # Check if it's an unversioned compiler (exact match)
     if compiler_name == 'clang++':
         return "llvm-cov"
     elif compiler_name == 'g++':
         return "gcov"
     
-    # If no pattern match and not an unversioned compiler,
-    # try to get the version by running the compiler
+    # No version in name, try to get it by running the compiler
     try:
         version = get_program_version(cxx_compiler)
         if version:
-            # Extract major version
             major_version = version.split(".")[0]
-            
-            # Check if it's GCC or Clang by looking at the binary basename
-            # Check if the basename starts with the compiler name
-            if compiler_name.startswith('clang++'):
-                return f"llvm-cov-{major_version}"
-            elif compiler_name.startswith('g++'):
-                return f"gcov-{major_version}"
+            return f"llvm-cov-{major_version}" if is_clang else f"gcov-{major_version}"
     except (FileNotFoundError, sp.SubprocessError, OSError):
-        # If compiler doesn't exist or can't get version, fall through to default
+        # If compiler doesn't exist or can't get version, fall through
         pass
     
-    return "gcov"
+    # Final fallback
+    return "llvm-cov" if is_clang else "gcov"
 
 
 def default_gcov_from_ctx():
