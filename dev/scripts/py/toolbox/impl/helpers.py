@@ -7,6 +7,11 @@ import subprocess as sp
 import sys
 
 
+# Regex patterns for compiler version detection
+CLANG_VERSION_PATTERN = re.compile(r'(?:^|/)clang\+\+-(\d+)$')
+GCC_VERSION_PATTERN = re.compile(r'(?:^|/)g\+\+-(\d+)$')
+
+
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
@@ -335,9 +340,9 @@ def detect_available_linker():
 
 def default_linker_from_ctx():
     """Create a click.Option class that infers the default linker"""
-    
+
     class OptionDefaultLinkerFromCtx(click.Option):
-        
+
         def get_default(self, ctx, call=True):
             linker = ctx.params.get("linker")
             if linker is None:
@@ -345,7 +350,7 @@ def default_linker_from_ctx():
             else:
                 self.default = linker
             return super(OptionDefaultLinkerFromCtx, self).get_default(ctx, call)
-    
+
     return OptionDefaultLinkerFromCtx
 
 
@@ -355,14 +360,14 @@ def infer_gcov_from_compiler(cxx_compiler):
         return "gcov"
     
     # First, try to infer from compiler name pattern (e.g., g++-14, clang++-19)
-    # Use regex to extract compiler type and version from the path/name
-    # Pattern matches compiler names at word boundaries or after '/' to avoid false matches
+    # Use strict regex to extract compiler type and version from the path/name
+    # Pattern matches compiler names at start or after '/' to avoid false matches
     # like 'libclang++' or 'debug-g++'
-    clang_match = re.search(r'(?:^|/)clang\+\+-(\d+)$', cxx_compiler)
+    clang_match = CLANG_VERSION_PATTERN.search(cxx_compiler)
     if clang_match:
         return f"llvm-cov-{clang_match.group(1)}"
     
-    gcc_match = re.search(r'(?:^|/)g\+\+-(\d+)$', cxx_compiler)
+    gcc_match = GCC_VERSION_PATTERN.search(cxx_compiler)
     if gcc_match:
         return f"gcov-{gcc_match.group(1)}"
     
@@ -375,10 +380,11 @@ def infer_gcov_from_compiler(cxx_compiler):
             
             # Check if it's GCC or Clang by looking at the binary basename
             compiler_name = cxx_compiler.split('/')[-1]
-            # Use exact prefix matching to avoid false positives
-            if compiler_name.startswith('clang++'):
+            # Use strict matching: only match if the name is exactly the compiler
+            # or compiler with options (e.g., 'clang++', 'g++', but not 'clang++foo')
+            if compiler_name == 'clang++' or compiler_name.startswith('clang++ '):
                 return f"llvm-cov-{major_version}"
-            elif compiler_name.startswith('g++'):
+            elif compiler_name == 'g++' or compiler_name.startswith('g++ '):
                 return f"gcov-{major_version}"
     except (FileNotFoundError, sp.SubprocessError, OSError):
         # If compiler doesn't exist or can't get version, fall through to default
