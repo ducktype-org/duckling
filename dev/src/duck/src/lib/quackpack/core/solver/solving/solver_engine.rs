@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+// Input for solver engine type, currently here, after implementing the gathering information stage will be moved there.
 pub struct GatheredInfo<'a> {
     pub gathered_manifests: HashMap<ExpandedPackage, &'a Manifest>,
     pub all_possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -25,6 +26,8 @@ pub struct GatheredInfo<'a> {
     pub preexisting_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
 }
 
+/// Main entry point.
+/// Creates an engine and runs it.
 pub fn run_engine(
     input: &GatheredInfo,
     new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
@@ -33,12 +36,14 @@ pub fn run_engine(
     engine.run(new_dependencies)
 }
 
+/// Struct performing dependencies resolving.
 pub struct SolverEngine<'a> {
     input: &'a GatheredInfo<'a>,
     model: SolverModel<'a, ProblemCreated>,
 }
 
 impl<'a> SolverEngine<'a> {
+    /// Creates a new SolverEngine from the given GatheredInfo reference.
     fn new(input: &'a GatheredInfo) -> Self {
         Self {
             input,
@@ -46,6 +51,7 @@ impl<'a> SolverEngine<'a> {
         }
     }
 
+    /// Runs the engine, building the underlying solver model, solving it and returning the output.
     fn run(
         mut self,
         new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
@@ -74,6 +80,7 @@ impl<'a> SolverEngine<'a> {
         self.model.solve()
     }
 
+    /// Creates necesseary varaiables for all the packages.
     fn create_package_variables(&mut self) -> QuackResult<()> {
         for pkg in self.input.gathered_manifests.keys() {
             self.model.add_package_var(pkg.clone())?;
@@ -87,6 +94,7 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
+    /// Creates the necesseary constraints for a single dependency.
     fn construct_for_single_dependency(
         &mut self,
         parent: &ExpandedPackage,
@@ -120,6 +128,7 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
+    /// Creates version realization constraints and necesseary variables for a single dependency.
     fn create_dependency_version_realization_conditions(
         &mut self,
         edge: &DependencyEdge,
@@ -143,6 +152,7 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
+    /// Creates feature realization constraints and necesseary variables for a single dependency.
     fn create_dependency_feature_realization_conditions(
         &mut self,
         edge: &DependencyEdge,
@@ -178,6 +188,7 @@ impl<'a> SolverEngine<'a> {
     }
 }
 
+/// Creates an iterator of all possible parent features and None.
 fn parent_features_to_consider<'a>(
     input: &'a GatheredInfo,
     edge: &DependencyEdge,
@@ -217,6 +228,7 @@ mod test {
     }
 
     #[test]
+    /// Tests simple implication of form `a` requires `b`, with `a` required.
     fn implication() {
         let (_dir_a, path_a) = prepare_manifest(
             r#"
@@ -297,6 +309,7 @@ metadata:
     }
 
     #[test]
+    /// Tests a situation where `a` requires `b` and `b` requires `a` with `xd`, with `a` required.
     fn equivalence_with_feature() {
         let (_dir_a, path_a) = prepare_manifest(
             r#"
@@ -390,8 +403,8 @@ dependencies:
     }
 
     #[test]
+    /// `a` is required, `a` requires `b` with `xd`, `b` preexists with `xdd`.
     fn new_feature_of_preexisting_package_with_other_features() {
-        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
         let (_dir_a, path_a) = prepare_manifest(
             r#"
 metadata:
@@ -485,8 +498,8 @@ features:
     }
 
     #[test]
+    /// `a` is required, `a` requires `b` with `xd`, `b` preexists with no features.
     fn new_feature_of_preexisting_package_with_no_features() {
-        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
         let (_dir_a, path_a) = prepare_manifest(
             r#"
 metadata:
