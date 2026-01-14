@@ -99,7 +99,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
 			safeWriteBytes<TYPE>(                                                                 \
-				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0    \
+				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0           \
 			);                                                                                    \
 		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
