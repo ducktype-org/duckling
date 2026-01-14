@@ -354,29 +354,34 @@ def infer_gcov_from_compiler(cxx_compiler):
     if cxx_compiler is None:
         return "gcov"
     
-    # Try to get the version number from the compiler
-    version = get_program_version(cxx_compiler)
-    if version:
-        # Extract major version
-        major_version = version.split(".")[0]
-        
-        # Check if it's GCC or Clang
-        if "g++" in cxx_compiler:
-            return f"gcov-{major_version}"
-        elif "clang++" in cxx_compiler:
-            # Clang uses llvm-cov gcov compatibility mode
-            return f"llvm-cov-{major_version}"
-    
-    # Fallback: try to infer from compiler name
-    if "g++-" in cxx_compiler:
+    # First, try to infer from compiler name pattern (e.g., g++-14, clang++-19)
+    # Check clang++ first to avoid matching "g++-" in "clang++-"
+    if "clang++-" in cxx_compiler:
+        match = re.search(r"clang\+\+-(\d+)", cxx_compiler)
+        if match:
+            return f"llvm-cov-{match.group(1)}"
+    elif "g++-" in cxx_compiler:
         # Extract version from name like g++-14
         match = re.search(r"g\+\+-(\d+)", cxx_compiler)
         if match:
             return f"gcov-{match.group(1)}"
-    elif "clang++-" in cxx_compiler:
-        match = re.search(r"clang\+\+-(\d+)", cxx_compiler)
-        if match:
-            return f"llvm-cov-{match.group(1)}"
+    
+    # If no pattern match, try to get the version by running the compiler
+    try:
+        version = get_program_version(cxx_compiler)
+        if version:
+            # Extract major version
+            major_version = version.split(".")[0]
+            
+            # Check if it's GCC or Clang
+            if "g++" in cxx_compiler:
+                return f"gcov-{major_version}"
+            elif "clang++" in cxx_compiler:
+                # Clang uses llvm-cov gcov compatibility mode
+                return f"llvm-cov-{major_version}"
+    except (FileNotFoundError, Exception):
+        # If compiler doesn't exist or can't get version, fall through to default
+        pass
     
     return "gcov"
 
