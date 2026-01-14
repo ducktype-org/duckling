@@ -21,7 +21,7 @@ from click import command, option, INT
 @option(
     "-j",
     "--parallel",
-    help="Run tests in parallel with optional number of jobs (default: number of CPU cores)",
+    help="Run tests in parallel with optional number of jobs",
     type=INT,
     default=get_cpu_count(),
     show_default=True,
