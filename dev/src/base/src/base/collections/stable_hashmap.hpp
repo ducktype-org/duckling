@@ -64,7 +64,7 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		u64 hashToBucket(KeyHash hash) const noexcept {
+		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
 			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
@@ -130,6 +130,10 @@ namespace base {
 		\*****************************************************************************************/
 
 
+		/**
+		 * See docs of put() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> putAssumingHash(K&& key, D&& value, KeyHash key_hash) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
@@ -150,6 +154,10 @@ namespace base {
 			return &new_node->key_value;
 		}
 
+		/**
+		 * See docs of maybePut() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash)
 			RELEASE_NOEXCEPT {
@@ -170,6 +178,10 @@ namespace base {
 			return &new_node->key_value;
 		}
 
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		[[nodiscard]]
 		base::Optional<CRef<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) const
 			RELEASE_NOEXCEPT {
@@ -181,6 +193,10 @@ namespace base {
 			return {};
 		}
 
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		[[nodiscard]]
 		base::Optional<Ref<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash)
 			RELEASE_NOEXCEPT {
@@ -192,6 +208,10 @@ namespace base {
 			return {};
 		}
 
+		/**
+		 * See docs of atMaybeCopy() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopyAssumingHash(const KEY_T& key, KeyHash key_hash) const
 			RELEASE_NOEXCEPT {
@@ -203,6 +223,10 @@ namespace base {
 			return {};
 		}
 
+		/**
+		 * See docs of contains() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
 		[[nodiscard]]
 		bool containsAssumingHash(const KEY_T& key, KeyHash key_hash) const RELEASE_NOEXCEPT {
 			return atMaybeAssumingHash(key, key_hash).has_value();
