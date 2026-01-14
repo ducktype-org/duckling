@@ -358,11 +358,11 @@ def infer_gcov_from_compiler(cxx_compiler):
     # Use regex to extract compiler type and version from the path/name
     # Pattern matches compiler names at word boundaries or after '/' to avoid false matches
     # like 'libclang++' or 'debug-g++'
-    clang_match = re.search(r'(?:^|/)clang\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    clang_match = re.search(r'(?:^|/)clang\+\+-(\d+)$', cxx_compiler)
     if clang_match:
         return f"llvm-cov-{clang_match.group(1)}"
     
-    gcc_match = re.search(r'(?:^|/)g\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    gcc_match = re.search(r'(?:^|/)g\+\+-(\d+)$', cxx_compiler)
     if gcc_match:
         return f"gcov-{gcc_match.group(1)}"
     
