@@ -124,7 +124,7 @@ namespace base {
 		}
 
 		/*****************************************************************************************\
-		|  Bellow is the map interface functions that take, calculated hash of key as parameters. |
+		|  Bellow is the map interface methods that take calculated hash of a key as a parameter. |
 		|  It is used to ensure that hash is only calculated once when needed.                    |
 		|  For doc comments explaining the interface, see the corresponding public functions.     |
 		\*****************************************************************************************/
