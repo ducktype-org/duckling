@@ -1,0 +1,13 @@
+# Dummy test configuration for function-definition
+# TODO: Replace with actual tests or link to preexisting ones if available.
+# NOTE: Preexisting tests may exist in /compiler/compilation/statements/testconfig.yaml.
+
+Tests:
+  dummy-test:
+    Description: Minimal working dummy test.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 42

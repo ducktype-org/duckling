@@ -1,0 +1,61 @@
+---
+# Unified test file for Target Version: 0.1 features
+
+compile_duckc: "cmake --build @{build_dir} -j -- duckc"
+compile_dvm: "cmake --build @{build_dir} -j -- VM"
+
+duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
+
+PreNode: "@{compile_duckc} && @{compile_dvm}"
+
+clean_cmd: "rm -rf build"
+
+backend: "nobackend"
+
+compile_dvm_backend_cmd: "@{duckc_path} compile_package -a build --dvm-backend duck_modules/@{Name} -n package_@{Name}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package  -a build duck_modules/@{Name} -n package_@{Name}"
+
+compiled_to_llvm: "./build/package_llvm.exe"
+compiled_to_dvm: "./build/query/query*/*.dbc" # ??
+
+Clean: "@{clean_cmd}"
+PreCase: "@{clean_cmd} && mkdir build;
+  case '@{backend}' in
+    dvm)       @{compile_dvm_backend_cmd}                   ;;
+    llvm)      @{compile_llvm_backend_cmd}                  ;;
+    nobackend) echo 'Backend undefined'; exit 1             ;;
+    *)         echo 'Unknown backend';   exit 1             ;;
+  esac;"
+Run: "
+  case '@{backend}' in
+    dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
+    llvm) @{compiled_to_llvm}                     ;;
+    nobackend) echo \"Backend undefined\"; exit 1 ;;
+    *)         echo \"Unknown backend\";   exit 1 ;;
+  esac;"
+
+
+SubDirs:
+  - alias-using-declaration
+  - namespace-declaration
+  - arithmetic-operators-on-integers
+  - primitive-booleans
+  - boolean-operators
+  - primitive-integers
+  - class-declaration
+  - simple-cffi
+  - coercions
+  - simple-chars
+  - comparison-operators-on-integers
+  - simple-ifs
+  - constant-simple-declaration
+  - simple-strings
+  - first-class-typing
+  - function-call
+  - type-deduction
+  - function-definition
+  - variable-simple-declaration
+  - io-builtins
+  - while-loops
+  - let-simple-declaration
