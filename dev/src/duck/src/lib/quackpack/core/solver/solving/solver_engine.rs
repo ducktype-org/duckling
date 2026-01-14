@@ -71,7 +71,7 @@ impl<'a> SolverEngine<'a> {
                 self.model.require_package_with_feature(new_dep, *feature)?;
             }
         }
-        Ok(self.model.solve())
+        self.model.solve()
     }
 
     fn create_package_variables(&mut self) -> QuackResult<()> {
@@ -218,7 +218,6 @@ mod test {
 
     #[test]
     fn implication() {
-        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
         let (_dir_a, path_a) = prepare_manifest(
             r#"
 metadata:
@@ -299,7 +298,6 @@ metadata:
 
     #[test]
     fn equivalence_with_feature() {
-        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
         let (_dir_a, path_a) = prepare_manifest(
             r#"
 metadata:
@@ -388,6 +386,195 @@ dependencies:
         assert!(
             output.new_features
                 == HashMap::from([(exp_pkg_a, HashSet::from([FeatureName::new("xd")]))])
+        )
+    }
+
+    #[test]
+    fn new_feature_of_preexisting_package_with_other_features() {
+        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: 1
+
+dependencies:
+  b:
+    version: 2
+    features:
+    - xd
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: 2
+
+features:
+  xd: []
+  xdd: []
+"#,
+        );
+        let ctx = DuckCtx::default();
+        let qpctx = QpCtx::new(&ctx);
+        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let location_a = Location::Registry(LocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("a"),
+        });
+        let location_b = Location::Registry(LocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("b"),
+        });
+        let exp_pkg_a = ExpandedPackage {
+            location: exp_location_a.clone(),
+            version: Some(Version::new(1, 0, 0)),
+        };
+        let exp_pkg_b = ExpandedPackage {
+            location: exp_location_b.clone(),
+            version: Some(Version::new(2, 0, 0)),
+        };
+        let gathered_manifests = HashMap::from([
+            (exp_pkg_a.clone(), manifest_a.manifest()),
+            (exp_pkg_b.clone(), manifest_b.manifest()),
+        ]);
+        let all_possible_features = HashMap::from([
+            (exp_pkg_a.clone(), HashSet::new()),
+            (
+                exp_pkg_b.clone(),
+                HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
+            ),
+        ]);
+        let versions_for_location = HashMap::from([
+            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+
+        let preexisting_packages = HashSet::from([exp_pkg_b.clone()]);
+        let preexisting_features =
+            HashMap::from([(exp_pkg_b.clone(), HashSet::from([FeatureName::new("xdd")]))]);
+
+        let input = GatheredInfo {
+            gathered_manifests,
+            all_possible_features,
+            versions_for_location,
+            location_resolver,
+            preexisting_packages,
+            preexisting_features,
+        };
+
+        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let output = run_engine(&input, &new_dependencies).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(
+            output.new_features
+                == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
+        )
+    }
+
+    #[test]
+    fn new_feature_of_preexisting_package_with_no_features() {
+        // Tests a situation where the main project has only one dependency, namely `a` in version `1`.
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: 1
+
+dependencies:
+  b:
+    version: 2
+    features:
+    - xd
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: 2
+
+features:
+  xd: []
+  xdd: []
+"#,
+        );
+        let ctx = DuckCtx::default();
+        let qpctx = QpCtx::new(&ctx);
+        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let location_a = Location::Registry(LocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("a"),
+        });
+        let location_b = Location::Registry(LocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: StrId::from("http://localhost:9001"),
+            real_name: StrId::from("b"),
+        });
+        let exp_pkg_a = ExpandedPackage {
+            location: exp_location_a.clone(),
+            version: Some(Version::new(1, 0, 0)),
+        };
+        let exp_pkg_b = ExpandedPackage {
+            location: exp_location_b.clone(),
+            version: Some(Version::new(2, 0, 0)),
+        };
+        let gathered_manifests = HashMap::from([
+            (exp_pkg_a.clone(), manifest_a.manifest()),
+            (exp_pkg_b.clone(), manifest_b.manifest()),
+        ]);
+        let all_possible_features = HashMap::from([
+            (exp_pkg_a.clone(), HashSet::new()),
+            (
+                exp_pkg_b.clone(),
+                HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
+            ),
+        ]);
+        let versions_for_location = HashMap::from([
+            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+
+        let preexisting_packages = HashSet::from([exp_pkg_b.clone()]);
+        let preexisting_features = HashMap::new();
+
+        let input = GatheredInfo {
+            gathered_manifests,
+            all_possible_features,
+            versions_for_location,
+            location_resolver,
+            preexisting_packages,
+            preexisting_features,
+        };
+
+        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let output = run_engine(&input, &new_dependencies).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(
+            output.new_features
+                == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
         )
     }
 }

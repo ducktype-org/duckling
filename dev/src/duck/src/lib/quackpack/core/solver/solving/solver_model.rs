@@ -6,7 +6,7 @@ use std::{
 };
 
 use russcip::{
-    Model, ProblemCreated, Variable,
+    Model, ProblemCreated, Solution, Variable, WithSolutions,
     prelude::{cons, var},
 };
 
@@ -185,7 +185,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .entry(pkg)
             .or_default()
             .entry(feature)
-            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
+            .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.001))));
         Ok(())
     }
 
@@ -339,12 +339,23 @@ pub struct FoundSolution {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
-    pub fn solve(self) -> FoundSolution {
-        self.model.minimize().solve();
+    pub fn solve(self) -> QuackResult<FoundSolution> {
+        let solution = self
+            .model
+            .minimize()
+            .solve()
+            .best_sol()
+            .context("Failed to find a solution")?;
         let new_packages = self
             .package_vars
             .into_iter()
-            .filter_map(|(pkg, var)| if is_one(&var) { Some(pkg) } else { None })
+            .filter_map(|(pkg, var)| {
+                if is_one(&var, &solution) {
+                    Some(pkg)
+                } else {
+                    None
+                }
+            })
             .collect::<HashSet<ExpandedPackage>>()
             .difference(self.preexisting_packages)
             .cloned()
@@ -355,11 +366,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             if let Some(features_to_vars) = self.package_to_feature_vars.get(pkg) {
                 pkg_features = features_to_vars
                     .iter()
-                    .filter_map(
-                        |(feature, var)| {
-                            if is_one(var) { Some(feature) } else { None }
-                        },
-                    )
+                    .filter_map(|(feature, var)| {
+                        if is_one(var, &solution) {
+                            Some(feature)
+                        } else {
+                            None
+                        }
+                    })
                     .cloned()
                     .collect();
             }
@@ -370,15 +383,15 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                 new_features.insert(pkg.clone(), pkg_features);
             }
         }
-        FoundSolution {
+        Ok(FoundSolution {
             new_packages,
             new_features,
-        }
+        })
     }
 }
 
 /// Helper function for determining whether the model did or did not put the variable into the solution.
-fn is_one(var: &Variable) -> bool {
+fn is_one(var: &Variable, solution: &Solution) -> bool {
     // The condition "> 0.5" is arbitrary, ideally it could be "== 1.0", but maybe to circumvent some float magic "> 0.5" is better.
-    var.sol_val() > 0.5
+    solution.val(var) > 0.5
 }
