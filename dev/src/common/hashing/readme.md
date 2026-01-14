@@ -9,6 +9,7 @@ General overview
 ================
 
 There are three parties involved in hashing process:
+
 * writers of classes that need to be hashed
 * ones who need to hash some objects
 * writers of hashing algorithms
@@ -19,7 +20,12 @@ This module provides tools for easy and composable integration of those processe
 Hooking up hashing for a class
 ==============================
 
-This is the most common use case and also the simplest one. There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
+This is the most common use case and also the simplest one.
+The way you should think about it, is that you will, based on the state of the object to hash,
+define a sequence of bytes that will be hashed with some independently chosen hashing algorithm,
+and the hash obtained will be the actual hash of the object.
+
+There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
 
 `hashDecompose()`
 -----------------
@@ -34,7 +40,8 @@ Inside the function all you have to do is to tell which bases/fields are part of
 For example, `string` type should pass its `data` and `size` but not `capacity` as it is not visible in the comparisons.
 
 To list all subfields simply return `std::tie` of all of them in order in which you would like them to be added to hash.
-To pass base subobjects you can use `getBase<Base>(t)` (defined in `<hashing/hash_algorithm_utils.hpp>`) which casts `t` to the `Base` class and additionally checks if what you are casting to is actually a base class.
+To pass base sub-objects you can use `getBase<Base>(t)` (defined in `<hashing/hash_algorithm_utils.hpp>`)
+which casts `t` to the `Base` class and additionally checks if what you are casting to is actually a base class.
 
 ~~~~~cpp
 class C : public Base1, public Base2 {
@@ -50,28 +57,34 @@ class C : public Base1, public Base2 {
 `addToHash()`
 -------------
 
-If your type needs more complicated logic, for example if you want to hash some fields conditionally, you can specify exactly what bytes should be passed to the hashing algorithm by defining a friend function with this signature:
+If your type needs more complicated logic, for example if you want to hash some fields conditionally,
+you can specify exactly what bytes should be passed to the hashing algorithm by defining a friend function with this signature:
 
 ~~~~~cpp
 friend constexpr void addToHash(hash_algorithm auto& h, const T& t) noexcept { /*...*/ }
 ~~~~~
 
-This function besides your type also takes a reference to a hashing algorithm. As you can see, this parameter is constrained by a concept which you can get by including `<hashing/hash_algorithm_utils.hpp>`.
+This function besides your type also takes a reference to a hashing algorithm.
+As you can see, this parameter is constrained by a concept which you can get by including `<hashing/hash_algorithm_utils.hpp>`.
 Though it is not strictly necessary it can help to detect bugs early and gives somewhat better error messages.
 
-Inside you have to feed the hashing algorithm with the objects or bytes that you want it to hash. You can simply call recursively `addToHash()`. You can also use the variadic version:
+Inside you have to feed the hashing algorithm with the objects or bytes that you want it to hash.
+You can simply call recursively `addToHash()`. You can also use the variadic version:
 
 ~~~~~cpp
 class C: public Base1, public Base2 {
     int a, b;
     std::string s;
     friend constexpr void addToHash(hash_algorithm auto& h, const T& t) noexcept {
-        // we can hash the subobject just like in hashDecompose()
+        
+        // we can hash the sub-object just like in hashDecompose()
         addToHash(h, getBase<Base1>(t), t.a, t.b, t.s, getBase<Base2>(t));
+
         // or add some conditionally
         if (t.b > 0) {
             addToHash(h, t.s);
         }
+        
         // or add other data
         addToHash(h, addSomePadding(), (t.a + t.b), s, t.size(), orAddSomeSalt());
     }
@@ -81,12 +94,20 @@ class C: public Base1, public Base2 {
 Adding type to `addToHash()` template fallback
 ----------------------------------------------
 
-Sometimes, you may want to hash an object whose definition you don’t have access to, such as certain types from the standard library. In such cases you can add a 'specialization' to the `addToHash()` function template in [add_to_hash.hpp](src/hashing/add_to_hash.hpp).
+Sometimes, you may want to hash an object whose definition you don’t have access to,
+such as certain types from the standard library.
+In such cases you can add a 'specialization' to the `addToHash()` function template in [add_to_hash.hpp](src/hashing/add_to_hash.hpp).
 
-The actual specializations or partial specializations are [a bit of a mess](https://eel.is/c++draft/temp.expl.spec#8.sentence-2) to keep track of and maintain - if there are many partial/full specializations interactions between them and their plecement (assuming we would like to place them in different files) would have to be considered which is often bug-prone.
-Instead we are using a single template (in [add_to_hash.hpp](src/hashing/add_to_hash.hpp)) with `if constexpr` conditions, which are much better structured, as the conditions are clearly visible and naturally create a 'control-flow' of logic.
+The actual specializations or partial specializations are [a bit of a mess](https://eel.is/c++draft/temp.expl.spec#8.sentence-2)
+to keep track of and maintain - if there are many partial/full specializations interactions between them
+and their placement (assuming we would like to place them in different files) would have to be considered which is often bug-prone.
 
-If the type you want to hash is not covered already by this template, you can add a new condition there. All you have to do is to choose an appropriate place and specific enough condition so that it won't interfere with other types.
+Instead we are using a single template (in [add_to_hash.hpp](src/hashing/add_to_hash.hpp)) with `if constexpr` conditions,
+which are much better structured, as the conditions are clearly visible and naturally create a 'control-flow' of logic.
+
+If the type you want to hash is not covered already by this template,
+you can add a new condition there. All you have to do is to choose an appropriate place
+and specific enough condition so that it won't interfere with other types.
 
 
 Obtaining hashes
@@ -123,7 +144,7 @@ With it's defaults it can be used as a drop-in replacement for `std::hash`:
     ~~~~~
 
 But it can also be customized.
-There are two template parameters that can be specified: `HashAlgorithm` and `TypeC`.
+There is one template parameters that can be specified: `HashAlgorithm`.
 
 * The first one chooses the underlying algorithm that converts bytes to the hash value.
 
@@ -137,8 +158,6 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
     </body>
     </html>
 
-* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCode` or the type `void`. Shorter type codes may be desired when hashing many small objects as for them type codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
-There are two types of type codes: unique and hash codes. Unique codes are trully unique for each type and hash codes are hashes of the type's name so collisions are possible. The advantage of hash codes is that they can be used in a `constexpr` contexts such as template parameters. By default unique hash codes are used. 
 
 Using different hashing algorithms:
 ~~~~~cpp
@@ -210,32 +229,6 @@ constexpr auto h1 = justHash(42);
 constexpr auto h2 = justHash(42, 3.14, "hello");
 ~~~~~
 
-
-`TYPE_HASH_CODE`
-----------------
-
-Module also provides a `TYPE_HASH_CODE` variable template which is an integer constant that is a hash of the type's name. In contrast to `std::type_info::hash_code()` it can be used in a `constexpr` context and in templates. It is used by `Hash` and `StatefulHash` to append appropriate bytes to the hashed bytes.
-
-It can be used simply by providing it the type we are interested in:
-~~~~~cpp
-static_assert(TYPE_HASH_CODE<int> != TYPE_HASH_CODE<float>);
-~~~~~
-We can also specify the size of the hash code:
-~~~~~cpp
-bool b1 = sizeof(TYPE_HASH_CODE<int, u32>) == 4; // true
-bool b2 = sizeof(TYPE_HASH_CODE<int, u64>) == 8; // true
-~~~~~
-
-`TYPE_UNIQUE_CODE`
-------------------
-
-This constant template variable is a trully unique number of a given length for each type.
-
-~~~~~cpp
-static_assert(TYPE_UNIQUE_CODE<int> == TYPE_UNIQUE_CODE<int>);
-static_assert(TYPE_UNIQUE_CODE<std::string> != TYPE_UNIQUE_CODE<float>);
-bool b = sizeof(TYPE_UNIQUE_CODE<int, u32>) == 4; // true
-~~~~~
 
 
 Adding new hashing algorithm
