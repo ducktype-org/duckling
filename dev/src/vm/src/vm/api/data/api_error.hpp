@@ -68,7 +68,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::JoinError, "JoinError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::AttachDetachError, "AttachDetachError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::OtherError, "OtherError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::IOError, "IOError");
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::LoadProgramError, "LoadProgramError")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::LoadProgramError, "LoadProgramError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError");
