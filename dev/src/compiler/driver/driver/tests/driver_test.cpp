@@ -103,16 +103,13 @@ private:
 			return parents;
 		};
 
-		auto compare_nodes = [](query::internal::NodeID first,
-		                        query::internal::NodeID second) -> bool { return first < second; };
-
 		// Compare if two vectors have the same NodeIDs inside
-		auto are_node_vectors_same = [&compare_nodes](
+		auto are_node_vectors_same = [](
 										 std::vector<query::internal::NodeID>& first,
 										 std::vector<query::internal::NodeID>& second
 									 ) -> bool {
-			std::ranges::sort(first, compare_nodes);
-			std::ranges::sort(second, compare_nodes);
+			std::ranges::sort(first, [](auto& l, auto& r) { return l < r; });
+			std::ranges::sort(second, [](auto& l, auto& r) { return l < r; });
 			return first == second;
 		};
 
@@ -193,28 +190,24 @@ private:
 			);
 		}
 
-		// Call serializeQueryGraph which triggers reduceOptimizeGraph internally
-		// Discard result - we only care about the side effect (optimization)
-		(void) query::external::serializeQueryGraph();
-
-		// Get the graph AFTER optimization
-		auto graph = query::internal::ContextAccess::getState()->getGraphMutable();
+		// Call serializeQueryGraph and then deserialize to get opt_graph
+		auto opt_graph = query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
 
 		// Build parent map for the optimized graph
-		auto parents = build_parent_map(*graph);
+		auto parents = build_parent_map(opt_graph);
 
 		// Get all nodes in the graph
-		auto all_nodes = graph->getAllNodes();
+		auto all_nodes = opt_graph.getAllNodes();
 
 		// ================================================================================
 		// CHECK 1: - Graph consistency - all children referenced in the graph must exist as keys in
 		// the graph
 		// ================================================================================
 		for (const auto& node: all_nodes) {
-			const auto& deps = graph->getDirectDependencies(node);
+			const auto& deps = opt_graph.getDirectDependencies(node);
 			for (const auto& child: deps) {
 				assertTrue(
-					graph->nodeExists(child),
+					opt_graph.nodeExists(child),
 					base::strConcat(
 						"Graph inconsistency: child node referenced but does not exist as key in "
 						"graph"
@@ -249,7 +242,7 @@ private:
 		for (const auto& node: all_nodes) {
 			if (node.q_id.getData().usesStableHashing()) { continue; }  // Skip stable nodes
 
-			const auto& deps = graph->getDirectDependencies(node);
+			const auto& deps = opt_graph.getDirectDependencies(node);
 			// Non-stable, non-input nodes must have MORE than one child
 			// Nodes with 0 children are leaves and should be trimmed
 			// Nodes with 1 child should be collapsed into their parent
@@ -271,7 +264,7 @@ private:
 		// ================================================================================
 		for (const auto& stable_node: stable_nodes_before) {
 			assertTrue(
-				graph->nodeExists(stable_node),
+				opt_graph.nodeExists(stable_node),
 				base::strConcat("Graph inconsistency: stable node was removed during optimization. "
 			                    "Stable nodes must be preserved.")
 			);
@@ -282,7 +275,7 @@ private:
 		// must be preserved after optimization (stable-to-stable edges are never removed)
 		// ================================================================================
 		for (const auto& stable_node: stable_nodes_before) {
-			auto stable_deps_after      = collect_stable_dependencies(*graph, stable_node);
+			auto stable_deps_after      = collect_stable_dependencies(opt_graph, stable_node);
 			auto stable_deps_before_opt = stable_deps_before.atMaybe(stable_node);
 
 			// Nodes should not be added - if in the fueature we allow that, this test needs to be
