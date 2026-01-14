@@ -320,3 +320,79 @@ def should_add_linker_flags(linker):
         f"The specified linker '{linker}' was not found. "
         "Try installing it or switching to another."
     )
+
+
+def detect_available_linker():
+    """Detect and return the best available linker (mold > lld > default)"""
+    if shutil.which("mold") is not None:
+        return "mold"
+    if shutil.which("lld") is not None:
+        return "lld"
+    if shutil.which("ld.lld") is not None:
+        return "lld"
+    return "default"
+
+
+def default_linker_from_ctx():
+    """Create a click.Option class that infers the default linker"""
+    
+    class OptionDefaultLinkerFromCtx(click.Option):
+        
+        def get_default(self, ctx, call=True):
+            linker = ctx.params.get("linker")
+            if linker is None:
+                self.default = detect_available_linker()
+            else:
+                self.default = linker
+            return super(OptionDefaultLinkerFromCtx, self).get_default(ctx, call)
+    
+    return OptionDefaultLinkerFromCtx
+
+
+def infer_gcov_from_compiler(cxx_compiler):
+    """Infer GCOV version from C++ compiler"""
+    if cxx_compiler is None:
+        return "gcov"
+    
+    # Try to get the version number from the compiler
+    version = get_program_version(cxx_compiler)
+    if version:
+        # Extract major version
+        major_version = version.split(".")[0]
+        
+        # Check if it's GCC or Clang
+        if "g++" in cxx_compiler:
+            return f"gcov-{major_version}"
+        elif "clang++" in cxx_compiler:
+            # Clang uses llvm-cov gcov compatibility mode
+            return f"llvm-cov-{major_version}"
+    
+    # Fallback: try to infer from compiler name
+    if "g++-" in cxx_compiler:
+        # Extract version from name like g++-14
+        match = re.search(r"g\+\+-(\d+)", cxx_compiler)
+        if match:
+            return f"gcov-{match.group(1)}"
+    elif "clang++-" in cxx_compiler:
+        match = re.search(r"clang\+\+-(\d+)", cxx_compiler)
+        if match:
+            return f"llvm-cov-{match.group(1)}"
+    
+    return "gcov"
+
+
+def default_gcov_from_ctx():
+    """Create a click.Option class that infers the default GCOV from compiler"""
+    
+    class OptionDefaultGcovFromCtx(click.Option):
+        
+        def get_default(self, ctx, call=True):
+            gcov_version = ctx.params.get("gcov_version")
+            if gcov_version is None:
+                cxx_compiler = ctx.params.get("cxx_compiler")
+                self.default = infer_gcov_from_compiler(cxx_compiler)
+            else:
+                self.default = gcov_version
+            return super(OptionDefaultGcovFromCtx, self).get_default(ctx, call)
+    
+    return OptionDefaultGcovFromCtx
