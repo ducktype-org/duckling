@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -119,10 +120,12 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type in module: ",
+								hout_glob.original_name.strView()
+							)
+						);
 					}
 				}
 			}
@@ -373,6 +376,22 @@ private:
 				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
 			auto const_value = const_numeric->get<i64>();
 			ASSERT_EQUAL(const_value, 55);
+		});
+	}
+
+	void referencesTest() {
+		auto module          = getLIROfModule(path("modules/references"));
+		auto test_simple_var = module.lirFunc("test_simple_ref");
+		auto adder           = module.lirFunc("adder");
+		auto pass_reference  = module.lirFunc("test_pass_through_reference");
+
+		withContextDo([&](query::Context& ctx) {
+			std::cout << "====================\n";
+			test_simple_var->debugPrint(ctx, std::cout);
+			std::cout << "====================\n";
+			adder->debugPrint(ctx, std::cout);
+			std::cout << "====================\n";
+			pass_reference->debugPrint(ctx, std::cout);
 		});
 	}
 

@@ -1,0 +1,10 @@
+# Tests for reference types
+
+Tests:
+  simple_refs:
+    Cases: 
+      llvm:
+        backend: llvm
+        Output:
+          String: "42\n11\n"
+        ExitCode: 0

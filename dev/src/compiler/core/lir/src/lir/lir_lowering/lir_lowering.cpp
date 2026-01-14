@@ -107,16 +107,15 @@ namespace compiler::lir {
 	}
 
 	LIRPlace::LIRPlace(
-		query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain
+		query::Context& ctx, const BaseVariant& base, std::vector<Projection> projection_chain
 	):
 		  base(base),
-		  access_chain(std::move(access_chain)),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
 		      // projections.
 			  CRef<tsl::TypeLayout> current_layout = getBaseLayout();
 
-			  for (const auto& proj: access_chain) {
+			  for (const auto& proj: projection_chain) {
 				  variant_match(proj.storage) {
 					  variant_case(FieldProjection, field) {
 						  const auto& class_layout
@@ -138,10 +137,8 @@ namespace compiler::lir {
 				  }
 			  }
 			  return current_layout;
-		  }())
-
-
-	{}
+		  }()),
+		  access_chain(std::move(projection_chain)) {}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
@@ -156,6 +153,8 @@ namespace compiler::lir {
 		// Variable Assignment
 		case mir::Operation::Assign:
 			return Operation::Assign;
+		case mir::Operation::AddressOf:
+			return Operation::AddressOf;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -246,9 +245,11 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(base::strConcat(
-				"Operation without direct counterpart", base::enumToStr(mir_operation)
-			));
+			CORE_PANIC(
+				base::strConcat(
+					"Operation without direct counterpart", base::enumToStr(mir_operation)
+				)
+			);
 		}
 	}
 
@@ -556,6 +557,7 @@ namespace compiler::lir {
 					}
 					return curr_block;
 				}
+				case mir::Operation::AddressOf:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -644,11 +646,13 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"instruction ",
-						base::enumToStr(mir_instruction.operation),
-						" in LowerToLIRFunction"
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"instruction ",
+							base::enumToStr(mir_instruction.operation),
+							" in LowerToLIRFunction"
+						)
+					);
 				}
 			}
 
@@ -806,13 +810,15 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(Instruction{
-				Operation::Call,
-				{},
-				{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
+			entry_block.instructions.push_back(
+				Instruction{
+					Operation::Call,
+					{},
+					{ LIRValue{ FunctionLiteral::fromFunction(*function) } }
 
-				,
-			});
+					,
+				}
+			);
 		}
 
 		base::StableVector<Block> blocks;

@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(ffiTest);
 	}
@@ -109,7 +110,9 @@ private:
 			for (auto& fun: module_hout.functions) {
 				CRef mir_fun
 					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+				mir_fun->debugPrint(std::cout);
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
+				lir_fun->debugPrint(ctx, std::cout);
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});
@@ -192,6 +195,8 @@ private:
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+
+	void referencesTest() { runTestForModule("modules/references", 3, 3); }
 
 	void floatingPointTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/floating_point");

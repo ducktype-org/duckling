@@ -298,16 +298,17 @@ namespace compiler::lir {
 		}
 
 		/**
-		 * @brief The symbols of the fields accessed within the variable.
-		 */
-		std::vector<Projection> access_chain;
-
-		/**
 		 * @brief The type layout of the final accessed field.
 		 * @note This type layout may be different from the layout of the base variable,
 		 * especially when the access chain is not empty.
 		 */
 		CRef<tsl::TypeLayout> layout;
+
+		/**
+		 * @brief The symbols of the fields accessed within the variable.
+		 */
+		std::vector<Projection> access_chain;
+
 
 		LIRPlace(query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain);
 

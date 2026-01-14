@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -581,6 +582,21 @@ private:
 					ASSERT_TRUE(create_tuple_5_arg_found);
 					ASSERT_TRUE(call_found);
 				}
+			}
+		});
+	}
+
+	void referencesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/references")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			for (const auto& func: unit.functions) {
+				std::cout << "==========================\n";
+				auto& func_mir
+					= ctx.query<compiler::mir::LowerToMIRFunction>({ func })->valueOrThrow();
+				func_mir.debugPrint(std::cout);
 			}
 		});
 	}
