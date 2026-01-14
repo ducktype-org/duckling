@@ -32,12 +32,20 @@ namespace compiler::backend_llvm {
 
 
 		/**
-		 * @brief Creates a llvm module from llvm IR code given as a text input.
+		 * @brief Creates an LLVM module from LLVM IR code given as a text input.
 		 * Panics if the code is invalid.
 		 *
 		 * @return Module created by parsing the given IR code.
 		 */
 		static Module fromIRCode(std::string_view llvm_ir_code);
+
+		/**
+		 * @brief Creates an LLVM module from LLVM bitcode given as char span.
+		 * Panics if the code is invalid.
+		 *
+		 * @return Module created by parsing the given bitcode.
+		 */
+		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 

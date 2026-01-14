@@ -3,7 +3,8 @@
 #include "char.hpp"
 #include "token.hpp"
 
-#include <diagnostic/logger.hpp>
+#include <diagnostic_interactive/logger.hpp>
+
 #include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
 
@@ -27,7 +28,7 @@ namespace lexer {
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const Ref<dia::Logger> getLogger() const {
+		const Ref<dia_int::Logger> getLogger() const {
 			return logger;
 		}
 
@@ -115,7 +116,7 @@ namespace lexer {
 
 		usize                       where = 0;  ///< Current position in file
 		Ref<tokenizer::TokenSource> file;
-		Ref<dia::Logger>            logger;
+		Ref<dia_int::Logger>        logger;
 		const CharArray&            char_array;
 		Tokens                      tokens;
 

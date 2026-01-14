@@ -44,6 +44,13 @@ namespace compiler::helios {
 			auto scopes = ctx.query<QueryScopesInModule>(key);
 
 			HOUTUnit out;
+
+			// We want to continue gathering other entities
+			// even if some function queries fail,
+			// so we store in this variable whether any failure occurred,
+			// and return failure at the end if so.
+			bool is_failed = false;
+
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -54,12 +61,23 @@ namespace compiler::helios {
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function)
-						out.functions.push_back(ctx.query<QueryCodeOfFun>(sym).valueOrThrow());
+					if (kind(sym) == SymbolKind::Function) {
+						// we "catch" failure here to continue gathering other functions:
+						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
+						if (hout_function.hasFailed()) {
+							is_failed = true;
+							continue;
+						} else {
+							out.functions.push_back(hout_function.valueOrPanic());
+						}
+					}
 					if (kind(sym) == SymbolKind::Class)
 						appendClassConstructors(out.functions, sym, ctx);
 				}
 			}
+
+			if (is_failed) return query::Failed();
+
 			return out;
 		}
 

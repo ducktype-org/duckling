@@ -85,7 +85,7 @@ namespace compiler::lir {
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
-			output << "    LAYOUT:\n" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
@@ -154,17 +154,16 @@ namespace compiler::lir {
 			// save flags to restore
 			auto output_flags = output.flags();
 
-			output << std::left << std::setw(12);
+			output << std::left << std::setw(3);
 			std::stringstream output_value;
 			if (instruction.output.has_value()) {
 				printOutput(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
-			output << output_value.str() << " ";
-
+			output << output_value.str() << ' ';
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation) << "  ";
-
+			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";
 			for (const auto& arg: instruction.arguments) {
@@ -188,7 +187,7 @@ namespace compiler::lir {
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
-				output << "\n";
+				output << '\n';
 			}
 			output << "{\n";
 
@@ -198,14 +197,13 @@ namespace compiler::lir {
 				for (const auto& instruction: block->instructions) {
 					output << "    ";
 					printInstruction(instruction);
-					output << "\n";
+					output << '\n';
 				}
-				output << "    ";
 				printInstruction(block->terminator);
-				output << "\n";
+				output << '\n';
 			}
 
-			output << "}";
+			output << "}\n";
 		}
 	};
 
