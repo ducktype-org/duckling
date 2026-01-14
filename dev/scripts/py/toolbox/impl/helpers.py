@@ -380,11 +380,10 @@ def infer_gcov_from_compiler(cxx_compiler):
             
             # Check if it's GCC or Clang by looking at the binary basename
             compiler_name = cxx_compiler.split('/')[-1]
-            # Use strict matching: only match if the name is exactly the compiler
-            # or compiler with options (e.g., 'clang++', 'g++', but not 'clang++foo')
-            if compiler_name == 'clang++' or compiler_name.startswith('clang++ '):
+            # Check if the basename starts with the compiler name
+            if compiler_name.startswith('clang++'):
                 return f"llvm-cov-{major_version}"
-            elif compiler_name == 'g++' or compiler_name.startswith('g++ '):
+            elif compiler_name.startswith('g++'):
                 return f"gcov-{major_version}"
     except (FileNotFoundError, sp.SubprocessError, OSError):
         # If compiler doesn't exist or can't get version, fall through to default
