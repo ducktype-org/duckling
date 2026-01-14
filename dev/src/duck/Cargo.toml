@@ -28,7 +28,7 @@ ordered-float = "5.1.0" # We have to add it, because saphyr (YAML library) expos
 paste = "1.0.15"
 reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipart", "stream"] }
 rusqlite = "0.37.0"
-russcip = { version = "0.9.1", features = ["bundled"] }
+russcip = { version = "0.9.1"}
 rustvil = { version = "0.9", features = ["full"] }
 saphyr = "0.0.6"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -51,8 +51,9 @@ wiremock = "0.6.5"
 [features]
 shell-completion = ["dep:clap_complete"]
 
-bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2"]
+bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2", "bundled-scip"]
 bundled-git2 = ["libgit2-sys/vendored"]
 bundled-openssl = ["openssl/vendored"]
 bundled-sqlite3 = ["rusqlite/bundled"]
 bundled-ssh2 = ["libssh2-sys/vendored-openssl"]
+bundled-scip = ["russcip/bundled"]
