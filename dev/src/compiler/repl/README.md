@@ -24,11 +24,22 @@ src/repl/
 ├── repl_structs.hpp       # Core data structures (ReplConfig, ReplResult, ReplStatement)
 ├── repl_frontend.hpp      # Terminal I/O and line editing
 ├── repl_frontend.cpp      # Frontend implementation with history navigation
-├── repl_queries.hpp       # Query framework integration for expression wrapping
-├── repl_queries.cpp       # HOUT expression wrapper generation
-├── dvm_helpers.hpp        # DVM compilation and execution utilities
-└── dvm_helpers.cpp        # LIR lowering and bytecode generation
 ```
+
+Also some helpers are in other modules:
+
+```
+compiler/core/helios/repl_utils/
+├── repl_queries.hpp       # HOUT expression wrapper generation
+├── repl_queries.cpp       # HOUT expression wrapper generation
+```
+
+```
+compiler/driver/repl_utils/
+├── repl_dvm_helpers.hpp       # DVM compilation and execution utilities
+├── repl_dvm_helpers.cpp       # LIR lowering and bytecode generation
+```
+
 
 ## Usage
 
