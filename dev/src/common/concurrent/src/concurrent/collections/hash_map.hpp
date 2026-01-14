@@ -29,11 +29,13 @@ namespace concurrent {
 
 		using KeyHash = u64;
 
-		[[nodiscard]]
-		constexpr u64 keyToShard(const KEY_T& key) const
+		constexpr u64 keyToHash(const KEY_T& key) const
 			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			u64 hash = HASH_T{}(key);
+			return HASH_T{}(key);
+		}
 
+		[[nodiscard]]
+		constexpr u64 hashToShard(KeyHash hash) const {
 			CORE_ASSERT(
 				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
 				"Shard count mismatch"
@@ -44,6 +46,12 @@ namespace concurrent {
 			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
 
 			return result;
+		}
+
+		[[nodiscard]]
+		constexpr u64 keyToShard(const KEY_T& key) const {
+			u64 hash = keyToHash(key);
+			return hashToShard(hash);
 		}
 
 		using KeyValuePair = typename HashMapType::KeyValuePair;

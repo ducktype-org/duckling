@@ -183,6 +183,46 @@ public:
     }
 };
 
+class ThreadUnsafeMap {
+    std::unordered_map<std::string, int> m_map;
+public:
+    void put(const std::string &key, int value) {
+        m_map.emplace(key, value);
+    }
+
+    std::optional<int> get(const std::string &key) {
+        auto it = m_map.find(key);
+        if (it != m_map.end())
+            return it->second;
+        return {};
+    }
+
+    bool remove(const std::string &key) {
+        auto n = m_map.erase(key);
+        return n;
+    }
+};
+
+class ThreadUnsafeDuckMap {
+    base::StableHashMap<std::string, int> m_map;
+public:
+    void put(const std::string &key, int value) {
+        m_map.maybePut(key, value);
+    }
+
+    std::optional<int> get(const std::string &key) {
+        auto v = m_map.atMaybe(key);
+        if (v.has_value())
+            return *v.value();
+        return {};
+    }
+
+    bool remove(const std::string &key) {
+        return m_map.erase(key);
+    }
+};
+
+
 
 template<class T>
 void do_worker(size_t seed, T& kv, const std::vector<std::string>& key_set, size_t num_ops) {
@@ -191,12 +231,12 @@ void do_worker(size_t seed, T& kv, const std::vector<std::string>& key_set, size
     for (size_t i = 0; i < num_ops; ++i) {
         auto choice = dist_choice(gen);
         auto &key = key_set[usize(dist_key(gen))];
-        if (choice <= 33)
+        if (choice <= 2)
             kv.put(key, dist_value(gen));
         else if (choice <= 66)
             (void) kv.get(key);
-        else
-            (void) kv.remove(key);
+        // else
+        //     (void) kv.remove(key);
     }
 }
 
@@ -223,8 +263,14 @@ void run(size_t num_workers, size_t num_keys, size_t num_ops, const std::vector<
 
 int main(int argc, char** argv) {
     const size_t num_workers = usize(std::stoi(argv[1]));
+
+    // original settings:
+    // const size_t num_keys = 1000000;
+    // const size_t num_ops = 10000000;
+
     const size_t num_keys = 1000000;
-    const size_t num_ops = 10000000;
+    const size_t num_ops = 3000000;
+
 
     std::vector<std::string> key_set;
     for (size_t i = 0; i < num_keys; ++i)
@@ -244,11 +290,14 @@ int main(int argc, char** argv) {
         run<DuckMap>(num_workers, num_keys, num_ops, key_set);
     else if (strcmp(argv[2], "StdDuckMap") == 0)
         run<DuckStdMap>(num_workers, num_keys, num_ops, key_set);
+    else if (strcmp(argv[2], "ThreadUnsafeMap") == 0)
+        run<ThreadUnsafeMap>(num_workers, num_keys, num_ops, key_set);
+    else if (strcmp(argv[2], "ThreadUnsafeDuckMap") == 0)
+        run<ThreadUnsafeDuckMap>(num_workers, num_keys, num_ops, key_set);
+
     else
         return 1;
 }
-
-
 
 
 

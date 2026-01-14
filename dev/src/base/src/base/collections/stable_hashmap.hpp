@@ -12,6 +12,12 @@
 #include <iterator>
 #include <utility>
 
+namespace concurrent {
+	// XD moment:
+	template<typename, typename, typename, u64>
+	class ConHashMap;
+}
+
 namespace base {
 
 	/**
@@ -55,20 +61,23 @@ namespace base {
 		};
 
 		[[nodiscard]]
-		static auto keyHash(const KEY_T& key
-		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
+		static KeyHash keyHash(const KEY_T& key) {
 			return HASH_T{}(key);
 		}
 
 		[[nodiscard]]
-		u64 keyToBucket(const KEY_T& key) const
-			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
+		u64 hashToBucket(KeyHash hash) const {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
 
-			u64  hash = keyHash(key);
 			auto res  = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
+		}
+
+		[[nodiscard]]
+		u64 keyToBucket(const KEY_T& key) const {
+			u64  hash = keyHash(key);
+			return hashToBucket(hash);
 		}
 
 		void rehash() RELEASE_NOEXCEPT {
@@ -113,6 +122,22 @@ namespace base {
 			buckets[bucket_index] = new_node;
 		}
 
+
+		// /**
+		//  * Links new node to the bucket unless the key already exists.
+		//  * @returns true if the node was added, false if the key already existed.
+		//  */
+		// bool addToBucketMaybe(u64 bucket_index, Ref<Node> new_node) RELEASE_NOEXCEPT {
+		// 	CORE_ASSERT(new_node->next == nullptr, "New node must be ending node");
+		// 	CORE_ASSERT(bucket_index < buckets.size(), "Bucket index out of bounds");
+
+		// 	auto current_node = buckets.at(bucket_index);
+		// 	while (current_node) {
+		// 		if (current_node->key_value.key == new_node->key_value.key) return false;
+		// 		current_node = current_node->next;
+		// 	}
+		// }
+
 		void maybeRehash() RELEASE_NOEXCEPT {
 			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) [[unlikely]]
 				rehash();
@@ -132,14 +157,15 @@ namespace base {
 		}
 
 		~StableHashMap() {
-			for (auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
-				while (current_node) {
-					MRef<Node> next_node = current_node->next;
-					node_allocator.justDestroy(current_node.toOpt().value());
-					current_node = next_node;
-				}
-			}
+			// this is quick:
+			// for (auto& bucket: buckets) {
+			// 	MRef<Node> current_node = bucket;
+			// 	while (current_node) {
+			// 		MRef<Node> next_node = current_node->next;
+			// 		node_allocator.justDestroy(current_node.toOpt().value());
+			// 		current_node = next_node;
+			// 	}
+			// }
 		}
 
 		/**
@@ -281,12 +307,11 @@ namespace base {
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
 
-			// @OPT: make this more efficient, by direct, one-pass implementation
 			if (this->contains(new_node->key_value.key)) {
 				node_allocator.deallocateDestroy(new_node);
 				return nullptr;
 			}
-
+			
 			addToBucket(keyToBucket(new_node->key_value.key), new_node);
 
 			element_count++;
@@ -297,7 +322,7 @@ namespace base {
 
 		[[nodiscard]]
 		base::Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
-			auto current_node = buckets.at(keyToBucket(key));
+			auto current_node = buckets[keyToBucket(key)];
 			while (current_node) {
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
@@ -426,6 +451,60 @@ namespace base {
 		ConstIteratorT end() const RELEASE_NOEXCEPT {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
+
+	private:
+
+	/*********************
+    	Interface used in concurrent hash map, in order to avoid duplication of hash calculations.
+	**********************/
+
+	template<
+		typename,
+		typename,
+		typename,
+		u64>
+	friend class ::concurrent::ConHashMap;
+
+
+	// template<typename K = KEY_T, typename D = DATA_T>
+	// Ref<KeyValuePair> putWithGivenHash(K&& key, D&& value, KeyHash hash) RELEASE_NOEXCEPT {
+	// 	auto new_node = node_allocator.allocateEmplace(
+	// 		nullptr, std::forward<K>(key), std::forward<D>(value)
+	// 	);
+
+	// 	// Note that this can in theory have some observable side effects:
+	// 	CORE_ASSERT(
+	// 		not this->contains(new_node->key_value.key), "Key already exists in StableHashMap"
+	// 	);
+
+	// 	addToBucket(hashToBucket(hash), new_node);
+
+	// 	element_count++;
+	// 	maybeRehash();
+
+	// 	return &new_node->key_value;
+	// }
+
+
+	template<typename K = KEY_T, typename D = DATA_T>
+	MRef<KeyValuePair> maybePutWithGivenHash(K&& key, D&& value, KeyHash hash) RELEASE_NOEXCEPT {
+		auto new_node = node_allocator.allocateEmplace(
+			nullptr, std::forward<K>(key), std::forward<D>(value)
+		);
+
+		if (this->contains(new_node->key_value.key)) {
+			node_allocator.deallocateDestroy(new_node);
+			return nullptr;
+		}
+		
+		addToBucket(keyToBucket(new_node->key_value.key), new_node);
+
+		element_count++;
+		maybeRehash();
+
+		return &new_node->key_value;
+	}
+
 
 	private:
 		/**
