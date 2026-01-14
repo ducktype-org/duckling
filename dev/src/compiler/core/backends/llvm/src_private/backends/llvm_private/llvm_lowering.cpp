@@ -545,7 +545,7 @@ namespace compiler::backend_llvm {
 				if (access_indices.size() > 1) {
 					// Create a GEP if needed.
 					current_ptr = builder.CreateGEP(current_type, current_ptr, access_indices);
-					// TODOP: Update type.
+					current_type = typeFromLayout(module, current_layout);
 				}
 				access_indices.clear();
 				// Reset the new base, since GEP assumes  we work on arrays.
@@ -849,6 +849,12 @@ namespace compiler::backend_llvm {
 			case Assign: {
 				const auto value = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				storeOutput(lir_instruction.output.value(), value, builder);
+				break;
+			}
+			case AddressOf: {
+				const auto& src_place = std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
+				llvm::Value* address = gepPointerFromLIRPlace(src_place, builder);
+				storeOutput(lir_instruction.output.value(), address, builder);
 				break;
 			}
 			/// Integer arithmetic ///
