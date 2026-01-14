@@ -41,15 +41,18 @@ def duck_linter_impl(
         )
         try:
             response = get_input("Do you want to apply these fixes? [Y/n]")
-            # Default to yes if empty response
+            # Default to yes if empty response or any input except explicit 'n'/'no'
+            # This makes 'yes' the default as requested
             if (response or '').lower() not in ['n', 'no']:
                 for f in files_with_fixes:
                     f.applyFixes()
                 log_info("Fixes applied!")
                 # Re-check files that had fixes applied
+                # Convert to set for O(1) membership checking
+                files_with_fixes_set = set(files_with_fixes)
                 passed_all = True
                 for f in files_with_errors:
-                    if f in files_with_fixes:
+                    if f in files_with_fixes_set:
                         # This file was fixed, reload and re-check
                         f.reloadAndReset()
                         if not f.runAllChecks(verbose):
@@ -99,9 +102,14 @@ class SourceFile:
     
     def reload(self):
         """Reload file content from disk"""
-        with open(self.path, "r") as file:
-            self.content = file.read()
-        self.lines = self.content.splitlines(keepends=True)
+        try:
+            with open(self.path, "r") as file:
+                self.content = file.read()
+            self.lines = self.content.splitlines(keepends=True)
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            # If file can't be read, keep the old content
+            # This allows the linter to continue processing other files
+            log_warning(f"Failed to reload {self.path}: {e}")
     
     def reloadAndReset(self):
         """Reload file content from disk and reset error/fix lists"""
