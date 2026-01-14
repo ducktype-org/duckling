@@ -355,16 +355,15 @@ def infer_gcov_from_compiler(cxx_compiler):
         return "gcov"
     
     # First, try to infer from compiler name pattern (e.g., g++-14, clang++-19)
-    # Check clang++ first to avoid matching "g++-" in "clang++-"
-    if "clang++-" in cxx_compiler:
-        match = re.search(r"clang\+\+-(\d+)", cxx_compiler)
-        if match:
-            return f"llvm-cov-{match.group(1)}"
-    elif "g++-" in cxx_compiler:
-        # Extract version from name like g++-14
-        match = re.search(r"g\+\+-(\d+)", cxx_compiler)
-        if match:
-            return f"gcov-{match.group(1)}"
+    # Use regex to extract compiler type and version from the path/name
+    # This handles cases like /usr/bin/clang++-19, clang++-19, some-wrapper-clang++-19
+    clang_match = re.search(r'clang\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    if clang_match:
+        return f"llvm-cov-{clang_match.group(1)}"
+    
+    gcc_match = re.search(r'g\+\+-(\d+)(?:\s|$|/)', cxx_compiler + ' ')
+    if gcc_match:
+        return f"gcov-{gcc_match.group(1)}"
     
     # If no pattern match, try to get the version by running the compiler
     try:
@@ -373,13 +372,13 @@ def infer_gcov_from_compiler(cxx_compiler):
             # Extract major version
             major_version = version.split(".")[0]
             
-            # Check if it's GCC or Clang
-            if "g++" in cxx_compiler:
-                return f"gcov-{major_version}"
-            elif "clang++" in cxx_compiler:
-                # Clang uses llvm-cov gcov compatibility mode
+            # Check if it's GCC or Clang by looking at the binary basename
+            compiler_name = cxx_compiler.split('/')[-1]
+            if compiler_name.startswith('clang++') or 'clang++' in compiler_name:
                 return f"llvm-cov-{major_version}"
-    except (FileNotFoundError, Exception):
+            elif compiler_name.startswith('g++') or 'g++' in compiler_name:
+                return f"gcov-{major_version}"
+    except (FileNotFoundError, sp.SubprocessError, OSError):
         # If compiler doesn't exist or can't get version, fall through to default
         pass
     
