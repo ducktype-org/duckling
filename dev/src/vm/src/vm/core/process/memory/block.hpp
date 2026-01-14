@@ -6,8 +6,6 @@
 
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
-#include <mutex>
-
 namespace vm {
 
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);

@@ -89,7 +89,7 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ writeToStack<TYPE>(local_stack, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); } \
+		{ writeToStack<TYPE>(local_stack, instr->arg0, static_cast<TYPE>(instr->arg1)); } \
 		FUNCTION_CONT(1);                                                                         \
 	}                                                                                             \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
@@ -99,7 +99,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
 		{                                                                                         \
 			safeWriteBytes<TYPE>(                                                                 \
-				local_stack, safeReadPointerBytes<TYPE>(local_stack, instr->arg1), instr->arg0    \
+				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0    \
 			);                                                                                    \
 		}                                                                                         \
 		FUNCTION_CONT(1);                                                                         \
