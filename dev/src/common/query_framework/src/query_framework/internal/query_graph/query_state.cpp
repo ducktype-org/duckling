@@ -529,9 +529,10 @@ namespace query::internal {
 						if (inserted) {
 							childs.push_back(grandchild);
 							number_of_childs[current] += 1;
+
+							// Since the granchild is a child now  (and it wasn't) add it to processing queue
+							childs_to_process.push(grandchild);
 						}
-						// Since the granchild is a child now add it to processing queue
-						childs_to_process.push(grandchild);
 					}
 				} else {
 					// Child cannot be removed, so we shedule it for processing
