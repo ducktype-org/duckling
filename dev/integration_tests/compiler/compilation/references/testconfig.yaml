@@ -22,3 +22,10 @@ Tests:
         Output:
           String: "999\n999\n888\n888\n999\n888\n"
         ExitCode: 0
+  records:
+    Cases: 
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n42\n123\n456\n0\n1\n"
+        ExitCode: 0
