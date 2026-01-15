@@ -64,16 +64,37 @@ namespace compiler::repl {
 		 */
 		ReplResult executeInput(const std::string& input);
 
+		/**
+		 * @brief Get the history of all statements entered in this REPL session.
+		 *
+		 * @return Vector of ReplStatement representing the session history.
+		 */
 		[[nodiscard]]
 		const std::vector<ReplStatement>& getHistory() const {
 			return m_history;
 		}
 
+		/**
+		 * @brief Get the configuration settings for this REPL session.
+		 *
+		 * @return ReplConfig containing the session's configuration options.
+		 */
 		[[nodiscard]]
 		const ReplConfig& getConfig() const {
 			return m_config;
 		}
 
+		/**
+		 * @brief Check whether the REPL session should terminate.
+		 *
+		 * Returns the exit flag that indicates whether the user has requested to exit
+		 * the REPL session. This flag is set to true when the user enters one of the
+		 * exit commands (/exit, /quit, or /q) or when an end-of-file (EOF) is detected
+		 * on standard input. The main REPL loop checks this flag to determine when to
+		 * stop prompting for input and gracefully terminate the session.
+		 *
+		 * @return true if the REPL should exit, false if it should continue running
+		 */
 		[[nodiscard]]
 		bool shouldExit() const {
 			return m_should_exit;
@@ -82,8 +103,32 @@ namespace compiler::repl {
 		void clearHistory();
 
 	private:
+		/**
+		 * @brief Determine if a line of input is a REPL command.
+		 *
+		 * Checks whether the given input line represents a command rather than code to
+		 * execute. Commands in the REPL are distinguished by starting with a forward slash '/'
+		 * character, such as /exit, /help, /history, etc. This allows users to control the
+		 * REPL session and access utilities without conflicting with valid Duckling code
+		 * syntax.
+		 *
+		 * @param line The input line to check
+		 * @return true if the line is a command (starts with '/'), false otherwise
+		 */
 		[[nodiscard]] bool isCommand(const std::string& line) const;
-		bool               handleCommand(const std::string& line);
+
+		/**
+		 * @brief Process and execute a REPL command.
+		 *
+		 * Parses and executes commands that control the REPL session behavior.
+
+		 * If an unrecognized command is provided, displays an error message and suggests using
+		 * /help. This method is called by processLine() when the input is identified as a command.
+		 *
+		 * @param line The command line to process (must start with '/')
+		 * @return true if the command was recognized and handled, false if unrecognized
+		 */
+		bool handleCommand(const std::string& line);
 
 		/**
 		 * @brief Extracts a single expression statement from the PST root, if present.

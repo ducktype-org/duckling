@@ -9,11 +9,11 @@
 
 namespace compiler::driver {
 
-	struct compileHOUTUnitToLIRModuleDataKey {
+	struct CompileHOUTUnitToLIRModuleDataKey final {
 		CRef<helios::HOUTUnit> hout_unit;
 		base::StrID            module_name;
 
-		auto operator<=>(const compileHOUTUnitToLIRModuleDataKey&) const = default;
+		auto operator<=>(const CompileHOUTUnitToLIRModuleDataKey&) const = default;
 
 		[[nodiscard]] u64 queryUnstablePerfectHash() const {
 			return std::hash<base::StrID>{}(module_name);
@@ -24,8 +24,8 @@ namespace compiler::driver {
 	 * @brief Query that converts HOUTUnit to LIRModuleData.
 	 */
 	DECLARE_QUERY(
-		compileHOUTUnitToLIRModuleData,
-		compileHOUTUnitToLIRModuleDataKey,
+		CompileHOUTUnitToLIRModuleData,
+		CompileHOUTUnitToLIRModuleDataKey,
 		query::QResult<LIRModuleData>,
 		({})
 	)

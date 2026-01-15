@@ -25,7 +25,7 @@ namespace compiler::repl {
 		query::Context& ctx, const helios::HOUTUnit& hout_unit, vm::PID pid
 	) {
 		auto lir_data
-			= ctx.query<driver::compileHOUTUnitToLIRModuleData>({ &hout_unit,
+			= ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit,
 		                                                          base::StrID("repl_module") })
 		          .valueOrPanic();
 		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
@@ -63,9 +63,9 @@ namespace compiler::repl {
 					else if (type_str == "i64")
 						return std::to_string(exit_value->readBytes<i64>());
 					else if (type_str == "f32")
-						return std::to_string(exit_value->readBytes<f32>());
+						return std::to_string(exit_value->readBytes<f32>());  // @TODO: #1795
 					else if (type_str == "f64")
-						return std::to_string(exit_value->readBytes<f64>());
+						return std::to_string(exit_value->readBytes<f64>());  // @TODO: #1795
 					else if (type_str == "bool")
 						return exit_value->readBytes<bool>() ? "true" : "false";
 					else

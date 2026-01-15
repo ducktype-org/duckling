@@ -17,10 +17,10 @@
 namespace compiler::driver {
 
 
-	struct IMPLEMENT_QUERY(compileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
+	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
 		QUERY_AUTO_NO_CACHE
 
-		static auto provide(query::Context& ctx, compileHOUTUnitToLIRModuleDataKey key) -> PResult {
+		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
 			auto        module_name = key.module_name;
 
@@ -49,35 +49,29 @@ namespace compiler::driver {
 							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })
 						           ->valueOrThrow();
 						auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-						globals.emplace_back(
-							LIRModuleGlobal{
-								.lir_global = lir_global,
-								// @TODO: #929 add legit dtors when implemented
-								.global_ctor = lir_function,
-								.global_dtor = std::nullopt,
-							}
-						);
+						globals.emplace_back(LIRModuleGlobal{
+							.lir_global = lir_global,
+							// @TODO: #929 add legit dtors when implemented
+							.global_ctor = lir_function,
+							.global_dtor = std::nullopt,
+						});
 					}
 					variant_case(helios::HOUTGlobalConst, global_const) {
 						// @future #1554 -- const ctors will probably be added here
 						// Note: The CTV initial value for constants is already set in lir_global
 						// (by the fromHOUT function used above). Backends should handle constant
 						// initialization appropriately.
-						globals.emplace_back(
-							LIRModuleGlobal{
-								.lir_global  = lir_global,
-								.global_ctor = std::nullopt,
-								.global_dtor = std::nullopt,
-							}
-						);
+						globals.emplace_back(LIRModuleGlobal{
+							.lir_global  = lir_global,
+							.global_ctor = std::nullopt,
+							.global_dtor = std::nullopt,
+						});
 					}
 					variant_default {
-						CORE_PANIC(
-							base::strConcat(
-								"Unexpected global data type in module: ",
-								hout_global.original_name.strView()
-							)
-						);
+						CORE_PANIC(base::strConcat(
+							"Unexpected global data type in module: ",
+							hout_global.original_name.strView()
+						));
 					}
 				}
 			}
@@ -91,7 +85,7 @@ namespace compiler::driver {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(compileHOUTUnitToLIRModuleData);
+	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
 
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
 		QUERY_AUTO_NO_CACHE
@@ -100,15 +94,15 @@ namespace compiler::driver {
 			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
 
 
-			auto module_name = base::StrID(
-				base::strConcat(
-					"module_",
-					compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+			auto module_name
+				= base::StrID(base::strConcat(
+								  "module_",
+								  compiler::frontend::ModuleTree::getPathComponentHash(module_id)
+									  .hash.toStringHex()
 				)
-					.c_str()
-			);
+			                      .c_str());
 
-			return ctx.query<compileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
+			return ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
 		}
 	};
 

@@ -39,16 +39,15 @@ namespace compiler::repl {
 	 *  	duckc repl
 	 *  type /help to see available commands.
 	 */
-	class ReplFrontend {
+	class ReplFrontend final {
 	public:
 		ReplFrontend(std::vector<ReplStatement>& history, const ReplConfig& config):
 			  m_history(history),
 			  m_config(config),
-			  m_cursor_align_to_multiline_prompt_end(
-				  std::format(
-					  "\x1b[{}C", config.continuation.size()
-				  )  // \x1b is start of ANSI escape sequence - needed to control terminal
-			  ) {}
+			  m_cursor_align_to_multiline_prompt_end(std::format(
+				  "\x1b[{}C", config.continuation.size()
+			  )  // \x1b is start of ANSI escape sequence - needed to control terminal
+		      ) {}
 
 		void printWelcome() const;
 		// Read a single line from terminal with simple history navigation (up/down arrows).
