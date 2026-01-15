@@ -96,6 +96,10 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// Builtin functions are implemented in C/C++ and use the C ABI.
+			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other))
+				return CAbi{};
+
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
 				if (specifier.unlock(ctx)->getSpecifier() == pst::Keyword::Extern) {

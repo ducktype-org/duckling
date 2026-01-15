@@ -1,0 +1,35 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "unknown_escape_sequence"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+  sequence:
+    description: "The unrecognized escape sequence."
+
+header_message:
+  - "Unknown escape sequence in string literal."
+
+description:
+  - "Escape sequence `"
+  - param: "sequence"
+  - "` is not recognised. Perhaps you meant to escape the backslash by writing `\\\\` instead of `\\`?"
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "here"

@@ -13,7 +13,8 @@
 #include <cstdlib>
 #include <cstring>
 
-struct DucklingString {
+// Definition of the Duckling string representation.
+struct str {
 	// Pointer to the data of the string proper.
 	char* data;
 	// The length of the string proper.
@@ -21,8 +22,8 @@ struct DucklingString {
 	// The difference between the pointer to the data and
 	// the beginning of the allocated memory (always non-negative).
 	uint64_t memory_begin_offset;
-	// The difference between the end of the allocated memory and
-	// the pointer to the data (always non-negative). The total size
+	// The difference between the past-the-end implicit sentinel of the allocated
+	// memory and the pointer to the data (always non-negative). The total size
 	// of the allocated buffer is thus memory_begin_offset + memory_end_offset.
 	uint64_t memory_end_offset;
 };
@@ -39,9 +40,9 @@ extern "C" {
 	double   builtin_input_f64();
 
 	// String I/O
-	int64_t        builtin_output_string(DucklingString s);
-	DucklingString builtin_input_string();
-	void           builtin_free_string(DucklingString& s);
+	int64_t builtin_output_string(str s);
+	str     builtin_input_string();
+	void    builtin_free_string(str& s);
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.
@@ -69,7 +70,7 @@ double builtin_input_f64() {
 	return v;
 }
 
-DucklingString builtin_input_string() {
+str builtin_input_string() {
 	char*   line = nullptr;
 	size_t  len  = 0;
 	ssize_t read = getline(&line, &len, stdin);
@@ -78,9 +79,7 @@ DucklingString builtin_input_string() {
 		// In case of error or EOF, return an empty string.
 		// getline might have allocated memory, so free it.
 		free(line);
-		return DucklingString{
-			.data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0
-		};
+		return str{ .data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0 };
 	}
 
 	// Strip trailing newline if present
@@ -98,7 +97,7 @@ DucklingString builtin_input_string() {
 	memcpy(new_buffer, line, size_t(read));
 	free(line);
 
-	return DucklingString{
+	return str{
 		.data                = new_buffer,
 		.length              = uint64_t(read),
 		.memory_begin_offset = 0,
@@ -106,18 +105,12 @@ DucklingString builtin_input_string() {
 	};
 }
 
-int64_t builtin_output_string(DucklingString s) {
-	if (s.data == NULL || s.length == 0) {
-		printf("\n");
-		return 0;
-	}
+int64_t builtin_output_string(str s) {
 	// Use fwrite to handle non-null-terminated strings and binary data safely.
-	int64_t written = int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
-	printf("\n");
-	return written;
+	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
 
-void builtin_free_string(DucklingString& s) {
+void builtin_free_string(str& s) {
 	if (s.data != NULL) {
 		// The data pointer might not be the start of the allocation.
 		// Adjust back by the offset to get the real start.
