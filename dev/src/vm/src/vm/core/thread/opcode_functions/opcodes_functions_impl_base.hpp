@@ -379,7 +379,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_jit)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
 			struct JitData {
 				OpFun* func_ptr;
