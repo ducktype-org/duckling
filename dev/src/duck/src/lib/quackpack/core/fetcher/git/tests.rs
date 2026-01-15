@@ -2,6 +2,7 @@ use rustvil::fs::PathExt;
 use tempfile::{TempDir, tempdir};
 
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
+use url::Url;
 
 use crate::{
     DuckCtx, QpCtx,
@@ -56,7 +57,7 @@ fn clone_local_repo() {
 
     let target = dir.path().join("cloned");
     let source = Git::new(
-        dir.path().as_os_str().to_str().unwrap().into(),
+        Url::from_directory_path(dir.path()).unwrap(),
         BranchOrTag::Default,
         None,
     );
@@ -80,7 +81,7 @@ fn clone_local_repo_with_branch() {
 
     let target = dir.path().join("cloned");
     let source = Git::new(
-        dir.path().as_os_str().to_str().unwrap().into(),
+        Url::from_directory_path(dir.path()).unwrap(),
         BranchOrTag::Branch("test-branch".into()),
         None,
     );
@@ -99,7 +100,7 @@ fn clone_local_repo_with_tag() {
 
     let target = dir.path().join("cloned");
     let source = Git::new(
-        dir.path().as_os_str().to_str().unwrap().into(),
+        Url::from_directory_path(dir.path()).unwrap(),
         BranchOrTag::Tag("v1.0.0".into()),
         None,
     );
@@ -127,7 +128,7 @@ fn clone_local_repo_with_rev() {
 
     let target = dir.path().join("cloned");
     let source = Git::new(
-        dir.path().as_os_str().to_str().unwrap().into(),
+        Url::from_directory_path(dir.path()).unwrap(),
         BranchOrTag::Default,
         Some(original_commit.id().to_string().into()),
     );

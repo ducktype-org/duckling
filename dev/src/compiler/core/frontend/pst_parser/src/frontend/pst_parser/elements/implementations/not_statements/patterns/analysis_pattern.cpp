@@ -2,21 +2,6 @@
 #include "../preamble.hpp"
 
 namespace pst {
-	class UnrecognizedPatternInCaseError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unrecognized pattern in case error";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		UnrecognizedPatternInCaseError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<AnalysisPattern> AnalysisPattern::parse(LangParserState& state) {
 		// Wildcard pattern: '_'
@@ -41,7 +26,7 @@ namespace pst {
 		// Binding pattern. Identifier which is not a destructor.
 		if (state[0].isIdentifier()) return BindingPattern::parse(state);
 
-		state.log(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
+		state.logInt(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
 		return nullptr;
 	}
 

@@ -720,7 +720,7 @@ namespace dia_int {
 		const dia_args::Message&           msg,
 		const state::Message&              evaluated_msg
 	) {
-		for (auto& msg_id: msg.linked_messages) {
+		for (auto& msg_id: msg.attached_messages) {
 			auto evaluated_id = ctx.message_mapping.at(msg_id);
 			if (std::ranges::find(output, evaluated_id) != output.end()) continue;
 

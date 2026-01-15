@@ -3,7 +3,6 @@
 #include <vm/core/process/vmprocess.hpp>
 
 #include <mutex>
-#include <ranges>
 
 namespace vm {
 	Supervisor& Supervisor::get() {

@@ -45,6 +45,7 @@ Tests:
 
 SubDirs:
   - expressions
+  - builtins
   - samples
   - statements
   - functions

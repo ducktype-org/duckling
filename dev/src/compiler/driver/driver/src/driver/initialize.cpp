@@ -1,16 +1,17 @@
 #include "initialize.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <diagnostic/logger.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
@@ -26,6 +27,7 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
+			dia_int::configureImmediatePrint(&std::cerr);
 
 			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
 			driver::llvm_dump_asm = debug_options.dump_llvm_asm;
@@ -79,9 +81,8 @@ namespace compiler::driver {
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
-					auto                  graph  = query::external::deserialize(span);
 					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
-					query::external::setPreviousGraph(std::move(graph), std::move(inputs));
+					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
 				}
 			}
 		}
@@ -92,6 +93,10 @@ namespace compiler::driver {
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+		time_stats::TrackCategoryTime driver_initialization_time(
+			time_stats::TimeCategories::DriverInitialization
+		);
+
 		CORE_ASSERT(
 			init::wasInitObject(),
 			"InitObject should be used before call to the initializeTheCompiler function!"
@@ -109,6 +114,9 @@ namespace compiler::driver {
 				handleArtifactsOptions(options.compilation_artifacts);
 				handlePackageOptions(options.main_package_info);
 				handleIncrementalOptions(options.incremental);
+			}
+			variant_case(CompilerModeOfOperationAndOptions::ReplMode, options) {
+				handleDebugOptions(options.debug_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

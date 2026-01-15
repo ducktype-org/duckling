@@ -334,6 +334,11 @@ namespace compiler::helios::mangler {
 								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
+							) {
+								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+							}
 							// Other cases of generated symbols cannot be functions.
 						}
 					}

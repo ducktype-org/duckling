@@ -53,27 +53,6 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
-	namespace {
-		base::StableVector<ScopeData> scope_table;
-
-		template<class... T>
-		Ref<ScopeData> putInScopeTable(T&&... args) {
-			scope_table.emplaceBack(std::forward<T>(args)...);
-			return scope_table.last();
-		}
-	}
-
-	std::vector<ScopeID> getAllHeliosScopes() {
-		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
-			"getAllHeliosScopes called from within query!"
-		);
-		std::vector<ScopeID> out;
-		for (auto& scope_data: scope_table)
-			out.emplace_back(ScopeAccess_Functor::idOf(&scope_data));
-		return out;
-	}
-
 	/**
 	 * @brief A way helios creates scope for given pst element.
 	 */
@@ -200,23 +179,41 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
+	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
 		static auto provide(Context&, QKey key) -> PResult {
-			return putInScopeTable(ScopeData{
-				.parent              = {},
-				.is_root             = true,
-				.related_pst_element = {},
-				.parent_module       = key,
-				.depth               = 0,
-			});
+			return ScopeData{ {}, true, {}, key, 0 };
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+	private:
+		/**
+		 * @brief This is a helper function for getAllHeliosScopes.
+		 * Use only inside that function (and only for debug/test purposes)!
+		 */
+		static std::vector<ScopeID> getAllCachedScopes() {
+			// \parallel this implementation must be made thread safe
+			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+			// This implementation is fragile, adjust if needed.
+
+			std::vector<ScopeID> out;
+
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			return out;
+		}
+
+		// for getAllCachedScopes:
+		friend std::vector<ScopeID> getAllHeliosScopes();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
-	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
+	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
+		/**
+		 * @brief Cache to verify parent scopes are consistent.
+		 * \parallel Must be made thread safe.
+		 */
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
@@ -238,7 +235,11 @@ namespace compiler::helios {
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
 
-			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
+			// here we essentially return the same scope as the parent
+			// scope, with the same unstable hash, but we still create a new ScopeData object
+			// that is kept in our cache:
+			if (element_scope_kind == ElementScopeKind::Transparent)
+				return parent.ref->perfectClone();
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -252,15 +253,32 @@ namespace compiler::helios {
 				parent_map.put(element->getID(), parent);
 			}
 
-			return putInScopeTable(ScopeData{
-				.parent              = parent,
-				.related_pst_element = element,
-				.parent_module       = module(parent),
-				.depth               = scopeDepth(parent) + 1,
-			});
+			return ScopeData{
+				parent, false, element, module(parent), scopeDepth(parent) + 1,
+			};
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
+
+	private:
+		/**
+		 * @brief This is a helper function for getAllHeliosScopes.
+		 * Use only inside that function (and only for debug/test purposes)!
+		 */
+		static std::vector<ScopeID> getAllCachedScopes() {
+			// \parallel this implementation must be made thread safe
+			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
+
+			// This implementation is fragile, adjust if needed.
+
+			std::vector<ScopeID> out;
+
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			return out;
+		}
+
+		// for getAllCachedScopes:
+		friend std::vector<ScopeID> getAllHeliosScopes();
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
@@ -384,6 +402,14 @@ namespace compiler::helios {
                             ctx, getStmtsFromStmtAggregate(ctx, stmt_specifier->getContent())
                         );
 						symbols.insert(symbols.end(), inner_symbols.begin(), inner_symbols.end());
+					} else if (auto using_opt
+					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
+						// Using has DeclType::Transparent if it ends in .*
+						// This is currently handled the same way as DeclType::Symbol.
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
+						symbols.emplace_back(sym_id);
+					} else {
+						CORE_PANIC("Not handled element with DeclKind::Transparent.");
 					}
 					break;
 				}
@@ -680,5 +706,23 @@ namespace compiler::helios {
 			iter_scope = parent(iter_scope).value();
 		}
 		os << "\n";
+	}
+
+	std::vector<ScopeID> getAllHeliosScopes() {
+		// this implementation is fragile, adjust if needed.
+
+		CORE_ASSERT(
+			query::Context::getState().queryStackSize() == 0,
+			"getAllHeliosScopes called from within query!"
+		);
+
+		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();
+		auto pst_scopes  = ImplementationOf_QueryPrimaryCodeScopeFor::getAllCachedScopes();
+
+		std::vector<ScopeID> out;
+		out.reserve(root_scopes.size() + pst_scopes.size());
+		out.insert(out.end(), root_scopes.begin(), root_scopes.end());
+		out.insert(out.end(), pst_scopes.begin(), pst_scopes.end());
+		return out;
 	}
 }

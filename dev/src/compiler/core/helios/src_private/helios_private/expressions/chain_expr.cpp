@@ -77,7 +77,7 @@ namespace compiler::helios::code {
 
 		CallInvalidCallablesError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			attachMessage(makeBox<InvaidCallableReferenceDocs>());
+			addAttachedMessage(makeBox<InvaidCallableReferenceDocs>());
 		}
 	};
 
@@ -261,7 +261,7 @@ namespace compiler::helios::code {
 					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
-					error->attachMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
+					error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
 						stmt(query_ctx, candidate).value()->getSourcePosition()
 					));
 				}

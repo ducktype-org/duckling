@@ -2,25 +2,24 @@
 
 #include "preamble.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 namespace pst {
 
 	/**
 	 * @brief Every variable needs to have either a type or value.
 	 */
-	class VariableNoTypeAndValueError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected either a type or value.";
+	class VariableNoTypeAndValueError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "variable_no_type_and_value" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		VariableNoTypeAndValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		VariableNoTypeAndValueError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
 	/**
@@ -52,7 +51,7 @@ namespace pst {
 		}
 
 		if (!has_value && !has_type)
-			state.log(makeBox<VariableNoTypeAndValueError>(state.getPosition()));
+			state.logInt(makeBox<VariableNoTypeAndValueError>(state.getPosition()));
 
 		if constexpr (key == Keyword::Var)
 			out->is_const = false;

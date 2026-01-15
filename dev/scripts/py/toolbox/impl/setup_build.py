@@ -8,6 +8,7 @@ from .helpers import (
     check_if_compilers_are_compatible,
     supports_cmake_linker_type,
     should_add_linker_flags,
+    exit_with_error,
 )
 
 
@@ -26,9 +27,22 @@ def setup_build_impl(
     strip_symbol_information,
     disable_unity_compilation,
     enable_link_time_optimization,
+    clang_for_builtins,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+    
+    # If LTO is enabled, ensure we're using Clang and LLD
+    if enable_link_time_optimization:
+        if "clang++" not in cxx_compiler:
+            exit_with_error(
+                f"Link-time optimization (LTO) requires Clang compiler. "
+                f"Current compiler: {cxx_compiler}. "
+                f"Please use --cxx-compiler to specify a Clang compiler (e.g., clang++-19)."
+            )
+        if linker != "lld":
+            log_info("LTO enabled: Setting linker to lld")
+            linker = "lld"
 
     bld = Path(build_dir)
     if bld.exists():
@@ -54,11 +68,13 @@ def setup_build_impl(
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
     ]
+    if clang_for_builtins:
+        cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
         else:
-            cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
+            cmd_parts.append(f'-D CMAKE_EXE_LINKER_FLAGS="-fuse-ld={linker.lower()}"')
 
     cmd = " ".join(cmd_parts)
 

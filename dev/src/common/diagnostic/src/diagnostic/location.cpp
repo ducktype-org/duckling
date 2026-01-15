@@ -57,15 +57,18 @@ namespace dia {
 		out << reason << "\n";
 	}
 
-	Ref<tokenizer::TokenSource> FakeLocation::getSource() const {
-		CORE_PANIC("Tried to access a TokenSource from fake location.");
+	Ref<tokenizer::TokenSource> FakeLocation::getSource() const { return source.refMut(); }
+
+	fs::File FakeLocation::getSourceFile() const { return virtual_file; }
+
+	Ref<FakeLocation> FakeLocation::getInstance() {
+		static FakeLocation instance;
+		return { &instance };
 	}
 
-	fs::File FakeLocation::getSourceFile() const {
-		CORE_PANIC("Tried to access a File from fake location.");
+	FakeLocation::FakeLocation():
+		  virtual_file(fs::FileManager::createRandomVirtualFile("some example content here\n")),
+		  source(tokenizer::makeTokenSource(virtual_file)) {
+		source->tokenize();
 	}
-
-	FakeLocation FakeLocation::instance = {};
-
-	Ref<FakeLocation> FakeLocation::getInstance() { return { &instance }; }
 }

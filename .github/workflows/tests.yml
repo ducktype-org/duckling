@@ -115,6 +115,15 @@ jobs:
       - name: Install LLVM
         run: sudo apt -y install llvm-19 llvm-19-dev
 
+      - name: Install clang
+        # Necessary to compile Duckling builtins to LLVM bitcode
+        # Must be the same version as llvm
+        run: sudo apt -y install clang-19
+
+      - name: Install xxd
+        # Necessary to embed LLVM bitcode into duckc source files.
+        run: sudo apt -y install xxd
+
       - name: Install mold
         run: sudo apt -y install mold
 
@@ -324,6 +333,24 @@ jobs:
     timeout-minutes: 2
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch origin/main
+        run: git fetch origin main
+
+      - name: Get newly added TODOs
+        id: get-new-todos
+        working-directory: dev
+        run: |
+          TODOS=$(python3 toolbox.py todo-validate --print-todos --branch origin/main --no-merge-base)
+          echo "new-todos=$TODOS" >> $GITHUB_OUTPUT
+          if [[ "$TODOS" == *"No new"* ]]; then
+            echo "has-new-todos=false" >> $GITHUB_OUTPUT
+          else
+            echo "has-new-todos=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
@@ -409,6 +436,8 @@ jobs:
                     \n## TODOs \
                     \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
                     \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \
+                    \n${{ steps.get-new-todos.outputs.has-new-todos == 'true' && '## Newly Added TODOs' || '' }} \
+                    \n${{ steps.get-new-todos.outputs.has-new-todos == 'true' && steps.get-new-todos.outputs.new-todos || '' }} \
                     '
             })
 

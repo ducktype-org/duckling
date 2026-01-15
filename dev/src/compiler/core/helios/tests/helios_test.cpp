@@ -2002,7 +2002,8 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
+					"Logger should have recorded an error."
 				);
 
 				std::stringstream non_detailed_log;
@@ -2024,7 +2025,8 @@ private:
 				);
 
 				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+					ctx.logger.bad() or ctx.int_logger.hasErrors(),
+					"Logger should have recorded an error."
 				);
 
 				std::stringstream non_detailed_log;
@@ -2170,7 +2172,7 @@ private:
 				"Trying to lift an unliftable tuple to a type should fail."
 			);
 			std::stringstream ss;
-			ctx.int_logger.dumpLog(ss);
+			ctx.int_logger.terminalPrint(ss);
 			assertTrue(
 				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
@@ -2257,7 +2259,8 @@ private:
 				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
 			);
 
 			std::stringstream non_detailed_log;
@@ -2276,7 +2279,8 @@ private:
 				result->hasFailed(), "Query should have failed due to ambiguous return type."
 			);
 			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.bad(), "Logger should have recorded an error."
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
 			);
 
 			std::stringstream non_detailed_log;

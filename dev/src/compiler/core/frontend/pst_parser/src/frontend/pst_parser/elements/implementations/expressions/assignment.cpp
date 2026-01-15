@@ -4,21 +4,6 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	class MultipleAssignmentError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Multiple assignments in one expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MultipleAssignmentError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
@@ -29,12 +14,12 @@ namespace pst::expr {
 		bool found = false;
 		i64  place = 0;
 		for (i64 i = 0; i < length; i++) {
-			if (ExprClassify::isAssignment(state, (i64) i)) {
+			if (ExprClassify::isAssignment(state.ctokens(), (i64) i)) {
 				if (!found) {
 					found = true;
 					place = i;
 				} else {
-					state.log(makeBox<MultipleAssignmentError>(pos));
+					state.logInt(makeBox<MultipleAssignmentError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}

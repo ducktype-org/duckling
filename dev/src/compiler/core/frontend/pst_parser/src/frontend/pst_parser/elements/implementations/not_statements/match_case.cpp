@@ -3,53 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class MatchCaseWithNoBodyError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Case branch with no body";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		MatchCaseWithNoBodyError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class DoubleDefaultBranchError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Case expression with two default branches";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		DoubleDefaultBranchError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class UnconditionedBranchAfterConditionedError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unconditioned case branch after a conditioned branch";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		UnconditionedBranchAfterConditionedError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
 		auto position = state.getPosition();
@@ -72,7 +25,8 @@ namespace pst {
 				if_case = true;
 			} else if (state.parse(out).tryEat(NamedOperator::Assign)) {
 				if (if_case) {  // Unconditioned branch after a conditioned branch.
-					state.log(makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
+					state.logInt(
+						makeBox<UnconditionedBranchAfterConditionedError>(state.getPosition())
 					);
 					return nullptr;
 				}
@@ -84,10 +38,11 @@ namespace pst {
 				break;
 			}
 			out->branches.push_back(std::move(current_branch));
-		} while (true);
+		}
+		PST_WHILE(true);
 
 		if (out->branches.empty()) {  // Empty match expression.
-			state.log(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));
+			state.logInt(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));
 			return nullptr;
 		}
 		return out;

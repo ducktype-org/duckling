@@ -1,7 +1,7 @@
 use crate::QuackResult;
 use crate::StrId;
 use crate::qp_bail;
-use crate::quackpack::core::Source;
+use crate::quackpack::core::InternedSource;
 use crate::quackpack::core::Version;
 
 #[derive(Debug)]
@@ -11,12 +11,16 @@ use crate::quackpack::core::Version;
 pub struct DependencyDescription {
     manifest_name: StrId,
     versions: Vec<Version>,
-    source: Source,
+    source: InternedSource,
 }
 
 impl DependencyDescription {
     /// Create a new `DependencyDescription`.
-    pub fn new(manifest_name: StrId, versions: Vec<Version>, source: Source) -> QuackResult<Self> {
+    pub fn new(
+        manifest_name: StrId,
+        versions: Vec<Version>,
+        source: InternedSource,
+    ) -> QuackResult<Self> {
         if source.is_registry() && versions.is_empty() {
             qp_bail!("a registry dependency must provide at least one version")
         }
@@ -38,12 +42,12 @@ impl DependencyDescription {
     }
 
     /// Get the dependency source.
-    pub fn source(&self) -> &Source {
-        &self.source
+    pub fn source(&self) -> InternedSource {
+        self.source
     }
 
     /// Destroy this description into inner parts
-    pub fn decompose(self) -> (StrId, Vec<Version>, Source) {
+    pub fn decompose(self) -> (StrId, Vec<Version>, InternedSource) {
         let Self {
             manifest_name,
             versions,

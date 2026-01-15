@@ -6,28 +6,12 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	class BadChainExprError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected access or call expression expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadChainExprError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
 		CORE_ASSERT(length > 0, "Illegal max length to next link");
 
 		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
-		while (fwd < length) {
+		PST_WHILE(fwd < length) {
 			if (state[fwd].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 			    ).copyValueOr(false)
 			    || state[fwd].isBracketGroup(lexer::Token::Square)
@@ -51,7 +35,7 @@ namespace pst::expr {
 		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
 
-		while (length > 0) {
+		PST_WHILE(length > 0) {
 			fwd = toNextLink(state, length);
 			MBox<ExprElement> extension;
 			if (state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
@@ -61,7 +45,7 @@ namespace pst::expr {
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&extension, Call::parse, +fwd);
 			} else {
-				state.log(makeBox<BadChainExprError>(
+				state.logInt(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
 				fastForward(state, fwd);
