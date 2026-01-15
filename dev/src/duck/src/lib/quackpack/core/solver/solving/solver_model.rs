@@ -334,6 +334,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 pub struct FoundSolution {
     pub new_packages: HashSet<ExpandedPackage>,
     pub new_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    pub new_edges: HashMap<DependencyEdge, Option<Version>>,
 }
 
 impl<'a> SolverModel<'a, ProblemCreated> {
@@ -346,48 +347,100 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .solve()
             .best_sol()
             .context("Failed to find a solution")?;
-        let new_packages = self
-            .package_vars
-            .into_iter()
-            .filter_map(|(pkg, var)| {
-                if is_one(&var, &solution) {
-                    Some(pkg)
+        let new_packages = new_packages(self.package_vars, self.preexisting_packages, &solution);
+        let new_features = new_features(
+            &self.package_to_feature_vars,
+            &new_packages,
+            self.preexisting_packages,
+            self.preexisting_features,
+            &solution,
+        );
+        let new_edges = new_edges(self.dependency_to_version_vars, &solution);
+        Ok(FoundSolution {
+            new_packages,
+            new_features,
+            new_edges,
+        })
+    }
+}
+
+/// Helper for determining which new packages have been chosen by the model.
+fn new_packages(
+    package_vars: HashMap<ExpandedPackage, Rc<Variable>>,
+    preexisting_packages: &HashSet<ExpandedPackage>,
+    solution: &Solution,
+) -> HashSet<ExpandedPackage> {
+    package_vars
+        .into_iter()
+        .filter_map(|(pkg, var)| {
+            if is_one(&var, solution) {
+                Some(pkg)
+            } else {
+                None
+            }
+        })
+        .collect::<HashSet<ExpandedPackage>>()
+        .difference(preexisting_packages)
+        .cloned()
+        .collect::<HashSet<ExpandedPackage>>()
+}
+
+/// Helper for determining which new features of all the packages have been chosen by the model.
+fn new_features(
+    package_to_feature_vars: &HashMap<ExpandedPackage, FeaturesToVars>,
+    new_packages: &HashSet<ExpandedPackage>,
+    preexisting_packages: &HashSet<ExpandedPackage>,
+    preexisting_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    solution: &Solution,
+) -> HashMap<ExpandedPackage, HashSet<FeatureName>> {
+    let mut new_features = HashMap::new();
+    for pkg in preexisting_packages.iter().chain(new_packages.iter()) {
+        let mut pkg_features = HashSet::new();
+        if let Some(features_to_vars) = package_to_feature_vars.get(pkg) {
+            pkg_features = features_to_vars
+                .iter()
+                .filter_map(|(feature, var)| {
+                    if is_one(var, solution) {
+                        Some(feature)
+                    } else {
+                        None
+                    }
+                })
+                .cloned()
+                .collect();
+        }
+        if let Some(features) = preexisting_features.get(pkg) {
+            pkg_features = pkg_features.difference(features).cloned().collect();
+        }
+        if !pkg_features.is_empty() {
+            new_features.insert(pkg.clone(), pkg_features);
+        }
+    }
+    new_features
+}
+
+/// Helper for determining what new realisations of any dependencies have been chosen by the model.
+fn new_edges(
+    dependency_to_version_vars: HashMap<DependencyEdge, ChildVersionsToVars>,
+    solution: &Solution,
+) -> HashMap<DependencyEdge, Option<Version>> {
+    let mut new_edges = HashMap::new();
+    for (edge, version_to_var_map) in dependency_to_version_vars.into_iter() {
+        if let Some(chosen_realisation) = version_to_var_map
+            .iter()
+            .filter_map(|(version, var)| {
+                if is_one(var, solution) {
+                    Some(*version)
                 } else {
                     None
                 }
             })
-            .collect::<HashSet<ExpandedPackage>>()
-            .difference(self.preexisting_packages)
-            .cloned()
-            .collect::<HashSet<ExpandedPackage>>();
-        let mut new_features = HashMap::new();
-        for pkg in self.preexisting_packages.iter().chain(new_packages.iter()) {
-            let mut pkg_features = HashSet::new();
-            if let Some(features_to_vars) = self.package_to_feature_vars.get(pkg) {
-                pkg_features = features_to_vars
-                    .iter()
-                    .filter_map(|(feature, var)| {
-                        if is_one(var, &solution) {
-                            Some(feature)
-                        } else {
-                            None
-                        }
-                    })
-                    .cloned()
-                    .collect();
-            }
-            if let Some(features) = self.preexisting_features.get(pkg) {
-                pkg_features = pkg_features.difference(features).cloned().collect();
-            }
-            if !pkg_features.is_empty() {
-                new_features.insert(pkg.clone(), pkg_features);
-            }
+            .next()
+        {
+            new_edges.insert(edge, chosen_realisation);
         }
-        Ok(FoundSolution {
-            new_packages,
-            new_features,
-        })
     }
+    new_edges
 }
 
 /// Helper function for determining whether the model did or did not put the variable into the solution.

@@ -289,8 +289,10 @@ metadata:
             (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
             (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let location_resolver = HashMap::from([
+            (location_a, exp_location_a),
+            (location_b, exp_location_b.clone()),
+        ]);
 
         let preexisting_packages = HashSet::new();
         let preexisting_features = HashMap::new();
@@ -306,7 +308,18 @@ metadata:
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
         let output = run_engine(&input, &new_dependencies).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
+        assert!(output.new_features == HashMap::new());
+        assert!(
+            output.new_edges
+                == HashMap::from([(
+                    DependencyEdge {
+                        parent: exp_pkg_a,
+                        dependency_loc: exp_location_b,
+                    },
+                    Some(Version::new(2, 0, 0))
+                )])
+        );
     }
 
     #[test]
@@ -379,8 +392,10 @@ dependencies:
             (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
             (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let location_resolver = HashMap::from([
+            (location_a, exp_location_a.clone()),
+            (location_b, exp_location_b.clone()),
+        ]);
 
         let preexisting_packages = HashSet::new();
         let preexisting_features = HashMap::new();
@@ -396,11 +411,30 @@ dependencies:
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
         let output = run_engine(&input, &new_dependencies).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
         assert!(
             output.new_features
-                == HashMap::from([(exp_pkg_a, HashSet::from([FeatureName::new("xd")]))])
-        )
+                == HashMap::from([(exp_pkg_a.clone(), HashSet::from([FeatureName::new("xd")]))])
+        );
+        assert!(
+            output.new_edges
+                == HashMap::from([
+                    (
+                        DependencyEdge {
+                            parent: exp_pkg_a,
+                            dependency_loc: exp_location_b,
+                        },
+                        Some(Version::new(2, 0, 0))
+                    ),
+                    (
+                        DependencyEdge {
+                            parent: exp_pkg_b,
+                            dependency_loc: exp_location_a,
+                        },
+                        Some(Version::new(1, 0, 0))
+                    ),
+                ])
+        );
     }
 
     #[test]
