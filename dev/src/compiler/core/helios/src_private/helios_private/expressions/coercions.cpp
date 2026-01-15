@@ -21,7 +21,20 @@ namespace compiler::helios {
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
-		auto source_type = from->expression_type.getSymbolType().getType();
+		auto source_symbol_type = from->expression_type.getSymbolType();
+		if (source_symbol_type.getRefKind() != tsh::ReferenceKind::Direct
+		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
+			auto derefed = makeBox<code::DerefExpr>(ctx, std::move(from));
+
+			// If underlying types are the same, return just the derefed value.
+			if (derefed->expression_type.getSymbolType() == to) return derefed;
+
+			// Otherwise if underlying types differ, perform the recursive coercion.
+			return Coercion(derefed->expression_type.getSymbolType(), to)
+			    .coerce(ctx, std::move(derefed));
+		}
+
+		auto source_type = source_symbol_type.getType();
 
 		bool is_source_numeric = source_type.getKind() == tsh::Kind::Integral
 		                      or source_type.getKind() == tsh::Kind::Float;

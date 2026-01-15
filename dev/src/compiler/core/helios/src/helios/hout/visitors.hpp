@@ -32,6 +32,7 @@ namespace compiler::helios::code {
 		AccessExpr,
 		SequenceExpr,
 		MakeReferenceExpr,
+		DerefExpr,
 		CastExpr,
 		LiftToTypeExpr
 	);

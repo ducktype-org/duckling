@@ -35,6 +35,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(MakeReferenceExpr)
+	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
@@ -702,6 +703,28 @@ namespace compiler::helios::code {
 
 	Box<Expr> MakeReferenceExpr::clone() const {
 		return makeBox<MakeReferenceExpr>(expression_type, inner->clone());
+	}
+
+	DerefExpr::DerefExpr(query::Context&, Box<Expr> inner):
+		  Expr(tsh::ExpressionType<>(
+			  inner->expression_type.getSymbolType().getPointeeSymbolType(
+			  ),  // Remove the ref / box specifier.
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  inner(std::move(inner)) {}
+
+	DerefExpr::DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner):
+		  Expr(expression_type),
+		  inner(std::move(inner)) {}
+
+	void DerefExpr::debugPrint(std::ostream& out) const {
+		out << "deref(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> DerefExpr::clone() const {
+		return makeBox<DerefExpr>(expression_type, inner->clone());
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr):

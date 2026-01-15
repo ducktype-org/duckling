@@ -90,17 +90,13 @@ namespace compiler::mir {
 			auto optional_local = function.findLocal(expr.symbol);
 
 			if (optional_local.has_value()) {
-				MIRPlace place = MIRPlace(optional_local.value());
-				if (place.type.getRefKind() != tsh::ReferenceKind::Direct)
-					place = place.withDeref();
-				valueOutput(continuation, MIRValue{ place });
+				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
 				//@TODO: #1334 Check if the symbol is a real global variable.
-				MIRPlace place
-					= MIRPlace(MIRGlobal({ expr.symbol, expr.expression_type.getSymbolType() }));
-				if (place.type.getRefKind() != tsh::ReferenceKind::Direct)
-					place = place.withDeref();
-				valueOutput(continuation, MIRValue{ place });
+				valueOutput(
+					continuation,
+					MIRValue{ MIRGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+				);
 			}
 		}
 
@@ -413,6 +409,21 @@ namespace compiler::mir {
 				Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
 				result_type
 			);
+		}
+
+		void visitDerefExpr(const hc::DerefExpr& expr) override {
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto value         = lowered_inner.getResult(function);
+
+			variant_match(std::move(value.getVariant())) {
+				variant_case(MIRPlace, place) {
+					valueOutput(lowered_inner.begin, place.withDeref());
+				}
+				variant_default {
+					// Deref base is not a place.
+					CORE_UNREACHABLE();
+				}
+			}
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {

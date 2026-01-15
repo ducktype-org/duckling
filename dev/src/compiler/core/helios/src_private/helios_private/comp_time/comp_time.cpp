@@ -542,6 +542,8 @@ namespace compiler::helios {
 				result = CouldNotShortPath{};
 			}
 
+			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
+
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.
