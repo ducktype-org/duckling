@@ -664,8 +664,8 @@ namespace query::internal {
 		// Here we need create a compacted version of the graph without removed nodes
 		// And return it
 		// Build a compact mapping for remaining nodes
-		constexpr usize    invalid_idx = std::numeric_limits<usize>::max();
-		std::vector<usize> old_to_new(node_count, invalid_idx);
+		constexpr usize    INVALID_IDX = std::numeric_limits<usize>::max();
+		std::vector<usize> old_to_new(node_count, INVALID_IDX);
 		std::vector<usize> old_to_new_reverse;
 		usize              kept_nodes = 0;
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
