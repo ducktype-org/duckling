@@ -151,6 +151,8 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
+		// @note This function should be thread safe, as it is called from the outside world.
+		// Each function that modifies internal state should be performed under the appropriate lock.
 		variant_match(request) {
 			variant_case(api::request::Run, run_request) {
 				return runFunction("main", run_request.program_args);
@@ -227,6 +229,7 @@ namespace vm {
 			variant_case_novalue(api::request::Detach) { return detach(); }
 
 			variant_case(api::request::TypeMetadata, type_request) {
+				std::shared_lock lock(rw_global);
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
@@ -246,6 +249,7 @@ namespace vm {
 			}
 
 			variant_case(api::request::VmValue, vmvalue_request) {
+				std::shared_lock lock(rw_global);
 				match_optional(assertProcessCanRespond()) {
 					opt_some(error) { return std::unexpected(error); }
 					opt_none {
@@ -339,6 +343,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
+		std::unique_lock lock(rw_global);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
@@ -350,6 +355,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::deinitAndValidate() {
+		std::unique_lock lock(rw_global);
 		for (auto& t: vm_threads) {
 			if (t.exec_thread)
 				if (auto res = stop(); !res.has_value()) return res;

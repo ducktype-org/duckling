@@ -142,7 +142,7 @@ namespace compiler::helios {
 	);
 
 	template<typename Element>
-	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
+	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia_int::Logger>>;
 	template<typename Element>
 	using ExpansionResult
 		= query::QResult<std::variant<pst::AccessLocked<Element>, ExpansionError<Element>>>;

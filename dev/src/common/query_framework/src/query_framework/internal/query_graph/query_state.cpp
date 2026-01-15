@@ -88,11 +88,13 @@ namespace query::internal {
 		const auto& prev_graph  = previous->graph;
 		auto&       node_colors = previous->node_colors;
 
+		// If color is already known for this node, return it
+		// At this point the node don't need to be in previous graph (can be moved to actual graph
+		// in merging) Moved nodes always have their color known already
+		if (auto it = node_colors.find(start_node); it != node_colors.end()) return it->second;
+
 		// If the node does not exist in the previous graph -> needs recomputation
 		if (!prev_graph.nodeExists(start_node)) return PrevColor::Red;
-
-		// If color is already known for this node, return it
-		if (auto it = node_colors.find(start_node); it != node_colors.end()) return it->second;
 
 		// Iterative DFS (post-order) over previous graph starting from start_node.
 		// A node becomes Green iff all its direct dependencies are Green; otherwise Red.
@@ -124,7 +126,8 @@ namespace query::internal {
 				continue;
 			}
 
-			// At this point, node must exist in previous graph because its a child of an existing node
+			// At this point, node must exist in previous graph because its a child of an existing
+			// node and aren't colored yet So the cannot be merged yet
 			CORE_ASSERT(prev_graph.node_deps.contains(node), "Node should exist in previous graph");
 
 			const auto& deps = prev_graph.node_deps.at(node);
@@ -215,7 +218,7 @@ namespace query::internal {
 		// If the start node exists in the current graph -> it's already merged or recomputed
 		if (query_graph.node_deps.contains(start_node)) return;
 
-		const auto& prev_graph = previous->graph;
+		auto& prev_graph = previous->graph;
 
 		// If the start node does not exist in previous graph, nothing to merge
 		if (!prev_graph.nodeExists(start_node)) return;
@@ -235,27 +238,37 @@ namespace query::internal {
 
 			const NodeID node = frame.node;
 
-			// If we already created this node in current graph, skip
+			// Node may already have been merged if it was scheduled multiple times (e.g. duplicate
+			// deps) This can happen when some Node has multiple parents in the previous graph
 			if (query_graph.node_deps.contains(node)) continue;
 
-			// Insert the node with an empty dependency list first (ensures parent exists for
-			// addDependency)
-			query_graph.node_deps.emplace(node, std::vector<NodeID>{});
-
-			// Retrieve dependencies from previous graph; if none -> it's a leaf, keep empty deps
 			CORE_ASSERT(
 				prev_graph.node_deps.contains(node), "Node to merge should exist in previous graph"
 			);
-			const auto& prev_deps = prev_graph.node_deps.at(node);
 
-			// For each child, add the dependency edge and ensure the child will be processed
-			for (const auto& child: prev_deps) {
-				// Add edge in current graph (child doesn't have to exist yet)
-				query_graph.addDependency(node, child);
+			// Node must have a color assigned already
+			CORE_ASSERT(
+				previous->node_colors.contains(node),
+				"Node to merge should have color assigned in previous graph"
+			);
 
-				// If child is not in current graph yet, schedule it for creation
-				if (!query_graph.node_deps.contains(child)) stack.push_back(Frame{ .node = child });
-			}
+			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph
+			// Node should exist in previous graph at this point (because its not in current graph yet)
+
+			auto prev_it = prev_graph.node_deps.find(node);
+			CORE_ASSERT(
+				prev_it != prev_graph.node_deps.end(),
+				"Failed to find node in previous graph during merge"
+			);
+
+			auto prev_deps = std::move(prev_it->second);
+			prev_graph.node_deps.erase(prev_it);
+
+			auto [it, inserted] = query_graph.node_deps.emplace(node, std::move(prev_deps));
+			CORE_ASSERT(inserted, "Node should not exist in current graph during merge");
+			const auto& deps = it->second;
+
+			for (const auto& child: deps) stack.push_back(Frame{ .node = child });
 		}
 	}
 

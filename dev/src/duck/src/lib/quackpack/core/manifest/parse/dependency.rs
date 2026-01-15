@@ -66,7 +66,7 @@ fn parse_single_dependency(
         .as_ref()
         .map(|ored| ored.0.clone())
         .unwrap_or_default();
-    let desc = DependencyDescription::new(manifest_name, versions, source)
+    let desc = DependencyDescription::new(manifest_name, versions, source.into())
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
 
     scope.push(static_str_id!("features"));

@@ -4,37 +4,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class PatternArgumentCountError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Pattern declarations must have exactly one parameter.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		PatternArgumentCountError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class PatternBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected round bracket group.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		PatternBracketError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<Pattern> Pattern::parse(LangParserState& state) {
 		auto position = state.getPosition();
@@ -47,20 +16,20 @@ namespace pst {
 		// Patterns take in only one argument, thus we don't use the parametr list and check for
 		// braces manually.
 		if (!state[0].isBracketGroup(Token::Round)) {
-			state.log(makeBox<PatternBracketError>(state.getPosition()));
+			state.logInt(makeBox<PatternBracketError>(state.getPosition()));
 			return nullptr;
 		}
 
 		auto bracket_group_token = state[0];
 		state.parse(out).goDown();
 		if (state.empty()) {
-			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
+			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 
 		state.parse(out).one(&out->param);
 		if (!state.empty()) {  // More than one argument.
-			state.log(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
+			state.logInt(makeBox<PatternArgumentCountError>(bracket_group_token.getPosition()));
 			return nullptr;
 		}
 

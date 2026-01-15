@@ -13,7 +13,7 @@ namespace dia_int::template_file {
 		if (elem["url"]) return MessageLinkComponent::fromYaml(elem);
 		if (elem["default"]) return VariantComponent::fromYaml(elem);
 
-		throw ParsingTemplateFileError("Unknown template component.");
+		throw ParsingTemplateFileError("Unknown template yaml file syntax.");
 	}
 
 	Box<TextComponent> TextComponent::fromYaml(const YAML::Node& elem_node) {
