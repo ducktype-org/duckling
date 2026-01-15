@@ -16,7 +16,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <iostream>
 #include <sstream>
 #include <type_traits>
 

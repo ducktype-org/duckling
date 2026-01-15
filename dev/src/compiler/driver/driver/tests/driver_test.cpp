@@ -18,7 +18,6 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
-#include <array>
 #include <filesystem>
 #include <iostream>
 
