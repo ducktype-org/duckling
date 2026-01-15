@@ -79,12 +79,13 @@ void llvmInit() {
 				auto name = extract_function_name(demangled);
 				name      = name.substr(3);  // delete op_
 				auto opcode = getOpcode(name);
-				if (FuncMap.contains(opcode))
+				if (FuncMap.contains(opcode)) {
 					CORE_PANIC("Duplicate opcode function name: ", name);
-				else
+				} else {
 					// Sanity check, that instructions sizes make sense.
 					std::cout<<"found "<<name<<" with " << F.getInstructionCount()<< "instructions\n";
 					FuncMap[opcode] = &F;
+				}
 			}
 		}
 	}
