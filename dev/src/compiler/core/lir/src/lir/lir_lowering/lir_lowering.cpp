@@ -137,7 +137,7 @@ namespace compiler::lir {
 			  }
 			  return current_layout;
 		  }()),
-		  access_chain(std::move(projection_chain)) {}
+		  projection_chain(std::move(projection_chain)) {}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
@@ -302,7 +302,6 @@ namespace compiler::lir {
 				lir_projection_chain.reserve(mir_place.access_chain.size());
 
 				// Map all MIR projections to LIR projections.
-				// TODOP: These are basically the same. Unify them in the future.
 				for (const auto& proj: mir_place.access_chain) {
 					variant_match(proj.storage) {
 						variant_case(mir::FieldProjection, field) {

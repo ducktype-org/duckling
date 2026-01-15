@@ -289,13 +289,12 @@ namespace compiler::mir {
 		bool          operator==(const FieldProjection&) const = default;
 	};
 
-	struct IndexProjection {
-		// TODOP
-		bool operator==(const IndexProjection&) const = default;
-	};
-
+	/**
+	 * @brief A single projection which transforms a MIRPlace. This includes dereferencing, field
+	 * access and in the future index access for array elements.
+	 */
 	struct Projection {
-		std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
+		std::variant<DerefProjection, FieldProjection> storage;
 
 		static Projection field(helios::SymID field_id) {
 			return Projection(FieldProjection(field_id));
@@ -303,18 +302,15 @@ namespace compiler::mir {
 
 		static Projection deref() { return Projection(DerefProjection()); }
 
-		static Projection index() { return Projection(IndexProjection()); }
-
 		bool operator==(const Projection& other) const = default;
 
 		[[nodiscard]] u64 queryUnstablePerfectHash() const {
-			// TODOP: Temp
+			// TODOP: How to handle deref hashes?
 			variant_match(storage) {
 				variant_case(DerefProjection, deref) { return 0x12'34; }
 				variant_case(FieldProjection, field) {
 					return field.field_id.queryUnstablePerfectHash();
 				}
-				variant_case(IndexProjection, index) { return 0x43'21; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -323,11 +319,21 @@ namespace compiler::mir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
-	 * and `b` and `c` are fields within that variable, this structure would contain
-	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 * It contains of a base variable and a projection chain (either field projections or deref
+	 * projections if eny of the elements was a reference)
 	 *
-	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
+	 * For example:
+	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
+	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
+	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
+	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
+	 * FieldProjection(`c`)]`).
+	 * - Additionally, if field `b` was a reference type, an additional
+	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
+	 *
+	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * chain would be empty.
 	 */
 	struct MIRPlace final {
 		// MIR Locals are stored indirectly through MIRLocalRef because
@@ -356,17 +362,15 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief The symbols of the fields accessed within the variable.
+		 * @brief Sequence of operations applied to the `base` to reach the target memory.
 		 */
-		// TODOP: Comment
-		std::vector<Projection> access_chain;
+		std::vector<Projection> projection_chain;
 
 		/**
-		 * @brief The type of the final accessed field.
-		 * @note This type may be different from the type of the base variable,
-		 * especially when the access chain is not empty.
+		 * @brief The type of the final accessed field after applying all projections.
+		 * @note If the projection chain is empty, this type will be equal to the `base` type. It
+		 * may differ from the base type if the projection chain is not empty.
 		 */
-		// TODOP: Comment.
 		tsh::SymbolType<> type;
 
 		/**
@@ -376,14 +380,22 @@ namespace compiler::mir {
 		explicit MIRPlace(BaseVariant base): base(base), type(getBaseType()) {}
 
 		/**
-		 * Extend the MIRPlace structure by adding a new field to the access chain.
+		 * @brief Extend the MIRPlace structure by adding a new FieldProjection to the projection
+		 * chain.
+		 * @note If the current `type` of the MIRPlace if a reference or a box a DerefProjection
+		 * will be automatically added.
+		 *
 		 * @param ctx The query context for type resolution.
 		 * @param field The next field to access.
 		 * @return The extended MIRPlace structure.
 		 */
 		MIRPlace withField(query::Context& ctx, helios::SymID field) const;
-		// TODOP
-		// Automatically inserts derefs if needed.
+
+		/**
+		 * @brief Adds a DerefProjection to the projection chain. Panics if dereferencing a direct
+		 * type.
+		 * @return The extended MIRPlace with a DerefProjection.
+		 */
 		[[nodiscard]] MIRPlace withDeref() const;
 
 		[[nodiscard]]
@@ -397,8 +409,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		bool hasAccess() const {
-			return !access_chain.empty();
+		bool hasProjections() const {
+			return !projection_chain.empty();
 		}
 
 		/**

@@ -307,7 +307,7 @@ namespace compiler::lir {
 		/**
 		 * @brief The symbols of the fields accessed within the variable.
 		 */
-		std::vector<Projection> access_chain;
+		std::vector<Projection> projection_chain;
 
 
 		LIRPlace(query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain);
@@ -323,8 +323,8 @@ namespace compiler::lir {
 		}
 
 		[[nodiscard]]
-		bool hasAccess() const {
-			return !access_chain.empty();
+		bool hasProjections() const {
+			return !projection_chain.empty();
 		}
 	};
 

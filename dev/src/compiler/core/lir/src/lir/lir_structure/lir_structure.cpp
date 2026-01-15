@@ -116,7 +116,7 @@ namespace compiler::lir {
 				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
 				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
-			printChain(output.access_chain, loc_output);
+			printChain(output.projection_chain, loc_output);
 		}
 
 		void printValue(const LIRValue& location) {
@@ -128,7 +128,7 @@ namespace compiler::lir {
 						variant_case(LIRGlobal, global) { printGlobal(global, output); }
 					}
 
-					printChain(place.access_chain, output);
+					printChain(place.projection_chain, output);
 				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {

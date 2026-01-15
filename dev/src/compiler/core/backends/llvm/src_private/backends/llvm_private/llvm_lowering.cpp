@@ -506,7 +506,16 @@ namespace compiler::backend_llvm {
 		 * @brief Maps LIRPlace to an LLVM pointer Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
-		 * it may need to generate a GEP instruction to access a field of a struct.
+		 * it may need to generate a GEP instruction to access a field of a struct or a load
+		 * if LIRPlace has to be dereferenced.
+		 *
+		 * The overview of what this does is:
+		 * - For a given LIRValue take a pointer to it.
+		 * - Iterate through the projection chain which can store `FieldProjection`,
+		 * `DerefProjection`(and in the near future `IndexProjection` for accessing array elements)
+		 * and add subsequent arguments to the currently built GEP instruction.
+		 * - If a `DerefProjection` is encountered, we have to emit the GEP built up to this point,
+		 * perform a load on the address it returned and start building a new GEP.
 		 *
 		 * @param place The LIRPlace to convert into an LLVM pointer Value.
 		 * @param builder The LLVM IRBuilder to use for generating the pointer, if necessary.
@@ -527,9 +536,9 @@ namespace compiler::backend_llvm {
 				CORE_UNREACHABLE();
 			}();
 
-			// Then, perform appropriate pointer modification based on the access chain.
-			// If there is no access chain, we can return the base pointer directly.
-			if (not place.hasAccess()) return current_ptr;
+			// Then, perform appropriate pointer modification based on the projection chain.
+			// If the projection chain is empty, we can return the base pointer directly.
+			if (not place.hasProjections()) return current_ptr;
 
 			llvm::Type*           current_type   = typeFromLayout(module, place.getBaseLayout());
 			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
@@ -540,8 +549,9 @@ namespace compiler::backend_llvm {
 			std::vector<llvm::Value*> access_indices;
 			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 
-			// A GEP constructor invoked when encountering a deref projection. Creates a GEP from
-			// all projection indicies up to this point so `load` can be performed on the address.
+			// A GEP constructor invoked when encountering a deref projection of when we went
+			// through all projections. Creates a GEP from all projection indicies up to this point
+			// so `load` can be performed on the address calculated up to this point.
 			auto flush_gep = [&]() {
 				if (access_indices.size() > 1) {
 					// Create a GEP if needed.
@@ -549,12 +559,12 @@ namespace compiler::backend_llvm {
 					current_type = typeFromLayout(module, current_layout);
 				}
 				access_indices.clear();
-				// Reset the new base, since GEP assumes  we work on arrays.
+				// Reset the new base, since GEP assumes we work on arrays.
 				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 			};
 
 
-			for (const auto& projection: place.access_chain) {
+			for (const auto& projection: place.projection_chain) {
 				variant_match(projection.storage) {
 					variant_case(lir::FieldProjection, field) {
 						const auto& current_class_layout

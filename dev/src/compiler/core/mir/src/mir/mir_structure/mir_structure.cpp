@@ -208,7 +208,7 @@ namespace compiler::mir {
 	MIRPlace MIRPlace::withDeref() const {
 		MIRPlace result = *this;
 
-		result.access_chain.push_back(Projection::deref());
+		result.projection_chain.push_back(Projection::deref());
 		// New type after deref is the one which was referenced by the ref/box, without the
 		// reference specifier.
 		result.type = result.type.getPointeeSymbolType();
@@ -222,7 +222,7 @@ namespace compiler::mir {
 		// before the field access.
 		if (result.type.getRefKind() != tsh::ReferenceKind::Direct) result = result.withDeref();
 
-		result.access_chain.push_back(Projection::field(field));
+		result.projection_chain.push_back(Projection::field(field));
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
 	}
@@ -232,7 +232,7 @@ namespace compiler::mir {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
 			variant_case(MIRGlobal, global) { global.debugPrint(os, detailed); }
 		}
-		for (const auto& proj: access_chain) {
+		for (const auto& proj: projection_chain) {
 			variant_match(proj.storage) {
 				variant_case(FieldProjection, field) {
 					os << "." << name(field.field_id).strView();
@@ -241,8 +241,8 @@ namespace compiler::mir {
 				variant_case_novalue(IndexProjection) { os << "[]"; }
 			}
 		}
-		if (detailed and not access_chain.empty()) {
-			os << ": Unstable hash: " << access_chain.back().queryUnstablePerfectHash();
+		if (detailed and not projection_chain.empty()) {
+			os << ": Unstable hash: " << projection_chain.back().queryUnstablePerfectHash();
 			os << ", Type: ";
 			os << type.toString();
 		}

@@ -3,8 +3,6 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
-#include "base/except/exceptions.hpp"
-
 namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
