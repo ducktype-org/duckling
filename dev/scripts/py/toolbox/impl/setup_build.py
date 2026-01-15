@@ -74,7 +74,7 @@ def setup_build_impl(
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
         else:
-            cmd_parts.append(f'-D CMAKE_CXX_FLAGS="-fuse-ld={linker.lower()}"')
+            cmd_parts.append(f'-D CMAKE_EXE_LINKER_FLAGS="-fuse-ld={linker.lower()}"')
 
     cmd = " ".join(cmd_parts)
 
