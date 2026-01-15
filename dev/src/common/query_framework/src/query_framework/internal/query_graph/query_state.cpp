@@ -263,6 +263,23 @@ namespace query::internal {
 		// measure time spent in graph optimization:
 		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
+		// Sanity check: ensure current query graph does not contain duplicate edges
+		std::vector<std::pair<NodeID, NodeID>> duplicate_edges;
+		for (const auto& [node, deps]: query_graph.node_deps) {
+			std::unordered_set<NodeID> seen_children;
+			for (const auto& child: deps) {
+				if (!seen_children.insert(child).second) duplicate_edges.emplace_back(node, child);
+			}
+		}
+		if (!duplicate_edges.empty()) {
+			std::cerr << "Duplicate child edges detected in query graph:\n";
+			for (const auto& [parent, child]: duplicate_edges) {
+				std::cerr << "  parent=" << parent.q_id.getData().name
+					  << " child=" << child.q_id.getData().name << '\n';
+			}
+			CORE_ASSERT(false, "Duplicate edges detected while optimizing query graph");
+		}
+
 		// First create Map NodeID -> usize to optimise feature algorithm than can operate on usize IDs and work on
 		// plain vectors instead of hash maps
 		base::HashMap<NodeID, usize> node_to_idx;
