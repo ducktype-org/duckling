@@ -613,12 +613,21 @@ namespace compiler::helios {
 				auto val = assignment->getValue();
 
 				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).valueOrThrow();
-				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, val, location_expr->expression_type.getSymbolType()
-					)
-				          .valueOrThrow();
 
+				// If left side of the assignment is a ref/box and right side is direct, we have to
+				// dereference it.
+				// If both sides are references, we consider it a rebind.
+				auto location_type = location_expr->expression_type.getSymbolType();
+				auto value_expr    = ctx.query<QueryHoutOfExpr>({ val }).valueOrThrow();
+				auto value_type    = value_expr->expression_type.getSymbolType();
+				if (location_type.getRefKind() != tsh::ReferenceKind::Direct
+				    && value_type.getRefKind() == tsh::ReferenceKind::Direct) {
+					location_expr = makeBox<code::DerefExpr>(ctx, std::move(location_expr));
+					location_type = location_expr->expression_type.getSymbolType();
+				}
+
+				auto new_value_expr_coerced
+					= getHoutOfExprWithExpectedType(ctx, val, location_type).valueOrThrow();
 
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();
@@ -632,8 +641,6 @@ namespace compiler::helios {
 					query::throwFailed();
 					return;
 				}
-
-				auto location_type = location_expr->expression_type.getSymbolType();
 
 				// When this code was being written, this check could not be tested.
 				// The optional result of this visitor is getting unwrapped without

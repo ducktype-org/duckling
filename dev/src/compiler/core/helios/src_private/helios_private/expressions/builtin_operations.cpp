@@ -27,7 +27,7 @@ namespace {
 		auto rhs_type = rhs->expression_type.getSymbolType();
 
 		// Types the same -> no coercion.
-		if (lhs_type.getType() == rhs_type.getType()) {
+		if (lhs_type == rhs_type) {
 			return std::make_tuple(
 				lhs_type, Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type)
 			);

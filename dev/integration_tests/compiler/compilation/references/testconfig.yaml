@@ -13,12 +13,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "10\n20\n20\n20\n345\n345\n456\n123\n"
+          String: "10\n20\n20\n20\n123\n999\n456\n123\n"
         ExitCode: 0
   global_refs:
     Cases: 
       llvm:
         backend: llvm
         Output:
-          String: "999\n999\n"
+          String: "999\n999\n888\n888\n999\n888\n"
         ExitCode: 0

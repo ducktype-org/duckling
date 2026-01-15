@@ -1,22 +1,13 @@
-let glob: i64 = 100;
-var blob: i64 = 200;
+# TODOP: Figure out
+# fun mutability() -> () = {
+#     let imm1 = refof glob;
+#     # imm1 = 2; # This won't work since let is immutable as it should.
 
-fun ret_ref(a: ref i64) -> ref i64 = {
-    a = 999;
-    # TODOP: We should decide wether this should be auto 
-    # derefed or not.
-    return a; 
-}
-
-fun mutability() -> () {
-    let imm1 = refof glob;
-    # imm1 = 2; # This won't work since let is immutable as it should.
-
-    var m1 = refof glob;
-    m1 = 2; # This will work although glob is immutable
-    var m2 = refof blob;
-    m2 = 2;
-}
+#     var m1 = refof glob;
+#     m1 = 2; # This will work although glob is immutable
+#     var m2 = refof blob;
+#     m2 = 2;
+# }
 
 
 class RefPoint { x: ref i64; y: ref i64; }
@@ -39,9 +30,6 @@ fun records2() -> () = {
 }
 
 fun main() -> i64 = {
-    let a: i64 = ret_ref(refof blob);
-    builtin_output_i64(blob); # 999
-    
     records2();
 
     return 0;

@@ -13,14 +13,7 @@ fun simple_auto_deref() -> () = {
     builtin_output_i64(r); # 20
 }
 
-# TODOP: Figure out
-fun swap(a: ref i64, b: ref i64) -> () = {
-    let tmp = a;
-    a = b;
-    b = tmp;
-}
-
-fun easy_swap(a: ref i64, b: ref i64) -> () = {
+fun value_swap(a: ref i64, b: ref i64) -> () = {
     let tmp: i64 = a;
     let tmp2: i64 = b;
     a = tmp2;
@@ -52,14 +45,15 @@ fun assign_to_ref() -> () = {
     builtin_output_i64(ref_a);
 }
 
+
 fun main() -> i64 = {
     simple_auto_deref();
     assign_to_ref();
 
     var a: i64 = 123; 
     var b: i64 = 456; 
-    easy_swap(refof a, refof b);
-    
+    # Swap just the values. References stay intact.
+    value_swap(refof a, refof b);
     builtin_output_i64(a); # 456
     builtin_output_i64(b); # 123
     
