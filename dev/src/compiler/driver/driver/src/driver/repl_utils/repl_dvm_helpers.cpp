@@ -33,7 +33,7 @@ namespace compiler::repl {
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
 	}
 
-	// @TODO #1817: This approach is hacky.
+	// @TODO: #1817 This approach is hacky.
 	// Instead of extracting the exit value manually based on type,
 	// print would be called inside the DVM execution.
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
@@ -62,10 +62,11 @@ namespace compiler::repl {
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")
 						return std::to_string(exit_value->readBytes<i64>());
+					// @TODO: #1795 DVM should also use f32 and f64.
 					else if (type_str == "f32")
-						return std::to_string(exit_value->readBytes<f32>());  // @TODO: #1795
+						return std::to_string(exit_value->readBytes<f32>());
 					else if (type_str == "f64")
-						return std::to_string(exit_value->readBytes<f64>());  // @TODO: #1795
+						return std::to_string(exit_value->readBytes<f64>());
 					else if (type_str == "bool")
 						return exit_value->readBytes<bool>() ? "true" : "false";
 					else

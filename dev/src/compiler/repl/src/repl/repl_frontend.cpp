@@ -192,7 +192,6 @@ namespace compiler::repl {
 
 	// Simple line reader that supports Up/Down arrow history navigation and
 	// basic editing (backspace). It uses termios maybe Jakub finds something better.
-	// TODO this should be in frontend.
 	std::string ReplFrontend::readLine() {
 		auto read_line_helper = [&]() -> std::string {
 			try {
@@ -254,7 +253,7 @@ namespace compiler::repl {
 		}
 
 		if (row == lines.size() - 1) {
-			lines.push_back("");
+			lines.emplace_back("");
 			row++;
 			col = 0;
 			writeChar(NEWLINE_CHAR);
@@ -342,7 +341,7 @@ namespace compiler::repl {
 
 	std::string ReplFrontend::handleMultilineInput() {
 		std::vector<std::string> lines;
-		lines.push_back("");
+		lines.emplace_back("");
 		u64 row = 0;
 		u64 col = 0;
 

@@ -52,7 +52,7 @@ namespace compiler::repl {
 
 			auto code_block = std::make_shared<helios::code::CodeBlock>();
 
-			// @TODO #1817: Instead of returning the value, we should call a generic
+			// @TODO: #1817 Instead of returning the value, we should call a generic
 			// print() function here that works for any type. This would eliminate the need
 			// to return values and manually convert them based on type in repl_dvm_helpers.cpp
 			if (return_type.toString() == "void") {

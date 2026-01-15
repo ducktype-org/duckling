@@ -18,7 +18,8 @@ namespace compiler::helios {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
-		// @TODO #1807
+		// @TODO: #1807 Refactor the code so that it's impossible to create
+		// two symbols with the same counter but different return types.
 		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
 			return { return_type.queryUnstablePerfectHash(), counter };
 		}

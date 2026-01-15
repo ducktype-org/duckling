@@ -1,15 +1,14 @@
 #include "repl_session.hpp"
 
-#include "driver/repl_utils/repl_dvm_helpers.hpp"
-
 #include <driver/operations/generic_operations.hpp>
+#include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-// @TODO: #1824
+// @TODO: #1824 Move platform dependent includes to a separate file.
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -27,7 +26,7 @@
 #include <string_view>
 
 namespace compiler::repl {
-	// @TODO #1784: decide if we want to do it here or in the main.cpp.
+	// @TODO: #1784 decide if we want to do it here or in the main.cpp.
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
 		CORE_ASSERT(spawn_result.has_value(), "ReplSession::initDVM: Failed to spawn DVM process");
