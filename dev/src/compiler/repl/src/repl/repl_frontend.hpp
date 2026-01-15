@@ -83,8 +83,8 @@ namespace compiler::repl {
 		);
 
 		std::string                 m_buffer;
-		size_t                      m_cursor_pos = 0;
-		ssize_t                     m_hist_idx   = 0;
+		u64                         m_cursor_pos = 0;
+		i64                         m_hist_idx   = 0;
 		std::vector<ReplStatement>& m_history;
 		const ReplConfig&           m_config;
 		const std::string           m_cursor_align_to_multiline_prompt_end;

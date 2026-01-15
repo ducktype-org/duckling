@@ -60,7 +60,7 @@ namespace compiler::repl {
 		::write(STDOUT_FILENO, str.data(), str.size());
 	}
 
-	void ReplFrontend::writeStr(std::string_view str, size_t from_pos) {
+	void ReplFrontend::writeStr(std::string_view str, u64 from_pos) {
 		if (from_pos > str.size()) std::cerr << "ReplFrontend::writeStr: from_pos out of range\n";
 		writeStr(str.substr(from_pos));
 	}
@@ -82,8 +82,8 @@ namespace compiler::repl {
 
 	void ReplFrontend::moveCursorRight() const { writeStr(CURSOR_RIGHT_SEQ); }
 
-	void ReplFrontend::moveCursorFromEndToPos(size_t pos, std::string& buffer) {
-		for (size_t i = pos; i < buffer.size(); ++i) moveCursorLeft();
+	void ReplFrontend::moveCursorFromEndToPos(u64 pos, std::string& buffer) {
+		for (u64 i = pos; i < buffer.size(); ++i) moveCursorLeft();
 	}
 
 	void ReplFrontend::moveCursorToEnd() {
@@ -120,9 +120,9 @@ namespace compiler::repl {
 				// Up.
 				if (m_hist_idx > 0) {
 					// Find previous single-line history item
-					ssize_t search_idx = m_hist_idx - 1;
+					i64 search_idx = m_hist_idx - 1;
 					while (search_idx >= 0) {
-						if (m_history[static_cast<size_t>(search_idx)].source_code.find('\n')
+						if (m_history[static_cast<u64>(search_idx)].source_code.find('\n')
 						    == std::string::npos) {
 							break;
 						}
@@ -133,34 +133,34 @@ namespace compiler::repl {
 						m_hist_idx = search_idx;
 						moveCursorToEnd();
 						// Clear current buffer from terminal.
-						for (size_t i = 0; i < m_buffer.size(); ++i) writeStr(ERASE_SEQ);
-						m_buffer     = m_history[static_cast<size_t>(m_hist_idx)].source_code;
+						for (u64 i = 0; i < m_buffer.size(); ++i) writeStr(ERASE_SEQ);
+						m_buffer     = m_history[static_cast<u64>(m_hist_idx)].source_code;
 						m_cursor_pos = m_buffer.size();
 						writeStr(m_buffer);
 					}
 				}
 			} else if (seq[1] == ARROW_DOWN_CODE) {
-				if (m_hist_idx < static_cast<ssize_t>(m_history.size())) {
+				if (m_hist_idx < static_cast<i64>(m_history.size())) {
 					// Find next single-line history item
-					ssize_t search_idx = m_hist_idx + 1;
-					while (search_idx < static_cast<ssize_t>(m_history.size())) {
-						if (m_history[static_cast<size_t>(search_idx)].source_code.find('\n')
+					auto search_idx = m_hist_idx + 1;
+					while (search_idx < static_cast<i64>(m_history.size())) {
+						if (m_history[static_cast<u64>(search_idx)].source_code.find('\n')
 						    == std::string::npos) {
 							break;
 						}
 						search_idx++;
 					}
 
-					if (search_idx <= static_cast<ssize_t>(m_history.size())) {
+					if (search_idx <= static_cast<i64>(m_history.size())) {
 						m_hist_idx = search_idx;
 						moveCursorToEnd();
 						// Clear.
-						for (size_t i = 0; i < m_buffer.size(); ++i) writeStr(ERASE_SEQ);
+						for (u64 i = 0; i < m_buffer.size(); ++i) writeStr(ERASE_SEQ);
 
-						if (m_hist_idx == static_cast<ssize_t>(m_history.size())) {
+						if (m_hist_idx == static_cast<i64>(m_history.size())) {
 							clearBuffer();
 						} else {
-							m_buffer     = m_history[static_cast<size_t>(m_hist_idx)].source_code;
+							m_buffer     = m_history[static_cast<u64>(m_hist_idx)].source_code;
 							m_cursor_pos = m_buffer.size();
 							writeStr(m_buffer);
 						}
@@ -223,11 +223,11 @@ namespace compiler::repl {
 
 	std::string ReplFrontend::handleSingleLineInput() {
 		clearBuffer();
-		m_hist_idx = static_cast<ssize_t>(m_history.size());
+		m_hist_idx = static_cast<i64>(m_history.size());
 
 		while (true) {
-			char    c = 0;
-			ssize_t r = ::read(STDIN_FILENO, &c, 1);
+			char c = 0;
+			i64  r = ::read(STDIN_FILENO, &c, 1);
 			if (r <= 0) {
 				// EOF or error.
 				return {};
@@ -246,7 +246,7 @@ namespace compiler::repl {
 		return m_buffer;
 	}
 
-	bool ReplFrontend::multiLineOnNewLine(std::vector<std::string>& lines, size_t& row, size_t& col) {
+	bool ReplFrontend::multiLineOnNewLine(std::vector<std::string>& lines, u64& row, u64& col) {
 		if (lines[row] == m_config.multiline_end) {
 			lines.pop_back();
 			writeChar(NEWLINE_CHAR);
@@ -269,9 +269,7 @@ namespace compiler::repl {
 		return false;
 	}
 
-	void ReplFrontend::multiLineOnBackspace(
-		std::vector<std::string>& lines, size_t& row, size_t& col
-	) {
+	void ReplFrontend::multiLineOnBackspace(std::vector<std::string>& lines, u64& row, u64& col) {
 		if (col > 0) {
 			col--;
 			lines[row].erase(col, 1);
@@ -284,7 +282,7 @@ namespace compiler::repl {
 	}
 
 	void ReplFrontend::multiLineOnEscapeSequence(
-		std::vector<std::string>& lines, size_t& row, size_t& col
+		std::vector<std::string>& lines, u64& row, u64& col
 	) {
 		std::array<char, 2> seq = { 0, 0 };
 		if (::read(STDIN_FILENO, &seq[0], 1) <= 0) return;
@@ -294,27 +292,27 @@ namespace compiler::repl {
 			if (seq[1] == ARROW_UP_CODE) {
 				if (row > 0) {
 					row--;
-					size_t old_col = col;
-					col            = std::min(col, lines[row].size());
+					u64 old_col = col;
+					col         = std::min(col, lines[row].size());
 					writeStr(CURSOR_UP_SEQ);
 
 					// Adjust horizontal position
 					if (col > old_col)
-						for (size_t i = 0; i < col - old_col; ++i) moveCursorRight();
+						for (u64 i = 0; i < col - old_col; ++i) moveCursorRight();
 					else if (col < old_col)
-						for (size_t i = 0; i < old_col - col; ++i) moveCursorLeft();
+						for (u64 i = 0; i < old_col - col; ++i) moveCursorLeft();
 				}
 			} else if (seq[1] == ARROW_DOWN_CODE) {
 				if (row < lines.size() - 1) {
 					row++;
-					size_t old_col = col;
-					col            = std::min(col, lines[row].size());
+					u64 old_col = col;
+					col         = std::min(col, lines[row].size());
 					writeStr(CURSOR_DOWN_SEQ);
 
 					if (col > old_col)
-						for (size_t i = 0; i < col - old_col; ++i) moveCursorRight();
+						for (u64 i = 0; i < col - old_col; ++i) moveCursorRight();
 					else if (col < old_col)
-						for (size_t i = 0; i < old_col - col; ++i) moveCursorLeft();
+						for (u64 i = 0; i < old_col - col; ++i) moveCursorLeft();
 				}
 			} else if (seq[1] == ARROW_LEFT_CODE) {
 				if (col > 0) {
@@ -331,7 +329,7 @@ namespace compiler::repl {
 	}
 
 	void ReplFrontend::multiLineOnPrintableChar(
-		char c, std::vector<std::string>& lines, size_t& row, size_t& col
+		char c, std::vector<std::string>& lines, u64& row, u64& col
 	) {
 		lines[row].insert(col, 1, c);
 		col++;
@@ -345,8 +343,8 @@ namespace compiler::repl {
 	std::string ReplFrontend::handleMultilineInput() {
 		std::vector<std::string> lines;
 		lines.push_back("");
-		size_t row = 0;
-		size_t col = 0;
+		u64 row = 0;
+		u64 col = 0;
 
 		std::cout << "(Multiline mode - type '" << m_config.multiline_end
 				  << "' on a new line to finish)\n";
@@ -369,7 +367,7 @@ namespace compiler::repl {
 		}
 
 		std::string multiline_content;
-		for (size_t i = 0; i < lines.size(); ++i) {
+		for (u64 i = 0; i < lines.size(); ++i) {
 			if (i > 0) multiline_content += NEWLINE_CHAR;
 			multiline_content += lines[i];
 		}
@@ -384,7 +382,7 @@ namespace compiler::repl {
 
 		std::cout << "\n=== REPL History (" << m_history.size()
 				  << (m_history.size() == 1 ? " statement" : " statements") << ") ===\n";
-		for (size_t i = 0; i < m_history.size(); ++i) {
+		for (u64 i = 0; i < m_history.size(); ++i) {
 			const auto& stmt = m_history[i];
 			std::cout << "[" << (i + 1) << "] ";
 
