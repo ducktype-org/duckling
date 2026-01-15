@@ -115,6 +115,9 @@ namespace compiler::driver {
 				handlePackageOptions(options.main_package_info);
 				handleIncrementalOptions(options.incremental);
 			}
+			variant_case(CompilerModeOfOperationAndOptions::ReplMode, options) {
+				handleDebugOptions(options.debug_options);
+			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 	}

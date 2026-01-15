@@ -35,6 +35,7 @@ add_library(HELIOS STATIC
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
+	src/helios/repl_utils/repl_queries.cpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
