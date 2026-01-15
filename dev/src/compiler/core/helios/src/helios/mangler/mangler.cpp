@@ -210,9 +210,11 @@ namespace compiler::helios::mangler {
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
 				ret = "F";
 
-				const auto fun_decl = ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get();
-				ret += fun_decl->return_type.toString();
-				for (const auto& param: fun_decl->parameters) {
+				const auto& fun_decl
+					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
+				ret += fun_decl.return_type.toString();
+
+				for (const auto& param: fun_decl.parameters) {
 					ret += param.type.toString();
 					ret += identifier(param.name.str());
 				}
