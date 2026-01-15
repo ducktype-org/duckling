@@ -83,7 +83,7 @@ clah::Clah getVmClah() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	llvm_init();
+	llvmInit();
 	auto clah = getVmClah();
 
 	try {

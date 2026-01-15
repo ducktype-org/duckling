@@ -8,4 +8,4 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>  // maybe remove this dependency?
 
-inline vm::OpFun* compile_jit(const vm::low::LowFuncData& func_data) { return nullptr; }
+inline vm::OpFun* compileJit(const vm::low::LowFuncData& func_data) { return nullptr; }

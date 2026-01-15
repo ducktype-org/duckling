@@ -1,6 +1,6 @@
 #include "opcode_definitions.hpp"
 
-#include "jit_api.hpp"
+#include "jit_init.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -56,7 +56,7 @@ namespace {
 }
 
 // Pewnie powinien przyjmowac context w argumencie, ale na razie ta funkcje idzie do api i ma byc niezalenza od llvm
-void llvm_init() {
+void llvmInit() {
 	if (gContext) return;  // already initialized
 	gContext = std::make_unique<LLVMContext>();
 

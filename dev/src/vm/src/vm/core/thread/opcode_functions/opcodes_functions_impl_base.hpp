@@ -397,12 +397,12 @@ namespace vm {
 			if (my_data.counter == 0) {
 				const low::LowFuncData& func_data
 					= thread.executing_program->getFunctions()[func_id];
-				my_data.func_ptr = compile_jit(func_data);
+				my_data.func_ptr = compileJit(func_data);
 			}
 
 			if (my_data.func_ptr) {
 				const_cast<MicroInstruction&>(*instr) = vm::makeLowInstruction(
-					low::MicroOpcode::call_func_ptr, (intptr_t) my_data.func_ptr, 0
+					low::MicroOpcode::call_func_ptr, reinterpret_cast<intptr_t>(my_data.func_ptr), 0
 				);
 				FUNCTION_CONT_CHECK_STRATEGY(0);
 			}
@@ -413,7 +413,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_ptr)(FUNCTION_ARGS) {
-		OpFun* func_ptr = reinterpret_cast<OpFun*>(instr->arg0);
+		auto* func_ptr = reinterpret_cast<OpFun*>(instr->arg0);
 		(*func_ptr)(instr, local_stack, frame, thread);
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
