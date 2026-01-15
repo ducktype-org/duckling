@@ -86,6 +86,16 @@ namespace query::internal {
 		[[nodiscard]] std::vector<byte> serialize() const;
 
 		/**
+		 * @brief Serializes an already reduced graph description.
+		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
+		 * each adjacency index references the precomputed NodeID at the same position. This helper
+		 * is meant for scenarios where another algorithm (e.g. QueryState::reduceOptimizeGraph) has
+		 * already produced a compacted graph representation and we only need to emit bytes without
+		 * rebuilding the mapping.
+		 */
+		static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
+
+		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
 		 * @param data The vector of bytes to deserialize from.
 		 * @param node_mapper Optional mapper that can transform NodeIDs read from disk into the
@@ -122,8 +132,6 @@ namespace query::internal {
 
 		/** @brief Check if a node has any dependencies. */
 		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
-
-		static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
 
 		~QueryGraph() = default;
 	};

@@ -133,65 +133,33 @@ namespace query::internal {
 	}
 
 	std::vector<byte> QueryGraph::serialize() const {
-		using HVType  = decltype(NodeID::hash.val.data);
-		using QIDType = decltype(QueryID::val);
-
-		constexpr usize node_id_size
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
-
-		// Serialized layout:
-		// [usize node_count]
-		// [node_count * NodeID payloads]
-		// Repeat node_count times: [usize deps_size][deps_size * u64 adjacency indices]
-
 		const usize         node_count = node_deps.size();
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_count);
 		base::HashMap<NodeID, usize> node_to_index;
 		node_to_index.reserve(node_count);
 
-		usize total_edges = 0;
-		usize next_index  = 0;
-		for (const auto& [node, deps]: node_deps) {
+		usize next_index = 0;
+		for (const auto& [node, _]: node_deps) {
 			node_to_index.emplace(node, next_index++);
 			nodes.push_back(node);
-			total_edges += deps.size();
 		}
 
-		std::vector<byte> buffer;
-		usize             total_size = sizeof(usize);  // node_count
-		total_size += node_count * node_id_size;
-		total_size += node_count * sizeof(usize);      // each deps_size field
-		total_size += total_edges * sizeof(usize);     // adjacency list indices
-		buffer.reserve(total_size);
-
-		auto write = [&](const auto& value) -> void {
-			using T               = std::decay_t<decltype(value)>;
-			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
-			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
-		};
-
-		auto write_node_id = [&](const NodeID& node) -> void {
-			write(node.q_id.val);
-			write(node.hash.val.data);
-		};
-
-		write(node_count);
-		for (const auto& node: nodes) write_node_id(node);
-
+		std::vector<std::vector<usize>> adjacency(node_count);
 		for (const auto& node: nodes) {
 			const auto& deps = node_deps.at(node);
-			write(deps.size());
+			auto&       out  = adjacency.at(node_to_index.at(node));
+			out.reserve(deps.size());
 			for (const auto& dep: deps) {
 				CORE_ASSERT(
 					node_to_index.contains(dep),
 					"Dependency node missing from graph during serialization."
 				);
-				write(node_to_index.at(dep));
+				out.push_back(node_to_index.at(dep));
 			}
 		}
 
-		return buffer;
+		return serializeReducedGraph(ReducedGraphData{ std::move(nodes), std::move(adjacency) });
 	}
 
 	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
