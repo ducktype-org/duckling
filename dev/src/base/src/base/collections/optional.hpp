@@ -290,7 +290,7 @@ namespace base {
 		 */
 		template<class Self>
 		[[nodiscard]]
-		constexpr QualifiedT<Self> expect(this Self&& self, std::string_view message) {
+		constexpr QualifiedT<Self> expect(this Self&& self, [[maybe_unused]] std::string_view message) {
 			if (!self.has_value()) CORE_PANIC(message);
 			return std::forward<Self>(self).value();
 		}
