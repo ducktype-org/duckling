@@ -376,6 +376,11 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_jit)(FUNCTION_ARGS) {
+		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
