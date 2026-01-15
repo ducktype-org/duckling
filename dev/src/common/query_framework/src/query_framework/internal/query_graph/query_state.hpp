@@ -183,10 +183,9 @@ namespace query::internal {
 		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
 
 		/**
-		 * @brief Removes redundant unstable nodes to shrink the graph prior to serialization.
-		 * This must be called after compilaton phase and only use it before actual serialization.
-		 * This is for internal use only.
+		 * @brief Builds a reduced adjacency list without mutating the original graph.
+		 * @return pair of compacted NodeIDs and adjacency (usize indices) used for serialization.
 		 */
-		void reduceOptimizeGraph();
+		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph) const;
 	};
 }

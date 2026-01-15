@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include <logger/logger.hpp>
+
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
@@ -272,16 +274,18 @@ namespace query::internal {
 		}
 	}
 
-	void QueryState::reduceOptimizeGraph() {
+	QueryGraph::ReducedGraphData QueryState::reduceOptimizeGraph(const QueryGraph& graph) const {
 		// measure time spent in graph optimization:
-		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
+		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::GraphOptimization);
+
+		const auto& node_deps = graph.node_deps;
 
 		// First create Map NodeID -> usize to optimise feature algorithm than can operate on usize
 		// IDs and work on plain vectors instead of hash maps
 		base::HashMap<NodeID, usize> node_to_idx;
 		std::vector<NodeID>          idx_to_node;
 
-		for (const auto& [node, _]: query_graph.node_deps) {
+		for (const auto& [node, _]: node_deps) {
 			node_to_idx.emplace(node, idx_to_node.size());
 			idx_to_node.push_back(node);
 		}
@@ -309,8 +313,44 @@ namespace query::internal {
 		// Map to keep track of touched nodes during optimization
 		std::vector<bool> touched(node_count, false);
 
+		const bool log_incremental =
+			::logger::enable_dev_logs
+			&& ::logger::isCategoryEnabled(::logger::DevLogCategories::Incremental);
+
+		const auto log_original_graph = [&](std::string_view phase) {
+			if (!log_incremental) return;
+			u64 edge_count = 0;
+			for (const auto& [_, deps]: node_deps) edge_count += deps.size();
+			CORE_DEV_LOG(
+				Incremental,
+				"[reduceOptGraph] Number of Nodes (",
+				phase,
+				"): ",
+				node_deps.size(),
+				", Number of Edges: ",
+				edge_count
+			);
+		};
+
+		const auto log_reduced_graph = [&](std::string_view phase, const auto& adjacency) {
+			if (!log_incremental) return;
+			u64 edge_count = 0;
+			for (const auto& deps: adjacency) edge_count += deps.size();
+			CORE_DEV_LOG(
+				Incremental,
+				"[reduceOptGraph] Number of Nodes (",
+				phase,
+				"): ",
+				adjacency.size(),
+				", Number of Edges: ",
+				edge_count
+			);
+		};
+
+		log_original_graph("Before optimization");
+
 		// build the parent map and opt graph
-		for (const auto& [node, deps]: query_graph.node_deps) {
+		for (const auto& [node, deps]: node_deps) {
 			const usize node_idx = node_to_idx.at(node);
 
 			// Record if this node is stable
@@ -620,22 +660,40 @@ namespace query::internal {
 			childs.erase(childs_removed_range.begin(), childs_removed_range.end());
 		}
 
-		// here the opt_graph is optimized, we need to rebuild the query_graph from it
-		base::HashMap<NodeID, std::vector<NodeID>> new_query_graph_deps;
+		// END OF THE OPTIMIZATION ALGORITHM
+
+		// Here we need create a compacted version of the graph without removed nodes
+		// And return it
+		// Build a compact mapping for remaining nodes
+		constexpr usize invalid_idx = std::numeric_limits<usize>::max();
+		std::vector<usize>          old_to_new(node_count, invalid_idx);
+		std::vector<usize>          old_to_new_reverse;
+		usize                       kept_nodes = 0;
+		for (usize node_idx = 0; node_idx < node_count; ++node_idx){
+			if (removed[node_idx]) continue;
+			old_to_new_reverse.push_back(node_idx);
+			old_to_new[node_idx] = kept_nodes++;
+		}
+
+		std::vector<NodeID>                new_idx_to_node;
+		std::vector<std::vector<usize>>    new_opt_graph(kept_nodes);
+		for (usize mapped_idx = 0; mapped_idx < kept_nodes; ++mapped_idx) {
+			const usize old_idx = old_to_new_reverse[mapped_idx];
+			new_idx_to_node.push_back(idx_to_node[old_idx]);
+		}
+
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
 			const auto&         deps = opt_graph[node_idx];
-			NodeID              node = idx_to_node[node_idx];
-			std::vector<NodeID> dep_vec;
-			dep_vec.reserve(deps.size());
-			for (const auto& dep_idx: deps) {
-				NodeID dep_node = idx_to_node[dep_idx];
-				dep_vec.push_back(dep_node);
-			}
-			new_query_graph_deps.emplace(node, std::move(dep_vec));
+			std::vector<usize> new_dep_vec;
+			new_dep_vec.reserve(deps.size());
+			for (const auto& dep_idx: deps)
+				new_dep_vec.push_back(old_to_new[dep_idx]);
+			new_opt_graph[old_to_new[node_idx]] = std::move(new_dep_vec);
 		}
 
-		query_graph.node_deps = std::move(new_query_graph_deps);
+		log_reduced_graph("After optimization", new_opt_graph);
+		return { std::move(new_idx_to_node), std::move(new_opt_graph) };
 	}
 
 }  // namespace query::internal

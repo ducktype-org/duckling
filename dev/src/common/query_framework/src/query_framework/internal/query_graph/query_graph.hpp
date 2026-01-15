@@ -26,6 +26,8 @@ namespace query::internal {
 		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 	public:
+		using ReducedGraphData = std::pair<std::vector<NodeID>, std::vector<std::vector<usize>>>;
+
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
 		QueryGraph(QueryGraph&&)                 = default;
@@ -120,6 +122,8 @@ namespace query::internal {
 
 		/** @brief Check if a node has any dependencies. */
 		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
+
+		static std::vector<byte> serializeReducedGraph(ReducedGraphData&& reduced_graph);
 
 		~QueryGraph() = default;
 	};

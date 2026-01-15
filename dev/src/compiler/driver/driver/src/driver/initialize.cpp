@@ -88,7 +88,12 @@ namespace compiler::driver {
 		}
 
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
-			if (inc_options.enabled) loadPreviousQueryGraphIfExists();
+			if (inc_options.enabled){
+				driver::enable_incremental_compilation = true;
+				loadPreviousQueryGraphIfExists();
+			} else {
+				driver::enable_incremental_compilation = false;
+			}
 		}
 	}
 

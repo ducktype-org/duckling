@@ -29,8 +29,7 @@ namespace query::external {
 
 	std::vector<byte> serializeQueryGraph() {
 		auto state = ::query::internal::ContextAccess::getState();
-		state->reduceOptimizeGraph();
-		auto graph_ref = state->getGraphMutable();
-		return graph_ref->serialize();
+		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
+		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}
 }  // namespace query::external
