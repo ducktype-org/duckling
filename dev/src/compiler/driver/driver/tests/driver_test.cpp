@@ -124,6 +124,15 @@ private:
 			" compilation graph clean"
 		);
 
+		// run the serialization before any compilation to see if it works on empty graph
+		auto serialized_empty_graph = query::external::serializeQueryGraph();
+		auto deserialized_empty_graph
+			= query::internal::QueryGraph::deserialize(serialized_empty_graph);
+		assertTrue(
+			deserialized_empty_graph.getAllNodes().empty(),
+			"Deserialized empty graph must be empty"
+		);
+
 		// ================================================================================
 		// Precompile all modules used across other driver tests with unique package names
 		// This is done to test the graph optimization as good as possible
@@ -237,7 +246,10 @@ private:
 				assertTrue(
 					parent_opt.size() > 1,
 					base::strConcat("Graph not-optimal: non-stable node has less than a two parents"
-				                    "Only stable nodes can be roots or have only one parent")
+				                    "Only stable nodes can be roots or have only one parent", 
+								" Node: ", node.q_id.getData().name, " Parents count: ", std::to_string(parent_opt.size()), 
+								" Childs count: ", std::to_string(opt_graph.getDirectDependencies(node).size()),
+							" Is stable: ", node.q_id.getData().usesStableHashing() ? "true" : "false")
 				);
 			}
 		}
@@ -300,6 +312,48 @@ private:
 				)
 			);
 		}
+
+		// ================================================================================
+		// CHECK 6: Re-running serialization/optimization must be idempotent
+		// ================================================================================
+		auto second_opt_graph = query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+		auto second_all_nodes = second_opt_graph.getAllNodes();
+
+		auto compare_graphs = [&](const query::internal::QueryGraph& lhs_graph,
+		                        const std::vector<query::internal::NodeID>& lhs_nodes,
+		                        const query::internal::QueryGraph& rhs_graph,
+		                        const char* missing_msg_prefix) {
+			for (const auto& node: lhs_nodes) {
+				assertTrue(
+					rhs_graph.nodeExists(node),
+					base::strConcat(missing_msg_prefix, node.q_id.getData().name)
+				);
+
+				auto deps_lhs = lhs_graph.getDirectDependencies(node);
+				auto deps_rhs = rhs_graph.getDirectDependencies(node);
+				assertTrue(
+					are_node_vectors_same(deps_lhs, deps_rhs),
+					base::strConcat(
+						"Graph inconsistency: dependency mismatch for node '",
+						node.q_id.getData().name,
+						"' between optimization runs"
+					)
+				);
+			}
+		};
+
+		compare_graphs(
+			opt_graph,
+			all_nodes,
+			second_opt_graph,
+			"Graph inconsistency: node missing in second graph: "
+		);
+		compare_graphs(
+			second_opt_graph,
+			second_all_nodes,
+			opt_graph,
+			"Graph inconsistency: node missing in first graph: "
+		);
 	}
 
 	void objFileGenerated() {
