@@ -100,6 +100,12 @@ namespace compiler::repl {
 			return m_should_exit;
 		}
 
+		/**
+		 * @brief Clear the REPL session history.
+		 *
+		 * Removes all previously entered statements from the session history
+		 * and resets the line counter.
+		 */
 		void clearHistory();
 
 	private:
