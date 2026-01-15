@@ -530,7 +530,7 @@ namespace query::internal {
 							childs.push_back(grandchild);
 							number_of_childs[current] += 1;
 
-							// Since the granchild is a child now  (and it wasn't) add it to processing queue
+							// Since the grandchild is a new child now add it to processing queue
 							childs_to_process.push(grandchild);
 						}
 					}
