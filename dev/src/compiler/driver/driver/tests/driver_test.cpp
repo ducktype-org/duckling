@@ -204,7 +204,7 @@ private:
 		// the graph
 		// ================================================================================
 		for (const auto& node: all_nodes) {
-			const auto& deps = opt_graph.getDirectDependencies(node);
+			auto& deps = opt_graph.getDirectDependencies(node);
 			for (const auto& child: deps) {
 				assertTrue(
 					opt_graph.nodeExists(child),
@@ -214,6 +214,14 @@ private:
 					)
 				);
 			}
+			// We also check thath deps do not contain duplicates as they can be accidentally added during optimization
+			auto deps_sorted = deps;
+			std::ranges::sort(deps_sorted, [](auto& l, auto& r) { return l < r; });
+			auto dup_it = std::ranges::adjacent_find(deps_sorted);
+			assertTrue(
+				dup_it == deps_sorted.end(),
+				base::strConcat("Graph inconsistency: node has duplicate dependencies listed")
+			);
 		}
 
 		// ================================================================================
