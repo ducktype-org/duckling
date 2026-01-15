@@ -561,8 +561,9 @@ namespace query::internal {
 						}
 						// This grandchild might also have only 1 parent now, so we need to process
 						// it too Even if we processed it before because its parent set changed This
-						// will still process granchild n times where n the number of paths from current
-						// to grandchild So this is still linear to the number of edges in the graph
+						// will still process granchild n times where n the number of paths from
+						// current to grandchild So this is still linear to the number of edges in
+						// the graph
 						childs_to_process.push(grandchild);
 					}
 				} else {
@@ -582,7 +583,7 @@ namespace query::internal {
 				CORE_ASSERT(
 					removed[only_child] == false,
 					"Only child cannot be removed at this stage. Cos it must have more then 1 "
-				    "parent or be stable"
+					"parent or be stable"
 				);
 
 				// Mark current as removed

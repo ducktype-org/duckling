@@ -18,10 +18,7 @@ namespace compiler::helios {
 	 * @TODO: #1362 hout 2.0: make it return ref, not box
 	 */
 	DECLARE_QUERY(
-		QueryHoutOfExpr,
-		pst::GenericPSTQueryKey<pst::ExprElement>,
-		ExprConstructionResult,
-		({ .used_hashes = query::UsedHashes::StableHash })
+		QueryHoutOfExpr, pst::GenericPSTQueryKey<pst::ExprElement>, ExprConstructionResult, ({})
 	)
 
 	/**

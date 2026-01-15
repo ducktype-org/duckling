@@ -111,6 +111,13 @@ private:
 			return first == second;
 		};
 
+		auto count_edges = [](const query::internal::QueryGraph& graph) -> std::size_t {
+			std::size_t total = 0;
+			for (const auto& node: graph.getAllNodes())
+				total += graph.getDirectDependencies(node).size();
+			return total;
+		};
+
 		// ================================================================================
 		// Sanity check: this test must run before any other tests
 		// ================================================================================
@@ -196,9 +203,18 @@ private:
 			);
 		}
 
+		const auto nodes_before_opt = graph_before_opt->getAllNodes().size();
+		const auto edges_before_opt = count_edges(*graph_before_opt);
+		std::cout << "[DriverTest] Graph before optimization: nodes=" << nodes_before_opt
+				  << " edges=" << edges_before_opt << '\n';
+
 		// Call serializeQueryGraph and then deserialize to get opt_graph
 		auto opt_graph
 			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+		const auto nodes_after_opt = opt_graph.getAllNodes().size();
+		const auto edges_after_opt = count_edges(opt_graph);
+		std::cout << "[DriverTest] Graph after optimization: nodes=" << nodes_after_opt
+				  << " edges=" << edges_after_opt << '\n';
 
 		// Build parent map for the optimized graph
 		auto parents = build_parent_map(opt_graph);

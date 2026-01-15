@@ -28,7 +28,7 @@ namespace pst {
 		AccessLocked<T> element;
 
 		[[nodiscard]]
-		base::Bit256 queryStablePerfectHash() const {
+		base::Bit256 queryUnstablePerfectHash() const {
 			return element.illegalAccess().value()->getHash();
 		}
 	};
