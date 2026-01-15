@@ -324,7 +324,7 @@ namespace compiler::helios {
 		default:
 			break;
 		}
-		auto stmt_ptr = &*stmt;
+		[[maybe_unused]] auto stmt_ptr = &*stmt;
 		CORE_PANIC(base::strConcat(
 			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
 		));
