@@ -1,5 +1,4 @@
 #include "symbol_data.hpp"
-#include "typesystem/higher/mutability.hpp"
 
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -67,7 +66,8 @@ namespace compiler::helios {
 					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
-					auto param_symbol_type = function_type.getParameterTypes().at(param.parameter_index);
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
 					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
 				}
 				variant_case(Variable, var) { return var.type; }

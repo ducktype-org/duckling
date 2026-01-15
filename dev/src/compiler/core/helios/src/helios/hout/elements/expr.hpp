@@ -548,7 +548,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a dereference node inserted when a value of type ref T is coerced to T or
-	 * when it's explicitly stated by the user using the dereference operator. It takes an
+	 * when it's explicitly stated by the user using the dereference operator.
 	 */
 	struct DerefExpr final: public Expr {
 		Box<Expr> inner;
