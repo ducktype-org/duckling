@@ -238,7 +238,6 @@ namespace compiler::mir {
 					os << "." << name(field.field_id).strView();
 				}
 				variant_case_novalue(DerefProjection) { os << ".*"; }
-				variant_case_novalue(IndexProjection) { os << "[]"; }
 			}
 		}
 		if (detailed and not projection_chain.empty()) {

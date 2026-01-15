@@ -105,9 +105,7 @@ namespace compiler::lir {
 		CORE_UNREACHABLE();
 	}
 
-	LIRPlace::LIRPlace(
-		query::Context& ctx, const BaseVariant& base, std::vector<Projection> projection_chain
-	):
+	LIRPlace::LIRPlace(const BaseVariant& base, std::vector<Projection> projection_chain):
 		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
@@ -299,10 +297,10 @@ namespace compiler::lir {
 			[[nodiscard]]
 			LIRPlace getPlace(const mir::MIRPlace& mir_place) const {
 				std::vector<Projection> lir_projection_chain;
-				lir_projection_chain.reserve(mir_place.access_chain.size());
+				lir_projection_chain.reserve(mir_place.projection_chain.size());
 
 				// Map all MIR projections to LIR projections.
-				for (const auto& proj: mir_place.access_chain) {
+				for (const auto& proj: mir_place.projection_chain) {
 					variant_match(proj.storage) {
 						variant_case(mir::FieldProjection, field) {
 							lir_projection_chain.push_back(Projection::field(field.field_id));
@@ -310,18 +308,15 @@ namespace compiler::lir {
 						variant_case_novalue(mir::DerefProjection) {
 							lir_projection_chain.push_back(Projection::deref());
 						}
-						variant_case_novalue(mir::IndexProjection) {
-							lir_projection_chain.push_back(Projection::index());
-						}
 					}
 				}
 
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { ctx, getLocal(local), std::move(lir_projection_chain) };
+						return { getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { ctx, getGlobal(global), std::move(lir_projection_chain) };
+						return { getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();

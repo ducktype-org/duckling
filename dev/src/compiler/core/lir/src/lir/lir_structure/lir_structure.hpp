@@ -310,7 +310,7 @@ namespace compiler::lir {
 		std::vector<Projection> projection_chain;
 
 
-		LIRPlace(query::Context& ctx, const BaseVariant& base, std::vector<Projection> access_chain);
+		LIRPlace(const BaseVariant& base, std::vector<Projection> access_chain);
 
 		[[nodiscard]]
 		bool isLocal() const {
