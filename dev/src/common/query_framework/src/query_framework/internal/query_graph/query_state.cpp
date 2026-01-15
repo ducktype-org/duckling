@@ -8,6 +8,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
@@ -19,8 +20,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
-#include <logger/logger.hpp>
 
 namespace query::internal {
 	void QueryState::setEntry(NodeID node, NodeID from) {
@@ -313,9 +312,9 @@ namespace query::internal {
 		// Map to keep track of touched nodes during optimization
 		std::vector<bool> touched(node_count, false);
 
-		const bool log_incremental =
-			::logger::enable_dev_logs
-			&& ::logger::isCategoryEnabled(::logger::DevLogCategories::Incremental);
+		const bool log_incremental
+			= ::logger::enable_dev_logs
+		   && ::logger::isCategoryEnabled(::logger::DevLogCategories::Incremental);
 
 		const auto log_original_graph = [&](std::string_view phase) {
 			if (!log_incremental) return;
@@ -665,18 +664,18 @@ namespace query::internal {
 		// Here we need create a compacted version of the graph without removed nodes
 		// And return it
 		// Build a compact mapping for remaining nodes
-		constexpr usize invalid_idx = std::numeric_limits<usize>::max();
-		std::vector<usize>          old_to_new(node_count, invalid_idx);
-		std::vector<usize>          old_to_new_reverse;
-		usize                       kept_nodes = 0;
-		for (usize node_idx = 0; node_idx < node_count; ++node_idx){
+		constexpr usize    invalid_idx = std::numeric_limits<usize>::max();
+		std::vector<usize> old_to_new(node_count, invalid_idx);
+		std::vector<usize> old_to_new_reverse;
+		usize              kept_nodes = 0;
+		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
 			old_to_new_reverse.push_back(node_idx);
 			old_to_new[node_idx] = kept_nodes++;
 		}
 
-		std::vector<NodeID>                new_idx_to_node;
-		std::vector<std::vector<usize>>    new_opt_graph(kept_nodes);
+		std::vector<NodeID>             new_idx_to_node;
+		std::vector<std::vector<usize>> new_opt_graph(kept_nodes);
 		for (usize mapped_idx = 0; mapped_idx < kept_nodes; ++mapped_idx) {
 			const usize old_idx = old_to_new_reverse[mapped_idx];
 			new_idx_to_node.push_back(idx_to_node[old_idx]);
@@ -684,11 +683,10 @@ namespace query::internal {
 
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
-			const auto&         deps = opt_graph[node_idx];
+			const auto&        deps = opt_graph[node_idx];
 			std::vector<usize> new_dep_vec;
 			new_dep_vec.reserve(deps.size());
-			for (const auto& dep_idx: deps)
-				new_dep_vec.push_back(old_to_new[dep_idx]);
+			for (const auto& dep_idx: deps) new_dep_vec.push_back(old_to_new[dep_idx]);
 			new_opt_graph[old_to_new[node_idx]] = std::move(new_dep_vec);
 		}
 

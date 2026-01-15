@@ -33,7 +33,7 @@ namespace logger {
 		DVM,         ///< Logs related to the DVM component.
 		DVMDetails,  ///< Logs related to detailed logs of the DVM component.
 
-		Incremental ///< Logs related to incremental compilation.
+		Incremental  ///< Logs related to incremental compilation.
 	};
 
 	/**

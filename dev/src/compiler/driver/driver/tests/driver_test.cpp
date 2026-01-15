@@ -527,7 +527,8 @@ private:
 		});
 
 		// Serialize current graph
-		auto original = query::internal::ContextAccess::getState()->getGraphMutable()->serialize();
+		auto original
+			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
 
 		// Call the driver saveArtifacts implementation
 		driver::exit();
@@ -547,11 +548,8 @@ private:
 		std::span<const byte> span(view.getBegin(), view.size());
 		auto                  reloaded = query::internal::QueryGraph::deserialize(span);
 
-		// Get pointer to the in-memory graph we serialized earlier
-		auto graph_ptr = query::internal::ContextAccess::getState()->getGraphMutable();
-
-		ASSERT_TRUE(graph_ptr->compare(reloaded));
-		ASSERT_TRUE(reloaded.compare(*graph_ptr));
+		ASSERT_TRUE(original.compare(reloaded));
+		ASSERT_TRUE(reloaded.compare(original));
 	}
 
 	void sideInputsTest() {

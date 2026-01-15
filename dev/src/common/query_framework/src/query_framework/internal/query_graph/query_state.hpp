@@ -186,6 +186,7 @@ namespace query::internal {
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @return pair of compacted NodeIDs and adjacency (usize indices) used for serialization.
 		 */
-		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph) const;
+		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
+		) const;
 	};
 }

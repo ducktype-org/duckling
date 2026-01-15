@@ -194,6 +194,54 @@ namespace query::internal {
 		return buffer;
 	}
 
+	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
+		using HVType  = decltype(NodeID::hash.val.data);
+		using QIDType = decltype(QueryID::val);
+
+		constexpr usize node_id_size
+			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
+
+		auto& nodes     = reduced_graph.first;
+		auto& adjacency = reduced_graph.second;
+		CORE_ASSERT(nodes.size() == adjacency.size(), "Reduced graph data is inconsistent");
+
+		const usize node_count  = nodes.size();
+		usize       total_edges = 0;
+		for (const auto& deps: adjacency) total_edges += deps.size();
+
+		std::vector<byte> buffer;
+		usize             total_size = sizeof(usize);  // node_count
+		total_size += node_count * node_id_size;
+		total_size += node_count * sizeof(usize);
+		total_size += total_edges * sizeof(usize);
+		buffer.reserve(total_size);
+
+		auto write = [&](const auto& value) -> void {
+			using T               = std::decay_t<decltype(value)>;
+			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
+			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
+		};
+
+		auto write_node_id = [&](const NodeID& node) -> void {
+			write(node.q_id.val);
+			write(node.hash.val.data);
+		};
+
+		write(node_count);
+		for (const auto& node: nodes) write_node_id(node);
+
+		for (usize idx = 0; idx < node_count; ++idx) {
+			const auto& deps = adjacency.at(idx);
+			write(deps.size());
+			for (usize dep_idx: deps) {
+				CORE_ASSERT(dep_idx < node_count, "Dependency index out of range in reduced graph");
+				write(dep_idx);
+			}
+		}
+
+		return buffer;
+	}
+
 	QueryGraph QueryGraph::deserialize(
 		std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper
 	) {

@@ -123,7 +123,7 @@ namespace query::internal {
 		/** @brief Check if a node has any dependencies. */
 		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
 
-		static std::vector<byte> serializeReducedGraph(ReducedGraphData&& reduced_graph);
+		static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
 
 		~QueryGraph() = default;
 	};
