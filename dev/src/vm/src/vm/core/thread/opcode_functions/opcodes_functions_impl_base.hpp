@@ -383,10 +383,11 @@ namespace vm {
 		{
 			struct JitData {
 				OpFun* func_ptr;
-				uint    counter;
+				uint   counter;
 			};
 
-			static std::vector<JitData> jit_data;
+			static std::vector<JitData> jit_data;  // TODO: move this to thread? couldn't as thead
+			                                       // does not know the execution style
 
 			auto func_id = instr->arg0;
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id);
@@ -394,8 +395,9 @@ namespace vm {
 			auto& my_data = jit_data[func_id];
 
 			if (my_data.counter == 0) {
-				const low::LowFuncData& func_data = thread.executing_program->getFunctions()[func_id];
-				my_data.func_ptr             = compile_jit(func_data);
+				const low::LowFuncData& func_data
+					= thread.executing_program->getFunctions()[func_id];
+				my_data.func_ptr = compile_jit(func_data);
 			}
 
 			if (my_data.func_ptr) {
