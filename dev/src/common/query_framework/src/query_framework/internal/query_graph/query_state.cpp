@@ -539,14 +539,14 @@ namespace query::internal {
 				}
 			}
 
-			// Special case: If we have only one child, and we are unstable, the child must be stable
+			// If we have only one child and current is unstable we can remove current too
 			if (!is_stable_node[current] && number_of_childs[current] == 1) {
 				usize only_child = childs[childs.size() - 1]; // The only child left is the last one
 
-				// aseert that only child is stable
+				// aseert that only child is not removed
 				CORE_ASSERT(
-					is_stable_node[only_child],
-					"Unstable node has only one child that is also unstable after removal of unstable childs with one parent"
+					removed[only_child] == false,
+					"Only child cannot be removed at this stage. Cos it must have more then 1 parent or be stable"
 				);
 
 				// Mark current as removed
