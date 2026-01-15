@@ -1,19 +1,19 @@
 #include "query_state.hpp"
 
+#include <time_stats/time_stats.hpp>
 
-#include <base/str/str_utils.hpp>
-#include <base/types/ints.hpp>
-#include <algorithm>
 #include <base/collections/maps.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include <time_stats/time_stats.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <queue>
 #include <unordered_set>
@@ -276,12 +276,12 @@ namespace query::internal {
 		// measure time spent in graph optimization:
 		time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
-		// First create Map NodeID -> usize to optimise feature algorithm than can operate on usize IDs and work on
-		// plain vectors instead of hash maps
+		// First create Map NodeID -> usize to optimise feature algorithm than can operate on usize
+		// IDs and work on plain vectors instead of hash maps
 		base::HashMap<NodeID, usize> node_to_idx;
-		std::vector<NodeID> idx_to_node;
+		std::vector<NodeID>          idx_to_node;
 
-		for (const auto& [node, _] : query_graph.node_deps) {
+		for (const auto& [node, _]: query_graph.node_deps) {
 			node_to_idx.emplace(node, idx_to_node.size());
 			idx_to_node.push_back(node);
 		}
@@ -310,7 +310,7 @@ namespace query::internal {
 		std::vector<bool> touched(node_count, false);
 
 		// build the parent map and opt graph
-		for (const auto& [node, deps] : query_graph.node_deps) {
+		for (const auto& [node, deps]: query_graph.node_deps) {
 			const usize node_idx = node_to_idx.at(node);
 
 			// Record if this node is stable
@@ -326,7 +326,7 @@ namespace query::internal {
 
 			// Store deduplicated children
 			auto& node_children = opt_graph[node_idx];
-			node_children = std::move(child_indices);
+			node_children       = std::move(child_indices);
 
 			// Set the number of childs after deduplication
 			number_of_childs[node_idx] = node_children.size();
@@ -362,7 +362,7 @@ namespace query::internal {
 			CORE_ASSERT(removed[current], "Current node should be marked as removed");
 
 			// Process childs - decrease their number of parents
-			for (auto child : opt_graph[current]) {
+			for (auto child: opt_graph[current]) {
 				// Decrease number of parents for the child
 				auto& child_parents = number_of_parents[child];
 				child_parents -= 1;
@@ -382,7 +382,6 @@ namespace query::internal {
 
 		// Remove removed_nodes from the graph
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
-
 			// If node is removed remove it from the graph
 			if (removed[node_idx]) {
 				opt_graph[node_idx].clear();
@@ -392,17 +391,11 @@ namespace query::internal {
 
 			// IF node is not removed but touched, we need to filter its parents
 			if (touched[node_idx]) {
-				auto& parents = parent_map[node_idx];
-				auto parents_removed_range = std::ranges::remove_if(
-					parents,
-					[&](usize parent_idx) {
-						return removed[parent_idx];
-					}
-				);
-				parents.erase(
-					parents_removed_range.begin(),
-					parents_removed_range.end()
-				);
+				auto& parents              = parent_map[node_idx];
+				auto parents_removed_range = std::ranges::remove_if(parents, [&](usize parent_idx) {
+					return removed[parent_idx];
+				});
+				parents.erase(parents_removed_range.begin(), parents_removed_range.end());
 
 				// Clear the touched flag
 				touched[node_idx] = false;
@@ -432,7 +425,7 @@ namespace query::internal {
 			CORE_ASSERT(removed[current], "Current node should be marked as removed");
 
 			// Process parents - decrease their number of childs
-			for (auto parent : parent_map[current]) {
+			for (auto parent: parent_map[current]) {
 				// Decrease number of childs for the parent
 				auto& parent_childs = number_of_childs[parent];
 				parent_childs -= 1;
@@ -457,17 +450,11 @@ namespace query::internal {
 
 			// If node is not removed but touched, we need to filter its childs
 			if (touched[node_idx]) {
-				auto& childs = opt_graph[node_idx];
-				auto childs_removed_range = std::ranges::remove_if(
-					childs,
-					[&](usize child_idx) {
-						return removed[child_idx];
-					}
-				);
-				childs.erase(
-					childs_removed_range.begin(),
-					childs_removed_range.end()
-				);
+				auto& childs               = opt_graph[node_idx];
+				auto  childs_removed_range = std::ranges::remove_if(childs, [&](usize child_idx) {
+                    return removed[child_idx];
+                });
+				childs.erase(childs_removed_range.begin(), childs_removed_range.end());
 
 				// Clear the touched flag
 				touched[node_idx] = false;
@@ -482,7 +469,7 @@ namespace query::internal {
 
 		// STEP 3: Remove unstable nodes that have only 1 parent
 		std::vector<std::unordered_set<usize>> actual_parent(node_count);
-		std::queue<usize> to_process;
+		std::queue<usize>                      to_process;
 
 		std::vector<bool> processed(node_count, false);
 
@@ -495,38 +482,44 @@ namespace query::internal {
 				// ASSERT that parent is not removed
 				CORE_ASSERT(!removed[parent], "Parent of non-removed node cannot be removed");
 
-				//Asert that insertion was successful
+				// Asert that insertion was successful
 				CORE_ASSERT(inserted, "Parent cannot be inserted twice");
 			}
 			// We start processing the graph from all roots
-			if (actual_parent[node_idx].empty()) {
-				to_process.push(node_idx);
-			}
+			if (actual_parent[node_idx].empty()) to_process.push(node_idx);
 		}
 
 		// Invariant: All parents of are current node are processed correctly
 		// And current node have only correct living parents in actual_parent map
 		// Also current node has either more than 1 parent or is stable
 		// The childs of current node aren't processed yet
-		// We remove unstable childs that have only 1 parent (current), and connect children of removed children to current
-		// This do not increrase the number of edges in the graph, but removes unnecessary nodes
-		while(!to_process.empty()){
+		// We remove unstable childs that have only 1 parent (current), and connect children of
+		// removed children to current This do not increrase the number of edges in the graph, but
+		// removes unnecessary nodes
+		while (!to_process.empty()) {
 			usize current = to_process.front();
 			to_process.pop();
 
 			// The node can be already removed via adoption after being scheduled
-			if(removed[current]) continue;
+			if (removed[current]) continue;
 			if (processed[current]) continue;
 
 			processed[current] = true;
 
 			// Asert than number of parents is more than 1 or node is stable
-			CORE_ASSERT( is_stable_node[current] || actual_parent[current].size() > 1, base::strConcat(
-				"Node in processing queue must be stable or have more than 1 parent: ", std::to_string(current),
-				" Number of parents: ", std::to_string(actual_parent[current].size()),
-				" Is stable: ", is_stable_node[current] ? "true" : "false",
-				" Number of childs: ", std::to_string(number_of_childs[current])
-			));
+			CORE_ASSERT(
+				is_stable_node[current] || actual_parent[current].size() > 1,
+				base::strConcat(
+					"Node in processing queue must be stable or have more than 1 parent: ",
+					std::to_string(current),
+					" Number of parents: ",
+					std::to_string(actual_parent[current].size()),
+					" Is stable: ",
+					is_stable_node[current] ? "true" : "false",
+					" Number of childs: ",
+					std::to_string(number_of_childs[current])
+				)
+			);
 
 			auto& childs = opt_graph[current];
 
@@ -534,17 +527,16 @@ namespace query::internal {
 			// They can be safety removed
 			std::queue<usize> childs_to_process;
 
-			for (auto child : childs)
-				childs_to_process.push(child);
+			for (auto child: childs) childs_to_process.push(child);
 
-			while(!childs_to_process.empty()){
+			while (!childs_to_process.empty()) {
 				usize child = childs_to_process.front();
 				childs_to_process.pop();
 				// Assert that child is not current
 				CORE_ASSERT(child != current, "Cycle detected during optimization");
 
 				// If child is removed skip it
-				if (removed[child]) { continue; }
+				if (removed[child]) continue;
 
 				// Check the number of parents
 				const auto parent_count = actual_parent[child].size();
@@ -558,7 +550,7 @@ namespace query::internal {
 					number_of_childs[current] -= 1;
 
 					// For each grandchild: add edge from current to grandchild
-					for (auto grandchild : opt_graph[child]) {
+					for (auto grandchild: opt_graph[child]) {
 						// Add edge from current to grandchild
 						auto& grandchild_parents = actual_parent[grandchild];
 						grandchild_parents.erase(child);
@@ -567,10 +559,10 @@ namespace query::internal {
 							childs.push_back(grandchild);
 							number_of_childs[current] += 1;
 						}
-						// This grandchild might also have only 1 parent now, so we need to process it too
-						// Even if we processed it before because its parent set changed
-						// This will still process granchild n times where n the number of paths from current to grandchild
-						// So this is still linear to the number of edges in the graph
+						// This grandchild might also have only 1 parent now, so we need to process
+						// it too Even if we processed it before because its parent set changed This
+						// will still process granchild n times where n the number of paths from current
+						// to grandchild So this is still linear to the number of edges in the graph
 						childs_to_process.push(grandchild);
 					}
 				} else {
@@ -583,12 +575,14 @@ namespace query::internal {
 			// And conect its only child to all its parents
 			// Since this will not increase the number of edges in the graph
 			if (!is_stable_node[current] && number_of_childs[current] == 1) {
-				usize only_child = childs[childs.size() - 1]; // The only child left is the last one
+				usize only_child
+					= childs[childs.size() - 1];  // The only child left is the last one
 
 				// Assert that only child is not removed
 				CORE_ASSERT(
 					removed[only_child] == false,
-					"Only child cannot be removed at this stage. Cos it must have more then 1 parent or be stable"
+					"Only child cannot be removed at this stage. Cos it must have more then 1 "
+				    "parent or be stable"
 				);
 
 				// Mark current as removed
@@ -601,7 +595,7 @@ namespace query::internal {
 					// Change the number of childs of parent
 					number_of_childs[parent] -= 1;
 					auto inserted = only_child_parents.insert(parent).second;
-					if (inserted){
+					if (inserted) {
 						opt_graph[parent].push_back(only_child);
 						number_of_childs[parent] += 1;
 					}
@@ -618,13 +612,10 @@ namespace query::internal {
 			}
 
 			// Remove removed childs from the node children list
-			auto& childs = opt_graph[node_idx];
-			auto childs_removed_range = std::ranges::remove_if(
-				childs,
-				[&](usize child_idx) {
-					return removed[child_idx];
-				}
-			);
+			auto& childs               = opt_graph[node_idx];
+			auto  childs_removed_range = std::ranges::remove_if(childs, [&](usize child_idx) {
+                return removed[child_idx];
+            });
 			childs.erase(childs_removed_range.begin(), childs_removed_range.end());
 		}
 
@@ -632,11 +623,11 @@ namespace query::internal {
 		base::HashMap<NodeID, std::vector<NodeID>> new_query_graph_deps;
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
-			const auto& deps = opt_graph[node_idx];
-			NodeID node      = idx_to_node[node_idx];
+			const auto&         deps = opt_graph[node_idx];
+			NodeID              node = idx_to_node[node_idx];
 			std::vector<NodeID> dep_vec;
 			dep_vec.reserve(deps.size());
-			for (const auto& dep_idx : deps) {
+			for (const auto& dep_idx: deps) {
 				NodeID dep_node = idx_to_node[dep_idx];
 				dep_vec.push_back(dep_node);
 			}

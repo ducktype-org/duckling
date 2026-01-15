@@ -104,10 +104,8 @@ private:
 		};
 
 		// Compare if two vectors have the same NodeIDs inside
-		auto are_node_vectors_same = [](
-										 std::vector<query::internal::NodeID>& first,
-										 std::vector<query::internal::NodeID>& second
-									 ) -> bool {
+		auto are_node_vectors_same = [](std::vector<query::internal::NodeID>& first,
+		                                std::vector<query::internal::NodeID>& second) -> bool {
 			std::ranges::sort(first, [](auto& l, auto& r) { return l < r; });
 			std::ranges::sort(second, [](auto& l, auto& r) { return l < r; });
 			return first == second;
@@ -129,8 +127,7 @@ private:
 		auto deserialized_empty_graph
 			= query::internal::QueryGraph::deserialize(serialized_empty_graph);
 		assertTrue(
-			deserialized_empty_graph.getAllNodes().empty(),
-			"Deserialized empty graph must be empty"
+			deserialized_empty_graph.getAllNodes().empty(), "Deserialized empty graph must be empty"
 		);
 
 		// ================================================================================
@@ -200,7 +197,8 @@ private:
 		}
 
 		// Call serializeQueryGraph and then deserialize to get opt_graph
-		auto opt_graph = query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+		auto opt_graph
+			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
 
 		// Build parent map for the optimized graph
 		auto parents = build_parent_map(opt_graph);
@@ -223,7 +221,8 @@ private:
 					)
 				);
 			}
-			// We also check thath deps do not contain duplicates as they can be accidentally added during optimization
+			// We also check thath deps do not contain duplicates as they can be accidentally added
+			// during optimization
 			auto deps_sorted = deps;
 			std::ranges::sort(deps_sorted, [](auto& l, auto& r) { return l < r; });
 			auto dup_it = std::ranges::adjacent_find(deps_sorted);
@@ -245,11 +244,18 @@ private:
 			if (!node.q_id.getData().usesStableHashing()) {
 				assertTrue(
 					parent_opt.size() > 1,
-					base::strConcat("Graph not-optimal: non-stable node has less than a two parents"
-				                    "Only stable nodes can be roots or have only one parent", 
-								" Node: ", node.q_id.getData().name, " Parents count: ", std::to_string(parent_opt.size()), 
-								" Childs count: ", std::to_string(opt_graph.getDirectDependencies(node).size()),
-							" Is stable: ", node.q_id.getData().usesStableHashing() ? "true" : "false")
+					base::strConcat(
+						"Graph not-optimal: non-stable node has less than a two parents"
+						"Only stable nodes can be roots or have only one parent",
+						" Node: ",
+						node.q_id.getData().name,
+						" Parents count: ",
+						std::to_string(parent_opt.size()),
+						" Childs count: ",
+						std::to_string(opt_graph.getDirectDependencies(node).size()),
+						" Is stable: ",
+						node.q_id.getData().usesStableHashing() ? "true" : "false"
+					)
 				);
 			}
 		}
@@ -316,13 +322,14 @@ private:
 		// ================================================================================
 		// CHECK 6: Re-running serialization/optimization must be idempotent
 		// ================================================================================
-		auto second_opt_graph = query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+		auto second_opt_graph
+			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
 		auto second_all_nodes = second_opt_graph.getAllNodes();
 
-		auto compare_graphs = [&](const query::internal::QueryGraph& lhs_graph,
-		                        const std::vector<query::internal::NodeID>& lhs_nodes,
-		                        const query::internal::QueryGraph& rhs_graph,
-		                        const char* missing_msg_prefix) {
+		auto compare_graphs = [&](const query::internal::QueryGraph&          lhs_graph,
+		                          const std::vector<query::internal::NodeID>& lhs_nodes,
+		                          const query::internal::QueryGraph&          rhs_graph,
+		                          const char*                                 missing_msg_prefix) {
 			for (const auto& node: lhs_nodes) {
 				assertTrue(
 					rhs_graph.nodeExists(node),
