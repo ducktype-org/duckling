@@ -1,6 +1,7 @@
 #include "query_state.hpp"
 
 
+#include "base/str/str_utils.hpp"
 #include <base/types/ints.hpp>
 #include <algorithm>
 #include <base/collections/maps.hpp>
@@ -469,12 +470,38 @@ namespace query::internal {
 		// Initialize actual parents for every non-removed node
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
+
 			for (auto parent: parent_map[node_idx]) {
-				actual_parent[node_idx].insert(parent);
+				auto inserted = actual_parent[node_idx].insert(parent).second;
+				// ASSERT that parent is not removed
+				CORE_ASSERT(!removed[parent], "Parent of non-removed node cannot be removed");
+
+				//Asert that insertion was successful
+				CORE_ASSERT(inserted, "Parent cannot be inserted twice");
 			}
 			// We start processing the graph from all roots
 			if (actual_parent[node_idx].empty()) {
 				to_process.push(node_idx);
+			}
+
+			for (auto child: opt_graph[node_idx]) {
+				CORE_ASSERT(
+					!removed[child],
+					"Child node cannot be removed before optimization"
+				);
+			}
+		}
+
+		// Check consistency of actual_parent map
+		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+			if (removed[node_idx]) continue;
+
+			// Check if every child have current node as parent
+			for (auto child: opt_graph[node_idx]) {
+				CORE_ASSERT(
+					actual_parent[child].contains(node_idx),
+					"Actual parent map is inconsistent with the graph"
+				);
 			}
 		}
 
@@ -490,12 +517,16 @@ namespace query::internal {
 			usize current = to_process.front();
 			to_process.pop();
 
-			// This node should exist in the opt graph (not removed)
-			CORE_ASSERT(!removed[current], "Node is removed but still in processing queue");
-
-			// Assert that node is not processed yet - if so we have a cycle in the graph
-			CORE_ASSERT(!processed[current], "Cycle detected in optimization graph during living parents computation");
+			if (processed[current]) continue;
 			processed[current] = true;
+
+			// This node should exist in the opt graph (not removed)
+			CORE_ASSERT(!removed[current], base::strConcat(
+				"Node in processing queue cannot be removed node: ", std::to_string(current),
+				" Number of parents: ", std::to_string(actual_parent[current].size()),
+				" Is stable: ", is_stable_node[current] ? "true" : "false",
+				" Number of childs: ", std::to_string(number_of_childs[current])
+			));
 
 			auto& childs = opt_graph[current];
 
@@ -510,6 +541,9 @@ namespace query::internal {
 				usize child = childs_to_process.front();
 				childs_to_process.pop();
 
+				// Assert that child is not current
+				CORE_ASSERT(child != current, "Cycle detected during optimization");
+
 				// Check the number of parents
 				const auto parent_count = actual_parent[child].size();
 
@@ -517,7 +551,7 @@ namespace query::internal {
 				if (parent_count == 1 && !is_stable_node[child]) {
 					// Set the child as removed
 
-					// Asset that child is not already removed
+					// Assert that child is not already removed
 					CORE_ASSERT(!removed[child], "Child cannot be already removed at this stage");
 					removed[child] = true;
 					// change the number of childs of current
@@ -532,7 +566,6 @@ namespace query::internal {
 						if (inserted) {
 							childs.push_back(grandchild);
 							number_of_childs[current] += 1;
-
 							// Since the grandchild is a new child now add it to processing queue
 							childs_to_process.push(grandchild);
 						}
@@ -544,10 +577,12 @@ namespace query::internal {
 			}
 
 			// If we have only one child and current is unstable we can remove current too
+			// And conect its only child to all its parents
+			// Since this will not increase the number of edges in the graph
 			if (!is_stable_node[current] && number_of_childs[current] == 1) {
 				usize only_child = childs[childs.size() - 1]; // The only child left is the last one
 
-				// aseert that only child is not removed
+				// Assert that only child is not removed
 				CORE_ASSERT(
 					removed[only_child] == false,
 					"Only child cannot be removed at this stage. Cos it must have more then 1 parent or be stable"
