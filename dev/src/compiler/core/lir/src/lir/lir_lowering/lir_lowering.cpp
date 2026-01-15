@@ -126,11 +126,6 @@ namespace compiler::lir {
 							  = std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
 						  current_layout = pointer_layout.getPointee();
 					  }
-					  variant_case_novalue(IndexProjection) {
-						  const auto& array_layout
-							  = std::get<tsl::DynamicArrayTypeLayout>(current_layout->getVariant());
-						  current_layout = array_layout.getElementLayout();
-					  }
 				  }
 			  }
 			  return current_layout;

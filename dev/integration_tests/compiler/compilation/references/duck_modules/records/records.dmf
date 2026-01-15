@@ -1,0 +1,22 @@
+class Point { x: i64; y: i64; }
+class Wrapper { p: Point; }
+
+fun records1() -> () = {
+    var w = Wrapper(Point(1, 2));
+    let ref_w = refof w;
+
+    # Auto deref should get inserted.
+    builtin_output_i64(ref_w.p.x); # 1
+
+    ref_w.p.y = 42;
+    builtin_output_i64(w.p.y); # 42
+}
+
+
+
+fun main() -> i64 = {
+    records1();
+    # records2();
+
+    return 0;
+}

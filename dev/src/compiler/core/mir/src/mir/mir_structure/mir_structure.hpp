@@ -30,12 +30,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	Call,
 	VCall,
-	
-	AddressOf,
-	Deref, // TODOP: Needed?
 
 	/** Simple byte by byte assignment */
 	Assign,
+	AddressOf,
 
 	/**
 		@brief Placeholder.

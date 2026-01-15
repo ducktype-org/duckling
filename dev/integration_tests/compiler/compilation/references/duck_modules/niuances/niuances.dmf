@@ -1,0 +1,48 @@
+let glob: i64 = 100;
+var blob: i64 = 200;
+
+fun ret_ref(a: ref i64) -> ref i64 = {
+    a = 999;
+    # TODOP: We should decide wether this should be auto 
+    # derefed or not.
+    return a; 
+}
+
+fun mutability() -> () {
+    let imm1 = refof glob;
+    # imm1 = 2; # This won't work since let is immutable as it should.
+
+    var m1 = refof glob;
+    m1 = 2; # This will work although glob is immutable
+    var m2 = refof blob;
+    m2 = 2;
+}
+
+
+class RefPoint { x: ref i64; y: ref i64; }
+class RefWrapper { p: ref RefPoint; }
+
+fun records2() -> () = {
+    var x: i64 = 123;
+    var y: i64 = 456;
+
+    # TODOP: Class constructor will insert assigns 
+    # which will cause the references to get auto derefed.
+    var point = RefPoint(refof x, refof y);
+    var ref_point = refof point;
+    
+    builtin_output_i64(ref_point.x);
+    builtin_output_i64(ref_point.y);
+    
+    var wrapper = RefWrapper(refof point);
+
+}
+
+fun main() -> i64 = {
+    let a: i64 = ret_ref(refof blob);
+    builtin_output_i64(blob); # 999
+    
+    records2();
+
+    return 0;
+}

@@ -8,4 +8,17 @@ Tests:
         Output:
           String: "42\n11\n"
         ExitCode: 0
-# TODOP
+  not_so_simple_refs:
+    Cases: 
+      llvm:
+        backend: llvm
+        Output:
+          String: "10\n20\n20\n20\n345\n345\n456\n123\n"
+        ExitCode: 0
+  global_refs:
+    Cases: 
+      llvm:
+        backend: llvm
+        Output:
+          String: "999\n999\n"
+        ExitCode: 0

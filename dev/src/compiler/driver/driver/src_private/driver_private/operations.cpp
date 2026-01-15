@@ -13,6 +13,8 @@
 #include <query_framework/query_cache_macros.hpp>
 #include <query_framework/query_impl.hpp>
 
+#include <iostream>
+
 namespace compiler::driver {
 
 
@@ -37,7 +39,9 @@ namespace compiler::driver {
 			for (const auto& hout_function: hout_unit.functions) {
 				CRef mir_function
 					= &ctx.query<mir::LowerToMIRFunction>({ hout_function })->valueOrThrow();
+				mir_function->debugPrint(std::cout);
 				auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
+				lir_function->debugPrint(ctx, std::cout);
 				functions.push_back(lir_function);
 			}
 

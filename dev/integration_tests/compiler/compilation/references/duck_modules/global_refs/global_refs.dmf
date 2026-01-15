@@ -1,57 +1,17 @@
-let glob: i64 = 100;
+var glob: i64 = 100;
 var blob: i64 = 200;
 
-fun ret_ref(a: ref i64) -> ref i64 = {
-#    a = 999;
-   return a;
+fun foo(a: ref i64) -> () = {
+    a = 999;
+    builtin_output_i64(blob); # 999
 }
-
-# fun ret_ref(a: ref i64) -> () = {
-#    a = 999;
-# #    return a;
-# }
-
-# fun foo() -> () = {
-#     let r_glob = refof glob;
-#     builtin_output_i64(r_glob);
-#     # r_glob = 2;
-#     builtin_output_i64(r_glob);
-
-#     var r_blob = refof blob;
-#     builtin_output_i64(r_blob);
-#     r_blob = 4;
-#     builtin_output_i64(r_blob);
-    
-
-#     # TODOP: Figure this out.
-#     let imm1 = refof glob;
-#     # imm1 = 2;
-#     let imm2 = refof blob;
-#     # imm2 = 2;
-
-#     var m1 = refof glob;
-#     m1 = 2;
-#     var m2 = refof blob;
-#     m1 = 2;
-# }
-
-
-
 
 
 fun main() -> i64 = {
-    # foo();
-    
-    # builtin_output_i64(11111111111111);
-    # ret_ref(refof blob);
-    let a: i64 = ret_ref(refof blob);
-    # builtin_output_i64(blob); # 999
-    # builtin_output_i64(a);
-
-    # let b: i64 = ret_ref(refof blob);
-    builtin_output_i64(blob);
-
-
+    var r_blob = refof blob;
+    foo(refof blob);
+    # foo(r_blob); # TODOP: Broken
+    builtin_output_i64(r_blob); # 999
 
     return 0;
 }

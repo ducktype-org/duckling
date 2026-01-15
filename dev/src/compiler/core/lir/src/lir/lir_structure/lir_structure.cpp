@@ -106,7 +106,6 @@ namespace compiler::lir {
 						loc_output << "." << name(field.field_id).strView();
 					}
 					variant_case_novalue(DerefProjection) { loc_output << ".*"; }
-					variant_case_novalue(IndexProjection) { loc_output << "[]"; }
 				}
 			}
 		}

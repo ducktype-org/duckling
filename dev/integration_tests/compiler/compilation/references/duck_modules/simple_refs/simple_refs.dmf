@@ -16,7 +16,7 @@ fun test_pass_through_reference() -> i64 = {
 }
 
 fun main() -> i64 = {
-    builtin_output_i64(test_simple_ref()); # 42
-    builtin_output_i64(test_pass_through_reference()); # 11
+    builtin_output_i64(test_simple_ref());              # 42
+    builtin_output_i64(test_pass_through_reference());  # 11
     return 0;
 }

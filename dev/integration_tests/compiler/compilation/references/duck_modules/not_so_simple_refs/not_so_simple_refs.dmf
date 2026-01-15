@@ -1,35 +1,19 @@
-class Point { x: i64; y: i64; }
-class Wrapper { p: Point; }
-
 fun simple_auto_deref() -> () = {
     var x = 10i64;
     let r = refof x;
+    builtin_output_i64(x); # 10
 
-    builtin_output_i64(x);
-
-    x = 20;
     # Auto deref should get inserted.
+    x = 20;
     var y: i64 = r;
     
-    builtin_output_i64(x);
-    builtin_output_i64(y);
-    
+    builtin_output_i64(x); # 20
+    builtin_output_i64(y); # 20
     # Auto deref should get inserted.
-    builtin_output_i64(r);
-
+    builtin_output_i64(r); # 20
 }
 
-fun not_so_simple_auto_deref() -> () = {
-    var w = Wrapper(Point(1, 2));
-    let ref_w = refof w;
-
-    # Auto deref should get inserted.
-    builtin_output_i64(ref_w.p.x); # 1
-
-    ref_w.p.y = 42;
-    builtin_output_i64(w.p.y); # 42
-}
-
+# TODOP: Figure out
 fun swap(a: ref i64, b: ref i64) -> () = {
     let tmp = a;
     a = b;
@@ -37,7 +21,6 @@ fun swap(a: ref i64, b: ref i64) -> () = {
 }
 
 fun easy_swap(a: ref i64, b: ref i64) -> () = {
-    # TODOP: It won't work without the explicit type.
     let tmp: i64 = a;
     let tmp2: i64 = b;
     a = tmp2;
@@ -64,38 +47,22 @@ fun assign_to_ref() -> () = {
     # It doesn't rebind the references.
     ref_a = ref_b;
     builtin_output_i64(a);
-    builtin_output_i64(ref_a);
-
+    
     ref_b = 999; # This should not affect a
     builtin_output_i64(ref_a);
 }
 
-# TODOP: Figure this out.
-fun dangling_ref() -> ref i64 = {
-    var a: i64 = 123;
-    return refof a;
-}
-
-
-
 fun main() -> i64 = {
     simple_auto_deref();
-    not_so_simple_auto_deref();
+    assign_to_ref();
 
     var a: i64 = 123; 
     var b: i64 = 456; 
-
-    # TODOP: Figure this out
-    # swap(refof a, refof b);
     easy_swap(refof a, refof b);
     
-    builtin_output_i64(a);
-    builtin_output_i64(b);
+    builtin_output_i64(a); # 456
+    builtin_output_i64(b); # 123
     
-    assign_to_ref();
-    
-    let x = dangling_ref();
-    builtin_output_i64(x); # TODOP: Actually happens to work.
 
     return 0;
 }
