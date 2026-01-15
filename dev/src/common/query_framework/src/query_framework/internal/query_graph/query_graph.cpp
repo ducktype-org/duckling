@@ -139,20 +139,34 @@ namespace query::internal {
 		constexpr usize node_id_size
 			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
-		std::vector<byte> buffer;
+		// Serialized layout:
+		// [usize node_count]
+		// [node_count * NodeID payloads]
+		// Repeat node_count times: [usize deps_size][deps_size * u64 adjacency indices]
 
-		// Calculate the total size of the serialized data
-		usize total_size = sizeof(usize);  // map_size
+		const usize         node_count = node_deps.size();
+		std::vector<NodeID> nodes;
+		nodes.reserve(node_count);
+		base::HashMap<NodeID, usize> node_to_index;
+		node_to_index.reserve(node_count);
+
+		usize total_edges = 0;
+		usize next_index  = 0;
 		for (const auto& [node, deps]: node_deps) {
-			total_size += node_id_size;
-			total_size += sizeof(usize);  // deps_size
-			total_size += deps.size() * node_id_size;
+			node_to_index.emplace(node, next_index++);
+			nodes.push_back(node);
+			total_edges += deps.size();
 		}
+
+		std::vector<byte> buffer;
+		usize             total_size = sizeof(usize);  // node_count
+		total_size += node_count * node_id_size;
+		total_size += node_count * sizeof(usize);      // each deps_size field
+		total_size += total_edges * sizeof(usize);     // adjacency list indices
 		buffer.reserve(total_size);
 
 		auto write = [&](const auto& value) -> void {
-			using T = std::decay_t<decltype(value)>;
-
+			using T               = std::decay_t<decltype(value)>;
 			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
 			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
 		};
@@ -162,18 +176,19 @@ namespace query::internal {
 			write(node.hash.val.data);
 		};
 
-		// Serialize the size of the node_deps map
-		write(node_deps.size());
+		write(node_count);
+		for (const auto& node: nodes) write_node_id(node);
 
-		// Serialize each entry in the map
-		for (const auto& [node, deps]: node_deps) {
-			write_node_id(node);
-
-			// Serialize the dependencies vector size
+		for (const auto& node: nodes) {
+			const auto& deps = node_deps.at(node);
 			write(deps.size());
-
-			// Serialize each dependency (NodeID)
-			for (const auto& dep: deps) write_node_id(dep);
+			for (const auto& dep: deps) {
+				CORE_ASSERT(
+					node_to_index.contains(dep),
+					"Dependency node missing from graph during serialization."
+				);
+				write(node_to_index.at(dep));
+			}
 		}
 
 		return buffer;
@@ -189,9 +204,6 @@ namespace query::internal {
 		// Compile-time check to ensure HVType and QIDType are trivial
 		static_assert(std::is_trivial_v<HVType>, "HVType must be a trivial type.");
 		static_assert(std::is_trivial_v<QIDType>, "QIDType must be a trivial type.");
-
-		constexpr usize node_id_size
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
 		QueryGraph  graph;
 		usize       offset    = 0;
@@ -219,37 +231,35 @@ namespace query::internal {
 			return NodeID(QueryID(q_id), { HType(hash) });
 		};
 
-		// Deserialize the size of the node_deps map
 		usize map_size = 0;
 		read(map_size);
 
-		// Deserialize each entry in the map
+		std::vector<NodeID> nodes;
+		nodes.reserve(map_size);
 		for (usize i = 0; i < map_size; ++i) {
 			NodeID raw_node = read_node_id();
-			NodeID node     = node_mapper(raw_node);
+			nodes.emplace_back(node_mapper(raw_node));
+		}
 
-			// Deserialize the dependencies vector size
+		for (usize node_index = 0; node_index < map_size; ++node_index) {
 			usize deps_size = 0;
 			read(deps_size);
 
-			if (deps_size * node_id_size + offset > data_size)
-				throw std::out_of_range("Buffor size exceeded during deserialization");
-
-			// Deserialize each dependency (NodeID)
 			std::vector<NodeID> deps;
 			deps.reserve(deps_size);
 
 			for (usize j = 0; j < deps_size; ++j) {
-				NodeID raw_dep = read_node_id();
-				deps.emplace_back(node_mapper(raw_dep));
+				usize dep_index = 0;
+				read(dep_index);
+				if (dep_index >= nodes.size())
+					throw std::out_of_range("Dependency index out of range during deserialization");
+				deps.emplace_back(nodes.at(dep_index));
 			}
 
-			// Add the deserialized entry to the graph
-			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
+			auto [it, inserted] = graph.node_deps.emplace(nodes.at(node_index), std::move(deps));
 			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
-		// Check here oif offset is equal to data_size
 		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
 
 		return graph;
