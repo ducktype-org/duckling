@@ -8,6 +8,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include "vm/bytecode/validator/type_context.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -159,8 +160,7 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const ObjIdNameMap<TypeOfData>&                  tod_map;
-	const TypeMetadata&                              type_metadata;
+	const TypeContext&                               types;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
@@ -211,7 +211,7 @@ class FunctionValidator {
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better way.
 		base::StrID impl_name;
-		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
+		auto        it       = std::ranges::find_if(types, [&](const auto& type) {
             if_opt_some(
                 type.getInheritanceMetadata(), inh_meta
             ) return inh_meta->vtable.contains(instr.method.method_name);
@@ -1011,8 +1011,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
@@ -1198,8 +1199,7 @@ public:
 };
 
 vm::code::Function vm::code::detail::validateAndExtractReachableCode(
-	const ObjIdNameMap<TypeOfData>&                  tod_map,
-	const TypeMetadata&                              type_metadata,
+	const TypeContext&                               types,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
@@ -1207,9 +1207,7 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
-	FunctionValidator validator(
-		tod_map, type_metadata, globals_map, signatures, ext_c_signatures, function
-	);
+	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
 
 	Function new_function;
 	new_function.name         = function.name;

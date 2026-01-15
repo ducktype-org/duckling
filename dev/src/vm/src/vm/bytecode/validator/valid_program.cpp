@@ -81,15 +81,14 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 
 	// @note: This is a temporary built type metadata for the sake of function verification.
 	// @TODO: #1306
-	auto type_metadata = detail::buildTypeMetadata(type_context);
+	// auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context.getCurrentTypes(),
-			*type_metadata,
+			type_context,
 			globals_map,
 			available_functions,
 			ext_c_function_map,
