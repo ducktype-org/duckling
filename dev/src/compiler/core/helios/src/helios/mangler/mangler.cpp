@@ -1,13 +1,12 @@
 #include "mangler.hpp"
 
-#include <helios/queries.hpp>
-#include <helios/hout/hout.hpp>
-#include <helios/hout/elements/stmt.hpp>
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/hout.hpp>
+#include <helios/queries.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -200,8 +199,6 @@ namespace compiler::helios::mangler {
 			);
 		}
 
-		std::string type(); // todo
-
 		/**
 		 * @brief Returns mangled name of a function or method
 		 * @note: See mangling-scheme.md for details
@@ -212,10 +209,10 @@ namespace compiler::helios::mangler {
 			if (kind(symbol_id) == SymbolKind::Function
 			    or kind(symbol_id) == SymbolKind::FunctionDeclaration) {
 				ret = "F";
-				
+
 				const auto fun_decl = ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get();
 				ret += fun_decl->return_type.toString();
-				for (const auto& param : fun_decl->parameters) {
+				for (const auto& param: fun_decl->parameters) {
 					ret += param.type.toString();
 					ret += identifier(param.name.str());
 				}
