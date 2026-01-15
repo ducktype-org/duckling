@@ -169,7 +169,11 @@ def todo_validate_impl(
 
     # Handle --print-todos flag
     if print_todos:
-        print_newly_added_todos(files_and_lines)
+        issues = get_todos_from_lines(files_and_lines)
+        if issues:
+            print(" ".join(f"#{issue}" for issue in issues))
+        else:
+            print("No new TODOs with issue numbers found.")
         return True
 
     # Check only modified files and lines
@@ -240,7 +244,7 @@ def todo_validate_impl(
     return not violations_found
 
 
-def print_newly_added_todos(files_and_lines: dict[str, list[tuple[int, int]]]):
+def get_todos_from_lines(files_and_lines: dict[str, list[tuple[int, int]]]) -> list[str]:
     """
     Prints newly added TODOs with issue numbers in modified files.
     
@@ -264,12 +268,6 @@ def print_newly_added_todos(files_and_lines: dict[str, list[tuple[int, int]]]):
             match = pattern.search(todo_line.content)
             if match:
                 found_issues.add(match.group(1))
-    
-    # Print the issue numbers in a format suitable for quacker bot
-    if found_issues:
-        # Sort numerically for consistent output
-        sorted_issues = sorted(found_issues, key=lambda x: int(x))
-        print(" ".join(f"#{issue}" for issue in sorted_issues))
-    else:
-        print("No new TODOs with issue numbers found.")
+    sorted_issues = sorted(found_issues, key=int)
+    return sorted_issues
 
