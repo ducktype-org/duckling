@@ -569,6 +569,7 @@ namespace compiler::backend_llvm {
 					variant_case(lir::FieldProjection, field) {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+
 						const auto layout_idx
 							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
 

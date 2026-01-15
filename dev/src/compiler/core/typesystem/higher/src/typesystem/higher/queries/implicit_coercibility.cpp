@@ -37,6 +37,12 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnSymbolType, bool) {
 		static auto provide(Context& context, const QKey& key) -> PResult {
+			const auto from_ref_kind = key.source.getRefKind();
+			const auto to_ref_kind   = key.target.getRefKind();
+
+			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind != ReferenceKind::Direct)
+				return false;
+
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({
 				key.source.getType(),

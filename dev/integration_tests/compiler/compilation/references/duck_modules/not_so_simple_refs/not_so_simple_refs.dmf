@@ -28,6 +28,10 @@ fun value_swap(a: ref i64, b: ref i64) -> () = {
 #     var ref_b = refof b;
 #     ref_a = ref_b;
 # }
+# TODOP: And like this.
+# adder(ret i64)
+# var x: i64 = 123; 
+# adder(x);
 
 fun assign_to_ref() -> () = {
     var a: i64 = 123;
