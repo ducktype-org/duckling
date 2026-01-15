@@ -516,6 +516,9 @@ namespace query::internal {
 				// If child has only 1 parent, and its unstable we can remove it
 				if (parent_count == 1 && !is_stable_node[child]) {
 					// Set the child as removed
+
+					// Asset that child is not already removed
+					CORE_ASSERT(!removed[child], "Child cannot be already removed at this stage");
 					removed[child] = true;
 					// change the number of childs of current
 					number_of_childs[current] -= 1;
