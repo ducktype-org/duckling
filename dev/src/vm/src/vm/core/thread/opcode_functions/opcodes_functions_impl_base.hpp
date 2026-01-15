@@ -34,6 +34,7 @@
 #include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/jit/jit_compiler.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -50,11 +51,13 @@
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
 	#define FUNCTION_CONT(step)                instr += step;
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+	#define OP_FUN                             vm::DebugOpFun
 #else
 	#define OPCODE_NAME(name)                  op_##name
 	#define FUNCTION_ARGS                      OPFUN_ARGS
 	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
+	#define OP_FUN                             vm::OpFun
 #endif
 
 namespace vm {
@@ -377,8 +380,40 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_jit)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		{
+			struct JitData {
+				OpFun* func_ptr;
+				uint    counter;
+			};
+
+			static std::vector<JitData> jit_data;
+
+			auto func_id = instr->arg0;
+			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id);
+
+			auto& my_data = jit_data[func_id];
+
+			if (my_data.counter == 0) {
+				const low::LowFuncData& func_data = thread.executing_program->getFunctions()[func_id];
+				my_data.func_ptr             = compile_jit(func_data);
+			}
+
+			if (my_data.func_ptr) {
+				const_cast<MicroInstruction&>(*instr) = vm::makeLowInstruction(
+					low::MicroOpcode::call_func_ptr, (intptr_t) my_data.func_ptr, 0
+				);
+				FUNCTION_CONT_CHECK_STRATEGY(0);
+			}
+
+			{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_ptr)(FUNCTION_ARGS) {
+		OpFun* func_ptr = reinterpret_cast<OpFun*>(instr->arg0);
+		(*func_ptr)(instr, local_stack, frame, thread);
+		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
