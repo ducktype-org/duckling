@@ -7,7 +7,7 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
-#include <vm/core/jit/jit_api.hpp>
+#include <vm/core/jit/jit_init.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
@@ -83,7 +83,7 @@ clah::Clah getVmClah() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	llvm_init();
+	llvmInit();
 	auto clah = getVmClah();
 
 	try {
