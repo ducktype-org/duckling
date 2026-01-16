@@ -301,16 +301,6 @@ namespace compiler::mir {
 		static Projection deref() { return Projection(DerefProjection()); }
 
 		bool operator==(const Projection& other) const = default;
-
-		[[nodiscard]] u64 queryUnstablePerfectHash() const {
-			variant_match(storage) {
-				variant_case(DerefProjection, deref) { return 0x12'34; }
-				variant_case(FieldProjection, field) {
-					return field.field_id.queryUnstablePerfectHash();
-				}
-			}
-			CORE_UNREACHABLE();
-		}
 	};
 
 	/**

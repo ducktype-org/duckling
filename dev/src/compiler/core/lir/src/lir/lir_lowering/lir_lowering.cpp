@@ -105,8 +105,8 @@ namespace compiler::lir {
 		CORE_UNREACHABLE();
 	}
 
-	LIRPlace::LIRPlace(const BaseVariant& base, std::vector<Projection> projection_chain):
-		  base(base),
+	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
+		  base(std::move(base)),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
 		      // projections.

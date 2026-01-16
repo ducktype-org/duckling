@@ -227,6 +227,7 @@ namespace compiler::mir {
 			variant_case(MIRLocalRef, local) { local->debugPrint(os, detailed); }
 			variant_case(MIRGlobal, global) { global.debugPrint(os, detailed); }
 		}
+
 		for (const auto& proj: projection_chain) {
 			variant_match(proj.storage) {
 				variant_case(FieldProjection, field) {
@@ -235,9 +236,9 @@ namespace compiler::mir {
 				variant_case_novalue(DerefProjection) { os << ".*"; }
 			}
 		}
-		if (detailed and not projection_chain.empty()) {
-			os << ": Unstable hash: " << projection_chain.back().queryUnstablePerfectHash();
-			os << ", Type: ";
+
+		if (detailed) {
+			os << ": Type: ";
 			os << type.toString();
 		}
 	}
