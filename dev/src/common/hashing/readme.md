@@ -155,32 +155,48 @@ There is one template parameters that can be specified: `HashAlgorithm`.
 
     Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
 
-    There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object, yellow - first byte of the appended type code).
+    There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
     
-    <html>
-    <body>
-    <!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>7B </span><span>00 00 00 C8 01 00 00 </span><span style='color: #e5e510; font-weight: bold;'>F5 </span><span>4B 51 5C   </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
-    </body>
-    </html>
-
+    <pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'>
+    <span>line    0:    </span>
+    <span style='color: #cd3131; font-weight: bold;'>7B </span>
+    <span>00 00 00 C8 01 00 00 </span>
+    </div></pre>
 
 Using different hashing algorithms:
+
 ~~~~~cpp
 // `Hash` is the same as `Hash<Fnv1a_64>`
 bool b = Hash{}(42) == Hash<Fnv1a_64>{}(42); // true
 
 // If many hashes are stored we can use shorter ones:
 u32 hash = Hash<Fnv1a_32>{}(42);
-~~~~~
 
-~~~~~cpp
 std::cout << Hash<DebugHash>{}(42) << '\n';
 // prints:
 ~~~~~
+
 <!-- @TODO update the output bellow! -->
 <html>
 <body>
-<!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00                                                                                                                                                                                                           </span></div><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>19 </span><span>65 94 2A                                                                                                                                                                                               </span></div><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>F5 </span><span>DD 91 3F 7A 2E 2B 44 </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
+<pre>
+
+<div style='color: #808080; background-color: #ffffff00; font-family: Consolas, "Courier New", monospace, monospace; font-size: 14px;'>
+ <span>line    0:    </span>
+ <span style='color: #cd3131; font-weight: bold;'>2A </span>
+ <span>00 00 00 </span>
+ <span>line    0:    </span>
+ <span style='color: #cd3131; font-weight: bold;'>2A </span>
+ <span>00 00 00 </span>
+ <span style='color: #e5e510; font-weight: bold;'>19 </span>
+ <span>65 94 2A </span>
+ <span>line    0:    </span>
+ <span style='color: #cd3131; font-weight: bold;'>2A </span>
+ <span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>F5 </span>
+ <span>DD 91 3F 7A 2E 2B 44 </span>
+</div>
+
+</pre>
 </body>
 </html>
 
