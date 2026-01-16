@@ -108,7 +108,6 @@ namespace hashing {
 			std::string ret;
 			usize       line = 0, pos = 0;
 
-			constexpr std::string_view YELLOW = "\033[1;33m";
 			constexpr std::string_view RED    = "\033[1;31m";
 			constexpr std::string_view RESET  = "\033[0m";
 
