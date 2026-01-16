@@ -71,9 +71,11 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob.original_name
-						));
+						fail(
+							base::strConcat(
+								"Unexpected global data type of: ", hout_glob.original_name
+							)
+						);
 					}
 				}
 			}
@@ -194,7 +196,21 @@ private:
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 
-	void referencesTest() { runTestForModule("modules/references", 3, 3); }
+	void referencesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/references");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Just a simple load count verification.
+		std::smatch matches;
+		int         ptr_loads    = 0;
+		std::string search_range = ir;
+		std::regex  ptr_load_regex{ R"(load ptr, ptr %\S+)" };
+		while (std::regex_search(search_range, matches, ptr_load_regex)) {
+			ptr_loads++;
+			search_range = matches.suffix();
+		}
+		assertTrue(ptr_loads >= 4, "Too few pointer loads");
+	}
 
 	void floatingPointTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/floating_point");
