@@ -248,7 +248,6 @@ namespace compiler::lir {
 		bool operator==(const Projection& other) const = default;
 
 		[[nodiscard]] u64 queryUnstablePerfectHash() const {
-			// TODOP: Figure this out
 			variant_match(storage) {
 				variant_case(DerefProjection, deref) { return 0x12'34; }
 				variant_case(FieldProjection, field) {
