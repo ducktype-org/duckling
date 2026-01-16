@@ -217,11 +217,6 @@ namespace compiler::mir {
 
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
-
-		// When handling thinks like `a.b`, where a: ref T, we automatically insert a deref for 'a'
-		// before the field access.
-		if (result.type.getRefKind() != tsh::ReferenceKind::Direct) result = result.withDeref();
-
 		result.projection_chain.push_back(Projection::field(field));
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;
