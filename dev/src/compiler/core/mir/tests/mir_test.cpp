@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "mir/mir_structure/mir_local_ref.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
@@ -14,6 +16,8 @@
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <future>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -591,13 +595,72 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+			auto& mir_func  = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
 
-			for (const auto& func: unit.functions) {
-				std::cout << "==========================\n";
-				auto& func_mir
-					= ctx.query<compiler::mir::LowerToMIRFunction>({ func })->valueOrThrow();
-				func_mir.debugPrint(std::cout);
+			bool found_simple_address_of     = false;
+			bool found_address_of_with_deref = false;
+			bool found_complex_assignment    = false;
+			using namespace compiler::mir;
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					//  var r = refof x;
+					if (instr.operation == Operation::AddressOf) {
+						auto& arg = instr.arguments[0].get<MIRPlace>();
+						if (arg.projection_chain.empty()) {
+							found_simple_address_of = true;
+						}
+						// var r = refof p.x;
+						else if (arg.projection_chain.size() == 2) {
+							bool has_deref = std::holds_alternative<DerefProjection>(
+								arg.projection_chain[0].storage
+							);
+							bool has_field = std::holds_alternative<FieldProjection>(
+								arg.projection_chain[1].storage
+							);
+							if (has_deref && has_field) {
+								auto field
+									= std::get<FieldProjection>(arg.projection_chain[1].storage);
+								if (compiler::helios::name(field.field_id) == base::StrID("x"))
+									found_address_of_with_deref = true;
+							}
+						}
+					}
+					// ref_wrapper -> Deref -> Field(p) -> Deref -> Field(x) -> Deref
+					if (instr.operation == Operation::Assign && instr.output.has_value()) {
+						auto& out_place = instr.output.value();
+
+						if (out_place.projection_chain.size() == 5) {
+							const auto& chain = out_place.projection_chain;
+							bool        pattern_ok
+								= std::holds_alternative<DerefProjection>(chain[0].storage)
+							   && std::holds_alternative<FieldProjection>(chain[1].storage)
+							   && std::holds_alternative<DerefProjection>(chain[2].storage)
+							   && std::holds_alternative<FieldProjection>(chain[3].storage)
+							   && std::holds_alternative<DerefProjection>(chain[4].storage);
+
+							if (pattern_ok) {
+								auto f_p = std::get<FieldProjection>(chain[1].storage);
+								auto f_x = std::get<FieldProjection>(chain[3].storage);
+
+								if (compiler::helios::name(f_p.field_id) == base::StrID("p")
+								    && compiler::helios::name(f_x.field_id) == base::StrID("x")) {
+									auto constant = instr.arguments[0].get<MIRConstant>();
+									auto num      = constant.value
+									               .get<compiler::numeric_value::NumericValue>();
+									if (num->get<i32>() == 999) found_complex_assignment = true;
+								}
+							}
+						}
+					}
+				}
 			}
+
+			ASSERT_TRUE(found_simple_address_of);
+			ASSERT_TRUE(found_address_of_with_deref);
+			ASSERT_TRUE(found_complex_assignment);
 		});
 	}
 
