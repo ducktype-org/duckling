@@ -71,11 +71,9 @@ private:
 						// @future #1554 -- const ctors will probably be added here
 					}
 					variant_default {
-						fail(
-							base::strConcat(
-								"Unexpected global data type of: ", hout_glob.original_name
-							)
-						);
+						fail(base::strConcat(
+							"Unexpected global data type of: ", hout_glob.original_name
+						));
 					}
 				}
 			}
@@ -112,7 +110,13 @@ private:
 			for (auto& fun: module_hout.functions) {
 				CRef mir_fun
 					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+				mir_fun->debugPrint(std::cout);
+				std::cout << '\n';
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
+
+				lir_fun->debugPrint(ctx, std::cout);
+				std::cout << '\n';
+
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});

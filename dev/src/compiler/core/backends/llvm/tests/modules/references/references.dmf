@@ -14,3 +14,28 @@ fun test_pass_through_reference() -> i64 = {
     adder(refof x);
     return x;
 }
+
+# fun whatWillHappen() -> () = {
+#     var x: i32 = 123;
+#     var y: i32 = 234;
+
+#     var ref_x: ref i32 = refof x;
+#     var ref_y: ref i32 = refof y;
+    
+#     ref_x = ref_x + ref_y;
+
+#     builtin_output_i64(ref_x);
+#     builtin_output_i64(ref_y);
+# }
+
+fun whatWillHappen2() -> () = {
+    var x: i32 = 123;
+    var y: i32 = 234;
+
+    var ref_x: ref i32 = refof x;
+    var ref_y: ref i32 = refof y;
+    
+    var r: i32 = ref_x + ref_y;
+
+    builtin_output_i64(r);
+}
