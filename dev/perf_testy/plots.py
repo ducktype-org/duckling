@@ -18,8 +18,8 @@ def plot_regression_line(df, output):
     ax.scatter(tokens_cpp, tokens_duck, c='tab:blue')
     
     ax.set_title("Comparison of compilation time (in ms)\nGCC vs Duckling")
-    ax.set_xlabel("Compilation time in C++ (ms)")
-    ax.set_ylabel("Compilation time in Duckling (ms)")
+    ax.set_xlabel("Compilation time – GCC (ms)")
+    ax.set_ylabel("Compilation time – Duckling (ms)")
     ax.legend()
     
     plt.savefig(output)
@@ -33,9 +33,9 @@ def plot_percentage_distribution(df, output):
     ax.axvline(x=np.mean(percentages), color='tab:red', label=f'Average: {np.mean(percentages):.1%}')
     ax.axvline(x=np.median(percentages), linestyle='--', color='tab:red', label=f'Median: {np.median(percentages):.1%}')
     
-    ax.set_xlabel('Ratio of compilation time in Duckling vs C++')
+    ax.set_xlabel('Ratio of compilation time in Duckling vs GCC')
     ax.set_ylabel('Number of cases')
-    ax.set_title('Summary of compilation time ratio\nC++ vs Duckling')
+    ax.set_title('Summary of compilation time ratio\nGCC vs Duckling')
     ax.legend()
     
     plt.savefig(output)
@@ -56,11 +56,13 @@ def plot_box_categories(df, output):
 
     for i, points, category in zip(range(1, len(data)+1), data, df.category.unique()):
         ax.scatter(np.random.normal(i, 0.05, len(points)), points, alpha=0.6, color='tab:blue')
+        # add green mean dashed line:
+        ax.hlines(y=np.mean(points), xmin=i-0.2, xmax=i+0.2, color='tab:green', linestyle='--')
         
 
     ax.set_xlabel('Category of the example')
-    ax.set_ylabel('Ratio of compilation time in Duckling vs C++')
-    ax.set_title('Compilation time ratio by category\nC++ vs Duckling')
+    ax.set_ylabel('Ratio of compilation time in Duckling vs GCC')
+    ax.set_title('Compilation time ratio by category\nGCC vs Duckling')
     ax.legend()
     
     plt.savefig(output)
