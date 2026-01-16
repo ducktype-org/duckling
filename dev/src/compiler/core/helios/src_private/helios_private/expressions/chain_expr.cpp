@@ -5,8 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -24,6 +22,7 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

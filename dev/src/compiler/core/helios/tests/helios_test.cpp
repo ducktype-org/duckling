@@ -1,6 +1,3 @@
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/elements/stmt.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -9,6 +6,8 @@
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -1237,9 +1236,30 @@ private:
 			ASSERT_TRUE(deref_rhs != nullptr);
 		}
 		{
+			// Check deref in field access: var val: i32 = ref_point.x;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(12)
+			);
+			auto outer_deref = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(outer_deref != nullptr);
+			auto access_expr
+				= dynamic_cast<const compiler::helios::code::AccessExpr*>(outer_deref->inner.get());
+			ASSERT_TRUE(access_expr != nullptr);
+
+			auto inner_deref
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(inner_deref != nullptr);
+			auto ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+				inner_deref->inner.get()
+			);
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
 			// Check deref in returns.
 			auto& ret_stmt = dynamic_cast<const compiler::helios::code::ReturnStmt&>(
-				*function.body->statements.at(10)
+				*function.body->statements.at(13)
 			);
 			auto deref_expr
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());
