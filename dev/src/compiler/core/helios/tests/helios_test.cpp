@@ -1203,9 +1203,43 @@ private:
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
 		{
+			// Check deref in unary operator: var z: i32 = -r;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(8)
+			);
+			auto un_expr = dynamic_cast<const compiler::helios::code::UnaryOperatorExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(un_expr != nullptr);
+
+			// The operand of '-' should be a DerefExpr
+			auto deref_expr
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(un_expr->expr.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// Check deref in binary operator with two refs: var p: i32 = r + r2;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(9)
+			);
+			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(bin_expr != nullptr);
+
+			// Both sides of '+' should be DerefExpr
+			auto deref_lhs
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->lhs.get());
+			auto deref_rhs
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->rhs.get());
+
+			ASSERT_TRUE(deref_lhs != nullptr);
+			ASSERT_TRUE(deref_rhs != nullptr);
+		}
+		{
 			// Check deref in returns.
 			auto& ret_stmt = dynamic_cast<const compiler::helios::code::ReturnStmt&>(
-				*function.body->statements.at(8)
+				*function.body->statements.at(10)
 			);
 			auto deref_expr
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());

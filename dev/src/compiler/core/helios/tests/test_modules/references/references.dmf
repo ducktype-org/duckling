@@ -7,6 +7,8 @@ fun test_simple_ref() -> i32 = {
     r = r2;                     # Reference rebinding -> no derefs.
     r = r + 1;                  # Deref of both sides.
     dummy(r);                   # Deref in arguments.
+    var z: i32 = -r;            # Deref in unary.
+    var p: i32 = r + r2;        # Deref in binary.
     return r;                   # Deref in return.
 }
 
