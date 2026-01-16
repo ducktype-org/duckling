@@ -7,7 +7,8 @@ namespace pst {
 		return ListParsingTemplate::parseList<
 			Param,
 			ParamList,
-			false,
+			false,  // empty list allowed
+			false,  // trailing separator not allowed
 			lexer::Token::BracketType::Round,
 			internal::Conditions::isComma,
 			internal::Conditions::isSentinel,
