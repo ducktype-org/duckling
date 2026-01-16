@@ -85,13 +85,12 @@ int main() {
 
 	// by default fnva_64 algorithm is used
 	std::cout << Hash{}(type1{}) << '\n';  // some 64-bit number
-	
+
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
 	constexpr auto h = Hash<Fnv1a_32>{}(type2{});
 	std::cout << h << '\n';  // some 32-bit number
 
-	
 	struct type3 {
 		int x{ 123 }, y{ 456 };
 	};
@@ -111,18 +110,17 @@ int main() {
 	// we can add objects one by one
 	hasher2(7);
 	hasher2(type2{});
-	
+
 	// or all at once
 	hasher2(7, std::string{ "hello" }, 42);
-	
-	constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::Fnv1a_64>{}(
-									7, type2{}, 7, std::string{ "hello" }, 42
-	)
-	                                .finalize();
+
+	constexpr auto HASH_VALUE
+		= hashing::StatefulHash<hashing::Fnv1a_64>{}(7, type2{}, 7, std::string{ "hello" }, 42)
+	          .finalize();
 	std::cout << "stateful hash:\n"
 			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << HASH_VALUE << '\n';
 
-	
+
 	std::cout << "hash of type_with_bases: " << hashing::Hash{}(type_with_bases{}) << '\n';
 
 

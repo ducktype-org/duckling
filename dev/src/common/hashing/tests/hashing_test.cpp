@@ -153,22 +153,20 @@ public:
 	}
 
 private:
-
 	void hashingAlgorithmsTest() {
-		
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 
 		constexpr auto RES1 = Hash<Fnv1a_32>{}(4);
-		
+
 		constexpr auto ARR  = std::array{ 1, 2, 3 };
 		constexpr auto RES2 = Hash<Fnv1a_64>{}(std::span{ ARR });
-		
-		auto           res3 = [] {
-            DebugHash dh;
-            dh(std::as_bytes(std::span{ "hello" }));
-            return dh.finalize().size();
+
+		auto res3 = [] {
+			DebugHash dh;
+			dh(std::as_bytes(std::span{ "hello" }));
+			return dh.finalize().size();
 		}();
 
 		assertTrue(
@@ -178,7 +176,7 @@ private:
 			std::is_same_v<decltype(RES2), const u64>, "Fnv1a_64's finalize() should return u64"
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
-		
+
 		DebugHash dh;
 		dh(std::as_bytes(std::span{ "hello 1234567890" }));
 
@@ -194,7 +192,7 @@ private:
 		constexpr auto RES1 = hasher(X{});
 		constexpr auto RES2 = hasher(S{});
 		assertTrue(RES1 != RES2, "hashes should differ");
-		
+
 		my_map::unordered_map<std::string, int> m;
 		m["hello"] = 42;
 		m["world"] = 7;
@@ -207,7 +205,7 @@ private:
 		constexpr auto R1 = Hash<Fnv1a_32>{}(876'543);
 
 		constexpr auto R2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
-		
+
 		constexpr auto R3 = Hash<Fnv1a_64>{}(S{});
 
 		StatefulHash<Fnv1a_64> h;
@@ -227,7 +225,6 @@ private:
 		h2(123);
 		h2(std::string_view{ "hello" });
 	}
-
 
 	void sha256Test() {
 		constexpr auto HASH_VALUE = hashing::StatefulHash<hashing::SHA256>{}(
@@ -251,7 +248,7 @@ private:
 		)
 		                                .finalize();
 
-		
+
 		const std::string expected_hash
 			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
 		const std::string computed_hash = HASH_VALUE.toStringHex();

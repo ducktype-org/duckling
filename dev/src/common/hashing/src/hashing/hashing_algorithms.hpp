@@ -91,9 +91,7 @@ namespace hashing {
 		std::vector<std::tuple<std::vector<char>, usize>> bytes;
 
 	public:
-		constexpr void operator()(
-			internal::span_of_bytes auto span
-		) noexcept {
+		constexpr void operator()(internal::span_of_bytes auto span) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 
@@ -101,15 +99,14 @@ namespace hashing {
 			bytes.emplace_back(std::move(vec), vec.size());
 		}
 
-
 		using result_type = std::string;
 
 		constexpr result_type finalize() {
 			std::string ret;
 			usize       line = 0, pos = 0;
 
-			constexpr std::string_view RED    = "\033[1;31m";
-			constexpr std::string_view RESET  = "\033[0m";
+			constexpr std::string_view RED   = "\033[1;31m";
+			constexpr std::string_view RESET = "\033[0m";
 
 			// Note: stringstream is not usable in constexpr
 			static constexpr auto APPEND_LINE_NUMBER = [](std::string& str, usize num) {

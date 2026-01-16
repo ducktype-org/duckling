@@ -18,7 +18,7 @@ namespace hashing {
 		template<class T>
 		concept has_value_type = requires { typename T::value_type; };
 
-	
+
 	}  // namespace internal
 
 	/**
@@ -29,11 +29,10 @@ namespace hashing {
 	 * @tparam TypeC - Type of the type code that should be appended to the hash
 	 * or void if the type code should not be appended
 	 */
-	template<
-		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm>
+	template<hash_algorithm HashAlgorithm = DefaultHashAlgorithm>
 	class Hash final {
 	public:
-		using result_type                      = typename HashAlgorithm::result_type;
+		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
 		constexpr result_type operator()(const T& t) const noexcept {
@@ -54,13 +53,12 @@ namespace hashing {
 	 * @tparam TypeC - Type of the type code that should be appended to the hash
 	 * or void if the type code should not be appended
 	 */
-	template<
-		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm>
+	template<hash_algorithm HashAlgorithm = DefaultHashAlgorithm>
 	class StatefulHash final {
 		HashAlgorithm h{};
 
 	public:
-		using result_type                      = typename HashAlgorithm::result_type;
+		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
 		constexpr StatefulHash& operator()(const T& t) noexcept {
@@ -89,9 +87,8 @@ namespace hashing {
 	 * @param t - object to hash
 	 * @return hash value
 	 */
-	template<
-		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm>
-			auto justHash(const auto& t) {
+	template<hash_algorithm HashAlgorithm = DefaultHashAlgorithm>
+	auto justHash(const auto& t) {
 		return Hash<HashAlgorithm>{}(t);
 	}
 
@@ -104,8 +101,7 @@ namespace hashing {
 	 * @param ts - objects to hash
 	 * @return hash value
 	 */
-	template<
-		hash_algorithm             HashAlgorithm = DefaultHashAlgorithm>
+	template<hash_algorithm HashAlgorithm = DefaultHashAlgorithm>
 	auto justHash(const auto&... ts) {
 		return StatefulHash<HashAlgorithm>{}(ts...).finalize();
 	}
