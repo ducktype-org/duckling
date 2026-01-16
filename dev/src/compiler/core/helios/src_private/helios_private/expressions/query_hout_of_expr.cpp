@@ -125,25 +125,16 @@ namespace compiler::helios::code {
 			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
-				auto type        = expr->expression_type.getSymbolType();
-				bool is_value_op = (op.value == "-" || op.value == "not");
-
-				// @note: If the operation operates on Direct values we may need to perform a
-				// coercion from a ref / box type the direct type. This is needed to handle cases
-				// like: var x: i32 = -someReference.
-				if (is_value_op && type.getRefKind() != tsh::ReferenceKind::Direct) {
-					auto target   = type.withReferenceKind(tsh::ReferenceKind::Direct);
-					auto coercion = canCoerce(ctx, type, target);
-					if (coercion.valueOrThrow().isValid())
-						expr = coercion.valueOrThrow().coerce(ctx, std::move(expr));
+				auto result = findUnaryBuiltin(ctx, op, expr.ref());
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, coercion] = value;
+						auto coerced               = coercion.coerce(ctx, std::move(expr));
+						return makeBox<UnaryOperatorExpr>(operation, std::move(coerced));
+					}
+					opt_none { return {}; }
 				}
-
-				auto operation = findUnaryBuiltin(op, expr.ref());
-
-				if (operation)
-					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
-				else
-					return {};
+				return {};
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {

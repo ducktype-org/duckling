@@ -1,7 +1,12 @@
 #include "builtin_operations.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+#include "helios_private/expressions/coercions.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <typesystem/higher/types.hpp>
 
+#include "query_framework/context.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
 #include <tuple>
@@ -133,7 +138,30 @@ namespace compiler::helios::code {
 	using OpKindPair = std::pair<lexer::Operator, tsh::Kind>;
 	using LookupMap  = std::map<OpKindPair, BuiltinUnary>;
 
-	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
+	base::Optional<std::tuple<BuiltinUnary, Coercion>> findUnaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+	) {
+		auto source_type = expr->expression_type.getSymbolType();
+
+		// @note: We use a self invoking lambda since Coercion can't be assigned to and we don't
+		// want to duplicate the lookup logic.
+		Coercion unary_coercion = [&]() -> Coercion {
+			// If the operation operates on Direct values we need to perform a
+			// coercion from a ref / box type the direct type. This is needed to handle cases
+			// like: var x: i32 = -someReference.
+			bool is_value_op
+				= (op.value == "-" || op.value == lang_def::keywordToStr(lang_def::Keyword::Not));
+			if (is_value_op && source_type.getRefKind() != tsh::ReferenceKind::Direct) {
+				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
+				auto res         = canCoerce(ctx, source_type, direct_type);
+				if (res.valueOrThrow().isValid())
+					return std::move(res.valueOrThrow()).getCoercion();
+			}
+
+			// By default the coercion for unary builtins is empty.
+			return Coercion::emptyCoercion(source_type);
+		}();
+
 		auto kind = expr->expression_type.getType().getKind();
 
 		// Initialize once
@@ -152,7 +180,7 @@ namespace compiler::helios::code {
 
 		// Single lookup
 		auto it = lookup.find({ op, kind });
-		if (it != lookup.end()) return it->second;
+		if (it != lookup.end()) return std::make_tuple(it->second, std::move(unary_coercion));
 
 		return {};  // Not found
 	}
