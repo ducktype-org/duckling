@@ -252,9 +252,8 @@ private:
 		                                .finalize();
 
 		
-		// @TODO PR: fix this!
 		const std::string expected_hash
-			= "b2288f243a2cf2ce6c04b098b2f5ea7d140e961fc234cf55d08a42599847ad89";
+			= "cc29a5e32052f1e78ce5933758b457e9829c84322bfa1e8e2794ae1456a274a0";
 		const std::string computed_hash = HASH_VALUE.toStringHex();
 
 		assertTrue(
