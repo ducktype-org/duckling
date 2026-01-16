@@ -1,16 +1,18 @@
-fun test_simple_ref() -> i64 = {
-    var x: i32 = 10;
-    var r: ref i32 = refof x;
-    r = 42;
-    return x;
-}
+class Point { x: i32; y: i32; }
+class RefPoint { x: ref i32; y: ref i32; }
+class RefWrapper { p: ref RefPoint; }
 
-fun adder(v: ref i32) -> () = {
-    v = v + 1;
-}
+fun references(p: ref Point) -> () = {
+    var x: i32 = 123;
+    var y: i32 = 456;
 
-fun test_pass_through_reference() -> i64 = {
-    var x: i32 = 10;
-    adder(refof x);
-    return x;
+    var r = refof x;
+    var r = refof p.x; # AddressOf from [Deref, FieldProjection].
+
+    var point = RefPoint(refof x, refof y);
+    var ref_point = refof point;
+    var wrapper = RefWrapper(refof point);
+    var ref_wrapper = refof wrapper;
+    
+    ref_wrapper.p.x = 999; # [Deref, Field, Deref, Field, Deref]
 }
