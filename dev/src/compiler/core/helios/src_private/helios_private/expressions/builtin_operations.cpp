@@ -13,43 +13,48 @@ namespace {
 	using namespace compiler::helios::code;
 
 	/**
-	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
+	 * @brief Tries to find a common type for builtin binary operation arguments through implicit
+	 * coercion. If any of the arguments is not a direct type a coercion to the direct type will be
+	 * forced.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
 	 *
 	 * @TODO: #973 this function panics on query::Failed in coercions, should probably propagate
 	 * failed instead. If we conclude, that this will return empty optional on failure, we should
 	 * document it here.
 	 */
-	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypewithCoercion(
+	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypeWithCoercion(
 		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
 	) {
 		auto lhs_type = lhs->expression_type.getSymbolType();
 		auto rhs_type = rhs->expression_type.getSymbolType();
 
-		// Types the same -> no coercion.
-		if (lhs_type == rhs_type) {
+		// Builtin operators only work on direct values. When provided with references or box types
+		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
+		// needed to handle cases like: var x = referenceA + referenceB.
+		auto lhs_direct = lhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
+		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
+
+		// Try to coerce both values to the rhs direct type.
+		auto l_to_r = canCoerce(ctx, lhs_type, rhs_direct);
+		auto r_to_r = canCoerce(ctx, rhs_type, rhs_direct);
+
+		if (l_to_r.valueOrThrow().isValid() && r_to_r.valueOrThrow().isValid()) {
 			return std::make_tuple(
-				lhs_type, Coercion::emptyCoercion(lhs_type), Coercion::emptyCoercion(rhs_type)
+				rhs_direct,
+				std::move(l_to_r.valueOrThrow()).getCoercion(),
+				std::move(r_to_r.valueOrThrow()).getCoercion()
 			);
 		}
 
-		// Try coercing left to right.
-		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
-		if (lhs_to_rhs.valueOrThrow().isValid()) {
-			return std::make_tuple(
-				rhs_type,
-				std::move(lhs_to_rhs.valueOrThrow()).getCoercion(),
-				Coercion::emptyCoercion(rhs_type)
-			);
-		}
+		// Try to coerce both values to the lhs direct type.
+		auto l_to_l = canCoerce(ctx, lhs_type, lhs_direct);
+		auto r_to_l = canCoerce(ctx, rhs_type, lhs_direct);
 
-		// Try coercing right to left.
-		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
-		if (rhs_to_lhs.valueOrThrow().isValid()) {
+		if (l_to_l.valueOrThrow().isValid() && r_to_l.valueOrThrow().isValid()) {
 			return std::make_tuple(
-				lhs_type,
-				Coercion::emptyCoercion(lhs_type),
-				std::move(rhs_to_lhs.valueOrThrow()).getCoercion()
+				lhs_direct,
+				std::move(l_to_l.valueOrThrow()).getCoercion(),
+				std::move(r_to_l.valueOrThrow()).getCoercion()
 			);
 		}
 
@@ -62,7 +67,7 @@ namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
-		auto common_type_res = findCommonTypewithCoercion(ctx, lhs, rhs);
+		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
 		if (!common_type_res.has_value()) {
 			// @TODO: report an error?
 			return {};

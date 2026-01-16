@@ -213,7 +213,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads >= 4, "Too few pointer loads");
+		assertTrue(ptr_loads >= 17, "Too few pointer loads");
 	}
 
 	void floatingPointTest() {
