@@ -22,7 +22,6 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

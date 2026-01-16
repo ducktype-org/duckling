@@ -1,12 +1,8 @@
 #include "builtin_operations.hpp"
 
-#include <helios/hout/elements/expr.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
-#include <query_framework/context.hpp>
 
 #include <tuple>
 #include <utility>
@@ -39,26 +35,26 @@ namespace {
 		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 
 		// Try to coerce both values to the rhs direct type.
-		auto l_to_r = canCoerce(ctx, lhs_type, rhs_direct);
-		auto r_to_r = canCoerce(ctx, rhs_type, rhs_direct);
+		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct);
+		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct);
 
-		if (l_to_r.valueOrThrow().isValid() && r_to_r.valueOrThrow().isValid()) {
+		if (lhs_to_rhs.valueOrThrow().isValid() && rhs_to_rhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
 				rhs_direct,
-				std::move(l_to_r.valueOrThrow()).getCoercion(),
-				std::move(r_to_r.valueOrThrow()).getCoercion()
+				std::move(lhs_to_rhs.valueOrThrow()).getCoercion(),
+				std::move(rhs_to_rhs.valueOrThrow()).getCoercion()
 			);
 		}
 
 		// Try to coerce both values to the lhs direct type.
-		auto l_to_l = canCoerce(ctx, lhs_type, lhs_direct);
-		auto r_to_l = canCoerce(ctx, rhs_type, lhs_direct);
+		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct);
+		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct);
 
-		if (l_to_l.valueOrThrow().isValid() && r_to_l.valueOrThrow().isValid()) {
+		if (lhs_to_lhs.valueOrThrow().isValid() && rhs_to_lhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
 				lhs_direct,
-				std::move(l_to_l.valueOrThrow()).getCoercion(),
-				std::move(r_to_l.valueOrThrow()).getCoercion()
+				std::move(lhs_to_lhs.valueOrThrow()).getCoercion(),
+				std::move(rhs_to_lhs.valueOrThrow()).getCoercion()
 			);
 		}
 

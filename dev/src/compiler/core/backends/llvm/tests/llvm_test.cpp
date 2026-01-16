@@ -110,13 +110,7 @@ private:
 			for (auto& fun: module_hout.functions) {
 				CRef mir_fun
 					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-				mir_fun->debugPrint(std::cout);
-				std::cout << '\n';
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
-
-				lir_fun->debugPrint(ctx, std::cout);
-				std::cout << '\n';
-
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});
