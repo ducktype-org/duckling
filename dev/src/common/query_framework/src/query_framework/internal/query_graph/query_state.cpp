@@ -506,10 +506,6 @@ namespace query::internal {
 			}
 		}
 
-		// Queue for step 3
-		std::vector<usize> to_process;
-		std::vector<bool>  sheduled_to_process(node_count, false);
-
 		// Remove nodes marked as removed from the graph
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			// If node is removed remove it from the graph
@@ -535,170 +531,157 @@ namespace query::internal {
 					"Number of childs mismatch after removal"
 				);
 			}
-
-			// IF the node is root, add it to processing queue for step 3
-			if (parent_map[node_idx].empty()) {
-				to_process.push_back(node_idx);
-				sheduled_to_process[node_idx] = true;
-			}
 		}
 
 		// STEP 3: Remove unstable nodes that have only 1 parent
 		// Queue for nodes to process we process from roots to leaves
 		// REQUIREMENT: THERE CANNOT BE DUPLICATES IN PARENTS, and the parent map cannot contain
 		// deleted nodes It is good if the children are also not deleted, but it is not necessary
-		usize to_process_head = 0;
 
-		// Map to keep track of original childs of current node during processing
-		// To not add same parent multiple times
-		std::vector<bool> was_original_child(node_count, false);
+		for (int i = 0; i < 2; ++i) {
+			std::vector<usize> to_process;
+			std::vector<bool>  sheduled_to_process(node_count, false);
+			usize              to_process_head = 0;
 
-		// Invariant: All parents of are current node are processed correctly
-		// And current node have all FINAL living parents in parent_map
-		// Also the number_of_parents[current] have the correct value of FINAL living parents
-		// Also current node has either more than 1 parent or it must be preserved
-		// The childs of current node aren't processed yet
-		// We remove unstable childs that have only 1 parent (current), and connect children of
-		// removed children to current This do not increrase the number of edges in the graph, but
-		// removes unnecessary nodes
-		// We also remove nodes that after processing have only 1 child and are not need to be
-		// preserved by connecting their only child to all their parents This also do not increase
-		// the number of edges in the graph, but decreases the number of nodes
-		while (to_process_head < to_process.size()) {
-			usize current = to_process[to_process_head++];
-
-			// The node can be already removed via adoption after being scheduled
-			if (removed[current]) continue;
-
-			// Scheduled to process must be true
-			CORE_ASSERT(
-				sheduled_to_process[current], "Node in processing queue must be scheduled to process"
-			);
-
-			// Asert invariant holds
-			CORE_ASSERT(
-				is_preserve_node[current] || number_of_parents[current] > 1,
-				base::strConcat(
-					"Node in processing queue must be preserve node or have more than 1 parent: ",
-					std::to_string(current),
-					" Number of parents: ",
-					std::to_string(number_of_parents[current]),
-					" Needs to be preserved: ",
-					is_preserve_node[current] ? "true" : "false",
-					" Number of childs: ",
-					std::to_string(number_of_childs[current])
-				)
-			);
-
-			auto& childs = opt_graph[current];
-
-			// Iterete over childs and search for children that have only 1 parent (current)
-			// They can be safety removed
-			std::vector<usize> childs_to_process;
-
-			const usize original_child_count = childs.size();
-
-			for (auto child: childs) {
-				was_original_child[child] = true;
-				childs_to_process.push_back(child);
-			}
-
-			while (!childs_to_process.empty()) {
-				usize child = childs_to_process.back();
-				childs_to_process.pop_back();
-				// Assert that child is not current
-				CORE_ASSERT(child != current, "Cycle detected during optimization");
-
-				// If child is removed skip it
-				if (removed[child]) continue;
-
-				// Check the number of parents
-				const auto parent_count = number_of_parents[child];
-
-				// If child has only 1 parent, and its unstable we can remove it
-				if (parent_count == 1 && !is_preserve_node[child]) {
-					// Set the child as removed
-
-					removed[child] = true;
-					// change the number of childs of current
-					number_of_childs[current] -= 1;
-
-					// For each grandchild: add edge from current to grandchild
-					for (auto grandchild: opt_graph[child]) {
-						// Decrease number of parents for grandchild
-						number_of_parents[grandchild] -= 1;
-
-						childs.push_back(grandchild);
-						// Add edge from current to grandchild (if not already present)
-						// That can happen if grandchild is also child of current or grandchild was
-						// processed before
-						if (!was_original_child[grandchild]
-						    && parent_map[grandchild][parent_map[grandchild].size() - 1]
-						           != current) {
-							number_of_childs[current] += 1;
-							number_of_parents[grandchild] += 1;
-							parent_map[grandchild].push_back(current);
-							// childs.push_back(grandchild);
-						}
-
-						// This grandchild might also have only 1 parent, and it is a child of
-						// current now So we need to process it too
-						childs_to_process.push_back(grandchild);
-					}
-				} else if (!sheduled_to_process[child]) {
-					// Child cannot be removed, so we schedule it for processing
-					to_process.push_back(child);
-					sheduled_to_process[child] = true;
+			// Add all roots to processing queue
+			for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+				if (!removed[node_idx] && parent_map[node_idx].empty()) {
+					to_process.push_back(node_idx);
+					sheduled_to_process[node_idx] = true;
+					// Node should be preserved at this point
+					CORE_ASSERT(
+						is_preserve_node[node_idx],
+						"Root nodes must be preserved at this point of optimization"
+					);
 				}
 			}
 
-			// Clear was_original_child flags
-			for (usize i = 0; i < original_child_count; ++i) was_original_child[childs[i]] = false;
+			// Map to keep track of original childs of current node during processing
+			// To not add same parent multiple times
+			std::vector<bool> was_original_child(node_count, false);
 
-			// If we have only one child and current is unstable we can remove current too
-			// And conect its only child to all its parents
-			// Since this will not increase the number of edges in the graph
-			if (!is_preserve_node[current] && number_of_childs[current] == 1) {
-				usize only_child
-					= childs[childs.size() - 1];  // The only child left is the last one
+			// Invariant: All parents of are current node are processed correctly
+			// And current node have all FINAL living parents in parent_map
+			// current node is not removen and will not be removed
+			// Also the number_of_parents[current] have the correct value of FINAL living parents
+			// Also current node has either more than 1 parent or it must be preserved
+			// The childs of current node aren't processed yet
+			// We remove unstable childs that have only 1 parent (current), and connect children of
+			// removed children to current This do not increrase the number of edges in the graph,
+			// but removes unnecessary nodes We also remove nodes that after processing have only 1
+			// child and are not need to be preserved by connecting their only child to all their
+			// parents This also do not increase the number of edges in the graph, but decreases the
+			// number of nodes
+			while (to_process_head < to_process.size()) {
+				usize current = to_process[to_process_head++];
 
-				// Assert that only child is not removed
+				// The node can be already removed via adoption after being scheduled
+				if (removed[current]) continue;
+
+				// Scheduled to process must be true
 				CORE_ASSERT(
-					removed[only_child] == false,
-					"Only child cannot be removed at this stage. If so there is a bug in the "
-				    "algorithm"
+					sheduled_to_process[current],
+					"Node in processing queue must be scheduled to process"
 				);
 
-				// Mark current as removed
-				removed[current] = true;
+				// Asert invariant holds
+				CORE_ASSERT(
+					is_preserve_node[current] || number_of_parents[current] > 1,
+					base::strConcat(
+						"Node in processing queue must be preserve node or have more than 1 "
+						"parent: ",
+						std::to_string(current),
+						" Number of parents: ",
+						std::to_string(number_of_parents[current]),
+						" Needs to be preserved: ",
+						is_preserve_node[current] ? "true" : "false",
+						" Number of childs: ",
+						std::to_string(number_of_childs[current])
+					)
+				);
 
-				// Decrease number of parents of only child
-				number_of_parents[only_child] -= 1;
+				auto& childs = opt_graph[current];
 
-				// Deduplicate and remove dead parents of current
-				deduplicate_or_remove(parent_map[current], true, true);
+				// Iterete over childs and search for children that have only 1 parent (current)
+				// They can be safety removed
+				std::vector<usize> childs_to_process;
 
-				for (auto parent: parent_map[current]) {
-					// Change the number of childs
-					// of parent
-					// Add the only child to parent's childs
-					opt_graph[parent].push_back(only_child);
-					number_of_parents[only_child] += 1;
-					parent_map[only_child].push_back(parent);
+				const usize original_child_count = childs.size();
+
+				for (auto child: childs) {
+					was_original_child[child] = true;
+					childs_to_process.push_back(child);
 				}
-			}
-		}
 
-		// Then remove all removed nodes from the graph
-		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
-			// If node is marked as removed, remove it from the graph
-			if (removed[node_idx]) {
-				opt_graph[node_idx].clear();
-				continue;
+				while (!childs_to_process.empty()) {
+					usize child = childs_to_process.back();
+					childs_to_process.pop_back();
+					// Assert that child is not current
+					CORE_ASSERT(child != current, "Cycle detected during optimization");
+
+					// If child is removed skip it
+					if (removed[child]) continue;
+
+					// Check the number of parents
+					const auto parent_count = number_of_parents[child];
+
+					// If child has only 1 parent, and its unstable we can remove it
+					if (parent_count == 1 && !is_preserve_node[child]) {
+						// Set the child as removed
+
+						removed[child] = true;
+						// change the number of childs of current
+						number_of_childs[current] -= 1;
+
+						// For each grandchild: add edge from current to grandchild
+						for (auto grandchild: opt_graph[child]) {
+							// Decrease number of parents for grandchild
+							number_of_parents[grandchild] -= 1;
+
+							// Add edge from current to grandchild (if not already present)
+							// That can happen if grandchild is also child of current or grandchild
+							// was processed before
+							if (!was_original_child[grandchild]
+							    && parent_map[grandchild][parent_map[grandchild].size() - 1]
+							           != current) {
+								number_of_childs[current] += 1;
+								number_of_parents[grandchild] += 1;
+								parent_map[grandchild].push_back(current);
+								childs.push_back(grandchild);
+							}
+
+							// This grandchild might also have only 1 parent, and it is a child of
+							// current now So we need to process it too
+							childs_to_process.push_back(grandchild);
+						}
+					} else if (!sheduled_to_process[child]) {
+						// Child cannot be removed, so we schedule it for processing
+						to_process.push_back(child);
+						sheduled_to_process[child] = true;
+					}
+				}
+
+				// Clear was_original_child flags
+				for (usize j = 0; j < original_child_count; ++j)
+					was_original_child[childs[j]] = false;
 			}
 
-			// Remove removed childs from the node children list
-			deduplicate_or_remove(opt_graph[node_idx], true, true);
+			// Then remove all removed nodes from the graph
+			for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+				// If node is marked as removed, remove it from the graph
+				if (removed[node_idx]) {
+					if (i == 0) opt_graph[node_idx].clear();
+					parent_map[node_idx].clear();
+					continue;
+				}
+				// Remove removed childs from the node children list
+				if (i == 0) deduplicate_or_remove(opt_graph[node_idx], false, true);
+				// Remove removed parents from the parent map
+				deduplicate_or_remove(parent_map[node_idx], false, true);
+			}
+
+			std::swap(opt_graph, parent_map);
+			std::swap(number_of_childs, number_of_parents);
 		}
 
 		// END OF THE OPTIMIZATION ALGORITHM
