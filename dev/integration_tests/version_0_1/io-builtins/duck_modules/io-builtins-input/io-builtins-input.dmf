@@ -1,7 +1,0 @@
-fun main() -> i64 = {
-    var input: string;
-    read(input);
-    var acc = 0i64
-    if 
-    return 0;
-}
