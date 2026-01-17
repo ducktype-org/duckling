@@ -3,11 +3,21 @@
 # NOTE: No preexisting tests found for this feature.
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  io-builtins-output:
+    Description: printing number types.
     Cases:
       llvm:
         backend: llvm
         Output:
+          String: "42\n15\n6\t8\nhello\n"
+        ExitCode: 0
+  io-builtins-input:
+    Description: inputting number types.
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+          String: "hi"
+        Output:
           String: ""
-        ExitCode: 42
+        ExitCode: 0
