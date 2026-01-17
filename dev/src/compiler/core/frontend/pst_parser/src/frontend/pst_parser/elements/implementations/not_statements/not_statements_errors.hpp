@@ -102,6 +102,7 @@ namespace pst {
 		}
 
 	public:
-		BadImportChainError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+		BadImportChainError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

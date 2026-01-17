@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.*` or `A.B.* hides X, Y`
 	 */
 	class ImportStarHides final: public ImportChain {
-		std::vector<tpc::Identifier> names;
+		std::vector<tpc::Identifier>                 names;
 		base::Optional<std::vector<tpc::Identifier>> hides;
 
 	public:

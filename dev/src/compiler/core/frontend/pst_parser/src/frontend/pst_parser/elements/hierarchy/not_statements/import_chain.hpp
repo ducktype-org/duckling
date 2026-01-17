@@ -8,9 +8,9 @@ namespace pst {
 	 *
 	 * used for imports
 	 */
-	class ImportChain : public NotStmt {
+	class ImportChain: public NotStmt {
 	public:
-		explicit ImportChain(const dia::SourcePosition& position): NotStmt(position) {};
+		explicit ImportChain(const dia::SourcePosition& position): NotStmt(position) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

@@ -1,7 +1,7 @@
-#include "../preamble.hpp"
-
 #include "../../../hierarchy/not_statements/import_chains/import_nested.hpp"
-#include "../../../hierarchy/lists/nested_import_list.hpp" // IWYU pragma: keep
+
+#include "../../../hierarchy/lists/nested_import_list.hpp"  // IWYU pragma: keep
+#include "../preamble.hpp"
 
 namespace pst {
 	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
@@ -17,18 +17,18 @@ namespace pst {
 		return out;
 	}
 
-	void ImportNested::dprint(std::ostream &out) const {
+	void ImportNested::dprint(std::ostream& out) const {
 		out << "{";
 
 		out << R"("names": [)";
-		for(const auto& name: names) {
+		for (const auto& name: names) {
 			nullAwareDprint(name, out);
 			out << ",";
 		}
 		out << "],";
 
 		out << R"("nested_import": )";
-		nullAwareDprint(nested_import, out);	
+		nullAwareDprint(nested_import, out);
 
 		out << "}";
 	}

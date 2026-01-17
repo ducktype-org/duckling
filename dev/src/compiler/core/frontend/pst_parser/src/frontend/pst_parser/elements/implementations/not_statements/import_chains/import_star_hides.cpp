@@ -1,6 +1,6 @@
-#include "../preamble.hpp"
-
 #include "../../../hierarchy/not_statements/import_chains/import_star_hides.hpp"
+
+#include "../preamble.hpp"
 
 namespace pst {
 	MBox<ImportStarHides> ImportStarHides::parse(LangParserState& state) {
@@ -33,11 +33,11 @@ namespace pst {
 		return out;
 	}
 
-	void ImportStarHides::dprint(std::ostream &out) const {
+	void ImportStarHides::dprint(std::ostream& out) const {
 		out << "{";
 
 		out << R"("names": [)";
-		for(const auto& name: names) {
+		for (const auto& name: names) {
 			nullAwareDprint(name, out);
 			out << ",";
 		}
@@ -45,7 +45,7 @@ namespace pst {
 
 		if (hides) {
 			out << R"("hides": [)";
-			for(const auto& name: *hides) {
+			for (const auto& name: *hides) {
 				nullAwareDprint(name, out);
 				out << ",";
 			}
@@ -58,9 +58,7 @@ namespace pst {
 	LangElement::HashAlg& ImportStarHides::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, names);
 		addToHash(partial_hash, hides.has_value());
-		if (hides) {
-			addToHash(partial_hash, *hides);
-		}
+		if (hides) addToHash(partial_hash, *hides);
 		return partial_hash;
 	}
 }

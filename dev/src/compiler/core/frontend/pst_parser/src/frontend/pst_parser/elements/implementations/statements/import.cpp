@@ -1,7 +1,7 @@
-#include "preamble.hpp"
-
 #include "../../hierarchy/statements/import.hpp"
-#include "../../hierarchy/not_statements/import_chain.hpp" // IWYU pragma: keep
+
+#include "../../hierarchy/not_statements/import_chain.hpp"  // IWYU pragma: keep
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<Import> Import::parse(LangParserState& state) {

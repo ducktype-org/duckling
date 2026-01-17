@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.C` or `A.B.C as X`
 	 */
 	class ImportIdentifierAs final: public ImportChain {
-		std::vector<tpc::Identifier> names;
+		std::vector<tpc::Identifier>    names;
 		base::Optional<tpc::Identifier> as;
 
 	public:
