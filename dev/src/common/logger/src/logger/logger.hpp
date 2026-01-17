@@ -30,8 +30,8 @@ namespace logger {
 		Linker,    ///< Logs related to the linker component.
 
 		// DVM:
-		DVM,         ///< Logs related to the DVM component.
-		DVMDetails,  ///< Logs related to detailed logs of the DVM component.
+		DVM,          ///< Logs related to the DVM component.
+		DVMDetails,   ///< Logs related to detailed logs of the DVM component.
 
 		Incremental,  ///< Logs related to incremental compilation.
 

@@ -506,6 +506,10 @@ namespace query::internal {
 			}
 		}
 
+		// For the next step we need a processing queue
+		std::vector<usize> to_process;
+		std::vector<bool>  sheduled_to_process(node_count, false);
+
 		// Remove nodes marked as removed from the graph
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			// If node is removed remove it from the graph
@@ -531,6 +535,18 @@ namespace query::internal {
 					"Number of childs mismatch after removal"
 				);
 			}
+
+
+			// For the next step, if node has 0 parents add it to processing queue
+			if (parent_map[node_idx].empty()) {
+				// Node is root, it must be preserved
+				CORE_ASSERT(
+					is_preserve_node[node_idx],
+					"Root nodes must be preserved at this point of optimization"
+				);
+				to_process.push_back(node_idx);
+				sheduled_to_process[node_idx] = true;
+			}
 		}
 
 		// STEP 3: Remove unstable nodes that have only 1 parent
@@ -539,26 +555,15 @@ namespace query::internal {
 		// deleted nodes It is good if the children are also not deleted, but it is not necessary
 
 		for (int i = 0; i < 2; ++i) {
-			std::vector<usize> to_process;
-			std::vector<bool>  sheduled_to_process(node_count, false);
-			usize              to_process_head = 0;
-
-			// Add all roots to processing queue
-			for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
-				if (!removed[node_idx] && parent_map[node_idx].empty()) {
-					to_process.push_back(node_idx);
-					sheduled_to_process[node_idx] = true;
-					// Node should be preserved at this point
-					CORE_ASSERT(
-						is_preserve_node[node_idx],
-						"Root nodes must be preserved at this point of optimization"
-					);
-				}
-			}
+			usize to_process_head = 0;
 
 			// Map to keep track of original childs of current node during processing
 			// To not add same parent multiple times
 			std::vector<bool> was_original_child(node_count, false);
+
+			// Declare childs to process stack
+			// It is declared here to avoid reallocations
+			std::vector<usize> childs_to_process;
 
 			// Invariant: All parents of are current node are processed correctly
 			// And current node have all FINAL living parents in parent_map
@@ -604,7 +609,6 @@ namespace query::internal {
 
 				// Iterete over childs and search for children that have only 1 parent (current)
 				// They can be safety removed
-				std::vector<usize> childs_to_process;
 
 				const usize original_child_count = childs.size();
 
@@ -664,20 +668,38 @@ namespace query::internal {
 				// Clear was_original_child flags
 				for (usize j = 0; j < original_child_count; ++j)
 					was_original_child[childs[j]] = false;
+
+				// Clear childs to process stack
+				childs_to_process.clear();
 			}
 
-			// Then remove all removed nodes from the graph
-			for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
-				// If node is marked as removed, remove it from the graph
-				if (removed[node_idx]) {
-					if (i == 0) opt_graph[node_idx].clear();
-					parent_map[node_idx].clear();
-					continue;
+			if (i == 0) {
+				to_process.clear();
+				sheduled_to_process.assign(node_count, false);
+				// Then remove all removed nodes from the graph
+				for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+					// If node is marked as removed, remove it from the graph
+					if (removed[node_idx]) {
+						opt_graph[node_idx].clear();
+						parent_map[node_idx].clear();
+						continue;
+					}
+					// Remove removed childs from the node children list
+					deduplicate_or_remove(opt_graph[node_idx], false, true);
+					// Remove removed parents from the parent map
+					deduplicate_or_remove(parent_map[node_idx], false, true);
+
+					// Add a leaf nodes to processing queue for next iteration
+					if (opt_graph[node_idx].empty()) {
+						// Node is leaf, it must be preserved
+						CORE_ASSERT(
+							is_preserve_node[node_idx],
+							"Leaf nodes must be preserved at this point of optimization"
+						);
+						to_process.push_back(node_idx);
+						sheduled_to_process[node_idx] = true;
+					}
 				}
-				// Remove removed childs from the node children list
-				if (i == 0) deduplicate_or_remove(opt_graph[node_idx], false, true);
-				// Remove removed parents from the parent map
-				deduplicate_or_remove(parent_map[node_idx], false, true);
 			}
 
 			std::swap(opt_graph, parent_map);
@@ -708,7 +730,12 @@ namespace query::internal {
 
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
-			const auto&        deps = opt_graph[node_idx];
+
+			// Remove removed childs from the node children list (from the last optimization step)
+			deduplicate_or_remove(opt_graph[node_idx], false, true);
+
+			const auto& deps = opt_graph[node_idx];
+
 			std::vector<usize> new_dep_vec;
 			new_dep_vec.reserve(deps.size());
 			for (const auto& dep_idx: deps) new_dep_vec.push_back(old_to_new[dep_idx]);
