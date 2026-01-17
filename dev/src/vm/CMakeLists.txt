@@ -102,6 +102,7 @@ function(add_vm_variant suffix compile_def)
     add_custom_command(
         OUTPUT ${common_bc}
         COMMAND llvm-link-19
+            --only-needed
             $<TARGET_OBJECTS:LibCommonVM_bc>
             $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
             ${vm_dep_objects_bc}
