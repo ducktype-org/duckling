@@ -11,8 +11,8 @@ def plot_regression_line(df, output):
     fig, ax = plt.subplots(figsize=(12, 10))
     ax.grid()
 
-    ax.plot([0, np.max(tokens_cpp)], [0, 2.0*np.max(tokens_cpp)], c='tab:gray', label=f'Target coeficcient: {2.0:.1%}')
-    ax.plot([0, np.max(tokens_cpp)], [0, 1*np.max(tokens_cpp)], c='tab:gray', linestyle='--', label=f'Base coeficcient: {1:.1%}')
+    ax.plot([0, np.max(tokens_cpp)], [0, 2.0*np.max(tokens_cpp)], c='tab:gray', label=f'Maximum target coeficcient: {2.0:.1%}')
+    ax.plot([0, np.max(tokens_cpp)], [0, 1*np.max(tokens_cpp)], c='tab:gray', linestyle='--', label=f'1-1 coeficcient: {1:.1%}')
     ax.plot([0, np.max(tokens_cpp)], [0, regression_coef*np.max(tokens_cpp)], c='tab:red', label=f'Current coeficcient: {regression_coef:0.1%}')
     
     ax.scatter(tokens_cpp, tokens_duck, c='tab:blue')
@@ -60,7 +60,7 @@ def plot_box_categories(df, output):
         ax.hlines(y=np.mean(points), xmin=i-0.2, xmax=i+0.2, color='tab:green', linestyle='--')
         
 
-    ax.set_xlabel('Category of the example')
+    ax.set_xlabel('Category')
     ax.set_ylabel('Ratio of compilation time in Duckling vs GCC')
     ax.set_title('Compilation time ratio by category\nGCC vs Duckling')
     ax.legend()
