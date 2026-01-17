@@ -292,25 +292,33 @@ namespace query::internal {
 		const usize node_count = idx_to_node.size();
 
 		// Map to keep track of touched nodes during optimization
-		// All values ​​in this map should always be set to false unless we are in the middle of some algorithm
+		// All values ​​in this map should always be set to false unless we are in the middle of
+		// some algorithm
 		std::vector<bool> touched(node_count, false);
 
 		// Map to keep track of removed nodes during optimization
 		std::vector<bool> removed(node_count, false);
 
 		// A function that allows you to lazily delete and deduplicate vertices. Runs in O(n)
-		auto deduplicate_or_remove = [&removed, &touched](std::vector<usize>& vec, const bool deduplicate, const bool remove) {
-			auto range = std::ranges::remove_if(vec, [&removed, &touched, remove, deduplicate](usize child) { 
-				if (remove && removed[child]) return true;
-				if (deduplicate && touched[child]) return true;
-				else if (deduplicate) touched[child] = true;
-				return false;
-			});
-			vec.erase(range.begin(), range.end());
-			// Reset touched map
-			if(deduplicate)
-				for (auto child: vec) touched[child] = false;
-		};
+		auto deduplicate_or_remove
+			= [&removed,
+		       &touched](std::vector<usize>& vec, const bool deduplicate, const bool remove) {
+				  auto range = std::ranges::remove_if(
+					  vec,
+					  [&removed, &touched, remove, deduplicate](usize child) {
+						  if (remove && removed[child]) return true;
+						  if (deduplicate && touched[child])
+							  return true;
+						  else if (deduplicate)
+							  touched[child] = true;
+						  return false;
+					  }
+				  );
+				  vec.erase(range.begin(), range.end());
+				  // Reset touched map
+				  if (deduplicate)
+					  for (auto child: vec) touched[child] = false;
+			  };
 
 		// The opt graph will be represented as adjacency list of usize IDs
 		std::vector<std::vector<usize>> opt_graph(node_count);
@@ -318,9 +326,9 @@ namespace query::internal {
 		// We also need to keep a parent map to be able to traverse back the graph
 		std::vector<std::vector<usize>> parent_map(node_count);
 
-		// Some algorithms may rely solely on the number of children or parents, and only delete them after the operation is complete.
-		// These maps should be kept up to date.
-		// Number of childs for each node
+		// Some algorithms may rely solely on the number of children or parents, and only delete
+		// them after the operation is complete. These maps should be kept up to date. Number of
+		// childs for each node
 		std::vector<u64> number_of_childs(node_count, 0);
 
 		// Number of parents for each node
@@ -378,11 +386,7 @@ namespace query::internal {
 			for (const auto& dep: deps) child_indices.push_back(node_to_idx.at(dep));
 
 			// Deduplicate dependencies
-			deduplicate_or_remove(
-				child_indices,
-				true,
-				false
-			);
+			deduplicate_or_remove(child_indices, true, false);
 
 			// Store deduplicated children
 			auto& node_children = opt_graph[node_idx];
@@ -456,13 +460,8 @@ namespace query::internal {
 
 			// IF node is not removed but touched, we need to filter its parents
 			if (touched[node_idx]) {
-
 				// Remove the parents that have been marked as removed during step 1
-				deduplicate_or_remove(
-					parent_map[node_idx],
-					false,
-					true
-				);
+				deduplicate_or_remove(parent_map[node_idx], false, true);
 
 				// Clear the touched flag
 				touched[node_idx] = false;
@@ -486,7 +485,7 @@ namespace query::internal {
 		while (!to_remove_no_childs.empty()) {
 			const usize current = to_remove_no_childs.back();
 			to_remove_no_childs.pop_back();
-			
+
 			// Assert that current node is non-stable
 			CORE_ASSERT(!is_preserve_node[current], "Current node should be non-stable");
 			// Current node should have been already marked as removed
@@ -508,8 +507,8 @@ namespace query::internal {
 		}
 
 		// Queue for step 3
-		std::vector<usize>                      to_process;
-		std::vector<bool> sheduled_to_process(node_count, false);
+		std::vector<usize> to_process;
+		std::vector<bool>  sheduled_to_process(node_count, false);
 
 		// Remove nodes marked as removed from the graph
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
@@ -522,14 +521,10 @@ namespace query::internal {
 
 			// If node is not removed but touched, we need to filter its childs
 			if (touched[node_idx]) {
-				auto& childs               = opt_graph[node_idx];
+				auto& childs = opt_graph[node_idx];
 
 				// Remove the childs that have been marked as removed during step 2
-				deduplicate_or_remove(
-					childs,
-					false,
-					true
-				);
+				deduplicate_or_remove(childs, false, true);
 
 				// Clear the touched flag
 				touched[node_idx] = false;
@@ -550,9 +545,9 @@ namespace query::internal {
 
 		// STEP 3: Remove unstable nodes that have only 1 parent
 		// Queue for nodes to process we process from roots to leaves
-		// REQUIREMENT: THERE CANNOT BE DUPLICATES IN PARENTS, and the parent map cannot contain deleted nodes
-		// It is good if the children are also not deleted, but it is not necessary
-		usize                                   to_process_head = 0;
+		// REQUIREMENT: THERE CANNOT BE DUPLICATES IN PARENTS, and the parent map cannot contain
+		// deleted nodes It is good if the children are also not deleted, but it is not necessary
+		usize to_process_head = 0;
 
 		// Map to keep track of original childs of current node during processing
 		// To not add same parent multiple times
@@ -566,9 +561,9 @@ namespace query::internal {
 		// We remove unstable childs that have only 1 parent (current), and connect children of
 		// removed children to current This do not increrase the number of edges in the graph, but
 		// removes unnecessary nodes
-		// We also remove nodes that after processing have only 1 child and are not need to be preserved
-		// by connecting their only child to all their parents
-		// This also do not increase the number of edges in the graph, but decreases the number of nodes
+		// We also remove nodes that after processing have only 1 child and are not need to be
+		// preserved by connecting their only child to all their parents This also do not increase
+		// the number of edges in the graph, but decreases the number of nodes
 		while (to_process_head < to_process.size()) {
 			usize current = to_process[to_process_head++];
 
@@ -577,8 +572,7 @@ namespace query::internal {
 
 			// Scheduled to process must be true
 			CORE_ASSERT(
-				sheduled_to_process[current],
-				"Node in processing queue must be scheduled to process"
+				sheduled_to_process[current], "Node in processing queue must be scheduled to process"
 			);
 
 			// Asert invariant holds
@@ -604,7 +598,7 @@ namespace query::internal {
 
 			const usize original_child_count = childs.size();
 
-			for (auto child: childs){
+			for (auto child: childs) {
 				was_original_child[child] = true;
 				childs_to_process.push_back(child);
 			}
@@ -636,16 +630,19 @@ namespace query::internal {
 
 						childs.push_back(grandchild);
 						// Add edge from current to grandchild (if not already present)
-						// That can happen if grandchild is also child of current or grandchild was processed before
-						if (!was_original_child[grandchild] && parent_map[grandchild][parent_map[grandchild].size()-1] != current) {
+						// That can happen if grandchild is also child of current or grandchild was
+						// processed before
+						if (!was_original_child[grandchild]
+						    && parent_map[grandchild][parent_map[grandchild].size() - 1]
+						           != current) {
 							number_of_childs[current] += 1;
 							number_of_parents[grandchild] += 1;
 							parent_map[grandchild].push_back(current);
-							//childs.push_back(grandchild);
+							// childs.push_back(grandchild);
 						}
 
-						// This grandchild might also have only 1 parent, and it is a child of current now 
-						// So we need to process it too
+						// This grandchild might also have only 1 parent, and it is a child of
+						// current now So we need to process it too
 						childs_to_process.push_back(grandchild);
 					}
 				} else if (!sheduled_to_process[child]) {
@@ -656,8 +653,7 @@ namespace query::internal {
 			}
 
 			// Clear was_original_child flags
-			for (usize i = 0; i < original_child_count; ++i)
-				was_original_child[childs[i]] = false;
+			for (usize i = 0; i < original_child_count; ++i) was_original_child[childs[i]] = false;
 
 			// If we have only one child and current is unstable we can remove current too
 			// And conect its only child to all its parents
@@ -669,7 +665,8 @@ namespace query::internal {
 				// Assert that only child is not removed
 				CORE_ASSERT(
 					removed[only_child] == false,
-					"Only child cannot be removed at this stage. If so there is a bug in the algorithm"
+					"Only child cannot be removed at this stage. If so there is a bug in the "
+				    "algorithm"
 				);
 
 				// Mark current as removed
@@ -679,14 +676,10 @@ namespace query::internal {
 				number_of_parents[only_child] -= 1;
 
 				// Deduplicate and remove dead parents of current
-				deduplicate_or_remove(
-					parent_map[current],
-					true,
-					true
-				);
+				deduplicate_or_remove(parent_map[current], true, true);
 
 				for (auto parent: parent_map[current]) {
-					// Change the number of childs 
+					// Change the number of childs
 					// of parent
 					// Add the only child to parent's childs
 					opt_graph[parent].push_back(only_child);
@@ -705,11 +698,7 @@ namespace query::internal {
 			}
 
 			// Remove removed childs from the node children list
-			deduplicate_or_remove(
-				opt_graph[node_idx],
-				true,
-				true
-			);
+			deduplicate_or_remove(opt_graph[node_idx], true, true);
 		}
 
 		// END OF THE OPTIMIZATION ALGORITHM
