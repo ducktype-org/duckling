@@ -525,8 +525,10 @@ namespace query::internal {
 					is_preserve_node[node_idx],
 					"Root nodes must be preserved at this point of optimization"
 				);
-				to_process.push_back(node_idx);
-				sheduled_to_process[node_idx] = true;
+				if (!sheduled_to_process[node_idx]) {
+					to_process.push_back(node_idx);
+					sheduled_to_process[node_idx] = true;
+				}
 			}
 		}
 
@@ -541,6 +543,10 @@ namespace query::internal {
 			// Map to keep track of original childs of current node during processing
 			// To not add same parent multiple times
 			std::vector<bool> was_original_child(node_count, false);
+
+			std::vector<usize> number_of_processed_parents(node_count, 0);
+
+			IF_BUILD_TYPE_DEV(std::vector<bool> processed(node_count, false);)
 
 			// Declare childs to process stack
 			// It is declared here to avoid reallocations
@@ -570,9 +576,27 @@ namespace query::internal {
 					"Node in processing queue must be scheduled to process"
 				);
 
+				// If not all parents are processed yet, skip for now
+				// The last processed parent will re-schedule the node
+				// We need to make sure ivariant holds and all parents are processed
+				if (number_of_processed_parents[current] < number_of_parents[current]) {
+					// Node have been processed already via another path
+					sheduled_to_process[current] = false;
+					continue;
+				}
+
+				IF_BUILD_TYPE_DEV(
+					CORE_ASSERT(
+						!processed[current],
+						"Node in processing queue must not be processed. Cycle exists in the graph"
+					);
+
+					processed[current] = true;
+				)
+
 				// Asert invariant holds
 				CORE_ASSERT(
-					is_preserve_node[current] || number_of_parents[current] > 1,
+					is_preserve_node[current] || number_of_processed_parents[current] > 1,
 					base::strConcat(
 						"Node in processing queue must be preserve node or have more than 1 "
 						"parent: ",
@@ -596,6 +620,8 @@ namespace query::internal {
 				for (auto child: childs) {
 					was_original_child[child] = true;
 					childs_to_process.push_back(child);
+					// Increase the number of processed parents for the child
+					number_of_processed_parents[child] += 1;
 				}
 
 				while (!childs_to_process.empty()) {
@@ -606,6 +632,13 @@ namespace query::internal {
 
 					// If child is removed skip it
 					if (removed[child]) continue;
+
+					// Child cannot be processed yet
+					IF_BUILD_TYPE_DEV(CORE_ASSERT(
+										  !processed[child],
+										  "Child node must not be processed yet. This also means "
+										  "than cycle exists in the graph"
+					);)
 
 					// Check the number of parents
 					const auto parent_count = number_of_parents[child];
@@ -631,6 +664,7 @@ namespace query::internal {
 							           != current) {
 								number_of_childs[current] += 1;
 								number_of_parents[grandchild] += 1;
+								number_of_processed_parents[grandchild] += 1;
 								parent_map[grandchild].push_back(current);
 								childs.push_back(grandchild);
 							}
@@ -649,12 +683,17 @@ namespace query::internal {
 				// Clear was_original_child flags
 				for (usize j = 0; j < original_child_count; ++j)
 					was_original_child[childs[j]] = false;
-
-				// Clear childs to process stack
-				childs_to_process.clear();
 			}
 
 			to_process.clear();
+
+			// Aseert that all nodes are either processed or removed
+			IF_BUILD_TYPE_DEV(for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+				CORE_ASSERT(
+					processed[node_idx] || removed[node_idx],
+					"All nodes in the graph must be either processed or removed"
+				);
+			})
 
 			if (i == 0) {
 				sheduled_to_process.assign(node_count, false);
@@ -678,8 +717,10 @@ namespace query::internal {
 							is_preserve_node[node_idx],
 							"Leaf nodes must be preserved at this point of optimization"
 						);
-						to_process.push_back(node_idx);
-						sheduled_to_process[node_idx] = true;
+						if (!sheduled_to_process[node_idx]) {
+							to_process.push_back(node_idx);
+							sheduled_to_process[node_idx] = true;
+						}
 					}
 				}
 			}
