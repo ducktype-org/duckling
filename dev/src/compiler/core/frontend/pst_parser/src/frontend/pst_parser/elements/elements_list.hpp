@@ -13,6 +13,7 @@ namespace pst {
 	class InitList;
 	class CallList;
 	class FlowPatternList;
+	class NestedImportList;
 	// Not Statements
 	class Param;
 	class DottedName;
@@ -23,6 +24,7 @@ namespace pst {
 	class ClassBlock;
 	class RoundGroupExpr;
 	class ExprElement;
+	// Patterns
 	class FlowPattern;
 	class AnalysisPattern;
 	class DeconstructorPattern;
@@ -30,6 +32,11 @@ namespace pst {
 	class WildcardPattern;
 	class BindingPattern;
 	class ValuePattern;
+	// Import Chains
+	class ImportChain;
+	class ImportIdentifierAs;
+	class ImportStarHides;
+	class ImportNested;
 	// Statements
 	class Import;
 	class StmtSpecifier;

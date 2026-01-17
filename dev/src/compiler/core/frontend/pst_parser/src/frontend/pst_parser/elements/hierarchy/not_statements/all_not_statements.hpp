@@ -6,7 +6,11 @@
 #include "code_block.hpp"               // IWYU pragma: export
 #include "code_block_or_statement.hpp"  // IWYU pragma: export
 #include "dotted_name.hpp"              // IWYU pragma: export
+#include "import_chain.hpp"              // IWYU pragma: export
 #include "expr_element.hpp"             // IWYU pragma: export
 #include "param.hpp"                    // IWYU pragma: export
 #include "patterns/patterns.hpp"        // IWYU pragma: export
 #include "round_group_expression.hpp"   // IWYU pragma: export
+#include "import_chains/import_identifier_as.hpp"              // IWYU pragma: export
+#include "import_chains/import_nested.hpp"	              // IWYU pragma: export
+#include "import_chains/import_star_hides.hpp"	              // IWYU pragma: export
