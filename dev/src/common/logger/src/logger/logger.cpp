@@ -56,6 +56,7 @@ namespace logger {
 		HANDLE_CATEGORY_NAME(DVM)
 		HANDLE_CATEGORY_NAME(DVMDetails)
 		HANDLE_CATEGORY_NAME(Incremental)
+		HANDLE_CATEGORY_NAME(REPL)
 		else std::cerr << "Warning: Unknown log category name: " << category_name << '\n';
 	}
 }
