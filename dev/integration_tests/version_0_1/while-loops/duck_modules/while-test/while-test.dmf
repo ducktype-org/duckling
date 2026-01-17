@@ -1,0 +1,84 @@
+
+
+fun main() -> i64 = {
+    
+    # unnamed loop and unnamed break
+    var a = 5;
+    while (a > 0) {
+        if (a == 3)
+            break;
+        println(a);
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+    # named loop and named break
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3)
+            break test_loop;
+        println(a);
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+    # named loop and unnamed break
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3)
+            break;
+        println(a);
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+
+    # unnamed loop and unnamed continue
+    var a = 5;
+    while (a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue;
+        }
+        println(a);
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+    # named loop and named continue
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue test_loop;
+        }
+        println(a);
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+    # named loop and unnamed continue
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue;
+        }
+        println(a);
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+
+    # false initial condition
+    while (false) {
+        println("should never be printed");
+    }
+    return 3;
+}

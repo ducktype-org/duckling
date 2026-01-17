@@ -1,14 +1,10 @@
-# Dummy test configuration for while-loops
-# TODO: Replace with actual tests or link to preexisting ones if available.
-# NOTE: No preexisting tests found for this feature.
-
 Tests:
-  dummy-test:
+  while-test:
     Description: Minimal working dummy test.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "5\n4\n5\n4\n5\n4\n5\n4\n2\n1\n5\n4\n2\n1\n5\n4\n2\n1\n"
+        ExitCode: 3
 
