@@ -4,7 +4,7 @@
 
 namespace pst {
 	/**
-	 * @brief Import chain of the form `A.B.*` or `A.B.* hides X, Y`
+	 * @brief Import chain of the form `A.B.(A, B.C.*)`
 	 */
 	class ImportNested final: public ImportChain {
 		std::vector<tpc::Identifier> names;
@@ -21,21 +21,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto begin() const {
-			return names.cbegin();
-		}
-
-		[[nodiscard]]
-		auto end() const {
-			return names.cend();
-		}
-
-		[[nodiscard]]
 		std::string elementType() const override {
 			return "Import Star Hides Chain";
 		}
 
-		static MBox<DottedName> parse(LangParserState& state);
+		static MBox<ImportNested> parse(LangParserState& state);
 
 		[[nodiscard]]
 		AccessLocked<NestedImportList> getNestedImportList() const {

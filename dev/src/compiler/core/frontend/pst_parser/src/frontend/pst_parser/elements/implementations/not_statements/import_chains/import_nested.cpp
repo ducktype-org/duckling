@@ -1,0 +1,39 @@
+#include "../preamble.hpp"
+
+#include "../../../hierarchy/not_statements/import_chains/import_nested.hpp"
+#include "../../../hierarchy/lists/nested_import_list.hpp" // IWYU pragma: keep
+
+namespace pst {
+	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
+		auto out = makeBox<ImportNested>(state.getPosition());
+
+		tpc::Identifier id;
+		PST_WHILE(state[0].isIdentifier()) {
+			state.parse(out).all(&id, NamedOperator::Period);
+		}
+		state.parse(out).one(&out->nested_import);
+
+		return out;
+	}
+
+	void ImportNested::dprint(std::ostream &out) const {
+		out << "{";
+
+		out << R"("names": [)";
+		for(const auto& name: names) {
+			nullAwareDprint(name, out);
+			out << ",";
+		}
+		out << "],";
+
+		out << R"("nested_import": )";
+		nullAwareDprint(nested_import, out);	
+
+		out << "}";
+	}
+
+	LangElement::HashAlg& ImportNested::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, names);
+		return partial_hash;
+	}
+}
