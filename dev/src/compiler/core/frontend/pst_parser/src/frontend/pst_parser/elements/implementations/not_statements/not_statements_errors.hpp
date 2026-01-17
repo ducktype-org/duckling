@@ -92,4 +92,16 @@ namespace pst {
 	public:
 		EmptyExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
+	class BadImportChainError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bad_import_chain_error" };
+		}
+
+	public:
+		BadImportChainError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
+	};
 }
