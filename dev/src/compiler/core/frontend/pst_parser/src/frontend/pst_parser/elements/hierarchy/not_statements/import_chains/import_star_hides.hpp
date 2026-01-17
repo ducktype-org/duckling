@@ -21,21 +21,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto begin() const {
-			return names.cbegin();
-		}
-
-		[[nodiscard]]
-		auto end() const {
-			return names.cend();
-		}
-
-		[[nodiscard]]
 		std::string elementType() const override {
 			return "Import Star Hides Chain";
 		}
 
-		static MBox<DottedName> parse(LangParserState& state);
+		static MBox<ImportStarHides> parse(LangParserState& state);
 
 		[[nodiscard]]
 		bool isImportHides() const {

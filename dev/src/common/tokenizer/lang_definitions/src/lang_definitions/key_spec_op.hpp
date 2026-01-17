@@ -35,6 +35,7 @@ namespace lang_def {
 		Class,
 		Namespace,
 		Import,
+		Hides,
 		As,
 		Using,
 		Alias,
