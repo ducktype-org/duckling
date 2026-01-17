@@ -405,6 +405,7 @@ namespace query::internal {
 		// OPTIMIZATION ALGORITHM GOES HERE
 		// Step 1: Remove all unstable nodes that have 0 parents (recursively)
 		// Queue for nodes to process
+
 		std::vector<usize> to_remove_no_parents;
 
 		// Add unstable nodes with 0 parents to processing queue
@@ -417,93 +418,73 @@ namespace query::internal {
 			}
 		}
 
-		// Process roots
-		while (!to_remove_no_parents.empty()) {
-			usize current = to_remove_no_parents.back();
-			to_remove_no_parents.pop_back();
+		for (int i = 0; i < 2; ++i) {
+			// Process roots
+			while (!to_remove_no_parents.empty()) {
+				usize current = to_remove_no_parents.back();
+				to_remove_no_parents.pop_back();
 
-			// Assert that current node is not preserved
-			CORE_ASSERT(!is_preserve_node[current], "Current node should not be preserved");
+				// Assert that current node is not preserved
+				CORE_ASSERT(!is_preserve_node[current], "Current node should not be preserved");
 
-			// Current node should have been marked as removed already
-			CORE_ASSERT(removed[current], "Current node should be marked as removed");
+				// Current node should have been marked as removed already
+				CORE_ASSERT(removed[current], "Current node should be marked as removed");
 
-			// Process childs - decrease their number of parents
-			for (auto child: opt_graph[current]) {
-				// Decrease number of parents for the child
-				auto& child_parents = number_of_parents[child];
-				child_parents -= 1;
+				// Process childs - decrease their number of parents
+				for (auto child: opt_graph[current]) {
+					// Decrease number of parents for the child
+					auto& child_parents = number_of_parents[child];
+					child_parents -= 1;
 
-				// Set the child as touched
-				touched[child] = true;
+					// Set the child as touched
+					touched[child] = true;
 
-				// If child do not need to be preserved and has 0 parents, add it to processing queue
-				if (child_parents == 0 && !is_preserve_node[child] && !removed[child]) {
-					to_remove_no_parents.push_back(child);
-					removed[child] = true;
+					// If child do not need to be preserved and has 0 parents, add it to processing queue
+					if (child_parents == 0 && !is_preserve_node[child] && !removed[child]) {
+						to_remove_no_parents.push_back(child);
+						removed[child] = true;
+					}
 				}
 			}
-		}
 
-		// This is the queue for next step
-		// Declared here to avoid unnecessary loops thru the graph
-		std::vector<usize> to_remove_no_childs;
+			to_remove_no_parents.clear();
 
-		// Remove removed_nodes from the graph
-		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
-			// If node is removed remove it from the graph
-			if (removed[node_idx]) {
-				opt_graph[node_idx].clear();
-				parent_map[node_idx].clear();
-				continue;
-			}
+			if (i == 0) {
+				// Remove removed_nodes from the graph
+				for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+					// If node is removed remove it from the graph
+					if (removed[node_idx]) {
+						opt_graph[node_idx].clear();
+						parent_map[node_idx].clear();
+						continue;
+					}
 
-			// IF node is not removed but touched, we need to filter its parents
-			if (touched[node_idx]) {
-				// Remove the parents that have been marked as removed during step 1
-				deduplicate_or_remove(parent_map[node_idx], false, true);
+					// IF node is not removed but touched, we need to filter its parents
+					if (touched[node_idx]) {
+						// Remove the parents that have been marked as removed during step 1
+						deduplicate_or_remove(parent_map[node_idx], false, true);
 
-				// Clear the touched flag
-				touched[node_idx] = false;
+						// Clear the touched flag
+						touched[node_idx] = false;
 
-				// assert that the actuall number of parents matches the stored one
-				CORE_ASSERT(
-					parent_map[node_idx].size() == number_of_parents[node_idx],
-					"Number of parents mismatch after removal"
-				);
-			}
+						// assert that the actuall number of parents matches the stored one
+						CORE_ASSERT(
+							parent_map[node_idx].size() == number_of_parents[node_idx],
+							"Number of parents mismatch after removal"
+						);
+					}
 
-			// For next step if node has 0 childs add it to processing queue
-			const auto num_childs = number_of_childs[node_idx];
-			if (num_childs == 0 && !is_preserve_node[node_idx]) {
-				removed[node_idx] = true;
-				to_remove_no_childs.push_back(node_idx);
-			}
-		}
-
-		// Step 2: Remove all unstable nodes that have 0 childs
-		while (!to_remove_no_childs.empty()) {
-			const usize current = to_remove_no_childs.back();
-			to_remove_no_childs.pop_back();
-
-			// Assert that current node is non-stable
-			CORE_ASSERT(!is_preserve_node[current], "Current node should be non-stable");
-			// Current node should have been already marked as removed
-			CORE_ASSERT(removed[current], "Current node should be marked as removed");
-
-			// Process parents - decrease their number of childs
-			for (auto parent: parent_map[current]) {
-				// Decrease number of childs for the parent
-				auto& parent_childs = number_of_childs[parent];
-				parent_childs -= 1;
-				// Set the parent as touched
-				touched[parent] = true;
-				// If parent is unstable and has 0 childs, add it to processing queue
-				if (parent_childs == 0 && !is_preserve_node[parent] && !removed[parent]) {
-					to_remove_no_childs.push_back(parent);
-					removed[parent] = true;
+					// For next step if node has 0 childs add it to processing queue
+					const auto num_childs = number_of_childs[node_idx];
+					if (num_childs == 0 && !is_preserve_node[node_idx]) {
+						removed[node_idx] = true;
+						to_remove_no_parents.push_back(node_idx);
+					}
 				}
 			}
+
+			std::swap(opt_graph, parent_map);
+			std::swap(number_of_childs, number_of_parents);
 		}
 
 		// For the next step we need a processing queue
