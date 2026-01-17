@@ -35,7 +35,7 @@ namespace pst {
 			return "Import Identifier As Chain";
 		}
 
-		static MBox<DottedName> parse(LangParserState& state);
+		static MBox<ImportIdentifierAs> parse(LangParserState& state);
 
 		[[nodiscard]]
 		bool isImportAs() const {
