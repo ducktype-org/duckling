@@ -220,6 +220,15 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 
 	Example<pst::Import, true> simple_import{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, false> empty_import{ "import" };
+	Example<pst::Import, false> empty_nested_import{ "import ()" };
+	Example<pst::Import, false> empty_star_import{ "import .*" };
+	Example<pst::Import, true> nested_import{ "import A.B.(C,)" };
+	Example<pst::Import, true> nested_import2{ "import A.B.(C,(D, E),)" };
+	Example<pst::Import, false> missing_period_import{ "import A.B(C,(D, E),)" };
+	Example<pst::Import, false> empty_nested_ard_import{ "import A.B.(C,(D, E),,)" };
+	Example<pst::Import, true> as_import{ "import A.B.C as D" };
+	Example<pst::Import, true> hides_import{ "import A.B.* hides D , G, C" };
 
 	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 

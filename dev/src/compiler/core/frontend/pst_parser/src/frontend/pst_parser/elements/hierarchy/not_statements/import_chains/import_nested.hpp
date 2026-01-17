@@ -22,7 +22,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Import Star Hides Chain";
+			return "Import Nested";
 		}
 
 		static MBox<ImportNested> parse(LangParserState& state);

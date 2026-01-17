@@ -19,7 +19,7 @@ namespace pst {
 		state.parse(out).one(NamedOperator::PeriodStar);
 
 		if (state.parse(out).tryEat(Keyword::Hides)) {
-			out->hides = {};
+			out->hides.emplace();
 
 			state.parse(out).all(&id);
 			out->hides->push_back(id);

@@ -1,4 +1,5 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
 

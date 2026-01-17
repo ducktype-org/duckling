@@ -7,7 +7,7 @@ namespace pst {
 		return ListParsingTemplate::parseList<
 			ImportChain,
 			NestedImportList,
-			false,  // empty list allowed
+			true,  // empty list not allowed
 			true,   // trailing separator not allowed
 			lexer::Token::BracketType::Round,
 			internal::Conditions::isComma,
