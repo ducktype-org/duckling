@@ -654,8 +654,9 @@ namespace query::internal {
 				childs_to_process.clear();
 			}
 
+			to_process.clear();
+
 			if (i == 0) {
-				to_process.clear();
 				sheduled_to_process.assign(node_count, false);
 				// Then remove all removed nodes from the graph
 				for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
