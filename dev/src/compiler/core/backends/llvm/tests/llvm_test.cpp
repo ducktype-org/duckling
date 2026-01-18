@@ -192,9 +192,7 @@ private:
 
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
 
-	void stringsTest() {
-		runTestForModule("modules/strings", 1, 3);
-	}
+	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 
