@@ -277,7 +277,7 @@ namespace compiler::backend_llvm {
 					/*is_packed=*/false
 				);
 
-				// TODO: Add layout verification, that the LLVM struct layout matches:
+				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
 				// - the TSL type layout, and
 				// - the struct defined in the built-ins module.
 
