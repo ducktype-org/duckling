@@ -1,0 +1,36 @@
+fun main() -> i64 = {
+    # Testing addition
+    var a: i64 = 10;
+    var b: i64 = 20;
+    builtin_output_i64(a + b); # Expect 30
+
+    # Testing subtraction
+    builtin_output_i64(b - a); # Expect 10
+
+    # Testing multiplication
+    builtin_output_i64(a * b); # Expect 200
+
+    # Testing division
+    builtin_output_i64(b / a); # Expect 2
+
+    # Testing modulo
+    builtin_output_i64(b % a); # Expect 0
+
+    # Testing compound operations
+    a = a + 5; # a = 15
+    builtin_output_i64(a); # Expect 15
+
+    b = b - 5; # b = 15
+    builtin_output_i64(b); # Expect 15
+
+    a = a * 2; # a = 30
+    builtin_output_i64(a); # Expect 30
+
+    b = b / 3; # b = 5
+    builtin_output_i64(b); # Expect 5
+
+    a = a % 7; # a = 2
+    builtin_output_i64(a); # Expect 2
+
+    return 0;
+}

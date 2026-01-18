@@ -3,11 +3,11 @@
 # NOTE: No preexisting tests found for this feature.
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  arithmetic-operators-test:
+    Description: Tests for arithmetic operators on integers.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
-        ExitCode: 42
+          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n"
+        ExitCode: 0
