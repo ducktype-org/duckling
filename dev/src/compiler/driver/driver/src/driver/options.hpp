@@ -138,16 +138,26 @@ namespace compiler::driver {
 		};
 
 		/**
+		 * Repl mode does not create a main package, does not enable incremental compilation,
+		 * and does not persist artifacts to disk.
+		 */
+		struct ReplMode final {
+			options_types::DebugOptions debug_options;
+		};
+
+		/**
 		 * @note: in the future this might hold more modes,
-		 * like repl mode, script compilation mode, lsp deamon, etc.
+		 * like script compilation mode, lsp deamon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
-		std::variant<BareMode, PackageCompilationMode> mode;
+		std::variant<BareMode, PackageCompilationMode, ReplMode> mode;
 
 		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
 		CompilerModeOfOperationAndOptions(PackageCompilationMode package_mode):
 			  mode(package_mode) {}
+
+		CompilerModeOfOperationAndOptions(ReplMode repl_mode): mode(repl_mode) {}
 	};
 };

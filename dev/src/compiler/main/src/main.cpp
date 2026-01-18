@@ -16,6 +16,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
+#include <repl/repl_session.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -245,8 +246,8 @@ clah::Clah getClahForMain() {
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+																? false
+																: true },
 						}
 					);
 
@@ -329,8 +330,8 @@ clah::Clah getClahForMain() {
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+																	 ? false
+																	 : true },
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -397,18 +398,18 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-				compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
-							},
-							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
-							},
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+									.main_package_info = {
+										.package_name = package_name,
+										.package_path = path_to_compile.getFilePath(),
+									},
+									.compilation_artifacts = {
+										.artifacts_path = fs::FilePath("./duck_build/"),
+									},
+									.debug_options = getDebugOptionsFromClap(options),
+									.incremental = {.enabled = options.isFlag("no-incremental")
+																			? false
+																			: true },
 						}
 					);
 
@@ -430,6 +431,19 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
+	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+
+							   compiler::repl::ReplSession session;
+							   int                         result = session.run();
+							   compiler::driver::exit();
+							   return result;
+						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
