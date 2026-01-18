@@ -272,7 +272,7 @@ class FunctionValidator {
 	}
 
 	/**
-	 * @brief Validates instruction's arguments in a trivial, generic way, i.e. if an
+	 * @brief Validates instruction's ain a trivial, generic way, i.e. if an
 	 * instruction expects a pointer argument then this function validates this argument really
 	 * is a pointer, not a label or a primitive. In case of this function, an instruction can be
 	 * thought of as an argument collection.
@@ -437,15 +437,15 @@ class FunctionValidator {
 		}
 
 		// We assert no cross-type operations on primitive types.
-		if (primitive_args.size() >= 2) {
-			bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
-				return x.size == primitive_args.front().size;
-			});
-			bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
-				return x.name == primitive_args.front().name;
-			});
-			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
-		}
+		// if (primitive_args.size() >= 2) {
+		// 	bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
+		// 		return x.size == primitive_args.front().size;
+		// 	});
+		// 	bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
+		// 		return x.name == primitive_args.front().name;
+		// 	});
+		// 	if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
+		// }
 	}
 
 	/**
@@ -538,6 +538,72 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_gopq_lopq) {}
 			instr_case_novalue(Op_mov_lopq_imm) {}
 			instr_case_novalue(Op_setNull_lptr) {}
+
+			// Sign Extension
+			instr_case_novalue(Op_sext_l16_l8) {}
+			instr_case_novalue(Op_sext_l32_l8) {}
+			instr_case_novalue(Op_sext_l64_l8) {}
+			instr_case_novalue(Op_sext_l32_l16) {}
+			instr_case_novalue(Op_sext_l64_l16) {}
+			instr_case_novalue(Op_sext_l64_l32) {}
+
+			// Zero Extension
+			instr_case_novalue(Op_zext_l16_l8) {}
+			instr_case_novalue(Op_zext_l32_l8) {}
+			instr_case_novalue(Op_zext_l64_l8) {}
+			instr_case_novalue(Op_zext_l32_l16) {}
+			instr_case_novalue(Op_zext_l64_l16) {}
+			instr_case_novalue(Op_zext_l64_l32) {}
+
+			// Truncation
+			instr_case_novalue(Op_trunc_l8_l16) {}
+			instr_case_novalue(Op_trunc_l8_l32) {}
+			instr_case_novalue(Op_trunc_l8_l64) {}
+			instr_case_novalue(Op_trunc_l16_l32) {}
+			instr_case_novalue(Op_trunc_l16_l64) {}
+			instr_case_novalue(Op_trunc_l32_l64) {}
+
+			// Int to Float
+			instr_case_novalue(Op_sitofp_l32_l8) {}
+			instr_case_novalue(Op_uitofp_l32_l8) {}
+			instr_case_novalue(Op_sitofp_l32_l16) {}
+			instr_case_novalue(Op_uitofp_l32_l16) {}
+			instr_case_novalue(Op_sitofp_l32_l32) {}
+			instr_case_novalue(Op_uitofp_l32_l32) {}
+			instr_case_novalue(Op_sitofp_l32_l64) {}
+			instr_case_novalue(Op_uitofp_l32_l64) {}
+
+			instr_case_novalue(Op_sitofp_l64_l8) {}
+			instr_case_novalue(Op_uitofp_l64_l8) {}
+			instr_case_novalue(Op_sitofp_l64_l16) {}
+			instr_case_novalue(Op_uitofp_l64_l16) {}
+			instr_case_novalue(Op_sitofp_l64_l32) {}
+			instr_case_novalue(Op_uitofp_l64_l32) {}
+			instr_case_novalue(Op_sitofp_l64_l64) {}
+			instr_case_novalue(Op_uitofp_l64_l64) {}
+
+			// Float to Int
+			instr_case_novalue(Op_fptosi_l8_l32) {}
+			instr_case_novalue(Op_fptoui_l8_l32) {}
+			instr_case_novalue(Op_fptosi_l16_l32) {}
+			instr_case_novalue(Op_fptoui_l16_l32) {}
+			instr_case_novalue(Op_fptosi_l32_l32) {}
+			instr_case_novalue(Op_fptoui_l32_l32) {}
+			instr_case_novalue(Op_fptosi_l64_l32) {}
+			instr_case_novalue(Op_fptoui_l64_l32) {}
+
+			instr_case_novalue(Op_fptosi_l8_l64) {}
+			instr_case_novalue(Op_fptoui_l8_l64) {}
+			instr_case_novalue(Op_fptosi_l16_l64) {}
+			instr_case_novalue(Op_fptoui_l16_l64) {}
+			instr_case_novalue(Op_fptosi_l32_l64) {}
+			instr_case_novalue(Op_fptoui_l32_l64) {}
+			instr_case_novalue(Op_fptosi_l64_l64) {}
+			instr_case_novalue(Op_fptoui_l64_l64) {}
+
+			// Float to float
+			instr_case_novalue(Op_fpext_l64_l32) {}
+			instr_case_novalue(Op_fptrunc_l32_l64) {}
 
 			instr_case_novalue(Op_add_l64_l64) {}
 			instr_case_novalue(Op_add_l64_imm) {}

@@ -12,7 +12,84 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
-	DVMOperation lirOpToDVMOperation(lir::Operation operation) {
+	/**
+	 * @brief Picks the right DVM operation for a Cast LIR instruction to.
+	 */
+	DVMOperation lirCastParamsToDVMOperation(const lir::CastParameters& cast_params) {
+		const auto  target_layout = cast_params.target_layout;
+		const auto  source_layout = cast_params.source_layout;
+		const auto& source_type   = cast_params.source_type;
+		const auto& target_type   = cast_params.target_type;
+
+		auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+			if (type.getType().getKind() == tsh::Kind::Integral) {
+				return (
+					tsh::IntegralAbstractType(type.getType()).getSignedness()
+					== tsh::IntegralAbstractType::Signedness::Signed
+				);
+			}
+			// Char, bool, etc. are treated as unsigned
+			return false;
+		};
+
+		variant_match(source_layout->getVariant()) {
+			variant_case_novalue(tsl::IntegralTypeLayout) {
+				const bool src_signed = is_signed(source_type);
+				variant_match(target_layout->getVariant()) {
+					variant_case_novalue(tsl::IntegralTypeLayout) {
+						// ================== Int -> Int ==================
+						if (source_layout->getSize() < target_layout->getSize()) {
+							// Extend
+							return SimpleOperation{ src_signed ? OpKind::sext : OpKind::zext };
+						} else if (source_layout->getSize() > target_layout->getSize()) {
+							// Truncate
+							return SimpleOperation{ OpKind::trunc };
+						} else {
+							// No-op cast
+							return SimpleOperation{ OpKind::mov };
+						}
+					}
+					variant_case_novalue(tsl::FloatTypeLayout) {
+						// ================== Int -> Float ==================
+						return SimpleOperation{ src_signed ? OpKind::sitofp : OpKind::uitofp };
+					}
+					variant_default {
+						CORE_PANIC("Unsupported cast from integral-layout to target layout");
+					}
+				}
+			}
+			variant_case_novalue(tsl::FloatTypeLayout) {
+				variant_match(target_layout->getVariant()) {
+					variant_case_novalue(tsl::IntegralTypeLayout) {
+						// ================== Float -> Int ==================
+						const bool to_signed = is_signed(target_type);
+						return SimpleOperation{ to_signed ? OpKind::fptosi : OpKind::fptoui };
+					}
+					variant_case_novalue(tsl::FloatTypeLayout) {
+						// ================== Float -> Float ==================
+						if (source_layout->getSize() < target_layout->getSize()) {
+							// Extend
+							return SimpleOperation{ OpKind::fpext };
+						} else if (source_layout->getSize() > target_layout->getSize()) {
+							// Truncate
+							return SimpleOperation{ OpKind::fptrunc };
+						} else {
+							// No-op cast
+							return SimpleOperation{ OpKind::mov };
+						}
+					}
+					variant_default {
+						CORE_PANIC("Unsupported cast from float-layout to target layout");
+					}
+				}
+			}
+			variant_default { CORE_PANIC("Unsupported cast source layout in DVM lowering"); }
+		}
+		CORE_UNREACHABLE();
+	}
+
+	DVMOperation lirInstrToDVMOperation(const lir::Instruction& instr) {
+		auto operation = instr.operation;
 		if (isMetaTypeOperation(operation)) return MetaOperation{ operation };
 
 		using enum lir::Operation;
@@ -99,6 +176,14 @@ namespace compiler::backend_vm::internal {
 			return SimpleOperation{ OpKind::mov };
 		case Call:
 			return SimpleOperation{ OpKind::call };
+
+		case Cast: {
+			const auto cast_params
+				= std::get_if<lir::CastParameters>(&instr.extra_params);
+			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
+			return lirCastParamsToDVMOperation(*cast_params);
+		}
+
 
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

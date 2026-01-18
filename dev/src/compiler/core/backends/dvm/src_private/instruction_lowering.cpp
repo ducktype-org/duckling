@@ -1,5 +1,6 @@
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
+#include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -25,6 +26,12 @@ namespace {
 
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
+	}
+
+	bool isCastOperation(OpKind op) {
+		return op == OpKind::sext || op == OpKind::zext || op == OpKind::trunc
+		    || op == OpKind::sitofp || op == OpKind::uitofp || op == OpKind::fptosi
+		    || op == OpKind::fptoui || op == OpKind::fptrunc || op == OpKind::fpext;
 	}
 }
 
@@ -77,7 +84,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 	const auto maybe_output
 		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
 
-	const auto dvm_operation = lirOpToDVMOperation(lir_instruction.operation);
+	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
 
 	variant_match(dvm_operation) {
 		variant_case(MetaOperation, operation) {
@@ -126,6 +133,22 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
 
 		pushInstruction({ operation, output, args[1] });
+	} else if (isCastOperation(operation)) {
+		// Operation in form a = OP b (like mov)
+		// but if "b" is not a local stack value, we need to move it to a temp first
+		// because cast operations don't support non-local values as arguments
+		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
+
+		if (not args[0].is<backend_vm::internal::DVMLocal>()) {
+			auto source_type = program_context.lowerAndKeepTslType(
+				std::get<lir::CastParameters>(lir_instruction.extra_params).source_layout
+			);
+			auto temp_local = pushTempLocal(source_type, "cast_temp");
+			pushInstruction({ OpKind::mov, temp_local.asArgument(), args[0] });
+			pushInstruction({ operation, maybe_output.value(), temp_local.asArgument() });
+		} else {
+			pushInstruction({ operation, maybe_output.value(), args[0] });
+		}
 	} else {
 		auto output = maybe_output.value();
 		pushInstruction({ operation, output, args[0] });

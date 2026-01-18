@@ -30,7 +30,7 @@ namespace compiler::backend_vm::internal {
 	/**
 	 * @brief Converts a LIR operation to DVM operation.
 	 */
-	[[nodiscard]] DVMOperation lirOpToDVMOperation(lir::Operation op);
+	[[nodiscard]] DVMOperation lirInstrToDVMOperation(const lir::Instruction& instr);
 
 
 }

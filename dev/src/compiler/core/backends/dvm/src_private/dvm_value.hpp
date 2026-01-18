@@ -86,5 +86,10 @@ namespace compiler::backend_vm::internal {
 
 		operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(stored_value);
+		}
 	};
 }
