@@ -23,7 +23,7 @@ namespace {
  * @note This function causes a dangling reference warning, which I strongly believe is a false
  * positive, thus the pragmas.
  */
-#if __GNUG__
+#if defined(__GNUG__) && !defined(__clang__)
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif
@@ -42,7 +42,7 @@ namespace {
 			return *specific_type;
 		throw error_factory();
 	}
-#if __GNUG__
+#if defined(__GNUG__) && !defined(__clang__)
 	#pragma GCC diagnostic pop
 #endif
 
