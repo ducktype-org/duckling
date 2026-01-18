@@ -7,4 +7,13 @@ Tests:
         Output:
           String: "5\n4\n5\n4\n5\n4\n5\n4\n2\n1\n5\n4\n2\n1\n5\n4\n2\n1\n"
         ExitCode: 3
+  loops-performance: # while
+    Description: Test taken from compiler testing module
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "20\n100000001\n"
+        ExitCode: 0
+        TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
 

@@ -3,11 +3,11 @@
 fun main() -> i64 = {
     
     # unnamed loop and unnamed break
-    var a = 5;
+    var a = 5i64;
     while (a > 0) {
         if (a == 3)
             break;
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 3)
@@ -18,7 +18,7 @@ fun main() -> i64 = {
     while test_loop(a > 0) {
         if (a == 3)
             break test_loop;
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 3)
@@ -29,7 +29,7 @@ fun main() -> i64 = {
     while test_loop(a > 0) {
         if (a == 3)
             break;
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 3)
@@ -43,7 +43,7 @@ fun main() -> i64 = {
             a -= 1;
             continue;
         }
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 0)
@@ -56,7 +56,7 @@ fun main() -> i64 = {
             a -= 1;
             continue test_loop;
         }
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 0)
@@ -69,7 +69,7 @@ fun main() -> i64 = {
             a -= 1;
             continue;
         }
-        println(a);
+        builtin_output_i64(a);
         a -= 1;
     }
     if (a != 0)
@@ -78,7 +78,8 @@ fun main() -> i64 = {
 
     # false initial condition
     while (false) {
-        println("should never be printed");
+        builtin_output_i64(-1);
+        # should never be printed
     }
     return 3;
 }
