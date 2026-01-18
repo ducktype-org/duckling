@@ -1,0 +1,35 @@
+fun main() -> i64 = {
+    # Testing AND operator
+    if (true and true) {
+        builtin_output_i64(1); # Should execute
+    }
+    if (true and false) {
+        builtin_output_i64(2); # Should not execute
+    }
+
+    # Testing OR operator
+    if (true or false) {
+        builtin_output_i64(3); # Should execute
+    }
+    if (false or false) {
+        builtin_output_i64(4); # Should not execute
+    }
+
+    # Testing NOT operator
+    if (not false) {
+        builtin_output_i64(5); # Should execute
+    }
+    if (not true) {
+        builtin_output_i64(6); # Should not execute
+    }
+
+    # Testing XOR operator
+    if (true xor false) {
+        builtin_output_i64(7); # Should execute
+    }
+    if (true xor true) {
+        builtin_output_i64(8); # Should not execute
+    }
+
+    return 0;
+}
