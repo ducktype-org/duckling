@@ -334,7 +334,7 @@ private:
 
 		// ================================================================================
 		// CHECK 5: For each preserved node, its preserved dependencies (this includes inputs)
-		// must be preserved after optimization (preserved-to-preserved edges are never removed)
+		// must be preserved after optimization (preserved-to-preserved paths are never removed)
 		// ================================================================================
 		for (const auto& preserved_node: preserved_nodes_before) {
 			auto preserved_deps_after = collect_preserved_dependencies(opt_graph, preserved_node);
