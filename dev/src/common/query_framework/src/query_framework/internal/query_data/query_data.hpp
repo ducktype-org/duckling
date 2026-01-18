@@ -51,11 +51,11 @@ namespace query {
 			bool can_be_loaded_from_disk = false;
 
 			/**
-			 * Whether query results should be preserved on disk after computation.
-			 * This do not imply that query result can be loaded from disk.
+			 * Whether the query node should be preserved in the graph and on disk after computation.
+			 * This does not imply that the query result can be loaded from disk.
 			 * Nodes with this tag will not be removed during incremental graph optimizations.
 			 */
-			bool preserve_on_disk = false;
+			bool preserve_in_graph = false;
 
 			/**
 			 * Whether query uses the failable QResult type as the result type.
@@ -122,14 +122,14 @@ namespace query {
 				if (tags.can_be_loaded_from_disk) {
 					// queries that are cached on disk must use stable hashing:
 					if (tags.used_hashes != UsedHashes::StableHash) return false;
-					// queies than can be loaded from disk must have preserve_on_disk true:
-					if (!tags.preserve_on_disk) return false;
+					// queries that can be loaded from disk must have preserve_in_graph true:
+					if (!tags.preserve_in_graph) return false;
 				}
 				if (isInputQuery()) {
 					// input queries must use stable hashing:
 					if (tags.used_hashes != UsedHashes::StableHash) return false;
 					// inputs must be preserved on disk:
-					if (!tags.preserve_on_disk) return false;
+					if (!tags.preserve_in_graph) return false;
 				}
 
 				return true;

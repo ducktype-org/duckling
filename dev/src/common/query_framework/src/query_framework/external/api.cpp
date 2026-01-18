@@ -27,7 +27,7 @@ namespace query::external {
 		::query::internal::markPreviousGraphNodesInputs(std::move(inputs));
 	}
 
-	std::vector<byte> serializeQueryGraph() {
+	std::vector<byte> optAndSerializeQueryGraph() {
 		auto state         = ::query::internal::ContextAccess::getState();
 		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));

@@ -185,9 +185,10 @@ namespace query::internal {
 		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to
-		 * QueryGraph::serializeReducedGraph without further mutation—this function already produces
+		 * QueryGraph::serializeReducedGraph without further mutation. This function already produces
 		 * the compact graph representation expected by serialization.
-		 * @return pair of compacted NodeIDs and adjacency (usize indices) used for serialization.
+		 * @return ReducedGraphData with compacted NodeIDs and adjacency (usize indices) used for
+		 * serialization.
 		 */
 		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
 		) const;

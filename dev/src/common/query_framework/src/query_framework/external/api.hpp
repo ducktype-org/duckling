@@ -41,6 +41,6 @@ namespace query::external {
 	/**
 	 * @brief Optimize and serialize the current query graph for persistence on disk.
 	 */
-	[[nodiscard]] std::vector<byte> serializeQueryGraph();
+	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
 
 }  // namespace query::external

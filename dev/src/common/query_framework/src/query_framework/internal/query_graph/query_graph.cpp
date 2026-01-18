@@ -159,18 +159,19 @@ namespace query::internal {
 			}
 		}
 
-		return serializeReducedGraph(ReducedGraphData{ std::move(nodes), std::move(adjacency) });
+		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
+		                                               .adjacency = std::move(adjacency) });
 	}
 
 	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
 
-		constexpr usize node_id_size
+		constexpr usize NODE_ID_SIZE
 			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
-		auto& nodes     = reduced_graph.first;
-		auto& adjacency = reduced_graph.second;
+		auto& nodes     = reduced_graph.nodes;
+		auto& adjacency = reduced_graph.adjacency;
 		CORE_ASSERT(nodes.size() == adjacency.size(), "Reduced graph data is inconsistent");
 
 		const usize node_count  = nodes.size();
@@ -178,8 +179,10 @@ namespace query::internal {
 		for (const auto& deps: adjacency) total_edges += deps.size();
 
 		std::vector<byte> buffer;
-		usize             total_size = sizeof(usize);  // node_count
-		total_size += node_count * node_id_size;
+
+		// Calculate the total size of the serialized data
+		usize total_size = sizeof(usize);  // node_count
+		total_size += node_count * NODE_ID_SIZE;
 		total_size += node_count * sizeof(usize);
 		total_size += total_edges * sizeof(usize);
 		buffer.reserve(total_size);
@@ -195,6 +198,7 @@ namespace query::internal {
 			write(node.hash.val.data);
 		};
 
+		// Serialize the size of the node list
 		write(node_count);
 		for (const auto& node: nodes) write_node_id(node);
 
@@ -247,16 +251,19 @@ namespace query::internal {
 			return NodeID(QueryID(q_id), { HType(hash) });
 		};
 
+		// Deserialize the size of the node list
 		usize map_size = 0;
 		read(map_size);
 
 		std::vector<NodeID> nodes;
 		nodes.reserve(map_size);
+		// Deserialize each node entry
 		for (usize i = 0; i < map_size; ++i) {
 			NodeID raw_node = read_node_id();
 			nodes.emplace_back(node_mapper(raw_node));
 		}
 
+		// Deserialize the adjacency lists
 		for (usize node_index = 0; node_index < map_size; ++node_index) {
 			usize deps_size = 0;
 			read(deps_size);
@@ -264,6 +271,7 @@ namespace query::internal {
 			std::vector<NodeID> deps;
 			deps.reserve(deps_size);
 
+			// Deserialize each dependency index
 			for (usize j = 0; j < deps_size; ++j) {
 				usize dep_index = 0;
 				read(dep_index);
@@ -276,6 +284,7 @@ namespace query::internal {
 			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
+		// Ensure that the entire buffer was consumed
 		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
 
 		return graph;

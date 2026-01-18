@@ -17,7 +17,7 @@ namespace compiler::driver {
 
 		auto query_graph_blob = query_collection->blobArtifactAtOrNew(base::StrID("query_graph"));
 
-		std::vector<byte> serialized = query::external::serializeQueryGraph();
+		std::vector<byte> serialized = query::external::optAndSerializeQueryGraph();
 
 		if (!serialized.empty())
 			query_collection->setBlobData(query_graph_blob, serialized.data(), serialized.size());

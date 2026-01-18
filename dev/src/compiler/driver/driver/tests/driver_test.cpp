@@ -70,15 +70,20 @@ private:
 		// Helper lambdas for this test
 		// ================================================================================
 
-		// Collects (all) stable dependencies of NodeID
-		auto collect_stable_dependencies
-			= [](const query::internal::QueryGraph& graph,
-		         const query::internal::NodeID&     node) -> std::vector<query::internal::NodeID> {
+		auto is_preserved = [](const query::internal::NodeID& node) -> bool {
+			return node.q_id.getData().tags.preserve_in_graph;
+		};
+
+		// Collects (all) preserved dependencies (transitively) of NodeID
+		auto collect_preserved_dependencies
+			= [&is_preserved](
+				  const query::internal::QueryGraph& graph, const query::internal::NodeID& node
+			  ) -> std::vector<query::internal::NodeID> {
 			std::vector<query::internal::NodeID> result;
 
 			const auto& deps = graph.getNodeDeps(node);
 			for (const auto& dep: deps)
-				if (dep.q_id.getData().usesStableHashing()) result.push_back(dep);
+				if (is_preserved(dep)) result.push_back(dep);
 			return result;
 		};
 
@@ -129,7 +134,7 @@ private:
 		);
 
 		// run the serialization before any compilation to see if it works on empty graph
-		auto serialized_empty_graph = query::external::serializeQueryGraph();
+		auto serialized_empty_graph = query::external::optAndSerializeQueryGraph();
 		auto deserialized_empty_graph
 			= query::internal::QueryGraph::deserialize(serialized_empty_graph);
 		assertTrue(
@@ -146,20 +151,34 @@ private:
 		};
 
 		constexpr std::array PRECOMPILE_MODULES{
-			PrecompileInfo{ .module_path    = "modules/functions_1",
-			                .package_prefix = "graph_consistency_functions_1" },
-			PrecompileInfo{ .module_path    = "modules/functions_2",
-			                .package_prefix = "graph_consistency_functions_2" },
-			PrecompileInfo{ .module_path    = "modules/functions_3",
-			                .package_prefix = "graph_consistency_functions_3" },
-			PrecompileInfo{ .module_path    = "modules/functions_4",
-			                .package_prefix = "graph_consistency_functions_4" },
-			PrecompileInfo{ .module_path    = "modules/globals",
-			                .package_prefix = "graph_consistency_globals" },
-			PrecompileInfo{ .module_path    = "modules/globals_initialization",
-			                .package_prefix = "graph_consistency_globals_init" },
-			PrecompileInfo{ .module_path    = "modules/import_simple",
-			                .package_prefix = "graph_consistency_import_simple" }
+			PrecompileInfo{
+				.module_path    = "modules/functions_1",
+				.package_prefix = "graph_consistency_functions_1",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/functions_2",
+				.package_prefix = "graph_consistency_functions_2",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/functions_3",
+				.package_prefix = "graph_consistency_functions_3",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/functions_4",
+				.package_prefix = "graph_consistency_functions_4",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/globals",
+				.package_prefix = "graph_consistency_globals",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/globals_initialization",
+				.package_prefix = "graph_consistency_globals_init",
+			},
+			PrecompileInfo{
+				.module_path    = "modules/import_simple",
+				.package_prefix = "graph_consistency_import_simple",
+			},
 		};
 
 		std::size_t precompile_suffix = 0;
@@ -187,18 +206,18 @@ private:
 		// Get the graph before optimization
 		auto graph_before_opt = query::internal::ContextAccess::getState()->getGraphMutable();
 
-		// Collect stable nodes BEFORE optimization (note then Input nodes are included)
-		std::vector<query::internal::NodeID> stable_nodes_before;
+		// Collect preserved nodes BEFORE optimization (note that Input nodes are included)
+		std::vector<query::internal::NodeID> preserved_nodes_before;
 		for (const auto& node: graph_before_opt->getAllNodes())
-			if (node.q_id.getData().usesStableHashing()) stable_nodes_before.push_back(node);
+			if (is_preserved(node)) preserved_nodes_before.push_back(node);
 
-		// Collect stable dependencies for each stable node BEFORE optimization
-		// This also include input dependencies
+		// Collect preserved dependencies (transitively) for each preserved node BEFORE optimization
+		// This also includes input dependencies
 		base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
-			stable_deps_before;
-		for (const auto& stable_node: stable_nodes_before) {
-			stable_deps_before.put(
-				stable_node, collect_stable_dependencies(*graph_before_opt, stable_node)
+			preserved_deps_before;
+		for (const auto& preserved_node: preserved_nodes_before) {
+			preserved_deps_before.put(
+				preserved_node, collect_preserved_dependencies(*graph_before_opt, preserved_node)
 			);
 		}
 
@@ -207,9 +226,9 @@ private:
 		std::cout << "[DriverTest] Graph before optimization: nodes=" << nodes_before_opt
 				  << " edges=" << edges_before_opt << '\n';
 
-		// Call serializeQueryGraph and then deserialize to get opt_graph
+		// Call optAndSerializeQueryGraph() and then deserialize to get opt_graph
 		auto opt_graph
-			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
 		const auto nodes_after_opt = opt_graph.getAllNodes().size();
 		const auto edges_after_opt = count_edges(opt_graph);
 		std::cout << "[DriverTest] Graph after optimization: nodes=" << nodes_after_opt
@@ -222,7 +241,7 @@ private:
 		auto all_nodes = opt_graph.getAllNodes();
 
 		// ================================================================================
-		// CHECK 1: - Graph consistency - all children referenced in the graph must exist as keys in
+		// CHECK 1: Graph consistency - all children referenced in the graph must exist as keys in
 		// the graph
 		// ================================================================================
 		for (const auto& node: all_nodes) {
@@ -236,7 +255,7 @@ private:
 					)
 				);
 			}
-			// We also check thath deps do not contain duplicates as they can be accidentally added
+			// We also check that deps do not contain duplicates as they can be accidentally added
 			// during optimization
 			auto deps_sorted = deps;
 			std::ranges::sort(deps_sorted, [](auto& l, auto& r) { return l < r; });
@@ -248,49 +267,49 @@ private:
 		}
 
 		// ================================================================================
-		// CHECK 2: Only stable nodes can have no parents (be roots)
-		// All non-stable nodes must have at least two parents
-		// This is because unstable Node with one (or zero) parents can be removed
+		// CHECK 2: Only preserved nodes can have no parents (be roots)
+		// All non-preserved nodes must have at least two parents
+		// This is because non-preserved nodes with one (or zero) parents can be removed
 		// ================================================================================
 		for (const auto& node: all_nodes) {
 			CORE_ASSERT(parents.contains(node), "Node not found in parents map");
 			const auto& parent_opt = parents.at(node);
 
-			if (!node.q_id.getData().usesStableHashing()) {
+			if (!is_preserved(node)) {
 				assertTrue(
 					parent_opt.size() > 1,
 					base::strConcat(
-						"Graph not-optimal: non-stable node has less than a two parents"
-						"Only stable nodes can be roots or have only one parent",
+						"Graph not-optimal: non-preserved node has fewer than two parents. "
+						"Only preserved nodes can be roots or have only one parent.",
 						" Node: ",
 						node.q_id.getData().name,
 						" Parents count: ",
 						std::to_string(parent_opt.size()),
-						" Childs count: ",
+						" Children count: ",
 						std::to_string(opt_graph.getDirectDependencies(node).size()),
-						" Is stable: ",
-						node.q_id.getData().usesStableHashing() ? "true" : "false"
+						" Is preserved: ",
+						is_preserved(node) ? "true" : "false"
 					)
 				);
 			}
 		}
 
 		// ================================================================================
-		// CHECK 3: All non-stable nodes must have MORE than one child (cannot have 0 or 1 children)
-		// This is because nodes with 0 or 1 children should be trimmed/collapsed during
-		// optimization As they can be easy optimised
+		// CHECK 3: All non-preserved nodes must have MORE than one child (cannot have 0 or 1
+		// children) This is because nodes with 0 or 1 children should be trimmed/collapsed during
+		// optimization, as they can be easily optimized
 		// ================================================================================
 		for (const auto& node: all_nodes) {
-			if (node.q_id.getData().usesStableHashing()) { continue; }  // Skip stable nodes
+			if (is_preserved(node)) { continue; }  // Skip preserved nodes
 
 			const auto& deps = opt_graph.getDirectDependencies(node);
-			// Non-stable, non-input nodes must have MORE than one child
+			// Non-preserved nodes must have MORE than one child
 			// Nodes with 0 children are leaves and should be trimmed
 			// Nodes with 1 child should be collapsed into their parent
 			assertTrue(
 				deps.size() > 1,
 				base::strConcat(
-					"Graph not-optimal: non-stable node '",
+					"Graph not-optimal: non-preserved node '",
 					node.q_id.getData().name,
 					"' has ",
 					std::to_string(deps.size()),
@@ -300,36 +319,38 @@ private:
 		}
 
 		// ================================================================================
-		// CHECK 4: All stable nodes from before optimization
+		// CHECK 4: All preserved nodes from before optimization
 		// must still exist in the graph after optimization
 		// ================================================================================
-		for (const auto& stable_node: stable_nodes_before) {
+		for (const auto& preserved_node: preserved_nodes_before) {
 			assertTrue(
-				opt_graph.nodeExists(stable_node),
-				base::strConcat("Graph inconsistency: stable node was removed during optimization. "
-			                    "Stable nodes must be preserved.")
+				opt_graph.nodeExists(preserved_node),
+				base::strConcat(
+					"Graph inconsistency: preserved node was removed during optimization. "
+					"Preserved nodes must remain in the graph."
+				)
 			);
 		}
 
 		// ================================================================================
-		// CHECK 5: For each stable node, its stable dependencies (this includes inputs)
-		// must be preserved after optimization (stable-to-stable edges are never removed)
+		// CHECK 5: For each preserved node, its preserved dependencies (this includes inputs)
+		// must be preserved after optimization (preserved-to-preserved edges are never removed)
 		// ================================================================================
-		for (const auto& stable_node: stable_nodes_before) {
-			auto stable_deps_after      = collect_stable_dependencies(opt_graph, stable_node);
-			auto stable_deps_before_opt = stable_deps_before.atMaybe(stable_node);
+		for (const auto& preserved_node: preserved_nodes_before) {
+			auto preserved_deps_after = collect_preserved_dependencies(opt_graph, preserved_node);
+			auto preserved_deps_before_opt = preserved_deps_before.atMaybe(preserved_node);
 
-			// Nodes should not be added - if in the fueature we allow that, this test needs to be
+			// Nodes should not be added - if in the future we allow that, this test needs to be
 			// updated
-			ASSERT_TRUE(stable_deps_before_opt.has_value());
+			ASSERT_TRUE(preserved_deps_before_opt.has_value());
 
-			// All stable dependencies from before must still exist after optimization
-			// hthissi include input nodes
+			// All preserved dependencies from before must still exist after optimization.
+			// This includes input nodes.
 			assertTrue(
-				are_node_vectors_same(*stable_deps_before_opt.value(), stable_deps_after),
+				are_node_vectors_same(*preserved_deps_before_opt.value(), preserved_deps_after),
 				base::strConcat(
-					"Graph inconsistency: stable dependencies of stable node '",
-					stable_node.q_id.getData().name
+					"Graph inconsistency: preserved dependencies of preserved node '",
+					preserved_node.q_id.getData().name
 				)
 			);
 		}
@@ -338,14 +359,12 @@ private:
 		// CHECK 6: Re-running serialization/optimization must be idempotent
 		// ================================================================================
 		auto second_opt_graph
-			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
-		auto second_all_nodes = second_opt_graph.getAllNodes();
+			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
 
-		auto compare_graphs = [&](const query::internal::QueryGraph&          lhs_graph,
-		                          const std::vector<query::internal::NodeID>& lhs_nodes,
-		                          const query::internal::QueryGraph&          rhs_graph,
-		                          const char*                                 missing_msg_prefix) {
-			for (const auto& node: lhs_nodes) {
+		auto compare_graphs = [&](const query::internal::QueryGraph& lhs_graph,
+		                          const query::internal::QueryGraph& rhs_graph,
+		                          const char*                        missing_msg_prefix) {
+			for (const auto& node: lhs_graph.getAllNodes()) {
 				assertTrue(
 					rhs_graph.nodeExists(node),
 					base::strConcat(missing_msg_prefix, node.q_id.getData().name)
@@ -365,16 +384,10 @@ private:
 		};
 
 		compare_graphs(
-			opt_graph,
-			all_nodes,
-			second_opt_graph,
-			"Graph inconsistency: node missing in second graph: "
+			opt_graph, second_opt_graph, "Graph inconsistency: node missing in second graph: "
 		);
 		compare_graphs(
-			second_opt_graph,
-			second_all_nodes,
-			opt_graph,
-			"Graph inconsistency: node missing in first graph: "
+			second_opt_graph, opt_graph, "Graph inconsistency: node missing in first graph: "
 		);
 	}
 
@@ -527,7 +540,7 @@ private:
 
 		// Serialize current graph
 		auto original
-			= query::internal::QueryGraph::deserialize(query::external::serializeQueryGraph());
+			= query::internal::QueryGraph::deserialize(query::external::optAndSerializeQueryGraph());
 
 		// Call the driver saveArtifacts implementation
 		driver::exit();

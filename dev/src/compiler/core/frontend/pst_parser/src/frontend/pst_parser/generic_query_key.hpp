@@ -29,6 +29,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
+			// Note: this hash is also stable if someone needs it.
 			return element.illegalAccess().value()->getHash();
 		}
 	};

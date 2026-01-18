@@ -26,7 +26,13 @@ namespace query::internal {
 		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 	public:
-		using ReducedGraphData = std::pair<std::vector<NodeID>, std::vector<std::vector<usize>>>;
+		/**
+		 * @brief Reduced graph representation used for compact serialization.
+		 */
+		struct ReducedGraphData final {
+			std::vector<NodeID>             nodes;
+			std::vector<std::vector<usize>> adjacency;
+		};
 
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
@@ -55,7 +61,7 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
-		/** @brief Returns the immediate dependencies of a  @p node_id. */
+		/** @brief Returns the immediate dependencies of a @p node_id. */
 		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
 
 		void debugPrint(std::ostream& out) const;
@@ -81,6 +87,7 @@ namespace query::internal {
 
 		/**
 		 * @brief Serializes the QueryGraph into a vector of bytes.
+		 * @note This DOES NOT optimize anything, it just serializes.
 		 * @return A vector of bytes representing the serialized QueryGraph.
 		 */
 		[[nodiscard]] std::vector<byte> serialize() const;
@@ -93,7 +100,7 @@ namespace query::internal {
 		 * already produced a compacted graph representation and we only need to emit bytes without
 		 * rebuilding the mapping.
 		 */
-		static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
+		[[nodiscard]] static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
 
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.
