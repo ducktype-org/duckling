@@ -9,19 +9,19 @@ Tests:
       dvm:
         backend: dvm
         ExitCode: 99
-  declaration-coercions:
+  declaration_coercions:
     Cases:
       llvm:
         backend: llvm
         Output:
           String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0
-# @TODO: #1571 Support casts in DVM
-#      dvm:
-#        backend: dvm
-#        Output:
-#          String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
-#        ExitCode: 0
+      dvm:
+        backend: dvm
+        # @TODO: #1657 the global initial value is not working in VM
+        # Output:
+        #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
+        ExitCode: 0
   loops-performance: # while
     Cases:
       llvm:

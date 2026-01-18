@@ -56,9 +56,7 @@ namespace {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return std::visit(
-					[&](auto&& val) -> DVMImmediate {
-						return DVMImmediate{ val };
-					},
+					[&](auto&& val) -> DVMImmediate { return DVMImmediate{ val }; },
 					numeric.getStorage()
 				);
 			}

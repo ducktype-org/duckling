@@ -105,11 +105,12 @@ namespace compiler::backend_vm::internal {
 		 * @TODO #...: when comparisons between the immediates are supported, this should be removed.
 		 */
 		void handleComparison(
-			OpKind         operation,
-			std::deque<DVMValue>     &args,
+			OpKind                   operation,
+			const lir::Instruction&  lir_instruction,
+			std::deque<DVMValue>&    args,
 			base::Optional<DVMValue> maybe_output
 		);
-		
+
 		/**
 		 * @brief Generates instructions to perform a cast operation.
 		 * The cast operations are only supported between local stack values.
@@ -120,9 +121,9 @@ namespace compiler::backend_vm::internal {
 		 * and then move the result to the final destination.
 		 */
 		void handleCastOperation(
-			OpKind        operation,
-			const lir::Instruction& lir_instruction,
-			std::deque<DVMValue>    &args,
+			OpKind                   operation,
+			const lir::Instruction&  lir_instruction,
+			std::deque<DVMValue>&    args,
 			base::Optional<DVMValue> maybe_output
 		);
 

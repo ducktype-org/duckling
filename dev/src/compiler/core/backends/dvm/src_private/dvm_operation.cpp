@@ -178,8 +178,7 @@ namespace compiler::backend_vm::internal {
 			return SimpleOperation{ OpKind::call };
 
 		case Cast: {
-			const auto cast_params
-				= std::get_if<lir::CastParameters>(&instr.extra_params);
+			const auto cast_params = std::get_if<lir::CastParameters>(&instr.extra_params);
 			CORE_ASSERT(cast_params != nullptr, "Cast instruction without parameters");
 			return lirCastParamsToDVMOperation(*cast_params);
 		}

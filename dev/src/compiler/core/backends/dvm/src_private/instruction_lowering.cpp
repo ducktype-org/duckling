@@ -33,14 +33,6 @@ namespace {
 		    || op == OpKind::sitofp || op == OpKind::uitofp || op == OpKind::fptosi
 		    || op == OpKind::fptoui || op == OpKind::fptrunc || op == OpKind::fpext;
 	}
-
-	TypeOfData getComparisonType(OpKind op) {
-		if (op == OpKind::fcmpEq || op == OpKind::fcmpNeq || op == OpKind::fcmpLt
-		    || op == OpKind::fcmpLe || op == OpKind::fcmpGt || op == OpKind::fcmpGe) {
-			return PrimitiveType(base::StrID("f64"), 8);
-		}
-		return PrimitiveType(base::StrID("i64"), 8);
-	}
 }
 
 void FunctionLoweringContext::handleCall(
@@ -85,15 +77,23 @@ void FunctionLoweringContext::handleCall(
 }
 
 void FunctionLoweringContext::handleComparison(
-	OpKind operation, std::deque<DVMValue>& args, base::Optional<DVMValue> maybe_output
+	OpKind                   operation,
+	const lir::Instruction&  lir_instruction,
+	std::deque<DVMValue>&    args,
+	base::Optional<DVMValue> maybe_output
 ) {
 	CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
 
 	// If the first argument is an immediate, we need to move it to a temporary local
-	// because comparsion instructions allow cmp reg, imm but not cmp imm, reg (or imm, imm)
+	// because comparsion instructions allow cmp reg, imm but not cmp imm, reg (or imm, imm).
+	//
+	// Idealy this could be removed after the DVM supports comparisons between immediates.
 	base::Optional<DVMLocal> temp_lhs;
-	if (!args[0].is<DVMLocal>()) {
-		temp_lhs = pushTempLocal(getComparisonType(operation), "cmp_lhs_tmp");
+	if (args[0].is<DVMImmediate>()) {
+		auto vm_type = program_context.lowerAndKeepTslType(
+			lir_instruction.arguments[0].get<lir::LIRConstant>().layout
+		);
+		temp_lhs = pushTempLocal(vm_type, "cmp_lhs_tmp");
 		pushInstruction({ OpKind::mov, temp_lhs->asArgument(), args[0] });
 		args[0] = DVMValue(*temp_lhs);
 	}
@@ -103,15 +103,16 @@ void FunctionLoweringContext::handleComparison(
 	// a CMP b;
 	// cmov x, 1;
 	pushInstruction({ operation, args[0], args[1] });
+	pushInstruction({ OpKind::mov, maybe_output.value(), DVMImmediate(0).asArgument() });
 	pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
 
 	if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
 }
 
 void FunctionLoweringContext::handleCastOperation(
-	OpKind                    operation,
-	const lir::Instruction&   lir_instruction,
-	std::deque<DVMValue>&     args,
+	OpKind                   operation,
+	const lir::Instruction&  lir_instruction,
+	std::deque<DVMValue>&    args,
 	base::Optional<DVMValue> maybe_output
 ) {
 	// Operation in form a = OP b (like mov)
@@ -181,7 +182,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 
 	if (isComparison(operation)) {
-		handleComparison(operation, args, maybe_output);
+		// @TODO #...: when comparisons between the immediates are supported,
+		// this should whole code should be reverted to before this commit.
+		handleComparison(operation, lir_instruction, args, maybe_output);
 	} else if (isCastOperation(operation)) {
 		handleCastOperation(operation, lir_instruction, args, maybe_output);
 	} else if (operation == OpKind::call) {

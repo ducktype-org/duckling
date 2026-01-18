@@ -36,7 +36,8 @@ namespace compiler::backend_vm::internal {
 		DVMImmediate(double value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64 value{};
+		u64                  value{};
+		vm::code::TypeOfData type;
 
 		bool operator==(const DVMImmediate& other) const = default;
 

@@ -444,7 +444,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_uitofp_l32_l32, i) { addLow<Op_uitofp_l32_l32>(i.dst, i.src); }
 			instr_case(high::Op_sitofp_l32_l64, i) { addLow<Op_sitofp_l32_l64>(i.dst, i.src); }
 			instr_case(high::Op_uitofp_l32_l64, i) { addLow<Op_uitofp_l32_l64>(i.dst, i.src); }
-			
+
 			instr_case(high::Op_sitofp_l64_l8, i) { addLow<Op_sitofp_l64_l8>(i.dst, i.src); }
 			instr_case(high::Op_uitofp_l64_l8, i) { addLow<Op_uitofp_l64_l8>(i.dst, i.src); }
 			instr_case(high::Op_sitofp_l64_l16, i) { addLow<Op_sitofp_l64_l16>(i.dst, i.src); }
