@@ -3,11 +3,23 @@
 # NOTE: No preexisting tests found for this feature.
 
 Tests:
-  dummy-test:
-    Description: Minimal working dummy test.
+  variable-declaration-value-test:
+    Description: Test variable simple declaration with initial value.
     Cases:
       llvm:
         backend: llvm
         Output:
           String: ""
-        ExitCode: 42
+        ExitCode: 0
+  variable-default-int-test:
+    Description: Test int variable declaration with default value.
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0
+  variable-default-uint-test:
+    Description: Test uint variable declaration with default value.
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0
