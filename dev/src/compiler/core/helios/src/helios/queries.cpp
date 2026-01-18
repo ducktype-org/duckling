@@ -311,8 +311,13 @@ namespace compiler::helios {
 					if (value.empty()) {
 						parameters.emplace_back(param_name, param_type, std::nullopt, param_symbol);
 					} else {
+						// auto initial_value
+						// 	= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr())
+						//           .valueOrThrow();
 						auto initial_value
-							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr())
+							= getHoutOfExprWithExpectedType(
+								  ctx, value.value().unlock(ctx)->getExpr(), param_type
+							)
 						          .valueOrThrow();
 
 						parameters.emplace_back(
