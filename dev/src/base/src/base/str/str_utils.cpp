@@ -50,7 +50,7 @@ base::UnescapeResult base::unescapeString(const std::string_view raw) {
 	std::string result;
 	result.reserve(raw.size());
 
-	for (size_t i = 0; i < raw.size(); ++i) {
+	for (usize i = 0; i < raw.size(); ++i) {
 		if (raw[i] == '\\' && i + 1 < raw.size()) {
 			// Peek at the next character
 			// clang-format off

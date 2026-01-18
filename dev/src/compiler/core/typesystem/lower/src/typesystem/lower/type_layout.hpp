@@ -216,7 +216,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @return The offset of the end of data offset
+		 * @return The offset of the pointer to the data
 		 */
 		[[nodiscard]]
 		Bytes getDataPointerPosition() const {

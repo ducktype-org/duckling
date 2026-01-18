@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(classTest);
+		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 	}
 
@@ -190,6 +191,10 @@ private:
 	}
 
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
+
+	void stringsTest() {
+		runTestForModule("modules/strings", 1, 3);
+	}
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 

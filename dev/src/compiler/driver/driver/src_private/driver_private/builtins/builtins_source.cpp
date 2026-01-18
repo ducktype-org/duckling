@@ -42,7 +42,7 @@ extern "C" {
 	// String I/O
 	int64_t builtin_output_string(str s);
 	str     builtin_input_string();
-	void    builtin_free_string(str& s);
+	void    builtin_free_string(str s);
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.
@@ -110,7 +110,7 @@ int64_t builtin_output_string(str s) {
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
 
-void builtin_free_string(str& s) {
+void builtin_free_string(str s) {
 	if (s.data != NULL) {
 		// The data pointer might not be the start of the allocation.
 		// Adjust back by the offset to get the real start.

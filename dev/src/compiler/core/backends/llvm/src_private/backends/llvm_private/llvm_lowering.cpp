@@ -362,7 +362,8 @@ namespace compiler::backend_llvm {
 	/**
 	 * Get the LLVM function type based on the layouts of its parameters and return type.
 	 * @note If the function type has to conform to C/C++ ABI, then struct-like parameters
-	 * should be passed by pointer and with the `byval` LLVM attribute.
+	 * should be passed by pointer and with the `byval` LLVM attribute. See:
+	 * https://yorickpeterse.com/articles/the-mess-that-is-handling-structure-arguments-and-returns-in-llvm/.
 	 * @param module The LLVM module in which the function type will be used.
 	 * @param parameters The layouts of the parameters of the function.
 	 * @param return_type The layout of the return type of the function.
@@ -380,8 +381,7 @@ namespace compiler::backend_llvm {
 
 		// Prepare parameter types.
 		for (const auto& param: parameters)
-			if (std::holds_alternative<helios::CAbi>(abi)
-			    and param->is<tsl::StringTypeLayout>())
+			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
 				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
 			else
 				llvm_parameters.push_back(typeFromLayout(module, param));

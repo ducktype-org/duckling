@@ -36,19 +36,6 @@ namespace compiler::helios::code {
 					     .name          = "unknown_escape_sequence" };
 			}
 
-			class SequenceArgument final: public dia_int::Argument {
-				std::string sequence;
-
-			public:
-				SequenceArgument(std::string sequence):
-					  Argument("sequence"),
-					  sequence(std::move(sequence)) {}
-
-				Box<dia_int::dia_args::Component> getValue(MessageBase&) override {
-					return makeBox<dia_int::dia_args::TextComponent>(sequence);
-				}
-			};
-
 			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
 				dia_int::Metadata getMetadata() const final {
 					return { .template_type = "message",
@@ -64,7 +51,7 @@ namespace compiler::helios::code {
 		public:
 			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
 				  MessageWithCodeFragmentAndCause(source_position) {
-				addArgument(makeBox<SequenceArgument>(sequence));
+				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
 			}
 		};

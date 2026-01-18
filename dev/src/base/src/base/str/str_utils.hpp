@@ -166,10 +166,12 @@ namespace base {
 	std::string generateRandomString(u64 length);
 
 	struct UnescapedString {
+		// The successfully unescaped string.
 		std::string value;
 	};
 
 	struct UnknownEscapeSequence {
+		// The unknown escape sequence that caused the error.
 		std::string value;
 	};
 
