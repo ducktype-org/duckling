@@ -57,18 +57,7 @@ namespace {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return std::visit(
 					[&](auto&& val) -> DVMImmediate {
-						using T      = std::decay_t<decltype(val)>;
-						u64 arg_bits = 0;
-
-						if constexpr (std::is_integral_v<T>) {
-							arg_bits = static_cast<u64>(val);
-						} else if (std::is_floating_point_v<T>) {
-							f64 val_as_64 = static_cast<f64>(val);
-							arg_bits      = std::bit_cast<u64>(val_as_64);
-						} else {
-							CORE_PANIC("Unsupported NumericValue type for a VM constant operand");
-						}
-						return DVMImmediate{ arg_bits };
+						return DVMImmediate{ val };
 					},
 					numeric.getStorage()
 				);

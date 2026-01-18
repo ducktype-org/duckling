@@ -98,6 +98,34 @@ namespace compiler::backend_vm::internal {
 			base::Optional<DVMValue>    output
 		);
 
+		/**
+		 * @brief Generates instructions to perform a comparison operation.
+		 * The first argument of comparison must be a local stack value (or global),
+		 * so if it's an immediate, we first move it to a temporary local.
+		 * @TODO #...: when comparisons between the immediates are supported, this should be removed.
+		 */
+		void handleComparison(
+			OpKind         operation,
+			std::deque<DVMValue>     &args,
+			base::Optional<DVMValue> maybe_output
+		);
+		
+		/**
+		 * @brief Generates instructions to perform a cast operation.
+		 * The cast operations are only supported between local stack values.
+		 * So if we have a non-local source (like immediate value or global),
+		 * we first move it to a temporary local, perform the cast there,
+
+		 * If the destination is non-local, we put the result in a temporary local
+		 * and then move the result to the final destination.
+		 */
+		void handleCastOperation(
+			OpKind        operation,
+			const lir::Instruction& lir_instruction,
+			std::deque<DVMValue>    &args,
+			base::Optional<DVMValue> maybe_output
+		);
+
 		usize    next_temp_id = 0;
 		DVMLocal pushTempLocal(
 			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}

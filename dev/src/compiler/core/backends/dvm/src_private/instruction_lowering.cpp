@@ -33,6 +33,14 @@ namespace {
 		    || op == OpKind::sitofp || op == OpKind::uitofp || op == OpKind::fptosi
 		    || op == OpKind::fptoui || op == OpKind::fptrunc || op == OpKind::fpext;
 	}
+
+	TypeOfData getComparisonType(OpKind op) {
+		if (op == OpKind::fcmpEq || op == OpKind::fcmpNeq || op == OpKind::fcmpLt
+		    || op == OpKind::fcmpLe || op == OpKind::fcmpGt || op == OpKind::fcmpGe) {
+			return PrimitiveType(base::StrID("f64"), 8);
+		}
+		return PrimitiveType(base::StrID("i64"), 8);
+	}
 }
 
 void FunctionLoweringContext::handleCall(
@@ -76,6 +84,82 @@ void FunctionLoweringContext::handleCall(
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
+void FunctionLoweringContext::handleComparison(
+	OpKind operation, std::deque<DVMValue>& args, base::Optional<DVMValue> maybe_output
+) {
+	CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
+
+	// If the first argument is an immediate, we need to move it to a temporary local
+	// because comparsion instructions allow cmp reg, imm but not cmp imm, reg (or imm, imm)
+	base::Optional<DVMLocal> temp_lhs;
+	if (!args[0].is<DVMLocal>()) {
+		temp_lhs = pushTempLocal(getComparisonType(operation), "cmp_lhs_tmp");
+		pushInstruction({ OpKind::mov, temp_lhs->asArgument(), args[0] });
+		args[0] = DVMValue(*temp_lhs);
+	}
+
+	// This resolves e.g. `x = a CMP b;`
+	// by splitting it into two instructions:
+	// a CMP b;
+	// cmov x, 1;
+	pushInstruction({ operation, args[0], args[1] });
+	pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
+
+	if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
+}
+
+void FunctionLoweringContext::handleCastOperation(
+	OpKind                    operation,
+	const lir::Instruction&   lir_instruction,
+	std::deque<DVMValue>&     args,
+	base::Optional<DVMValue> maybe_output
+) {
+	// Operation in form a = OP b (like mov)
+	// but if "b" is not a local stack value, we need to move it to a temp first
+	// because cast operations don't support non-local values as arguments
+	CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
+
+	// ---- Resolve source ----
+	DVMValue                 src_arg = args[0];
+	base::Optional<DVMLocal> src_temp;
+
+	if (!src_arg.is<DVMLocal>()) {
+		auto source_type = program_context.lowerAndKeepTslType(
+			std::get<lir::CastParameters>(lir_instruction.extra_params).source_layout
+		);
+
+		src_temp = pushTempLocal(source_type, "cast_src_tmp");
+		src_arg  = DVMValue(src_temp.value());
+	}
+
+	// ---- Resolve destination ----
+	DVMValue                 dst_arg = maybe_output.value();
+	base::Optional<DVMLocal> dst_temp;
+
+	if (!dst_arg.is<DVMLocal>()) {
+		auto target_type = program_context.lowerAndKeepTslType(
+			std::get<lir::CastParameters>(lir_instruction.extra_params).target_layout
+		);
+
+		dst_temp = pushTempLocal(target_type, "cast_dst_tmp");
+		dst_arg  = DVMValue(dst_temp.value());
+	}
+
+	// ---- Move the source to temp if needed ----
+	if (src_temp.has_value()) pushInstruction({ OpKind::mov, src_arg, args[0] });
+
+	// ---- Perform cast (local → local) ----
+	pushInstruction({ operation, dst_arg, src_arg });
+
+	// ---- Move to final destination if needed ----
+	if (dst_temp.has_value())
+		pushInstruction({ OpKind::mov, maybe_output.value(), dst_temp->asArgument() });
+
+	// ---- Cleanup ----
+	if (src_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
+	if (dst_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
+}
+
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
@@ -97,13 +181,9 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 
 	if (isComparison(operation)) {
-		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-		// This resolves e.g. `x = a CMP b;`
-		// by splitting it into two instructions:
-		// a CMP b;
-		// cmov x, 1;
-		pushInstruction({ operation, args[0], args[1] });
-		pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
+		handleComparison(operation, args, maybe_output);
+	} else if (isCastOperation(operation)) {
+		handleCastOperation(operation, lir_instruction, args, maybe_output);
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		auto called_func_name = args.front();
@@ -133,22 +213,6 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		if (output != args[0]) pushInstruction({ OpKind::mov, output, args[0] });
 
 		pushInstruction({ operation, output, args[1] });
-	} else if (isCastOperation(operation)) {
-		// Operation in form a = OP b (like mov)
-		// but if "b" is not a local stack value, we need to move it to a temp first
-		// because cast operations don't support non-local values as arguments
-		CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-
-		if (not args[0].is<backend_vm::internal::DVMLocal>()) {
-			auto source_type = program_context.lowerAndKeepTslType(
-				std::get<lir::CastParameters>(lir_instruction.extra_params).source_layout
-			);
-			auto temp_local = pushTempLocal(source_type, "cast_temp");
-			pushInstruction({ OpKind::mov, temp_local.asArgument(), args[0] });
-			pushInstruction({ operation, maybe_output.value(), temp_local.asArgument() });
-		} else {
-			pushInstruction({ operation, maybe_output.value(), args[0] });
-		}
 	} else {
 		auto output = maybe_output.value();
 		pushInstruction({ operation, output, args[0] });
