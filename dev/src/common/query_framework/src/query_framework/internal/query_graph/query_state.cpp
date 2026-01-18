@@ -61,6 +61,10 @@ namespace {
 
 		[[nodiscard]] usize size() const { return data.size(); }
 
+		T& top() { return data.back(); }
+
+		[[nodiscard]] const T& top() const { return data.back(); }
+
 		T pop() {
 			T value = std::move(data.back());
 			data.pop_back();
@@ -184,25 +188,25 @@ namespace query::internal {
 			usize  idx;  // next child index to process
 		};
 
-		std::vector<Frame> stack;
+		VectorStack<Frame> stack;
 
 		IF_BUILD_TYPE_DEV(std::unordered_set<NodeID> in_stack);
 
-		stack.push_back(Frame{ .node = start_node, .idx = 0 });
+		stack.push(Frame{ .node = start_node, .idx = 0 });
 
 		// This is used to detect back-edges (cycles) in the previous graph
 		// The previous graph should be acyclic, but we just check it to PANIC if not
 		IF_BUILD_TYPE_DEV(in_stack.insert(start_node);)
 
 		while (!stack.empty()) {
-			auto& frame = stack.back();
+			auto& frame = stack.top();
 			auto  node  = frame.node;
 
 			// If already colored (via another path), just pop and continue
 			if (node_colors.contains(node)) {
 				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
-				stack.pop_back();
+				stack.pop();
 				continue;
 			}
 
@@ -219,7 +223,7 @@ namespace query::internal {
 
 				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
-				stack.pop_back();
+				stack.pop();
 				continue;
 			}
 
@@ -231,7 +235,7 @@ namespace query::internal {
 				if (node_colors.contains(child)) continue;
 
 				// Push child for processing
-				stack.push_back(Frame{ .node = child, .idx = 0 });
+				stack.push(Frame{ .node = child, .idx = 0 });
 
 				IF_BUILD_TYPE_DEV(
 					auto instert_result = in_stack.insert(child); CORE_ASSERT(
@@ -256,7 +260,7 @@ namespace query::internal {
 
 			IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
-			stack.pop_back();
+			stack.pop();
 		}
 
 		return node_colors.at(start_node);
@@ -422,7 +426,8 @@ namespace query::internal {
 		// Number of parents for each node
 		VectorMap<u64> number_of_parents(node_count, 0);
 
-		// Map to keep track of nodes that need to be preserved during the optimization
+		// Map to keep track of nodes that need to be preserved during the optimization.
+		// This must be filled correctly before any log_reduced_graph calls.
 		VectorMap<bool> is_preserve_node(node_count, false);
 
 		// Optional logging of graph size before/after optimization (dev logs).
@@ -432,31 +437,46 @@ namespace query::internal {
 
 		const auto log_original_graph = [&](std::string_view phase) {
 			if (!log_incremental) return;
-			u64 edge_count = 0;
+			u64   edge_count      = 0;
+			usize preserved_nodes = 0;
 			for (const auto& [_, deps]: node_deps) edge_count += deps.size();
+			for (const auto& [node, _]: node_deps)
+				if (node.q_id.getData().tags.preserve_in_graph) ++preserved_nodes;
 			CORE_DEV_LOG(
 				Incremental,
 				"[reduceOptGraph] Number of Nodes (",
 				phase,
 				"): ",
 				node_deps.size(),
+				", Number of Preserved Nodes: ",
+				preserved_nodes,
 				", Number of Edges: ",
-				edge_count
+				edge_count,
+				"\n"
 			);
 		};
 
-		const auto log_reduced_graph = [&](std::string_view phase, const auto& adjacency) {
+		const auto log_reduced_graph = [&](std::string_view phase,
+		                                   const auto&      adjacency,
+		                                   const auto&      preserved_map,
+		                                   const auto&      kept_old_indices) {
 			if (!log_incremental) return;
-			u64 edge_count = 0;
+			u64   edge_count      = 0;
+			usize preserved_nodes = 0;
 			for (const auto& deps: adjacency) edge_count += deps.size();
+			for (const auto old_idx: kept_old_indices)
+				if (preserved_map[old_idx]) ++preserved_nodes;
 			CORE_DEV_LOG(
 				Incremental,
 				"[reduceOptGraph] Number of Nodes (",
 				phase,
 				"): ",
 				adjacency.size(),
+				", Number of Preserved Nodes: ",
+				preserved_nodes,
 				", Number of Edges: ",
-				edge_count
+				edge_count,
+				"\n"
 			);
 		};
 
@@ -854,7 +874,7 @@ namespace query::internal {
 			new_opt_graph[old_to_new[node_idx]] = std::move(new_dep_vec);
 		}
 
-		log_reduced_graph("After optimization", new_opt_graph);
+		log_reduced_graph("After optimization", new_opt_graph, is_preserve_node, old_to_new_reverse);
 		return { .nodes = std::move(new_idx_to_node), .adjacency = std::move(new_opt_graph) };
 	}
 
