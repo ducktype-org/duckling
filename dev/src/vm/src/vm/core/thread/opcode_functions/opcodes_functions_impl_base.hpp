@@ -1057,7 +1057,7 @@ namespace vm {
 #define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE)                                            \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
 		{                                                                                     \
-			auto x = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);        \
+			auto x       = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);  \
 			using IntT   = i##DST_SIZE;                                                       \
 			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                           \
 			IntT res;                                                                         \

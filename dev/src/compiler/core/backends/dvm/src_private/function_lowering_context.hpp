@@ -100,8 +100,8 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Generates instructions to perform a comparison operation.
-		 * 
-		 * @TODO #1848: when comparisons between the immediates are supported, 
+		 *
+		 * @TODO #1848: when comparisons between the immediates are supported,
 		 * this whole function can be removed.
 		 */
 		void handleComparison(

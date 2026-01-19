@@ -83,9 +83,7 @@ void FunctionLoweringContext::handleComparison(
 	base::Optional<DVMValue> maybe_output
 ) {
 	CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-	CORE_ASSERT(
-		maybe_output.has_value(), "Comparison operations must have an output destination"
-	);
+	CORE_ASSERT(maybe_output.has_value(), "Comparison operations must have an output destination");
 	auto output = maybe_output.value();
 
 	// If the first argument is an immediate, we need to move it to a temporary local.
@@ -120,9 +118,7 @@ void FunctionLoweringContext::handleCastOperation(
 ) {
 	// Operation in form a = OP b (like mov)
 	CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-	CORE_ASSERT(
-		maybe_output.has_value(), "Cast operations must have an output destination"
-	);
+	CORE_ASSERT(maybe_output.has_value(), "Cast operations must have an output destination");
 	auto output = maybe_output.value();
 
 	// The cast operations are only supported between local stack values.
@@ -164,8 +160,7 @@ void FunctionLoweringContext::handleCastOperation(
 	pushInstruction({ operation, dst_arg, src_arg });
 
 	// ---- Move to final destination if needed ----
-	if (dst_temp.has_value())
-		pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
+	if (dst_temp.has_value()) pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
 
 	// ---- Cleanup ----
 	if (src_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
