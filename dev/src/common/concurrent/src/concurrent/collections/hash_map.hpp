@@ -68,7 +68,7 @@ namespace concurrent {
 		[[nodiscard]]
 		constexpr u64 hashToShard(KeyHash hash) const {
 			CORE_ASSERT(
-				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
+				SHARD_COUNT == shards.size() and SHARD_COUNT == shards.size(),
 				"Shard count mismatch"
 			);
 			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
@@ -94,17 +94,17 @@ namespace concurrent {
 			WithShardLock(const ConHashMap& self, u64 shard_index) noexcept:
 				  shard_index(shard_index),
 				  self(self) {
-				self.shard_mutexes[shard_index]->lock();
+				self.shards[shard_index].mutex.lock();
 			}
 
-			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+			~WithShardLock() noexcept { self.shards[shard_index].mutex.unlock(); }
 		};
 
 
 	public:
 		ConHashMap(): shards(SHARD_COUNT) {
-			for (u64 i = 0; i < SHARD_COUNT; i++)
-				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
+			// for (u64 i = 0; i < SHARD_COUNT; i++)
+			// 	shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
 		}
 
 		ConHashMap(const ConHashMap&) = delete;
@@ -142,7 +142,7 @@ namespace concurrent {
 
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards.at(lock.shard_index).maybePutAssumingHash(
+			return shards.at(lock.shard_index).map.maybePutAssumingHash(
 				std::forward<K>(key),
 				std::forward<D>(value),
 				hash
@@ -160,7 +160,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			shards[lock.shard_index].maybePutAssumingHash(key, value, hash);
+			shards[lock.shard_index].map.maybePutAssumingHash(key, value, hash);
 
 			f(shards[lock.shard_index][key]);
 		}
@@ -174,7 +174,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			DATA_T        value = *shards[lock.shard_index].atMaybeAssumingHash(key, hash).value();
+			DATA_T        value = *shards[lock.shard_index].map.atMaybeAssumingHash(key, hash).value();
 			return value;
 		}
 
@@ -190,7 +190,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].atMaybeAssumingHash(key, hash);
+			return shards[lock.shard_index].map.atMaybeAssumingHash(key, hash);
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
@@ -199,7 +199,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			shards[lock.shard_index][key] = value;
+			shards[lock.shard_index].map[key] = value;
 		}
 
 		[[nodiscard]]
@@ -208,7 +208,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].containsAssumingHash(key, hash);
+			return shards[lock.shard_index].map.containsAssumingHash(key, hash);
 		}
 
 		[[nodiscard]]
@@ -217,7 +217,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].eraseAssumingHash(key, hash);
+			return shards[lock.shard_index].map.eraseAssumingHash(key, hash);
 		}
 
 	private:
@@ -226,15 +226,21 @@ namespace concurrent {
 		 */
 		constexpr static u64 SHARD_COUNT = 128;
 
+
+		struct ShardData final {
+			HashMapType map;
+			mutable concurrent::AtomicFlagSpinlock mutex;
+		};
+
 		/**
 		 * The shards of the map.
 		 */
-		std::vector<HashMapType> shards;
+		std::vector<ShardData> shards;
 
-		/**
-		 * The locks protecting each shard.
-		 */
-		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+		// /**
+		//  * The locks protecting each shard.
+		//  */
+		// mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
 	};
 
 }
