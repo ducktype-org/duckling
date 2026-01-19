@@ -43,8 +43,9 @@ namespace artifacts {
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
 	 *
-	 * \parallel During compilation/lowering/backends files can be written to disk and concurrent
-	 * builds of the same module/package can collide on paths. See:
+	 * \parallel During compilation/lowering/backends files can be written to disk. Processed files
+	 * and backend outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same
+	 * module/package can collide on paths. See:
 	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp "Driver
 	 * operations"
 	 *  - \ref
