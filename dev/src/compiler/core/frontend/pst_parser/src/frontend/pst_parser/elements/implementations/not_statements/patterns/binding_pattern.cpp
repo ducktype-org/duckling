@@ -8,7 +8,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<BindingPattern>(position);
 		state.parse(out).one(&out->name);
-		return out;
+		PST_RETURN out;
 	}
 
 	void BindingPattern::dprint(std::ostream& out) const {

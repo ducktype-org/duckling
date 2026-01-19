@@ -48,7 +48,7 @@ namespace pst::expr {
 		if (state.notEmpty()) state.logInt(makeBox<NotACaseExpression>(state.getPosition()));
 
 		state.parse(out).goUpAndSkip();
-		return out;
+		PST_RETURN out;
 	}
 
 	void MatchExpr::dprint(std::ostream& out) const {

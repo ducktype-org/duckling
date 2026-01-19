@@ -9,6 +9,8 @@
 
 #define PST_WHILE(condition) while (!state.isSkipping() && (condition))
 
+#define PST_RETURN if (state.isSkipping()) return nullptr; return
+
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;

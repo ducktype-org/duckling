@@ -16,7 +16,7 @@ namespace pst {
 		if (out->points_to.internal()->getStar())
 			state.logInt(makeBox<AliasStarError>(out->source_position));
 
-		return out;
+		PST_RETURN out;
 	}
 
 	LangElement::HashAlg& Alias::addElementDataToStableHash(HashAlg& partial_hash) const {
