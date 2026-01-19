@@ -36,7 +36,7 @@ namespace tokenizer {
 	}
 
 	void TokenSource::countLines() {
-		if (log.bad()) return;
+		if (int_log.hasErrors()) return;
 		usize line  = 1;
 		usize start = 0;
 		usize newline{};
@@ -70,6 +70,9 @@ namespace tokenizer {
 		return { begin, size };
 	}
 
+	/**
+	 * @brief Splits a range of characters [begin_char, end_char) into lines.
+	 */
 	std::vector<std::pair<usize, base::RawView>> TokenSource::viewSplitRange(
 		usize begin_char, usize end_char
 	) {
@@ -97,7 +100,7 @@ namespace tokenizer {
 	Ref<dia::Logger> TokenSource::getLogger() { return &log; }
 
 	void TokenSource::runLexer() {
-		if (log.bad()) return;
+		if (int_log.hasErrors()) return;
 		lexer::Lexer lexer{ Ref<TokenSource>(this) };
 		token_data.emplace(lexer.tokenize());
 	}

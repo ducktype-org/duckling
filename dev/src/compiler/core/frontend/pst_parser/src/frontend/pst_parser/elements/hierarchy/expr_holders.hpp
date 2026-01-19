@@ -17,16 +17,13 @@ namespace pst {
 	class ExprHolder: public NotStmt {
 	protected:
 		NAMED_CHILD(expr, ExprElement);
-		friend void internal::parseExprIntoHolder(LangParserState&, Ref<ExprHolder>, ExprParseFun);
+		friend void internal::parseExprIntoHolder(
+			LangParserState&, Ref<ExprHolder>, ExprParseFun, u64
+		);
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
 			this->element_kind = ElementKind::ExprHolder;
-		}
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Top Level Expression";
 		}
 
 		void     dprint(std::ostream& out) const final;
@@ -44,15 +41,24 @@ namespace pst {
 
 	/**
 	 * @brief Collects different parsing entries.
+	 *
+	 * @note The naming scheme `until_____` that is used for these functions can be viewed as
+	 * `is____` when considering them in a vacuum. `until_____` is used for them to be more readable
+	 * as template arguments in expression holders as this is their goal.
 	 */
 	class ExprParserHelper {
 	public:
 		ExprParserHelper() = delete;
-		static MBox<ExprElement> parseUniversal(LangParserState& state);
-		static MBox<ExprElement> parseComma(LangParserState& state);
+		static bool untilUniversalEnd(const TokenStream&, i64);
+		static bool untilUniversalAllowBlockEnd(const TokenStream&, i64);
+		static bool untilUniversalAllowCommaEnd(const TokenStream&, i64);
+		static bool untilSemicolon(const TokenStream&, i64);
+		static bool untilForTypeEnd(const TokenStream&, i64);
+		static bool untilExtendsEnd(const TokenStream&, i64);
+
 		static MBox<ExprElement> parseAssignment(LangParserState& state);
-		static MBox<ExprElement> parseForType(LangParserState& state);
-		static MBox<ExprElement> parseImplementsList(LangParserState& state);
+		static MBox<ExprElement> parseComma(LangParserState& state);
+		static MBox<ExprElement> parseTernary(LangParserState& state);
 	};
 
 	/**
@@ -62,10 +68,11 @@ namespace pst {
 	 *
 	 * @tparam Self - Class of the holder, used for the correct return type of parse.
 	 * @tparam parseFun - The parsing function that parses the inner expression.
+	 * @tparam until - Condition for the end of parsing.
 	 * @tparam TOP_LEVEL - Whether the holder holds a top-level expression, for example some lists
 	 * shouldn't.
 	 */
-	template<typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
+	template<typename Self, ExprParseFun parseFun, TokenStreamCondition until, bool TOP_LEVEL = true>
 	class ExprHolderTemplate: public ExprHolder {
 	public:
 		using ExprHolder::ExprHolder;
@@ -74,8 +81,14 @@ namespace pst {
 			auto position = internal::getPosition(state);
 			auto out      = makeBox<Self>(position);
 
-			internal::parseExprIntoHolder(state, out.refMut(), parseFun);
+			auto length = internal::getTokenStream(state).countUntil<until>();
+			internal::parseExprIntoHolder(state, out.refMut(), parseFun, length);
 			return out;
+		}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return TOP_LEVEL ? "Top Level Expression" : "Expression Holder";
 		}
 
 		[[nodiscard]]
@@ -86,13 +99,32 @@ namespace pst {
 
 	/**
 	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
-	 * top-level
+	 * top-level, it also doesn't allow for block expressions.
 	 */
 	class UniversalExprHolder final:
-		  public ExprHolderTemplate<UniversalExprHolder, ExprParserHelper::parseUniversal, true> {
+		  public ExprHolderTemplate<
+			  UniversalExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalEnd,
+			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolder() final = default;
+	};
+
+	/**
+	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
+	 * top-level, it allows for block expressions.
+	 */
+	class UniversalAllowBlockExprHolder final:
+		  public ExprHolderTemplate<
+			  UniversalAllowBlockExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalAllowBlockEnd,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalAllowBlockExprHolder() final = default;
 	};
 
 	/**
@@ -101,7 +133,8 @@ namespace pst {
 	class UniversalExprHolderLowerLevel final:
 		  public ExprHolderTemplate<
 			  UniversalExprHolderLowerLevel,
-			  ExprParserHelper::parseUniversal,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalEnd,
 			  false> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
@@ -110,10 +143,14 @@ namespace pst {
 
 	/**
 	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
-	 * allow for assignment expressions top-level
+	 * allow for assignment expressions top-level, doesn't allow for block expressions.
 	 */
 	class CommaExprHolder final:
-		  public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
+		  public ExprHolderTemplate<
+			  CommaExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilUniversalAllowCommaEnd,
+			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~CommaExprHolder() final = default;
@@ -121,10 +158,14 @@ namespace pst {
 
 	/**
 	 * @brief Tertiary and most broad entry point to expression parsing that allows assignment
-	 * expressions top-level.
+	 * expressions top-level. Allows for block expressions.
 	 */
 	class AssignmentExprHolder final:
-		  public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {
+		  public ExprHolderTemplate<
+			  AssignmentExprHolder,
+			  ExprParserHelper::parseAssignment,
+			  ExprParserHelper::untilSemicolon,
+			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~AssignmentExprHolder() final = default;
@@ -135,7 +176,11 @@ namespace pst {
 	 * `for (iter: this-expr in range) {...}`
 	 */
 	class ForTypeExprHolder final:
-		  public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
+		  public ExprHolderTemplate<
+			  ForTypeExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilForTypeEnd,
+			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;
@@ -144,13 +189,42 @@ namespace pst {
 	/**
 	 * @brief Expression parsing entry point for Implements list.
 	 */
-	class ImplementsListExprHolder final:
+	class ExtendsExprHolder final:
 		  public ExprHolderTemplate<
-			  ImplementsListExprHolder,
-			  ExprParserHelper::parseImplementsList,
+			  ExtendsExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilExtendsEnd,
 			  true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
-		~ImplementsListExprHolder() final = default;
+		~ExtendsExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for Implements list.
+	 */
+	class ImplementsElementExprHolder final:
+		  public ExprHolderTemplate<
+			  ImplementsElementExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalEnd,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ImplementsElementExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for Implements list.
+	 */
+	class ValuePatternExprHolder final:
+		  public ExprHolderTemplate<
+			  ValuePatternExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalAllowBlockEnd,
+			  true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ValuePatternExprHolder() final = default;
 	};
 }

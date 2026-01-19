@@ -18,4 +18,4 @@ add_files(
     thread/vmvalue.cpp
 )
 
-set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

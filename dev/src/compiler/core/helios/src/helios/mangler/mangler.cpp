@@ -329,12 +329,17 @@ namespace compiler::helios::mangler {
 								const auto ctor_suffix   = "C" + funcType(ctx, symbol_id) + "E";
 								return path_to_class + ctor_suffix;
 							}
+							variant_case(
+								houtgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
+							) {
+								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+							}
 							// Other cases of generated symbols cannot be functions.
 						}
 					}
 					// The last case is that the symbol is a builtin function, which is handled
-					// in a separate branch of the switch by symbol kind.
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// in a separate branch of ImplementationOf_QueryMangledSymbol::provide.
+					// @TODO: #1700 Simplify this handling of builtin functions.
 				}
 				CORE_UNREACHABLE();
 			}
@@ -430,9 +435,10 @@ namespace compiler::helios::mangler {
 					return base::StrID{ "main" };
 				}
 
-				if (kind(sym_id) == SymbolKind::BuiltinFunction) {
+				if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(sym_id)->other)) {
 					// Builtin functions are not mangled
-					// @TODO: #1419 Simplify this handling of builtin functions.
+					// @TODO: #1700 Simplify this handling of builtin functions.
+					// i.e. probably make it similar to mangling regular functions.
 					return name(sym_id);
 				}
 

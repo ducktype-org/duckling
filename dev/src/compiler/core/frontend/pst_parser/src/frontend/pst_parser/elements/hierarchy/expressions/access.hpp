@@ -8,7 +8,7 @@ namespace pst::expr {
 	 * .?][name][optionally template specifier]`
 	 */
 	class Access final: public ExprElement {
-		base::StrID     type;  ///< either `.` or `.?`
+		base::StrID     type;  ///< either `.` or `.?` or `::`
 		tpc::Identifier name;
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 

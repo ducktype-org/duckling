@@ -42,8 +42,7 @@ namespace compiler::helios {
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
-				or kind(symbol) == SymbolKind::BuiltinFunction,
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
 			"Symbol is not a function or function declaration"
 		);
 	}
@@ -127,28 +126,20 @@ namespace compiler::helios {
 			                                         .value()
 			                                         .unlock(ctx)
 			                                         ->getExpr();
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
-					  "Failed: query type of symbol 2a — " + name(symbol).str()
-				  );
-				  auto initial_value_hout_coerced
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+				  auto       initial_value_hout_coerced
 					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
-			                .throwOnFail(
-								"Failed: variable initial value 2b — " + name(symbol).str()
-							);
+			                .valueOrThrow();
 
 				  return HOUTGlobalVariable{
 					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
 				  };
 			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).throwOnFail(
-					  "Failed: query const value 3 — " + name(symbol).str()
-				  ) };
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).valueOrThrow() };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->throwOnFail(
-			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
-		  )) {}
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow()) {}
 }

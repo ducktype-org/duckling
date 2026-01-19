@@ -20,6 +20,7 @@ namespace compiler::frontend {
 	struct FileID final {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
+			checkDanglingReference();
 			return reinterpret_cast<u64>(ref.get());
 		}
 
@@ -30,7 +31,14 @@ namespace compiler::frontend {
 	private:
 		FileID(base::Ref<SourceFile> ref): ref(ref) {}
 
+		/**
+		 * @brief Ensures the referenced SourceFile is still valid during development builds.
+		 * This function will work only if use_module_modifier_remove is enabled.
+		 */
+		void checkDanglingReference() const;
+
 		base::Ref<SourceFile> ref;
+
 		friend class SourceFile;
 		friend struct GetFileID_Functor;
 	};

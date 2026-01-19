@@ -12,6 +12,8 @@ namespace pst::internal {
 	std::vector<ImportType> extractState(Box<LangParserState> state_ptr) {
 		return std::move(*state_ptr).extractState();
 	}
+
+	void finalizeParsing(Ref<LangParserState> state) { state->finalize(); }
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(pst::LangParserState)

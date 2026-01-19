@@ -3,21 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class AttrStarError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected `.*` in Attribute name";
-		}
-
-	public:
-		AttrStarError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-	};
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
 		auto           position = state.getPosition();
@@ -29,10 +14,10 @@ namespace pst {
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
 		if (out->name.internal() && out->name.internal()->getStar())
-			state.log(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
+			state.logInt(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	LangElement::HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {

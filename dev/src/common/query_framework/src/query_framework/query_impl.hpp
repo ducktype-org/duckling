@@ -7,6 +7,7 @@
 #include "context.hpp"
 #include "internal/acd.hpp"
 #include "internal/context_access.hpp"
+#include "internal/query_errors.hpp"
 #include "internal/query_graph/node_making.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
@@ -122,7 +123,8 @@ namespace query::internal {
 					Query,
 					"[QUERY \"",
 					QueryIntType::QUERY_DATA.name,
-					"\"]: Caught failed exception.\n"
+					"\"]: Caught failed exception.\n",
+					qfe.what()
 				);
 
 				if constexpr (QueryImplType::USES_QRESULT

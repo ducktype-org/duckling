@@ -7,6 +7,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 
+#include <iostream>
+
 namespace tpc {
 
 	TokenStream::TokenStream(
@@ -18,6 +20,7 @@ namespace tpc {
 	):
 		  tokens(tokens),
 		  where(from),
+		  from(from),
 		  to(to),
 		  sentinel_end(sentinel_end),
 		  sentinel_begin(sentinel_begin) {
@@ -28,6 +31,7 @@ namespace tpc {
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:
 		  tokens(stream.tokens),
 		  where(stream.where),
+		  from(stream.from),
 		  to(stream.to),
 		  sentinel_end(stream.sentinel_end),
 		  sentinel_begin(stream.sentinel_begin) {}
@@ -42,17 +46,31 @@ namespace tpc {
 		}
 	}
 
+	TokenStream TokenStream::getSubstream(u64 length) const {
+		CORE_ASSERT(to - where >= length || length == 0, "Sub-stream should fit in parent stream");
+		return { tokens,
+			     peek(-1).asSentinel(),
+			     peek(base::safeIntConv<i64>(length)).asSentinel(),
+			     where,
+			     where + length };
+	}
+
 	const Token& TokenStream::next() { return (where >= to ? sentinel_end : tokens[where++]); }
 
 	const Token& TokenStream::peek(i64 fwd) const {
-		if (std::max(-fwd, (i64) 0) > where) return sentinel_begin;
+		if (base::safeIntConv<i64>(where) + fwd < base::safeIntConv<i64>(from))
+			return sentinel_begin;
 		return (
-			base::safeIntConv<i64>(where) + fwd >= to ? sentinel_end : tokens[where + (usize) fwd]
+			base::safeIntConv<i64>(where) + fwd >= base::safeIntConv<i64>(to)
+				? sentinel_end
+				: tokens[base::safeIntConv<u64>(base::safeIntConv<i64>(where) + fwd)]
 		);
 	}
 
 	void TokenStream::skip(i64 n) {
-		where = base::safeIntConv<usize>(std::max(base::safeIntConv<i64>(where) + n, (i64) 0));
+		where = base::safeIntConv<usize>(
+			std::max(base::safeIntConv<i64>(where) + n, base::safeIntConv<i64>(from))
+		);
 	}
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }

@@ -3,12 +3,13 @@ use std::path::{Path, PathBuf};
 use tracing::debug;
 
 use rustvil::fs::PathExt;
+use url::Url;
 
 use super::Scope;
 use crate::{
     QpCtx, QuackError, QuackResult, QuackResultContext, qp_bail, qp_internal,
     quackpack::{
-        core::{Git, GitRevision, Local, Registry, Source},
+        core::{BranchOrTag, Git, Local, Registry, Source},
         schemas::manifest::{DependencySource as SourceSchema, DetailedSource},
     },
 };
@@ -51,7 +52,11 @@ pub(crate) fn parse(
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
-            return Ok(Registry::new(registry_url.into()).into());
+            let url = registry_url
+                .as_str()
+                .try_into()
+                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
+            return Ok(Registry::new(url).into());
         }
         SourceSchema::Detailed(detailed_source) => detailed_source,
     };
@@ -83,7 +88,11 @@ pub(crate) fn parse(
             debug!("found a registry source");
             check_no_git(source, scope)?;
             check_no_local(source, scope)?;
-            Registry::new(registry_url.into()).into()
+            let url = registry_url
+                .as_str()
+                .try_into()
+                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
+            Registry::new(url).into()
         }
         (None, Some(root), None) => {
             debug!("found a local path source");
@@ -93,14 +102,15 @@ pub(crate) fn parse(
             let (dir_root, was_relative) = resolve_local_dep_root(root, package_root, ctx)?;
             Local::new(dir_root, root.into(), was_relative).into()
         }
-        (None, None, Some(git_url)) => {
+        (None, None, Some(manifest_git_url)) => {
             debug!("found a git source");
             check_no_local(source, scope)?;
             check_no_registry(source, scope)?;
-            let rev = resolve_git_rev(source, scope)?;
+            let branch_or_tag = resolve_git_branch_or_tag(source, scope)?;
+            let git_url = parse_git_url(manifest_git_url, package_root, ctx)?;
             Git::new(
-                git_url.into(),
-                rev,
+                git_url,
+                branch_or_tag,
                 source.commit.as_ref().map(<&String>::into),
             )
             .into()
@@ -218,16 +228,16 @@ fn check_no_registry(source: &DetailedSource, scope: &mut Scope) -> QuackResult<
     Ok(())
 }
 
-/// Resolve [`GitRevision`] from the given `source`.
-fn resolve_git_rev(source: &DetailedSource, scope: &Scope) -> QuackResult<GitRevision> {
+/// Resolve [`BranchOrTag`] from the given `source`.
+fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackResult<BranchOrTag> {
     match (source.branch.as_ref(), source.tag.as_ref()) {
-        (None, None) => Ok(GitRevision::Main),
-        (None, Some(tag)) => Ok(GitRevision::Tag(tag.into())),
-        (Some(branch), None) => Ok(GitRevision::Branch(branch.into())),
+        (None, None) => Ok(BranchOrTag::Default),
+        (None, Some(tag)) => Ok(BranchOrTag::Tag(tag.into())),
+        (Some(branch), None) => Ok(BranchOrTag::Branch(branch.into())),
         (Some(_), Some(_)) => {
             let formatted = scope.format();
             qp_bail!(
-                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.commit`"
+                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.tag`"
             );
         }
     }
@@ -262,4 +272,25 @@ fn resolve_local_dep_root(
             true,
         ))
     }
+}
+
+fn parse_git_url(manifest_git_url: &str, package_root: &Path, ctx: &QpCtx<'_>) -> QuackResult<Url> {
+    let git_url = Url::parse(manifest_git_url);
+    let mut err: QuackError = match git_url {
+        Ok(parsed) => return Ok(parsed),
+        Err(err) => err.into(),
+    };
+    // We are building error messages from the bottom to the top.
+    // If an original URL points to a file, mention it to the user. Also, ignore any errors.
+    if let Ok((path, _)) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
+        && path.exists()
+    {
+        err = err.add_hint(format!(
+            "either change it to a local dependency or change the URL to `file://{}`",
+            path.display()
+        ));
+        err = err.add_note("git dependency points to a file on the disk");
+    }
+    err = err.context(format!("`{manifest_git_url}` is not a valid URL"));
+    Err(err)
 }

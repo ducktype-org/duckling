@@ -66,11 +66,11 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
-		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
-		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
+		void visitLiteralNumericExpr(const hc::LiteralNumericExpr& value) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ value.value } });
 		}
 
@@ -78,8 +78,8 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
-		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
-			throw base::NotYetImplemented("string literal");
+		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
@@ -408,9 +408,6 @@ namespace compiler::mir {
 		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
 		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
 		 * Unit). Other nodes are delegated back to the standard expression lowerer.
-		 * @TODO: #1693 This is a temporary approach since tuples are not supported in DVM, so
-		 * casting from them is impossible. This should probably get removed and liftToType should
-		 * be handled in MIR, LIR and DVM
 		 */
 		ExprLowerRes lowerAndLiftToTypeRecursively(
 			const hc::Expr& expr, BlockBuilderRef continuation
@@ -513,6 +510,11 @@ namespace compiler::mir {
 			case FloatNeq:
 				return Operation::FloatNeq;
 
+			case MetaEq:
+				return Operation::MetaEq;
+			case MetaNeq:
+				return Operation::MetaNeq;
+
 			case BooleanAnd:
 				return Operation::BooleanAnd;
 			case BooleanOr:
@@ -535,6 +537,8 @@ namespace compiler::mir {
 				return Operation::MetaCreateBox;
 			case Ref:
 				return Operation::MetaCreateRef;
+			case Const:
+				return Operation::MetaCreateConst;
 			default:
 				CORE_UNREACHABLE();
 			}

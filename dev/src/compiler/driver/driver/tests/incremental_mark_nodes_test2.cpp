@@ -73,9 +73,6 @@ private:
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/functions_1")), "mark_nodes_test_package"
 		);
-		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
-		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used
 		compiler::driver::KeyOf_CompileModule key{
@@ -87,8 +84,15 @@ private:
 			query::internal::KeyHash{ key.queryStablePerfectHash() },
 		};
 
+		// Capture dependencies before the graph is merged (merge now consumes prev graph entries)
+		auto root_deps = prev->getNodeDeps(root_node);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+		});
+
 		// Check if red-green sweep marks all direct dependencies of the root node as green
-		for (const auto& dep_node: prev->getNodeDeps(root_node)) {
+		for (const auto& dep_node: root_deps) {
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));

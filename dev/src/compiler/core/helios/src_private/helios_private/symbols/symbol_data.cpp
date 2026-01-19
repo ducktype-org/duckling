@@ -18,8 +18,14 @@ namespace compiler::helios {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
+		// @TODO: #1807 Refactor the code so that it's impossible to create
+		// two symbols with the same counter but different return types.
+		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
+			return { return_type.queryUnstablePerfectHash(), counter };
+		}
+
 		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable>& data
+			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
 		):
 			  data(data) {}
 
@@ -34,10 +40,7 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) {
 					const auto class_type
 						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->throwOnFail(
-								  "Not handling errors here yet... "
-								  "(getting type of generated constructor symbol)"
-							  )
+					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::ClassAbstractType>();
 
@@ -66,10 +69,7 @@ namespace compiler::helios {
 				variant_case(Parameter, param) {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
-					          ->throwOnFail(
-								  "Not handling errors here yet... "
-								  "(getting type of generated parameter symbol)"
-							  )
+					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
 					return tsh::SymbolType{
@@ -79,6 +79,17 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(Variable, var) { return var.type; }
+				variant_case(ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 			}
 			CORE_UNREACHABLE();
 		}
@@ -99,7 +110,7 @@ namespace compiler::helios {
 		return SymbolData{
 			.common = {
 				.name = name,
-				.kind = SymbolKind::BuiltinFunction,
+				.kind = SymbolKind::Function,
 			},
 			.other  = builtin_data,
 		};
@@ -118,6 +129,9 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

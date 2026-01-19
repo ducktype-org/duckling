@@ -15,7 +15,7 @@
 
 namespace pst {
 
-	using StateCondition = bool(const LangParserState&, i64);
+	using TokenStreamCondition = bool(const tpc::TokenStream&, i64);
 
 	using GetName = std::string (*)();
 
@@ -40,10 +40,10 @@ namespace pst {
 	 * * None - This statement doesn't introduce any symbols. For example an expression statement or
 	 * a return statement.
 	 * * Symbol - This statement introduces a symbol. For example a function
-	 * declaration, import, using and variable declaration.
+	 * declaration, import, using a specific symbol and variable declaration.
 	 * * Transparent - This statement contains or
-	 * links somewhere where there might be introduced. For example a macro expansion or a specifier
-	 * block.
+	 * links somewhere where there might be introduced. For example a macro expansion, specifier
+	 * block or using with a star.
 	 */
 	enum class DeclKind {
 		None,

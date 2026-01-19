@@ -32,9 +32,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		DeclKind isDeclaration() const final {
-			return DeclKind::Symbol;
-		}
+		DeclKind isDeclaration() const final;
 
 		[[nodiscard]] base::Optional<base::StrID> getDeclSymbolName() const final;
 	};

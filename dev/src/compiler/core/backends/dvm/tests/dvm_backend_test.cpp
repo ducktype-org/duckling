@@ -44,11 +44,11 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 			backend_vm::Module m(moduleName(module));
 
-			for (auto& hout_glob: top_level->glob_data) {
+			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
@@ -64,13 +64,19 @@ private:
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
 						// @TODO: #1553 -- const ctors will probably be added here
-						fail(base::strConcat(
-							"We fail here, because constants don't work on DVM as expected, "
-							"remove "
-							"the fail after #1553. ",
-							"Global constant: ",
-							hout_glob.original_name.strView()
-						));
+						// @TODO: #1709 For now, global meta type constants are skipped and not
+						// treated as failure for the code using compile time evaluated types to
+						// compile.
+						if (!cnst.value.has<tsh::SymbolType<>>()) {
+							fail(base::strConcat(
+								"We fail here, because constants don't work on DVM as "
+								"expected, "
+								"remove "
+								"the fail after #1553. ",
+								"Global constant: ",
+								hout_glob.original_name.strView()
+							));
+						}
 					}
 					variant_default {
 						fail(base::strConcat(
@@ -80,10 +86,10 @@ private:
 					}
 				}
 			}
-			for (auto& fun: top_level->functions) {
+			for (auto& fun: top_level.functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					{ &mir_fun->throwOnFail("Couldn\'t compile") }
+					{ &mir_fun->valueOrPanicMsg("Couldn\'t compile") }
 				);
 				m.insertLirFunction(lir_fun);
 			}

@@ -4,7 +4,6 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
-#include <driver_private/statistics_private/statistics.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -13,9 +12,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <timer/timer.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
@@ -42,7 +42,7 @@ namespace compiler::driver {
 		return partial.finalize();
 	}
 
-	struct IMPLEMENT_QUERY(CompileModule, artifacts::FileArtifact) {
+	struct IMPLEMENT_QUERY(CompileModule, query::QResult<artifacts::FileArtifact>) {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_COPY
 
@@ -88,26 +88,21 @@ namespace compiler::driver {
 			}
 		}
 
-		static auto provide(query::Context& ctx, QKey key) -> artifacts::FileArtifact {
+		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
-			auto hout = ctx.query<helios::QueryModuleHOUT>(key.module_id);
+			auto lir_data_result = ctx.query<CompileToLIRModuleData>(key.module_id);
+			if (lir_data_result.hasFailed()) {
+				moduleLog(key, "Compilation failed");
+				return query::Failed();
+			}
+			auto lir_data = std::move(lir_data_result).valueOrThrow();
 
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
-
 			auto output
 				= getQueryArtifactsCollection()->fileArtifactAtOrNew(base::StrID(output_name.c_str()
 			    ));
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  compiler::frontend::ModuleTree::getPathComponentHash(key.module_id)
-									  .hash.toStringHex()
-				)
-			                      .c_str());
-
-			auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, module_name);
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
@@ -115,7 +110,8 @@ namespace compiler::driver {
 				{
 					// compileLIRModuleToLLVM time is added on its own,
 					// but tracking time of the actual compilation to object file is done here
-					timer::AddToTime _(&backend_compilation_time);
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+
 					llvm_module.compile(
 						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
@@ -154,7 +150,7 @@ namespace compiler::driver {
 		 * Load precompiled artifact from disk without performing any compilation.
 		 * Returns Optional empty if the underlying file does not exist anymore.
 		 */
-		static auto loadFromDisc(const QKey& key) -> base::Optional<artifacts::FileArtifact> {
+		static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
 
@@ -175,23 +171,30 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
-	void compileEntirePackage(
+	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
 		const linker::LinkingOptions&    linking_options
 	) {
-		auto root = package_info.root_module;
+		auto        root   = package_info.root_module;
+		base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
 
 		// this is std::function, so it can be recursive
 		std::function<void(frontend::ModuleID)> handle_module
 			= [&](frontend::ModuleID module_id) -> void {
-			objects.emplace_back(query::entryPoint<CompileModule>({ module_id, backend }));
+			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
+			if (module_result.hasValue())
+				objects.emplace_back(module_result.valueOrPanic());
+			else
+				result = base::BAD;
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
 		};
 		handle_module(root);
+
+		if (result.isBad()) return result;
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.
@@ -203,13 +206,14 @@ namespace compiler::driver {
 
 			linker::link(output_file, objects, linking_options);
 		}
+
+		return result;
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		auto hout     = ctx.query<helios::QueryModuleHOUT>(module_id);
-		auto lir_data = compileHOUTUnitToLIRModuleData(ctx, &hout, base::StrID("dvm_run"));
+		auto lir_data            = ctx.query<CompileToLIRModuleData>(module_id).valueOrPanic();
 		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};
