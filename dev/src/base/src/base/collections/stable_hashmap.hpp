@@ -12,6 +12,11 @@
 #include <iterator>
 #include <utility>
 
+namespace concurrent {
+	template<class, class, class, u64>
+	class ConHashMap;
+}
+
 namespace base {
 
 	/**
@@ -38,6 +43,14 @@ namespace base {
 		};
 
 	private:
+
+		// concurrent::ConHashMap uses private components of this map
+		// for efficiency reasons, so we just friend it.
+		// This is not very good code design, but it is acceptable
+		// in this case.
+		template<class, class, class, u64>
+		friend class concurrent::ConHashMap;
+
 		static constexpr usize  INITIAL_BUCKETS = 64;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 

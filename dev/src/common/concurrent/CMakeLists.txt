@@ -8,3 +8,8 @@ make_module(Concurrent USES Base)
 
 duck_add_test(common concurrent_module tests/concurrent_module_test.cpp USES Concurrent Base)
 
+
+find_package(TBB REQUIRED)
+
+add_example(concurrent_example examples/concurrent_example.cpp USES Concurrent Base TBB::tbb)
+

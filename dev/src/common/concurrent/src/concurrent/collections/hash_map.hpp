@@ -30,15 +30,43 @@ namespace concurrent {
 		// @TODO: #1747 For some reason StableHashMap here
 		// is much slower than std::unordered_map in
 		// concurrent scenarios. Investigate and fix, preferably by improving StableHashMap.
+
+		// Internal hash map types and checks:
+		
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
 
-		[[nodiscard]]
-		constexpr u64 keyToShard(const KEY_T& key) const
-			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			u64 hash = HASH_T{}(key);
+		using KeyValuePair = typename HashMapType::KeyValuePair;
 
+		static_assert(std::is_same_v<decltype(HashMapType::keyHash(std::declval<KEY_T>())), u64>,
+			"keyHash must return u64, if this breaks please update the implementation of this hash map accordingly"
+		);
+		static_assert(
+			std::is_same_v<KeyHash, typename HashMapType::KeyHash>,
+			"KeyHash of ConHashMap must be the same as KeyHash of underlying StableHashMap, please update the implementation of this hash map accordingly"
+		);
+
+		// Helper methods:
+
+
+		/**
+		 * This computes the hash of the given key using the hash function of the underlying
+		 * StableHashMap.
+		 * 
+		 * @important: The computed hash must be the same as used internally by the
+		 *             StableHashMap, otherwise the map will not work correctly.
+		 *             This is needed, because ConHashMap computes the hash to determine
+		 *             the shard for a given key, and then uses private methods of StableHashMap
+		 *             that take precomputed hash as a parameter.
+		 */
+		static KeyHash keyHash(const KEY_T& key) {
+			return HashMapType::keyHash(key);
+		}
+
+	
+		[[nodiscard]]
+		constexpr u64 hashToShard(KeyHash hash) const {
 			CORE_ASSERT(
 				SHARD_COUNT == shard_mutexes.size() and SHARD_COUNT == shards.size(),
 				"Shard count mismatch"
@@ -51,7 +79,7 @@ namespace concurrent {
 			return result;
 		}
 
-		using KeyValuePair = typename HashMapType::KeyValuePair;
+
 
 		/**
 		 * RAII lock for a given shard.
@@ -93,7 +121,10 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+
+			WithShardLock lock(*this, hashToShard(hash));
+
 			return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
 		}
 
@@ -107,7 +138,9 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+
+			WithShardLock lock(*this, hashToShard(hash));
 
 			return shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
 		}
@@ -119,7 +152,9 @@ namespace concurrent {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
 		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
 
 			shards[lock.shard_index].maybePut(key, value);
 			f(shards[lock.shard_index][key]);
@@ -130,7 +165,10 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
 			DATA_T        value = shards[lock.shard_index][key];
 			return value;
 		}
@@ -143,20 +181,39 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
+
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
 			shards[lock.shard_index][key] = value;
 		}
 
 		[[nodiscard]]
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
 			return shards[lock.shard_index].contains(key);
+		}
+
+		[[nodiscard]]
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
+			return shards[lock.shard_index].erase(key);
 		}
 
 	private:

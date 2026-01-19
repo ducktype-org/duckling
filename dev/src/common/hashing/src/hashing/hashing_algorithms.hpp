@@ -161,7 +161,7 @@ namespace hashing {
 	 * the names of the variables are copied from official standard
 	 * that can be found here: https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.180-4.pdf
 	 */
-	class SHA256 {
+	class SHA256 final {
 	private:
 		// Internal state: 8 32-bit words
 		std::array<u32, 8> state;
