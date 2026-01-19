@@ -47,7 +47,7 @@ namespace {
 	 * @return The created llvm::Constant*.
 	 */
 	auto numericValueToLLVMConstant(
-		const compiler::numeric_value::NumericValue& numeric, llvm::Type* llvm_type
+		const compiler::numeric_value::NumericValue& numeric, const Ref<llvm::Type> llvm_type
 	) {
 		return std::visit(
 			[&](auto&& val) -> llvm::Constant* {
@@ -62,9 +62,9 @@ namespace {
 					}
 
 					if constexpr (std::is_signed_v<T>)
-						return llvm::ConstantInt::getSigned(llvm_type, static_cast<i64>(val));
+						return llvm::ConstantInt::getSigned(llvm_type.get(), static_cast<i64>(val));
 					else
-						return llvm::ConstantInt::get(llvm_type, static_cast<u64>(val), false);
+						return llvm::ConstantInt::get(llvm_type.get(), static_cast<u64>(val), false);
 				} else if constexpr (std::is_same_v<T, f32>) {
 					if (!llvm_type->isFloatTy()) {
 						CORE_PANIC(
@@ -72,7 +72,7 @@ namespace {
 							"not"
 						);
 					}
-					return llvm::ConstantFP::get(llvm_type, static_cast<f64>(val));
+					return llvm::ConstantFP::get(llvm_type.get(), static_cast<f64>(val));
 				} else if constexpr (std::is_same_v<T, f64>) {
 					if (!llvm_type->isDoubleTy()) {
 						CORE_PANIC(
@@ -80,7 +80,7 @@ namespace {
 							"not"
 						);
 					}
-					return llvm::ConstantFP::get(llvm_type, val);
+					return llvm::ConstantFP::get(llvm_type.get(), val);
 				} else {
 					CORE_PANIC("LLVM lowering: Unsupported numeric type in NumericValue");
 				}
@@ -93,9 +93,14 @@ namespace {
 	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
 	 * @param ctv The CTV to convert.
 	 * @param llvm_type The expected type.
+	 * @param llvm_module The LLVM module into which global constants should be injected.
 	 * @return The created llvm::Constant*.
 	 */
-	auto ctvToLLVMConstant(const compiler::ctv::CompileTimeValue& ctv, llvm::Type* llvm_type) {
+	llvm::Constant* ctvToLLVMConstant(
+		const compiler::ctv::CompileTimeValue& ctv,
+		Ref<llvm::Type>                        llvm_type,
+		Ref<llvm::Module>                      llvm_module
+	) {
 		variant_match(ctv.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
 				return numericValueToLLVMConstant(numeric, llvm_type);
@@ -106,13 +111,41 @@ namespace {
 						"LLVM lowering: Type mismatch. CTV is a boolean, but LLVM type is not"
 					);
 				}
-				return llvm::ConstantInt::get(llvm_type, val ? 1 : 0, false);
+				return llvm::ConstantInt::get(llvm_type.get(), val ? 1 : 0, false);
 			}
 			variant_case_novalue(compiler::tsh::SymbolType<>) {
 				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
 				// using compile time operations on types to compile. This should never be used in
 				// runtime.
-				return llvm::ConstantInt::get(llvm_type, 0, false);
+				return llvm::ConstantInt::get(llvm_type.get(), 0, false);
+			}
+			variant_case(base::StrID, str) {
+				// First, create a global constant for the string data
+				const auto string_constant = llvm::ConstantDataArray::getString(
+					llvm_type->getContext(), str.strView(), /*AddNull=*/false
+				);
+				const auto string_global = new llvm::GlobalVariable(
+					*llvm_module,
+					string_constant->getType(),
+					/*isConstant=*/true,
+					llvm::GlobalValue::PrivateLinkage,
+					string_constant
+				);
+
+				// Prepare the global struct
+				const u64                          length = str.strView().size();
+				const std::vector<llvm::Constant*> fields{
+					string_global,
+					// length is length
+					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length)),
+					// memory_begin_offset (wrt. data pointer) is 0
+					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, 0)),
+					// memory_end_offset (wrt. data pointer) is equal to length
+					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
+				};
+				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());
+				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
+				return struct_constant;
 			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
@@ -221,6 +254,35 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
+			variant_case(tsl::StringTypeLayout, string_layout) {
+				const auto string_type_name = "str";
+
+				// Get the string type from the context, if it has been previously defined.
+				if (llvm::StructType* string_type
+				    = llvm::StructType::getTypeByName(llvm_context, string_type_name);
+				    string_type) {
+					return string_type;
+				}
+
+				// Otherwise, define the string type in LLVM, in line with the TSL definition.
+				llvm::StructType* string_type
+					= llvm::StructType::create(llvm_context, string_type_name);
+				string_type->setBody(
+					{
+						llvm::PointerType::getUnqual(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+					},
+					/*is_packed=*/false
+				);
+
+				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
+				// - the TSL type layout, and
+				// - the struct defined in the built-ins module.
+
+				return string_type;
+			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
@@ -297,16 +359,34 @@ namespace compiler::backend_llvm {
 		CORE_UNREACHABLE();
 	}
 
+	/**
+	 * Get the LLVM function type based on the layouts of its parameters and return type.
+	 * @note If the function type has to conform to C/C++ ABI, then struct-like parameters
+	 * should be passed by pointer and with the `byval` LLVM attribute. See:
+	 * https://yorickpeterse.com/articles/the-mess-that-is-handling-structure-arguments-and-returns-in-llvm/.
+	 * @param module The LLVM module in which the function type will be used.
+	 * @param parameters The layouts of the parameters of the function.
+	 * @param return_type The layout of the return type of the function.
+	 * @param abi The ABI to conform to.
+	 * @return The LLVM function type.
+	 */
 	auto getFunType(
 		const Ref<llvm::Module>                   module,
 		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		const CRef<tsl::TypeLayout>               return_type
+		const CRef<tsl::TypeLayout>               return_type,
+		const helios::SymbolABI                   abi = helios::DefaultAbi{}
 	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
-		for (const auto& param: parameters)
-			llvm_parameters.push_back(typeFromLayout(module, param));
 
+		// Prepare parameter types.
+		for (const auto& param: parameters)
+			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
+				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
+			else
+				llvm_parameters.push_back(typeFromLayout(module, param));
+
+		// Prepare function type, including return type.
 		return llvm::FunctionType::get(typeFromLayout(module, return_type), llvm_parameters, false);
 	}
 
@@ -339,12 +419,31 @@ namespace compiler::backend_llvm {
 		llvm::FunctionCallee callee = module->getOrInsertFunction(
 			mangled_name.strView(),
 			getFunType(
-				module, *function_literal.parameter_layouts, function_literal.return_type_layout
+				module,
+				*function_literal.parameter_layouts,
+				function_literal.return_type_layout,
+				function_literal.abi
 			)
 		);
 
-		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee()))
+		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee())) {
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
+
+			// If the function uses C ABI, we need to pass structs by pointer with `byval` attribute.
+			if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
+				for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
+					if (const auto param_layout = function_literal.parameter_layouts->at(i);
+					    param_layout->is<tsl::StringTypeLayout>()) {
+						function->addParamAttr(
+							u32(i),
+							llvm::Attribute::getWithByValType(
+								module->getContext(), typeFromLayout(module, param_layout)
+							)
+						);
+					}
+				}
+			}
+		}
 
 		return callee;
 	}
@@ -391,7 +490,7 @@ namespace compiler::backend_llvm {
 				lir_global.initial_value.has_value(), "Expected initial value for constant global"
 			);
 			global->setInitializer(
-				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType())
+				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType(), module)
 			);
 		} else {
 			// Initialise the global variable to null, since it will be initialised in the constructor:
@@ -573,7 +672,7 @@ namespace compiler::backend_llvm {
 			variant_match(lir_location.getVariant()) {
 				variant_case(lir::LIRConstant, constant) {
 					const auto llvm_type = typeFromLayout(module, constant.layout);
-					return ctvToLLVMConstant(constant.value, llvm_type);
+					return ctvToLLVMConstant(constant.value, llvm_type, module);
 				}
 				variant_case(lir::LIRPlace, place) {
 					// We store local values behind pointers to stack-allocated memory.
@@ -922,21 +1021,36 @@ namespace compiler::backend_llvm {
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				auto callee = getOrInsertFunctionPrototypeFromLiteral(
-					module, lir_instruction.arguments.at(0).get<lir::FunctionLiteral>()
-				);
+				const auto function_literal
+					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+				auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
 
-				const auto args = loadLIRValueList(
+				auto args = loadLIRValueList(
 					std::vector(
 						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
 					),
 					builder
 				);
+				// If the function uses C ABI, we need to pass structs by pointer.
+				std::vector<usize> byval_indices{};
+				if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
+					for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
+						if (const auto param_layout = function_literal.parameter_layouts->at(i);
+						    param_layout->is<tsl::StringTypeLayout>()) {
+							byval_indices.push_back(i);
+							const auto str_type = typeFromLayout(module, param_layout);
+							const auto arg_ptr  = builder.CreateAlloca(str_type);
+							builder.CreateStore(args.at(i), arg_ptr);
+							args.at(i) = arg_ptr;
+						}
+					}
+				}
 
+				llvm::CallInst* call_instruction = nullptr;
 				if (lir_instruction.output.has_value()) {
 					const auto output = lir_instruction.output.value();
-					const auto value  = builder.CreateCall(callee, args);
-					storeOutput(output, value, builder);
+					call_instruction  = builder.CreateCall(callee, args);
+					storeOutput(output, call_instruction, builder);
 				} else {
 					CORE_ASSERT(
 						callee.getFunctionType()->getReturnType()->isVoidTy(),
@@ -944,7 +1058,14 @@ namespace compiler::backend_llvm {
 						"– this may be valid, feel free "
 						"to remove assertion if the compiler internals change."
 					);
-					builder.CreateCall(callee, args);
+					call_instruction = builder.CreateCall(callee, args);
+				}
+				for (const auto byval_idx: byval_indices) {
+					const auto arg_type
+						= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
+					call_instruction->addParamAttr(
+						u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
+					);
 				}
 
 				break;
