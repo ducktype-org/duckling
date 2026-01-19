@@ -11,7 +11,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Using, &out->names);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
