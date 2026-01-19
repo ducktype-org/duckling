@@ -125,7 +125,9 @@ namespace compiler::backend_llvm {
 
 		// Run optimization passes before code generation
 		runOptimizationPasses(
-			m, target_machine, global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+			m,
+			target_machine,
+			global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
 		);
 
 		std::error_code error_code;
