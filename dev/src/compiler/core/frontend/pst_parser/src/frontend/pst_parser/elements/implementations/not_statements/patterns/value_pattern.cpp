@@ -14,7 +14,7 @@ namespace pst {
 		auto out      = makeBox<ValuePattern>(position);
 		state.parse(out).one(&out->expression);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ValuePattern::dprint(std::ostream& out) const {

@@ -19,7 +19,7 @@ namespace pst {
 		if (state.parse(out).tryEat(Keyword::Else))
 			state.parse(out).withDef(&out->else_body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void If::dprint(std::ostream& out) const {
