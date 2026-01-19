@@ -7,14 +7,17 @@
 namespace lsp {
 	/**
 	 * @brief The main function to get the JSON serialized diagnostics from the compiler.
+	 *
+	 * @warning It compiles the entire package the file belongs to, so also other modules
+	 * unrelated to the file.
+	 *
 	 * It performs the following steps:
-	 * 1. Collects the parser errors from the files belonging to the package of the argument file.
-	 * 2. Runs HELIOS compilation on the package to get the semantic diagnostics.
-	 * 3. Serializes all the diagnostics to JSON format.
+	 * 1. Finds the the module of the @param file and its package.
+	 * 2. Collects the parser errors from the entire package.
+	 * 3. Runs HELIOS compilation on the package to get the semantic diagnostics.
+	 * 4. Serializes all the diagnostics to JSON format compatible with LSP interface.
 	 *
 	 * @param file The file to get diagnostics for.
-	 * Note that all the package related diagnostics will be returned. The file is used to identify
-	 * the package.
 	 *
 	 * @return std::string The JSON serialized
 	 */

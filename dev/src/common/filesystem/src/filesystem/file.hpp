@@ -238,6 +238,11 @@ namespace fs {
 		static File createRandomTempFile(std::string_view content = "");
 
 
+		/**
+		 * @brief Gets the virtual filesystem root directory as a File object.
+		 *
+		 * @return Root directory of the virtual filesystem.
+		 */
 		static File getVirtualRootDirectory();
 
 		/**

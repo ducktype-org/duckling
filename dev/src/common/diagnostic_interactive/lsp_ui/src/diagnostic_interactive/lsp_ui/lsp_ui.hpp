@@ -28,7 +28,7 @@ namespace dia_int::lsp {
 	class LSPDiagnosticResult {
 	public:
 		/**
-		 * @brief Langauge Server Protocol diagnostic.
+		 * @brief Language Server Protocol diagnostic.
 		 */
 		Box<Diagnostic> diagnostic;
 
@@ -45,10 +45,11 @@ namespace dia_int::lsp {
 	};
 
 	/**
-	 * These is the context needed to evaluate diagnostics to language server messages.
+	 * This is the context needed to evaluate diagnostics to language server messages.
 	 *
-	 * Some errors may not have location information, so we need a context to provide
-	 * default location information and also the mapping from the VFS paths to URIs.
+	 * For example there are error messages without code location and we need to have
+	 * a default file to attach to such diagnostics, because that is a requirement of the LSP
+	 * protocol.
 	 */
 	class EvaluationContext {
 	public:
@@ -71,6 +72,6 @@ namespace dia_int::lsp {
 	 * @brief Evaluate diagnostic arguments to language server message.
 	 */
 	LSPDiagnosticResult evaluateToLanguageServerMessage(
-		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& ctx
+		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& evaluation_ctx
 	);
 }

@@ -88,8 +88,6 @@ namespace lsp {
 		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>>
 			previous_diag_by_file_opt{};
 
-		std::vector<Box<dia_int::lsp::Diagnostic>> x{};
-
 		base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 
 		// We always want to have at least an entry for the queried file for better experience

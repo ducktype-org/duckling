@@ -51,7 +51,7 @@ namespace dia_int::lsp {
 		Position start{};
 		Position end{};
 
-		void serialize(std::ostream& out) const {
+		void jsonSerialize(std::ostream& out) const {
 			out << "{\n";
 			out << R"("start": { "line": )" << start.line << ", \"character\": " << start.character
 				<< "},\n";
@@ -72,8 +72,6 @@ namespace dia_int::lsp {
 
 	enum class DiagnosticTag : u64 { Unnecessary = 1, Deprecated = 2 };
 
-	using Code = std::string;
-
 	struct CodeDescription {
 		std::string href;
 	};
@@ -82,12 +80,12 @@ namespace dia_int::lsp {
 		Location    location;
 		std::string message;
 
-		void serialize(std::ostream& out) const {
+		void jsonSerialize(std::ostream& out) const {
 			out << "{\n";
 			out << R"("location": { "uri": )";
 			writeJsonString(out, location.uri);
 			out << R"(, "range": )";
-			location.range.serialize(out);
+			location.range.jsonSerialize(out);
 			out << "},\n";
 			out << R"("message": )";
 			writeJsonString(out, message);
@@ -96,6 +94,13 @@ namespace dia_int::lsp {
 		}
 	};
 
+	/**
+	 * @brief The diagnostic class is 1-1 mapping of the typescript
+	 * Language Server Protocol `Diagnostic` structure.
+	 *
+	 * The documentation below is taken from the vscode-lsp-extension
+	 * nodejs package.
+	 */
 	class Diagnostic {
 	public:
 		/**
@@ -122,7 +127,7 @@ namespace dia_int::lsp {
 		/**
 		 * A human-readable string describing the source of this
 		 * diagnostic, e.g. 'typescript' or 'super lint'. It usually
-		 * appears in the user interface.
+		 * appears in the user interface. In our case, we set it to "Duckling".
 		 */
 		std::string source{};
 
@@ -134,7 +139,7 @@ namespace dia_int::lsp {
 		/**
 		 * Additional metadata about the diagnostic.
 		 *
-		 * @since 3.15.0
+		 * @since 3.15.0 (lsp protocol)
 		 */
 		base::Optional<std::vector<DiagnosticTag>> tags{};
 
@@ -148,7 +153,7 @@ namespace dia_int::lsp {
 		 * A data entry field that is preserved between a `textDocument/publishDiagnostics`
 		 * notification and `textDocument/codeAction` request.
 		 *
-		 * @since 3.16.0
+		 * @since 3.16.0 (lsp protocol)
 		 */
 		base::Optional<std::any> data{};
 	};
@@ -191,9 +196,9 @@ namespace dia_int::lsp {
 
 	/**
 	 * @brief This function serves two purposes:
-	 * Is's a heuristic approach to extracting the main message location
-	 * and also adds related diagnostic from the code sections in the description
-	 * (if there is more than one code section in the msg).
+	 * It's a heuristic approach to extracting the main message location
+	 * and also adds "related diagnostic" attachments based on the code sections in the description
+	 * (one code section would add one "related diagnostic" attachment).
 	 *
 	 * @param message The message to extract from.
 	 * @param related_information Vector to add related information to.
@@ -203,7 +208,7 @@ namespace dia_int::lsp {
 	Location getMessageLocation(
 		const dia_int::term_ui_view::Message&      message,
 		std::vector<DiagnosticRelatedInformation>& related_information,
-		const EvaluationContext&                   ctx
+		const EvaluationContext&                   evaluation_ctx
 	) {
 		std::string content            = "";
 		bool        found_code_section = false;
@@ -228,7 +233,7 @@ namespace dia_int::lsp {
 			}
 		}
 		if (not found_code_section) {
-			loc = Location{ .uri   = ctx.default_error_location_uri,
+			loc = Location{ .uri   = evaluation_ctx.default_error_location_uri,
 				            .range = Range{ .start = Position{ .line = 0, .character = 0 },
 				                            .end   = Position{ .line = 0, .character = 0 } } };
 		}
@@ -236,10 +241,12 @@ namespace dia_int::lsp {
 	}
 
 	/**
-	 * @brief If the evaluation of the diagsnotic failed, return a diagnostic
+	 * @brief If the evaluation of the diagnotic failed, return a diagnostic
 	 * indicating the failure.
 	 */
-	LSPDiagnosticResult failedResult(const std::string& error_msg, const EvaluationContext& ctx) {
+	LSPDiagnosticResult failedResult(
+		const std::string& error_msg, const EvaluationContext& evaluation_ctx
+	) {
 		Box<Diagnostic> diag = makeBox<Diagnostic>();
 		diag->range          = Range{ .start = Position{ .line = 0, .character = 0 },
 			                          .end   = Position{ .line = 0, .character = 0 } };
@@ -247,26 +254,30 @@ namespace dia_int::lsp {
 		diag->code           = 0;
 		diag->source         = "Duckling";
 		diag->message        = "Failed to evaluate diagnostic: " + error_msg;
-		return { std::move(diag), ctx.default_error_location_uri };
+		return { std::move(diag), evaluation_ctx.default_error_location_uri };
 	}
 
 	LSPDiagnosticResult evaluateToLanguageServerMessage(
-		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& ctx
+		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& evaluation_ctx
 	) {
 		term_ui_view::Diagnostic view;
 		try {
 			auto state = dia_int::evaluateDiagnostic(*diagnostic_args);
 			view       = dia_int::constructTreeView(state);
-		} catch (const std::exception& e) { return failedResult(e.what(), ctx); }
+		} catch (const std::exception& e) { return failedResult(e.what(), evaluation_ctx); }
 
-		Box<Diagnostic> diag     = makeBox<Diagnostic>();
-		const auto&     main_msg = view.messages[0];
-		Location        loc      = getMessageLocation(main_msg, diag->related_information, ctx);
-		diag->range              = loc.range;
-		diag->severity           = convertSeverity(main_msg.type);
-		diag->code               = main_msg.code;
-		diag->source             = "Duckling";
-		diag->message            = main_msg.header;
+		Box<Diagnostic> diag = makeBox<Diagnostic>();
+		CORE_ASSERT(
+			!view.messages.empty(),
+			"Diagnostic view must have at least one message which is the main message."
+		);
+		const auto& main_msg = view.messages[0];
+		Location    loc = getMessageLocation(main_msg, diag->related_information, evaluation_ctx);
+		diag->range     = loc.range;
+		diag->severity  = convertSeverity(main_msg.type);
+		diag->code      = main_msg.code;
+		diag->source    = "Duckling";
+		diag->message   = main_msg.header;
 
 
 		for (u64 i = 1; i < view.messages.size(); i++) {
@@ -274,7 +285,7 @@ namespace dia_int::lsp {
 
 			// These are code sections from single message (useful if the message has multiple locations)
 			std::vector<DiagnosticRelatedInformation> related_info;
-			Location msg_loc = getMessageLocation(msg, related_info, ctx);
+			Location msg_loc = getMessageLocation(msg, related_info, evaluation_ctx);
 			diag->related_information.push_back(DiagnosticRelatedInformation{
 				.location = msg_loc, .message = msg.header });
 
@@ -293,7 +304,7 @@ namespace dia_int::lsp {
 	) {
 		out << "{\n";
 		out << R"("range": )";
-		diagnostic->range.serialize(out);
+		diagnostic->range.jsonSerialize(out);
 		out << ",\n";
 		out << R"("severity": )" << static_cast<u64>(diagnostic->severity) << ",\n";
 		out << R"("code": )" << diagnostic->code << ",\n";
@@ -307,7 +318,7 @@ namespace dia_int::lsp {
 			out << ",\n";
 			out << R"("relatedInformation": [)" << "\n";
 			for (usize i = 0; i < diagnostic->related_information.size(); i++) {
-				diagnostic->related_information[i].serialize(out);
+				diagnostic->related_information[i].jsonSerialize(out);
 				if (i + 1 < diagnostic->related_information.size()) out << ",\n";
 			}
 			out << "]\n";
