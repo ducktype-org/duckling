@@ -2,7 +2,7 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <global_state/packages.hpp>
+#include <global_state/options.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -38,12 +38,15 @@ private:
 
 		// Initialize compiler (as in markPreviousLeavesGreenTest, first stage)
 		compiler::driver::initializeTheCompiler(
-            compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+            compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
                     .package_path = fs::FilePath(path("modules/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
+            	.backend_options = {
+					.llvm_backend = options::BackendOptions::LLVMBackend{},
+				},
 				.debug_options         = {},
 				.incremental           = { .enabled = true }
             }

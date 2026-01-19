@@ -5,6 +5,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries.hpp>
 
@@ -44,13 +45,16 @@ public:
 		TESTER_ADD_TEST(sideInputsTest);
 
 		compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+			compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
 					.package_path = fs::FilePath(path("modules/functions_1")),
 				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
+				},
+				.backend_options = {
+					.llvm_backend = compiler::options::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
 				.incremental           = {}

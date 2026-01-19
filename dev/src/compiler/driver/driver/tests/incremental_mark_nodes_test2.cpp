@@ -2,6 +2,7 @@
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <global_state/options.hpp>
 #include <global_state/artifacts_location.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -35,12 +36,15 @@ private:
 
 		// Re-initialize compiler which will load the previous graph from artifacts
 		compiler::driver::initializeTheCompiler(
-            compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+            compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
                     .package_path = fs::FilePath(path("modules/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
+            	.backend_options = {
+					.llvm_backend = options::BackendOptions::LLVMBackend{},
+				},
 				.debug_options         = {},
 				.incremental           = { .enabled = true }
             }
