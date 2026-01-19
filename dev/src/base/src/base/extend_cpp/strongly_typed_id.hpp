@@ -105,7 +105,7 @@
 		auto        operator<=>(const NAME&) const = default;            \
 		inline bool isBad() const { return id == BAD_ID; }               \
 		inline bool isGood() const { return id != BAD_ID; }              \
-	};
+	}
 
 
 /**

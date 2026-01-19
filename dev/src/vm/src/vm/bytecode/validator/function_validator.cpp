@@ -15,7 +15,6 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <variant>
@@ -160,7 +159,7 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const TypeContext&                               types;
+	const ObjIdNameMap<type::Type>&                  types;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
@@ -1199,7 +1198,7 @@ public:
 };
 
 vm::code::Function vm::code::detail::validateAndExtractReachableCode(
-	const TypeContext&                               types,
+	const ObjIdNameMap<type::Type>&                  types,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,

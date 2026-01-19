@@ -6,14 +6,13 @@
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
-#include <vm/bytecode/validator/type_builder.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program         = ValidProgram();
-	program.type_context = getBuiltinTypes();
+	program.insertTypes(getBuiltinTypes());
 	return program;
 }
 
@@ -24,7 +23,8 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
@@ -47,7 +47,7 @@ const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() 
 }
 
 void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
-	for (const auto& func: collection.functions) available_functions.put(func.name, func.signature);
+	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
@@ -55,11 +55,12 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
-	for (const auto& type: new_types) type_context.insertType(type);
+	type_context.insertAndValidate(new_types, function_signatures);
+	// for (const auto& type: new_types) type_context.insertType(type);
 	// Check if no cycles in hierarchy appeared after injection.
-	detail::validateTypesIntegrity(type_context);
-	// Validate only the newly added types.
-	for (const auto& type: new_types) detail::validateType(type, type_context, available_functions);
+	// detail::validateTypesIntegrity(type_context);
+	// // Validate only the newly added types.
+	// for (const auto& type: new_types) detail::validateType(type, type_context, function_signatures);
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
@@ -68,9 +69,9 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
 		if (!type_context.getCurrentTypes().contains(global.type))
 			throw UnknownTypeError(opargs::Type(global.type));
-		if (global.ctor_name.has_value() && !available_functions.contains(global.ctor_name.value()))
+		if (global.ctor_name.has_value() && !function_signatures.contains(global.ctor_name.value()))
 			throw MissingGlobalCtorDtorError(true, global.ctor_name.value(), global.name);
-		if (global.dtor_name.has_value() && !available_functions.contains(global.dtor_name.value()))
+		if (global.dtor_name.has_value() && !function_signatures.contains(global.dtor_name.value()))
 			throw MissingGlobalCtorDtorError(false, global.dtor_name.value(), global.name);
 		globals_map.insert(global, global.name);
 	}
@@ -88,11 +89,7 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context,
-			globals_map,
-			available_functions,
-			ext_c_function_map,
-			func
+			type_context.getCurrentTypes(), globals_map, function_signatures, ext_c_function_map, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
@@ -104,7 +101,7 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 	if (new_functions.empty()) return;
 
 	// @TODO: #1306 Fix
-	auto type_metadata = detail::buildTypeMetadata(type_context);
+	// auto type_metadata = detail::buildTypeMetadata(type_context);
 
 	for (const auto& new_func: new_functions) {
 		if (ext_c_function_map.contains(new_func.name))

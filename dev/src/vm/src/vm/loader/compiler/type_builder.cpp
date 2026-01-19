@@ -1,5 +1,6 @@
 #include "type_builder.hpp"
 
+#include "vm/utils/stable_obj_id_name_map.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -18,23 +19,23 @@ namespace {
 		const ErrorContextType&                  error_context_inh,
 		base::HashMap<base::StrID, base::StrID>& vtable,
 		vm::TypeMetadata&                        metadata,
-		const TypeContext&                       ctx
+		const vm::ObjIdNameMap<TypeOfData>&    types
 	) {
 		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = [&]() -> const InterfaceType& {
-				const auto& tod = *ctx.getCurrentTypes().at(interface_name);
+				const auto& tod = *types.at(interface_name);
 				return std::get<InterfaceType>(tod);
 			}();
-			buildVTableRecursive(interface, error_context_inh, vtable, metadata, ctx);
+			buildVTableRecursive(interface, error_context_inh, vtable, metadata, types);
 		}
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
 			if (inh.extends) {
 				const auto& super_class = [&]() -> const ClassType& {
-					const auto& tod = *ctx.getCurrentTypes().at(*inh.extends);
+					const auto& tod = *types.at(*inh.extends);
 					return std::get<ClassType>(tod);
 				}();
-				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, ctx);
+				buildVTableRecursive(super_class, error_context_inh, vtable, metadata, types);
 			}
 		}
 	}
@@ -45,7 +46,7 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	FieldVector buildFieldVector(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
+		const InheritableType& inh, vm::TypeMetadata& metadata, const vm::ObjIdNameMap<TypeOfData>& types
 	) {
 		auto to_low_type = [&](const TypeOfData& tod) {
 			return metadata.at(VISIT(tod, type, return type.name));
@@ -57,7 +58,7 @@ namespace {
 				= [&](const vm::code::ClassType& clazz) {
 					  if (clazz.extends) {
 						  const auto& super_class = [&]() -> const ClassType& {
-							  const auto& tod = *ctx.getCurrentTypes().at(*clazz.extends);
+							  const auto& tod = *types.at(*clazz.extends);
 							  return std::get<ClassType>(tod);
 						  }();
 						  collect_class_fields_recursive(super_class);
@@ -77,7 +78,7 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	vm::InheritanceMetadata buildInheritanceMetadata(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const TypeContext& ctx
+		const InheritableType& inh, vm::TypeMetadata& metadata, const vm::ObjIdNameMap<TypeOfData>& types
 	) {
 		vm::TypeCRef tp    = metadata.at(inh.name);
 		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef { return metadata.at(name); };
@@ -89,7 +90,7 @@ namespace {
 			virtual_methods.put(method.name, get_type_cref(method.type));
 
 		base::HashMap<base::StrID, base::StrID> vtable;
-		buildVTableRecursive(inh, inh, vtable, metadata, ctx);
+		buildVTableRecursive(inh, inh, vtable, metadata, types);
 
 		vm::InheritanceMetadata::Kind kind;
 		if constexpr (std::is_same_v<InheritableType, ClassType>) {
@@ -117,9 +118,9 @@ namespace {
 	 * @brief Define types from the list in the given type_metadata.
 	 */
 	void defineTypes(
-		Ref<vm::TypeMetadata>          type_metadata,
-		const TypeContext&             ctx,
-		const std::vector<TypeOfData>& types
+		Ref<vm::TypeMetadata>               type_metadata,
+		const vm::ObjIdNameMap<TypeOfData>& types,
+		const std::vector<TypeOfData>&      new_types
 	) {
 		for (const auto& type: types) {
 			variant_match(type) {
@@ -165,16 +166,16 @@ namespace {
 				}
 				variant_case(ClassType, clazz) {
 					vm::TypeRef             tp     = type_metadata->at(clazz.name);
-					FieldVector             fields = buildFieldVector(clazz, *type_metadata, ctx);
+					FieldVector             fields = buildFieldVector(clazz, *type_metadata, types);
 					vm::InheritanceMetadata inh_metadata
-						= buildInheritanceMetadata(clazz, *type_metadata, ctx);
+						= buildInheritanceMetadata(clazz, *type_metadata, types);
 					tp->defineData(fields, std::move(inh_metadata));
 				}
 				variant_case(InterfaceType, interface) {
 					vm::TypeRef tp     = type_metadata->at(interface.name);
-					FieldVector fields = buildFieldVector(interface, *type_metadata, ctx);
+					FieldVector fields = buildFieldVector(interface, *type_metadata, types);
 					vm::InheritanceMetadata inh_metadata
-						= buildInheritanceMetadata(interface, *type_metadata, ctx);
+						= buildInheritanceMetadata(interface, *type_metadata, types);
 					tp->defineData(fields, std::move(inh_metadata));
 				}
 				variant_default {
@@ -185,25 +186,25 @@ namespace {
 	}
 }
 
-Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const TypeContext& ctx) {
+Box<vm::TypeMetadata> vm::code::detail::buildTypeMetadata(const ObjIdNameMap<TypeOfData>& types) {
 	Box<vm::TypeMetadata> type_metadata = makeBox<vm::TypeMetadata>();
 
-	auto types = ctx.getCurrentTypes() | std::ranges::to<std::vector<TypeOfData>>();
+	auto types_vec = types | std::ranges::to<std::vector<TypeOfData>>();
 
 	// Declare all types first.
-	declareTypes(type_metadata.refMut(), types);
+	declareTypes(type_metadata.refMut(), types_vec);
 
 	// Well-define every type.
-	defineTypes(type_metadata.refMut(), ctx, types);
+	defineTypes(type_metadata.refMut(), types, types_vec);
 
 	type_metadata->finalize();
 	return type_metadata;
 }
 
 void vm::code::detail::rebuildTypeMetadata(
-	Ref<vm::TypeMetadata> type_metadata, const TypeContext& new_ctx
+	Ref<vm::TypeMetadata> type_metadata, const ObjIdNameMap<TypeOfData>& types
 ) {
-	auto new_types = new_ctx.getCurrentTypes() | std::views::drop(type_metadata->size())
+	auto new_types = types | std::views::drop(type_metadata->size())
 	               | std::ranges::to<std::vector<TypeOfData>>();
 
 	// Reopen type metadata for addition.
@@ -212,7 +213,7 @@ void vm::code::detail::rebuildTypeMetadata(
 	// Declare new types.
 	declareTypes(type_metadata, new_types);
 	// Well define new types.
-	defineTypes(type_metadata, new_ctx, new_types);
+	defineTypes(type_metadata, types, new_types);
 
 	type_metadata->finalize();
 }

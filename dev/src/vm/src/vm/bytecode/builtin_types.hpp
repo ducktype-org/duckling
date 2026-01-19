@@ -19,10 +19,10 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Create a TypeContext with builtin types.
+	 * @brief Get builtins.
 	 * @note The types defined here are used by the builtin functions.
 	 */
-	code::TypeContext getBuiltinTypes();
+	const std::vector<TypeOfData>& getBuiltinTypes();
 
 	/**
 	 * @brief Returns the builtin type of a given name.
