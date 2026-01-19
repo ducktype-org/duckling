@@ -156,12 +156,13 @@ There is one template parameters that can be specified: `HashAlgorithm`.
     Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
 
     There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
-    
-    <pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'>
-    <span>line    0:    </span>
-    <span style='color: #cd3131; font-weight: bold;'>7B </span>
-    <span>00 00 00 C8 01 00 00 </span>
-    </div></pre>
+
+
+    <html>
+    <body>
+    <!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>7B </span><span>00 00 00 C8 01 00 00 </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
+    </body>
+    </html>
 
 Using different hashing algorithms:
 
@@ -176,30 +177,11 @@ std::cout << Hash<DebugHash>{}(42) << '\n';
 // prints:
 ~~~~~
 
-<!-- @TODO update the output bellow! -->
 <html>
 <body>
-<pre>
-
-<div style='color: #808080; background-color: #ffffff00; font-family: Consolas, "Courier New", monospace, monospace; font-size: 14px;'>
- <span>line    0:    </span>
- <span style='color: #cd3131; font-weight: bold;'>2A </span>
- <span>00 00 00 </span>
- <span>line    0:    </span>
- <span style='color: #cd3131; font-weight: bold;'>2A </span>
- <span>00 00 00 </span>
- <span style='color: #e5e510; font-weight: bold;'>19 </span>
- <span>65 94 2A </span>
- <span>line    0:    </span>
- <span style='color: #cd3131; font-weight: bold;'>2A </span>
- <span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>F5 </span>
- <span>DD 91 3F 7A 2E 2B 44 </span>
-</div>
-
-</pre>
+<!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00                                                                                                                                                                                                           </span></</div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
 </body>
 </html>
-
 
 `StatefulHash`
 --------------
@@ -230,13 +212,7 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
         "hello",
         std::pair<std::string, char>{"abc", 'x'
     ).finalize() << '\n';
-// prints:
 ~~~~~
-<html>
-<body>
-<!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>2A </span><span>00 00 00 </span><span style='color: #e5e510; font-weight: bold;'>19 </span><span>65 94 2A </span><span style='color: #cd3131; font-weight: bold;'>1F </span><span>85 EB 51 B8 1E 09 40                                                                                                                                                                       </span></div><div><span>line    1:    </span><span style='color: #e5e510; font-weight: bold;'>7B </span><span>FE 1A 9C </span><span style='color: #cd3131; font-weight: bold;'>68 </span><span>65 6C 6C 6F 00 </span><span style='color: #e5e510; font-weight: bold;'>DA </span><span>F6 8B A0 </span><span style='color: #cd3131; font-weight: bold;'>61 </span><span>62                                                                                                                                                                       </span></div><div><span>line    2:    63 </span><span style='color: #cd3131; font-weight: bold;'>78 </span><span style='color: #e5e510; font-weight: bold;'>89 </span><span>B4 D7 D7</span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
-</body>
-</html>
 
 
 `justHash()`
