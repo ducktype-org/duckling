@@ -56,7 +56,7 @@ namespace compiler::frontend {
 	 *
 	 * \parallel note that compiler::frontend::SourceFile::getComponentHash /
 	 * compiler::frontend::SourceFile::invalidateComponentHash are lazy-initialized per-module
-	 * component hash; updated walking parents and writing m_component_hash. Lazy writes can race
+	 * component hash. Lazy writes can race
 	 * under concurrency.
 	 */
 	class ModuleTree final {
