@@ -1,15 +1,13 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use crate::{
-    StrId,
-    quackpack::{
-        schemas::registry,
-        util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
-    },
+use crate::quackpack::{
+    schemas::registry,
+    util::async_helpers::{extract_single_item_from_vec, unpack_tokio_scoped_vector},
 };
 use async_scoped::TokioScope;
 use tracing::debug;
+use url::Url;
 
 use super::types;
 
@@ -215,7 +213,7 @@ impl ManifestCache {
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
     pub async fn add_or_replace_multiple_manifests(
         &self,
-        registry_url: StrId,
+        registry_url: Url,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
         let package_manifest_pairs = multi_manifest
@@ -226,7 +224,7 @@ impl ManifestCache {
                 let package = types::Package {
                     id: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
-                    url: registry_url,
+                    url: registry_url.clone(),
                 };
                 Ok((package, json))
             })

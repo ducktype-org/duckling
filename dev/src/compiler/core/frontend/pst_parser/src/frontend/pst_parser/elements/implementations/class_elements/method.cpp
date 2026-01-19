@@ -1,6 +1,6 @@
 #include "../../hierarchy/class_elements/method.hpp"
 
-#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -19,7 +19,7 @@ namespace pst {
 			.one(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Method::dprint(std::ostream& out) const {

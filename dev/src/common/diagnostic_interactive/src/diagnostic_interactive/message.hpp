@@ -378,7 +378,7 @@ namespace dia_int {
 	 * The `cause` is the name of the pointer message.
 	 * A pointer message is a text displayed below the highlighted code fragment.
 	 *
-	 * So this class besided the code fragment also adds a pointer message titled "cause"
+	 * So this class besides the code fragment also adds a pointer message titled "cause"
 	 * argument. All is handled by one SourcePosition, because the code fragment is the
 	 * source position and some lines around it, and the pointer message points to exactly
 	 * the given source position.

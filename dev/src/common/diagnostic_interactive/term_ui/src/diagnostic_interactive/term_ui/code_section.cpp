@@ -105,7 +105,7 @@ namespace term_ui {
 
 		// Print location
 		out << std::string(tab_space, ' ');
-		out << "> " << section.file << ':' << section.line << ':' << section.col << '\n';
+		std::println(out, "> {}:{}:{}", section.file, section.line, section.col);
 
 		if (section.lines.empty()) return;
 		printLineStart(tab_space, out);

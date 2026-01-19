@@ -7,6 +7,11 @@ import subprocess as sp
 import sys
 
 
+# Regex patterns for compiler version detection
+CLANG_VERSION_PATTERN = re.compile(r'(?:^|/)clang\+\+-(\d+)$')
+GCC_VERSION_PATTERN = re.compile(r'(?:^|/)g\+\+-(\d+)$')
+
+
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
@@ -102,24 +107,24 @@ def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
     )
 
 
-def log_info(msg, file=sys.stdout):
+def log_info(msg: str, file=sys.stdout) -> None:
     click_log("INFO", msg, fg="yellow", file=file)
 
 
-def log_bash(msg, file=sys.stdout):
+def log_bash(msg: str, file=sys.stdout) -> None:
     click_log("BASH", msg, fg="bright_cyan", file=file)
 
 
-def log_warning(msg, file=sys.stdout):
+def log_warning(msg: str, file=sys.stdout) -> None:
     click_log("WARNING", msg, fg="magenta", bold=True, file=file)
 
 
-def get_input(msg, nl=False):
+def get_input(msg: str, nl: bool = False) -> str:
     click_log("INPUT", msg, fg="blue", nl=nl)
     return input()
 
 
-def log_new_line(file=sys.stdout):
+def log_new_line(file=sys.stdout) -> None:
     click.echo("", file=file)
 
 
@@ -320,3 +325,92 @@ def should_add_linker_flags(linker):
         f"The specified linker '{linker}' was not found. "
         "Try installing it or switching to another."
     )
+
+
+def detect_available_linker():
+    """Detect and return the best available linker (mold > lld > default)"""
+    if shutil.which("mold") is not None:
+        return "mold"
+    # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)
+    if shutil.which("lld") is not None or shutil.which("ld.lld") is not None:
+        return "lld"
+    return "default"
+
+
+def default_linker_from_ctx():
+    """Create a click.Option class that infers the default linker"""
+
+    class OptionDefaultLinkerFromCtx(click.Option):
+
+        def get_default(self, ctx, call=True):
+            linker = ctx.params.get("linker")
+            if linker is None:
+                self.default = detect_available_linker()
+            else:
+                self.default = linker
+            return super(OptionDefaultLinkerFromCtx, self).get_default(ctx, call)
+
+    return OptionDefaultLinkerFromCtx
+
+
+def infer_gcov_from_compiler(cxx_compiler):
+    """Infer GCOV version from C++ compiler"""
+    if cxx_compiler is None:
+        return "gcov"
+    
+    # Get the compiler basename
+    compiler_name = cxx_compiler.split('/')[-1]
+    
+    # Determine compiler type and extract version if present
+    is_clang = compiler_name.startswith('clang++')
+    is_gcc = compiler_name.startswith('g++')
+    
+    if not is_clang and not is_gcc:
+        # Unknown compiler type, default to gcov
+        return "gcov"
+    
+    # Try to extract version from compiler name (e.g., clang++-19, g++-14)
+    if is_clang:
+        match = CLANG_VERSION_PATTERN.search(cxx_compiler)
+        if match:
+            return f"llvm-cov-{match.group(1)}"
+    else:  # is_gcc
+        match = GCC_VERSION_PATTERN.search(cxx_compiler)
+        if match:
+            return f"gcov-{match.group(1)}"
+    
+    # Check if it's an unversioned compiler (exact match)
+    if compiler_name == 'clang++':
+        return "llvm-cov"
+    elif compiler_name == 'g++':
+        return "gcov"
+    
+    # No version in name, try to get it by running the compiler
+    try:
+        version = get_program_version(cxx_compiler)
+        if version:
+            major_version = version.split(".")[0]
+            return f"llvm-cov-{major_version}" if is_clang else f"gcov-{major_version}"
+    except (FileNotFoundError, sp.SubprocessError, OSError):
+        # If compiler doesn't exist or can't get version, fall through
+        pass
+    
+    # Final fallback
+    return "llvm-cov" if is_clang else "gcov"
+
+
+def default_gcov_from_ctx():
+    """Create a click.Option class that infers the default GCOV from compiler"""
+    
+    class OptionDefaultGcovFromCtx(click.Option):
+        
+        def get_default(self, ctx, call=True):
+            gcov_version = ctx.params.get("gcov_version")
+            if gcov_version is None:
+                cxx_compiler = ctx.params.get("cxx_compiler")
+                self.default = infer_gcov_from_compiler(cxx_compiler)
+            else:
+                self.default = gcov_version
+            return super(OptionDefaultGcovFromCtx, self).get_default(ctx, call)
+    
+    return OptionDefaultGcovFromCtx
