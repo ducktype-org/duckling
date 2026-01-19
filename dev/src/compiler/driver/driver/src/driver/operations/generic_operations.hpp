@@ -22,6 +22,10 @@ namespace compiler::driver {
 	 * Temporary interface for compiling the entire package into a single binary.
 	 * It compiler every module into the .o/.dbc files (via queries),
 	 * and also for LLVM backend it links them into a single binary.
+	 *
+	 * @brief The final link step for creating the package executable.
+	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
+	 * concurrently.
 	 */
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
