@@ -15,15 +15,7 @@ export async function validateDuckling(
 
 	for (const [uri, diagnostics] of Object.entries(errorsMap)) {
 		let problems = 0;
-		const filteredDiagnostics: Diagnostic[] = [];
-
-		for (const diagnostic of diagnostics) {
-			problems++;
-			filteredDiagnostics.push(diagnostic);
-			if (problems > settings.maxNumberOfProblems) {
-				break;
-			}
-		}
+		const filteredDiagnostics = diagnostics.slice(0, settings.maxNumberOfProblems);
 
 		// Send the computed diagnostics to the client
 		connection.sendDiagnostics({ uri: uri, diagnostics: filteredDiagnostics });

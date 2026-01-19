@@ -147,7 +147,9 @@ namespace lsp {
 			"File must be associated with at least one SourceFile in the ModuleTree"
 		);
 
-		auto root_module = getRootModule(source_files[0]->getModule().illegalAccess().getID());
+		auto root_module = getRootModule(
+			source_files[source_files.size() - 1]->getModule().illegalAccess().getID()
+		);
 		auto main_source_file
 			= getFileRef(root_module->getMainSourceFile().illegalAccess().getID());
 		auto main_path    = main_source_file->getFileIllegalAccess().getFilePath().toPhysicalPath();
