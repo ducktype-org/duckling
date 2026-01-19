@@ -51,7 +51,7 @@ namespace compiler::helios {
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in its definition.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>, ({}))
 }

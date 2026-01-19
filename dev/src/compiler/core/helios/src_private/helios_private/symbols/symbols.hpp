@@ -30,7 +30,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query symbol associated with given element in PST
 	 *
-	 * @ingroup query_thread_safe_if_cache_and_struct
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
 		QuerySymbolOfSTMT,
@@ -63,7 +63,7 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 *
-	 * @ingroup query_thread_safe_if_cache_and_struct
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
 		QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>, ({ .uses_qresult = false })
@@ -74,7 +74,7 @@ namespace compiler::helios {
 	/**
 	 * A query that returns dealiased symbol list of a given alias symbol.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>, ({}));
 
@@ -83,7 +83,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
 
@@ -100,7 +100,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query stmt specifiers associated with given symbol in HELIOS
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QuerySpecifiersOfSymbol,
@@ -124,7 +124,7 @@ namespace compiler::helios {
 		 * @note This query also acts as a cache of SymIDs for generated symbols, so that the same
 		 * SymIDs are returned for the same parameters.
 		 *
-		 * @ingroup query_thread_safe_if_cache_and_struct
+		 * \query_thread_safe_if_cache_and_struct
 		 */
 		DECLARE_QUERY(
 			QueryGeneratedSymbol, KeyFor_QueryGeneratedSymbol, SymID, ({ .uses_qresult = false })
@@ -136,7 +136,7 @@ namespace compiler::helios {
 	 * all SymID-s of functions called directly by this one.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryDirectFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
@@ -149,7 +149,7 @@ namespace compiler::helios {
 	 * compile time evaluating a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryTransitiveFunctionCalls, SymID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })

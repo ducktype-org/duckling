@@ -64,7 +64,7 @@ namespace compiler::driver {
 	 * - Updates backend compilation timer (\ref timer::AddToTime)
 	 * - Uses \ref compiler::frontend::ModuleTree::getPathComponentHash (lazy \ref
 	 * compiler::frontend::ModuleTree mutation)
-	 * @ingroup query_not_thread_safe
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		CompileModule,

@@ -62,7 +62,7 @@ namespace compiler::helios {
 	 * @todo: Currently root scopes are somewhat problematic.
 	 * See description of "root_element_file_back_map" for details.
 	 *
-	 * @ingroup query_thread_safe_if_cache_and_struct
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID, ({ .uses_qresult = false }));
 
@@ -80,7 +80,7 @@ namespace compiler::helios {
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
 	 *
-	 * @ingroup query_thread_safe_if_cache_and_struct
+	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(
 		QueryPrimaryCodeScopeFor,
@@ -112,7 +112,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({ .uses_qresult = false })
@@ -121,7 +121,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryLookupInScopeAndParents,
@@ -134,7 +134,7 @@ namespace compiler::helios {
 	 * @brief Query all symbols that are directly inside given scope.
 	 * Also: dictates what symbols are contained in what scopes.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
@@ -145,7 +145,7 @@ namespace compiler::helios {
 	 * Note: Not implemented yet.
 	 *
 	 * \parallel reads scope_table
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,
@@ -167,7 +167,7 @@ namespace compiler::helios {
 	 * aren't available for now. There needs to be a small rework of errors and position first.
 	 *
 	 * \parallel owns its cache; creates PST via \ref pst::fromExpand (PST creation thread-safe)
-	 * @ingroup query_not_thread_safe
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryMacroExpansion,

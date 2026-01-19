@@ -24,7 +24,7 @@ namespace compiler::mir {
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(LowerToMIRFunction, KeyOf_LowerToMIRFunction, CRef<LowerToMIRFunctionResult>, ({}))
 
@@ -40,7 +40,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates a ctor function for a global data.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		LowerGlobalDataToMIRCtor,

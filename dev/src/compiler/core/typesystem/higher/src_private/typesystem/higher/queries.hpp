@@ -29,7 +29,7 @@ namespace compiler::tsh {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryInterfaceOfClass,

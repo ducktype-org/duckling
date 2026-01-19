@@ -9,7 +9,7 @@ namespace compiler::tsl {
 	/**
 	 * @brief Get a TypeLayout for a given AbstractType.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryAbstractTypeLayout, tsh::AbstractType, CRef<TypeLayout>, ({ .uses_qresult = false })
@@ -18,7 +18,7 @@ namespace compiler::tsl {
 	/**
 	 * @brief Get a TypeLayout for a given SymbolType, taking reference indirection into account.
 	 *
-	 * @ingroup query_thread_safe_if_cache
+	 * \query_thread_safe_if_cache
 	 * This query uses QueryAbstractTypeLayout direclty, hence the grouping.
 	 */
 	DECLARE_QUERY(

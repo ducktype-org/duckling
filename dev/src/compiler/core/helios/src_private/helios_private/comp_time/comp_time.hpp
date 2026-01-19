@@ -24,7 +24,7 @@ namespace compiler::helios {
 	 * Tries evaluating with Tree Evaluation (Short Path) and if the expression is to complicated it
 	 * evaluates it on DVM.
 	 *
-	 * @ingroup query_not_thread_safe
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult, ({})
@@ -35,7 +35,7 @@ namespace compiler::helios {
 	 * @note Effectively generates the HOUT of a PST expression and
 	 * evaluates it using QueryEvaluateHOUTExpression.
 	 *
-	 * @ingroup query_not_thread_safe
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryEvaluatePSTExpression,

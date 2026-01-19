@@ -42,6 +42,10 @@ MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
             "parallel=\xrefitem parallel \"Parallel\" \"Parallel\"" \
+            "query_thread_safe=Query thread safety group: \ref query_thread_safe_group @ingroup query_thread_safe_group" \
+            "query_thread_safe_if_cache=Query thread safety group: \ref query_thread_safe_if_cache_group @ingroup query_thread_safe_if_cache_group" \
+            "query_thread_safe_if_cache_and_struct=Query thread safety group: \ref query_thread_safe_if_cache_and_struct_group @ingroup query_thread_safe_if_cache_and_struct_group" \
+            "query_not_thread_safe=Query thread safety group: \ref query_not_thread_safe_group @ingroup query_not_thread_safe_group" \
             "TODO=\todo" \
             "tip=\remark" \
             "hint=\remark" \
