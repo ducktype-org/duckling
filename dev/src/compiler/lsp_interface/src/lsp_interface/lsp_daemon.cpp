@@ -121,11 +121,12 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
-			auto       file = fs::File(virtual_root.getFilePath().join(path));
-			if (not file.exists()) return crow::response(404, "File not found");
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			auto       path          = virtual_root.getFilePath().join(relative_path);
+			if (not path.exists()) return crow::response(404, "File not found");
 
-			auto json_str = lsp::getDiagnosticJsonFromCompiler(file);
+			const auto file     = fs::File(path);
+			auto       json_str = lsp::getDiagnosticJsonFromCompiler(file);
 			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
 			crow::response res(200, json_str);
 			res.set_header("Content-Type", "application/json");

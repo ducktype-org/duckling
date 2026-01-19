@@ -142,7 +142,7 @@ namespace lsp {
 		previous_diag_by_file_opt = std::move(diagnostics_by_file);
 	}
 
-	std::string getDiagnosticJsonFromCompiler(fs::File& file) {
+	std::string getDiagnosticJsonFromCompiler(const fs::File& file) {
 		auto source_files = frontend::SourceFile::getSourceFilesfromFile(file);
 		CORE_ASSERT(
 			not source_files.empty(),

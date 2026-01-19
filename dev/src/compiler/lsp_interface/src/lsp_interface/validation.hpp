@@ -21,5 +21,5 @@ namespace lsp {
 	 *
 	 * @return std::string The JSON serialized
 	 */
-	std::string getDiagnosticJsonFromCompiler(fs::File& file);
+	std::string getDiagnosticJsonFromCompiler(const fs::File& file);
 }
