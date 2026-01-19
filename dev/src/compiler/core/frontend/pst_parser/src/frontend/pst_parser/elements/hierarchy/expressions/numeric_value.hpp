@@ -26,7 +26,7 @@ namespace pst::expr {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Numeric value Expr";
+			return "Numeric Value Expr";
 		}
 	};
 }
