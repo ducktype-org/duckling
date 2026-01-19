@@ -13,7 +13,7 @@ namespace pst {
 		else
 			out = parseVariableTemplate<Variable, Keyword::Let>(state);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Variable::dprint(std::ostream& out) const {

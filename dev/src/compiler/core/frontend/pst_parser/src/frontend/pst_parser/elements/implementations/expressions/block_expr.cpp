@@ -19,7 +19,7 @@ namespace pst::expr {
 
 		state.parse(out).withDef(&out->block, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void BlockExpr::dprint(std::ostream& out) const {

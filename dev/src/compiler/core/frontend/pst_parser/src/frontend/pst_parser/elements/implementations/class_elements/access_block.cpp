@@ -26,7 +26,7 @@ namespace pst {
 
 		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void AccessBlock::dprint(std::ostream& out) const {
