@@ -17,8 +17,10 @@ namespace pst {
 		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
 			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
-			out->statements.emplace_back(nullptr);
-			state.parse(out).assign(&out->statements.back(), std::move(stmt));
+			if (stmt) {
+				out->statements.emplace_back(nullptr);
+				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+			}
 		}
 
 		state.parse(out).goUpAndSkip();
