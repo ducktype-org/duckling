@@ -245,6 +245,35 @@ namespace base {
 			return atMaybeAssumingHash(key, key_hash).has_value();
 		}
 
+		bool eraseAssumingHash(const KEY_T& key, KeyHash key_hash) RELEASE_NOEXCEPT {
+			u64        bucket_index  = hashToBucket(key_hash);
+
+			MRef<Node> current_node  = buckets.at(bucket_index);
+			MRef<Node> previous_node = nullptr;
+
+			// iterate over the bucket:
+			while (current_node) {
+				if (current_node->key_value.key == key) {
+					// found the node to erase
+
+					// relink the pointers in the bucket:
+					if (previous_node) {
+						previous_node->next = current_node->next;
+					} else {
+						// erasing first node in bucket
+						buckets.at(bucket_index) = current_node->next;
+					}
+
+					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					element_count--;
+					return true;
+				}
+				previous_node = current_node;
+				current_node  = current_node->next;
+			}
+			return false;
+		}
+
 
 	public:
 		StableHashMap(): buckets(INITIAL_BUCKETS) {}
@@ -430,31 +459,8 @@ namespace base {
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
-			u64        bucket_index  = keyToBucket(key);
-			MRef<Node> current_node  = buckets.at(bucket_index);
-			MRef<Node> previous_node = nullptr;
-
-			// iterate over the bucket:
-			while (current_node) {
-				if (current_node->key_value.key == key) {
-					// found the node to erase
-
-					// relink the pointers in the bucket:
-					if (previous_node) {
-						previous_node->next = current_node->next;
-					} else {
-						// erasing first node in bucket
-						buckets.at(bucket_index) = current_node->next;
-					}
-
-					node_allocator.deallocateDestroy(current_node.toOpt().value());
-					element_count--;
-					return true;
-				}
-				previous_node = current_node;
-				current_node  = current_node->next;
-			}
-			return false;
+			u64 key_hash = keyHash(key);
+			return eraseAssumingHash(key, key_hash);
 		}
 
 		/**

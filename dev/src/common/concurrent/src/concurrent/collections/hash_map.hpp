@@ -142,7 +142,11 @@ namespace concurrent {
 
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
+			return shards.at(lock.shard_index).maybePutAssumingHash(
+				std::forward<K>(key),
+				std::forward<D>(value),
+				hash
+			);
 		}
 
 		/**
@@ -185,8 +189,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-
-			return shards[lock.shard_index].atMaybe(key);
+			return shards[lock.shard_index].atMaybeAssumingHash(key, hash);
 		}
 
 		template<typename K = KEY_T, typename D = DATA_T>
@@ -213,7 +216,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].erase(key);
+			return shards[lock.shard_index].eraseAssumingHash(key, hash);
 		}
 
 	private:
