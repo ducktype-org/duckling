@@ -621,7 +621,10 @@ namespace compiler::helios {
 					location_expr = makeBox<code::DerefExpr>(ctx, std::move(location_expr));
 
 				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(ctx, val, location_expr->expression_type.getSymbolType()).valueOrThrow();
+					= getHoutOfExprWithExpectedType(
+						  ctx, val, location_expr->expression_type.getSymbolType()
+					)
+				          .valueOrThrow();
 
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();

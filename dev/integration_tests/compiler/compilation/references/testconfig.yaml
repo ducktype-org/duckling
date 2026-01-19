@@ -28,3 +28,10 @@ Tests:
         Output:
           String: "1\n42\n123\n456\n0\n1\n"
         ExitCode: 0
+  overload_resolution:
+    Cases: 
+      llvm:
+        backend: llvm
+        Output:
+          String: "2\n"
+        ExitCode: 0
