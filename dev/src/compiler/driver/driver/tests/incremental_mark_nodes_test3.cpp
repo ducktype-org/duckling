@@ -35,7 +35,7 @@ private:
 
 		// Initialize with changed functions path (same package name as previous step)
 		compiler::driver::initializeTheCompiler(
-            compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+            compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
                     .package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),

@@ -45,7 +45,7 @@ public:
 		TESTER_ADD_TEST(sideInputsTest);
 
 		compiler::driver::initializeTheCompiler(
-			compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
 					.package_path = fs::FilePath(path("modules/functions_1")),
