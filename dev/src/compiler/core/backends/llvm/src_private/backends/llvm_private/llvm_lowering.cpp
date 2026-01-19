@@ -1046,18 +1046,11 @@ namespace compiler::backend_llvm {
 					}
 				}
 
+				llvm::CallInst* call_instruction = nullptr;
 				if (lir_instruction.output.has_value()) {
 					const auto output = lir_instruction.output.value();
-					const auto value  = builder.CreateCall(callee, args);
-					for (const auto byval_idx: byval_indices) {
-						const auto arg_type = typeFromLayout(
-							module, function_literal.parameter_layouts->at(byval_idx)
-						);
-						value->addParamAttr(
-							u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
-						);
-					}
-					storeOutput(output, value, builder);
+					call_instruction  = builder.CreateCall(callee, args);
+					storeOutput(output, call_instruction, builder);
 				} else {
 					CORE_ASSERT(
 						callee.getFunctionType()->getReturnType()->isVoidTy(),
@@ -1065,7 +1058,14 @@ namespace compiler::backend_llvm {
 						"– this may be valid, feel free "
 						"to remove assertion if the compiler internals change."
 					);
-					builder.CreateCall(callee, args);
+					call_instruction = builder.CreateCall(callee, args);
+				}
+				for (const auto byval_idx: byval_indices) {
+					const auto arg_type
+						= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
+					call_instruction->addParamAttr(
+						u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
+					);
 				}
 
 				break;
