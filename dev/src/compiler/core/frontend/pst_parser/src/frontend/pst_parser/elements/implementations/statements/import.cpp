@@ -12,15 +12,15 @@ namespace pst {
 		state.parse(out).all(Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.ref());
-		return out;
+		PST_RETURN out;
 	}
 
 	const decltype(Import::names)& Import::getNames() const { return names; }
 
 	std::vector<base::StrID> Import::getModulePath() const {
-		std::vector<base::StrID> out;
-		for (auto& elem: *names.internal()) out.emplace_back(elem.value);
-		return out;
+		std::vector<base::StrID> path;
+		for (auto& elem: *names.internal()) path.emplace_back(elem.value);
+		return path;
 	}
 
 	bool Import::getStar() const { return names.internal()->getStar(); }

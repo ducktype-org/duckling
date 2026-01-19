@@ -33,7 +33,7 @@ namespace pst::expr {
 		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
 			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Access::dprint(std::ostream& out) const {

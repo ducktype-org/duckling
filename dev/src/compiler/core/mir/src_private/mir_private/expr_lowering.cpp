@@ -66,11 +66,11 @@ namespace compiler::mir {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
 
-		void visitLiteralUnitExpr(const helios::code::LiteralUnitExpr&) override {
+		void visitLiteralUnitExpr(const hc::LiteralUnitExpr&) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
-		void visitLiteralNumericExpr(const helios::code::LiteralNumericExpr& value) override {
+		void visitLiteralNumericExpr(const hc::LiteralNumericExpr& value) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ value.value } });
 		}
 
@@ -78,8 +78,8 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
-		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
-			throw base::NotYetImplemented("string literal");
+		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {

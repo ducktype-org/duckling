@@ -20,7 +20,7 @@ namespace pst {
 			.one(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	base::Optional<AccessLocked<ExprHolder>> Fun::getRet() const {

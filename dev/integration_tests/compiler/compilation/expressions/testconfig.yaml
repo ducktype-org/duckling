@@ -141,3 +141,12 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
+  strings:
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+         String: "Test"
+        Output:
+          String: "Test\nHello, world!\n"
