@@ -1,8 +1,9 @@
 #pragma once
 
-#include <../../../../../base/src/base/collections/optional.hpp>
-#include <../../../../../common/filesystem/src/filesystem/file.hpp>
-#include <../../../../../common/filesystem/src/filesystem/file_path.hpp>
+#include <base/collections/optional.hpp>
+
+#include <filesystem/file.hpp>
+#include <filesystem/file_path.hpp>
 
 #include <string>
 #include <variant>
