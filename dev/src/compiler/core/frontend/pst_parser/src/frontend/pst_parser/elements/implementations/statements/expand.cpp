@@ -11,7 +11,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Expand, &out->value);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	/**

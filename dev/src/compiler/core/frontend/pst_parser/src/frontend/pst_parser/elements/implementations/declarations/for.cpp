@@ -41,7 +41,7 @@ namespace pst {
 
 		state.parse(out).withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void For::dprint(std::ostream& out) const {
