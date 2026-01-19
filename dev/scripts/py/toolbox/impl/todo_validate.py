@@ -246,10 +246,9 @@ def todo_validate_impl(
 
 def get_todos_from_lines(files_and_lines: dict[str, list[tuple[int, int]]]) -> list[str]:
     """
-    Prints newly added TODOs with issue numbers in modified files.
+    Returns newly added TODOs with issue numbers in modified files.
     
-    Scans modified files for TODO/FIXME comments that contain issue numbers 
-    and prints them in a format suitable for the quacker bot.
+    Scans modified files for TODO/FIXME comments that contain issue numbers.
     
     Args:
         files_and_lines: Dictionary mapping file paths to line ranges to scan
