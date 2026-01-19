@@ -44,20 +44,32 @@ def test_impl(
     quiet=False,
 ):
     # Determine which tests to build
-    build_target = "build_all_tests"
+    build_targets = []
     
     if label_regex:
         # Get available test targets from build directory
         available_targets = get_available_test_targets(build_dir)
         
-        # Check if label_regex is a simple identifier (not a regex)
-        # and matches exactly one of the available test packs
-        if available_targets and re.match(r'^\w+$', label_regex) and label_regex in available_targets:
-            # Build only the specific test pack
-            build_target = f"build_{label_regex}_tests"
+        if available_targets:
+            try:
+                # Try to match the label_regex against each available target
+                pattern = re.compile(label_regex)
+                matching_targets = [target for target in available_targets if pattern.match(target)]
+                
+                if matching_targets:
+                    # Build only the matching test packs
+                    build_targets = [f"build_{target}_tests" for target in matching_targets]
+            except re.error:
+                # Invalid regex pattern, fall back to building all tests
+                pass
     
-    # Build tests
-    bash_command(f"cmake --build {build_dir} --target {build_target} -j {int(parallel)}")
+    # If no specific targets identified, build all tests
+    if not build_targets:
+        build_targets = ["build_all_tests"]
+    
+    # Build tests (can be multiple targets)
+    for target in build_targets:
+        bash_command(f"cmake --build {build_dir} --target {target} -j {int(parallel)}")
     
     # Build ctest command
     ctest_cmd = "ctest"
