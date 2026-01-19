@@ -123,65 +123,40 @@ namespace pst {
 			return skipped_entries_depth == 0;
 		}
 
-		/**
-		 * @brief Logs an error relatively to the current token
-		 */
-		void fail(i64 rel_pos, const std::string& message) override {
-			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing error at pos(",
-					ctokens().peek(rel_pos).getPosition().getStartLineColumn(),
-					"): ",
-					message,
-					"\n\n"
-				);
-				return;
-			}
-			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
-			skip_till_fallback    = true;
-			skipped_entries_depth = 1;
+		void fail([[maybe_unused]] i64 rel_pos, [[maybe_unused]] const std::string& message)
+			override {
+			CORE_PANIC("old fail is unsupported for language parsing");
 		}
 
 		/**
 		 * @brief Logs an error relatively to the current token.
 		 */
-		void log(Box<dia::Message> message) override {
+		void log(Box<dia::Message>) override {
+			CORE_PANIC("old logger is unsupported for language parsing");
+		}
+
+		void logInt(Box<dia_int::MessageBase> message) override {
 			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing message at pos(",
-					message->getSourcePosition().getStartLineColumn(),
-					"): ",
-					message->toString(true),
-					"\n\n"
-				);
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
 			}
-			if (message->getSeverity() == dia::Message::Severity::Error) {
+			if (message->isError()) {
 				skip_till_fallback    = true;
 				skipped_entries_depth = 1;
 			}
-			err->log(std::move(message));
+			int_err->log(std::move(message));
 		}
 
 		/**
 		 * @brief Logs an error that doesn't require skipping to a fallback relatively to the
 		 * current token.
 		 */
-		void logSafeError(Box<dia::Message> message) {
+		void logSafeError(Box<dia_int::MessageBase> message) {
 			if (isSkipping()) {
-				CORE_DEV_LOG(
-					Parser,
-					"Skipped parsing message at pos(",
-					message->getSourcePosition().getStartLineColumn(),
-					"): ",
-					message->toString(true),
-					"\n\n"
-				);
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
 				return;
 			}
-			err->log(std::move(message));
+			int_err->log(std::move(message));
 		}
 
 		/**

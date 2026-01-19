@@ -41,6 +41,9 @@ namespace base {
 		static constexpr usize  INITIAL_BUCKETS = 64;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
+		/**
+		 * Type used to represent the hash of the key.
+		 */
 		using KeyHash = u64;
 
 		struct Node final {
@@ -55,20 +58,22 @@ namespace base {
 		};
 
 		[[nodiscard]]
-		static auto keyHash(const KEY_T& key
+		static KeyHash keyHash(const KEY_T& key
 		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
 			return HASH_T{}(key);
 		}
 
 		[[nodiscard]]
-		u64 keyToBucket(const KEY_T& key) const
-			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(keyHash(std::declval<KEY_T>()))) {
+		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
-
-			u64  hash = keyHash(key);
-			auto res  = hash % buckets.size();
+			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
+		}
+
+		[[nodiscard]]
+		u64 keyToBucket(const KEY_T& key) const {
+			return hashToBucket(keyHash(key));
 		}
 
 		void rehash() RELEASE_NOEXCEPT {
@@ -117,6 +122,116 @@ namespace base {
 			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) [[unlikely]]
 				rehash();
 		}
+
+		/*****************************************************************************************\
+		|  Below is the map interface methods that take calculated hash of a key as a parameter. |
+		|  It is used to ensure that hash is only calculated once when needed.                    |
+		|  For doc comments explaining the interface, see the corresponding public functions.     |
+		\*****************************************************************************************/
+
+
+		/**
+		 * See docs of put() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		Ref<KeyValuePair> putAssumingHash(K&& key, D&& value, KeyHash key_hash) RELEASE_NOEXCEPT {
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
+
+			// Note that this can in theory have some observable side effects:
+			CORE_ASSERT(
+				not this->containsAssumingHash(new_node->key_value.key, key_hash),
+				"Key already exists in StableHashMap"
+			);
+
+			addToBucket(hashToBucket(key_hash), new_node);
+
+			element_count++;
+			maybeRehash();
+
+			return &new_node->key_value;
+		}
+
+		/**
+		 * See docs of maybePut() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash)
+			RELEASE_NOEXCEPT {
+			auto new_node = node_allocator.allocateEmplace(
+				nullptr, std::forward<K>(key), std::forward<D>(value)
+			);
+
+			if (this->containsAssumingHash(new_node->key_value.key, key_hash)) {
+				node_allocator.deallocateDestroy(new_node);
+				return nullptr;
+			}
+
+			addToBucket(hashToBucket(key_hash), new_node);
+
+			element_count++;
+			maybeRehash();
+
+			return &new_node->key_value;
+		}
+
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		base::Optional<CRef<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) const
+			RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(hashToBucket(key_hash));
+			while (current_node) {
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		base::Optional<Ref<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash)
+			RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(hashToBucket(key_hash));
+			while (current_node) {
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		/**
+		 * See docs of atMaybeCopy() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		base::Optional<DATA_T> atMaybeCopyAssumingHash(const KEY_T& key, KeyHash key_hash) const
+			RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(hashToBucket(key_hash));
+			while (current_node) {
+				if (current_node->key_value.key == key) return current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			return {};
+		}
+
+		/**
+		 * See docs of contains() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		bool containsAssumingHash(const KEY_T& key, KeyHash key_hash) const RELEASE_NOEXCEPT {
+			return atMaybeAssumingHash(key, key_hash).has_value();
+		}
+
 
 	public:
 		StableHashMap(): buckets(INITIAL_BUCKETS) {}
@@ -251,21 +366,8 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> put(K&& key, D&& value) RELEASE_NOEXCEPT {
-			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value)
-			);
-
-			// Note that this can in theory have some observable side effects:
-			CORE_ASSERT(
-				not this->contains(new_node->key_value.key), "Key already exists in StableHashMap"
-			);
-
-			addToBucket(keyToBucket(new_node->key_value.key), new_node);
-
-			element_count++;
-			maybeRehash();
-
-			return &new_node->key_value;
+			auto hash = keyHash(key);
+			return putAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
 		}
 
 		/**
@@ -277,52 +379,26 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
-			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value)
-			);
-
-			// @OPT: make this more efficient, by direct, one-pass implementation
-			if (this->contains(new_node->key_value.key)) {
-				node_allocator.deallocateDestroy(new_node);
-				return nullptr;
-			}
-
-			addToBucket(keyToBucket(new_node->key_value.key), new_node);
-
-			element_count++;
-			maybeRehash();
-
-			return &new_node->key_value;
+			auto hash = keyHash(key);
+			return maybePutAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
 		}
 
 		[[nodiscard]]
 		base::Optional<CRef<DATA_T>> atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT {
-			auto current_node = buckets.at(keyToBucket(key));
-			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
-				current_node = current_node->next;
-			}
-			return {};
+			auto hash = keyHash(key);
+			return atMaybeAssumingHash(key, hash);
 		}
 
 		[[nodiscard]]
 		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
-			auto current_node = buckets.at(keyToBucket(key));
-			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
-				current_node = current_node->next;
-			}
-			return {};
+			auto hash = keyHash(key);
+			return atMaybeAssumingHash(key, hash);
 		}
 
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			auto current_node = buckets.at(keyToBucket(key));
-			while (current_node) {
-				if (current_node->key_value.key == key) return current_node->key_value.value;
-				current_node = current_node->next;
-			}
-			return {};
+			auto hash = keyHash(key);
+			return atMaybeCopyAssumingHash(key, hash);
 		}
 
 		DATA_T& operator[](const KEY_T& key) { return **atMaybe(key); }
@@ -331,7 +407,8 @@ namespace base {
 
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
-			return atMaybe(key).has_value();
+			auto hash = keyHash(key);
+			return containsAssumingHash(key, hash);
 		}
 
 		/**

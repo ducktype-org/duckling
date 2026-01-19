@@ -4,22 +4,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class NonEmptyError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected no arguments for destructor.";
-		}
-
-	public:
-		NonEmptyError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-	};
-
 	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<Destructor>(position, ctx);
@@ -31,7 +15,7 @@ namespace pst {
 		out->kind = ident;
 
 		state.parse(out).goDown();
-		if (state.notEmpty()) state.log(makeBox<NonEmptyError>(state.getPosition()));
+		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
 		state.parse(out)

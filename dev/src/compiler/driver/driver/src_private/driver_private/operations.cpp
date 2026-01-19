@@ -1,6 +1,7 @@
 #include "operations.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -16,20 +17,12 @@
 namespace compiler::driver {
 
 
-	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
+	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
 		QUERY_AUTO_NO_CACHE
 
-		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
-			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
-
-
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  compiler::frontend::ModuleTree::getPathComponentHash(module_id)
-									  .hash.toStringHex()
-				)
-			                      .c_str());
+		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
+			const auto& hout_unit   = *key.hout_unit.get();
+			auto        module_name = key.module_name;
 
 			std::vector<CRef<lir::Function>> functions;
 			functions.reserve(hout_unit.functions.size());
@@ -89,6 +82,27 @@ namespace compiler::driver {
 				.functions = functions,
 				.globals   = globals,
 			};
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
+
+	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
+		QUERY_AUTO_NO_CACHE
+
+		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
+			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
+
+
+			auto module_name
+				= base::StrID(base::strConcat(
+								  "module_",
+								  compiler::frontend::ModuleTree::getPathComponentHash(module_id)
+									  .hash.toStringHex()
+				)
+			                      .c_str());
+
+			return ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
 		}
 	};
 

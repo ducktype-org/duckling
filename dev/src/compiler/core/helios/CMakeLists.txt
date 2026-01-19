@@ -3,6 +3,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
+	src_private/helios_private/scopes/scope_data.cpp
 	src_private/helios_private/utils/pst_walkers.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
@@ -21,6 +22,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/interactive_errors.cpp
 
 	src/helios/queries.cpp
+	src/helios/scope_symbol_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
 	src/helios/hout/elements/expr.cpp
@@ -33,6 +35,7 @@ add_library(HELIOS STATIC
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
+	src/helios/repl_utils/repl_queries.cpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)

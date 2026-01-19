@@ -1,10 +1,13 @@
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <clah/clah.hpp>
+#include <init/init.hpp>
 
 #include <iostream>
 
 int main(int argc, const char* argv[]) {
+	init::InitObject _;
+
 	auto clah = clah::Clah("frontend_playground")
 	                .add(clah::ParamBuilder::ofValue(clah::FileParser::make("Path"))
 	                         .addShortName('p')

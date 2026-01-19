@@ -3,21 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class AttrStarError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected `.*` in Attribute name";
-		}
-
-	public:
-		AttrStarError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-	};
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
 		auto           position = state.getPosition();

@@ -46,7 +46,7 @@ fn create_example_package() -> Package {
     Package {
         id: static_str_id!("quackpack"),
         version: Version::new(1, 2, 3),
-        url: static_str_id!("localhost:9001"),
+        url: Url::parse("https://localhost:9001").unwrap(),
     }
 }
 

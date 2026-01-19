@@ -1,30 +1,16 @@
 #include "../../hierarchy/expressions/access.hpp"
 
 #include "../../hierarchy/expressions/template_specifier.hpp"
+#include "expressions_errors.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {
-	class BadAccessError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected single access expression";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadAccessError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2 && length != 4) {
-			state.log(makeBox<BadAccessError>(
+			state.logInt(makeBox<BadAccessError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}
@@ -36,7 +22,7 @@ namespace pst::expr {
 		// This should never occur if access parsing is called well
 		if (!state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 		    ).copyValueOr(false)) {
-			state.log(makeBox<BadAccessError>(
+			state.logInt(makeBox<BadAccessError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

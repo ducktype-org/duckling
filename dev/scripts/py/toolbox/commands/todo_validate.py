@@ -29,6 +29,12 @@ from click import command, option
     "Note that by default [todo_validate.py, todo_counter.py] patterns are excluded.",
 )
 @all_flag(help="Whether to scan the entire project, not just the diff.")
+@option(
+    "--print-todos",
+    is_flag=True,
+    default=False,
+    help="Print the list of newly added TODOs with issue numbers (for quacker bot).",
+)
 def todo_validate(*args, **kwargs):
     """Validates that TODO comments found in the source files follow the required format: @TODO: #issue_number description.
     By default just the diff is checked. If you want to test the entire project use the `--all` flag.

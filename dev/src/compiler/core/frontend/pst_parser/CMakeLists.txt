@@ -48,6 +48,7 @@ add_library(PstParser
 	${PST_SRC}/lang_parser_state.cpp
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access.cpp
+	${PST_SRC}/utility.cpp
 	${PST_SRC}/pst.cpp
 	${PST_SRC}/pst_automatic.cpp
 	${PST_SRC}/pst_query/code_dependency.cpp
@@ -69,7 +70,7 @@ else() # Unity compilation is disabled by default.
 	message("-- PstParser will NOT use UNITY compilation, compilation will be longer")
 endif()
 
-make_module(PstParser USES DiagnosticInteractive Hashing Lexer UnicodeClassification Printer TPC QueryFramework)
+make_module(PstParser USES DiagnosticInteractive Hashing Lexer UnicodeClassification Printer TPC QueryFramework CompilerTimeStats)
 
 duck_add_test(compiler parser tests/parser_test.cpp USES PstParser)
 duck_add_test(compiler parser_builder tests/parser_builder_test.cpp USES PstParser)

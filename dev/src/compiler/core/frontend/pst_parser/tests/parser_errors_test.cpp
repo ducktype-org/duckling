@@ -1,10 +1,23 @@
+
+#include <frontend/pst_parser/elements/elements_common.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
+#include <frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/declarations/var_parse.hpp>
+#include <frontend/pst_parser/elements/implementations/expressions/expressions_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/lists/impl_template.hpp>
+#include <frontend/pst_parser/elements/implementations/meta/meta_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp>
+#include <frontend/pst_parser/elements/implementations/preamble.hpp>
+#include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
+#include <frontend/pst_parser/elements/parser_common_errors.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
+#include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
@@ -136,8 +149,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Attribute, true> simple_attr{ "@pretty(5)" };
 
 	Example<pst::Block, true>  simple_block{ "block {}" };
-	Example<pst::Block, false> no_block{ "block;" };
+	Example<pst::Block, false> no_block{ "block" };
 	Example<pst::Block, false> no_block_eof{ "block" };
+
+	Example<pst::Stmt, false> not_all_parsed{ "call(3, 5 + 3 = 7);" };
 
 	Example<pst::CodeBlockOrStmt, true> just_block{ "{}" };
 	Example<pst::CodeBlockOrStmt, true> just_stmt{ "x=y;" };
@@ -406,8 +421,95 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	}
 
+	void diagnosticTests() {
+		using dia_int::testDiagnosticMessage;
+		std::stringstream ss;
+
+		testDiagnosticMessage<pst::error::BlockStartError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::error::DuplicateSemicolon>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::BadStatementChoice<pst::Alias>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::NonEmptyError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::NoSpecifierError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::PatternArgumentCountError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::PatternBracketError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::ForBracketError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::VariableNoTypeAndValueError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::BadValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MoreThanValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadUnitExprError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MultipleTernaryError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::PartialTernaryError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::ImproperTernaryError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadTemplateError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadStrValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MoreThanStrValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadRoundExprError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MatchRoundBracketError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::NotACaseExpression>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MatchCurlyBracketError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::OnlyPrefixError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadCharValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MoreThanCharValueError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadChainExprError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadCallError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadBlockError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::NoAtomError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MultipleAssignmentError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadAccessError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::EmptyStatementError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::UnrecognizedPatternInCaseError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::RoundExprStartError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::MatchCaseWithNoBodyError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::DoubleDefaultBranchError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::UnconditionedBranchAfterConditionedError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::AttrStarError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::EmptyExprError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::AliasStarError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::BadSpecifierCallError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::InvalidExternContentWarning>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+
+		testDiagnosticMessage<
+			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition(), lexer::Token::BracketType::Round
+		);
+		testDiagnosticMessage<pst::EmptyListError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::EmptyListElementError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::EmptyFieldError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::NoSeparatorError<pst::internal::NameGetters::inheritanceList>>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		std::cerr << ss.str();
+	}
+
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(exampleTests); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(exampleTests);
+		TESTER_ADD_TEST(diagnosticTests);
+	}
 
 public:
 	~PSTErrorTests() override = default;

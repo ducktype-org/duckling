@@ -7,22 +7,6 @@
 #include <diagnostic/message.hpp>
 
 namespace pst {
-	class NoExternArgumentError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an extern argument";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoExternArgumentError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	const std::set<Keyword> StmtSpecifier::SPECIFIEIRS_CALL_LIST_REQUIRED(
 		SPECIFIEIRS_CALL_LIST_REQUIRED_ARRAY.begin(), SPECIFIEIRS_CALL_LIST_REQUIRED_ARRAY.end()
 	);

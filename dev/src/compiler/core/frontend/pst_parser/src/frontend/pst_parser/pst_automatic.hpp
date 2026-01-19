@@ -80,7 +80,7 @@ namespace pst {
 		PSTAutomatic& one(Keyword key, bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(key)) {
-				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
+				state.logInt(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
@@ -95,7 +95,7 @@ namespace pst {
 		PSTAutomatic& one(Special spec, bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(spec)) {
-				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
+				state.logInt(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
@@ -110,7 +110,7 @@ namespace pst {
 		PSTAutomatic& one(Operator op, bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(op)) {
-				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
+				state.logInt(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
@@ -125,7 +125,7 @@ namespace pst {
 		PSTAutomatic& one(tpc::Keyword* result, bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
-				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
 				if (!ignorable) skipNotSemicolon();
 				return *this;
@@ -142,7 +142,7 @@ namespace pst {
 		PSTAutomatic& one(tpc::Identifier* result, bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) skipNotSemicolon();
 				return *this;
@@ -174,7 +174,7 @@ namespace pst {
 		PSTAutomatic& one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isString()) {
-				state.log(makeBox<tpc::NoStringError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoStringError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) skipNotSemicolon();
 				return *this;
@@ -192,7 +192,7 @@ namespace pst {
 		PSTAutomatic& one(tpc::NumericValue* result, [[maybe_unused]] bool ignorable = false) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().is(lexer::Token::Type::NumLiteralGroup)) {
-				state.log(makeBox<tpc::NoNumericValueError>(state.getPosition()));
+				state.logInt(makeBox<tpc::NoNumericValueError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				result->type_specifier.reset();
 				if (!ignorable) skipNotSemicolon();
