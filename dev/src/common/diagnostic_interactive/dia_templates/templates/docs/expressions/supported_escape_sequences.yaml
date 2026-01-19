@@ -1,0 +1,16 @@
+metadata:
+  type: "docs"
+  family: "expressions"
+  name: "supported_escape_sequences"
+  code: "1101"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+header_message:
+  - "Supported escape sequences"
+
+description:
+  - "Duckling supports the following escape sequences in string literals: "
+  - "\\\\, \\n, \\r, \\t, \\v, \\b, \\f, \\a, \\e, \\\", \\', and \\0."

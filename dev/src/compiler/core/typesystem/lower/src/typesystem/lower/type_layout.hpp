@@ -216,6 +216,15 @@ namespace compiler::tsl {
 		}
 
 		/**
+		 * @return The offset of the pointer to the data
+		 */
+		[[nodiscard]]
+		Bytes getDataPointerPosition() const {
+			(void) this;
+			return Bytes(0);
+		}
+
+		/**
 		 * @return The offset of the end of data offset
 		 */
 		[[nodiscard]]
@@ -669,9 +678,9 @@ namespace compiler::tsl {
 
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
-	public:
 		TypeLayoutDirectVariant variant;
 
+	public:
 		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
 		TypeLayout(TypeLayout&& other) noexcept = default;
 
@@ -690,6 +699,12 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		const TypeLayoutDirectVariant& getVariant() const {
 			return variant;
+		}
+
+		template<typename T>
+		[[nodiscard]]
+		bool is() const {
+			return std::holds_alternative<T>(variant);
 		}
 
 		/**
