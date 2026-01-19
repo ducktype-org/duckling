@@ -42,6 +42,17 @@ namespace artifacts {
 	/**
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
+	 *
+	 * \parallel During compilation/lowering/backends files can be written to disk and concurrent
+	 * builds of the same module/package can collide on paths. See:
+	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp "Driver
+	 * operations"
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
+	 * "LLVM compilation"
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp"DVM
+	 * compilation"
 	 */
 	struct FileArtifact final {
 		const Ref<ArtifactCollection> PARENT;
