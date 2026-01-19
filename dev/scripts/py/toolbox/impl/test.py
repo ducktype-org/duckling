@@ -10,17 +10,48 @@ def get_available_test_targets(build_dir):
     """
     Query the build system for available build_*_tests targets.
     Returns a list of test pack names (e.g., ['base', 'common', 'compiler', 'vm'])
+    Works with both Ninja and Unix Makefiles generators.
     """
+    targets = []
+    
+    # Try method 1: Use cmake --build with help target (works for Unix Makefiles)
     try:
-        # Try to get targets from Ninja
+        stdout, _ = bash_command_get_output(f"cmake --build {build_dir} --target help 2>/dev/null || true")
+        if stdout:
+            # Parse output for build_*_tests targets
+            for line in stdout.split('\n'):
+                # Unix Makefiles format: "... build_<name>_tests"
+                match = re.search(r'\bbuild_(\w+)_tests\b', line)
+                if match:
+                    targets.append(match.group(1))
+            if targets:
+                return targets
+    except:
+        pass
+    
+    # Try method 2: Use ninja -t targets (works for Ninja)
+    try:
         stdout, _ = bash_command_get_output(f"ninja -C {build_dir} -t targets all 2>/dev/null || true")
         if stdout:
             # Parse ninja output for build_*_tests targets
-            targets = []
             for line in stdout.split('\n'):
                 match = re.match(r'^build_(\w+)_tests:', line)
                 if match:
                     targets.append(match.group(1))
+            if targets:
+                return targets
+    except:
+        pass
+    
+    # Try method 3: Parse build.ninja file directly (fallback for Ninja)
+    try:
+        build_ninja_path = os.path.join(build_dir, 'build.ninja')
+        if os.path.exists(build_ninja_path):
+            with open(build_ninja_path, 'r') as f:
+                for line in f:
+                    match = re.match(r'^build\s+build_(\w+)_tests:', line)
+                    if match:
+                        targets.append(match.group(1))
             if targets:
                 return targets
     except:
