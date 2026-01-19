@@ -1,8 +1,11 @@
 #include "thread.hpp"
 
+#include <base/except/exceptions.hpp>
+
 #include <mutex>
 
 void concurrent::Thread::pushTask(Task&& task) {
+	CORE_ASSERT(loop_run_flag, "Cannot push task to stopped thread");
 	{
 		std::lock_guard lock(m);
 		task_queue.push(std::move(task));
@@ -12,7 +15,7 @@ void concurrent::Thread::pushTask(Task&& task) {
 
 concurrent::Thread::Thread(ThreadID id):
 	  id(id),
-	  worker_thread([this]() {
+	  real_thread([this]() {
 		  while (loop_run_flag) {
 			  Task task{};
 			  {
@@ -38,3 +41,12 @@ concurrent::Thread::Thread(ThreadID id):
 [[nodiscard]] concurrent::ThreadID concurrent::Thread::getId() const { return id; }
 
 concurrent::Thread::~Thread() { stop(); }
+
+void concurrent::Thread::stop() {
+	{
+		std::lock_guard<std::mutex> lock(m);
+		loop_run_flag = false;
+	}
+	cv.notify_one();
+	real_thread.join();
+}

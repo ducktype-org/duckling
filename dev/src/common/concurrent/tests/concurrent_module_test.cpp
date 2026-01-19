@@ -1,4 +1,4 @@
-#include <concurrent/collections/hash_map.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 #include <tester/tester.hpp>
 

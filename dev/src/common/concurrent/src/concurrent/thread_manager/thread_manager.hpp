@@ -13,14 +13,17 @@ namespace concurrent {
 
 	/**
 	 * @brief Manages a fixed number of threads to execute tasks.
-	 * @tparam NUM_THREADS The number of threads to manage.
-	 * @note Mixing ThreadID from different ThreadManager instances is undefined.
+	 * @note Using ThreadID between different ThreadManager instances is undefined.
 	 */
-	template<usize NUM_THREADS>
-	requires(NUM_THREADS > 0) class ThreadManager {
+	class ThreadManager {
 	public:
-		ThreadManager():
-			  threads{ std::views::iota(usize{ 0 }, NUM_THREADS)
+		/**
+		 * @brief Constructs a ThreadManager with the specified number of threads.
+		 * @param num_threads The number of threads to manage. Defaults to the worker count.
+		 */
+		ThreadManager(usize num_threads = concurrent::getWorkerCount()):
+			  num_threads(num_threads),
+			  threads{ std::views::iota(usize{ 0 }, num_threads)
 			           | std::views::transform([](usize i) {
 							 return makeBox<Thread>(ThreadID{ i });
 						 })
@@ -39,7 +42,7 @@ namespace concurrent {
 		 * @brief Returns a vector of free thread IDs.
 		 * @param max_count The maximum number of free thread IDs to return.
 		 */
-		std::vector<ThreadID> getFreeThreads(usize max_count = NUM_THREADS) {
+		std::vector<ThreadID> getFreeThreads(usize max_count) {
 			return threads | std::ranges::views::filter([](const Box<Thread>& thread) {
 					   return thread->isFree();
 				   })
@@ -73,11 +76,25 @@ namespace concurrent {
 			}
 			// NOLINTBEGIN(concurrency-mt-unsafe)
 			// If no free thread is found, push to a random thread
-			threads[static_cast<usize>(std::rand()) % NUM_THREADS]->pushTask(std::move(task));
+			threads[static_cast<usize>(std::rand()) % num_threads]->pushTask(std::move(task));
 			// NOLINTEND(concurrency-mt-unsafe)
 		}
 
+		/**
+		 * @brief Checks if a thread is free.
+		 * @param thread_id The ID of the thread to check.
+		 * @return True if the thread is free, false otherwise.
+		 */
+		[[nodiscard]] bool isThreadFree(ThreadID thread_id) const {
+			return threads[static_cast<usize>(thread_id)]->isFree();
+		}
+
 	private:
+		/**
+		 * @brief The number of threads managed by the ThreadManager.
+		 */
+		const usize num_threads;
+
 		/**
 		 * @brief Array of threads managed by the ThreadManager.
 		 */

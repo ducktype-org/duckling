@@ -17,7 +17,7 @@ namespace concurrent {
 	 * @brief Represents a single thread in the ThreadManager.
 	 * @note All methods are thread-safe.
 	 */
-	class Thread {
+	class Thread final {
 	public:
 		Thread(ThreadID id);
 		~Thread();
@@ -36,20 +36,17 @@ namespace concurrent {
 		 */
 		[[nodiscard]] bool isFree() const;
 
-		void stop() {
-			{
-				std::lock_guard<std::mutex> lock(m);
-				loop_run_flag = false;
-			}
-			cv.notify_one();
-			worker_thread.join();
-		}
+		/**
+		 * @brief Stops the thread's main loop and joins the inner thread.
+		 */
+		void stop();
 
 		[[nodiscard]] ThreadID getId() const;
 
 	private:
-		std::atomic_bool is_occupied   = false;
-		std::atomic_bool loop_run_flag = true;
+		std::atomic_bool is_occupied
+			= false;  /// Indicates whether the thread is currently executing a task.
+		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
 		const ThreadID id;
 
@@ -58,6 +55,6 @@ namespace concurrent {
 		mutable std::mutex      m;
 		std::condition_variable cv;
 
-		std::thread worker_thread;
+		std::thread real_thread;
 	};
 }

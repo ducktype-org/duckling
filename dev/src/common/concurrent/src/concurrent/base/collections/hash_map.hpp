@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concurrent/locks/atomic_flag_spinlock.hpp>
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
