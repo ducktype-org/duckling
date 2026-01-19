@@ -88,8 +88,8 @@ int main() {
 
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto h = Hash<Fnv1a_32>{}(type2{});
-	std::cout << h << '\n';  // some 32-bit number
+	constexpr auto H = Hash<Fnv1a_32>{}(type2{});
+	std::cout << H << '\n';  // some 32-bit number
 
 	struct type3 {
 		int x{ 123 }, y{ 456 };
