@@ -1,6 +1,6 @@
 #include "../../hierarchy/class_elements/copy_constructor.hpp"
 
-#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
