@@ -132,8 +132,8 @@ namespace compiler::helios::code {
 
 	}
 
-	base::Optional<compiler::numeric_value::NumericValue> fromExprValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprValue> literal_expr_locked
+	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
+		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked
 	) {
 		auto literal_expr = literal_expr_locked.unlock(ctx);
 		auto value        = literal_expr->getValue().value.strView();
