@@ -134,7 +134,9 @@ namespace compiler::backend_vm::internal {
 			function_context.pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
 
 		// ---- Cleanup ----
-		if (src_temp.has_value()) function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
-		if (dst_temp.has_value()) function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
+		if (src_temp.has_value())
+			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
+		if (dst_temp.has_value())
+			function_context.pushInstruction({ vm::code::instructions::Op_deinit() });
 	}
 }

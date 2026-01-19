@@ -18,7 +18,7 @@ namespace compiler::backend_vm::internal {
 	public:
 		/**
 		 * @brief Generates instructions to perform a cast operation.
-         * 
+		 *
 		 * @param cast_operation The cast operation to lower.
 		 * @param args The arguments of the cast operation.
 		 * @param maybe_output The optional output of the cast operation, but this functions panics
