@@ -1,6 +1,6 @@
 #pragma once
 
-#include "options.hpp"
+#include <global_state/options.hpp>
 
 namespace compiler::driver {
 
@@ -16,5 +16,5 @@ namespace compiler::driver {
 	 * that will be used to interact with top-level driver operations
 	 * such as handling change in the source code input.
 	 */
-	void initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	void initializeTheCompiler(options::CompilerModeOfOperationAndOptions options);
 }

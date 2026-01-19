@@ -1,3 +1,5 @@
+#include <global_state/backend_options.hpp>
+#include <global_state/options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <iostream>
@@ -6,6 +8,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
@@ -21,6 +24,62 @@ LLVM_INCLUDE_END()
 #include <logger/logger.hpp>
 
 namespace compiler::backend_llvm {
+	using LLVMOptimizationLevel = options::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
+
+	/**
+	 * @brief Convert our OptimizationLevel enum to LLVM's OptimizationLevel for IR generation.
+	 */
+	llvm::OptimizationLevel toLLVMOptLevel(const LLVMOptimizationLevel level) {
+		switch (level) {
+		case LLVMOptimizationLevel::O0:
+			return llvm::OptimizationLevel::O0;
+		case LLVMOptimizationLevel::O1:
+			return llvm::OptimizationLevel::O1;
+		case LLVMOptimizationLevel::O2:
+			return llvm::OptimizationLevel::O2;
+		case LLVMOptimizationLevel::O3:
+			return llvm::OptimizationLevel::O3;
+		case LLVMOptimizationLevel::Os:
+			return llvm::OptimizationLevel::Os;
+		case LLVMOptimizationLevel::Oz:
+			return llvm::OptimizationLevel::Oz;
+		}
+		CORE_UNREACHABLE();
+	}
+
+	/**
+	 * @brief Run LLVM IR optimization passes on the module.
+	 */
+	void runOptimizationPasses(
+		const Ref<llvm::Module>        m,
+		const Ref<llvm::TargetMachine> target_machine,
+		const LLVMOptimizationLevel    level
+	) {
+		if (level == LLVMOptimizationLevel::O0) return;  // Skip optimization for O0
+
+		llvm::LoopAnalysisManager     loop_analysis_manager;
+		llvm::FunctionAnalysisManager function_analysis_manager;
+		llvm::CGSCCAnalysisManager    cgscc_analysis_manager;
+		llvm::ModuleAnalysisManager   module_analysis_manager;
+
+		llvm::PassBuilder pass_builder(target_machine.get());
+
+		pass_builder.registerModuleAnalyses(module_analysis_manager);
+		pass_builder.registerCGSCCAnalyses(cgscc_analysis_manager);
+		pass_builder.registerFunctionAnalyses(function_analysis_manager);
+		pass_builder.registerLoopAnalyses(loop_analysis_manager);
+		pass_builder.crossRegisterProxies(
+			loop_analysis_manager,
+			function_analysis_manager,
+			cgscc_analysis_manager,
+			module_analysis_manager
+		);
+
+		llvm::ModulePassManager module_pass_manager
+			= pass_builder.buildPerModuleDefaultPipeline(toLLVMOptLevel(level));
+		module_pass_manager.run(*m, module_analysis_manager);
+	}
+
 	void emitCode(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
@@ -63,6 +122,11 @@ namespace compiler::backend_llvm {
 	) {
 		const auto m              = module_impl->module.refMut();
 		const auto target_machine = module_impl->getTargetMachine().toOpt().value();
+
+		// Run optimization passes before code generation
+		runOptimizationPasses(
+			m, target_machine, global_state::getBackendOptions()->llvm_backend->llvmOptimizationLevel
+		);
 
 		std::error_code error_code;
 
