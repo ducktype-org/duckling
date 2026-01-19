@@ -2,6 +2,8 @@
 
 #include "options.hpp"
 
+#include <base/pointers/ref.hpp>
+
 namespace global_state {
 
 	/**

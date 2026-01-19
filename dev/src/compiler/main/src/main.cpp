@@ -114,8 +114,10 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 	return linking_options;
 }
 
-compiler::options::DebugOptions getDebugOptionsFromClap(const clah::ParsingResult& parsing_result) {
-	return compiler::options::DebugOptions{
+compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
+	const clah::ParsingResult& parsing_result
+) {
+	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                          .copyValueOr(std::vector<std::string>{}),
 		.immediate_print_diagnostics = true,
@@ -135,7 +137,7 @@ clah::Clah getClahForMain() {
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
-						compiler::options::CompilerModeOfOperationAndOptions::BareMode{
+						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
@@ -181,7 +183,7 @@ clah::Clah getClahForMain() {
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					compiler::driver::initializeTheCompiler(
-						compiler::options::CompilerModeOfOperationAndOptions::BareMode{
+						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 							.debug_options = getDebugOptionsFromClap(options),
 						}
 					);
@@ -210,7 +212,7 @@ clah::Clah getClahForMain() {
 	                       .addPositional(clah::FileParser::make("module"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
-								   compiler::options::CompilerModeOfOperationAndOptions::BareMode{
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
 							   );
@@ -270,7 +272,7 @@ clah::Clah getClahForMain() {
                     );
 
 					compiler::driver::initializeTheCompiler(
-						compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
 								.package_path = path_to_compile.getFilePath(),
@@ -353,7 +355,7 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					compiler::driver::initializeTheCompiler(
-						compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
 								.package_path = path_to_compile.getFilePath(),
@@ -431,7 +433,7 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-						compiler::options::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.main_package_info = {
 										.package_name = package_name,
 										.package_path = path_to_compile.getFilePath(),
@@ -466,7 +468,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
-								   compiler::options::CompilerModeOfOperationAndOptions::ReplMode{
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
 							   );
@@ -479,7 +481,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(
-								   compiler::options::CompilerModeOfOperationAndOptions::BareMode{
+								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
 									   .debug_options = getDebugOptionsFromClap(options),
 								   }
 							   );
