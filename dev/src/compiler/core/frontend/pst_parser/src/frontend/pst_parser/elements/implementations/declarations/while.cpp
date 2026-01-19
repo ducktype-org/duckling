@@ -15,7 +15,7 @@ namespace pst {
 			.all(Keyword::While, &out->optional_name, &out->condition)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void While::dprint(std::ostream& out) const {

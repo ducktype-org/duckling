@@ -28,6 +28,6 @@ namespace pst::expr {
 		state.parse(out).one(Keyword::Or);
 		state.parse(out).with(&out->right, Self::parse, length - or_fwd - 1);
 
-		return out;
+		PST_RETURN out;
 	}
 }

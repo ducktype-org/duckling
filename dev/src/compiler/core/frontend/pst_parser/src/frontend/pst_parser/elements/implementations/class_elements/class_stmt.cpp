@@ -12,7 +12,7 @@ namespace pst {
 			auto    opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
-			return out;
+			PST_RETURN out;
 		}
 	}
 
@@ -83,6 +83,6 @@ namespace pst {
 		// Add Attributes
 		if (out) out->addAttributes(state, std::move(attributes));
 
-		return out;
+		PST_RETURN out;
 	}
 }

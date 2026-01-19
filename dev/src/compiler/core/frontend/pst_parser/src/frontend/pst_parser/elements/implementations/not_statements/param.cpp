@@ -14,7 +14,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->initial);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	base::Optional<AccessLocked<UniversalExprHolder>> Param::getValue() const {

@@ -11,7 +11,7 @@ namespace pst {
 		}
 
 		state.parse(out).one(&out->arg);
-		return out;
+		PST_RETURN out;
 	}
 
 	void CallArgument::dprint(std::ostream& out) const {

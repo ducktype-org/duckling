@@ -20,7 +20,7 @@ namespace pst::expr {
 		state.parse(out).goDown();
 		state.parse(out).goUpAndSkip();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void UnitExpr::dprint(std::ostream& out) const {
