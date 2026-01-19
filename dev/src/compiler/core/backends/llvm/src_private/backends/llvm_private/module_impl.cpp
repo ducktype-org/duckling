@@ -86,7 +86,7 @@ namespace compiler::backend_llvm {
 						llvm::Reloc::PIC_,
 						std::nullopt,
 						toLLVMCodeGenOptLevel(
-							global_state::getBackendOptions()->llvm_backend->llvmOptimizationLevel
+							global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
 						)
 					));
 				return this->target_machine.refMut().toOpt().value();

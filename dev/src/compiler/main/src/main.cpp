@@ -94,7 +94,7 @@ compiler::options::BackendOptions getBackendOptionsFromClap(const clah::ParsingR
 
 	return compiler::options::BackendOptions{
 		.llvm_backend = compiler::options::BackendOptions::LLVMBackend{
-			.llvmOptimizationLevel = llvm_optimization_level,
+			.llvm_optimization_level = llvm_optimization_level,
 		},
 	};
 }
