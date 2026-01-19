@@ -156,7 +156,7 @@ namespace compiler::helios::code {
 
 		switch (type_specifier) {
 		case lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier: {
-			bool is_float = value.find_first_of(".eE") != std::string_view::npos;
+			bool is_float = value.find_first_of(".eE") != std::string_view::npos && base == 10;
 			return is_float ? deduceFloatType(value, position, ctx)
 			                : deduceIntegerType(value, base, position, ctx);
 		}
