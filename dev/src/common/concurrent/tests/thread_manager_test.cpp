@@ -13,13 +13,14 @@ public:
 
 private:
 	void basicFunctionalityTest() {
-		concurrent::ThreadManager<4> thread_manager;
+		concurrent::setWorkerCount(4);
+		concurrent::ThreadManager thread_manager;
 
 		auto all_threads = thread_manager.getAllThreads();
-		ASSERT_EQUAL(all_threads.size(), 4);
+		ASSERT_EQUAL(all_threads.size(), concurrent::getWorkerCount());
 
-		auto free_threads = thread_manager.getFreeThreads();
-		ASSERT_EQUAL(free_threads.size(), 4);
+		auto free_threads = thread_manager.getFreeThreads(concurrent::getWorkerCount());
+		ASSERT_EQUAL(free_threads.size(), concurrent::getWorkerCount());
 
 		std::atomic_int counter = 0;
 
