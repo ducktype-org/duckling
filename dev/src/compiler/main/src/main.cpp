@@ -88,9 +88,9 @@ compiler::options::BackendOptions getBackendOptionsFromClap(const clah::ParsingR
 	static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
 		{ "0", O0 }, { "1", O1 }, { "2", O2 }, { "3", O3 }, { "s", Os }, { "z", Oz },
 	};
-	const auto llvm_optimization_level = str_to_llvm_opt_level.at(
-		parsing_result.getValue<std::string>("llvm-opt").copyValueOr("0")
-	);
+	const auto llvm_optimization_level
+		= str_to_llvm_opt_level.at(parsing_result.getValue<std::string>("llvm-opt").copyValueOr("0")
+	    );
 
 	return compiler::options::BackendOptions{
 		.llvm_backend = compiler::options::BackendOptions::LLVMBackend{
