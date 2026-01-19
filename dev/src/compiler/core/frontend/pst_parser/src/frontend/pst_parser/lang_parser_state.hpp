@@ -150,7 +150,7 @@ namespace pst {
 		/**
 		 * @brief Logs an error that doesn't require skipping to a fallback.
 		 *
-		 * @note This is for very specific usecases where behaviour is reliable. 
+		 * @note This is for very specific usecases where behaviour is reliable.
 		 * Care needs to be taken so that each element has all the data needed for hashing.
 		 */
 		void logSafeError(Box<dia_int::MessageBase> message) {
