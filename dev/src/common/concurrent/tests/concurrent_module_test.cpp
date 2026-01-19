@@ -204,7 +204,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1, 0, [](u64& v) { v += 10; });
+					map.maybePutAndUpdate(1ULL, 0ULL, [](u64& v) { v += 10; });
 			});
 		}
 
