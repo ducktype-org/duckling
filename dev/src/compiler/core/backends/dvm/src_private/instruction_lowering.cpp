@@ -1,5 +1,8 @@
+#include "cast_operation_lowering.hpp"
+#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
+#include "meta_operation_lowering.hpp"
 #include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
@@ -26,12 +29,6 @@ namespace {
 
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
-	}
-
-	bool isCastOperation(OpKind op) {
-		return op == OpKind::sext || op == OpKind::zext || op == OpKind::trunc
-		    || op == OpKind::sitofp || op == OpKind::uitofp || op == OpKind::fptosi
-		    || op == OpKind::fptoui || op == OpKind::fptrunc || op == OpKind::fpext;
 	}
 }
 
@@ -76,97 +73,6 @@ void FunctionLoweringContext::handleCall(
 	if (call_result_storage) pushInstruction({ instructions::Op_deinit() });  // Deinit func result
 }
 
-void FunctionLoweringContext::handleComparison(
-	OpKind                   operation,
-	const lir::Instruction&  lir_instruction,
-	std::deque<DVMValue>&    args,
-	base::Optional<DVMValue> maybe_output
-) {
-	CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-	CORE_ASSERT(maybe_output.has_value(), "Comparison operations must have an output destination");
-	auto output = maybe_output.value();
-
-	// If the first argument is an immediate, we need to move it to a temporary local.
-	// @TODO: #1848 Idealy this could be removed after the DVM supports comparisons between immediates.
-	base::Optional<DVMLocal> temp_lhs;
-	if (args[0].is<DVMImmediate>()) {
-		auto vm_type = program_context.lowerAndKeepTslType(
-			lir_instruction.arguments[0].get<lir::LIRConstant>().layout
-		);
-		temp_lhs = pushTempLocal(vm_type, "cmp_lhs_tmp");
-		pushInstruction({ OpKind::mov, temp_lhs->asArgument(), args[0] });
-		args[0] = DVMValue(*temp_lhs);
-	}
-
-	// This resolves e.g. `x = a CMP b;`
-	// by splitting it into three instructions:
-	// a CMP b;
-	// mov x, 0;
-	// cmov x, 1;
-	pushInstruction({ operation, args[0], args[1] });
-	pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
-	pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
-
-	if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
-}
-
-void FunctionLoweringContext::handleCastOperation(
-	OpKind                   operation,
-	const lir::Instruction&  lir_instruction,
-	std::deque<DVMValue>&    args,
-	base::Optional<DVMValue> maybe_output
-) {
-	// Operation in form a = OP b (like mov)
-	CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
-	CORE_ASSERT(maybe_output.has_value(), "Cast operations must have an output destination");
-	auto output = maybe_output.value();
-
-	// The cast operations are only supported between local stack values.
-	// So if we have a non-local source (like immediate value or global),
-	// we first move it to a temporary local, perform the cast there,
-
-	// If the destination is non-local, we put the result in a temporary local
-	// and then move the result to the final destination.
-	// ---- Resolve source ----
-	DVMValue                 src_arg = args[0];
-	base::Optional<DVMLocal> src_temp;
-
-	if (!src_arg.is<DVMLocal>()) {
-		auto source_type = program_context.lowerAndKeepTslType(
-			std::get<lir::CastParameters>(lir_instruction.extra_params).source_layout
-		);
-
-		src_temp = pushTempLocal(source_type, "cast_src_tmp");
-		src_arg  = DVMValue(src_temp.value());
-	}
-
-	// ---- Resolve destination ----
-	DVMValue                 dst_arg = output;
-	base::Optional<DVMLocal> dst_temp;
-
-	if (not dst_arg.is<DVMLocal>()) {
-		auto target_type = program_context.lowerAndKeepTslType(
-			std::get<lir::CastParameters>(lir_instruction.extra_params).target_layout
-		);
-
-		dst_temp = pushTempLocal(target_type, "cast_dst_tmp");
-		dst_arg  = DVMValue(dst_temp.value());
-	}
-
-	// ---- Move the source to temp if needed ----
-	if (src_temp.has_value()) pushInstruction({ OpKind::mov, src_arg, args[0] });
-
-	// ---- Perform cast (local → local) ----
-	pushInstruction({ operation, dst_arg, src_arg });
-
-	// ---- Move to final destination if needed ----
-	if (dst_temp.has_value()) pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
-
-	// ---- Cleanup ----
-	if (src_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
-	if (dst_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
-}
-
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
 	std::deque<DVMValue> args
 		= lir_instruction.arguments
@@ -183,16 +89,46 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			lowerer.lower(operation, args, maybe_output);
 			return;
 		}
+		variant_case(CastOperation, operation) {
+			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output, *this);
+			return;
+		}
 	}
 	const auto operation = std::get<SimpleOperation>(dvm_operation).op;
 
 
 	if (isComparison(operation)) {
-		// @TODO #1848: when comparisons between the immediates are supported,
-		// this should whole code should be reverted to before this commit.
-		handleComparison(operation, lir_instruction, args, maybe_output);
-	} else if (isCastOperation(operation)) {
-		handleCastOperation(operation, lir_instruction, args, maybe_output);
+		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
+		CORE_ASSERT(
+			maybe_output.has_value(), "Comparison operations must have an output destination"
+		);
+		auto output = maybe_output.value();
+
+		// If the first argument is an immediate, we need to move it to a temporary local.
+		// @TODO: #1848 Idealy this could be removed after the DVM supports comparisons between
+		// immediates.
+		base::Optional<DVMLocal> temp_lhs;
+		if (args[0].is<DVMImmediate>()) {
+			auto vm_type = program_context.lowerAndKeepTslType(
+				lir_instruction.arguments[0].get<lir::LIRConstant>().layout
+			);
+			temp_lhs = pushTempLocal(vm_type, "cmp_lhs_tmp");
+			pushInstruction({ OpKind::mov, temp_lhs->asArgument(), args[0] });
+			args[0] = DVMValue(*temp_lhs);
+		}
+
+		// This resolves e.g. `x = a CMP b;`
+		// by splitting it into three instructions:
+		// a CMP b;
+		// mov x, 0;
+		// cmov x, 1;
+		pushInstruction({ operation, args[0], args[1] });
+		pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+		pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
+
+		// @TODO: #1848 same as above
+		if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
+
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		auto called_func_name = args.front();

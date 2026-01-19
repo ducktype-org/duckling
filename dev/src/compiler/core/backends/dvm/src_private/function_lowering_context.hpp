@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dvm_value.hpp"
-#include "meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -20,6 +19,8 @@ namespace compiler::backend_vm::internal {
 	class FunctionLoweringContext {
 	public:
 		friend class MetaOperationLowerer;
+		friend class CastOperationLowerer;
+
 		FunctionLoweringContext(
 			ProgramLoweringContext&                   program_context,
 			base::StrID                               name,
@@ -96,29 +97,6 @@ namespace compiler::backend_vm::internal {
 			const FunctionCallInfo&     call_info,
 			const std::deque<DVMValue>& func_args,
 			base::Optional<DVMValue>    output
-		);
-
-		/**
-		 * @brief Generates instructions to perform a comparison operation.
-		 *
-		 * @TODO #1848: when comparisons between the immediates are supported,
-		 * this whole function can be removed.
-		 */
-		void handleComparison(
-			OpKind                   operation,
-			const lir::Instruction&  lir_instruction,
-			std::deque<DVMValue>&    args,
-			base::Optional<DVMValue> maybe_output
-		);
-
-		/**
-		 * @brief Generates instructions to perform a cast operation.
-		 */
-		void handleCastOperation(
-			OpKind                   operation,
-			const lir::Instruction&  lir_instruction,
-			std::deque<DVMValue>&    args,
-			base::Optional<DVMValue> maybe_output
 		);
 
 		usize    next_temp_id = 0;
