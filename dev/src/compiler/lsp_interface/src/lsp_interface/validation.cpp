@@ -85,10 +85,10 @@ namespace lsp {
 		const dia_int::lsp::EvaluationContext&                  ctx,
 		std::ostream&                                           out
 	) {
-		static base::Optional<base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>>>
+		static base::Optional<base::HashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>>>
 			previous_diag_by_file_opt{};
 
-		base::HashMap<std::string, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
+		base::HashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 
 		// We always want to have at least an entry for the queried file for better experience
 		diagnostics_by_file.emplace(
@@ -99,13 +99,11 @@ namespace lsp {
 		for (const auto& diag: diagnostics) {
 			dia_int::lsp::LSPDiagnosticResult lsp_diag
 				= dia_int::lsp::evaluateToLanguageServerMessage(diag, ctx);
+			auto file_uri = base::StrID(lsp_diag.file_uri);
 
-			if (not diagnostics_by_file.contains(lsp_diag.file_uri)) {
-				diagnostics_by_file.put(
-					lsp_diag.file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{}
-				);
-			}
-			diagnostics_by_file[lsp_diag.file_uri].push_back(std::move(lsp_diag.diagnostic));
+			if (not diagnostics_by_file.contains(file_uri))
+				diagnostics_by_file.emplace(file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{});
+			diagnostics_by_file.at(file_uri).push_back(std::move(lsp_diag.diagnostic));
 		}
 
 
@@ -116,7 +114,7 @@ namespace lsp {
 			if (not first_list_elem) out << ",\n";
 			first_list_elem = false;
 
-			out << "\"" << file_uri << "\": [\n";
+			out << "\"" << file_uri.strView() << "\": [\n";
 			for (usize i = 0; i < diags.size(); i++) {
 				dia_int::lsp::LSPDiagnosticResult::jsonSerializeDiagnostic(diags[i].ref(), out);
 				if (i + 1 < diags.size()) out << ",\n";
@@ -133,7 +131,7 @@ namespace lsp {
 					if (not first_list_elem) out << ",\n";
 					first_list_elem = false;
 
-					out << "\"" << old_file_uri << "\": []\n";
+					out << "\"" << old_file_uri.strView() << "\": []\n";
 				}
 			}
 		}
