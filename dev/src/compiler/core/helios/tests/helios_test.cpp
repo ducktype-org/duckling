@@ -1156,18 +1156,18 @@ private:
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
 		{
-			// Check if ref T = ref T performs rebinding, no derefs are inserted.
+			// Check if `ref T = ref T` performs value assignment, not rebinding.
 			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
 				*function.body->statements.at(5)
 			);
-			auto deref1_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+			auto deref_lhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				ass_stmt.location_expr.get()
 			);
-			auto deref2_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+			auto deref_rhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				ass_stmt.new_value_expr.get()
 			);
-			ASSERT_TRUE(deref1_expr == nullptr);
-			ASSERT_TRUE(deref2_expr == nullptr);
+			ASSERT_TRUE(deref_lhs != nullptr);
+			ASSERT_TRUE(deref_rhs != nullptr);
 		}
 		{
 			// Check if ref T = ref T + 1. Derefs should be inserted on both sides.
