@@ -125,7 +125,7 @@ namespace concurrent {
 
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			return shards[lock.shard_index].putAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
 		}
 
 		/**
@@ -160,7 +160,8 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			shards[lock.shard_index].maybePut(key, value);
+			shards[lock.shard_index].maybePutAssumingHash(key, value, hash);
+
 			f(shards[lock.shard_index][key]);
 		}
 
@@ -173,7 +174,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			DATA_T        value = shards[lock.shard_index][key];
+			DATA_T        value = *shards[lock.shard_index].atMaybeAssumingHash(key, hash).value();
 			return value;
 		}
 
@@ -207,7 +208,7 @@ namespace concurrent {
 			
 			WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].contains(key);
+			return shards[lock.shard_index].containsAssumingHash(key, hash);
 		}
 
 		[[nodiscard]]

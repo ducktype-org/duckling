@@ -149,7 +149,7 @@ public:
 };
 
 class DuckMap {
-    concurrent::ConHashMap<std::string, int> m_map;
+    concurrent::ConHashMap<std::string, int, std::hash<std::string> > m_map;
 public:
     void put(const std::string &key, int value) {
         m_map.maybePut(key, value);

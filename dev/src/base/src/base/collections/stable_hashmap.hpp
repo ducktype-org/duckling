@@ -532,7 +532,8 @@ namespace base {
 		/**
 		 * Memory pool allocator for node storage.
 		 */
-		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+		// SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+		SingleTypeNewDeleteAllocator<Node> node_allocator;
 
 		/**
 		 * Number of elements stored in the map.
