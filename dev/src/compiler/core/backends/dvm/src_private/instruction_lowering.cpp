@@ -83,11 +83,13 @@ void FunctionLoweringContext::handleComparison(
 	base::Optional<DVMValue> maybe_output
 ) {
 	CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
+	CORE_ASSERT(
+		maybe_output.has_value(), "Comparison operations must have an output destination"
+	);
+	auto output = maybe_output.value();
 
-	// If the first argument is an immediate, we need to move it to a temporary local
-	// because comparsion instructions allow cmp reg, imm but not cmp imm, reg (or imm, imm).
-	//
-	// Idealy this could be removed after the DVM supports comparisons between immediates.
+	// If the first argument is an immediate, we need to move it to a temporary local.
+	// @TODO: #1848 Idealy this could be removed after the DVM supports comparisons between immediates.
 	base::Optional<DVMLocal> temp_lhs;
 	if (args[0].is<DVMImmediate>()) {
 		auto vm_type = program_context.lowerAndKeepTslType(
@@ -99,12 +101,13 @@ void FunctionLoweringContext::handleComparison(
 	}
 
 	// This resolves e.g. `x = a CMP b;`
-	// by splitting it into two instructions:
+	// by splitting it into three instructions:
 	// a CMP b;
+	// mov x, 0;
 	// cmov x, 1;
 	pushInstruction({ operation, args[0], args[1] });
-	pushInstruction({ OpKind::mov, maybe_output.value(), DVMImmediate(0).asArgument() });
-	pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
+	pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+	pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
 
 	if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
 }
@@ -116,10 +119,18 @@ void FunctionLoweringContext::handleCastOperation(
 	base::Optional<DVMValue> maybe_output
 ) {
 	// Operation in form a = OP b (like mov)
-	// but if "b" is not a local stack value, we need to move it to a temp first
-	// because cast operations don't support non-local values as arguments
 	CORE_ASSERT(args.size() == 1, "Invalid cast operation argument count");
+	CORE_ASSERT(
+		maybe_output.has_value(), "Cast operations must have an output destination"
+	);
+	auto output = maybe_output.value();
 
+	// The cast operations are only supported between local stack values.
+	// So if we have a non-local source (like immediate value or global),
+	// we first move it to a temporary local, perform the cast there,
+
+	// If the destination is non-local, we put the result in a temporary local
+	// and then move the result to the final destination.
 	// ---- Resolve source ----
 	DVMValue                 src_arg = args[0];
 	base::Optional<DVMLocal> src_temp;
@@ -134,10 +145,10 @@ void FunctionLoweringContext::handleCastOperation(
 	}
 
 	// ---- Resolve destination ----
-	DVMValue                 dst_arg = maybe_output.value();
+	DVMValue                 dst_arg = output;
 	base::Optional<DVMLocal> dst_temp;
 
-	if (!dst_arg.is<DVMLocal>()) {
+	if (not dst_arg.is<DVMLocal>()) {
 		auto target_type = program_context.lowerAndKeepTslType(
 			std::get<lir::CastParameters>(lir_instruction.extra_params).target_layout
 		);
@@ -154,7 +165,7 @@ void FunctionLoweringContext::handleCastOperation(
 
 	// ---- Move to final destination if needed ----
 	if (dst_temp.has_value())
-		pushInstruction({ OpKind::mov, maybe_output.value(), dst_temp->asArgument() });
+		pushInstruction({ OpKind::mov, output, dst_temp->asArgument() });
 
 	// ---- Cleanup ----
 	if (src_temp.has_value()) pushInstruction({ instructions::Op_deinit() });
@@ -182,7 +193,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 
 
 	if (isComparison(operation)) {
-		// @TODO #...: when comparisons between the immediates are supported,
+		// @TODO #1848: when comparisons between the immediates are supported,
 		// this should whole code should be reverted to before this commit.
 		handleComparison(operation, lir_instruction, args, maybe_output);
 	} else if (isCastOperation(operation)) {

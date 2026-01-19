@@ -18,7 +18,7 @@ Tests:
         ExitCode: 0
       dvm:
         backend: dvm
-        # @TODO: #1657 the global initial value is not working in VM
+        # @TODO: #1849 the global initial value is not working in VM
         # Output:
         #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0

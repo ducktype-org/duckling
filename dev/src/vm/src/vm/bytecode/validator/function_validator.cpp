@@ -272,7 +272,7 @@ class FunctionValidator {
 	}
 
 	/**
-	 * @brief Validates instruction's ain a trivial, generic way, i.e. if an
+	 * @brief Validates instruction's arguments in a trivial, generic way, i.e. if an
 	 * instruction expects a pointer argument then this function validates this argument really
 	 * is a pointer, not a label or a primitive. In case of this function, an instruction can be
 	 * thought of as an argument collection.

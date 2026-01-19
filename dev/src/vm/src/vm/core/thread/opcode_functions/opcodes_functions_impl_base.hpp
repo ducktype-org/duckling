@@ -1058,7 +1058,6 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
 		{                                                                                     \
 			auto x = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);        \
-			/* Logic inlined from interp_fptosi_sat */                                        \
 			using IntT   = i##DST_SIZE;                                                       \
 			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                           \
 			IntT res;                                                                         \

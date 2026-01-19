@@ -100,9 +100,9 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Generates instructions to perform a comparison operation.
-		 * The first argument of comparison must be a local stack value (or global),
-		 * so if it's an immediate, we first move it to a temporary local.
-		 * @TODO #...: when comparisons between the immediates are supported, this should be removed.
+		 * 
+		 * @TODO #1848: when comparisons between the immediates are supported, 
+		 * this whole function can be removed.
 		 */
 		void handleComparison(
 			OpKind                   operation,
@@ -113,12 +113,6 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Generates instructions to perform a cast operation.
-		 * The cast operations are only supported between local stack values.
-		 * So if we have a non-local source (like immediate value or global),
-		 * we first move it to a temporary local, perform the cast there,
-
-		 * If the destination is non-local, we put the result in a temporary local
-		 * and then move the result to the final destination.
 		 */
 		void handleCastOperation(
 			OpKind                   operation,
