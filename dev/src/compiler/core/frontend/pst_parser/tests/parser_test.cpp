@@ -144,7 +144,6 @@ private:
 			);
 		}
 
-		std::cout << correct_string << '\n';
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a
 		// file?
