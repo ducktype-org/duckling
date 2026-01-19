@@ -1,5 +1,7 @@
 #include "lang_parser_state.hpp"
 
+#include "utility.hpp"
+
 namespace pst {
 	bool LangParserState::isSkipping() const { return skip_till_fallback; }
 
@@ -60,25 +62,22 @@ namespace pst {
 
 	void LangParserState::checkAllParsed() {
 		if (!isSkipping() && !empty()) {
-			log(base::makeBox<NotAllParsedError>(dia::SourcePosition{
+			logInt(base::makeBox<NotAllParsedError>(dia::SourcePosition{
 				getPosition(),
 				ctokens()[base::safeIntConv<i64>(ctokens().size()) - 1].getPosition().getEnd() }));
 		}
 	}
 
-	class NotAllParsedError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected additional tokens during parsing.";
+	class NotAllParsedError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "not_all_tokens_parsed_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NotAllParsedError(dia::SourcePosition pos): dia::Error(pos) {}
+		NotAllParsedError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
 }

@@ -35,7 +35,7 @@ namespace pst::expr {
 
 		state.parse(out).with(&out->value, Lower::parse, length - place - 1);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Assignment::dprint(std::ostream& out) const {

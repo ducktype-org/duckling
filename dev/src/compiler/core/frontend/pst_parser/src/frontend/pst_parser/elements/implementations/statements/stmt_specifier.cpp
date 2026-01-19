@@ -60,7 +60,7 @@ namespace pst {
 			}
 		}
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void StmtSpecifier::dprint(std::ostream& out) const {

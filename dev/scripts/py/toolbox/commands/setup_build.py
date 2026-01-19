@@ -7,6 +7,8 @@ from .helpers import (
 )
 from ..impl.helpers import (
     default_compiler_from_ctx,
+    default_linker_from_ctx,
+    default_gcov_from_ctx,
 )
 from click import Choice, option, command
 
@@ -48,24 +50,22 @@ from click import Choice, option, command
 @option(
     "-d",
     "--docs",
-    prompt="Build docs",
     help="Whether or not to build the docs.",
     type=bool,
-    default=True,
+    default=False,
     is_flag=True,
 )
-# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
 @option(
     "--gcov-version",
-    prompt="GCOV version",
-    help="GCOV version that will be passed to find_program in CMAKE",
-    default="gcov-14",
+    help="GCOV version that will be passed to find_program in CMAKE. If not specified, inferred from the C++ compiler.",
+    default=None,
+    cls=default_gcov_from_ctx(),
 )
 @option(
     "--linker",
-    prompt="Linker",
-    help="Specify the linker type to use",
-    default="default",
+    help="Specify the linker type to use. Auto-detects mold or lld if available.",
+    default=None,
+    cls=default_linker_from_ctx(),
 )
 @option(
     "-t",
@@ -80,7 +80,6 @@ from click import Choice, option, command
 )
 @option(
     "--shared_libs",
-    prompt="Build shared libraries",
     help="Whether to use shared or static libraries.",
     type=bool,
     default=False,
@@ -88,7 +87,6 @@ from click import Choice, option, command
 )
 @option(
     "--strip-symbol-information",
-    prompt="Strip all symbol information from binaries:",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,
     default=False,
@@ -96,7 +94,6 @@ from click import Choice, option, command
 )
 @option(
     "--disable-unity-compilation",
-    prompt="Disable unity compilation",
     help="Unity compilation (used only in parser) speeds up the build time significantly, but makes debugging harder (related linker errors lack information).",
     type=bool,
     default=False,
@@ -104,11 +101,15 @@ from click import Choice, option, command
 )
 @option(
     "--enable-link-time-optimization",
-    prompt="Enable link time optimization (LTO), requires a lot of resources",
-    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires a lot of resources.",
+    help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires Clang compiler and LLD linker (auto-configured).",
     type=bool,
     default=False,
     is_flag=True,
+)
+@option(
+    "--clang-for-builtins",
+    help="Path to a custom Clang compiler for generating builtins. If not specified, auto-detected based on LLVM version.",
+    default=None,
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""

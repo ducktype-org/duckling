@@ -32,6 +32,9 @@ namespace logger {
 		// DVM:
 		DVM,         ///< Logs related to the DVM component.
 		DVMDetails,  ///< Logs related to detailed logs of the DVM component.
+
+		// REPL:
+		REPL,  ///< Logs related to the REPL component.
 	};
 
 	/**

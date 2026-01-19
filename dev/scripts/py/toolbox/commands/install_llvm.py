@@ -67,11 +67,11 @@ from click import command, option, Choice
     type=bool,
 )
 def install_llvm(*args, **kwargs):
-    """Compiles LLVM from source with specified options.
+    """Compiles LLVM (including clang) from source with specified options.
 
     This command will download LLVM source code, build it with the specified options,
     and install it to the 'scripts/downloads/installed' directory.
-    Important! Is is advised to try to use the LLVM from your
-    distribution (e.g. apt install llvm-19) first.
+    Important! It is advised to try to use the LLVM and clang from your
+    distribution (e.g. apt install llvm-19 clang-19) first.
     """
     install_llvm_impl(*args, **kwargs)
