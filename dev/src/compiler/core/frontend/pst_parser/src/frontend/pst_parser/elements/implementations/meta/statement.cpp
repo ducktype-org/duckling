@@ -107,7 +107,7 @@ namespace pst {
 
 			exitFallback(state);
 
-			return out;
+			PST_RETURN out;
 		}
 
 		template<>
@@ -123,7 +123,7 @@ namespace pst {
 
 			exitFallback(state);
 
-			return out;
+			PST_RETURN out;
 		}
 
 		MBox<Stmt> chooseStmt(LangParserState& state) {
@@ -224,7 +224,7 @@ namespace pst {
 		// Add Attributes
 		if (out) out->addAttributes(state, std::move(attributes));
 
-		return out;
+		PST_RETURN out;
 	}
 
 	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {

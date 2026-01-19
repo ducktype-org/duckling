@@ -26,7 +26,7 @@ namespace pst {
 			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
 		);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Class::dprint(std::ostream& out) const {
