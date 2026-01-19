@@ -61,8 +61,8 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value };
 			}
 
-			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
-				throw base::NotYetImplemented("Evaluation of string values in compile time");
+			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {

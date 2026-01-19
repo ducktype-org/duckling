@@ -89,6 +89,7 @@ public:
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
+		TESTER_ADD_TEST(testErrorUnknownEscapeSequence);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -673,7 +674,7 @@ private:
 			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
 			);
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
+				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
 			);
 
 			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
@@ -2439,6 +2440,23 @@ private:
 			std::stringstream non_detailed_log;
 			ctx.logger.dumpLog(false, non_detailed_log);
 			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testErrorUnknownEscapeSequence() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/unknown_escape_sequence")));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto result = ctx.query<compiler::helios::QueryTopLevelEntities>(module_id);
+			assertTrue(
+				result->hasFailed(), "Query should have failed due to unknown escape sequence."
+			);
+			assertTrue(
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
+			);
+
+			ctx.int_logger.dumpLog(true, std::cerr);
 		});
 	}
 

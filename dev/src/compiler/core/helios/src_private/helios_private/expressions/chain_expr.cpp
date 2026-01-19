@@ -37,8 +37,7 @@
 namespace compiler::helios::code {
 
 	/**
-	 * @brief Error messages
-	 * This error message is used when there are both function symbols and non-function valid
+	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
 	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {

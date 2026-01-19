@@ -131,13 +131,11 @@ namespace compiler::helios::code {
 	 */
 	struct LiteralStringExpr final: public Expr {
 		/**
-		 * @note value is a StringValue, not a String.
-		 * Thus the character escaping sequences are kept in the value.
-		 * Ex. in "Hello world\n" new line character is kept as "\n" not as literal new line.
+		 * @note This value contains escape sequences, such as "\n", "\t", etc.
 		 */
-		tpc::StringValue value;
+		base::StrID value;
 
-		LiteralStringExpr(query::Context& ctx, tpc::StringValue value);
+		LiteralStringExpr(query::Context& ctx, base::StrID value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -147,7 +145,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralStringExpr(tsh::ExpressionType<> expression_type, tpc::StringValue value);
+		LiteralStringExpr(const tsh::ExpressionType<>& expression_type, base::StrID value);
 	};
 
 	/**
