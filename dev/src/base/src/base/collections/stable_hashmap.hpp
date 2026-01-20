@@ -97,11 +97,13 @@ namespace base {
 
 
 		void rehash() RELEASE_NOEXCEPT {
+			
+			// std::vector<MRef<Node>> previous_buckets = std::move(buckets);
+			// buckets.clear();
+			
+			// Generate new buckets: 
+			auto previous_bucket_size = buckets.size();
 			usize new_bucket_count = buckets.size() * 2;
-
-			std::vector<MRef<Node>> previous_buckets = std::move(buckets);
-
-			buckets.clear();
 			buckets.resize(new_bucket_count);
 			bucket_mask = new_bucket_count - 1;
 
@@ -112,16 +114,48 @@ namespace base {
 
 			u64 considered_nodes = 0;
 
-			for (const auto& bucket: previous_buckets) {
-				MRef<Node> current_node = bucket;
-				while (current_node) {
-					auto next_node = current_node->next;
-					
-					current_node->next = nullptr;
-					addToBucket(hashToBucket(current_node->cached_hash), current_node.toOpt().value());
+			for (usize bucket_index = 0; bucket_index < previous_bucket_size; bucket_index++) {
+				// Here, since bucket size should always be the power of two,
+				// we can be sure, that the new bucket index will always be one of:
+				// - old_index
+				// - index that was previously non existent (old_index + old_bucket_count)
+				// 
+				// For this reason, we can only walk through the old bucket list,
+				// and re-link nodes to the new buckets as needed.
 
-					current_node = next_node;
+				CORE_ASSERT(
+					bucket_index < buckets.size(),
+					"Bucket index out of bounds during rehash"
+				);
+
+				// This stored the pointer to the pointer that we will relink
+				Ref<MRef<Node>> next_node_pointer_pointer = &buckets[bucket_index];
+
+				// while next_node_pointer_pointer points to not null
+				while (*next_node_pointer_pointer) {
 					considered_nodes++;
+
+					auto node_hash = (*next_node_pointer_pointer)->cached_hash;
+					auto new_bucket_index = hashToBucket(node_hash);
+
+					Ref<MRef<Node>> next_node_ptr_ptr_in_the_list = &((*next_node_pointer_pointer)->next);
+
+					if (new_bucket_index == bucket_index) {
+						// Node stays in the same bucket
+						next_node_pointer_pointer = next_node_ptr_ptr_in_the_list;
+						continue;
+					}
+
+					// else relink:
+					Ref<Node> node_to_relink = next_node_pointer_pointer->toOpt().value(); // this must not be null here
+
+					// we "skip" the node to relink in the current bucket:
+					*next_node_pointer_pointer = node_to_relink->next;
+
+					node_to_relink->next = nullptr;
+
+					// link to the new bucket:
+					addToBucket(new_bucket_index, node_to_relink);
 				}
 			}
 
@@ -132,6 +166,35 @@ namespace base {
 				" vs ",
 				element_count
 			);
+
+			IF_BUILD_TYPE_DEV(
+				// Verify that all nodes are in correct buckets now:
+
+				u64 node_count = 0;
+				
+				for (usize bucket_index = 0; bucket_index < buckets.size(); bucket_index++) {
+					auto current_node = buckets[bucket_index];
+
+					while (current_node) {
+						node_count++;
+
+						auto node_hash = current_node->cached_hash;
+						auto correct_bucket_index = hashToBucket(node_hash);
+					
+						CORE_ASSERT(
+							correct_bucket_index == bucket_index,
+							"Node in wrong bucket after rehash"
+						);
+					
+						current_node = current_node->next;
+					}
+				}
+
+				CORE_ASSERT(
+					node_count == element_count,
+					"Node count mismatch after rehash"
+				);
+			)
 		}
 
 		/**

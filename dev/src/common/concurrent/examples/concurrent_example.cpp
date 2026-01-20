@@ -236,10 +236,10 @@ void do_worker(size_t seed, T& kv, const std::vector<std::string>& key_set, size
         auto &key = key_set[usize(dist_key(gen))];
         if (choice <= 30)
             kv.put(key, dist_value(gen));
-        // else if (choice <= 66)
-        //     (void) kv.get(key);
-        // else
-        //     (void) kv.remove(key);
+        else if (choice <= 66)
+            (void) kv.get(key);
+        else
+            (void) kv.remove(key);
     }
 }
 

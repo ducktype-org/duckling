@@ -8,6 +8,7 @@
 namespace concurrent {
 
 	constexpr static u64 SHARD_COUNT = 128;
+	static_assert((SHARD_COUNT & (SHARD_COUNT - 1)) == 0 && SHARD_COUNT > 0, "SHARD_COUNT must be the power of two and greater than zero");
 
 	/**
 	 * A sharded concurrent StableHashMap implementation.
