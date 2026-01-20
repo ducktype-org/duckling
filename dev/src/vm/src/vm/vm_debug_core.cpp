@@ -1,4 +1,4 @@
-#include "vm_debug.hpp"
+#include "vm_debug_core.hpp"
 
 #include <iostream>
 #include <string>
@@ -30,80 +30,30 @@ namespace {
 	/**
 	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
 	 */
-	vm::FunctionRunArguments createArgumentList(DuckVMDebug::OwnedArgumentList& arguments) {
+	vm::FunctionRunArguments createArgumentList(DuckVMDebugCore::OwnedArgumentList& arguments) {
 		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
 		     | std::ranges::to<vm::FunctionRunArguments>();
 	}
 
-	void freeArguments(const DuckVMDebug::OwnedArgumentList& arguments) {
+	void freeArguments(const DuckVMDebugCore::OwnedArgumentList& arguments) {
 		for (const auto& arg: arguments) arg->freeData();
 	}
 }
 
-void DuckVMDebug::run() {
-	std::cout << "++++++++++++++++++++++++\n"
-			     "+ BeRD has started +\n"
-				 "++++++++++++++++++++++++\n";
 
-	std::string line;
-	while (true) {
-		std::cout << "\n>>> ";
-		if (!std::getline(std::cin, line)) {
-			std::cout << "Exiting BeRD (EOF reached) or error.\n";
-			break;
-		}
-		std::string stripped_line = strip(line);
-		if (line.empty()) {
-			continue;
-		}
-		if (stripped_line == "exit" || stripped_line == "q" || stripped_line == "quit") {
-			std::cout << "Exiting BeRD\n";
-			break;
-		}
-		if (stripped_line == "s" || stripped_line == "step") {
-			step();
-		} else if (stripped_line == "status") {
-			getStatus();
-		} else if (stripped_line == "run") {
-			runVm();
-		} else if (stripped_line.starts_with("run ")) {
-			runFun(lstrip(lstrip(line).substr(3)));
-		} else if (stripped_line == "resume" || stripped_line == "continue" || stripped_line == "c") {
-			resume();
-		} else if (stripped_line == "pause") {
-			pause();
-		} else if (stripped_line == "stop") {
-			stop();
-		} else if (stripped_line == "print") {
-			// print();
-			throw base::NotYetImplemented("Printing not implemented yet.");
-		} else if (stripped_line == "exitval" || stripped_line == "g" || stripped_line == "getexitval") {
-			getExitValue();
-		} else if (stripped_line == "autoexitval on") {
-			auto_retrieve_exit_value = true;
-			std::cout << "Auto exit value retrieval enabled.\n";
-		} else if (stripped_line == "autoexitval off") {
-			auto_retrieve_exit_value = false;
-			std::cout << "Auto exit value retrieval disabled.\n";
-		} else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
-			help();
-		} else {
-			std::cout << "Invalid input: \"" << line << "\"\n";
-		}
-	}
-}
+DuckVMDebugCore DuckVMDebugCore::get(const fs::File& filepath, const std::vector<std::string>& args) { return {filepath, args}; }
 
-DuckVMDebug DuckVMDebug::get(const fs::File& filepath, const std::vector<std::string>& args) { return {filepath, args}; }
-
-DuckVMDebug::DuckVMDebug() {
+DuckVMDebugCore::DuckVMDebugCore() {
+	if (pipe(event_pipe) < 0) { throw std::runtime_error("Failed to create event pipe"); }
 	const auto process_pid_response = vm::api::spawn();
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
 	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args) : debug_args(args) {
-	const auto process_pid_response = vm::api::spawn();
+DuckVMDebugCore::DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args) : debug_args(args) {
+	if (pipe(event_pipe) < 0) { throw std::runtime_error("Failed to create event pipe"); }
+	const auto process_pid_response = vm::api::spawn(event_pipe[1]);
 	if (!process_pid_response.has_value()) throw BeRDFailedToSpawnProcessException();
 	pid = process_pid_response->pid;
 	if (!vm::api::loadFiles(pid, { filepath })) throw BeRDFailedToLoadFile();
@@ -111,7 +61,7 @@ DuckVMDebug::DuckVMDebug(const fs::File& filepath, const std::vector<std::string
 	if (!vm::api::attach(pid, std::cin, std::cout)) throw BeRDFailedToAttachStreamsException();
 }
 
-void DuckVMDebug::runVm() {
+void DuckVMDebugCore::runVm() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && 
 		(!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
@@ -134,7 +84,7 @@ void DuckVMDebug::runVm() {
 	}
 }
 
-void DuckVMDebug::runFun(const std::string& string) {
+void DuckVMDebugCore::runFun(const std::string& string) {
 	const u64 paren_open  = string.find('(');
 	const u64 paren_close = string.rfind(')');
 
@@ -198,7 +148,7 @@ void DuckVMDebug::runFun(const std::string& string) {
 	}
 }
 
-void DuckVMDebug::getExitValue() {
+void DuckVMDebugCore::getExitValue() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
 		std::cout << "No execution finished\n";
@@ -217,7 +167,7 @@ void DuckVMDebug::getExitValue() {
 	std::cout<< "Ret: " << exit_code_response.value()->readBytes<i64>() << "\n";
 }
 
-void DuckVMDebug::getStatus() const {
+void DuckVMDebugCore::getStatus() const {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value()) {
 		vm::api::ProcStatus status = response.value();
@@ -232,7 +182,7 @@ void DuckVMDebug::getStatus() const {
 	}
 }
 
-void DuckVMDebug::step() const {
+void DuckVMDebugCore::step() const {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
 		std::cout << "Not paused program - make sure you started it.\n";
@@ -244,7 +194,7 @@ void DuckVMDebug::step() const {
 	// std::cout << response.value().function_id << " " << response.value().instr_number << "\n";
 }
 
-void DuckVMDebug::resume() const {
+void DuckVMDebugCore::resume() const {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
 		std::cout << "Not paused program - make sure you started it.\n";
@@ -253,7 +203,7 @@ void DuckVMDebug::resume() const {
 	if (!vm::api::resume(pid)) throw BeRDFailedToResumeVM();
 }
 
-void DuckVMDebug::pause() const {
+void DuckVMDebugCore::pause() const {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !vm::api::isExecuting(response.value())) {
 		std::cout << "Not running program right now - make sure you started it.\n";
@@ -262,7 +212,7 @@ void DuckVMDebug::pause() const {
 	if (!vm::api::pause(pid)) throw BeRDFailedToPauseVM();
 }
 
-void DuckVMDebug::stop() const {
+void DuckVMDebugCore::stop() const {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value() && !vm::api::isExecuting(response.value())) {
 		std::cout << "Not running program right now - make sure you started it.\n";
@@ -271,17 +221,6 @@ void DuckVMDebug::stop() const {
 	if (!vm::api::stop(pid)) throw BeRDFailedToPauseVM();
 }
 
-void DuckVMDebug::help() const {
-	std::cout << "BeRD Debugger Commands:\n"
-			     "  s, step              		- Execute one step in the VM\n"
-			     "  run                  		- Run the VM until completion\n"
-			     "  run <func([args])>   		- Run a specific function with arguments\n"
-			     "  resume, continue, c		- Resume execution of the VM\n"
-			     "  pause               		- Pause execution of the VM\n"
-			     "  status              		- Get the current status of the VM\n"
-			     "  print <var>         		- Print the value of a variable (not implemented yet)\n"
-			     "  exit, q, quit       		- Exit the debugger\n"
-			     "  exitval, g, getexitval  	- Get the exit value of the function run in VM\n"
-				 "  autoexitval [on/off]       	- Enable or disable automatic retrieval of exit value after run\n"
-			     "  help, h, ?          		- Show this help message\n";
+void DuckVMDebugCore::setAutoRetrieveExitValue(bool value) { 
+	auto_retrieve_exit_value = value; 
 }

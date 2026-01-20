@@ -18,6 +18,13 @@ namespace vm::api {
 	 * process wasn't created.
 	 */
 	std::expected<ProcessInfo, ApiError> spawn();
+	
+	/**
+	 * @brief Create new process in DVM with debugger fd.
+	 * @return The response containing the PID of the newly created process or an API error if the
+	 * process wasn't created.
+	 */
+	std::expected<ProcessInfo, ApiError> spawn(int debugger_event_fd);
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

@@ -308,6 +308,13 @@ namespace vm {
 		  loaded_program(loader.getProgram()) {
 		vm_threads.emplace_back(*this);
 	}
+	VMProcess::VMProcess(const PID my_pid, const int debugger_event_fd):
+		  my_pid(my_pid),
+		  status(api::ExecutionNotStarted{}),
+		  debugger_event_fd(debugger_event_fd),
+		  loaded_program(loader.getProgram()) {
+		vm_threads.emplace_back(*this);
+	}
 
 	ProcIO& VMProcess::getIO() { return io; }
 
@@ -336,6 +343,10 @@ namespace vm {
 			status = new_status;
 		}
 		status_cv.notify_all();
+		if (debugger_event_fd != -1) {
+			uint8_t byte = 1; 
+			write(debugger_event_fd, &byte, 1); 
+		}
 	}
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {

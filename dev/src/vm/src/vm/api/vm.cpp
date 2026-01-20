@@ -56,6 +56,12 @@ namespace vm::api {
 		});
 	}
 
+	std::expected<ProcessInfo, ApiError> spawn(int debugger_event_fd) {
+		return Supervisor::get().newProcess(debugger_event_fd).transform([](const auto& x) {
+			return ProcessInfo{ x };
+		});
+	}
+
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))

@@ -3,40 +3,26 @@
 #include <vm/api/vm.hpp>
 
 /**
- * @file vm_debug.hpp
- * @brief Command line interface for the VM debugger.
+ * @file vm_debug_core.hpp
+ * @brief Core for the VM debugger.
  */
 
 
-class DuckVMDebug {
+class DuckVMDebugCore {
 public:
 	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
 
-	static DuckVMDebug get(const fs::File& filepath, const std::vector<std::string>& args = {});
+	static DuckVMDebugCore get(const fs::File& filepath, const std::vector<std::string>& args = {});
 
-	DuckVMDebug(DuckVMDebug&&)                 = delete;
-	DuckVMDebug& operator=(DuckVMDebug&&)      = delete;
-	DuckVMDebug(const DuckVMDebug&)            = delete;
-	DuckVMDebug& operator=(const DuckVMDebug&) = delete;
+	DuckVMDebugCore(DuckVMDebugCore&&)                 = delete;
+	DuckVMDebugCore& operator=(DuckVMDebugCore&&)      = delete;
+	DuckVMDebugCore(const DuckVMDebugCore&)            = delete;
+	DuckVMDebugCore& operator=(const DuckVMDebugCore&) = delete;
 
-	void run();
+	DuckVMDebugCore();
+	DuckVMDebugCore(const fs::File& filepath, const std::vector<std::string>& args = {});
 
-private:
-	struct CallInfo {
-		std::string       func_name;
-		OwnedArgumentList func_args;
-	};
-
-	vm::PID pid{};
-	u64     step_counter = 0;
-
-	std::vector<std::string> debug_args;
-
-	DuckVMDebug();
-	DuckVMDebug(const fs::File& filepath, const std::vector<std::string>& args = {});
-
-	bool joined = false;
-	bool auto_retrieve_exit_value = false;
+	[[nodiscard]] int getEventPipeReadFD() const { return event_pipe[0]; }
 
 	void runVm();
 	void runFun(const std::string& string);
@@ -45,23 +31,39 @@ private:
 	void step() const;
 	void resume() const;
 	void pause() const;
-	void help() const;
 	void stop() const;
+	void setAutoRetrieveExitValue(bool val);
+
+private:
+	struct CallInfo {
+		std::string       func_name;
+		OwnedArgumentList func_args;
+	};
+	int event_pipe[2]; // event_pipe[0] = read end, event_pipe[1] = write end
+
+	vm::PID pid{};
+	u64     step_counter = 0;
+
+	std::vector<std::string> debug_args;
+
+
+	bool joined = false;
+	bool auto_retrieve_exit_value = false;
 };
 
-class DuckVMDebugException: public base::Exception {
+class DuckVMDebugCoreException: public base::Exception {
 	std::string message;
 
 public:
-	DuckVMDebugException(std::string message): base::Exception(), message(std::move(message)) {}
+	DuckVMDebugCoreException(std::string message): base::Exception(), message(std::move(message)) {}
 
 	[[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 };
 
 #define DEFINE_DEBUG_EXCEPTION(err, msg)                     \
-struct err: public DuckVMDebugException {                \
+struct err: public DuckVMDebugCoreException {                \
 constexpr static std::string_view ERR_MSG = msg;    \
-err(): DuckVMDebugException(std::string(ERR_MSG)) {} \
+err(): DuckVMDebugCoreException(std::string(ERR_MSG)) {} \
 }
 
 DEFINE_DEBUG_EXCEPTION(BeRDFailedToSpawnProcessException, "Failed to spawn the VM process for BeRD.");
