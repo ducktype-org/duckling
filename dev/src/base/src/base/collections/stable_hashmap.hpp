@@ -43,7 +43,6 @@ namespace base {
 		};
 
 	private:
-
 		// concurrent::ConHashMap uses private components of this map
 		// for efficiency reasons, so we just friend it.
 		// This is not very good code design, but it is acceptable
@@ -51,11 +50,11 @@ namespace base {
 		template<class, class, class, u64>
 		friend class concurrent::ConHashMap;
 
-		/** 
+		/**
 		 * Initial number of buckets in the map.
-		 * This must be a power of two.	
+		 * This must be a power of two.
 		 */
-		static constexpr usize  INITIAL_BUCKETS = 16;
+		static constexpr usize INITIAL_BUCKETS = 16;
 
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
@@ -95,21 +94,15 @@ namespace base {
 			return res;
 		}
 
-
 		void rehash() RELEASE_NOEXCEPT {
-			
-			// std::vector<MRef<Node>> previous_buckets = std::move(buckets);
-			// buckets.clear();
-			
-			// Generate new buckets: 
-			auto previous_bucket_size = buckets.size();
-			usize new_bucket_count = buckets.size() * 2;
+			// Generate new buckets:
+			auto  previous_bucket_size = buckets.size();
+			usize new_bucket_count     = buckets.size() * 2;
 			buckets.resize(new_bucket_count);
 			bucket_mask = new_bucket_count - 1;
 
 			CORE_ASSERT(
-				(new_bucket_count & bucket_mask) == 0,
-				"Bucket count must be a power of two"
+				(new_bucket_count & bucket_mask) == 0, "Bucket count must be a power of two"
 			);
 
 			u64 considered_nodes = 0;
@@ -118,14 +111,13 @@ namespace base {
 				// Here, since bucket size should always be the power of two,
 				// we can be sure, that the new bucket index will always be one of:
 				// - old_index
-				// - index that was previously non existent (old_index + old_bucket_count)
-				// 
+				// - index that was previously non existent (i.e. old_index + old_bucket_count)
+				//
 				// For this reason, we can only walk through the old bucket list,
 				// and re-link nodes to the new buckets as needed.
 
 				CORE_ASSERT(
-					bucket_index < buckets.size(),
-					"Bucket index out of bounds during rehash"
+					bucket_index < buckets.size(), "Bucket index out of bounds during rehash"
 				);
 
 				// This stored the pointer to the pointer that we will relink
@@ -135,10 +127,11 @@ namespace base {
 				while (*next_node_pointer_pointer) {
 					considered_nodes++;
 
-					auto node_hash = (*next_node_pointer_pointer)->cached_hash;
+					auto node_hash        = (*next_node_pointer_pointer)->cached_hash;
 					auto new_bucket_index = hashToBucket(node_hash);
 
-					Ref<MRef<Node>> next_node_ptr_ptr_in_the_list = &((*next_node_pointer_pointer)->next);
+					Ref<MRef<Node>> next_node_ptr_ptr_in_the_list
+						= &((*next_node_pointer_pointer)->next);
 
 					if (new_bucket_index == bucket_index) {
 						// Node stays in the same bucket
@@ -147,7 +140,13 @@ namespace base {
 					}
 
 					// else relink:
-					Ref<Node> node_to_relink = next_node_pointer_pointer->toOpt().value(); // this must not be null here
+					CORE_ASSERT(
+						new_bucket_index >= previous_bucket_size,
+						"New bucket index must be in the new range"
+					);
+
+					Ref<Node> node_to_relink
+						= next_node_pointer_pointer->toOpt().value();  // this must not be null here
 
 					// we "skip" the node to relink in the current bucket:
 					*next_node_pointer_pointer = node_to_relink->next;
@@ -171,29 +170,25 @@ namespace base {
 				// Verify that all nodes are in correct buckets now:
 
 				u64 node_count = 0;
-				
+
 				for (usize bucket_index = 0; bucket_index < buckets.size(); bucket_index++) {
 					auto current_node = buckets[bucket_index];
 
 					while (current_node) {
 						node_count++;
 
-						auto node_hash = current_node->cached_hash;
+						auto node_hash            = current_node->cached_hash;
 						auto correct_bucket_index = hashToBucket(node_hash);
-					
+
 						CORE_ASSERT(
-							correct_bucket_index == bucket_index,
-							"Node in wrong bucket after rehash"
+							correct_bucket_index == bucket_index, "Node in wrong bucket after rehash"
 						);
-					
+
 						current_node = current_node->next;
 					}
 				}
 
-				CORE_ASSERT(
-					node_count == element_count,
-					"Node count mismatch after rehash"
-				);
+				CORE_ASSERT(node_count == element_count, "Node count mismatch after rehash");
 			)
 		}
 
@@ -324,7 +319,7 @@ namespace base {
 		}
 
 		bool eraseAssumingHash(const KEY_T& key, KeyHash key_hash) RELEASE_NOEXCEPT {
-			u64        bucket_index  = hashToBucket(key_hash);
+			u64 bucket_index = hashToBucket(key_hash);
 
 			MRef<Node> current_node  = buckets.at(bucket_index);
 			MRef<Node> previous_node = nullptr;
@@ -356,8 +351,7 @@ namespace base {
 	public:
 		StableHashMap(): bucket_mask(INITIAL_BUCKETS - 1), buckets(INITIAL_BUCKETS) {
 			CORE_ASSERT(
-				(INITIAL_BUCKETS & bucket_mask) == 0,
-				"INITIAL_BUCKETS must be a power of two"
+				(INITIAL_BUCKETS & bucket_mask) == 0, "INITIAL_BUCKETS must be a power of two"
 			);
 		}
 
@@ -610,7 +604,7 @@ namespace base {
 		}
 
 	private:
-	    /**
+		/**
 		 * Mask used to quickly calculate the bucket index from the hash.
 		 * It is always equal to (number_of_buckets - 1).
 		 */
