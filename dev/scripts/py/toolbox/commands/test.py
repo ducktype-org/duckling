@@ -8,8 +8,8 @@ from click import command, option, INT
 
 @command()
 @build_dir(
-    prompt="build directory with docs enabled",
-    help="The name of the build directory with enabled docs.",
+    prompt="build directory",
+    help="The name of the build directory.",
 )
 @option(
     "-m",
@@ -80,5 +80,9 @@ from click import command, option, INT
     default=False,
 )
 def test(*args, **kwargs):
-    """Performs tests of the code"""
+    """
+    Builds and performs tests of the code.
+    To run e.g. only VM's tests use `./toolbox.py test -L vm`.
+    For more details about each option see ctest documentation.
+    """
     test_impl(*args, **kwargs)
