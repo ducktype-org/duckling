@@ -5,6 +5,10 @@
 
 #include <base/collections/stable_hashmap.hpp>
 
+// to consider:
+// - __small_size_threshold
+
+
 namespace concurrent {
 
 	constexpr static u64 SHARD_COUNT = 128;
