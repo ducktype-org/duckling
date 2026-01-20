@@ -132,8 +132,8 @@ namespace compiler::helios::code {
 
 	}
 
-	base::Optional<compiler::numeric_value::NumericValue> fromExprValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprValue> literal_expr_locked
+	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
+		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked
 	) {
 		auto literal_expr = literal_expr_locked.unlock(ctx);
 		auto value        = literal_expr->getValue().value.strView();
@@ -156,16 +156,20 @@ namespace compiler::helios::code {
 
 		switch (type_specifier) {
 		case lang_def::NumericLiteralTypeSpecifier::NotATypeSpecifier: {
-			bool is_float = value.find_first_of(".eE") != std::string_view::npos;
+			bool is_float = value.find_first_of(".eE") != std::string_view::npos && base == 10;
 			return is_float ? deduceFloatType(value, position, ctx)
 			                : deduceIntegerType(value, base, position, ctx);
 		}
+		case lang_def::NumericLiteralTypeSpecifier::i8:
+			return parseSignedInteger<std::int8_t>(value, base, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::i16:
 			return parseSignedInteger<i16>(value, base, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::i32:
 			return parseSignedInteger<i32>(value, base, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::i64:
 			return parseSignedInteger<i64>(value, base, position, ctx);
+		case lang_def::NumericLiteralTypeSpecifier::u8:
+			return parseUnsignedInteger<std::uint8_t>(value, base, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::u16:
 			return parseUnsignedInteger<u16>(value, base, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::u32:
@@ -176,8 +180,6 @@ namespace compiler::helios::code {
 			return parseFloat<f32>(value, position, ctx);
 		case lang_def::NumericLiteralTypeSpecifier::f64:
 			return parseFloat<f64>(value, position, ctx);
-		case lang_def::NumericLiteralTypeSpecifier::i8:
-		case lang_def::NumericLiteralTypeSpecifier::u8:
 		case lang_def::NumericLiteralTypeSpecifier::f16:
 		case lang_def::NumericLiteralTypeSpecifier::f80:
 		case lang_def::NumericLiteralTypeSpecifier::u128:

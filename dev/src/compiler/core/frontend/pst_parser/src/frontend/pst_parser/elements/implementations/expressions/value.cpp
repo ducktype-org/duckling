@@ -1,9 +1,8 @@
-#include "../../hierarchy/expressions/value.hpp"
-
+#include "../../hierarchy/expressions/numeric_value.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> ExprValue::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> ExprNumericValue::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
@@ -15,7 +14,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprValue>(state.getPosition());
+		auto out = makeBox<ExprNumericValue>(state.getPosition());
 		state.parse(out).one(&out->value);
 
 		if (length > 1) {
@@ -26,7 +25,7 @@ namespace pst::expr {
 		PST_RETURN out;
 	}
 
-	void ExprValue::dprint(std::ostream& out) const {
+	void ExprNumericValue::dprint(std::ostream& out) const {
 		out << "{";
 
 		out << R"("number": ")" << value.value.str() << "\"";
@@ -37,12 +36,12 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& ExprValue::addElementDataToStableHash(HashAlg& partial_hash) const {
+	LangElement::HashAlg& ExprNumericValue::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, value);
 		return partial_hash;
 	}
 
-	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const {
-		visitor.visitExprValue(*this);
+	void ExprNumericValue::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitExprNumericValue(*this);
 	}
 }
