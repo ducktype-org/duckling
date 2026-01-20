@@ -87,8 +87,11 @@ namespace base {
 		[[nodiscard]]
 		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
 			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
-			auto res = hash % buckets.size();
-			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
+			CORE_ASSERT(bucket_mask + 1 == buckets.size(), "Bucket size mismatch");
+
+			auto res = hash & bucket_mask;
+
+			CORE_ASSERT(res < buckets.size(), "Bucket index out of bounds");
 			return res;
 		}
 
@@ -100,6 +103,12 @@ namespace base {
 
 			buckets.clear();
 			buckets.resize(new_bucket_count);
+			bucket_mask = new_bucket_count - 1;
+
+			CORE_ASSERT(
+				(new_bucket_count & bucket_mask) == 0,
+				"Bucket count must be a power of two"
+			);
 
 			u64 considered_nodes = 0;
 
@@ -282,16 +291,24 @@ namespace base {
 
 
 	public:
-		StableHashMap(): buckets(INITIAL_BUCKETS) {}
+		StableHashMap(): bucket_mask(INITIAL_BUCKETS - 1), buckets(INITIAL_BUCKETS) {
+			CORE_ASSERT(
+				(INITIAL_BUCKETS & bucket_mask) == 0,
+				"INITIAL_BUCKETS must be a power of two"
+			);
+		}
 
 		StableHashMap(const StableHashMap&) = delete;
 
 		StableHashMap(StableHashMap&& other) noexcept:
+			  bucket_mask(other.bucket_mask),
 			  buckets(std::move(other.buckets)),
 			  node_allocator(std::move(other.node_allocator)),
 			  element_count(other.element_count) {
 			other.element_count = 0;
 			other.buckets.resize(1, nullptr);
+			other.bucket_mask = 0;
+			CORE_ASSERT(bucket_mask + 1 == buckets.size(), "Bucket size mismatch after move");
 		}
 
 		~StableHashMap() {
@@ -530,6 +547,12 @@ namespace base {
 		}
 
 	private:
+	    /**
+		 * Mask used to quickly calculate the bucket index from the hash.
+		 * It is always equal to (number_of_buckets - 1).
+		 */
+		u64 bucket_mask;
+
 		/**
 		 * Array of bucket beginnings.
 		 */
