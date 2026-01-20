@@ -1,5 +1,6 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(TypeSystemHigher STATIC
+        src/typesystem/higher/queries/deductions.cpp
         src/typesystem/higher/queries/implicit_coercibility.cpp
         src/typesystem/higher/queries/types.cpp
         src/typesystem/higher/abstract_type.cpp
