@@ -199,6 +199,15 @@ def truncate_str(string, max_len=10, surround="`"):
     """
     return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"
 
+# this class overrides the click.Option class, so it can get ctx
+# and infer and set the default value from other options
+class PromptForCoverageIfBuildNotOptimised(click.Option):
+    def prompt_for_value(self, ctx):
+        build_type = ctx.params.get("type")
+        if build_type and "Opt" in build_type:
+            # skip prompt entirely
+            return False
+        return super().prompt_for_value(ctx)
 
 # this class overrides the click.Option class, so it can get ctx
 # and infer and set the default value from other options

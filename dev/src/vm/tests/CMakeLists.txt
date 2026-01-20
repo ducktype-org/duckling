@@ -4,7 +4,7 @@ include(CMakePrintHelpers)
 # enabled, it will run out of stack space.
 function(duck_disable_tc_when_not_opt test_name test_set)
         if (test_set STREQUAL "vm_tc")
-                if(NOT CMAKE_BUILD_TYPE MATCHES ".*Opt.*")
+                if(NOT BUILD_TYPE_IS_OPTIMISED)
                         set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
                 endif()
         endif()
