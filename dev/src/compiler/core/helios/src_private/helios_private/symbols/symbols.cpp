@@ -469,6 +469,11 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
+					auto str_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryStringType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
 
 					[[maybe_unused]]
 					auto unit_type
@@ -478,35 +483,41 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 6> function_data
-						= {
-							  {
-								  {
-									  base::StrID("builtin_input_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-								  },
-								  {
-									  base::StrID("builtin_output_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
-								  },
-								  {
-									  base::StrID("builtin_input_u64"),
-									  ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
-								  },
-								  {
-									  base::StrID("builtin_output_u64"),
-									  ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
-								  },
-								  {
-									  base::StrID("builtin_input_f64"),
-									  ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
-								  },
-								  {
-									  base::StrID("builtin_output_f64"),
-									  ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
-								  },
-							  },
-						  };
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
+						= { {
+							{
+								base::StrID("builtin_input_i64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
+							},
+							{
+								base::StrID("builtin_output_i64"),
+								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
+							},
+							{
+								base::StrID("builtin_input_u64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, u64_type }),
+							},
+							{
+								base::StrID("builtin_output_u64"),
+								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type }),
+							},
+							{
+								base::StrID("builtin_input_f64"),
+								ctx.query<tsh::QueryFunctionType>({ {}, f64_type }),
+							},
+							{
+								base::StrID("builtin_output_f64"),
+								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type }),
+							},
+							{
+								base::StrID("builtin_input_string"),
+								ctx.query<tsh::QueryFunctionType>({ {}, str_type }),
+							},
+							{
+								base::StrID("builtin_output_string"),
+								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type }),
+							},
+						} };
 
 					for (auto& [name, type]: function_data) {
 						auto sym_data
