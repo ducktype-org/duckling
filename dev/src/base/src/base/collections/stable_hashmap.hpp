@@ -51,7 +51,7 @@ namespace base {
 		template<class, class, class, u64>
 		friend class concurrent::ConHashMap;
 
-		static constexpr usize  INITIAL_BUCKETS = 64;
+		static constexpr usize  INITIAL_BUCKETS = 16;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 		/**
@@ -62,11 +62,14 @@ namespace base {
 		struct Node final {
 			MRef<Node> next;
 
+			KeyHash cached_hash;
+
 			KeyValuePair key_value;
 
 			template<class K = KEY_T, class D = DATA_T>
-			Node(MRef<Node> next, K&& key, D&& value) noexcept:
+			Node(MRef<Node> next, KeyHash hash, K&& key, D&& value) noexcept:
 				  next(next),
+				  cached_hash(hash),
 				  key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
 
@@ -84,10 +87,6 @@ namespace base {
 			return res;
 		}
 
-		[[nodiscard]]
-		u64 keyToBucket(const KEY_T& key) const {
-			return hashToBucket(keyHash(key));
-		}
 
 		void rehash() RELEASE_NOEXCEPT {
 			usize new_bucket_count = buckets.size() * 2;
@@ -115,8 +114,9 @@ namespace base {
 			buckets.clear();
 			buckets.resize(new_bucket_count);
 
+			// key to bucket here ~is~ was the problem!!!
 			for (const Ref<Node>& node: all_nodes)
-				addToBucket(keyToBucket(node->key_value.key), node);
+				addToBucket(hashToBucket(node->cached_hash), node);
 		}
 
 		/**
@@ -150,7 +150,7 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> putAssumingHash(K&& key, D&& value, KeyHash key_hash) RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value)
+				nullptr, key_hash, std::forward<K>(key), std::forward<D>(value)
 			);
 
 			// Note that this can in theory have some observable side effects:
@@ -175,7 +175,7 @@ namespace base {
 		MRef<KeyValuePair> maybePutAssumingHash(K&& key, D&& value, KeyHash key_hash)
 			RELEASE_NOEXCEPT {
 			auto new_node = node_allocator.allocateEmplace(
-				nullptr, std::forward<K>(key), std::forward<D>(value)
+				nullptr, key_hash, std::forward<K>(key), std::forward<D>(value)
 			);
 
 			if (this->containsAssumingHash(new_node->key_value.key, key_hash)) {
@@ -532,8 +532,9 @@ namespace base {
 		/**
 		 * Memory pool allocator for node storage.
 		 */
-		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
-		// SingleTypeNewDeleteAllocator<Node> node_allocator;
+		// SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+		// for now, to remove any allocator influence on performance:
+		SingleTypeNewDeleteAllocator<Node> node_allocator;
 
 		/**
 		 * Number of elements stored in the map.

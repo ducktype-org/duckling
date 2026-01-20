@@ -7,6 +7,8 @@
 
 namespace concurrent {
 
+	constexpr static u64 SHARD_COUNT = 128;
+
 	/**
 	 * A sharded concurrent StableHashMap implementation.
 	 * It is implemented as a simple wrapper around base::StableHashMap.
@@ -119,14 +121,14 @@ namespace concurrent {
 		 * @param value The data
 		 * @returns A reference to the inserted key-value pair.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
-			auto hash = keyHash(key);
+		// template<typename K = KEY_T, typename D = DATA_T>
+		// auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
+		// 	auto hash = keyHash(key);
 
-			WithShardLock lock(*this, hashToShard(hash));
+		// 	WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].putAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
-		}
+		// 	return shards[lock.shard_index].putAssumingHash(std::forward<K>(key), std::forward<D>(value), hash);
+		// }
 
 		/**
 		 * Inserts key->value into the container.
@@ -154,29 +156,29 @@ namespace concurrent {
 		 * 1. Inserts key->value into the container if key does not exist.
 		 * 2. Calls f with reference to the value associated with the key.
 		 */
-		template<typename K = KEY_T, typename D = DATA_T, typename Func>
-		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
-			auto hash = keyHash(key);
+		// template<typename K = KEY_T, typename D = DATA_T, typename Func>
+		// void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
+		// 	auto hash = keyHash(key);
 			
-			WithShardLock lock(*this, hashToShard(hash));
+		// 	WithShardLock lock(*this, hashToShard(hash));
 
-			shards[lock.shard_index].map.maybePutAssumingHash(key, value, hash);
+		// 	shards[lock.shard_index].map.maybePutAssumingHash(key, value, hash);
 
-			f(shards[lock.shard_index][key]);
-		}
+		// 	f(shards[lock.shard_index][key]);
+		// }
 
 		/**
 		 * Atomically retrieves a copy of the value associated with the given key.
 		 */
-		[[nodiscard]]
-		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			auto hash = keyHash(key);
+		// [[nodiscard]]
+		// DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+		// 	auto hash = keyHash(key);
 			
-			WithShardLock lock(*this, hashToShard(hash));
+		// 	WithShardLock lock(*this, hashToShard(hash));
 
-			DATA_T        value = *shards[lock.shard_index].map.atMaybeAssumingHash(key, hash).value();
-			return value;
-		}
+		// 	DATA_T        value = *shards[lock.shard_index].map.atMaybeAssumingHash(key, hash).value();
+		// 	return value;
+		// }
 
 		/**
 		 * Atomically retrieves a reference to the value associated with the given key.
@@ -193,23 +195,23 @@ namespace concurrent {
 			return shards[lock.shard_index].map.atMaybeAssumingHash(key, hash);
 		}
 
-		template<typename K = KEY_T, typename D = DATA_T>
-		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
-			auto hash = keyHash(key);
+		// template<typename K = KEY_T, typename D = DATA_T>
+		// void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
+		// 	auto hash = keyHash(key);
 			
-			WithShardLock lock(*this, hashToShard(hash));
+		// 	WithShardLock lock(*this, hashToShard(hash));
 
-			shards[lock.shard_index].map[key] = value;
-		}
+		// 	shards[lock.shard_index].map[key] = value;
+		// }
 
-		[[nodiscard]]
-		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-			auto hash = keyHash(key);
+		// [[nodiscard]]
+		// auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		// 	auto hash = keyHash(key);
 			
-			WithShardLock lock(*this, hashToShard(hash));
+		// 	WithShardLock lock(*this, hashToShard(hash));
 
-			return shards[lock.shard_index].map.containsAssumingHash(key, hash);
-		}
+		// 	return shards[lock.shard_index].map.containsAssumingHash(key, hash);
+		// }
 
 		[[nodiscard]]
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
@@ -221,10 +223,6 @@ namespace concurrent {
 		}
 
 	private:
-		/**
-		 * Number of shards used in the map.
-		 */
-		constexpr static u64 SHARD_COUNT = 128;
 
 
 		struct ShardData final {
@@ -236,11 +234,135 @@ namespace concurrent {
 		 * The shards of the map.
 		 */
 		std::vector<ShardData> shards;
+	};
 
-		// /**
-		//  * The locks protecting each shard.
-		//  */
-		// mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+
+
+
+	template<
+		typename KEY_T,
+		typename DATA_T,
+		typename HASH_T          = std::hash<KEY_T>>
+	class ConHashMapStd final {
+		
+		using HashMapType = std::unordered_map<KEY_T, DATA_T, HASH_T>;
+
+		using KeyHash = u64;
+		static KeyHash keyHash(const KEY_T& key) {
+			return static_cast<u64>(HASH_T{}(key));
+		}
+
+	
+		[[nodiscard]]
+		constexpr u64 hashToShard(KeyHash hash) const {
+			CORE_ASSERT(
+				SHARD_COUNT == shards.size() and SHARD_COUNT == shards.size(),
+				"Shard count mismatch"
+			);
+			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
+
+			u64 result = hash % SHARD_COUNT;
+			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
+
+			return result;
+		}
+
+
+
+		/**
+		 * RAII lock for a given shard.
+		 *
+		 * @note This can be changed to a reader-writer lock if needed in the future.
+		 * Each method must then specify whether it needs a read or write lock.
+		 */
+		struct WithShardLock final {
+			u64               shard_index;
+			const ConHashMapStd& self;
+
+			WithShardLock(const ConHashMapStd& self, u64 shard_index) noexcept:
+				  shard_index(shard_index),
+				  self(self) {
+				self.shards[shard_index].mutex.lock();
+			}
+
+			~WithShardLock() noexcept { self.shards[shard_index].mutex.unlock(); }
+		};
+
+
+	public:
+		ConHashMapStd(): shards(SHARD_COUNT) { }
+
+		ConHashMapStd(const ConHashMapStd&) = delete;
+		ConHashMapStd(ConHashMapStd&&)      = delete;
+
+		~ConHashMapStd() = default;
+
+
+
+		/**
+		 * Inserts key->value into the container.
+		 * Does nothing if key already exists.
+		 * @param key Data key
+		 * @param value The data
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
+			auto hash = keyHash(key);
+
+			WithShardLock lock(*this, hashToShard(hash));
+
+			shards.at(lock.shard_index).map.insert({
+				std::forward<K>(key),
+				std::forward<D>(value)
+			});
+		}
+
+	
+		/**
+		 * Atomically retrieves a reference to the value associated with the given key.
+		 *
+		 * @important Usage of the reference must be synchronized externally.
+		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
+		 */
+		[[nodiscard]]
+		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
+			auto it = shards[lock.shard_index].map.find(key);
+			
+			if (it != shards[lock.shard_index].map.end())
+				return base::Optional<Ref<DATA_T>>{Ref<DATA_T>{&it->second}};
+
+			return {};
+		}
+
+
+		[[nodiscard]]
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+			auto hash = keyHash(key);
+			
+			WithShardLock lock(*this, hashToShard(hash));
+
+			return shards[lock.shard_index].map.erase(key);
+		}
+
+	private:
+
+
+
+		struct ShardData final {
+			HashMapType map;
+			mutable concurrent::AtomicFlagSpinlock mutex;
+		};
+
+		/**
+		 * The shards of the map.
+		 */
+		std::vector<ShardData> shards;
 	};
 
 }

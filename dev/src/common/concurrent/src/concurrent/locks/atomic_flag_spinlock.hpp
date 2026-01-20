@@ -30,7 +30,7 @@ namespace concurrent {
 	 * improve it.
 	 */
 	class AtomicFlagSpinlock final {
-		std::atomic_flag atomic_flag{};
+		std::atomic_flag atomic_flag{false};
 
 
 	public:

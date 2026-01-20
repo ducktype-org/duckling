@@ -167,21 +167,24 @@ public:
     }
 };
 
-// class DuckStdMap {
-//     concurrent::StdConHashMap<std::string, int> m_map;
-// public:
-//     void put(const std::string &key, int value) {
-//         m_map.maybePut(key, value);
-//     }
+class DuckStdMap {
+    concurrent::ConHashMapStd<std::string, int> m_map;
+public:
+    void put(const std::string &key, int value) {
+        m_map.maybePut(key, value);
+    }
 
-//     std::optional<int> get(const std::string &key) {
-//         return m_map.atMaybe(key);
-//     }
+    std::optional<int> get(const std::string &key) {
+        auto v = m_map.atMaybe(key);
+        if (v.has_value())
+            return *v.value();
+        return {};
+    }
 
-//     bool remove(const std::string &key) {
-//         return m_map.erase(key);
-//     }
-// };
+    bool remove(const std::string &key) {
+        return m_map.erase(key);
+    }
+};
 
 class ThreadUnsafeMap {
     std::unordered_map<std::string, int> m_map;
@@ -231,12 +234,12 @@ void do_worker(size_t seed, T& kv, const std::vector<std::string>& key_set, size
     for (size_t i = 0; i < num_ops; ++i) {
         auto choice = dist_choice(gen);
         auto &key = key_set[usize(dist_key(gen))];
-        if (choice <= 2)
+        if (choice <= 30)
             kv.put(key, dist_value(gen));
-        else if (choice <= 66)
-            (void) kv.get(key);
-        else
-            (void) kv.remove(key);
+        // else if (choice <= 66)
+        //     (void) kv.get(key);
+        // else
+        //     (void) kv.remove(key);
     }
 }
 
@@ -288,8 +291,8 @@ int main(int argc, char** argv) {
         run<KVIntelTBB>(num_workers, num_keys, num_ops, key_set);
     else if (strcmp(argv[2], "DuckMap") == 0)
         run<DuckMap>(num_workers, num_keys, num_ops, key_set);
-    // else if (strcmp(argv[2], "StdDuckMap") == 0)
-    //     run<DuckStdMap>(num_workers, num_keys, num_ops, key_set);
+    else if (strcmp(argv[2], "DuckStdMap") == 0)
+        run<DuckStdMap>(num_workers, num_keys, num_ops, key_set);
     else if (strcmp(argv[2], "ThreadUnsafeMap") == 0)
         run<ThreadUnsafeMap>(num_workers, num_keys, num_ops, key_set);
     else if (strcmp(argv[2], "ThreadUnsafeDuckMap") == 0)
