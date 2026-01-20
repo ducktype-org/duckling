@@ -9,9 +9,11 @@
 
 #pragma once
 
-#include "../expression_type.hpp"
-#include "../mutability.hpp"
-#include "../symbol_type.hpp"
+#include "expression_type.hpp"
+#include "mutability.hpp"
+#include "symbol_type.hpp"
+
+#include <concepts>
 
 namespace compiler::tsh::deductions {
 	/**
@@ -28,8 +30,8 @@ namespace compiler::tsh::deductions {
 	 * @return The symbol type with the appropriate mutability applied.
 	 *
 	 * @example
-	 * // For a declaration like: let x = 42
-	 * // where expr_type is the type of `42` (an integral prvalue)
+	 * // For a declaration like: `let x = 42`
+	 * // where expr_type is the type of `42` (an integral temporary value)
 	 * // and expected_mutability is Immutable (from `let` keyword)
 	 * auto symbol_type = deduceSymbolTypeFromExpr(expr_type, Mutability::Immutable);
 	 */
