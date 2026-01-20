@@ -100,6 +100,12 @@ namespace {
 		case OpKind::cmpNeq:
 			return OpKind::cmpNeq;
 
+		case OpKind::fcmpEq:
+			return OpKind::fcmpEq;
+
+		case OpKind::fcmpNeq:
+			return OpKind::fcmpNeq;
+
 		case OpKind::cmpGt:
 			return OpKind::cmpLt;
 
