@@ -1,7 +1,6 @@
-# @TODO: #1571 Remove type specifiers from this file once casts exist in DVM.
 fun fib(n: i64) -> i64 = {
-   if (n < 2i64) { return n; }
-   return fib(n - 1i64) + fib(n - 2i64);
+   if (n < 2) { return n; }
+   return fib(n - 1) + fib(n - 2);
 }
 
 const FIB_10 = fib(10); # 55
