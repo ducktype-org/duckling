@@ -112,13 +112,13 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
-			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
-					// Error was logged in fromExprValue.
+					// Error was logged in fromExprNumericValue.
 					return;
 				}
 			}

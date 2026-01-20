@@ -13,6 +13,11 @@ Tests:
           String: "9\n9\n9\n18\n4\n"
   single-comparison: # Any type of comparison between two values.
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -21,6 +26,11 @@ Tests:
 
   comparison-chain:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -43,6 +53,11 @@ Tests:
 
   casts:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -51,6 +66,11 @@ Tests:
 
   floating_point_arithmetic:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -59,6 +79,11 @@ Tests:
 
   floating_point_comparisons:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -67,6 +92,11 @@ Tests:
 
   unsigned_integers:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -75,6 +105,11 @@ Tests:
 
   signed_integers:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -83,6 +118,11 @@ Tests:
 
   float_32:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
@@ -91,6 +131,11 @@ Tests:
   
   coercions:
     Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:

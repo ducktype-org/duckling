@@ -279,8 +279,6 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
-		std::vector<PrimitiveType> primitive_args;
-
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
@@ -291,7 +289,6 @@ class FunctionValidator {
 			variant_case(PrimitiveType, primitive_type) {                                  \
 				if (primitive_type.size != (BIT_COUNT / 8))                                \
 					throw InvalidArgumentSizeError(*local);                                \
-				primitive_args.push_back(primitive_type);                                  \
 			}                                                                              \
 			variant_default { throw InvalidArgumentTypeError(*local); }                    \
 		}                                                                                  \
@@ -305,7 +302,6 @@ class FunctionValidator {
 			variant_case(PrimitiveType, primitive_type) {                                       \
 				if (primitive_type.size != (BIT_COUNT / 8))                                     \
 					throw InvalidArgumentSizeError(*global);                                    \
-				primitive_args.push_back(primitive_type);                                       \
 			}                                                                                   \
 			variant_default { throw InvalidArgumentTypeError(*global); }                        \
 		}                                                                                       \
@@ -435,17 +431,48 @@ class FunctionValidator {
 				}
 			}
 		}
+	}
 
-		// We assert no cross-type operations on primitive types.
-		if (primitive_args.size() >= 2) {
-			bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
-				return x.size == primitive_args.front().size;
-			});
-			bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
-				return x.name == primitive_args.front().name;
-			});
-			if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
+	void validateStackPrimitiveArgumentsSameType(
+		const Instruction& instruction, const LocalStack& current_stack
+	) const {
+		std::vector<PrimitiveType> primitive_args;
+
+		for (auto arg: instruction.args()) {
+			variant_match(arg) {
+#define STACK_LOCAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                \
+	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {          \
+		CRef<TypeOfData> entry = current_stack.at(local->var_name);     \
+		variant_match(*entry) {                                         \
+			variant_case(PrimitiveType, primitive_type) {               \
+				primitive_args.push_back(primitive_type);               \
+			}                                                           \
+			variant_default { throw InvalidArgumentTypeError(*local); } \
+		}                                                               \
+	}
+#define GLOBAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                      \
+	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {              \
+		CRef<GlobalData> entry = globals.at(global->global_data_name);   \
+		auto             type  = tod_map.at(entry->type);                \
+		variant_match(*type) {                                           \
+			variant_case(PrimitiveType, primitive_type) {                \
+				primitive_args.push_back(primitive_type);                \
+			}                                                            \
+			variant_default { throw InvalidArgumentTypeError(*global); } \
+		}                                                                \
+	}
+				FOR_EACH(STACK_LOCAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
+				FOR_EACH(GLOBAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
+				variant_default { continue; }
+			}
 		}
+		bool sizes_match = std::ranges::all_of(primitive_args, [&](auto x) {
+			return x.size == primitive_args.front().size;
+		});
+		bool names_match = std::ranges::all_of(primitive_args, [&](auto x) {
+			return x.name == primitive_args.front().name;
+		});
+		if (sizes_match && !names_match) throw ArgumentMismatchError(instruction);
 	}
 
 	/**
@@ -491,11 +518,13 @@ class FunctionValidator {
 				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_l8_l8, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
 				    && function.signature.result_type.str == base::StrID("void"))
 					throw VoidRetValAssignmentError(instr);
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_l8_imm, instr) {
 				if (instr.dst.var_name == base::StrID("ret_val")
@@ -503,34 +532,70 @@ class FunctionValidator {
 					throw VoidRetValAssignmentError(instr);
 			}
 			instr_case_novalue(Op_mov_l16_imm) {}
-			instr_case_novalue(Op_mov_l16_l16) {}
-			instr_case_novalue(Op_cmov_l16_l16) {}
+			instr_case_novalue(Op_mov_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_cmov_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmov_l16_imm) {}
 			instr_case_novalue(Op_mov_l32_imm) {}
-			instr_case_novalue(Op_mov_l32_l32) {}
-			instr_case_novalue(Op_cmov_l32_l32) {}
+			instr_case_novalue(Op_mov_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_cmov_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmov_l32_imm) {}
 			instr_case_novalue(Op_mov_l64_imm) {}
-			instr_case_novalue(Op_mov_l64_l64) {}
-			instr_case_novalue(Op_cmov_l64_l64) {}
+			instr_case_novalue(Op_mov_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_cmov_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmov_l64_imm) {}
-			instr_case_novalue(Op_mov_g64_g64) {}
-			instr_case_novalue(Op_mov_g64_l64) {}
+			instr_case_novalue(Op_mov_g64_g64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_g64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mov_g64_imm) {}
-			instr_case_novalue(Op_mov_g32_g32) {}
-			instr_case_novalue(Op_mov_g32_l32) {}
+			instr_case_novalue(Op_mov_g32_g32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_g32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mov_g32_imm) {}
-			instr_case_novalue(Op_mov_g16_g16) {}
-			instr_case_novalue(Op_mov_g16_l16) {}
+			instr_case_novalue(Op_mov_g16_g16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_g16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mov_g16_imm) {}
-			instr_case_novalue(Op_mov_g8_g8) {}
-			instr_case_novalue(Op_mov_g8_l8) {}
+			instr_case_novalue(Op_mov_g8_g8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_g8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mov_g8_imm) {}
 			instr_case_novalue(Op_mov_gptr_lptr) {}
-			instr_case_novalue(Op_mov_l64_g64) {}
-			instr_case_novalue(Op_mov_l32_g32) {}
-			instr_case_novalue(Op_mov_l16_g16) {}
-			instr_case_novalue(Op_mov_l8_g8) {}
+			instr_case_novalue(Op_mov_l64_g64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_l32_g32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_l16_g16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case_novalue(Op_mov_l8_g8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mov_lptr_gptr) {}
 			instr_case_novalue(Op_mov_lptr_lptr) {}
 			instr_case_novalue(Op_mov_lopq_lopq) {}
@@ -539,223 +604,479 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_lopq_imm) {}
 			instr_case_novalue(Op_setNull_lptr) {}
 
-			instr_case_novalue(Op_add_l64_l64) {}
+			// Sign Extension
+			instr_case_novalue(Op_sext_l16_l8) {}
+			instr_case_novalue(Op_sext_l32_l8) {}
+			instr_case_novalue(Op_sext_l64_l8) {}
+			instr_case_novalue(Op_sext_l32_l16) {}
+			instr_case_novalue(Op_sext_l64_l16) {}
+			instr_case_novalue(Op_sext_l64_l32) {}
+
+			// Zero Extension
+			instr_case_novalue(Op_zext_l16_l8) {}
+			instr_case_novalue(Op_zext_l32_l8) {}
+			instr_case_novalue(Op_zext_l64_l8) {}
+			instr_case_novalue(Op_zext_l32_l16) {}
+			instr_case_novalue(Op_zext_l64_l16) {}
+			instr_case_novalue(Op_zext_l64_l32) {}
+
+			// Truncation
+			instr_case_novalue(Op_trunc_l8_l16) {}
+			instr_case_novalue(Op_trunc_l8_l32) {}
+			instr_case_novalue(Op_trunc_l8_l64) {}
+			instr_case_novalue(Op_trunc_l16_l32) {}
+			instr_case_novalue(Op_trunc_l16_l64) {}
+			instr_case_novalue(Op_trunc_l32_l64) {}
+
+			// Int to Float
+			instr_case_novalue(Op_sitofp_l32_l8) {}
+			instr_case_novalue(Op_uitofp_l32_l8) {}
+			instr_case_novalue(Op_sitofp_l32_l16) {}
+			instr_case_novalue(Op_uitofp_l32_l16) {}
+			instr_case_novalue(Op_sitofp_l32_l32) {}
+			instr_case_novalue(Op_uitofp_l32_l32) {}
+			instr_case_novalue(Op_sitofp_l32_l64) {}
+			instr_case_novalue(Op_uitofp_l32_l64) {}
+
+			instr_case_novalue(Op_sitofp_l64_l8) {}
+			instr_case_novalue(Op_uitofp_l64_l8) {}
+			instr_case_novalue(Op_sitofp_l64_l16) {}
+			instr_case_novalue(Op_uitofp_l64_l16) {}
+			instr_case_novalue(Op_sitofp_l64_l32) {}
+			instr_case_novalue(Op_uitofp_l64_l32) {}
+			instr_case_novalue(Op_sitofp_l64_l64) {}
+			instr_case_novalue(Op_uitofp_l64_l64) {}
+
+			// Float to Int
+			instr_case_novalue(Op_fptosi_l8_l32) {}
+			instr_case_novalue(Op_fptoui_l8_l32) {}
+			instr_case_novalue(Op_fptosi_l16_l32) {}
+			instr_case_novalue(Op_fptoui_l16_l32) {}
+			instr_case_novalue(Op_fptosi_l32_l32) {}
+			instr_case_novalue(Op_fptoui_l32_l32) {}
+			instr_case_novalue(Op_fptosi_l64_l32) {}
+			instr_case_novalue(Op_fptoui_l64_l32) {}
+
+			instr_case_novalue(Op_fptosi_l8_l64) {}
+			instr_case_novalue(Op_fptoui_l8_l64) {}
+			instr_case_novalue(Op_fptosi_l16_l64) {}
+			instr_case_novalue(Op_fptoui_l16_l64) {}
+			instr_case_novalue(Op_fptosi_l32_l64) {}
+			instr_case_novalue(Op_fptoui_l32_l64) {}
+			instr_case_novalue(Op_fptosi_l64_l64) {}
+			instr_case_novalue(Op_fptoui_l64_l64) {}
+
+			// Float to float
+			instr_case_novalue(Op_fpext_l64_l32) {}
+			instr_case_novalue(Op_fptrunc_l32_l64) {}
+
+			instr_case_novalue(Op_add_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_add_l64_imm) {}
-			instr_case_novalue(Op_sub_l64_l64) {}
+			instr_case_novalue(Op_sub_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_sub_l64_imm) {}
-			instr_case_novalue(Op_mul_l64_l64) {}
+			instr_case_novalue(Op_mul_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mul_l64_imm) {}
-			instr_case_novalue(Op_mod_l64_l64) {}
+			instr_case_novalue(Op_mod_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mod_l64_imm) {}
-			instr_case_novalue(Op_div_l64_l64) {}
+			instr_case_novalue(Op_div_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_div_l64_imm) {}
 			instr_case_novalue(Op_neg_l64) {}
 
-			instr_case_novalue(Op_add_l32_l32) {}
+			instr_case_novalue(Op_add_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_add_l32_imm) {}
-			instr_case_novalue(Op_sub_l32_l32) {}
+			instr_case_novalue(Op_sub_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_sub_l32_imm) {}
-			instr_case_novalue(Op_mul_l32_l32) {}
+			instr_case_novalue(Op_mul_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mul_l32_imm) {}
-			instr_case_novalue(Op_mod_l32_l32) {}
+			instr_case_novalue(Op_mod_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mod_l32_imm) {}
-			instr_case_novalue(Op_div_l32_l32) {}
+			instr_case_novalue(Op_div_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_div_l32_imm) {}
 			instr_case_novalue(Op_neg_l32) {}
 
-			instr_case_novalue(Op_add_l16_l16) {}
+			instr_case_novalue(Op_add_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_add_l16_imm) {}
-			instr_case_novalue(Op_sub_l16_l16) {}
+			instr_case_novalue(Op_sub_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_sub_l16_imm) {}
-			instr_case_novalue(Op_mul_l16_l16) {}
+			instr_case_novalue(Op_mul_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mul_l16_imm) {}
-			instr_case_novalue(Op_mod_l16_l16) {}
+			instr_case_novalue(Op_mod_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mod_l16_imm) {}
-			instr_case_novalue(Op_div_l16_l16) {}
+			instr_case_novalue(Op_div_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_div_l16_imm) {}
 			instr_case_novalue(Op_neg_l16) {}
 
-			instr_case_novalue(Op_add_l8_l8) {}
+			instr_case_novalue(Op_add_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_add_l8_imm) {}
-			instr_case_novalue(Op_sub_l8_l8) {}
+			instr_case_novalue(Op_sub_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_sub_l8_imm) {}
-			instr_case_novalue(Op_mul_l8_l8) {}
+			instr_case_novalue(Op_mul_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mul_l8_imm) {}
-			instr_case_novalue(Op_mod_l8_l8) {}
+			instr_case_novalue(Op_mod_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_mod_l8_imm) {}
-			instr_case_novalue(Op_div_l8_l8) {}
+			instr_case_novalue(Op_div_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_div_l8_imm) {}
 			instr_case_novalue(Op_neg_l8) {}
 
-			instr_case_novalue(Op_cmpEq_l64_l64) {}
+			instr_case_novalue(Op_cmpEq_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpEq_l64_imm) {}
-			instr_case_novalue(Op_cmpNeq_l64_l64) {}
+			instr_case_novalue(Op_cmpNeq_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpNeq_l64_imm) {}
-			instr_case_novalue(Op_cmpEq_l32_l32) {}
+			instr_case_novalue(Op_cmpEq_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpEq_l32_imm) {}
-			instr_case_novalue(Op_cmpNeq_l32_l32) {}
+			instr_case_novalue(Op_cmpNeq_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpNeq_l32_imm) {}
-			instr_case_novalue(Op_cmpEq_l16_l16) {}
+			instr_case_novalue(Op_cmpEq_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpEq_l16_imm) {}
-			instr_case_novalue(Op_cmpNeq_l16_l16) {}
+			instr_case_novalue(Op_cmpNeq_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpNeq_l16_imm) {}
-			instr_case_novalue(Op_cmpEq_l8_l8) {}
+			instr_case_novalue(Op_cmpEq_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpEq_l8_imm) {}
-			instr_case_novalue(Op_cmpNeq_l8_l8) {}
+			instr_case_novalue(Op_cmpNeq_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpNeq_l8_imm) {}
 
-			instr_case_novalue(Op_cmpGt_l64_l64) {}
+			instr_case_novalue(Op_cmpGt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGt_l64_imm) {}
-			instr_case_novalue(Op_cmpGe_l64_l64) {}
+			instr_case_novalue(Op_cmpGe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGe_l64_imm) {}
-			instr_case_novalue(Op_cmpGt_l32_l32) {}
+			instr_case_novalue(Op_cmpGt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGt_l32_imm) {}
-			instr_case_novalue(Op_cmpGe_l32_l32) {}
+			instr_case_novalue(Op_cmpGe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGe_l32_imm) {}
-			instr_case_novalue(Op_cmpGt_l16_l16) {}
+			instr_case_novalue(Op_cmpGt_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGt_l16_imm) {}
-			instr_case_novalue(Op_cmpGe_l16_l16) {}
+			instr_case_novalue(Op_cmpGe_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGe_l16_imm) {}
-			instr_case_novalue(Op_cmpGt_l8_l8) {}
+			instr_case_novalue(Op_cmpGt_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGt_l8_imm) {}
-			instr_case_novalue(Op_cmpGe_l8_l8) {}
+			instr_case_novalue(Op_cmpGe_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpGe_l8_imm) {}
 
-			instr_case_novalue(Op_ucmpGt_l64_l64) {}
+			instr_case_novalue(Op_ucmpGt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGt_l64_imm) {}
-			instr_case_novalue(Op_ucmpGe_l64_l64) {}
+			instr_case_novalue(Op_ucmpGe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGe_l64_imm) {}
-			instr_case_novalue(Op_ucmpGt_l32_l32) {}
+			instr_case_novalue(Op_ucmpGt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGt_l32_imm) {}
-			instr_case_novalue(Op_ucmpGe_l32_l32) {}
+			instr_case_novalue(Op_ucmpGe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGe_l32_imm) {}
-			instr_case_novalue(Op_ucmpGt_l16_l16) {}
+			instr_case_novalue(Op_ucmpGt_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGt_l16_imm) {}
-			instr_case_novalue(Op_ucmpGe_l16_l16) {}
+			instr_case_novalue(Op_ucmpGe_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGe_l16_imm) {}
-			instr_case_novalue(Op_ucmpGt_l8_l8) {}
+			instr_case_novalue(Op_ucmpGt_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGt_l8_imm) {}
-			instr_case_novalue(Op_ucmpGe_l8_l8) {}
+			instr_case_novalue(Op_ucmpGe_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpGe_l8_imm) {}
 
-			instr_case_novalue(Op_cmpLt_l64_l64) {}
+			instr_case_novalue(Op_cmpLt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLt_l64_imm) {}
-			instr_case_novalue(Op_cmpLe_l64_l64) {}
+			instr_case_novalue(Op_cmpLe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLe_l64_imm) {}
-			instr_case_novalue(Op_cmpLt_l32_l32) {}
+			instr_case_novalue(Op_cmpLt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLt_l32_imm) {}
-			instr_case_novalue(Op_cmpLe_l32_l32) {}
+			instr_case_novalue(Op_cmpLe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLe_l32_imm) {}
-			instr_case_novalue(Op_cmpLt_l16_l16) {}
+			instr_case_novalue(Op_cmpLt_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLt_l16_imm) {}
-			instr_case_novalue(Op_cmpLe_l16_l16) {}
+			instr_case_novalue(Op_cmpLe_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLe_l16_imm) {}
-			instr_case_novalue(Op_cmpLt_l8_l8) {}
+			instr_case_novalue(Op_cmpLt_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLt_l8_imm) {}
-			instr_case_novalue(Op_cmpLe_l8_l8) {}
+			instr_case_novalue(Op_cmpLe_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_cmpLe_l8_imm) {}
 
-			instr_case_novalue(Op_ucmpLt_l64_l64) {}
+			instr_case_novalue(Op_ucmpLt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLt_l64_imm) {}
-			instr_case_novalue(Op_ucmpLe_l64_l64) {}
+			instr_case_novalue(Op_ucmpLe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLe_l64_imm) {}
-			instr_case_novalue(Op_ucmpLt_l32_l32) {}
+			instr_case_novalue(Op_ucmpLt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLt_l32_imm) {}
-			instr_case_novalue(Op_ucmpLe_l32_l32) {}
+			instr_case_novalue(Op_ucmpLe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLe_l32_imm) {}
-			instr_case_novalue(Op_ucmpLt_l16_l16) {}
+			instr_case_novalue(Op_ucmpLt_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLt_l16_imm) {}
-			instr_case_novalue(Op_ucmpLe_l16_l16) {}
+			instr_case_novalue(Op_ucmpLe_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLe_l16_imm) {}
-			instr_case_novalue(Op_ucmpLt_l8_l8) {}
+			instr_case_novalue(Op_ucmpLt_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLt_l8_imm) {}
-			instr_case_novalue(Op_ucmpLe_l8_l8) {}
+			instr_case_novalue(Op_ucmpLe_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_ucmpLe_l8_imm) {}
 
-			instr_case_novalue(Op_fcmpEq_l64_l64) {}
+			instr_case_novalue(Op_fcmpEq_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpEq_l64_imm) {}
-			instr_case_novalue(Op_fcmpNeq_l64_l64) {}
+			instr_case_novalue(Op_fcmpNeq_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpNeq_l64_imm) {}
-			instr_case_novalue(Op_fcmpGt_l64_l64) {}
+			instr_case_novalue(Op_fcmpGt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpGt_l64_imm) {}
-			instr_case_novalue(Op_fcmpGe_l64_l64) {}
+			instr_case_novalue(Op_fcmpGe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpGe_l64_imm) {}
-			instr_case_novalue(Op_fcmpLt_l64_l64) {}
+			instr_case_novalue(Op_fcmpLt_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpLt_l64_imm) {}
-			instr_case_novalue(Op_fcmpLe_l64_l64) {}
+			instr_case_novalue(Op_fcmpLe_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpLe_l64_imm) {}
 
-			instr_case_novalue(Op_fcmpEq_l32_l32) {}
+			instr_case_novalue(Op_fcmpEq_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpEq_l32_imm) {}
-			instr_case_novalue(Op_fcmpNeq_l32_l32) {}
+			instr_case_novalue(Op_fcmpNeq_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpNeq_l32_imm) {}
-			instr_case_novalue(Op_fcmpGt_l32_l32) {}
+			instr_case_novalue(Op_fcmpGt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpGt_l32_imm) {}
-			instr_case_novalue(Op_fcmpGe_l32_l32) {}
+			instr_case_novalue(Op_fcmpGe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpGe_l32_imm) {}
-			instr_case_novalue(Op_fcmpLt_l32_l32) {}
+			instr_case_novalue(Op_fcmpLt_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpLt_l32_imm) {}
-			instr_case_novalue(Op_fcmpLe_l32_l32) {}
+			instr_case_novalue(Op_fcmpLe_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fcmpLe_l32_imm) {}
 
 			instr_case_novalue(Op_cmpNull_lptr) {}
 
-			instr_case_novalue(Op_fadd_l64_l64) {}
+			instr_case_novalue(Op_fadd_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fadd_l64_imm) {}
-			instr_case_novalue(Op_fadd_l32_l32) {}
+			instr_case_novalue(Op_fadd_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fadd_l32_imm) {}
 
-			instr_case_novalue(Op_fsub_l64_l64) {}
+			instr_case_novalue(Op_fsub_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fsub_l64_imm) {}
-			instr_case_novalue(Op_fsub_l32_l32) {}
+			instr_case_novalue(Op_fsub_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fsub_l32_imm) {}
 
-			instr_case_novalue(Op_fmul_l64_l64) {}
+			instr_case_novalue(Op_fmul_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fmul_l64_imm) {}
-			instr_case_novalue(Op_fmul_l32_l32) {}
+			instr_case_novalue(Op_fmul_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fmul_l32_imm) {}
 
-			instr_case_novalue(Op_fdiv_l64_l64) {}
+			instr_case_novalue(Op_fdiv_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fdiv_l64_imm) {}
-			instr_case_novalue(Op_fdiv_l32_l32) {}
+			instr_case_novalue(Op_fdiv_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_fdiv_l32_imm) {}
 
 			instr_case_novalue(Op_fneg_l64) {}
 			instr_case_novalue(Op_fneg_l32) {}
 
-			instr_case_novalue(Op_umul_l64_l64) {}
+			instr_case_novalue(Op_umul_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umul_l64_imm) {}
-			instr_case_novalue(Op_umod_l64_l64) {}
+			instr_case_novalue(Op_umod_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umod_l64_imm) {}
-			instr_case_novalue(Op_udiv_l64_l64) {}
+			instr_case_novalue(Op_udiv_l64_l64) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_udiv_l64_imm) {}
 
-			instr_case_novalue(Op_umul_l32_l32) {}
+			instr_case_novalue(Op_umul_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umul_l32_imm) {}
-			instr_case_novalue(Op_umod_l32_l32) {}
+			instr_case_novalue(Op_umod_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umod_l32_imm) {}
-			instr_case_novalue(Op_udiv_l32_l32) {}
+			instr_case_novalue(Op_udiv_l32_l32) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_udiv_l32_imm) {}
 
-			instr_case_novalue(Op_umul_l16_l16) {}
+			instr_case_novalue(Op_umul_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umul_l16_imm) {}
-			instr_case_novalue(Op_umod_l16_l16) {}
+			instr_case_novalue(Op_umod_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umod_l16_imm) {}
-			instr_case_novalue(Op_udiv_l16_l16) {}
+			instr_case_novalue(Op_udiv_l16_l16) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_udiv_l16_imm) {}
 
-			instr_case_novalue(Op_umul_l8_l8) {}
+			instr_case_novalue(Op_umul_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umul_l8_imm) {}
-			instr_case_novalue(Op_umod_l8_l8) {}
+			instr_case_novalue(Op_umod_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_umod_l8_imm) {}
-			instr_case_novalue(Op_udiv_l8_l8) {}
+			instr_case_novalue(Op_udiv_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_udiv_l8_imm) {}
 
-			instr_case_novalue(Op_log_and_l8_l8) {}
+			instr_case_novalue(Op_log_and_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_log_and_l8_imm) {}
-			instr_case_novalue(Op_log_or_l8_l8) {}
+			instr_case_novalue(Op_log_or_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_log_or_l8_imm) {}
-			instr_case_novalue(Op_log_xor_l8_l8) {}
+			instr_case_novalue(Op_log_xor_l8_l8) {
+				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			}
 			instr_case_novalue(Op_log_xor_l8_imm) {}
 			instr_case_novalue(Op_log_not_l8) {}
 
