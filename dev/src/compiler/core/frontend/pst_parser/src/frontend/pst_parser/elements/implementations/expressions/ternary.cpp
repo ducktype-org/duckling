@@ -78,7 +78,7 @@ namespace pst::expr {
 
 		state.parse(out).one(Keyword::Else);
 		state.parse(out).with(&out->if_false, Lower::parse, length - else_fwd - 1);
-		return out;
+		PST_RETURN out;
 	}
 
 	void Ternary::dprint(std::ostream& out) const {

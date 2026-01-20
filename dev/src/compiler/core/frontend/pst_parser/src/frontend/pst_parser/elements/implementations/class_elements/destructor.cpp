@@ -24,7 +24,7 @@ namespace pst {
 			.one(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Destructor::dprint(std::ostream& out) const {

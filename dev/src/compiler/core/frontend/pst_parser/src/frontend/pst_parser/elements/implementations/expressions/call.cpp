@@ -23,7 +23,7 @@ namespace pst::expr {
 		state.parse(out).one(&out->args);
 		state.parse(out).goUpAndSkip();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Call::dprint(std::ostream& out) const {

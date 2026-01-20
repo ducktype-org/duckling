@@ -15,7 +15,7 @@ namespace pst::expr {
 
 		state.parse(out).eatOne();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state, i64 length) {

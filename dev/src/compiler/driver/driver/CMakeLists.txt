@@ -16,6 +16,7 @@ add_library(Driver
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
 	src/driver/exit.cpp
+	src/driver/repl_utils/repl_dvm_helpers.cpp
 
 	${BUILTINS_EMBEDS}
 )

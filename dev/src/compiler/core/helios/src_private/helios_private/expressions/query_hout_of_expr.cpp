@@ -4,6 +4,7 @@
 #include "errors.hpp"
 #include "numeric_literals.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
@@ -23,6 +24,37 @@
 
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief This error message is used when there is a string literal with escape sequences
+		 * that failed to parse.
+		 */
+		class UnknownEscapeSequenceError final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "unknown_escape_sequence" };
+			}
+
+			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
+				dia_int::Metadata getMetadata() const final {
+					return { .template_type = "message",
+						     .type          = "docs",
+						     .family        = "expressions",
+						     .name          = "supported_escape_sequences" };
+				}
+
+			public:
+				SupportedEscapeSequencesDocs(): MessageBase() {}
+			};
+
+		public:
+			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+				  MessageWithCodeFragmentAndCause(source_position) {
+				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
+				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
+			}
+		};
 
 		/**
 		 * This is an effective implementation of QueryHoutOfExpr.
@@ -80,19 +112,31 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
-			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
-					// Error was logged in fromExprValue.
+					// Error was logged in fromExprNumericValue.
 					return;
 				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
-				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				variant_match(unescape_result) {
+					variant_case(base::UnescapedString, result) {
+						node = makeBox<LiteralStringExpr>(ctx, base::StrID(result.value));
+					}
+					variant_case(base::UnknownEscapeSequence, error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
+					variant_default CORE_UNREACHABLE();
+				}
 			}
 
 			/**

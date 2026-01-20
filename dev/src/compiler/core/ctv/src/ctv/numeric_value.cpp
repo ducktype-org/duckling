@@ -6,6 +6,7 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 namespace compiler::numeric_value {
@@ -71,6 +72,8 @@ namespace compiler::numeric_value {
 
 			if (int_type.getSignedness() == IntegralAbstractType::Signedness::Signed) {
 				switch (width) {
+				case 8:
+					return cast.template operator()<std::int8_t>();
 				case 16:
 					return cast.template operator()<i16>();
 				case 32:
@@ -82,6 +85,8 @@ namespace compiler::numeric_value {
 				}
 			} else {
 				switch (width) {
+				case 8:
+					return cast.template operator()<std::uint8_t>();
 				case 16:
 					return cast.template operator()<u16>();
 				case 32:

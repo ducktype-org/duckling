@@ -44,7 +44,7 @@ namespace pst::expr {
 			state.parse(out).one(op->type);
 			state.parse(out).with(&out->right, parseRecursive, op->rhs);
 
-			return out;
+			PST_RETURN out;
 		}
 	}
 
