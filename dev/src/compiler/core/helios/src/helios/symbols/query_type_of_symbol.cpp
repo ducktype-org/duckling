@@ -50,8 +50,8 @@ namespace compiler::helios {
 				if (type_ctv.hasFailed()) {
 					setFailed();
 				} else {
-					setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>()->withMutability(
-						expected_mutability
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromProvidedType(
+						type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(), expected_mutability
 					));
 				}
 			}
@@ -76,7 +76,7 @@ namespace compiler::helios {
 						return;
 					}
 					const auto& expr_type = parsed.valueOrThrow()->expression_type;
-					setTypeOfSymbol(tsh::deductions::deduceSymbolTypeFromExpr(
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
 						expr_type, tsh::Mutability::Immutable
 					));
 				} else {
@@ -102,7 +102,7 @@ namespace compiler::helios {
 
 					const auto& expr_type = parsed->expression_type;
 					setTypeOfSymbol(
-						tsh::deductions::deduceSymbolTypeFromExpr(expr_type, decl_mutability)
+						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
 					);
 				} else {
 					CORE_PANIC(

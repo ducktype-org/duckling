@@ -6,7 +6,15 @@
 #include "deductions.hpp"
 
 namespace compiler::tsh::deductions {
-	// Currently all deduction functions are header-only template functions.
-	// This file exists to maintain consistency with other TSH query modules
-	// and provide a place for future non-template implementations.
+	SymbolType<> declarationTypeFromInitializer(
+		const ExpressionType<>& expr_type, const Mutability expected_mutability
+	) {
+		return expr_type.getSymbolType().withMutability(expected_mutability);
+	}
+
+	SymbolType<> declarationTypeFromProvidedType(
+		const SymbolType<>& given_type, const Mutability expected_mutability
+	) {
+		return given_type.withMutability(expected_mutability);
+	}
 }
