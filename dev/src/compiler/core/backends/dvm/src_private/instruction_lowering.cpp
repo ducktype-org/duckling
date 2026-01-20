@@ -3,7 +3,6 @@
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "meta_operation_lowering.hpp"
-#include "program_lowering_context.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -29,6 +28,111 @@ namespace {
 
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
+	}
+
+	/**
+	 * @brief Helper used to evaluate comparison operations at compile-time.
+	 * @note Keep the same semantics as in the compiler's comp_time and VM.
+	 * @return The result of the comparison.
+	 */
+	bool compTimeEvaluateComparison(
+		OpKind                       operation,
+		const ctv::CompileTimeValue& lhs_value,
+		const ctv::CompileTimeValue& rhs_value
+	) {
+		auto lhs_numeric_opt = lhs_value.get<ctv::NumericValue>();
+		auto rhs_numeric_opt = rhs_value.get<ctv::NumericValue>();
+		CORE_ASSERT(
+			lhs_numeric_opt.has_value() && rhs_numeric_opt.has_value(),
+			"Comparison between non-numeric immediates is not supported"
+		);
+		auto lhs_numeric = lhs_numeric_opt.value();
+		auto rhs_numeric = rhs_numeric_opt.value();
+		auto result      = std::visit(
+            [&](auto&& lhs_num) -> bool {
+                using LhsNumT    = std::decay_t<decltype(lhs_num)>;
+                auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
+                CORE_ASSERT(
+                    rhs_num_opt.has_value(),
+                    "Comparison between different numeric types is not supported"
+                );
+                auto rhs_num = rhs_num_opt.value();
+                switch (operation) {
+                case OpKind::cmpEq:
+                case OpKind::fcmpEq:
+                    return lhs_num == rhs_num;
+                case OpKind::cmpNeq:
+                case OpKind::fcmpNeq:
+                    return lhs_num != rhs_num;
+                case OpKind::cmpGt:
+                case OpKind::fcmpGt:
+                case OpKind::ucmpGt:
+                    return lhs_num > rhs_num;
+                case OpKind::cmpGe:
+                case OpKind::fcmpGe:
+                case OpKind::ucmpGe:
+                    return lhs_num >= rhs_num;
+                case OpKind::cmpLt:
+                case OpKind::fcmpLt:
+                case OpKind::ucmpLt:
+                    return lhs_num < rhs_num;
+                case OpKind::cmpLe:
+                case OpKind::fcmpLe:
+                case OpKind::ucmpLe:
+                    return lhs_num <= rhs_num;
+                default:
+                    CORE_PANIC("Unhandled comparison operation");
+                }
+            },
+            lhs_numeric.getStorage()
+        );
+		return result;
+	}
+
+	/**
+	 * @brief Gets the opposite direction of a comparison operation, e.g `a < b` becomes `b > a`.
+	 */
+	OpKind getComparisonOppositeDirection(OpKind operation) {
+		switch (operation) {
+		case OpKind::cmpEq:
+			return OpKind::cmpEq;
+
+		case OpKind::cmpNeq:
+			return OpKind::cmpNeq;
+
+		case OpKind::cmpGt:
+			return OpKind::cmpLt;
+
+		case OpKind::cmpGe:
+			return OpKind::cmpLe;
+
+		case OpKind::ucmpGt:
+			return OpKind::ucmpLt;
+
+		case OpKind::ucmpGe:
+			return OpKind::ucmpLe;
+
+		case OpKind::cmpLt:
+			return OpKind::cmpGt;
+
+		case OpKind::cmpLe:
+			return OpKind::cmpGe;
+
+		case OpKind::fcmpGt:
+			return OpKind::fcmpLt;
+
+		case OpKind::fcmpGe:
+			return OpKind::fcmpLe;
+
+		case OpKind::fcmpLt:
+			return OpKind::fcmpGt;
+
+		case OpKind::fcmpLe:
+			return OpKind::fcmpGe;
+
+		default:
+			CORE_PANIC("Unhandled comparison operation");
+		}
 	}
 }
 
@@ -94,7 +198,7 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 			return;
 		}
 	}
-	const auto operation = std::get<SimpleOperation>(dvm_operation).op;
+	auto operation = std::get<SimpleOperation>(dvm_operation).op;
 
 
 	if (isComparison(operation)) {
@@ -104,30 +208,29 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		);
 		auto output = maybe_output.value();
 
-		// If the first argument is an immediate, we need to move it to a temporary local.
-		// @TODO: #1848 Idealy this could be removed after the DVM supports comparisons between
-		// immediates.
-		base::Optional<DVMLocal> temp_lhs;
-		if (args[0].is<DVMImmediate>()) {
-			auto vm_type = program_context.lowerAndKeepTslType(
-				lir_instruction.arguments[0].get<lir::LIRConstant>().layout
-			);
-			temp_lhs = pushTempLocal(vm_type, "cmp_lhs_tmp");
-			pushInstruction({ OpKind::mov, temp_lhs->asArgument(), args[0] });
-			args[0] = DVMValue(*temp_lhs);
+		if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
+			auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
+			auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
+			bool result    = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
+			if (result)
+				pushInstruction({ OpKind::mov, output, DVMImmediate(1).asArgument() });
+			else
+				pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+		} else {
+			if (args[0].is<DVMImmediate>()) {
+				// Swap arguments to place immediate on the right side.
+				std::swap(args[0], args[1]);
+				operation = getComparisonOppositeDirection(operation);
+			}
+			// This resolves e.g. `x = a CMP b;`
+			// by splitting it into three instructions:
+			// a CMP b;
+			// mov x, 0;
+			// cmov x, 1;
+			pushInstruction({ operation, args[0], args[1] });
+			pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+			pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
 		}
-
-		// This resolves e.g. `x = a CMP b;`
-		// by splitting it into three instructions:
-		// a CMP b;
-		// mov x, 0;
-		// cmov x, 1;
-		pushInstruction({ operation, args[0], args[1] });
-		pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
-		pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
-
-		// @TODO: #1848 same as above
-		if (temp_lhs) pushInstruction({ instructions::Op_deinit() });
 
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
