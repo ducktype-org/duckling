@@ -51,7 +51,12 @@ namespace base {
 		template<class, class, class, u64>
 		friend class concurrent::ConHashMap;
 
+		/** 
+		 * Initial number of buckets in the map.
+		 * This must be a power of two.	
+		 */
 		static constexpr usize  INITIAL_BUCKETS = 16;
+
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 		/**
@@ -91,32 +96,33 @@ namespace base {
 		void rehash() RELEASE_NOEXCEPT {
 			usize new_bucket_count = buckets.size() * 2;
 
-			std::vector<Ref<Node>> all_nodes;
-			all_nodes.reserve(element_count);
-
-			for (const auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
-				while (current_node) {
-					all_nodes.emplace_back(current_node.toOpt().value());
-					current_node           = current_node.toOpt().value()->next;
-					all_nodes.back()->next = nullptr;
-				}
-			}
-
-			CORE_ASSERT(
-				all_nodes.size() == element_count,
-				"Node count mismatch during rehash: ",
-				all_nodes.size(),
-				" vs ",
-				element_count
-			);
+			std::vector<MRef<Node>> previous_buckets = std::move(buckets);
 
 			buckets.clear();
 			buckets.resize(new_bucket_count);
 
-			// key to bucket here ~is~ was the problem!!!
-			for (const Ref<Node>& node: all_nodes)
-				addToBucket(hashToBucket(node->cached_hash), node);
+			u64 considered_nodes = 0;
+
+			for (const auto& bucket: previous_buckets) {
+				MRef<Node> current_node = bucket;
+				while (current_node) {
+					auto next_node = current_node->next;
+					
+					current_node->next = nullptr;
+					addToBucket(hashToBucket(current_node->cached_hash), current_node.toOpt().value());
+
+					current_node = next_node;
+					considered_nodes++;
+				}
+			}
+
+			CORE_ASSERT(
+				considered_nodes == element_count,
+				"Node count mismatch during rehash: ",
+				considered_nodes,
+				" vs ",
+				element_count
+			);
 		}
 
 		/**
