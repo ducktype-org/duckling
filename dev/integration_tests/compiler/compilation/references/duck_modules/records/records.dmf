@@ -34,10 +34,26 @@ fun records2() -> () = {
     builtin_output_i64(ref_wrapper.p.y);
 }
 
+fun point_by_ref(p: ref Point) -> () = {
+    p.x = 777;
+    p.y = 888;
+}
+
+fun records3() -> () = {
+    var my_point = Point(10, 20);
+    builtin_output_i64(my_point.x); # 10
+    builtin_output_i64(my_point.y); # 20
+
+    point_by_ref(refof my_point);
+
+    builtin_output_i64(my_point.x); # 777
+    builtin_output_i64(my_point.y); # 888
+}
 
 fun main() -> i64 = {
     records1();
     records2();
+    records3();
 
     return 0;
 }

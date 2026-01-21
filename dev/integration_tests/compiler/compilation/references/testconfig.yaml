@@ -26,7 +26,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n42\n123\n456\n0\n1\n"
+          String: "1\n42\n123\n456\n0\n1\n10\n20\n777\n888\n"
         ExitCode: 0
   overload_resolution:
     Cases: 

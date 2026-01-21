@@ -1,8 +1,11 @@
 #include "mir_structure.hpp"
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -217,6 +220,10 @@ namespace compiler::mir {
 
 	MIRPlace MIRPlace::withField(query::Context& ctx, const helios::SymID field) const {
 		MIRPlace result = *this;
+		CORE_ASSERT(
+			result.type.getRefKind() == tsh::ReferenceKind::Direct,
+			"Field access on ref/box type. A proper DerefExpr should be inserted in HOUT"
+		);
 		result.projection_chain.push_back(Projection::field(field));
 		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
 		return result;

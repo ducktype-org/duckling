@@ -4,6 +4,8 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
+#include "lir/lir_structure/lir_structure.hpp"
+
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -396,15 +398,17 @@ private:
 					if (arg.projection_chain.empty()) {
 						found_simple_address_of = true;
 					} else if (arg.projection_chain.size() == 2) {
-						bool pattern_ok = std::holds_alternative<DerefProjection>(
+						bool pattern_ok = std::holds_alternative<LIRPlace::DerefProjection>(
 											  arg.projection_chain[0].storage
 										  )
-						               && std::holds_alternative<FieldProjection>(
+						               && std::holds_alternative<LIRPlace::FieldProjection>(
 											  arg.projection_chain[1].storage
 									   );
 
 						if (pattern_ok) {
-							auto field = std::get<FieldProjection>(arg.projection_chain[1].storage);
+							auto field = std::get<LIRPlace::FieldProjection>(
+								arg.projection_chain[1].storage
+							);
 							if (helios::name(field.field_id) == base::StrID("x"))
 								found_address_of_with_deref = true;
 						}
@@ -417,15 +421,16 @@ private:
 					if (out_place.projection_chain.size() == 5) {
 						const auto& chain = out_place.projection_chain;
 
-						bool pattern_ok = std::holds_alternative<DerefProjection>(chain[0].storage)
-						               && std::holds_alternative<FieldProjection>(chain[1].storage)
-						               && std::holds_alternative<DerefProjection>(chain[2].storage)
-						               && std::holds_alternative<FieldProjection>(chain[3].storage)
-						               && std::holds_alternative<DerefProjection>(chain[4].storage);
+						bool pattern_ok
+							= std::holds_alternative<LIRPlace::DerefProjection>(chain[0].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[2].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[3].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[4].storage);
 
 						if (pattern_ok) {
-							auto f_p = std::get<FieldProjection>(chain[1].storage);
-							auto f_x = std::get<FieldProjection>(chain[3].storage);
+							auto f_p = std::get<LIRPlace::FieldProjection>(chain[1].storage);
+							auto f_x = std::get<LIRPlace::FieldProjection>(chain[3].storage);
 
 							if (helios::name(f_p.field_id) == base::StrID("p")
 							    && helios::name(f_x.field_id) == base::StrID("x")) {

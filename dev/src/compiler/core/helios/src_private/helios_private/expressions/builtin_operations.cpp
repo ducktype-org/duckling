@@ -142,9 +142,7 @@ namespace compiler::helios::code {
 			// If the operation operates on Direct values we need to perform a
 			// coercion from a ref / box type the direct type. This is needed to handle cases
 			// like: var x: i32 = -someReference.
-			bool is_value_op
-				= (op.value == "-" || op.value == lang_def::keywordToStr(lang_def::Keyword::Not));
-			if (is_value_op && source_type.getRefKind() != tsh::ReferenceKind::Direct) {
+			if (source_type.getRefKind() != tsh::ReferenceKind::Direct) {
 				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
 				auto res         = canCoerce(ctx, source_type, direct_type);
 				if (res.valueOrThrow().isValid())

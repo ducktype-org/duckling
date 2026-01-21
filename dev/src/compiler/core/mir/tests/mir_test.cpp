@@ -610,15 +610,16 @@ private:
 						}
 						// var r = refof p.x;
 						else if (arg.projection_chain.size() == 2) {
-							bool has_deref = std::holds_alternative<DerefProjection>(
+							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
 								arg.projection_chain[0].storage
 							);
-							bool has_field = std::holds_alternative<FieldProjection>(
+							bool has_field = std::holds_alternative<MIRPlace::FieldProjection>(
 								arg.projection_chain[1].storage
 							);
 							if (has_deref && has_field) {
-								auto field
-									= std::get<FieldProjection>(arg.projection_chain[1].storage);
+								auto field = std::get<MIRPlace::FieldProjection>(
+									arg.projection_chain[1].storage
+								);
 								if (compiler::helios::name(field.field_id) == base::StrID("x"))
 									found_address_of_with_deref = true;
 							}
@@ -631,15 +632,16 @@ private:
 						if (out_place.projection_chain.size() == 5) {
 							const auto& chain = out_place.projection_chain;
 							bool        pattern_ok
-								= std::holds_alternative<DerefProjection>(chain[0].storage)
-							   && std::holds_alternative<FieldProjection>(chain[1].storage)
-							   && std::holds_alternative<DerefProjection>(chain[2].storage)
-							   && std::holds_alternative<FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<DerefProjection>(chain[4].storage);
+								= std::holds_alternative<MIRPlace::DerefProjection>(chain[0].storage)
+							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
+							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
+							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
+							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
+							   );
 
 							if (pattern_ok) {
-								auto f_p = std::get<FieldProjection>(chain[1].storage);
-								auto f_x = std::get<FieldProjection>(chain[3].storage);
+								auto f_p = std::get<MIRPlace::FieldProjection>(chain[1].storage);
+								auto f_x = std::get<MIRPlace::FieldProjection>(chain[3].storage);
 
 								if (compiler::helios::name(f_p.field_id) == base::StrID("p")
 								    && compiler::helios::name(f_x.field_id) == base::StrID("x")) {
