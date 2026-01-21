@@ -4,7 +4,6 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include "lir/lir_structure/lir_structure.hpp"
 
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
