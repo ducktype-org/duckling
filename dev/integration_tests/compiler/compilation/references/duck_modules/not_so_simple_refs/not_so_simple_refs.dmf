@@ -15,8 +15,7 @@ fun simple_auto_deref() -> () = {
 
 fun value_swap(a: ref i64, b: ref i64) -> () = {
     let tmp: i64 = a;
-    let tmp2: i64 = b;
-    a = tmp2;
+    a = b;
     b = tmp;
 }
 

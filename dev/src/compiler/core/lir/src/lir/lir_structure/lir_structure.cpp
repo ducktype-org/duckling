@@ -99,13 +99,13 @@ namespace compiler::lir {
 			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
-		void printChain(const std::vector<Projection>& chain, std::ostream& loc_output) {
+		void printChain(const std::vector<LIRPlace::Projection>& chain, std::ostream& loc_output) {
 			for (const auto& proj: chain) {
 				variant_match(proj.storage) {
-					variant_case(FieldProjection, field) {
+					variant_case(LIRPlace::FieldProjection, field) {
 						loc_output << "." << name(field.field_id).strView();
 					}
-					variant_case_novalue(DerefProjection) { loc_output << ".*"; }
+					variant_case_novalue(LIRPlace::DerefProjection) { loc_output << ".*"; }
 				}
 			}
 		}

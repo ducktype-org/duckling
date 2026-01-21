@@ -1127,11 +1127,11 @@ private:
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
 		{
-			// Check if MakeReferenceExpr was inserted.
+			// Check if RefOfExpr was inserted.
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
 				*function.body->statements.at(1)
 			);
-			auto make_ref_expr = dynamic_cast<const compiler::helios::code::MakeReferenceExpr*>(
+			auto make_ref_expr = dynamic_cast<const compiler::helios::code::RefOfExpr*>(
 				var_stmt.initial_value->get()
 			);
 			ASSERT_TRUE(make_ref_expr != nullptr);

@@ -278,31 +278,6 @@ namespace compiler::mir {
 		}
 	};
 
-	struct DerefProjection {
-		bool operator==(const DerefProjection&) const = default;
-	};
-
-	struct FieldProjection {
-		helios::SymID field_id;
-		bool          operator==(const FieldProjection&) const = default;
-	};
-
-	/**
-	 * @brief A single projection which transforms a MIRPlace. This includes dereferencing, field
-	 * access and in the future index access for array elements.
-	 */
-	struct Projection {
-		std::variant<DerefProjection, FieldProjection> storage;
-
-		static Projection field(helios::SymID field_id) {
-			return Projection(FieldProjection(field_id));
-		}
-
-		static Projection deref() { return Projection(DerefProjection()); }
-
-		bool operator==(const Projection& other) const = default;
-	};
-
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
@@ -323,6 +298,31 @@ namespace compiler::mir {
 	 * chain would be empty.
 	 */
 	struct MIRPlace final {
+		struct DerefProjection {
+			bool operator==(const DerefProjection&) const = default;
+		};
+
+		struct FieldProjection {
+			helios::SymID field_id;
+			bool          operator==(const FieldProjection&) const = default;
+		};
+
+		/**
+		 * @brief A single projection which transforms a MIRPlace. This includes dereferencing,
+		 * field access and in the future index access for array elements.
+		 */
+		struct Projection {
+			std::variant<DerefProjection, FieldProjection> storage;
+
+			static Projection field(helios::SymID field_id) {
+				return Projection(FieldProjection(field_id));
+			}
+
+			static Projection deref() { return Projection(DerefProjection()); }
+
+			bool operator==(const Projection& other) const = default;
+		};
+
 		// MIR Locals are stored indirectly through MIRLocalRef because
 		// they are owned by MIR Function, unlike MIR Globals.
 		using BaseVariant = std::variant<MIRLocalRef, MIRGlobal>;

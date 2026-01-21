@@ -291,17 +291,19 @@ namespace compiler::lir {
 
 			[[nodiscard]]
 			LIRPlace getPlace(const mir::MIRPlace& mir_place) const {
-				std::vector<Projection> lir_projection_chain;
+				std::vector<LIRPlace::Projection> lir_projection_chain;
 				lir_projection_chain.reserve(mir_place.projection_chain.size());
 
 				// Map all MIR projections to LIR projections.
 				for (const auto& proj: mir_place.projection_chain) {
 					variant_match(proj.storage) {
-						variant_case(mir::FieldProjection, field) {
-							lir_projection_chain.push_back(Projection::field(field.field_id));
+						variant_case(mir::MIRPlace::FieldProjection, field) {
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::field(field.field_id)
+							);
 						}
-						variant_case_novalue(mir::DerefProjection) {
-							lir_projection_chain.push_back(Projection::deref());
+						variant_case_novalue(mir::MIRPlace::DerefProjection) {
+							lir_projection_chain.push_back(LIRPlace::Projection::deref());
 						}
 					}
 				}

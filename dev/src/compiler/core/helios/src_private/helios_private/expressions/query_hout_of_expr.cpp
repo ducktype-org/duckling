@@ -404,10 +404,10 @@ namespace compiler::helios::code {
 
 				auto inner = std::move(inner_res).valueOrThrow();
 				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
-					// @TODO: #1549 MakeReferenceExpr is inserted here naively without any checks.
+					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
-					node = makeBox<MakeReferenceExpr>(ctx, std::move(inner));
+					node = makeBox<RefOfExpr>(ctx, std::move(inner));
 					return;
 				}
 

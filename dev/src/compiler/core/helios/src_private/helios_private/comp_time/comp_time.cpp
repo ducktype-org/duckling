@@ -538,9 +538,7 @@ namespace compiler::helios {
 				result = sub_result.valueOrThrow();
 			}
 
-			void visitMakeReferenceExpr(const code::MakeReferenceExpr&) final {
-				result = CouldNotShortPath{};
-			}
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 

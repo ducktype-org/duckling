@@ -397,7 +397,7 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitMakeReferenceExpr(const hc::MakeReferenceExpr& expr) override {
+		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);

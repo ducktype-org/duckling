@@ -223,31 +223,6 @@ namespace compiler::lir {
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 	};
 
-	struct DerefProjection {
-		bool operator==(const DerefProjection&) const = default;
-	};
-
-	struct FieldProjection {
-		helios::SymID field_id;
-		bool          operator==(const FieldProjection&) const = default;
-	};
-
-	/**
-	 * @brief A single projection which transforms a LIRPlace. This includes dereferencing, field
-	 * access and in the future index access for array elements.
-	 */
-	struct Projection {
-		std::variant<DerefProjection, FieldProjection> storage;
-
-		static Projection field(helios::SymID field_id) {
-			return Projection(FieldProjection(field_id));
-		}
-
-		static Projection deref() { return Projection(DerefProjection()); }
-
-		bool operator==(const Projection& other) const = default;
-	};
-
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
@@ -268,6 +243,31 @@ namespace compiler::lir {
 	 * chain would be empty.
 	 */
 	struct LIRPlace final {
+		struct DerefProjection {
+			bool operator==(const DerefProjection&) const = default;
+		};
+
+		struct FieldProjection {
+			helios::SymID field_id;
+			bool          operator==(const FieldProjection&) const = default;
+		};
+
+		/**
+		 * @brief A single projection which transforms a LIRPlace. This includes dereferencing,
+		 * field access and in the future index access for array elements.
+		 */
+		struct Projection {
+			std::variant<DerefProjection, FieldProjection> storage;
+
+			static Projection field(helios::SymID field_id) {
+				return Projection(FieldProjection(field_id));
+			}
+
+			static Projection deref() { return Projection(DerefProjection()); }
+
+			bool operator==(const Projection& other) const = default;
+		};
+
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
 		/**
 		 * @brief Base of the LIR place, either local or global variable.

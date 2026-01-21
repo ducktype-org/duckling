@@ -665,7 +665,7 @@ namespace compiler::backend_llvm {
 
 			for (const auto& projection: place.projection_chain) {
 				variant_match(projection.storage) {
-					variant_case(lir::FieldProjection, field) {
+					variant_case(lir::LIRPlace::FieldProjection, field) {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 
@@ -678,7 +678,7 @@ namespace compiler::backend_llvm {
 						current_layout
 							= current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					}
-					variant_case_novalue(lir::DerefProjection) {
+					variant_case_novalue(lir::LIRPlace::DerefProjection) {
 						// If deref was encountered, we have to create a GEP which includes all the
 						// projections built up to this point and perform a load.
 						flush_gep();

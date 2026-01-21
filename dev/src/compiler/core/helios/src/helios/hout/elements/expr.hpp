@@ -529,10 +529,10 @@ namespace compiler::helios::code {
 	 * @brief Represents a reference creation expression (refof).
 	 * It takes an expression of type T and produces a value of type ref T.
 	 */
-	struct MakeReferenceExpr final: public Expr {
+	struct RefOfExpr final: public Expr {
 		Box<Expr> inner;
 
-		MakeReferenceExpr(query::Context& ctx, Box<Expr> inner);
+		RefOfExpr(query::Context& ctx, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -541,7 +541,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		MakeReferenceExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+		RefOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
 	/**
