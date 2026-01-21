@@ -17,6 +17,10 @@
 
 #include <base/types/ints.hpp>
 
+// test:
+// #include <mimalloc-new-delete.h>
+
+
 std::string random_string(int len) {
 	static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	static std::mt19937                       gen(123);

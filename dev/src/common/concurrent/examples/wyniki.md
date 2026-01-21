@@ -62,3 +62,12 @@ $  ./bin/concurrent_example 16 KVIntelTBB 1  1
 2.21428 2.14755 2.14821 2.15521 2.2116 2.22445 2.16251 2.18333 2.24082 ^C
 
 ```
+
+
+# allocators
+
+
+New delete is faster...
+
+1.2
+

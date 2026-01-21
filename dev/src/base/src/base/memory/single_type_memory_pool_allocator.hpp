@@ -120,6 +120,7 @@ namespace base {
 			Ref<StorageT> new_storage
 				= &buffers[allocation_idx.buffer_idx]->items[allocation_idx.item_idx];
 			new_storage->construct(std::forward<decltype(args)>(args)...);
+			
 			return new_storage->get();
 		}
 
@@ -160,10 +161,13 @@ namespace base {
 
 			// naively find the buffer and the index within the buffer:
 			for (u64 buffer_idx = 0; buffer_idx < buffers.size(); buffer_idx++) {
+				
 				StorageT* buffer_pointer_start = std::begin(buffers[buffer_idx]->items);
 				StorageT* buffer_pointer_end   = std::end(buffers[buffer_idx]->items);
+
 				if (std::less_equal<>{}(buffer_pointer_start, obj_storage.get())
 				    and std::less<>{}(obj_storage.get(), buffer_pointer_end)) {
+				
 					deallocation_idx.buffer_idx = buffer_idx;
 					deallocation_idx.item_idx
 						= static_cast<u64>(obj_storage.get() - buffer_pointer_start);

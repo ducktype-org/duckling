@@ -4,7 +4,9 @@ add_library(Concurrent
     src/concurrent/utils/nop_wait.cpp
 )
 
-make_module(Concurrent USES Base)
+find_package(mimalloc 2.2 REQUIRED)
+
+make_module(Concurrent USES Base mimalloc)
 
 duck_add_test(common concurrent_module tests/concurrent_module_test.cpp USES Concurrent Base)
 
