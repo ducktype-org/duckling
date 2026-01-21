@@ -13,8 +13,6 @@
 #include "mutability.hpp"
 #include "symbol_type.hpp"
 
-#include <concepts>
-
 namespace compiler::tsh::deductions {
 	/**
 	 * @brief Deduces the symbol type of a declaration from the expression type of its initialiser.
