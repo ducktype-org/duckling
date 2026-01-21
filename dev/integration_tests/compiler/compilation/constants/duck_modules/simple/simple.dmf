@@ -33,6 +33,8 @@ const AREA_F32 = PI_F32 * RAD_F32 * RAD_F32;
 
 const U16_MAX = 65535u16;
 const U16_OVERFLOW = U16_MAX + 1u16;
+const U8_MAX = 255u8;
+const U8_OVERFLOW = U8_MAX + 1u8;
 const I16_SOME_VALUE = -1000i16;
 const I16_CALC = I16_SOME_VALUE / 10i16;
 
@@ -50,6 +52,7 @@ fun main() -> i64 = {
 
     builtin_output_i64(i64(AREA_F32)); # 314
     builtin_output_i64(i64(U16_OVERFLOW)); # 0
+    builtin_output_i64(i64(U8_OVERFLOW)); # 0
     builtin_output_i64(i64(I16_CALC)); # -100
 
     return 0i64;
