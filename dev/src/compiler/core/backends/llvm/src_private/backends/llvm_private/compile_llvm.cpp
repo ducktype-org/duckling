@@ -24,7 +24,7 @@ LLVM_INCLUDE_END()
 #include <logger/logger.hpp>
 
 namespace compiler::backend_llvm {
-	using LLVMOptimizationLevel = options::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
+	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 
 	/**
 	 * @brief Convert our OptimizationLevel enum to LLVM's OptimizationLevel for IR generation.

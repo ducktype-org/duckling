@@ -95,7 +95,7 @@ namespace compiler::driver {
 			if (inc_options.enabled) loadPreviousQueryGraphIfExists();
 		}
 
-		void handleBackendOptions(const options::BackendOptions& backend_options) {
+		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
 		}
 	}

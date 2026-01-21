@@ -54,7 +54,7 @@ public:
 					.artifacts_path = artifacts_path,
 				},
 				.backend_options = {
-					.llvm_backend = compiler::options::BackendOptions::LLVMBackend{},
+					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
 				.incremental           = {}

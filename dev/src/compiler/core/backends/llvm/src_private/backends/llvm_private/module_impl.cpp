@@ -17,7 +17,7 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 namespace compiler::backend_llvm {
-	using LLVMOptimizationLevel = options::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
+	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 
 	ModuleImpl::ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {
 		const std::string target_triple = llvm::sys::getDefaultTargetTriple();

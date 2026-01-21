@@ -1,10 +1,7 @@
 #pragma once
 
-#include <global_state/options.hpp>
+#include <global_state/backend_options.hpp>
 #include <linker/link.hpp>
-
-#include <base/collections/optional.hpp>
-#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
@@ -13,13 +10,6 @@
 #include <variant>
 
 namespace compiler::driver {
-	// @note: a lot of code in this file is left as hypothetical comments
-	// as it is unused for now, but sets a vision for the code structure
-	// in the future.
-	// I'm not 100% sure if this place is the best place for this code,
-	// as in the end those options should be accessible (via global_state module of other things)
-	// in the core-compiler, and we don't want to have a dependency on the driver module there.
-
 	/**
 	 * Definition of options that are used by the compiler to control its behavior.
 	 */
@@ -103,7 +93,7 @@ namespace compiler::driver {
 			options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
-			options::BackendOptions           backend_options;
+			global_state::BackendOptions           backend_options;
 			options_types::DebugOptions       debug_options;
 			options_types::IncrementalOptions incremental;
 		};
