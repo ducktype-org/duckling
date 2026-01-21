@@ -66,22 +66,12 @@ void DuckVMDebugCore::runVm() {
 	if (response.has_value() && 
 		(!std::holds_alternative<vm::api::ExecutionNotStarted>(response.value())
 		 && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value()))) {
-		std::cout << "You have to finish execution and get exit value.\n";
+		std::cout << "You have to finish execution to run VM.\n";
 		getStatus();
 		return;
 	}
-	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value()) && joined == false) {
-		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
-		joined = true;
-	}	
+
 	if (!vm::api::run(pid, debug_args)) throw std::runtime_error("Failed to run VM");
-	joined = false;
-	
-	if (auto_retrieve_exit_value) {
-		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
-		joined = true;
-		getExitValue();
-	}
 }
 
 void DuckVMDebugCore::runFun(const std::string& string) {
@@ -133,39 +123,10 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 		getStatus();
 		return;
 	}
-	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value()) && joined == false) {
-		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
-		joined = true;
-	}	
 	if (!vm::api::runFunction(pid, function_name, createArgumentList(arguments)))
 		throw BeRDFailedToRunCodeException();
-	joined = false;
-	if (auto_retrieve_exit_value) {
-		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
-		joined = true;
-		getExitValue();
-		freeArguments(arguments);
-	}
 }
 
-void DuckVMDebugCore::getExitValue() {
-	auto response = vm::api::getExecutionStatus(pid);
-	if (response.has_value() && !std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
-		std::cout << "No execution finished\n";
-		getStatus();
-		return;
-	}
-	if (!joined) {
-		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
-		joined = true;
-	}
-	const auto exit_code_response = vm::api::getExitValue(pid);
-	if (!exit_code_response.has_value()) throw BeRDEmptyExitCodeException();
-
-	if (exit_code_response.value()->type->getName() != base::StrID("i64"))
-		throw BeRDWrongTypeException();
-	std::cout<< "Ret: " << exit_code_response.value()->readBytes<i64>() << "\n";
-}
 
 void DuckVMDebugCore::getStatus() const {
 	auto response = vm::api::getExecutionStatus(pid);
@@ -176,6 +137,17 @@ void DuckVMDebugCore::getStatus() const {
 			using T = std::decay_t<decltype(arg)>;
 			std::cout << TypeParseTraits<T>::NAME.data() << "\n";
 		}, status);
+
+		if(std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+			auto exitval = std::get<vm::api::ExecutionCompleted>(response.value()).exit_value;
+
+			if (exitval->type->getName() != base::StrID("i64"))
+				throw BeRDWrongTypeException();
+			
+			std::cout<< "Ret: " << exitval->readBytes<i64>() << "\n";
+			
+			if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+		}
 	} else {
 		const vm::api::ApiError& err = response.error();
 		std::cout << "error: " << vm::api::errorToString(err) << "\n";
@@ -189,9 +161,6 @@ void DuckVMDebugCore::step() const {
 		return;
 	}
 	if (!vm::api::step(pid)) throw BeRDFailedToMakeStep();
-	// auto response = vm::api::getCurrentPosition(pid);
-	// if (!response.has_value()) throw -1;
-	// std::cout << response.value().function_id << " " << response.value().instr_number << "\n";
 }
 
 void DuckVMDebugCore::resume() const {
@@ -219,8 +188,4 @@ void DuckVMDebugCore::stop() const {
 		return;
 	}
 	if (!vm::api::stop(pid)) throw BeRDFailedToPauseVM();
-}
-
-void DuckVMDebugCore::setAutoRetrieveExitValue(bool value) { 
-	auto_retrieve_exit_value = value; 
 }

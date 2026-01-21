@@ -24,7 +24,7 @@ namespace {
 
 void DuckVMDebugCli::run() {
 	std::cout << "++++++++++++++++++++++++\n"
-			     "+ BeRD has started +\n"
+			     "+   BeRD has started   +\n"
 				 "++++++++++++++++++++++++\n";
 
 	std::string line;
@@ -74,8 +74,6 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 	}
 	if (stripped_line == "s" || stripped_line == "step") {
 		core.step();
-	} else if (stripped_line == "status") {
-		core.getStatus();
 	} else if (stripped_line == "run") {
 		core.runVm();
 	} else if (stripped_line.starts_with("run ")) {
@@ -86,17 +84,6 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 		core.pause();
 	} else if (stripped_line == "stop") {
 		core.stop();
-	} else if (stripped_line == "print") {
-		// print();
-		throw base::NotYetImplemented("Printing not implemented yet.");
-	} else if (stripped_line == "exitval" || stripped_line == "g" || stripped_line == "getexitval") {
-		core.getExitValue();
-	} else if (stripped_line == "autoexitval on") {
-		core.setAutoRetrieveExitValue(true);
-		std::cout << "Auto exit value retrieval enabled.\n";
-	} else if (stripped_line == "autoexitval off") {
-		core.setAutoRetrieveExitValue(false);
-		std::cout << "Auto exit value retrieval disabled.\n";
 	} else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
 		help();
 	} else {
@@ -120,10 +107,6 @@ void DuckVMDebugCli::help() const {
 			     "  run <func([args])>   		- Run a specific function with arguments\n"
 			     "  resume, continue, c		- Resume execution of the VM\n"
 			     "  pause               		- Pause execution of the VM\n"
-			     "  status              		- Get the current status of the VM\n"
-			     "  print <var>         		- Print the value of a variable (not implemented yet)\n"
 			     "  exit, q, quit       		- Exit the debugger\n"
-			     "  exitval, g, getexitval  	- Get the exit value of the function run in VM\n"
-				 "  autoexitval [on/off]       	- Enable or disable automatic retrieval of exit value after run\n"
 			     "  help, h, ?          		- Show this help message\n";
 }

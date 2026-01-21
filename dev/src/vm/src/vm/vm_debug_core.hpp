@@ -26,13 +26,11 @@ public:
 
 	void runVm();
 	void runFun(const std::string& string);
-	void getExitValue();
 	void getStatus() const;
 	void step() const;
 	void resume() const;
 	void pause() const;
 	void stop() const;
-	void setAutoRetrieveExitValue(bool val);
 
 private:
 	struct CallInfo {
@@ -45,10 +43,6 @@ private:
 	u64     step_counter = 0;
 
 	std::vector<std::string> debug_args;
-
-
-	bool joined = false;
-	bool auto_retrieve_exit_value = false;
 };
 
 class DuckVMDebugCoreException: public base::Exception {
