@@ -25,12 +25,22 @@ namespace compiler::backend_vm::internal {
 		bool           operator==(const MetaOperation& other) const = default;
 	};
 
-	using DVMOperation = std::variant<SimpleOperation, MetaOperation>;
+	/**
+	 * @brief Represents a cast operation.
+	 * Based on the cast parameters (source type and dest type)
+	 * different DVM operations are chosen.
+	 */
+	struct CastOperation {
+		lir::CastParameters cast_params;
+	};
+
+	using DVMOperation = std::variant<SimpleOperation, MetaOperation, CastOperation>;
+
 
 	/**
 	 * @brief Converts a LIR operation to DVM operation.
 	 */
-	[[nodiscard]] DVMOperation lirOpToDVMOperation(lir::Operation op);
+	[[nodiscard]] DVMOperation lirInstrToDVMOperation(const lir::Instruction& instr);
 
 
 }

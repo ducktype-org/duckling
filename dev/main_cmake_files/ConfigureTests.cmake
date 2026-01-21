@@ -4,6 +4,10 @@ function(add_to_coverage target)
 	endif()
 endfunction()
 
+if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
+	message(WARNING "Chosen build type expects to be optimised, but coverage is enabled, which disables optimisations.")
+endif()
+
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 
