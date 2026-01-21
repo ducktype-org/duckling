@@ -545,8 +545,21 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents a dereference node inserted when a value of type ref T is coerced to T or
-	 * when it's explicitly stated by the user using the dereference operator.
+	 * @brief Represents a dereference operation on a reference/box type.
+	 *
+	 * This node is inserted in three cases:
+	 * - When a value of type `ref T` is coerced to `T`,
+	 * - When `ref T`/`box T` appears on the left-hand side of the assignment operator.
+	 * - During field access on a `ref T` / `box T` type.
+	 *
+	 * - In a context that requires a value, such as the right-hand side of an
+	 * assignment (`let x: T = ref_val`), this expression resolves to the value
+	 * pointed to by the reference and translates to a `load` instruction in LLVM.
+	 *
+	 * - In a context that requires a memory location, such as the left-hand side
+	 * of an assignment (`ref_val = new_t;`), this expression resolves to the memory
+	 * location itself, allowing it to be written to. This provides the address for a `store`
+	 * instruction in LLVM.
 	 */
 	struct DerefExpr final: public Expr {
 		Box<Expr> inner;
