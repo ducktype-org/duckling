@@ -11,11 +11,11 @@
 
 namespace concurrent {
 
-	constexpr static u64 SHARD_COUNT = 128;
-	static_assert(
-		(SHARD_COUNT & (SHARD_COUNT - 1)) == 0 && SHARD_COUNT > 0,
-		"SHARD_COUNT must be the power of two and greater than zero"
-	);
+	/**
+	 * @important in the current implementation GCD(SHARD_COUNT, 2) must be 1.
+	 * Otherwise, the distribution of keys over buckets in individual shards may be non-uniform.
+	 */
+	constexpr static u64 SHARD_COUNT = 17;
 
 	/**
 	 * A sharded concurrent StableHashMap implementation.
@@ -78,7 +78,7 @@ namespace concurrent {
 		[[nodiscard]]
 		constexpr u64 hashToShard(KeyHash hash) const {
 			CORE_ASSERT(
-				SHARD_COUNT == shards.size() and SHARD_COUNT == shards.size(), "Shard count mismatch"
+				SHARD_COUNT == shards.size(), "Shard count mismatch"
 			);
 			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
 
@@ -248,7 +248,7 @@ namespace concurrent {
 		[[nodiscard]]
 		constexpr u64 hashToShard(KeyHash hash) const {
 			CORE_ASSERT(
-				SHARD_COUNT == shards.size() and SHARD_COUNT == shards.size(), "Shard count mismatch"
+				SHARD_COUNT == shards.size(), "Shard count mismatch"
 			);
 			CORE_ASSERT(SHARD_COUNT > 0, "Shard count must be greater than zero");
 
