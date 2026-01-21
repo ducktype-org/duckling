@@ -25,7 +25,7 @@ def get_available_test_targets(build_dir: str) -> list[str]:
         return targets
     except BashCommandError as e:
         exit_with_error(
-            f"Error querying CMake File API. Please re-run `./toolbox.py setup-build`.\n{e}"
+            "Error querying CMake File API. Please re-run `./toolbox.py setup-build`."
         )
 
 
