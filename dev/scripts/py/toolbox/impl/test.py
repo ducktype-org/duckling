@@ -1,8 +1,11 @@
 import re
 from .helpers import (
+    BashCommandError,
     bash_command,
     bash_command_get_output,
+    exit_with_error,
 )
+
 
 def get_available_test_targets(build_dir: str) -> list[str]:
     """
@@ -11,15 +14,20 @@ def get_available_test_targets(build_dir: str) -> list[str]:
     """
     targets: list[str] = []
 
-    # Get list of targets from CMake File API.
-    # This should work for any build-system, but is a little technical.
-    stdout, _ = bash_command_get_output("ls .cmake/api/v1/reply", cwd=build_dir)
+    try:
+        # Get list of targets from CMake File API.
+        # This should work for any build-system, but is a little technical.
+        stdout, _ = bash_command_get_output("ls .cmake/api/v1/reply", cwd=build_dir)
+        for line in stdout.split("\n"):
+            match = re.search(r"\bbuild_(\w+)_tests\b", line)
+            if match:
+                targets.append(match.group(1))
+        return targets
+    except BashCommandError as e:
+        exit_with_error(
+            f"Error querying CMake File API. Please re-run `./toolbox.py setup-build`.\n{e}"
+        )
 
-    for line in stdout.split('\n'):
-        match = re.search(r'\bbuild_(\w+)_tests\b', line)
-        if match:
-            targets.append(match.group(1))
-    return targets
 
 def test_impl(
     build_dir: str,
@@ -50,9 +58,7 @@ def test_impl(
 
             if matching_targets:
                 # Build only the matching test packs
-                build_targets = [
-                    f"build_{target}_tests" for target in matching_targets
-                ]
+                build_targets = [f"build_{target}_tests" for target in matching_targets]
 
     # If no specific targets identified, build all tests
     if not build_targets:
