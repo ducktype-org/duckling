@@ -221,7 +221,7 @@ namespace compiler::helios {
 			auto element_scope_kind = getScopeKind(ctx, element_key.element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
-				auto element_ptr = &*element;
+				[[maybe_unused]] auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
 					"Scope of element for which scope does not make sense (or was not "
 					"added.): ",
