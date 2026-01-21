@@ -1,5 +1,4 @@
 #include <global_state/backend_options.hpp>
-#include <global_state/options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()

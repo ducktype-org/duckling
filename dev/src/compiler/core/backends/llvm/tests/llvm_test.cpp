@@ -2,7 +2,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
-#include <global_state/options.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -42,12 +41,14 @@ public:
 	}
 
 private:
-	auto getLLVMModuleFromPath(std::string module_path) {
-		using namespace compiler;
-
+	void beforeAll() override {
 		global_state::setters::setBackendOptions({
 			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
 		});
+	}
+
+	auto getLLVMModuleFromPath(std::string module_path) {
+		using namespace compiler;
 
 		backend_llvm::Module             llvm_module(base::StrID("test_module"));
 		std::vector<CRef<lir::Function>> ctors;

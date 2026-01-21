@@ -8,7 +8,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
-#include <global_state/options.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
