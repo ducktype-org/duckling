@@ -5,13 +5,20 @@
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
 #include "pst_state_forward.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
+#include <time_stats/time_stats.hpp>
+
 #include <token_source/source.hpp>
 
 namespace pst {
 	// Used to not include full state definition
 	namespace internal {
-		Box<LangParserState>    makeState(tpc::TokenStream&&, Ref<dia::Logger> logger);
+		Box<LangParserState> makeState(
+			tpc::TokenStream&&, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger
+		);
 		std::vector<ImportType> extractState(Box<LangParserState>);
+
+		void finalizeParsing(Ref<LangParserState>);
 	}
 
 	/**
@@ -49,6 +56,8 @@ namespace pst {
 		 */
 		template<typename... Args>
 		void parse(Args&&... args) requires ParseAble<Args...> {
+			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
+
 			const lexer::TokenData& token_data = file->getTokenData();
 			auto                    state_box  = internal::makeState(
                 tpc::TokenStream(
@@ -58,12 +67,17 @@ namespace pst {
                     0,
                     token_data.tokens.size()
                 ),
-                file->getLogger()
+                file->getLogger(),
+                file->getIntLogger()
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
-			imports = internal::extractState(std::move(state_box));
-			calcElementPathHash();
-			calcHashes();
+			internal::finalizeParsing(state_box.refMut());
+			bool is_good = internal::isGood(*state_box);
+			imports      = internal::extractState(std::move(state_box));
+			if (is_good) {
+				calcElementPathHash();
+				calcHashes();
+			}
 		}
 
 		/**
@@ -164,8 +178,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const Ref<dia::Logger> getLogger() const {
-			return file->getLogger();
+		const Ref<dia_int::Logger> getLogger() const {
+			return file->getIntLogger();
+		}
+
+		[[nodiscard]] bool hasErrors() const {
+			return file->getLogger()->bad() || file->getIntLogger()->hasErrors();
 		}
 
 		[[nodiscard]]

@@ -18,11 +18,23 @@ impl StrId {
     pub fn as_str(&self) -> &'static str {
         self.0.as_str()
     }
+
+    pub(crate) fn __from_static_helper(s: GlobalSymbol) -> Self {
+        Self(s)
+    }
 }
+
+macro_rules! static_str_id {
+    ($x:literal) => {
+        $crate::StrId::__from_static_helper(::symbol_table::static_symbol!($x))
+    };
+}
+
+pub(crate) use static_str_id;
 
 impl Default for StrId {
     fn default() -> Self {
-        Self::new("")
+        static_str_id!("")
     }
 }
 
@@ -105,6 +117,18 @@ impl AsRef<Path> for StrId {
 impl Borrow<str> for StrId {
     fn borrow(&self) -> &str {
         self.as_str()
+    }
+}
+
+impl From<StrId> for String {
+    fn from(value: StrId) -> Self {
+        value.as_str().into()
+    }
+}
+
+impl From<StrId> for &'static str {
+    fn from(value: StrId) -> Self {
+        value.as_str()
     }
 }
 

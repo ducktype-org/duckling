@@ -7,6 +7,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -41,8 +42,7 @@ namespace compiler::helios {
 		  return_type(ret_type),
 		  parameters(std::move(parameters)) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
-				or kind(symbol) == SymbolKind::BuiltinFunction,
+			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration,
 			"Symbol is not a function or function declaration"
 		);
 	}
@@ -117,29 +117,29 @@ namespace compiler::helios {
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 			  switch (data_type) {
-			  case HOUTGlobalDataType::Variable:
-				  return HOUTGlobalVariable{ std::make_shared<Box<code::Expr>>(
-					  std::move(ctx.query<QueryHoutOfExpr>(stmt(ctx, symbol)
-				                                               ->dynamicCast<pst::Variable>()
-				                                               .value()
-				                                               ->getValue()
-				                                               .value()
-				                                               .unlock(ctx)
-				                                               ->getExpr())
-				                    .expect(
-										"Handling errors in HOUT is not supported yet 2 — "
-										+ name(symbol).str()
-									))
-				  ) };
+			  case HOUTGlobalDataType::Variable: {
+				  // Get the initial value and type of the variable.
+				  const auto initial_value_pst = stmt(ctx, symbol)
+			                                         ->dynamicCast<pst::Variable>()
+			                                         .value()
+			                                         ->getValue()
+			                                         .value()
+			                                         .unlock(ctx)
+			                                         ->getExpr();
+				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+				  auto       initial_value_hout_coerced
+					  = getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
+			                .valueOrThrow();
+
+				  return HOUTGlobalVariable{
+					  std::make_shared<Box<code::Expr>>(std::move(initial_value_hout_coerced))
+				  };
+			  }
 			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).expect(
-					  "Handling errors in HOUT is not supported yet 3 — " + name(symbol).str()
-				  ) };
+				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).valueOrThrow() };
 			  default:
 				  CORE_PANIC("Unhandled HOUTGlobalDataType");
 			  }
 		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
-			  "Handling errors in HOUT is not supported yet 4 — " + name(symbol).str()
-		  )) {}
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow()) {}
 }

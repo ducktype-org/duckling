@@ -14,7 +14,7 @@ namespace pst {
 			.all(Keyword::Namespace, &out->name)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Namespace::dprint(std::ostream& out) const {

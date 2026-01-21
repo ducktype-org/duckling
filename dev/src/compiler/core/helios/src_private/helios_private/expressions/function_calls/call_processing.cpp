@@ -1,18 +1,18 @@
-#include "call_processing.hpp"
-
-#include "errors.hpp"
-
+#include <diagnostic_interactive/message.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/function_calls/call_processing.hpp>
+#include <helios_private/expressions/function_calls/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -26,6 +26,7 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace compiler::helios::code {
@@ -45,11 +46,13 @@ namespace compiler::helios::code {
 		// We can't keep a direct reference to the argument because we would like to move
 		// from the positional arguments vector later, so we just keep the index.
 		usize index_in_positional_args;
+		bool  requires_coercion;
 	};
 
 	struct NamedArgumentOrigin final {
 		// Same as above.
 		usize index_in_named_args;
+		bool  requires_coercion;
 	};
 
 	struct DefaultArgumentOrigin final {
@@ -92,7 +95,8 @@ namespace compiler::helios::code {
 	};
 
 	struct NoMatch final {
-		MatchFailure reason;
+		SymID                function;
+		FunctionMatchFailure reason;
 	};
 
 	using MatchResult = std::variant<CoercionMatch, ExactMatch, NoMatch>;
@@ -107,37 +111,53 @@ namespace compiler::helios::code {
 		const std::vector<Box<Expr>>&                          positional_arguments,
 		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
-		auto                                        decl = ctx.query<QueryDeclOfFun>(fun);
-		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl->parameters.size());
-		std::vector<base::Optional<Coercion>>       coercions(decl->parameters.size());
+		auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
+		std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
+		std::vector<base::Optional<Coercion>>       coercions(decl.parameters.size());
 		bool                                        coercion_present = false;
 
-		if (positional_arguments.size() + named_arguments.size() > decl->parameters.size())
-			return NoMatch{ TooManyCallArguments{} };
+		if (positional_arguments.size() > decl.parameters.size())
+			return NoMatch{ .function = fun,
+				            .reason
+				            = TooManyCallArguments{ .valid_arguments = decl.parameters.size(),
+				                                    .total_arguments = positional_arguments.size(),
+				                                    .function        = fun } };
 
 		// Go over positional arguments.
 		for (usize i{ 0 }; i < positional_arguments.size(); i++) {
 			tsh::SymbolType provided_type
 				= positional_arguments[i]->expression_type.getSymbolType();
-			tsh::SymbolType expected_type = decl->parameters[i].type;
+			tsh::SymbolType expected_type = decl.parameters[i].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{} };
-			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
+			if (coercion.valueOrThrow().isInvalid())
+				return NoMatch{ .function = fun,
+					            .reason   = TypeMismatch{ .given_type     = provided_type,
+					                                      .expected_type  = expected_type,
+					                                      .argument_index = i,
+					                                      .function       = fun } };
+
+			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
 
 			// Position in the parameter list is the same as in the positional arguments list.
-			argument_origin[i].emplace(PositionalArgumentOrigin{ .index_in_positional_args = i });
-			coercions[i].emplace(std::move(coercion).value());
+			argument_origin[i].emplace(PositionalArgumentOrigin{
+				.index_in_positional_args = i, .requires_coercion = not is_empty });
+			coercions[i].emplace(std::move(coercion).valueOrThrow().getCoercion());
 		}
 
 
 		// Go over named arguments.
 		for (usize i{ 0 }; i < named_arguments.size(); i++) {
 			base::Optional<usize> param_idx_with_matching_name{};
-			for (usize param_idx{ 0 }; param_idx < decl->parameters.size(); param_idx++) {
-				if (decl->parameters[param_idx].name == std::get<0>(named_arguments[i])) {
+			auto&                 name = std::get<0>(named_arguments[i]);
+			for (usize param_idx{ 0 }; param_idx < decl.parameters.size(); param_idx++) {
+				if (decl.parameters[param_idx].name == name) {
 					if (argument_origin[param_idx].has_value())
-						return NoMatch{ DuplicateNamedArgument{} };
+						return NoMatch{ .function = fun,
+							            .reason   = NamedArgumentProvidedByPositional{
+											  .argument_index = positional_arguments.size() + i,
+											  .function       = fun } };
 
 					param_idx_with_matching_name = param_idx;
 					break;
@@ -145,32 +165,48 @@ namespace compiler::helios::code {
 			}
 
 			// Name mismatch case.
-			if (param_idx_with_matching_name.empty()) return NoMatch{ UnknownNamedArgument{} };
+			if (param_idx_with_matching_name.empty())
+				return NoMatch{ .function = fun,
+					            .reason   = UnknownNamedArgument{ .name = name,
+					                                              .argument_index
+                                                                = positional_arguments.size() + i,
+					                                              .function = fun } };
 
 			usize           param_idx = param_idx_with_matching_name.value();
 			tsh::SymbolType provided_type
 				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
-			tsh::SymbolType expected_type = decl->parameters[param_idx].type;
+			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
 			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
 
-			if (coercion.hasError()) return NoMatch{ TypeMismatch{} };
-			if (not coercion.value().isEmptyCoercion()) coercion_present = true;
+			if (coercion.valueOrThrow().isInvalid())
+				return NoMatch{ .function = fun,
+					            .reason
+					            = TypeMismatch{ .given_type     = provided_type,
+					                            .expected_type  = expected_type,
+					                            .argument_index = positional_arguments.size() + i,
+					                            .function       = fun } };
 
-			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i };
-			coercions[param_idx].emplace(std::move(coercion).value());
+			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
+			if (not is_empty) coercion_present = true;
+
+			argument_origin[param_idx] = NamedArgumentOrigin{ .index_in_named_args = i,
+				                                              .requires_coercion   = not is_empty };
+			coercions[param_idx].emplace(std::move(coercion).valueOrThrow().getCoercion());
 		}
 
 		// Go over default arguments
-		for (usize i{ 0 }; i < decl->parameters.size(); i++) {
+		for (usize i{ 0 }; i < decl.parameters.size(); i++) {
 			if (not argument_origin[i].has_value()) {
-				if (decl->parameters[i].initial_value.has_value()) {
+				if (decl.parameters[i].initial_value.has_value()) {
 					argument_origin[i].emplace(DefaultArgumentOrigin{
-						decl->parameters[i].initial_value.value().ref() });
+						decl.parameters[i].initial_value.value().ref() });
 					coercions[i].emplace(Coercion::emptyCoercion(
-						decl->parameters[i].initial_value.value()->expression_type.getSymbolType()
+						decl.parameters[i].initial_value.value()->expression_type.getSymbolType()
 					));
 				} else
-					return NoMatch{ MissingCallArgument{} };
+					return NoMatch{ .function = fun,
+						            .reason   = MissingCallArgument{ .parameter_index = i,
+						                                             .function        = fun } };
 			}
 		}
 
@@ -251,35 +287,149 @@ namespace compiler::helios::code {
 	 * @param call_expr The PST call expression containing arguments
 	 * @param positional_arguments Output vector for positional arguments
 	 * @param named_arguments Output map for named arguments
-	 * @return QError if validation fails (duplicate names, positional after named, or expression
-	 * error)
+	 * @return std::monostate is succeeded,
+	 *         other states if validation fails (duplicate names, positional after named, or
+	 * expression error)
 	 */
-	query::QResult<std::monostate, PositionalAfterNamedArgument, RepeatedNamedArgument, errors::Failed> fillCallArgs(
+	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument, RepeatedNamedArgument>> fillCallArgs(
 		query::Context&                                  ctx,
 		pst::Access<pst::expr::Call>                     call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
+		usize arg_index = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasError()) return query::QError(arg_expr.error());
+			if (arg_expr.hasFailed()) return query::Failed();
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
-				named_arguments.emplace_back(arg_name, std::move(arg_expr.value()));
+				for (auto&& [existing_name, _]: named_arguments)
+					if (existing_name == arg_name)
+						return RepeatedNamedArgument{ arg_index };  // Duplicate named argument.
+				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
 			} else {
 				if (!named_arguments.empty())
-					return query::QError(PositionalAfterNamedArgument{}
-					);  // Normal argument after named one.
+					return PositionalAfterNamedArgument{
+						arg_index
+					};  // Normal argument after named one.
 
-				positional_arguments.emplace_back(std::move(arg_expr.value()));
+				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
 			}
+			arg_index++;
 		}
 		return std::monostate{};
 	}
 
-	query::QResult<Box<CallExpr>, errors::Failed> processFunctionCall(
+	void appendExactMatchesErrors(
+		query::Context&                ctx,
+		Box<AmbiguousMatchesError>&    main_msg,
+		const std::vector<ExactMatch>& exact_matches,
+		bool                           as_a_link = false
+	) {
+		if (exact_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
+		for (const auto& match: exact_matches) {
+			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note
+				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
+
+			if (not first_candidate_msg.has_value())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->addAttachedMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreExactCandidates(
+				exact_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
+	}
+
+	void appendCoercibleMatchesErrors(
+		query::Context&                   ctx,
+		Box<AmbiguousMatchesError>&       main_msg,
+		const std::vector<CoercionMatch>& coercible_matches,
+		bool                              as_a_link
+	) {
+		if (coercible_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
+		for (const auto& match: coercible_matches) {
+			auto decl           = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note = makeBox<CoercibleCandidateNote>(
+				getFunctionParamList(ctx, decl)->getSourcePosition()
+			);
+			for (usize i{ 0 }; i < match.coercions.size(); i++) {
+				auto& coercion = match.coercions[i];
+				if (not coercion.isEmptyCoercion()) {
+					auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
+						coercion.to.toString(), coercion.validated_from.toString()
+					);
+					auto pm_message_id = dia_int::MessageBase::getUniqueID();
+					candidate_note->addLinkedMessage(pm_message_id, std::move(pm));
+					auto param_decl = getNthDeclarationParameter(ctx, decl, i);
+					candidate_note->addPointerMessage(
+						"coercion", param_decl->getSourcePosition(), pm_message_id
+					);
+				}
+			}
+
+			if (not first_candidate_msg.has_value())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->addAttachedMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreCoercibleCandidates(
+				coercible_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
+	}
+
+	void appendFailedMatchesErrors(
+		query::Context&              ctx,
+		Box<AmbiguousMatchesError>&  main_msg,
+		pst::Access<pst::expr::Call> call_expr,
+		const std::vector<NoMatch>&  failed_matches,
+		bool                         as_a_link
+	) {
+		if (failed_matches.empty()) return;
+		// We have to differentiate between first candidate beacuse all the other candidates will
+		// be attached to it.
+		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
+		for (const auto& match: failed_matches) {
+			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto candidate_note
+				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
+
+			candidate_note->addAttachedMessage(
+				createDetailedCallErrorMessage(ctx, call_expr, match.reason, true)
+			);
+
+			if (first_candidate_msg.empty())
+				first_candidate_msg.emplace(std::move(candidate_note));
+			else
+				first_candidate_msg.value()->addAttachedMessage(std::move(candidate_note));
+		}
+
+		if (as_a_link)
+			main_msg->addExploreFailedCandidates(
+				failed_matches.size(), std::move(first_candidate_msg).value()
+			);
+		else
+			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
+	}
+
+	query::QResult<Box<CallExpr>> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
@@ -288,10 +438,22 @@ namespace compiler::helios::code {
 		std::vector<Box<Expr>>                          positional_arguments;
 		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
 		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
-		if (verify_result.hasError()) return query::QError(errors::Failed{});
+
+		if (verify_result.hasFailed()) return query::Failed();
+
+		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
+			return query::Failed{};
+		}
+		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrThrow())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
+			return query::Failed{};
+		}
+
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;
+		std::vector<NoMatch>       no_match;
 
 
 		for (auto candidate: candidates) {
@@ -302,14 +464,19 @@ namespace compiler::helios::code {
 				variant_case(ExactMatch, data) { exact_match.push_back(std::move(data)); }
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
+					no_match.push_back(data);
 					// For now ignore it, it is handled by the logic bellow.
 				}
 			}
 		}
 
 		if (exact_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousExactMatches>(call_expr->getSourcePosition()));
-			return query::QError(errors::Failed());
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
+			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
+			ctx.logInt(std::move(main_msg));
+			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
 			return constructCallExpr(
@@ -323,8 +490,11 @@ namespace compiler::helios::code {
 		}
 
 		if (coercion_match.size() > 1) {
-			ctx.log(makeBox<AmbiguousCoercionMatches>(call_expr->getSourcePosition()));
-			return query::QError(errors::Failed());
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
+			ctx.logInt(std::move(main_msg));
+			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
 			return constructCallExpr(
@@ -337,7 +507,14 @@ namespace compiler::helios::code {
 			);
 		}
 
-		ctx.log(makeBox<InvalidCallExpression>(call_expr->getSourcePosition()));
-		return query::QError(errors::Failed());
+		if (candidates.size() == 1) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, no_match[0].reason, false));
+		} else {
+			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, false);
+			ctx.logInt(std::move(main_msg));
+		}
+
+		return query::Failed();
 	}
 }

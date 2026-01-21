@@ -1,0 +1,92 @@
+fun main() -> i64 = {
+    ### U8 ###
+    let u8_large: u8 = 250u8;
+    let u8_small: u8 = 100u8;
+
+    # If wrong comparison (signed) was picked, then the `u8_large` would be treated as a negative.
+    if (u8_large < u8_small) {
+        builtin_output_i64(1);
+    }
+
+    if (u8_large + 100u8 != 94u8) {
+        builtin_output_i64(2);
+    }
+
+    let u8_max: u8 = 255u8;
+    let u8_min: u8 = 0u8;
+    if (u8_max + 1u8 != 0u8) {
+        builtin_output_i64(3);
+    }
+
+    if (u8_min - 1u8 != 255u8) {
+        builtin_output_i64(4);
+    }
+
+    ### U16 ###
+    let u16_large: u16 = 60000u16;
+    let u16_small: u16 = 100u16;
+
+    # If wrong comparison (signed) was picked, then the `u16_large` would be treated as a negative.
+    if (u16_large < u16_small) {
+        builtin_output_i64(5);
+    }
+    
+    if (u16_large + 1000u16 != 61000u16) {
+        builtin_output_i64(6);
+    }
+
+    let u16_max: u16 = 65535u16;
+    let u16_min: u16 = 0u16;
+    if (u16_max + 1u16 != 0u16) {
+        builtin_output_i64(7);
+    }
+
+    if (u16_min - 1u16 != 65535u16) {
+        builtin_output_i64(8);
+    }
+    
+    ### U32 ###
+    let u32_large: u32 = 3000000000u32;
+    let u32_small: u32 = 1u32;
+
+    if (u32_large < u32_small) {
+        builtin_output_i64(9);
+    }
+
+    if ((u32_large / 3000000000u32) != 1u32) {
+        builtin_output_i64(10);
+    }
+
+    let u32_max: u32 = 4294967295u32;
+    let u32_min: u32 = 0u32;
+    if (u32_max + 1u32 != 0u32) {
+        builtin_output_i64(11);
+    }
+    if (u32_min - 1u32 != 4294967295u32) {
+        builtin_output_i64(12);
+    }
+    
+    ### U64 ###
+    let u64_large: u64 = 17293822569102704640u64; # hex: F000000000000000
+    let u64_small: u64 = 1u64;
+
+    if (u64_large < u64_small) {
+        builtin_output_i64(13);
+    }
+
+    if (10u64 - 5u64 != 5u64) {
+        builtin_output_i64(14);
+    }
+    
+    let u64_max: u64 = 18446744073709551615u64;
+    let u64_min: u64 = 0u64;
+    if (u64_max + 1u64 != 0u64) {
+        builtin_output_i64(15);
+    }
+    if (u64_min - 1u64 != u64_max) {
+        builtin_output_i64(16);
+    }
+
+
+    return 0i64;
+}

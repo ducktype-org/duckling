@@ -1,45 +1,10 @@
 #pragma once
 
-#include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
+#include <base/pointers/default_deleter.hpp>
 #include <base/pointers/ref.hpp>
 
 namespace base {
-
-	/**
-	 * @brief Default deleter functor used by Box, MBox.
-	 *
-	 * @note Adding specialization for custom types with macros
-	 * DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and
-	 * DEFAULT_BOX_PTR_DELETER_DEFINITION(T) is supported and
-	 * can be used to avoid delete on incomplete types.
-	 * This effectively moves the definition into the cpp file, where the type is complete.
-	 *
-	 * @tparam T
-	 */
-	template<class T>
-	struct DefaultBoxPtrDeleter final {
-		DefaultBoxPtrDeleter() = default;
-
-		/**
-		 * DefaultBoxPtrDeleter can be constructed from other DefaultBoxPtrDeleter.
-		 */
-		template<class U>
-		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {}
-
-		static void del(T* ptr) {
-			static_assert(
-				IS_COMPLETE_V<T>,
-				"DefaultBoxPtrDeleter can be used only with complete types. If you need to use it "
-				"with "
-				"incomplete type, please provide a specialization using macros "
-				"DEFAULT_BOX_PTR_DELETER_DECLARATION(T) and DEFAULT_BOX_PTR_DELETER_DEFINITION(T)."
-			);
-
-			delete ptr;
-		}
-	};
-
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.
@@ -50,8 +15,8 @@ namespace base {
 	 * more complex behavior arises, we can add it as needed.
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
-	 * to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>.
+	 * It has to define static method `void del(T*)`.
 	 */
 	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
 	class Box final {
@@ -200,10 +165,10 @@ namespace base {
 	 * [no_unique_address]] Deleter deleter;).
 	 *
 	 * @tparam T pointed type
-	 * @tparam Deleter type used to delete the pointer, defaults to DefaultBoxPtrDeleter<T>. It has
-	 * to define static method `void del(T*)`.
+	 * @tparam Deleter type used to delete the pointer, defaults to base::DefaultBoxPtrDeleter<T>.
+	 * It has to define static method `void del(T*)`.
 	 */
-	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 	class MBox final {
 	private:
 		static_assert(
@@ -392,7 +357,7 @@ namespace base {
 	 * and allocating memory with new operator.
 	 * @note default initialization of Deleter is used.
 	 */
-	template<class T, class Deleter = DefaultBoxPtrDeleter<T>, class... Args>
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>, class... Args>
 	inline Box<T, Deleter> makeBox(Args&&... args) {
 		static_assert(
 			std::is_default_constructible_v<Deleter>,
@@ -411,10 +376,10 @@ namespace base {
 		);
 	}
 
-	template<class T, class Deleter = DefaultBoxPtrDeleter<T>>
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 	using CBox = Box<const T, Deleter>;
 
-	template<class T, class Deleter = DefaultBoxPtrDeleter<const T>>
+	template<class T, class Deleter = base::DefaultBoxPtrDeleter<const T>>
 	using MCBox = MBox<const T, Deleter>;
 }
 
@@ -424,40 +389,3 @@ using base::CBox;
 using base::makeBox;
 using base::MBox;
 using base::MCBox;
-
-
-/**
- * @brief Macro for declaring a specialization of DefaultBoxPtrDeleter for type T.
- * It should be used near the type declaration / forward declaration.
- * It has to be used in pair with DEFAULT_BOX_PTR_DELETER_DEFINITION(T).
- * See DefaultBoxPtrDeleter documentation for more details.
- *
- * @important It has to be used in top-level.
- *
- * @param T type for which the specialization is declared
- */
-#define DEFAULT_BOX_PTR_DELETER_DECLARATION(T)                  \
-	template<>                                                  \
-	struct base::DefaultBoxPtrDeleter<T> final {                \
-		DefaultBoxPtrDeleter() = default;                       \
-                                                                \
-		template<class U>                                       \
-		DefaultBoxPtrDeleter(const DefaultBoxPtrDeleter<U>&) {} \
-		static void del(T* ptr);                                \
-	};
-
-/**
- * @brief Macro for defining a specialization of DefaultBoxPtrDeleter for type T.
- * It should be used where type is complete.
- * It has to be used in pair with DEFAULT_BOX_PTR_DELETER_DECLARATION(T).
- * See DefaultBoxPtrDeleter documentation for more details.
- *
- * @important It has to be used in top-level.
- *
- * @param T type for which the specialization is declared
- */
-#define DEFAULT_BOX_PTR_DELETER_DEFINITION(T)                                \
-	void base::DefaultBoxPtrDeleter<T>::del(T* ptr) {                        \
-		static_assert(IS_COMPLETE_V<T>, "T must be complete at this point"); \
-		delete ptr;                                                          \
-	}

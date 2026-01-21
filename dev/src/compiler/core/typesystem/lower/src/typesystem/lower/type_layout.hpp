@@ -124,6 +124,27 @@ namespace compiler::tsl {
 	};
 
 	/**
+	 * @brief Layout for the MetaType.
+	 * Represents a runtime handle/ID to type metadata.
+	 *
+	 * Acts as a handle that references the type information stored in the static memory.
+	 *
+	 * @TODO: #1709 take a look at this as well - maybe some adjustments will have to be made.
+	 */
+	class MetaTypeLayout final: public TypeLayoutABC {
+		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type):
+			  TypeLayoutABC(META_SIZE, meta_type) {}
+
+		friend struct ImplementationOf_QueryAbstractTypeLayout;
+
+	public:
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
+			return getIndent(indent) + "meta type :" + base::toString(getSize());
+		}
+	};
+
+	/**
 	 * @brief Layout of a type that has integral-like low level behaviour.
 	 *
 	 * Valid candidates include, of course, integers, but also bytes, bools, and characters.
@@ -192,6 +213,15 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "string : " + base::toString(getSize());
+		}
+
+		/**
+		 * @return The offset of the pointer to the data
+		 */
+		[[nodiscard]]
+		Bytes getDataPointerPosition() const {
+			(void) this;
+			return Bytes(0);
 		}
 
 		/**
@@ -626,6 +656,7 @@ namespace compiler::tsl {
 
 	using TypeLayoutDirectVariant = std::variant<
 		EmptyTypeLayout,
+		MetaTypeLayout,
 		IntegralTypeLayout,
 		FloatTypeLayout,
 		VariantTypeLayout,
@@ -647,9 +678,9 @@ namespace compiler::tsl {
 
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
-	public:
 		TypeLayoutDirectVariant variant;
 
+	public:
 		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
 		TypeLayout(TypeLayout&& other) noexcept = default;
 
@@ -668,6 +699,12 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		const TypeLayoutDirectVariant& getVariant() const {
 			return variant;
+		}
+
+		template<typename T>
+		[[nodiscard]]
+		bool is() const {
+			return std::holds_alternative<T>(variant);
 		}
 
 		/**

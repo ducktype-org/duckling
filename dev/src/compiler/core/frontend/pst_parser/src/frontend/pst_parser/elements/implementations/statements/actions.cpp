@@ -40,9 +40,10 @@ namespace pst {
 		state.parse(out.toOpt().value()).eatOne();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
+		// @TODO: #1535 Change to not parsing expression when no tokens are left
 		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).one(&out->expr);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	base::Optional<AccessLocked<ExprHolder>> Action::getValue() const {

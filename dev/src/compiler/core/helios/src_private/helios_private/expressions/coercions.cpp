@@ -1,24 +1,21 @@
 #include "coercions.hpp"
 
+#include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context.hpp>
 
 namespace compiler::helios {
-
-
-	/**
-	 * @brief Create a zero literal HOUT expression of the given symbol type.
-	 */
-	Box<code::Expr> createZeroLiteralOfType(query::Context& ctx, const tsh::SymbolType<> type) {
-		// @TODO: #1543 Implement `NumericValue::createOfType()` and use it instead of
-		// createZeroLiteralOfType.
-		auto zero_literal = makeBox<code::LiteralNumericExpr>(ctx, i64(0));
-		if (zero_literal->expression_type.getType() == type.getType()) return zero_literal;
-
-		auto coerced = makeBox<code::CastExpr>(ctx, std::move(zero_literal), type);
-		return coerced;
+	IncompatibleTypesError::IncompatibleTypesError(
+		dia::SourcePosition  source_position,
+		Box<InteractiveType> actual_type,
+		Box<InteractiveType> expected_type
+	):
+		  MessageWithCodeFragmentAndCause(source_position) {
+		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
 	}
 
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
@@ -46,7 +43,12 @@ namespace compiler::helios {
 				ctx,
 				code::BuiltinBinary::IntegerNeq,
 				std::move(from),
-				createZeroLiteralOfType(ctx, from->expression_type.getSymbolType())
+				makeBox<code::LiteralNumericExpr>(
+					ctx,
+					numeric_value::NumericValue::createOfType(from->expression_type.getSymbolType())
+						.expect("Failed to create a NumericLiteral with 0 value. This should never "
+			                    "happen.")
+				)
 			);
 			return comparison;
 		} else if ((source_type.getKind() == tsh::Kind::Unit
@@ -59,11 +61,24 @@ namespace compiler::helios {
 		}
 	}
 
-	query::QResult<Coercion, InvalidCoercion> canCoerce(
-		query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+	CoercionQResult canCoerce(
+		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
 		if (ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to }))
 			return Coercion(from, to);
-		return query::QError{ InvalidCoercion{} };
+		return InvalidCoercion{};
 	}
+
+	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::SymbolType<> from) {
+		return canCoerce(
+			ctx,
+			from,
+			tsh::SymbolType<>{
+				ctx.query<tsh::QueryMetaType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
+			}
+		);
+	}
+
 }

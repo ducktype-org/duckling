@@ -25,7 +25,7 @@ private:
 
 		const AbstractType my_class_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol)
-		          ->expect("Not expecting an ERROR here...")
+		          ->valueOrPanicMsg("Not expecting an ERROR here...")
 		          .getType();
 
 

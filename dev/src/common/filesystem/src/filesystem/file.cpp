@@ -3,7 +3,7 @@
 #include <filesystem_private/vfs.hpp>
 
 #include <base/except/exceptions.hpp>
-#include <base/misc/raw_view.hpp>
+#include <base/misc/shared_view.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <algorithm>
@@ -207,9 +207,13 @@ namespace fs {
 		return rand_path;
 	}
 
-	File FileManager::createRandomVirtualFile(std::string_view content) {
+	File FileManager::createRandomVirtualFile(
+		std::string_view content, base::Optional<std::string_view> suffix
+	) {
 		FilePath root      = vfs->getRootPath();
 		auto     rand_path = randomName(root);
+		if (suffix.has_value())
+			rand_path = FilePath(base::strConcat(rand_path.string(), suffix.value()));
 		return createVirtualFile(rand_path, content);
 	}
 

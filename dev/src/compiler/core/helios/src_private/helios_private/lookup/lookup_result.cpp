@@ -1,8 +1,7 @@
 #include "lookup_result.hpp"
 
-#include <helios/helios_errors.hpp>
-
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::helios {
 
@@ -19,27 +18,33 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
-	) const {
-		if (isEmpty()) return query::QError(errors::SymbolNotFound());
-		if (!isSingle()) return query::QError(errors::Ambiguity());
+	GetAsSingleLookupQResult LookupResult::getAsSingle() const {
+		if (isEmpty()) return errors::SymbolNotFound();
+		if (!isSingle()) return errors::Ambiguity();
 
+		// The following line must work, since at this point we know that
+		// symbolCount() == 1:
 		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
 		auto&& [node_id, inner] = children.at(0);
-		SymbolList child_path   = inner.getAsSingle().expect(
-            "This cannot be error, "
-			  "because it was asserted above."
-        );
-
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
-		SymbolList result;
-		result.pushBack(node_id);
-		result.appendList(child_path);
-		return result;
+		UNPACK_QRESULT(auto& child_path =, inner.getAsSingle());
+
+		variant_match(child_path) {
+			variant_case(SymbolList, symbols) {
+				SymbolList result;
+				result.pushBack(node_id);
+				result.appendList(symbols);
+				return result;
+			}
+			variant_case(errors::Ambiguity, _) { return errors::Ambiguity(); }
+			variant_case(errors::SymbolNotFound, _) { return errors::SymbolNotFound(); }
+			variant_default { CORE_PANIC("Invalid state"); }
+		}
+		CORE_UNREACHABLE();
 	}
 
 	u64 LookupResult::symbolCount() const {

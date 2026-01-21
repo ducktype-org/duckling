@@ -3,6 +3,8 @@
 #include "../lists/parameter_list.hpp"
 #include "preamble.hpp"
 
+#include <token_parser_core/common_elements.hpp>
+
 namespace pst {
 	/**
 	 * @brief Function declaration
@@ -29,13 +31,13 @@ namespace pst {
 			return params.give();
 		}
 
-		[[nodiscard]]
+		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
+
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
-		base::Optional<AccessLocked<ExprHolder>> getRet() const {
-			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
-		}
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getRet() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {

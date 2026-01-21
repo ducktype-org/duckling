@@ -4,7 +4,7 @@ include(CMakePrintHelpers)
 # enabled, it will run out of stack space.
 function(duck_disable_tc_when_not_opt test_name test_set)
         if (test_set STREQUAL "vm_tc")
-                if(NOT CMAKE_BUILD_TYPE MATCHES ".*Opt.*")
+                if(NOT BUILD_TYPE_IS_OPTIMISED)
                         set_property(TEST ${test_set}_${test_name} PROPERTY DISABLED TRUE)
                 endif()
         endif()
@@ -63,6 +63,8 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
                 inheritance/inheritance_hierarchy_correctness.cpp
                 USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_vtable_setting_test inheritance/setting_vtable/vtable_setting.cpp
+                USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_code_injection_test injection/code_injection.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -79,7 +81,6 @@ endfunction()
 
 duck_add_vm_tests("tc")
 duck_add_vm_tests("sc")
-duck_add_vm_tests("cg")
 
 duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_map_test.cpp
         USES LibVM Tester)

@@ -18,7 +18,7 @@ Tests:
           String: 'Error: No such command: \`not-a-subcmd\`\n'
 
       invalid-config:
-        before_cmd: export QP_CONFIG=.
+        before_cmd: export DUCK_HOME=.
         test_cmd: "not-a-command 2>&1 | head -n4 " # Get first for lines, but we lose exit code and stderr
         ExitCode: 0
         Output:

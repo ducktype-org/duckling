@@ -33,7 +33,7 @@ namespace vm::code {
 		std::vector<Instruction>                jumps;  /// all jumps to the label
 
 		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
-			  ValidationError(base::strConcat(ERR_MSG, label.arg0.label_name)),
+			  ValidationError(base::strConcat(ERR_MSG, label.label.label_name)),
 			  label(label),
 			  jumps(std::move(jumps)) {}
 
@@ -197,7 +197,7 @@ namespace vm::code {
 			  instruction(instruction) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(instruction, tp, return static_cast<CRef<ElementBase>>(&tp));
+			return instruction.visit([](auto&& i) { return static_cast<CRef<ElementBase>>(&i); });
 		}
 	};
 
@@ -373,6 +373,7 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
 	);
+	DEFINE_INSTRUCTION_ERROR(NotAClassTypeError, "This type does not represent a class.");
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);

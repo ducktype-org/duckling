@@ -1,9 +1,11 @@
 #include "source_file.hpp"
 
 #include <frontend/module_tree/file_id.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <base/collections/stable_container.hpp>
+#include <base/collections/stable_hashmap.hpp>
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>
@@ -15,9 +17,10 @@ namespace {
 	ContentMap to_content;
 
 	/**
-	 * StableVector that stores all SourceFile instances.
+	 * StableHashMap that stores all SourceFile instances.
 	 */
-	base::StableVector<compiler::frontend::SourceFile> files;
+	base::StableHashMap<usize, compiler::frontend::SourceFile> files;
+	usize                                                      next_storage_key = 0;
 
 	/*
 	 * Map that stores all SourceFile instances by their file path.
@@ -25,6 +28,7 @@ namespace {
 	 */
 	base::HashMap<std::filesystem::path, std::vector<base::Ref<compiler::frontend::SourceFile>>>
 		files_map;
+
 }
 
 namespace compiler::frontend {
@@ -42,10 +46,13 @@ namespace compiler::frontend {
 
 		if (!files_map.contains(abs_path))
 			files_map.put(abs_path, std::vector<base::Ref<SourceFile>>());
-		files.pushBack(SourceFile(std::move(file), linked_module));
-		files_map.at(abs_path).emplace_back(files.last());
-		files.last()->file_id = FileID(files.last());
-		return files.last();
+		const auto storage_key = next_storage_key++;
+		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
+		Ref<SourceFile> created_ref(&inserted->value);
+		created_ref->storage_handle = storage_key;
+		created_ref->file_id        = FileID(created_ref);
+		files_map.at(abs_path).emplace_back(created_ref);
+		return created_ref;
 	}
 
 	std::vector<base::Ref<SourceFile>> SourceFile::getSourceFilesfromFile(const fs::File& file) {
@@ -63,10 +70,10 @@ namespace compiler::frontend {
 		parse_tree.reset();
 	}
 
-	const hashing::ComponentHash& SourceFile::getComponentHash() {
+	const hashing::ComponentHash& SourceFile::getComponentHash() const {
 		if (!component_hash.has_value()) {
-			auto m_component_hash = ModuleTree::getComponentHash(linked_module);
-			component_hash        = hashing::ComponentHash(m_component_hash, lang_file_name);
+			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
+			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
 		}
 		return component_hash.value();
 	}
@@ -81,7 +88,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	base::SharedView SourceFile::getCachedContent() {
+	base::SharedView SourceFile::getCachedContentIllegalAcess() {
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 		if (to_content.contains(abs_path)) {
 			CORE_ASSERT(
@@ -104,4 +111,49 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
+
+	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
+		auto abs_path = source_file->file.getFilePath().absolute().getPath();
+
+		if (files_map.contains(abs_path)) {
+			auto&      entries = files_map.at(abs_path);
+			const auto removal = std::ranges::remove_if(
+				entries.begin(),
+				entries.end(),
+				[source_file](const base::Ref<SourceFile>& candidate) {
+					return candidate == source_file;
+				}
+			);
+			entries.erase(removal.begin(), removal.end());
+
+			if (entries.empty()) {
+				files_map.erase(abs_path);
+				to_content.erase(abs_path);
+			}
+		}
+
+		CORE_ASSERT(
+			source_file->storage_handle.has_value(),
+			"Attempted to remove SourceFile without storage handle"
+		);
+		const auto storage_key = source_file->storage_handle.value();
+		const bool erased      = files.erase(storage_key);
+		CORE_ASSERT(erased, "Failed to remove SourceFile from storage");
+	}
+
+	void SourceFile::checkDanglingReference(const base::Ref<SourceFile>& candidate) {
+		IF_BUILD_TYPE_DEV({
+			// If we are not using module modifier, skip the check
+			if (!use_module_modifier_remove) return;
+			const auto* candidate_ptr = candidate.get();
+			bool        is_tracked    = false;
+			for (const auto& entry: files) {
+				if (&entry.value == candidate_ptr) {
+					is_tracked = true;
+					break;
+				}
+			}
+			if (!is_tracked) CORE_PANIC("dangling reference used after removing SourceFile");
+		});
+	}
 }

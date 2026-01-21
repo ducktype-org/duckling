@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/helios_errors.hpp>
+
 #include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
@@ -44,7 +44,7 @@ namespace compiler::helios {
 		std::vector<tsh::AbstractType> implements;
 	};
 
-	using QueryClassSymbolData_Result = query::QResult<ClassSymbolData, errors::Failed>;
+	using QueryClassSymbolData_Result = query::QResult<ClassSymbolData>;
 
 	/**
 	 * @brief Query all the information about a class definition.

@@ -4,6 +4,16 @@ This file is the main entry point for a future duck and quackpack developer.
 
 More detailed descriptions of various parts of duck and/or quackpack can be found in specific files dedicated to them.
 
+## Required external dependencies
+
+- `libgit2`,
+- `libssh2`,
+- `libssl2`,
+- `libsqlite3`,
+- `pkg-config` on Linux, for finding OpenSSL installation.
+
+Most of them could be avoided by passing appropriate `bundled-*` feature flag, or `all-bundled`, to bundle everything.
+
 ## General code structure
 
 While duck is a binary and __the__ entry point for building Duckling programmes, quackpack is the engine behind package management.

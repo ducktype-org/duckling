@@ -43,10 +43,33 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 
 	cmpNull,
 	cmpEq,
-	cmpG,
-	ucmpG,
-	cmpL,
-	ucmpL,
+	cmpNeq,
+	cmpGt,
+	cmpGe,
+	ucmpGt,
+	ucmpGe,
+	cmpLt,
+	cmpLe,
+	ucmpLt,
+	ucmpLe,
+	
+	fcmpEq,
+	fcmpNeq,
+	fcmpGt,
+	fcmpGe,
+	fcmpLt,
+	fcmpLe,
+
+	sext,
+	zext,
+	trunc,
+	sitofp,
+	uitofp,
+	fptosi,
+	fptoui,
+	fptrunc,
+	fpext,
+	
 	jmp,
 	jmpIf,
 	jmpIfNot,
@@ -79,17 +102,21 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	variantGetInner,
 	variantSetInner,
 
-	/**
-	 *  Do not use directly. If an instruction supports `ext` opcodes,
-	 *  just push another argument to the instruction builder.
-	 */
-	ext,
 	exit
 )
 // clang-format on
 // NOLINTEND
 
 namespace vm::code::builders {
+	/**
+	 * @brief Construct fat bytecode instruction from name and arg variant vector.
+	 * Expects that the instruction exists, has the correct arity, and argument types match,
+	 * panics if arguments are invalid.
+	 */
+	vm::code::Instruction makeInstructionFromArgs(
+		base::StrID name, const std::vector<opargs::OpCodeArg>& args
+	);
+
 	/**
 	 * @brief Helper to compose bytecode instructions.
 	 * It supports creating all available opcodes.
@@ -120,6 +147,6 @@ namespace vm::code::builders {
 			(pushArg(std::forward<Args>(args)), ...);
 		}
 
-		[[nodiscard]] std::vector<Instruction> build() const;
+		[[nodiscard]] Instruction build() const;
 	};
 }

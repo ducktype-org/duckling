@@ -6,6 +6,7 @@ namespace pst {
 	void viewAllSubTreeElementsAux(
 		std::vector<AccessLocked<pst::LangElement>>& output, AccessLocked<pst::LangElement> root
 	) {
+		if (!root.illegalAccess().has_value()) return;
 		output.push_back(root);
 		for (const auto& sub: root.illegalAccess().value()->viewChildren())
 			viewAllSubTreeElementsAux(output, sub);

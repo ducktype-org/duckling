@@ -4,37 +4,32 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, anyhow, bail};
 use rustvil::fs::PathExt;
 use toml::{Table, Value, from_str};
 use tracing::debug;
 
-use crate::{QuackResult, internal_bail};
+use super::DescriptionWithAnArticle;
+
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 use paste::item;
 use toml::value::{Array, Datetime};
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug)]
 pub struct TomlConfig {
     content: Table,
     source: Option<PathBuf>,
 }
 
-trait TypeWithAnArticle {
-    fn type_str_with_article(&self) -> &'static str;
-}
-
-impl TypeWithAnArticle for Value {
-    fn type_str_with_article(&self) -> &'static str {
+impl DescriptionWithAnArticle for Value {
+    fn desc_with_article(&self) -> &'static str {
         match self {
-            Value::String(_) => "a string",
-            Value::Integer(_) => "an integer",
-            Value::Float(_) => "a float",
-            Value::Boolean(_) => "a boolean",
-            Value::Datetime(_) => "a datetime",
-            Value::Array(_) => "an array",
-            Value::Table(_) => "a table",
+            Value::String(..) => "a string",
+            Value::Integer(..) => "an integer",
+            Value::Float(..) => "a float",
+            Value::Boolean(..) => "a boolean",
+            Value::Datetime(..) => "a datetime",
+            Value::Array(..) => "an array",
+            Value::Table(..) => "a table",
         }
     }
 }
@@ -49,14 +44,14 @@ macro_rules! delegate_getter {
             $(
                 pub fn [<get_ $name>](&self, key: &str) -> QuackResult<Option<$ret>> {
                     let value = self.get(key)?;
-                    let Some(value) = value else { return Ok(None); };
+                    let Some(value) = value else {
+                        return Ok(None);
+                    };
                     match value.[<as_ $toml_value_fn>]() {
                         Some(x) => Ok(Some(x)),
-                        // @TODO: #1353 Right now $toml_value_fn is human readable; maybe add another parameter for displaying?
-                        None => Err(anyhow!(self.make_location_error()))
-                                    .context(
-                                        format!("the key `{key}` expects {}, not {}", $human_type, value.type_str_with_article())
-                                    )
+                        None => Err(qp_err!("{}", self.make_location_error())).context(
+                            format!("the key `{key}` expects {}, not {}", $human_type, value.desc_with_article())
+                        )
                     }
                 }
             )*
@@ -83,6 +78,7 @@ macro_rules! delegate_setter {
 
 impl TomlConfig {
     pub fn new(path: PathBuf) -> QuackResult<Self> {
+        debug!("parsing TOML config at `{}`", path.display());
         let content = match path.as_path().read_to_string() {
             Ok(string) => string,
             Err(e) if matches!(e.kind(), ErrorKind::NotFound) => {
@@ -131,7 +127,7 @@ impl TomlConfig {
                 .unwrap_or_else(|| Path::new("<default-config>").display()) // It's dyn-hack.
         );
         if key.is_empty() {
-            internal_bail!("empty key")
+            qp_bail_internal!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -147,15 +143,15 @@ impl TomlConfig {
             let Some(next) = current.get(part) else {
                 debug!(
                     "there is no table `[{part}]` in the chain `{}`",
-                    parts[0..=i].join(".")
+                    parts[0..=i].join("."),
                 );
                 return Ok(None);
             };
             let Value::Table(next) = next else {
-                bail!(
+                qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next.type_str_with_article()
+                    next.desc_with_article(),
                 )
             };
             current = next;
@@ -170,7 +166,7 @@ impl TomlConfig {
     #[track_caller]
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
         if key.is_empty() {
-            internal_bail!("empty key")
+            qp_bail_internal!("empty key")
         }
         let parts = key.split('.').collect::<Vec<_>>();
         let [ref parts @ .., last] = parts[..] else {
@@ -183,18 +179,15 @@ impl TomlConfig {
             if part.is_empty() {
                 return Err(Self::make_empty_key_fragment_error(i, key));
             }
-            if !current.contains_key(part) {
-                current.insert(part.to_string(), Value::Table(Table::new()));
-            }
-            let Some(next) = current.get_mut(part) else {
-                unreachable!("we've just inserted a new part into the current");
-            };
-            let next_type = next.type_str_with_article();
+            let next = current
+                .entry(part)
+                .or_insert_with(|| Value::Table(Default::default()));
+            let next_type = next.desc_with_article();
             let Some(next) = next.as_table_mut() else {
-                bail!(
+                qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next_type
+                    next_type,
                 )
             };
             current = next;
@@ -208,8 +201,8 @@ impl TomlConfig {
             .with_context(|| self.make_location_error())
     }
 
-    fn make_empty_key_fragment_error(i: usize, key: &str) -> anyhow::Error {
-        let i = i + 1;
+    fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
+        i += 1;
         let last_two = i % 100;
         let digit = last_two % 10;
         let decimal = last_two - digit;
@@ -219,7 +212,7 @@ impl TomlConfig {
             3 if decimal != 10 => "rd",
             _ => "th",
         };
-        anyhow!("{i}{suffix} part of the key `{key}` is empty")
+        qp_err!("{i}{suffix} part of the key `{key}` is empty")
     }
 
     delegate_getter! {
@@ -246,9 +239,13 @@ impl TomlConfig {
         &self.content
     }
 
-    pub fn get_path(&self, key: &str) -> QuackResult<Option<PathBuf>> {
+    pub fn get_path(&self, key: &str) -> QuackResult<Option<&Path>> {
         let path = self.get_str(key)?;
-        Ok(path.map(PathBuf::from))
+        Ok(path.map(Path::new))
+    }
+
+    pub fn set_path(&mut self, key: &str, value: &Path) -> QuackResult<()> {
+        self.set_str(key, value.display().to_string())
     }
 }
 
@@ -265,9 +262,9 @@ mod tests {
 
     fn prepare_file(content: &str) -> NamedTempFile {
         use std::io::Write;
-        let mut file = NamedTempFile::new().expect("couldn't create tempfile");
+        let mut file = NamedTempFile::new().expect("couldn't create a tempfile");
         file.write_all(content.as_bytes())
-            .expect("couldn't write to file");
+            .expect("couldn't write to the tempfile");
         file
     }
 
@@ -304,13 +301,55 @@ mod tests {
         assert!(matches!(config.get_float("b"), Ok(Some(1.2))));
         assert!(matches!(config.get_int("a"), Ok(Some(1))));
         assert!(matches!(config.get_int("foo.a.a"), Ok(Some(1))));
-        assert!(config.get_int("foo.xd.a").is_err());
-        assert!(config.get_table("foo.xd.a").is_err());
-        assert!(config.get_array("foo.xd.a").is_err());
-        assert!(config.get_bool("foo.xd.a").is_err());
-        assert!(config.get_float("foo.xd.a").is_err());
-        assert!(config.get_date("foo.xd.a").is_err());
-        assert!(config.get_str("foo.xd.a").is_err());
+        assert_eq!(
+            config.get_int("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_table("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_array("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_bool("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_float("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_date("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
+        assert_eq!(
+            config.get_str("foo.xd.a").unwrap_err().to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                file.path().display()
+            )
+        );
         assert_eq!(
             config
                 .get_table("foo")
@@ -349,9 +388,14 @@ mod tests {
                 Table::from_iter([(String::from("a"), Value::Integer(1))]),
             )
             .unwrap();
-        config
-            .set_int("foo.a", 1)
-            .expect_err("we shouldn't be able to set int in array");
+        let err = config.set_int("foo.a", 1).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "when parsing the configuration at `{}`\nin the chain `foo` expected a table, not an array",
+                file.path().display()
+            )
+        );
         assert_eq!(
             config.to_string(),
             r#"a = true

@@ -2,6 +2,9 @@
 
 #include "token_stream.hpp"
 
+#include <diagnostic_interactive/logger_fwd.hpp>
+#include <diagnostic_interactive/message.hpp>
+
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
@@ -12,7 +15,29 @@ namespace tpc {
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
-		std::vector<TokenStream> stream_stack;  ///< Internal storage of recursive strings
+	protected:
+		/**
+		 * @brief Types of substream:
+		 * - Recursive - Comes from the token structure.
+		 * - NonRecursive - Manually set fallback.
+		 */
+		enum SubStreamType { Recursive, NonRecursive };
+
+		/**
+		 * @brief Data needed to handle restoring to a fallback
+		 */
+		struct Fallback {
+			SubStreamType    type;
+			Box<TokenStream> saved_stream;
+			/**
+			 * @brief Jump done after restoring a fallback.
+			 */
+			u64 post_jump;
+		};
+
+		Box<TokenStream> current_stream;
+
+		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
 
 	public:
 		/**
@@ -33,11 +58,14 @@ namespace tpc {
 
 		// clang-format on
 
-		Ref<dia::Logger> err;  ///< Stores parsing errors
+		Ref<dia::Logger>     err;      ///< Stores parsing errors
+		Ref<dia_int::Logger> int_err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, Ref<dia::Logger> err): err(err) {
-			stream_stack.emplace_back(std::move(tokens));
-		}
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
+			  current_stream(makeBox<TokenStream>(std::move(tokens))),
+			  fallback_stack(),
+			  err(err),
+			  int_err(int_err) {}
 
 		/**
 		 * @return true If no tokens left in current stream
@@ -61,30 +89,40 @@ namespace tpc {
 
 		/**
 		 * @brief Creates a new stream from the current token in current stream and makes it the
-		 * current stream
+		 * current stream.
 		 */
-		void goDown();
+		virtual void goDown();
 		/**
-		 * @brief deletes current stream and makes last stream the current stream
+		 * @brief deletes current stream and makes last stream the current stream.
 		 */
-		void goUp();
+		virtual void goUp();
 		/**
 		 * @brief deletes current stream and makes last stream the current stream then skips one
-		 * token(the recursive token that was the source of the deleted stream)
+		 * token.
 		 */
-		void goUpAndSkip();
+		virtual void goUpAndSkip();
 
 		/**
-		 * @brief Logs an error relatively to the current token
+		 * @brief Logs an error relatively to the current token.
+		 * @note This version is deprecated in favor of the diagnostic Message system.
 		 */
-		void fail(i64 rel_pos, const std::string& message) {
+		[[deprecated]]
+		virtual void fail(i64 rel_pos, const std::string& message) {
 			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
 
 		/**
-		 * @brief Logs an error relatively to the current token
+		 * @brief Logs an error relatively to the current token.
 		 */
-		void log(Box<dia::Message> message) { err->log(std::move(message)); }
+		virtual void log(Box<dia::Message> message) { err->log(std::move(message)); }
+
+		virtual void logInt(Box<dia_int::MessageBase> message) { int_err->log(std::move(message)); }
+
+		template<TokenStreamCondition until>
+		[[nodiscard]]
+		u64 countUntil() const {
+			return current_stream->countUntil<until>();
+		}
 
 		/**
 		 * @brief Get position relative to the current token.

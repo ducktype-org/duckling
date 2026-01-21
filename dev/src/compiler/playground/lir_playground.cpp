@@ -42,14 +42,14 @@ int main(int argc, const char* argv[]) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
-	for (const auto& hout_glob: top_level->glob_data) {
+	for (const auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			variant_match(hout_glob.value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
-						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->value();
+						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();
 					auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 					lir_func->debugPrint(ctx, std::cerr);
 					std::cerr << "\n";
@@ -61,9 +61,9 @@ int main(int argc, const char* argv[]) {
 		});
 	}
 
-	for (auto& fun: top_level->functions) {
+	for (auto& fun: top_level.functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->value();
+			CRef mir_fun = &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
 			lir_fun->debugPrint(ctx, std::cerr);
 		});

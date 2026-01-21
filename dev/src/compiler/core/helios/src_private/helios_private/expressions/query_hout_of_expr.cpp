@@ -1,11 +1,15 @@
 #include "query_hout_of_expr.hpp"
 
+#include "coercions.hpp"
+#include "errors.hpp"
 #include "numeric_literals.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -20,6 +24,37 @@
 
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief This error message is used when there is a string literal with escape sequences
+		 * that failed to parse.
+		 */
+		class UnknownEscapeSequenceError final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "unknown_escape_sequence" };
+			}
+
+			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
+				dia_int::Metadata getMetadata() const final {
+					return { .template_type = "message",
+						     .type          = "docs",
+						     .family        = "expressions",
+						     .name          = "supported_escape_sequences" };
+				}
+
+			public:
+				SupportedEscapeSequencesDocs(): MessageBase() {}
+			};
+
+		public:
+			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+				  MessageWithCodeFragmentAndCause(source_position) {
+				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
+				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
+			}
+		};
 
 		/**
 		 * This is an effective implementation of QueryHoutOfExpr.
@@ -77,19 +112,31 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
-			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
-					// Error was logged in fromExprValue.
+					// Error was logged in fromExprNumericValue.
 					return;
 				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
-				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				variant_match(unescape_result) {
+					variant_case(base::UnescapedString, result) {
+						node = makeBox<LiteralStringExpr>(ctx, base::StrID(result.value));
+					}
+					variant_case(base::UnknownEscapeSequence, error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
+					variant_default CORE_UNREACHABLE();
+				}
 			}
 
 			/**
@@ -99,11 +146,20 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(
 				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 			) {
-				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
-				if (operation) {
-					return makeBox<BinaryOperatorExpr>(
-						ctx, operation.value(), std::move(lhs), std::move(rhs)
-					);
+				auto result = findBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, lhs_coercion, rhs_coercion] = value;
+
+						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+
+						return makeBox<BinaryOperatorExpr>(
+							ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
+						);
+					}
+					opt_none { return {}; }
 				}
 				return {};
 			}
@@ -124,26 +180,25 @@ namespace compiler::helios::code {
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				if (stmt->getOperator().str() == "|") {
-					// @todo HOUT 2.0:
-					// Here we assume that "|" always produces a variant (likely valid).
-					// If it does not, and "|" will remain a binary operator,
-					// we will have to do something with it.
-					// (likely if-out if all sub expressions are meta or non-meta, throw otherwise,
-					// (require parentheses))
-
-					auto sub_exprs = getVariantSubExprs(ctx, stmt);
-					// @todo HOUT 2.0:
-					// validate that all sub types are meta
-
+					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
+					// Expect all subexpressions in variant constructor to be Meta types or try to
+					// lift them if they aren't.
+					const auto meta_type = tsh::SymbolType<>{
+						ctx.query<tsh::QueryMetaType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = fromPST(ctx, sub_expr);
-						if (sub_expr_hout.hasError()) {
+						auto sub_expr_hout
+							= getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
+						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
 						}
-						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
+						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
 					}
 					node = makeBox<VariantTypeConstructorExpr>(ctx, std::move(all_subtypes));
 					return;
@@ -153,10 +208,10 @@ namespace compiler::helios::code {
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
 				// @todo: make failure more explicit...
-				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
+				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
 
-				auto lhs = std::move(lhs_res).value();
-				auto rhs = std::move(rhs_res).value();
+				auto lhs = std::move(lhs_res).valueOrThrow();
+				auto rhs = std::move(rhs_res).valueOrThrow();
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -165,28 +220,26 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
+				auto lhs_type = lhs->expression_type.getType();
+				auto rhs_type = rhs->expression_type.getType();
 
 				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
+					ctx.log(makeBox<code::UndefinedBinaryOperator>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						lhs_type.toString(),
+						rhs_type.toString()
+					));
 					// failed
 				}
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {
-				auto result = fromChainExpr(ctx, chain_expr);
-				if (result.hasError()) {
-					// Error has occurred.
-					return;
-				}
-				node = std::move(result.value());
+				node = fromChainExpr(ctx, chain_expr).valueOrThrow();
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
@@ -202,12 +255,8 @@ namespace compiler::helios::code {
 				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 					stmt->getName().position, ctx, stmt->getName().value
 				);
-				if (!sym_list) {
-					// failed
-					return;
-				}
 
-				node = makeBox<IdentifierExpr>(ctx, sym_list.value().back());
+				node = makeBox<IdentifierExpr>(ctx, sym_list.valueOrThrow().back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -319,11 +368,11 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
 					auto res = fromPST(ctx, ex);
-					if (res.hasError()) {
+					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
 					}
-					expressions.emplace_back(std::move(res).value());
+					expressions.emplace_back(std::move(res).valueOrThrow());
 				}
 
 				node = makeBox<TupleExpr>(ctx, std::move(expressions));
@@ -339,7 +388,7 @@ namespace compiler::helios::code {
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
 				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasError()) return;  // failed
+				if (inner.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -349,17 +398,16 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner.value()));
+				auto expr_type = inner.valueOrThrow()->expression_type.getType();
+				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.valueOrThrow()));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
+					ctx.log(makeBox<UndefinedUnaryOperator>(
+						stmt->getSourcePosition(), stmt->getOperator().str(), expr_type.toString()
+					));
 					// failed
 				}
 			}
@@ -369,12 +417,12 @@ namespace compiler::helios::code {
 				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
 				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
 
-				if (condition_res.hasError() or if_true_res.hasError() or if_false_res.hasError())
+				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
 
-				auto condition = std::move(condition_res).value();
-				auto if_true   = std::move(if_true_res).value();
-				auto if_false  = std::move(if_false_res).value();
+				auto condition = std::move(condition_res).valueOrThrow();
+				auto if_true   = std::move(if_true_res).valueOrThrow();
+				auto if_false  = std::move(if_false_res).valueOrThrow();
 
 				node = makeBox<TernaryOperatorExpr>(
 					ctx, std::move(condition), std::move(if_true), std::move(if_false)
@@ -392,10 +440,10 @@ namespace compiler::helios::code {
 				result_exprs.reserve(expr_count);
 				for (size_t i = 0; i < expr_count; ++i) {
 					auto result = fromPST(ctx, stmt->getSubExpr(i));
-					if (result.hasError())
+					if (result.hasFailed())
 						return;
 					else
-						result_exprs.push_back(std::move(result.value()));
+						result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
 
 				// @todo here we should:
@@ -406,21 +454,34 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					match_optional(findBinaryBuiltin(
-						pst_operators.at(i), result_exprs.at(i).ref(), result_exprs.at(i + 1).ref()
-					)) {
-						opt_some(op) { operators.push_back(op); }
-						opt_none {
-							ctx.log(makeBox<
-									dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-								stmt->getSourcePosition(), "No builtin operator found"
-							));
-							return;
-						}
+					auto lhs_type = result_exprs.at(i)->expression_type.getType();
+					auto rhs_type = result_exprs.at(i + 1)->expression_type.getType();
+
+					auto result = findBinaryBuiltin(
+						ctx,
+						pst_operators.at(i),
+						result_exprs.at(i).ref(),
+						result_exprs.at(i + 1).ref()
+					);
+
+					if (result) {
+						auto [op, lhs_coercion, rhs_coercion] = std::move(result).value();
+						result_exprs[i] = lhs_coercion.coerce(ctx, std::move(result_exprs[i]));
+						result_exprs[i + 1]
+							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
+						operators.push_back(op);
+					} else {
+						ctx.log(makeBox<code::UndefinedBinaryOperator>(
+							stmt->getSourcePosition(),
+							pst_operators.at(i).str(),
+							lhs_type.toString(),
+							rhs_type.toString()
+						));
+
+						return;
 					}
 				}
 
@@ -437,7 +498,7 @@ namespace compiler::helios::code {
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
-			return query::QError(errors::Failed());
+			return query::Failed();
 		}
 	}
 }
@@ -446,12 +507,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// Note: we might actually accept nulls in such queries, and just return failed
-			// Something to think about as part of #412
-			CORE_ASSERT(
-				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
-			);
-
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
 		}
@@ -465,4 +520,39 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
+
+	ExprConstructionResult getHoutOfExprWithExpectedType(
+		query::Context&                                      ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
+		const tsh::SymbolType<>                              expected_type,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+
+		if (expr_hout_qresult.hasFailed()) return query::Failed();
+
+		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
+
+		const auto coercion_qresult
+			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		if (coercion_qresult.hasFailed()) return query::Failed();
+
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_case(InvalidCoercion, _) {
+				if (log_error.has_value()) {
+					(*log_error)(ctx);
+				} else {
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						pst_expr.element.unlock(ctx)->getSourcePosition(),
+						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
+						makeBox<InteractiveType>(ctx, expected_type)
+					));
+				}
+				return query::Failed();
+			}
+			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
+		}
+		CORE_UNREACHABLE();
+	}
 }

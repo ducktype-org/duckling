@@ -28,7 +28,8 @@ namespace compiler::helios {
 
 			void visitClass(pst::Access<pst::Class> stmt) final {
 				name = stmt->getName();
-				if (auto base = stmt->getBase().unlockOpt(ctx)) base_class = base.value();
+				if (auto base = stmt->getBase().unlockOpt(ctx))
+					base_class = base.value()->getExpr().unlock(ctx);
 				if (auto implements = stmt->getImplements().unlockOpt(ctx))
 					this->implements = implements.value();
 			}
@@ -70,36 +71,21 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				if (auto ctv = ctx.query<QueryEvaluatePSTExpression>({ base })) {
-					// @TODO: #1618 Use coercion logic
-					if (auto maybe_type = ctv.value().getType(ctx)) {
-						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
-						// the base class has any specifiers other than the abstract type.
-						class_info.base = maybe_type.value().getType();
-					} else {
-						return query::QError(errors::Failed());
-					}
-				} else {
-					// We just fail here, error should be reported by QueryEvaluatePSTExpression.
-					return query::QError(errors::Failed());
-				}
+				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
+				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
+				// type of the base class has any specifiers.
+				class_info.base = ctv.get<tsh::SymbolType<>>()->getType();
+				class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					if (auto ctv
-					    = ctx.query<QueryEvaluatePSTExpression>(interface.unlock(ctx)->getExpr())) {
-						if (auto maybe_type = ctv.value().getType(ctx)) {
-							// @TODO: Raise errors, here, or preferably earlier, if the symbol type
-							// of the base class has any specifiers other than the abstract type.
-							class_info.implements.push_back(maybe_type.value().getType());
-						} else {
-							return query::QError(errors::Failed());
-						}
-					} else {
-						// We just fail here, error should be reported by QueryEvaluatePSTExpression.
-						return query::QError(errors::Failed());
-					}
+					UNPACK_QRESULT(
+						auto ctv =, getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr())
+					);
+					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
+					// type of the base class has any specifiers.
+					class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
 				}
 			}
 
@@ -110,5 +96,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
-
 }

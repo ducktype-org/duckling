@@ -20,6 +20,11 @@
 #include <variant>
 #include <vector>
 
+namespace compiler::repl {
+	// for friend:
+	struct ImplementationOf_QueryReplExpressionWrapper;
+}
+
 namespace compiler::helios {
 
 	// for friend:
@@ -72,6 +77,7 @@ namespace compiler::helios {
 			SymID symbol, tsh::SymbolType<> ret_type, std::vector<code::Parameter> parameters
 		);
 		friend ImplementationOf_QueryDeclOfFun;
+		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 	};
 
 	/**
@@ -85,6 +91,7 @@ namespace compiler::helios {
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
 		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 
 	public:
 		HOUTFunction() = delete;
@@ -148,7 +155,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> type;
 
-		HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
+		explicit HOUTGlobalData(SymID symbol, query::Context& ctx, HOUTGlobalDataType data_type);
 
 		[[nodiscard]]
 		std::string debugPrint(query::Context& ctx) const;

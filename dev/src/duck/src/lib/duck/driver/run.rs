@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
     ffi::OsString,
+    io::Write,
     path::{Path, PathBuf},
 };
 
-use crate::{DuckCtx, QuackResult};
-use anyhow::{Context, bail};
+use crate::{DuckCtx, QuackResult, QuackResultContext, qp_bail};
 use clap::ArgMatches;
 use rustvil::{fs::PathExt, os::CommandExt};
 use tracing::debug;
@@ -32,8 +32,13 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 
     let matches = cli.try_get_matches()?;
     if let Some(chdir) = matches.get_one::<PathBuf>("directory") {
-        std::env::set_current_dir(chdir)
-            .with_context(|| format!("couldn't change CWD to `{}`", chdir.display()))?;
+        std::env::set_current_dir(chdir).with_context(|| {
+            format!(
+                "couldn't change the current working directory to `{}`",
+                chdir.display()
+            )
+        })?;
+        ctx.reload_cwd()?;
     }
     let args = fix_typos(matches, ctx, &external)?;
     let args = expand_aliases(args, ctx, &external, vec![])?;
@@ -111,7 +116,7 @@ fn run_subcmd(
             execute_external_subcmd(exec_path, args)
                 .with_context(|| format!("failed to execute the external subcommand `{sub_cmd}`"))
         }
-        (None, None) => bail!("No such command: `{sub_cmd}`"),
+        (None, None) => qp_bail!("No such command: `{sub_cmd}`"),
     }
 }
 

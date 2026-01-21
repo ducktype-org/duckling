@@ -208,7 +208,7 @@ namespace vm::loader::parser {
 					}
 				} else {
 					// By default, we assume 64-bit integer or a double if it has a dot.
-					if (str.find_first_of(".eE") != std::string::npos) {
+					if (str.find_first_of(".eE") != std::string::npos && base == 10) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = detail::packValue<T>(value);
 					} else {
@@ -308,37 +308,29 @@ namespace vm::loader::parser {
 
 #undef HANDLE_STR_ARG
 
-		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
-
-		template<IsOpCodeArg Arg0>
-		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			return { parseArg<Arg0>(state) };
+		// Dummy parameter to help with leading commas from macros.
+		template<typename Dummy, typename ArgsHead = void, typename... ArgsTail>
+		std::vector<opargs::OpCodeArg> parseOpCodeArgs(F8ParserState& state) {
+			// Separate case for no (non-dummy) args passed (first arg defaulted)
+			// to avoid a trailing comma.
+			if constexpr (std::same_as<ArgsHead, void>) {
+				return {};
+			} else {
+				return { parseArg<ArgsHead>(state),
+					     (state.parse().one(lang_def::Special::Comma),
+					      parseArg<ArgsTail>(state))... };
+			}
 		}
-
-		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
-		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto arg0 = parseArg<Arg0>(state);
-			state.parse().one(lang_def::Special::Comma);
-			auto arg1 = parseArg<Arg1>(state);
-			return { arg0, arg1 };
-		}
-
-#define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
-
-#define HANDLE_INSTR_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
-#define HANDLE_INSTR_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
-#define HANDLE_INSTR_2ARGS(opcode, arg0_type, arg1_type) \
-	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
+#define ARG_TYPE(type, name) , type
+#define HANDLE_INSTR_ARGS(NAME, ...) \
+	std::make_pair(std::string{ #NAME }, parseOpCodeArgs<void FOR_EACH(ARG_TYPE EXPAND, __VA_ARGS__)>),
+
 #include <vm/bytecode/instruction_definitions.hpp>
-
+#undef HANDLE_INSTR_ARGS
+#undef ARG_TYPE
 		};
-
-#undef HANDLE_INSTR_0ARGS
-#undef HANDLE_INSTR_1ARGS
-#undef HANDLE_INSTR_2ARGS
-#undef MAKE_LINK
 	}
 
 	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
@@ -424,7 +416,7 @@ namespace vm::loader::parser {
 				}
 			} else {
 				if (!logged) {
-					state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+					state.log(makeBox<tpc::NoIdentifierErrorOld>(state.getPosition()));
 					logged = true;
 				}
 				state.tokens().skip();

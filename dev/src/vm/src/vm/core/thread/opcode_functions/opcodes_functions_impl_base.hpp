@@ -1,4 +1,3 @@
-
 /**
  * @file opcodes_functions_impl_base.hpp
  * @brief The opcodes functions implementations.
@@ -45,6 +44,10 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <cmath>
+#include <limits>
+#include <type_traits>
+
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -76,10 +79,10 @@ namespace vm {
 	// call and may cause the stack to explode.
 
 	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
-	// macro. This means, every other will jump to the next instruction at the end of it with
+	// macro. This means, every other instruction will jump to the next at the end of it with
 	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
 	// use this opcode. It also requires different macro surrounding the function call in the
-	// computed goto's and switch case, because in those approaches we can't end execution from
+	// switch case because in this approach we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
@@ -88,89 +91,67 @@ namespace vm {
 		IF_TC(return;)
 	}
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                            \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
-		{                                                                                           \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                    \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                        \
-		{                                                                                           \
-			const TYPE value = safeReadBytes<TYPE>(instr->arg1);                                    \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                              \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {               \
-		{                                                                                           \
-			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];     \
-			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];     \
-			thread.process_memory.copyPointedData(                                                  \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
-			);                                                                                      \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {               \
-		{                                                                                           \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                         \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                         \
-			thread.process_memory.copyPointedData(                                                  \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
-			);                                                                                      \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {               \
-		{                                                                                           \
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);                                         \
-			auto src_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];     \
-			thread.process_memory.copyPointedData(                                                  \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
-			);                                                                                      \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {               \
-		{                                                                                           \
-			auto dst_block = frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];     \
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);                                         \
-			thread.process_memory.copyPointedData(                                                  \
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)   \
-			);                                                                                      \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {              \
-		{                                                                                           \
-			if (frame->flags.flag) {                                                                \
-				auto dst_block                                                                      \
-					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg0]];            \
-				auto src_block                                                                      \
-					= frame->block_stack[frame->local_offset_to_block_idx[instr->arg1]];            \
-				thread.process_memory.copyPointedData(                                              \
-					{ dst_block, 0 },                                                               \
-					{ src_block, 0 },                                                               \
-					thread.process_memory.getBlockType(dst_block)                                   \
-				);                                                                                  \
-			}                                                                                       \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
-	}                                                                                               \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                       \
-		{                                                                                           \
-			if (frame->flags.flag)                                                                  \
-				writeToStack<TYPE>(local_stack, instr->arg0, vm::safeReadBytes<TYPE>(instr->arg1)); \
-		}                                                                                           \
-		FUNCTION_CONT(1);                                                                           \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
+		{ writeToStack<TYPE>(local_stack, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); } \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
+		{ WRITE_TO_GLOBAL(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }           \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
+		{                                                                                         \
+			safeWriteBytes<TYPE>(                                                                 \
+				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0           \
+			);                                                                                    \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
+		{                                                                                         \
+			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
+			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
+		{                                                                                         \
+			const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                     \
+			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
+		{                                                                                         \
+			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
+			writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {            \
+		{                                                                                         \
+			if (frame->flags.flag) {                                                              \
+				const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                 \
+				writeToStack<TYPE>(local_stack, instr->arg0, value);                              \
+			}                                                                                     \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
+	}                                                                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                     \
+		{                                                                                         \
+			if (frame->flags.flag)                                                                \
+				writeToStack<TYPE>(                                                               \
+					local_stack, instr->arg0, vm::safeReadObjectBytes<TYPE>(instr->arg1)          \
+				);                                                                                \
+		}                                                                                         \
+		FUNCTION_CONT(1);                                                                         \
 	}
 
-	DEFINE_MOVE_OPS(64, i64)
-	DEFINE_MOVE_OPS(32, i32)
-	DEFINE_MOVE_OPS(16, i16)
-	DEFINE_MOVE_OPS(8, i8)
+	DEFINE_MOVE_OPS(64, u64)
+	DEFINE_MOVE_OPS(32, u32)
+	DEFINE_MOVE_OPS(16, u16)
+	DEFINE_MOVE_OPS(8, u8)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
 		{
@@ -195,8 +176,8 @@ namespace vm {
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
 			lhs OP     rhs;                                                              \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
@@ -204,64 +185,70 @@ namespace vm {
 	}                                                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = safeReadBytes<TYPE>(instr->arg1);                           \
-			lhs OP     rhs;                                                              \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			const auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                     \
+			lhs        OP static_cast<TYPE>(rhs);                                        \
 			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-#define DEFINE_DIVISION_OP(NAME, BITS_SIZE, TYPE)                                        \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+#define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+		{                                                                                 \
+			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
+			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+		{                                                                                 \
+			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
+			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
+			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
+			lhs OP rhs;                                                                   \
+			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
 		{                                                                                \
-			TYPE       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const TYPE rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
-		{                                                                                \
-			TYPE lhs = readFromStack<TYPE>(local_stack, instr->arg0);                    \
-			auto rhs = safeReadBytes<TYPE>(instr->arg1);                                 \
-			if (rhs == 0) throw exceptions::VMZeroDivisionException();                   \
-			lhs /= rhs;                                                                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
+			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	// @TODO: Check for over/under flows. This should be done in #1216.
-	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
-	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
-	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
-	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
-	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
-	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
-	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
-	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
-	DEFINE_DIVISION_OP(div, 64, i64)
-	DEFINE_DIVISION_OP(div, 32, i32)
+// @TODO: #1216 Check for over/under flows.
+#define DEFINE_INT_N_ARITHMETIC(SIZE)                \
+	DEFINE_ARITHMETIC_OP(add, SIZE, i##SIZE, +=)     \
+	DEFINE_ARITHMETIC_OP(sub, SIZE, i##SIZE, -=)     \
+	DEFINE_ARITHMETIC_OP(mul, SIZE, i##SIZE, *=)     \
+	DEFINE_DIVISION_LIKE_OP(mod, SIZE, i##SIZE, %=)  \
+	DEFINE_DIVISION_LIKE_OP(div, SIZE, i##SIZE, /=)  \
+	DEFINE_NEGATION_OP(neg, SIZE, i##SIZE)           \
+	DEFINE_ARITHMETIC_OP(umul, SIZE, u##SIZE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(umod, SIZE, u##SIZE, %=) \
+	DEFINE_DIVISION_LIKE_OP(udiv, SIZE, u##SIZE, /=)
 
-	DEFINE_ARITHMETIC_OP(fadd, 64, double, +=)
-	DEFINE_ARITHMETIC_OP(fadd, 32, float, +=)
-	DEFINE_ARITHMETIC_OP(fsub, 64, double, -=)
-	DEFINE_ARITHMETIC_OP(fsub, 32, float, -=)
-	DEFINE_ARITHMETIC_OP(fmul, 64, double, *=)
-	DEFINE_ARITHMETIC_OP(fmul, 32, float, *=)
-	DEFINE_ARITHMETIC_OP(fdiv, 64, double, /=)
-	DEFINE_ARITHMETIC_OP(fdiv, 32, float, /=)
+	FOR_EACH(DEFINE_INT_N_ARITHMETIC, 64, 32, 16, 8)
 
+#define FLOAT_64_TYPE double
+#define FLOAT_32_TYPE float
+#define DEFINE_FLOAT_N_ARITHMETIC(SIZE)                          \
+	DEFINE_ARITHMETIC_OP(fadd, SIZE, FLOAT_##SIZE##_TYPE, +=)    \
+	DEFINE_ARITHMETIC_OP(fsub, SIZE, FLOAT_##SIZE##_TYPE, -=)    \
+	DEFINE_ARITHMETIC_OP(fmul, SIZE, FLOAT_##SIZE##_TYPE, *=)    \
+	DEFINE_DIVISION_LIKE_OP(fdiv, SIZE, FLOAT_##SIZE##_TYPE, /=) \
+	DEFINE_NEGATION_OP(fneg, SIZE, FLOAT_##SIZE##_TYPE)
 
-	DEFINE_ARITHMETIC_OP(umul, 64, u64, *=)
-	DEFINE_ARITHMETIC_OP(umul, 32, u32, *=)
-	DEFINE_ARITHMETIC_OP(umod, 64, u64, %=)
-	DEFINE_ARITHMETIC_OP(umod, 32, u32, %=)
-	DEFINE_DIVISION_OP(udiv, 64, u64)
-	DEFINE_DIVISION_OP(udiv, 32, u32)
+	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
+
 
 #define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
@@ -275,7 +262,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                  \
 		{                                                                              \
 			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (safeReadBytes<u8>(instr->arg1) != u8{ 0 });              \
+			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 });        \
 			writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
 		}                                                                              \
 		FUNCTION_CONT(1);                                                              \
@@ -304,28 +291,34 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
-				OP safeReadBytes<TYPE>(instr->arg1);                                     \
+				OP safeReadObjectBytes<TYPE>(instr->arg1);                               \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
-	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
-	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
-	DEFINE_COMPARISON_OP(ucmpG, 64, u64, >)
-	DEFINE_COMPARISON_OP(cmpL, 64, i64, <)
-	DEFINE_COMPARISON_OP(ucmpL, 64, u64, <)
+#define DEFINE_INT_N_COMPARISONS(SIZE)              \
+	DEFINE_COMPARISON_OP(cmpEq, SIZE, i##SIZE, ==)  \
+	DEFINE_COMPARISON_OP(cmpNeq, SIZE, i##SIZE, !=) \
+	DEFINE_COMPARISON_OP(cmpGt, SIZE, i##SIZE, >)   \
+	DEFINE_COMPARISON_OP(cmpGe, SIZE, i##SIZE, >=)  \
+	DEFINE_COMPARISON_OP(cmpLt, SIZE, i##SIZE, <)   \
+	DEFINE_COMPARISON_OP(cmpLe, SIZE, i##SIZE, <=)  \
+	DEFINE_COMPARISON_OP(ucmpGt, SIZE, u##SIZE, >)  \
+	DEFINE_COMPARISON_OP(ucmpGe, SIZE, u##SIZE, >=) \
+	DEFINE_COMPARISON_OP(ucmpLt, SIZE, u##SIZE, <)  \
+	DEFINE_COMPARISON_OP(ucmpLe, SIZE, u##SIZE, <=)
 
-	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
-	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
-	DEFINE_COMPARISON_OP(ucmpG, 32, u32, >)
-	DEFINE_COMPARISON_OP(cmpL, 32, i32, <)
-	DEFINE_COMPARISON_OP(ucmpL, 32, u32, <)
+	FOR_EACH(DEFINE_INT_N_COMPARISONS, 64, 32, 16, 8)
 
-	DEFINE_COMPARISON_OP(cmpEq, 8, i8, ==)
-	DEFINE_COMPARISON_OP(cmpG, 8, i8, >)
-	DEFINE_COMPARISON_OP(ucmpG, 8, u8, >)
-	DEFINE_COMPARISON_OP(cmpL, 8, i8, <)
-	DEFINE_COMPARISON_OP(ucmpL, 8, u8, <)
+#define DEFINE_FLOAT_N_COMPARISONS(SIZE)                         \
+	DEFINE_COMPARISON_OP(fcmpEq, SIZE, FLOAT_##SIZE##_TYPE, ==)  \
+	DEFINE_COMPARISON_OP(fcmpNeq, SIZE, FLOAT_##SIZE##_TYPE, !=) \
+	DEFINE_COMPARISON_OP(fcmpGt, SIZE, FLOAT_##SIZE##_TYPE, >)   \
+	DEFINE_COMPARISON_OP(fcmpGe, SIZE, FLOAT_##SIZE##_TYPE, >=)  \
+	DEFINE_COMPARISON_OP(fcmpLt, SIZE, FLOAT_##SIZE##_TYPE, <)   \
+	DEFINE_COMPARISON_OP(fcmpLe, SIZE, FLOAT_##SIZE##_TYPE, <=)
+
+	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
@@ -352,38 +345,6 @@ namespace vm {
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
-		{
-			i64 value = readFromStack<i64>(local_stack, instr->arg0);
-			writeToStack<i64>(local_stack, instr->arg0, value * -1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
-		{
-			i32 value = readFromStack<i32>(local_stack, instr->arg0);
-			writeToStack<i32>(local_stack, instr->arg0, value * -1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l64)(FUNCTION_ARGS) {
-		{
-			auto value = readFromStack<double>(local_stack, instr->arg0);
-			writeToStack<double>(local_stack, instr->arg0, value * -1.0);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(fneg_l32)(FUNCTION_ARGS) {
-		{
-			auto value = readFromStack<float>(local_stack, instr->arg0);
-			writeToStack<float>(local_stack, instr->arg0, value * -1.0f);
-		}
-		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
@@ -442,17 +403,39 @@ namespace vm {
 			auto ext_func_id = instr->arg0;
 			auto ext_func    = thread.executing_program->getExternCFunctions().at(ext_func_id);
 
-			auto arg_count        = ext_func->parameters.size();
-			u64  result_value_idx = frame->block_stack.size() - arg_count - 1;
+			auto arg_count = ext_func->parameters.size();
+			bool is_void   = ext_func->result_type->getName() == "void";
 
-			auto ext_result_destination = frame->block_stack[result_value_idx];
-			auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+			if (arg_count == 0 && is_void) {
+				// Special case: void function with no arguments.
+				ext_func->function_pointer(nullptr, nullptr);
+			} else {
+				// Calculate the index of the result value on the block stack.
+				// If the function is void, there is no result value, so we don't
+				// need to account for it.
+				// Local stack layout:
+				// 		CURRENT_FUNC_RESULT_VALUE (this is where the stack begins)
+				// 		...
+				// 		result_value,
+				// 		arg0,
+				// 		arg1
+				// 		...
+				// 		argN
+				u64 result_value_idx = frame->block_stack.size() - arg_count - (is_void ? 0 : 1);
 
-			ext_func->function_pointer(
-				result_view.getBegin(), result_view.getBegin() + ext_func->result_type->getSize()
-			);
 
-			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+				auto ext_result_destination = frame->block_stack[result_value_idx];
+				auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+
+				// Prepare arguments and call the function.
+				byte* result_pointer = result_view.getBegin();
+				byte* args_pointer
+					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize());
+
+				ext_func->function_pointer(result_pointer, args_pointer);
+
+				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+			}
 		}
 
 		FUNCTION_CONT(1);
@@ -466,14 +449,12 @@ namespace vm {
 			// This is verified by static verification.
 
 			const auto  view             = Memory::getPointerData(pointer, sizeof(Type*));
-			const auto* inh_meta_pointer = readFromView<const vm::Type**>(view);
-			const auto  inh_metadata     = (*inh_meta_pointer)
-			                              ->getInheritanceMetadata()
-			                              .expect(
-											  "setVTable_lptr_type not called on the object, hence "
-											  "no inheritance metadata."
-										  );
-			const auto method_name = thread.executing_program->getMethodNamePool()[instr->arg1];
+			const auto* inh_meta_pointer = readFromView<const Type*>(view);
+
+			if (inh_meta_pointer == nullptr) throw exceptions::VMVtableUnset();
+
+			const auto inh_metadata = inh_meta_pointer->getInheritanceMetadata().value();
+			const auto method_name  = thread.executing_program->getMethodNamePool()[instr->arg1];
 			const auto implementation_name = inh_metadata->vtable[method_name];
 
 			const usize function_id
@@ -651,13 +632,43 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
 		{
-			auto dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
-			auto dst_block     = frame->block_stack[dst_block_idx];
-			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
-			auto src_block     = frame->block_stack[src_block_idx];
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			auto       dst_block_idx = frame->local_offset_to_block_idx[instr->arg0];
+			auto       dst_block     = frame->block_stack[dst_block_idx];
+			const auto type_size     = thread.process_memory.getBlockType(dst_block)->getSize();
+			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
+		{
+			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
+			std::memcpy(
+				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
+				local_stack + instr->arg1,
+				thread.process_memory.getBlockType(dst_block)->getSize()
 			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
+		{
+			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
+			std::memcpy(
+				local_stack + instr->arg0,
+				thread.process_memory.getBlockViewUnsafe(src_block).getBegin(),
+				thread.process_memory.getBlockType(src_block)->getSize()
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+		{
+			// @TODO: #1728 remove this evil instruction
+			const void* value = safeReadObjectBytes<void*>(instr->arg1);
+			writeToStack(local_stack, instr->arg0, value);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -679,9 +690,19 @@ namespace vm {
                 TypeID(base::safeIntConv<usize>(instr->arg1))
             );
 
-			// Objects are guaranteed to hold vtable pointer as their first field by static verification.
+			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			// This writes a pointer to the type at object's first field.
 			writeToView<const Type*>(view, type.get());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_lptr)(FUNCTION_ARGS) {
+		{
+			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
+			writeToView<const Type*>(view, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -751,8 +772,8 @@ namespace vm {
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
-			const auto* src_ptr      = readFromView<const Type**>(view);
-			auto        cast_allowed = (*src_ptr)->inheritsFrom(dst_type);
+			const auto* src_ptr      = readFromView<const Type*>(view);
+			auto        cast_allowed = src_ptr->inheritsFrom(dst_type);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, cast_allowed ? src : Pointer::null()
@@ -808,7 +829,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
+			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
@@ -829,7 +850,7 @@ namespace vm {
 			auto dst_pointer   = Pointer(dst_block, 0);
 
 			auto src_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
-			auto field_offset = safeReadBytes<i64>(instr[1].arg0);
+			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
@@ -876,7 +897,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
+			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -893,7 +914,7 @@ namespace vm {
 			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
-			auto data_offset  = index * safeReadBytes<i64>(element_type->getSize());
+			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[instr->arg1];
@@ -915,7 +936,7 @@ namespace vm {
 
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
+			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
@@ -932,7 +953,7 @@ namespace vm {
 
 			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * safeReadBytes<i64>(element_type->getSize()));
+			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
 
 			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
 		}
@@ -981,9 +1002,123 @@ namespace vm {
 	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
 #define CAST_PRIMITIVE(SIZE) \
 	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
-
 	FOR_EACH(CAST_PRIMITIVE, 8, 16, 32, 64)
 #undef CAST_PRIMITIVE
+
+
+#define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			auto val = readFromStack<SRC_TYPE>(local_stack, instr->arg1);                 \
+			writeToStack<DST_TYPE>(local_stack, instr->arg0, static_cast<DST_TYPE>(val)); \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+	// Sign Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 16, 8, i16, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 8, i32, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 8, i64, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 16, i32, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 16, i64, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 32, i64, i32)
+
+	// Zero Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 16, 8, u16, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 8, u32, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 8, u64, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 16, u32, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 16, u64, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 32, u64, u32)
+
+	// Truncation
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 16, u8, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 32, u8, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 64, u8, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 32, u16, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 64, u16, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 32, 64, u32, u64)
+
+
+#define DEFINE_INT_TO_FLOAT(DST_SIZE)                                                    \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, i8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, u8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, i16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, u16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, i32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, u32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, i64) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, u64)
+
+	DEFINE_INT_TO_FLOAT(32)
+	DEFINE_INT_TO_FLOAT(64)
+
+
+#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE)                                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                                     \
+			auto x       = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);  \
+			using IntT   = i##DST_SIZE;                                                       \
+			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                           \
+			IntT res;                                                                         \
+			if (std::isnan(x)) {                                                              \
+				res = IntT{ 0 };                                                              \
+			} else {                                                                          \
+				constexpr FloatT min = static_cast<FloatT>(std::numeric_limits<IntT>::min()); \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<IntT>::max()); \
+				if (x <= min) {                                                               \
+					res = std::numeric_limits<IntT>::min();                                   \
+				} else if (x >= max) {                                                        \
+					res = std::numeric_limits<IntT>::max();                                   \
+				} else {                                                                      \
+					res = static_cast<IntT>(x);                                               \
+				}                                                                             \
+			}                                                                                 \
+			writeToStack<i##DST_SIZE>(local_stack, instr->arg0, res);                         \
+		}                                                                                     \
+		FUNCTION_CONT(1);                                                                     \
+	}
+
+#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE)                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			auto x = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);         \
+			/* Logic inlined from interp_fptoui_sat */                                         \
+			using UIntT  = u##DST_SIZE;                                                        \
+			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                            \
+			UIntT res;                                                                         \
+			if (std::isnan(x)) {                                                               \
+				res = UIntT{ 0 };                                                              \
+			} else {                                                                           \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<UIntT>::max()); \
+				if (x <= FloatT{ 0 }) {                                                        \
+					res = UIntT{ 0 };                                                          \
+				} else if (x >= max) {                                                         \
+					res = std::numeric_limits<UIntT>::max();                                   \
+				} else {                                                                       \
+					res = static_cast<UIntT>(x);                                               \
+				}                                                                              \
+			}                                                                                  \
+			writeToStack<u##DST_SIZE>(local_stack, instr->arg0, res);                          \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}
+
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)      \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE)  \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE) \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE) \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE) \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE) \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE) \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE)
+
+	DEFINE_FLOAT_TO_INT(32)
+	DEFINE_FLOAT_TO_INT(64)
+
+	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
+	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{

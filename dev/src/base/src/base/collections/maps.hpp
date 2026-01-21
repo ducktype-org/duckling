@@ -39,6 +39,9 @@ namespace base {
 
 		~MapWrapper() = default;
 
+		MapWrapper(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
+			  ContainerType(init) {}
+
 		MapWrapper& operator=(const MapWrapper& map) {
 			ContainerType::operator=(map);
 			return *this;
@@ -81,6 +84,11 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& data) {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
+		}
+
+		template<typename K = KEY_T, typename D = DATA_T>
+		auto insertOrAssign(K&& key, D&& data) {
+			return ContainerType::insert_or_assign(std::forward<K>(key), std::forward<D>(data));
 		}
 
 		[[nodiscard]]
@@ -150,13 +158,13 @@ namespace base {
 
 		Optional<Ref<DATA_T>> atMaybe(KEY_T key) {
 			auto idx = static_cast<usize>(key);
-			if (idx < map.size()) return &*map.at(idx);
+			if (idx < map.size() && map.at(idx).has_value()) return &*map.at(idx);
 			return {};
 		}
 
 		Optional<CRef<DATA_T>> atMaybe(KEY_T key) const {
 			auto idx = static_cast<usize>(key);
-			if (idx < map.size()) return &*map.at(idx);
+			if (idx < map.size() && map.at(idx).has_value()) return &*map.at(idx);
 			return {};
 		}
 

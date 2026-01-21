@@ -71,11 +71,12 @@ namespace vm::opargs {
 	DEFINE_GLOBAL(32, "g32");
 	DEFINE_GLOBAL(64, "g64");
 	DEFINE_GLOBAL(Ptr, "gptr");
+	DEFINE_GLOBAL(Opq, "gopq");
 
 	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES Global64, Global32, Global16, Global8, GlobalPtr
+#define VM_OPARG_GLOBAL_TYPES Global64, Global32, Global16, Global8, GlobalPtr, GlobalOpq
 
 	/**
 	 * @brief Represents type name argument.
@@ -207,6 +208,7 @@ namespace vm::opargs {
 		ExtCFunctionName,
 		MethodName,
 		Label>;
+	using OpCodeArgCRef      = base::CRefifyParams<OpCodeArg>;
 	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
 	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
 	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;

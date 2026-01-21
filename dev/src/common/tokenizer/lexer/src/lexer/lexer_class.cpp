@@ -1,7 +1,7 @@
 #include "lexer_class.hpp"
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
+#include <diagnostic_interactive/message.hpp>
+
 #include <logger/logger.hpp>
 #include <unicode_classification/classifications.hpp>
 
@@ -9,210 +9,161 @@ namespace lexer {
 
 	using Class = unicode::Classifications;
 
-	class TokenStartError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Illegal character at the beginning of a token.";
+	class TokenStartError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "token_start_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		TokenStartError(dia::SourcePosition pos): dia::Error(pos) {}
+		TokenStartError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCommentError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unclosed block comment starting here.";
+	class UnclosedCommentError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unclosed_comment_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnclosedCommentError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnclosedCommentError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class EolLocationNote final: public dia::NoteWithPosition {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "This end of line.";
+	class UnclosedStringEolError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unclosed_string_eol_error" };
 		}
 
 	public:
-		EolLocationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		UnclosedStringEolError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedStringEolError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "String unclosed before end of line.";
+	class UnclosedStringEofError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unclosed_string_eof_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		using EolNote = EolLocationNote;
-
-		UnclosedStringEolError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnclosedStringEofError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedStringEofError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "String unclosed before end of file.";
+	class UnclosedCharEolError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unclosed_char_eol_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnclosedStringEofError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnclosedCharEolError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCharEolError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Char unclosed before end of line.";
+	class UnclosedCharEofError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unclosed_char_eof_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		using EolNote = EolLocationNote;
-
-		UnclosedCharEolError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnclosedCharEofError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnclosedCharEofError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Char unclosed before end of file.";
+	class EmptyCharError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "empty_char_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnclosedCharEofError(dia::SourcePosition pos): dia::Error(pos) {}
+		EmptyCharError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class EmptyCharError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Empty char.";
+	class MultiCharacterCharError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "multi_character_char_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		EmptyCharError(dia::SourcePosition pos): dia::Error(pos) {}
+		MultiCharacterCharError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class MultiCharacterCharError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Char with multiple characters.";
+	class UnknownLiteralTypeSpecifierError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unknown_literal_type_specifier_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		MultiCharacterCharError(dia::SourcePosition pos): dia::Error(pos) {}
+		UnknownLiteralTypeSpecifierError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
-	class UnknownLiteralTypeSpecifierError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Numeric literal with an unknown type specifier.";
+	class UnmatchedBracketError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "unmatched_bracket_error" };
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnknownLiteralTypeSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class UnmatchedBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unmatched Bracket.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnmatchedBracketError(
-			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
-		):
-			  dia::Error(start_pos) {
-			addNote(makeBox<EndBlock>(expected_pos, closing_bracket));
-		}
-
-		class EndBlock final: public dia::NoteWithPosition {
-		private:
-			UChar32 closing_bracket;
-
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				std::string str_bracket{};
-				icu::UnicodeString(closing_bracket).toUTF8String(str_bracket);
-				return "Expected to be closed with " + str_bracket + ".";
+		class EndBlock final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "note",
+					     .family        = "lexer",
+					     .name          = "end_block_note" };
 			}
 
 		public:
 			EndBlock(dia::SourcePosition pos, UChar32 closing_bracket):
-				  dia::NoteWithPosition(pos),
-				  closing_bracket(closing_bracket) {}
+				  dia_int::MessageWithCodeFragmentAndCause(pos) {
+				std::string s;
+				icu::UnicodeString(closing_bracket).toUTF8String(s);
+				addArgument<dia_int::TextArgument>("closing_bracket", s);
+			}
 		};
+
+		UnmatchedBracketError(
+			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
+		):
+			  dia_int::MessageWithCodeFragmentAndCause(start_pos) {
+			addAttachedMessage(makeBox<EndBlock>(expected_pos, closing_bracket));
+		}
 	};
 
 	Lexer::Lexer(Ref<tokenizer::TokenSource> file):
 		  file(file),
-		  logger(file->getLogger()),
+		  logger(file->getIntLogger()),
 		  char_array(file->getChars()) {
-		if (logger->bad()) {
-			logger->dumpLog(false, std::cerr);
+		if (logger->hasErrors()) {
+			logger->terminalPrint(std::cerr);
 			throw base::LogicError("Lexer initialized with existing error");
 		}
 	}
@@ -263,7 +214,7 @@ namespace lexer {
 			std::string(token_type),
 			"(",
 			std::string(file->getCharRange(begin, end + 1).stringView()),
-			")"
+			")\n"
 		)
 	}
 
@@ -529,9 +480,7 @@ namespace lexer {
 				skip(2);
 			} else if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
-				dia::SourcePosition eol_pos = currentPosition();
-				auto                error   = makeBox<UnclosedStringEolError>(err_pos);
-				error->addNote(makeBox<UnclosedStringEolError::EolNote>(eol_pos));
+				auto                error = makeBox<UnclosedStringEolError>(err_pos);
 				logger->log(std::move(error));
 				closed = false;
 				break;
@@ -569,9 +518,7 @@ namespace lexer {
 				skip(2);
 			} else if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
-				dia::SourcePosition eol_pos = currentPosition();
-				auto                error   = makeBox<UnclosedCharEolError>(err_pos);
-				error->addNote(makeBox<UnclosedCharEolError::EolNote>(eol_pos));
+				auto                error = makeBox<UnclosedCharEolError>(err_pos);
 				logger->log(std::move(error));
 				closed = false;
 				break;
@@ -659,7 +606,7 @@ namespace lexer {
 
 	bool Lexer::isBlockCommentBegin() const { return tryRawValue('#') && tryRawValue('{', 1); }
 
-	bool Lexer::isBlockCommentEnd() const { return tryRawValue('}') && tryRawValue('#', 1); }
+	bool Lexer::isBlockCommentEnd() const { return tryRawValue('#') && tryRawValue('}', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 

@@ -20,11 +20,12 @@ namespace pst {
 			         && !state[0].is(lang_def::Special::Semicolon)) {
 				state.tokens().next();
 			}
-		} while (state.parse(out).tryEat(lang_def::NamedOperator::Period));
+		}
+		PST_WHILE(state.parse(out).tryEat(lang_def::NamedOperator::Period));
 
 		if (state.parse(out).tryEat(lang_def::NamedOperator::PeriodStar)) out->star = true;
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void DottedName::dprint(std::ostream& out) const {

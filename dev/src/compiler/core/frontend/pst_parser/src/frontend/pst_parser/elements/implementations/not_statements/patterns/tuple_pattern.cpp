@@ -8,7 +8,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<TuplePattern>(position);
 		state.parse(out).one(&out->elements);
-		return out;
+		PST_RETURN out;
 	}
 
 	void TuplePattern::dprint(std::ostream& out) const {

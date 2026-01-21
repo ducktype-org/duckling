@@ -1,22 +1,24 @@
 use crate::quackpack::core::Version;
-use std::collections::{BTreeMap, BTreeSet};
+use crate::quackpack::schemas::OneEntryMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
 use serde::Deserialize;
 use serde::de;
 use serde_untagged::UntaggedEnumVisitor;
 
+pub type Dependencies = HashMap<String, Dependency>;
+
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
     pub metadata: Option<Metadata>,
-    pub dependencies: Option<BTreeMap<String, Dependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, Dependency>>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
-    pub targets: Option<BTreeMap<String, CompilerOptions>>,
-    pub profiles: Option<BTreeMap<String, CompilerOptions>>,
+    pub dependencies: Option<Dependencies>,
+    pub dev_dependencies: Option<Dependencies>,
+    pub features: Option<HashMap<String, Vec<String>>>,
+    pub profiles: Option<HashMap<String, CompilerOptions>>,
 
     #[serde(skip)]
-    pub _unused: BTreeSet<String>,
+    pub _unused_keys: BTreeSet<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,7 +28,6 @@ pub struct Metadata {
     pub license: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub language: Option<Version>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +84,7 @@ impl<'de> Deserialize<'de> for OredSemver {
 
 #[derive(Debug)]
 pub enum DependencySource {
+    /// `Simple` variant overwrites `registry_url` for a given dependency.
     Simple(String),
     Detailed(DetailedSource),
 }
@@ -157,14 +159,12 @@ impl DetailedSource {
 
 #[derive(Debug, Deserialize)]
 pub struct DependencyCondition {
-    pub system: Option<Vec<String>>,
-    pub arch: Option<Vec<String>>,
     pub package_features: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
-pub struct DetailedFeature(pub BTreeMap<String, DependencyCondition>);
+pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
 #[derive(Debug)]
 pub enum DependencyFeature {

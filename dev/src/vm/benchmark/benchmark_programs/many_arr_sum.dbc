@@ -31,14 +31,13 @@ function main { i64, ptr_argv } -> i64 {
         sub_l64_imm         40, 1;
 
         # t[i] := x (by idx)
-        store_lptr_l64_ofs  64, 32;
-        ext_l64             40;
+        store_lptr_l64_ofs  64, 32, 40;
 
         # x++
         add_l64_imm         32, 1;
 
         # if i > 0 : end
-        cmpG_l64_imm        40, 0;
+        cmpGt_l64_imm        40, 0;
         jmpIf_label      Loop1;
 
       # sum the sequence
@@ -53,14 +52,13 @@ function main { i64, ptr_argv } -> i64 {
         # i--
         sub_l64_imm         40, 1;
 
-        load_l64_lptr_ofs   32, 64;
-        ext_l64             40;
+        load_l64_lptr_ofs   32, 64, 40;
 
         # y += x
         add_l64_l64         48, 32;
 
         # if i > 0 : end
-        cmpG_l64_imm        40, 0;
+        cmpGt_l64_imm        40, 0;
         jmpIf_label      Loop2;
 
       sub_l64_imm     56, 1;

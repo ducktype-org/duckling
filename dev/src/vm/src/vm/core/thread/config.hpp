@@ -2,16 +2,12 @@
  * @file config.hpp
  * @brief Configuration macros for the VM.
  *
- * There are 3 different `Executor` implementations:
+ * There are 2 different `Executor` implementations:
  * - Tail calls
  * - Switch case
- * - Computed goto
  *
  * They differ in the way they handle the main loop of the `Executor`
  * and they use different type for the "instruction struct" `MicroInstruction`.
- * More information in the paper
- * ["Nowoczesne metody
- * optymalizacji..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/pondvm-opt-pl.pdf)
  */
 
 #pragma once
@@ -19,49 +15,22 @@
 // Default = false
 constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
-
-// WARN: Do not undefine this macro on your own!
-// Selecting TC or CG will unselect it for you
-#define USE_SWITCH_CASE
-
-#if !defined(USE_SWITCH_CASE)
-	#error "USE_SWITCH_CASE: Do NOT undefine me like this!"
+#if !(defined(USE_TAIL_CALLS) || defined(USE_SWITCH_CASE))
+	#error "Provide an execution strategy: USE_TAIL_CALLS or USE_SWITCH_CASE"
 #endif
 
-// #define USE_TAIL_CALLS
-
-// #define USE_COMPUTED_GOTO
-
-// note: undefining default macro when using non-default mode
-#if defined(USE_TAIL_CALLS) || defined(USE_COMPUTED_GOTO)
-	#undef USE_SWITCH_CASE
-#endif
-
-// note: since default macro is undefined when using non-default mode
-// we just have to check if all the other macros are pairwise exclusive
-#if defined(USE_TAIL_CALLS) && defined(USE_COMPUTED_GOTO)
-	#error "USE_TAIL_CALLS and USE_COMPUTED_GOTO are mutually exclusive. Choose only one"
-#endif
-
-#ifdef USE_COMPUTED_GOTO
-	#define IF_NOT_CG(arg)
-	#define IF_CG(arg) arg
-constexpr bool USE_COMPUTED_GOTO_VALUE = true;
-#else
-	#define IF_NOT_CG(arg) arg
-	#define IF_CG(arg)
-constexpr bool USE_COMPUTED_GOTO_VALUE = false;
+#if defined(USE_TAIL_CALLS) && defined(USE_SWITCH_CASE)
+	#error "Cannot use both USE_TAIL_CALLS and USE_SWITCH_CASE"
 #endif
 
 #ifdef USE_TAIL_CALLS
 	#define IF_NOT_TC(arg)
 	#define IF_TC(arg) arg
-constexpr bool USE_TAIL_CALLS_VALUE = true;
+inline constexpr bool USE_TAIL_CALLS_VALUE  = true;
+inline constexpr bool USE_SWITCH_CASE_VALUE = false;
 #else
 	#define IF_NOT_TC(arg) arg
 	#define IF_TC(arg)
-constexpr bool USE_TAIL_CALLS_VALUE = false;
+inline constexpr bool USE_TAIL_CALLS_VALUE  = false;
+inline constexpr bool USE_SWITCH_CASE_VALUE = true;
 #endif
-
-// NOLINTEND(cppcoreguidelines-macro-usage)

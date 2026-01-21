@@ -27,14 +27,13 @@ function main { i64, ptr_argv } -> i64 {
 		sub_l64_imm         i, 1;
 
 		# t[i] := x (by idx)
-		fixedSizeTableStore_lptr_lany  t, x;
-		ext_l64             i;
+		fixedSizeTableStore_lptr_lany_l64  t, x, i;
 
 		# x++
 		add_l64_imm         x, 1;
 
 		# if i > 0 : end
-		cmpG_l64_imm        i, 0;
+		cmpGt_l64_imm        i, 0;
 		jmpIf_label      Loop1;
 
 	# sum the sequence
@@ -49,14 +48,13 @@ function main { i64, ptr_argv } -> i64 {
 		# i--
 		sub_l64_imm         i, 1;
 
-		fixedSizeTableLoad_lany_lptr   x, t;
-		ext_l64             i;
+		fixedSizeTableLoad_lany_lptr_l64   x, t, i;
 
 		# y += x
 		add_l64_l64         y, x;
 
 		# if i > 0 : end
-		cmpG_l64_imm        i, 0;
+		cmpGt_l64_imm        i, 0;
 		jmpIf_label      Loop2;
 
 

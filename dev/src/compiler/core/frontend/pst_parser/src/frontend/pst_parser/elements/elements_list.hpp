@@ -74,7 +74,7 @@ namespace pst {
 		class PrefixOperator;
 		class SuffixOperator;
 		class BinaryOperator;
-		class ExprValue;
+		class ExprNumericValue;
 		class ExprStrValue;
 		class ExprCharValue;
 		class Literal;
@@ -105,8 +105,11 @@ namespace pst {
 
 	class ExprHolder;
 	class UniversalExprHolder;
+	class UniversalAllowBlockExprHolder;
 	class UniversalExprHolderLowerLevel;
 	class CommaExprHolder;
 	class AssignmentExprHolder;
+	class ValuePatternExprHolder;
+	class ImplementsElementExprHolder;
 	class ForTypeExprHolder;
 }

@@ -9,7 +9,6 @@
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
-#include <driver/statistics/statistics.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -17,11 +16,13 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <linker/link.hpp>
-#include <timer/timer.hpp>
+#include <repl/repl_session.hpp>
+#include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -39,12 +40,7 @@
 /**
  * Simple function for showing compilation errors.
  */
-void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
-	}
-}
+void printContextErrors() { query::Context::logger.dumpLog(true, std::cerr); }
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -89,9 +85,9 @@ compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
 	return compiler::driver::options_types::DebugOptions{
 		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
 		                          .copyValueOr(std::vector<std::string>{}),
-
-		.dump_llvm_ir  = parsing_result.isFlag("dump-llvm-ir"),
-		.dump_llvm_asm = parsing_result.isFlag("dump-llvm-asm"),
+		.immediate_print_diagnostics = true,
+		.dump_llvm_ir                = parsing_result.isFlag("dump-llvm-ir"),
+		.dump_llvm_asm               = parsing_result.isFlag("dump-llvm-asm"),
 	};
 }
 
@@ -195,7 +191,8 @@ clah::Clah getClahForMain() {
 							   auto root
 								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 							   auto hout_units
-								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
+		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
 									   std::cout << hout_unit.debugPrint(ctx);
@@ -249,8 +246,8 @@ clah::Clah getClahForMain() {
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+																? false
+																: true },
 						}
 					);
 
@@ -260,8 +257,9 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = frontend::createModuleTree(path_to_compile, package_name);
+					auto root = global_state::getMainPackage().root_module;
 
+					defer(printContextErrors());
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
 
@@ -332,15 +330,16 @@ clah::Clah getClahForMain() {
 							},
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+																	 ? false
+																	 : true },
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
 
-					timer::TimeMeasurement total_compilation_time;
-					total_compilation_time.startMeasurement();
 
+					time_stats::TrackCategoryTime total_compilation_time(
+						time_stats::TimeCategories::TotalCompilationTime
+					);
 
 					auto backend_type = options.isFlag("dvm-backend")
 		                                  ? compiler::driver::BackendType::DVM
@@ -348,11 +347,13 @@ clah::Clah getClahForMain() {
 
 					defer(printContextErrors());
 
-					compiler::driver::compileEntirePackage(
+					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
 					);
 
-					total_compilation_time.endMeasurement();
+					total_compilation_time.end();
+
+					compiler::driver::exit();
 
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
@@ -360,29 +361,14 @@ clah::Clah getClahForMain() {
 										 "No query statistics will be printed.\n";
 						}
 						query::printStats();
-
-						std::cerr << "\nTotal compilation time: ";
-						timer::printAs(
-							std::cerr,
-							total_compilation_time.duration(),
-							timer::TimeUnit::Milliseconds
-						);
-						std::cerr << "\n";
-						std::cerr << " - Backend compilation time: ";
-						timer::printAs(
-							std::cerr,
-							compiler::driver::getBackendCompilationTime(),
-							timer::TimeUnit::Milliseconds
-						);
-						std::cerr << "\n\n";
+						time_stats::prettyPrintTimeStatistics();
 					}
 
 					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
-					compiler::driver::exit();
 
-					return 0;
+					return result.isOk() ? 0 : 1;
 				})
 		)
 	    .addSubcommand(
@@ -412,18 +398,18 @@ clah::Clah getClahForMain() {
 					using namespace compiler;
 
 					compiler::driver::initializeTheCompiler(
-				compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
-							},
-							.compilation_artifacts = {
-								.artifacts_path = fs::FilePath("./duck_build/"),
-							},
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-									                                  ? false
-									                                  : true },
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+									.main_package_info = {
+										.package_name = package_name,
+										.package_path = path_to_compile.getFilePath(),
+									},
+									.compilation_artifacts = {
+										.artifacts_path = fs::FilePath("./duck_build/"),
+									},
+									.debug_options = getDebugOptionsFromClap(options),
+									.incremental = {.enabled = options.isFlag("no-incremental")
+																			? false
+																			: true },
 						}
 					);
 
@@ -445,6 +431,19 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
+	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   compiler::driver::initializeTheCompiler(
+								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
+									   .debug_options = getDebugOptionsFromClap(options),
+								   }
+							   );
+
+							   compiler::repl::ReplSession session;
+							   int                         result = session.run();
+							   compiler::driver::exit();
+							   return result;
+						   }))
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   compiler::driver::initializeTheCompiler(

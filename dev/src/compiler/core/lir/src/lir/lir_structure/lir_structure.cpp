@@ -7,7 +7,6 @@
 
 #include <iomanip>
 #include <set>
-#include <variant>
 
 namespace compiler::lir {
 
@@ -86,7 +85,7 @@ namespace compiler::lir {
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
-			output << "    LAYOUT:\n" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
@@ -110,8 +109,7 @@ namespace compiler::lir {
 
 		void printValue(const LIRValue& location) {
 			variant_match(location.getVariant()) {
-				variant_case(i64, value) { output << value; }
-				variant_case(bool, value) { output << (value ? "true" : "false"); }
+				variant_case(LIRConstant, constant) { output << constant.value.toString(); }
 				variant_case(LIRPlace, place) {
 					variant_match(place.base) {
 						variant_case(LIRLocalRef, local) { printLocal(local, output); }
@@ -143,20 +141,19 @@ namespace compiler::lir {
 			// save flags to restore
 			auto output_flags = output.flags();
 
-			output << std::left << std::setw(12);
+			output << std::left << std::setw(3);
 			std::stringstream output_value;
 			if (instruction.output.has_value()) {
 				printOutput(instruction.output.value(), output_value);
 				output_value << " :=";
 			}
-			output << output_value.str() << " ";
-
+			output << output_value.str() << ' ';
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation) << "  ";
-
+			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";
-			for (auto arg: instruction.arguments) {
+			for (const auto& arg: instruction.arguments) {
 				output << sep;
 				sep = ", ";
 				printValue(arg);
@@ -177,7 +174,7 @@ namespace compiler::lir {
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
-				output << "\n";
+				output << '\n';
 			}
 			output << "{\n";
 
@@ -187,14 +184,13 @@ namespace compiler::lir {
 				for (const auto& instruction: block->instructions) {
 					output << "    ";
 					printInstruction(instruction);
-					output << "\n";
+					output << '\n';
 				}
-				output << "    ";
 				printInstruction(block->terminator);
-				output << "\n";
+				output << '\n';
 			}
 
-			output << "}";
+			output << "}\n";
 		}
 	};
 
