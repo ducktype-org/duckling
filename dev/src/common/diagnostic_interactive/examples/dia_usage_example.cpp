@@ -23,7 +23,7 @@ int main() {
 	dia_int::Logger logger;
 
 	logger.log(makeBox<ExampleDocs>("DuckLing", "Poland"));
-	logger.dumpLog(std::cout);
+	logger.terminalPrint(std::cout);
 
 	return 0;
 }

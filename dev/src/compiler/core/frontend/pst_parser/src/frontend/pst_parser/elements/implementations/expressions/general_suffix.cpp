@@ -15,7 +15,7 @@ namespace pst::expr {
 
 		state.parse(out).eatOne();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state, i64 length) {
@@ -24,13 +24,16 @@ namespace pst::expr {
 		i64 fwd            = 0;
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
-		while (fwd < length && state[fwd].isPrefixOperator()) fwd++;
-		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
-			reduced_length--;
+		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) fwd++;
+		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
+		reduced_length--;
 		if (fwd == reduced_length) {}  // Error
 
 		if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier()
-		    && !state[reduced_length - 2].is(NamedOperator::Period))
+		    && !state[reduced_length - 2]
+		            .asBinaryOperator()
+		            .map([](auto x) { return x.isAccessOp(); })
+		            .copyValueOr(false))
 			reduced_length--;
 		return parseRecursive(state, length, base::safeIntConv<u64>(length - reduced_length));
 	}

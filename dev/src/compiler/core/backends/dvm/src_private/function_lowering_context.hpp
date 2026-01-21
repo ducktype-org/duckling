@@ -18,6 +18,9 @@ namespace compiler::backend_vm::internal {
 
 	class FunctionLoweringContext {
 	public:
+		friend class MetaOperationLowerer;
+		friend class CastOperationLowerer;
+
 		FunctionLoweringContext(
 			ProgramLoweringContext&                   program_context,
 			base::StrID                               name,
@@ -53,6 +56,29 @@ namespace compiler::backend_vm::internal {
 		vm::code::Function finish() &&;
 
 	private:
+		struct FunctionCallInfo {
+			DVMCallable                          call_target;
+			base::Optional<vm::code::TypeOfData> return_type;
+			std::vector<vm::code::TypeOfData>    param_types;
+			bool                                 is_extern_c;
+
+			/**
+			 * @brief Created call info for a LIR function.
+			 * Translates TSL type layouts to corresponding DVM types.
+			 */
+			static FunctionCallInfo fromLirFunction(
+				const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
+			);
+
+			/**
+			 * @brief Creates call info for an extern C function.
+			 * Translates type names from extern C function signatures to corresponding DVM types.
+			 */
+			static FunctionCallInfo fromExternCFunction(
+				const base::StrID& func_name, ProgramLoweringContext& program_context
+			);
+		};
+
 		// Creates a mapping between a LIR local and DVM local.
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 
@@ -67,9 +93,8 @@ namespace compiler::backend_vm::internal {
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
 
-		void handleFunctionCall(
-			const lir::FunctionLiteral& called_function,
-			const DVMValue&             called_func_name,
+		void handleCall(
+			const FunctionCallInfo&     call_info,
 			const std::deque<DVMValue>& func_args,
 			base::Optional<DVMValue>    output
 		);

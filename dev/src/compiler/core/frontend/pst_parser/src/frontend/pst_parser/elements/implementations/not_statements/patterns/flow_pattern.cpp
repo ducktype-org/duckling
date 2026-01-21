@@ -17,7 +17,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::Colon))
 			state.parse(out).one(&out->type_constraint);
-		return out;
+		PST_RETURN out;
 	}
 
 	void FlowPattern::dprint(std::ostream& out) const {
@@ -37,6 +37,10 @@ namespace pst {
 			nullAwareDprint(*type_constraint, out);
 		}
 		out << "}";
+	}
+
+	base::Optional<AccessLocked<UniversalExprHolder>> FlowPattern::getTypeConstraint() const {
+		return type_constraint.map([](const auto& value) { return value.give(); });
 	}
 
 	LangElement::HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {

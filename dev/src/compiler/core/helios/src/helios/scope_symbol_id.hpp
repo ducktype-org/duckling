@@ -9,10 +9,13 @@
 #include <base/pointers/ref.hpp>
 
 namespace compiler::helios {
-	// Forward:
-	// @TODO: put in internal namespace
+	// Forwards:
 	struct SymbolData;
 	struct ScopeData;
+
+	namespace houtgen {
+		struct ImplementationOf_QueryGeneratedSymbol;
+	}
 
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
@@ -34,6 +37,7 @@ namespace compiler::helios {
 		SymID(const CRef<SymbolData> ref): ref(ref) {}
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
+		friend struct houtgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
@@ -43,17 +47,22 @@ namespace compiler::helios {
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
 	struct ScopeID final {
-		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return reinterpret_cast<u64>(ref.get());
-		}
+		u64 queryUnstablePerfectHash() const;
 
-		bool operator==(const ScopeID&) const = default;
+		/**
+		 * @note == is needed despite the existence of <=> because
+		 * only defaulted <=> generates all 6 comparison operators.
+		 */
+		bool operator==(const ScopeID&) const;
 
-		bool operator<(const ScopeID& other) const { return ref < other.ref; }
+		/**
+		 * @note < is needed despite the existence of <=> because
+		 * only defaulted <=> generates all 6 comparison operators.
+		 */
+		bool operator<(const ScopeID& other) const;
 
-		auto operator<=>(const ScopeID& other) const { return ref.get() <=> other.ref.get(); }
+		std::strong_ordering operator<=>(const ScopeID& other) const;
 
 		/**
 		 * @brief Debug function to print scope and its parents IDs.
@@ -63,9 +72,17 @@ namespace compiler::helios {
 		void debugPrintScopeAndParents(std::ostream& os) const;
 
 	private:
-		Ref<ScopeData> ref;
+		/**
+		 * @brief Reference to scope data.
+		 * @note There might be multiple ScopeData objects in memory
+		 * for the same logical scope. ScopeData should be distinguished
+		 * using their unstable_id perfect hash, not their memory address.
+		 * See ScopeData::perfectClone() and the implementation of QueryPrimaryCodeScopeFor for more
+		 * details.
+		 */
+		CRef<ScopeData> ref;
 
-		ScopeID(const Ref<ScopeData> ref): ref(ref) {}
+		ScopeID(const CRef<ScopeData> ref): ref(ref) {}
 		friend struct ScopeAccess_Functor;
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;

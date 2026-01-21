@@ -12,7 +12,7 @@ namespace pst::expr {
 		PrefixOperator,
 		SuffixOperator,
 		BinaryOperator,
-		ExprValue,
+		ExprNumericValue,
 		ExprStrValue,
 		ExprCharValue,
 		TemplateSpecifier,

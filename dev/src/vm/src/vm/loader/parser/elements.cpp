@@ -208,7 +208,7 @@ namespace vm::loader::parser {
 					}
 				} else {
 					// By default, we assume 64-bit integer or a double if it has a dot.
-					if (str.find_first_of(".eE") != std::string::npos) {
+					if (str.find_first_of(".eE") != std::string::npos && base == 10) {
 						double value = std::stod(str, &pos) * static_cast<double>(sign);
 						result       = detail::packValue<T>(value);
 					} else {
@@ -416,7 +416,7 @@ namespace vm::loader::parser {
 				}
 			} else {
 				if (!logged) {
-					state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+					state.log(makeBox<tpc::NoIdentifierErrorOld>(state.getPosition()));
 					logged = true;
 				}
 				state.tokens().skip();

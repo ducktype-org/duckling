@@ -9,6 +9,9 @@
 
 namespace query {
 
+	timer::Duration total_red_green_sweep_time = timer::Duration::zero();
+	timer::Duration total_graph_merge_time     = timer::Duration::zero();
+
 	namespace {
 
 		/**
@@ -52,6 +55,7 @@ namespace query {
 	}
 
 	void printStats() {
+		std::cerr << "=== Query Framework Per Query Statistics ===\n\n";
 		for (const auto& [query_id, stat_data]: data) {
 			std::cerr << "Query ID: " << query_id.getData().name << "\n";
 			std::cerr << "    Number of Calls:   " << stat_data.num_calls << "\n";
@@ -60,5 +64,14 @@ namespace query {
 			timer::printAs(std::cerr, stat_data.total_call_time, timer::TimeUnit::Milliseconds);
 			std::cerr << "\n\n";
 		}
+
+		std::cerr << "=== Query Framework Other Statistics ===\n\n";
+		std::cerr << "Total time spent in red-green sweeps: ";
+		timer::printAs(std::cerr, total_red_green_sweep_time, timer::TimeUnit::Milliseconds);
+		std::cerr << "\n";
+
+		std::cerr << "Total time spent in graph merges: ";
+		timer::printAs(std::cerr, total_graph_merge_time, timer::TimeUnit::Milliseconds);
+		std::cerr << "\n\n";
 	}
 }

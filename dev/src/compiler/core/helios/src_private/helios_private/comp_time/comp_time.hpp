@@ -13,7 +13,7 @@
  * evaluates it on DVM.
  */
 namespace compiler::helios {
-	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue, query::Failed>;
+	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue>;
 
 	struct KeyFor_QueryEvaluateHOUTExpression {
 		CRef<code::Expr> expr;

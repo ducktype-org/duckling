@@ -63,6 +63,13 @@ namespace dia {
 		 */
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
+		/**
+		 * @brief Merge two source ranges that refer to the same location into one enclosing range.
+		 *
+		 * @throws base::LogicError when locations differ.
+		 */
+		static SourcePosition merge(const SourcePosition& lhs, const SourcePosition& rhs);
+
 		SourcePosition(CRef<Location>, usize source_start);
 		SourcePosition(CRef<Location>, usize source_start, usize source_end);
 		SourcePosition(const SourcePosition& other) = default;

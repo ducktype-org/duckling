@@ -441,8 +441,8 @@ struct IMPLEMENT_QUERY(StableHashTest, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(StableHashTest);
 
 
-using UsesQResult_Result        = query::QResult<u64, query::Failed>;
-using UsesQResultNoCatch_Result = query::QResult<u64, query::Failed>;
+using UsesQResult_Result        = query::QResult<u64>;
+using UsesQResultNoCatch_Result = query::QResult<u64>;
 using NoQResult_Result          = u64;
 
 DECLARE_QUERY(
@@ -457,7 +457,7 @@ DECLARE_QUERY(
 
 struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
 	static auto provide(Context&, QKey) -> PResult {
-		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		query::QResult<u64> res = query::Failed();
 		return res.valueOrThrow();
 	}
 
@@ -478,7 +478,7 @@ DECLARE_QUERY(
 
 struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
 	static auto provide(Context&, QKey) -> PResult {
-		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		query::QResult<u64> res = query::Failed();
 		return res.valueOrThrow();
 	}
 
@@ -499,7 +499,7 @@ DECLARE_QUERY(
 
 struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
 	static auto provide(Context&, QKey) -> PResult {
-		query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+		query::QResult<u64> res = query::Failed();
 		return res.valueOrThrow();
 	}
 
@@ -768,78 +768,20 @@ private:
 	}
 
 	void testQueryResultConcept() {
-		using namespace query::impl;
+		static_assert(query::IsQResult<query::QResult<u64>>::value, "QResult concept failed (1)");
+		static_assert(!query::IsQResult<u64>::value, "QResult concept failed (2)");
 
-		static_assert(std::is_same_v<
-					  std::variant<int, float, bool>,
-					  FlattenVariant_t<std::variant<int, float, std::variant<bool>>>>);
+		// not a q result:
+		struct QResult {};
 
-		static_assert(IsIn_v<int, int>);
-		static_assert(IsIn_v<int, float, double, int>);
-		static_assert(IsIn_v<int, float, int, double, int>);
-		static_assert(!IsIn_v<int, float, double>);
-
-		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
-		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
-		static_assert(!std::is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
-
-		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
-		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
-		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
-		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int, float>>);
-		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<int, int, float, int, int>,
-					  std::variant<float, int>>);
-		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
-					  std::variant<float, int>>);
-		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<
-						  std::variant<int, float, int>,
-						  int,
-						  int,
-						  float,
-						  std::variant<int, int>>,
-					  std::variant<float, int>>);
-
-		struct A {};
-
-		std::variant<std::variant<int, float>, std::variant<int, A>> y;
-
-		UniqueTypesVariant_t<decltype(y)> y1 = 1;
-
-		variant_match(y1) {
-			variant_case(int, val) ASSERT_EQUAL(val, 1);
-			variant_default CORE_PANIC("Invalid state");
-		}
-
-		static_assert(std::is_same_v<
-					  std::variant<int, float, bool>,
-					  UniqueTypesVariant_t<
-						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+		static_assert(!query::IsQResult<QResult>::value, "QResult concept failed (3)");
 	}
 
 	void testQueryResult() {
 		using namespace query;
 
-		static_assert(std::is_same_v<query::QResult<int, int>::ErrorType, int>);
-		static_assert(std::is_same_v<query::QResult<int, std::variant<int>>::ErrorType, int>);
-		static_assert(std::is_same_v<
-					  query::QResult<int, int, std::variant<float>>::ErrorType,
-					  std::variant<int, float>>);
-		static_assert(std::is_same_v<
-					  query::QResult<int, int, bool>::ErrorType,
-					  std::variant<int, bool>>);
-		static_assert(std::is_same_v<
-					  query::QResult<int, int, int, int, float>::ErrorType,
-					  std::variant<int, float>>);
-		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
-		// impl::FlattenVariant_t<typename T>)
-
-		query::QResult<int, float> hr1 = 1;
+		query::QResult<int> hr1 = 1;
 		ASSERT_TRUE(hr1.hasValue());
-		ASSERT_TRUE(bool(hr1));
-		ASSERT_TRUE(!hr1.hasError());
 		ASSERT_EQUAL(1, hr1.valueOrPanic());
 
 		int                      temp_val = hr1.valueOrPanic();
@@ -847,39 +789,13 @@ private:
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		query::QResult<std::string, float> hr2        = "Value";
-		base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
-		ASSERT_EQUAL("Value", stolen_opt);
+		query::QResult<std::string> hr2 = "Value";
+		// base::Optional<std::string>        stolen_opt = std::move(hr2).optValueMove();
+		// ASSERT_EQUAL("Value", stolen_opt);
 
-		std::string                           info  = "Hello";
-		query::QResult<int, std::string_view> whoa2 = query::QError(std::string_view(info));
-		ASSERT_TRUE(!whoa2.hasValue());
-		ASSERT_TRUE(whoa2.hasError());
-		ASSERT_TRUE(!bool(whoa2));
-		ASSERT_EQUAL(whoa2.error(), "Hello");
-
-		struct Err1 {};
-
-		struct Err2 {};
-
-		struct Err3 {};
-
-		struct Err4 {};
-
-		query::QResult<int, Err2, Err4> sub_result = query::QError(Err2());
-		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
-		query::QResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
-		static_assert(std::is_same_v<
-					  decltype(result)::ErrorType,
-					  std::variant<Err1, Err3, Err2, Err4>>);
-		bool entered2 = false;
-		ASSERT_TRUE(!result.hasValue());
-		ASSERT_TRUE(result.hasError());
-		variant_match(result.error()) {
-			variant_case(Err2, value) { entered2 = true; }
-			variant_default CORE_PANIC("Invalid branch");
-		}
-		ASSERT_TRUE(entered2);
+		std::string                      info  = "Hello";
+		query::QResult<std::string_view> whoa2 = std::string_view(info);
+		ASSERT_TRUE(whoa2.hasValue());
 	}
 
 	void testNoKeyCopy() {
@@ -906,7 +822,7 @@ private:
 
 	void testQueryResultExceptionsHandling() {
 		auto result = query::entryPoint<UsesQResultTest>({ 1 });
-		assertTrue(result.hasError(), "Expected error in UsesQResultTest");
+		assertTrue(result.hasFailed(), "Expected error in UsesQResultTest");
 
 		assertThrows<base::Panic>(
 			[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
@@ -918,9 +834,9 @@ private:
 			"QueryFailedException not thrown as expected"
 		);
 
-		assertThrows<query::QueryFailedException>(
+		assertThrows<query::internal::QueryFailedException>(
 			[] {
-				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				query::QResult<u64> res = query::Failed();
 				res.valueOrThrow();
 			},
 			"QueryFailedException not thrown as expected"
@@ -928,7 +844,7 @@ private:
 
 		assertThrows<base::Panic>(
 			[] {
-				query::QResult<u64, query::Failed> res = query::QError(query::Failed());
+				query::QResult<u64> res = query::Failed();
 				res.valueOrPanic();
 			},
 			"Panic not thrown as expected"

@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(classTest);
+		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 	}
 
@@ -48,7 +49,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto module_hout = ctx.query<helios::QueryModuleHOUT>(module);
+			auto module_hout = ctx.query<helios::QueryModuleHOUT>(module).valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
 				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
@@ -190,6 +191,8 @@ private:
 	}
 
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }
+
+	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
 

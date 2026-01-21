@@ -43,13 +43,13 @@ int main(int argc, const char* argv[]) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
 
 	std::vector<CRef<lir::Function>> ctors;
 
-	for (auto& hout_glob: top_level->glob_data) {
+	for (auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
@@ -133,7 +133,7 @@ int main(int argc, const char* argv[]) {
 		});
 	}
 
-	for (auto& fun: top_level->functions) {
+	for (auto& fun: top_level.functions) {
 		CRef mir_fun
 			= &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
 

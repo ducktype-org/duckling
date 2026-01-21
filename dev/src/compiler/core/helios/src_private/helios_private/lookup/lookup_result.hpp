@@ -27,6 +27,9 @@ namespace compiler::helios {
 
 	struct NestedResult;
 
+	using GetAsSingleLookupQResult
+		= query::QResult<std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound>>;
+
 	/**
 	 * @brief Tree like structure storing lookup result.
 	 * Actual results are always stored in "leaves", while
@@ -65,7 +68,7 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		query::QResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		GetAsSingleLookupQResult getAsSingle() const;
 
 		/**
 		 * Adds another LookupResult to self (leaves to leaves, children ot children).

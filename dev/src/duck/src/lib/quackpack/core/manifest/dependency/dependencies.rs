@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::QuackError;
+use crate::quackpack::schemas::registry;
 use crate::{StrId, quackpack::core::Dependency};
 
 #[derive(Debug)]
@@ -26,5 +28,32 @@ impl Dependencies {
     /// Get an iterator over all dependencies.
     pub fn all_dependencies(&self) -> &HashMap<StrId, Dependency> {
         &self.0
+    }
+}
+
+impl TryFrom<registry::Dependencies> for Dependencies {
+    type Error = QuackError;
+
+    fn try_from(value: registry::Dependencies) -> Result<Self, Self::Error> {
+        value
+            .into_iter()
+            .map(|(name, dep)| {
+                let dep = Dependency::try_from((name.as_str(), dep))?;
+                Ok((name.into(), dep))
+            })
+            .collect::<Result<_, _>>()
+            .map(Self)
+    }
+}
+
+impl TryFrom<Dependencies> for registry::Dependencies {
+    type Error = QuackError;
+
+    fn try_from(value: Dependencies) -> Result<Self, Self::Error> {
+        value
+            .0
+            .into_iter()
+            .map(|(name, dep)| Ok((name.into(), dep.try_into()?)))
+            .collect::<Result<_, _>>()
     }
 }

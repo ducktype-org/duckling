@@ -36,8 +36,7 @@ namespace compiler::backend_vm::internal {
 		DVMImmediate(double value);
 
 		// All values are represented as u64, so e.g. a float is bit-casted to u64.
-		u64 value{};
-
+		u64  value{};
 		bool operator==(const DVMImmediate& other) const = default;
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
@@ -59,9 +58,23 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 	};
 
+	struct DVMExternCFunctionName {
+		base::StrID name;
+		bool        operator==(const DVMExternCFunctionName& other) const = default;
+
+		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+	};
+
+	using DVMCallable = std::variant<DVMFunctionName, DVMExternCFunctionName>;
+
 	class DVMValue {
-		using StoredValueVariant
-			= std::variant<DVMLocal, DVMGlobal, DVMImmediate, DVMLabel, DVMFunctionName>;
+		using StoredValueVariant = std::variant<
+			DVMLocal,
+			DVMGlobal,
+			DVMImmediate,
+			DVMLabel,
+			DVMFunctionName,
+			DVMExternCFunctionName>;
 
 		StoredValueVariant stored_value;
 
@@ -72,5 +85,10 @@ namespace compiler::backend_vm::internal {
 
 		operator vm::opargs::OpCodeArg() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
+
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(stored_value);
+		}
 	};
 }

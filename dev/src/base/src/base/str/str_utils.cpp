@@ -45,3 +45,37 @@ std::string base::generateRandomString(u64 length) {
 	for (u64 i = 0; i < length; ++i) random_string += CHARS[distribution(generator)];
 	return random_string;
 }
+
+base::UnescapeResult base::unescapeString(const std::string_view raw) {
+	std::string result;
+	result.reserve(raw.size());
+
+	for (usize i = 0; i < raw.size(); ++i) {
+		if (raw[i] == '\\' && i + 1 < raw.size()) {
+			// Peek at the next character
+			// clang-format off
+			switch (raw[i + 1]) {
+			case 'n':  result += '\n'; break; // Newline
+			case 'r':  result += '\r'; break; // Carriage return
+			case 't':  result += '\t'; break; // Tab
+			case 'v':  result += '\v'; break; // Vertical tab
+			case 'b':  result += '\b'; break; // Backspace
+			case 'f':  result += '\f'; break; // Form feed
+			case 'a':  result += '\a'; break; // Alert (bell)
+			case 'e':  result += '\033'; break; // Escape (non-standard but common)
+			case '\\': result += '\\'; break; // Literal backslash
+			case '\"': result += '\"'; break; // Double quote
+			case '\'': result += '\''; break; // Single quote
+			case '0':  result += '\0'; break; // Null character
+
+			default:
+				return UnknownEscapeSequence{strConcat("\\", raw[i + 1])};
+			}
+			// clang-format on
+			i++;  // Skip the escaped character
+		} else {
+			result += raw[i];
+		}
+	}
+	return UnescapedString{ result };
+}

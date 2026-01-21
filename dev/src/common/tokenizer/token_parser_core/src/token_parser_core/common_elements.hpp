@@ -14,7 +14,6 @@ namespace tpc {
 	struct Identifier final {
 		base::StrID value;
 
-		// @TODO: this should be changed do be properly set during parsing:
 		dia::SourcePosition position = dia::SourcePosition::fakePosition();
 
 		friend constexpr void addToHash(
@@ -32,7 +31,6 @@ namespace tpc {
 	struct OptionalIdentifier final {
 		base::Optional<base::StrID> value;
 
-		// @TODO: this should be changed do be properly set during parsing:
 		dia::SourcePosition position = dia::SourcePosition::fakePosition();
 
 		friend constexpr void addToHash(

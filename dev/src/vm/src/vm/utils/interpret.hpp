@@ -23,9 +23,9 @@ namespace vm {
 	 * @return A new object of type T, constructed from the bytes in the buffer.
 	 */
 	template<typename T>
-	[[nodiscard]] inline T safeReadBytes(const byte* ptr, usize offset = 0)
+	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		// @note: We create a byte array aligned as type T to prevent alignement-related UBs.
+		// @note: We create a byte array aligned as type T to prevent alignment-related UBs.
 		// Doing it like below makes it impossible to "reinterpret" values of type T with private
 		// constructors, thus the workaround:
 		// T value;
@@ -43,7 +43,7 @@ namespace vm {
 	/**
 	 * @brief Safely writes the byte representation of an object to a buffer.
 	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T. It is complies with strict aliasing rules and memory alignment.
+	 * object of type T. It is compiled with strict aliasing rules and memory alignment.
 	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
 	 * trivially copyable types.
 	 *
@@ -53,7 +53,7 @@ namespace vm {
 	 * @param offset An optional offset in bytes from the start of the buffer.
 	 */
 	template<typename T>
-	inline void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
+	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
 		std::memcpy(dest + offset, &value, sizeof(T));
 	}
@@ -74,9 +74,9 @@ namespace vm {
 	 *
 	 */
 	template<typename T, typename U>
-	[[nodiscard]] inline T safeReadBytes(const U& source_object) requires(
+	[[nodiscard]] T safeReadObjectBytes(const U& source_object) requires(
 		std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> && sizeof(T) <= sizeof(U)
 	) {
-		return safeReadBytes<T>(reinterpret_cast<const byte*>(&source_object));
+		return safeReadPointerBytes<T>(reinterpret_cast<const byte*>(&source_object));
 	}
 }

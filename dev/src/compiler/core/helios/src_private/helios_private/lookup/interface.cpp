@@ -1,12 +1,12 @@
 #include "interface.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <diagnostic/source_position.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -84,41 +84,46 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<SymbolList, query::Failed> HInterface::lookupExpectUnique(
+	query::QResult<SymbolList> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
 		auto lookup_result = lookup(ctx, name, params);
+
 		auto get_as_single = lookup_result->getAsSingle();
 
-		if (get_as_single.hasError()) {
-			variant_match(get_as_single.error()) {
-				variant_case(errors::Ambiguity, _) {
-					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, "Ambiguity in lookup"
-					));
+		if (get_as_single.hasFailed()) return query::Failed();
+
+		variant_match(get_as_single.valueOrThrow()) {
+			variant_case(SymbolList, symbol_list) {
+				SymbolList dealiased_result;
+
+				for (auto path_symbol: symbol_list) {
+					UNPACK_QRESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
+					dealiased_result.appendList(dealiased);
 				}
-				variant_case(errors::SymbolNotFound, _) {
-					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-						error_position, base::strConcat("Symbol '", name, "' not found in lookup")
-					));
-				}
-				variant_default { CORE_PANIC("Invalid state"); }
+
+				return dealiased_result;
 			}
-			return query::QError(query::Failed());
+			variant_case(errors::Ambiguity, _) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Ambiguity in lookup", error_position, "", "symbol lookup here"
+				));
+				return query::Failed();
+			}
+			variant_case(errors::SymbolNotFound, _) {
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat("Symbol '", name, "' not found in lookup"),
+					error_position,
+					"",
+					"symbol lookup here"
+				));
+				return query::Failed();
+			}
+			variant_default { CORE_PANIC("Invalid state"); }
 		}
-
-		const auto& symbols = get_as_single.valueOrThrow();
-
-		SymbolList dealiased_result;
-
-		for (auto path_symbol: symbols) {
-			UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-			dealiased_result.appendList(dealiased);
-		}
-
-		return dealiased_result;
+		CORE_UNREACHABLE();
 	}
 }

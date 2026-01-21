@@ -104,7 +104,7 @@ jobs:
       - name: Run duck linter
         run: |
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
+         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose --no-fix
         shell: bash
 
       - name: Run issue checker

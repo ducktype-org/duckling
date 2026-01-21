@@ -3,6 +3,7 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
@@ -18,8 +19,6 @@
 #include <query_framework/context.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <vm/bytecode/bytecode.hpp>
-
 #include <cmath>
 #include <ranges>
 #include <type_traits>
@@ -33,7 +32,8 @@ namespace compiler::helios {
 		 */
 		struct CouldNotShortPath {};
 
-		using TreeEvalResult = query::QResult<CompileTimeValue, CouldNotShortPath, query::Failed>;
+		using TreeEvalValue  = std::variant<CompileTimeValue, CouldNotShortPath>;
+		using TreeEvalResult = query::QResult<TreeEvalValue>;
 
 		/**
 		 * @brief A HOUT visitor for compile-time expression evaluation.
@@ -61,49 +61,41 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value };
 			}
 
-			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
-				throw base::NotYetImplemented("Evaluation of string values in compile time");
+			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
 				result = CompileTimeValue{ expr.value_type };
 			}
 
-			void visitCallExpr(const code::CallExpr&) final {
-				result = query::QError(CouldNotShortPath{});
-			}
+			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitAccessExpr(const code::AccessExpr&) final {
-				result = query::QError(CouldNotShortPath{});
-			}
+			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->hasValue()
-					              ? CompTimeEvalResult{ CompileTimeValue{ type->valueOrThrow() } }
-					              : query::QError(query::Failed());
+					result    = type->valueOrThrow();
 				} else {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
-					result                = const_val_result.hasValue()
-					                          ? CompTimeEvalResult{ const_val_result.valueOrThrow() }
-					                          : query::QError(query::Failed());
+					result                = const_val_result.valueOrThrow();
 				}
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
 				using enum code::BuiltinBinary;
 				auto lhs_result = evalHoutExpr(ctx, expr.lhs.ref());
-				if (lhs_result.hasError()) {
-					result = query::QError(query::Failed());
+				if (lhs_result.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 
 				auto rhs_result = evalHoutExpr(ctx, expr.rhs.ref());
-				if (rhs_result.hasError()) {
-					result = query::QError(query::Failed());
+				if (rhs_result.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 
@@ -157,12 +149,12 @@ namespace compiler::helios {
 										break;
 									case IntegerDiv:
 									case FloatDiv:
-										if (rhs_val == 0) return query::QError(query::Failed());
+										if (rhs_val == 0) return query::Failed();
 										result = lhs_val / rhs_val;
 										break;
 									case IntegerMod:
 									case FloatMod:
-										if (rhs_val == 0) return query::QError(query::Failed());
+										if (rhs_val == 0) return query::Failed();
 										if constexpr (std::is_integral_v<ResultT>)
 											result = lhs_val % rhs_val;
 										else
@@ -196,7 +188,7 @@ namespace compiler::helios {
 							}
 						} else {
 							// Unsupported type for binary operator.
-							return query::QError(query::Failed());
+							return query::Failed();
 						}
 					},
 					lhs_ctv.getStorage(),
@@ -206,8 +198,8 @@ namespace compiler::helios {
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
 				auto expr_result = evalHoutExpr(ctx, expr.expr.ref());
-				if (expr_result.hasError()) {
-					result = query::QError(query::Failed());
+				if (expr_result.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 
@@ -227,7 +219,7 @@ namespace compiler::helios {
 									[&](auto&& num_val) -> TreeEvalResult {
 										using NumT = std::decay_t<decltype(num_val)>;
 										if constexpr (std::is_unsigned_v<NumT>)
-											return query::QError(query::Failed());
+											return query::Failed();
 										else {
 											// @note: static cast is needed here. Since cpp
 									        // automatically promotes small int types to i32 if any
@@ -250,7 +242,7 @@ namespace compiler::helios {
 							case code::BuiltinUnary::BooleanNot:
 								return CompileTimeValue{ not val };
 							default:
-								return query::QError(query::Failed());
+								return query::Failed();
 							}
 
 						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
@@ -287,8 +279,8 @@ namespace compiler::helios {
 
 			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
 				auto cond_result = evalHoutExpr(ctx, expr.condition.ref());
-				if (cond_result.hasError()) {
-					result = query::QError(query::Failed());
+				if (cond_result.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 
@@ -304,64 +296,100 @@ namespace compiler::helios {
 					}
 				}
 
-				if (condition_is_true)
-					result = evalHoutExpr(ctx, expr.if_true.ref());
-				else
-					result = evalHoutExpr(ctx, expr.if_false.ref());
+				if (condition_is_true) {
+					auto sub_result = evalHoutExpr(ctx, expr.if_true.ref());
+					if (sub_result.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					result = sub_result.valueOrThrow();
+				} else {
+					auto sub_result = evalHoutExpr(ctx, expr.if_false.ref());
+					if (sub_result.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+					result = sub_result.valueOrThrow();
+				}
 			}
 
 			void visitChainComparisonExpr(const code::ChainComparisonExpr& chain_expr) final {
 				auto compare = [this](
-								   const NumericValue& first,
-								   const NumericValue& second,
-								   code::BuiltinBinary operation
+								   const CompileTimeValue& first,
+								   const CompileTimeValue& second,
+								   code::BuiltinBinary     operation
 							   ) {
 					return std::visit(
-						[&](auto&& lhs_num) -> bool {
-							using LhsNumT = std::decay_t<decltype(lhs_num)>;
+						[&](auto&& lhs_val, auto&& rhs_val) -> bool {
+							using LhsT = std::decay_t<decltype(lhs_val)>;
+							using RhsT = std::decay_t<decltype(rhs_val)>;
 
-							// @note: We assume both sides of the binary operation have the
-						    // same types. If types differ, they should be casted with the
-						    // cast expr beforehand.
-							auto maybe_rhs_val = second.get<LhsNumT>();
-							if (!maybe_rhs_val.has_value()) {
-								CORE_PANIC(base::strConcat(
-									"Operands on binary expression evaluated at "
-									"compile "
-									"time are of different type. This should be "
-									"prevented by casts.\nLeft side is:",
-									first.getTypeOfStoredValue(ctx).getType().toString(),
-									"\nRight side is: ",
-									second.getTypeOfStoredValue(ctx).getType().toString()
-								));
-							}
+							if constexpr (std::is_same_v<LhsT, NumericValue>
+						                  && std::is_same_v<RhsT, NumericValue>) {
+								return std::visit(
+									[&](auto&& lhs_num) -> bool {
+										using LhsNumT = std::decay_t<decltype(lhs_num)>;
 
-							LhsNumT rhs_num = maybe_rhs_val.value();
-							using enum code::BuiltinBinary;
-							switch (operation) {
-							case IntegerLt:
-							case FloatLt:
-								return lhs_num < rhs_num;
-							case IntegerGt:
-							case FloatGt:
-								return lhs_num > rhs_num;
-							case IntegerLteq:
-							case FloatLteq:
-								return lhs_num <= rhs_num;
-							case IntegerGteq:
-							case FloatGteq:
-								return lhs_num >= rhs_num;
-							case IntegerEq:
-							case FloatEq:
-								return lhs_num == rhs_num;
-							case IntegerNeq:
-							case FloatNeq:
-								return lhs_num != rhs_num;
-							default:
-								CORE_UNREACHABLE();
+										// @note: We assume both sides of the binary operation have
+								        // the same types. If types differ, they should be casted
+								        // with the cast expr beforehand.
+										auto maybe_rhs_val = rhs_val.template get<LhsNumT>();
+										if (!maybe_rhs_val.has_value()) {
+											CORE_PANIC(base::strConcat(
+												"Operands on binary expression evaluated at "
+												"compile "
+												"time are of different type. This should be "
+												"prevented by casts.\nLeft side is:",
+												first.getTypeOfStoredValue(ctx).getType().toString(),
+												"\nRight side is: ",
+												second.getTypeOfStoredValue(ctx).getType().toString()
+											));
+										}
+
+										LhsNumT rhs_num = maybe_rhs_val.value();
+										using enum code::BuiltinBinary;
+										switch (operation) {
+										case IntegerLt:
+										case FloatLt:
+											return lhs_num < rhs_num;
+										case IntegerGt:
+										case FloatGt:
+											return lhs_num > rhs_num;
+										case IntegerLteq:
+										case FloatLteq:
+											return lhs_num <= rhs_num;
+										case IntegerGteq:
+										case FloatGteq:
+											return lhs_num >= rhs_num;
+										case IntegerEq:
+										case FloatEq:
+											return lhs_num == rhs_num;
+										case IntegerNeq:
+										case FloatNeq:
+											return lhs_num != rhs_num;
+										default:
+											CORE_UNREACHABLE();
+										}
+									},
+									lhs_val.getStorage()
+								);
+							} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
+						                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
+								using enum code::BuiltinBinary;
+								switch (operation) {
+								case code::BuiltinBinary::MetaEq:
+									return lhs_val == rhs_val;
+								case code::BuiltinBinary::MetaNeq:
+									return lhs_val != rhs_val;
+								default:
+									CORE_UNREACHABLE();
+								}
+							} else {
+								CORE_PANIC("Unsupported types in CTE chain expr");
 							}
 						},
-						first.getStorage()
+						first.getStorage(),
+						second.getStorage()
 					);
 				};
 
@@ -375,21 +403,19 @@ namespace compiler::helios {
 				auto evaluated_exprs = chain_expr.expressions | transform(evaluate_subexpr);
 
 				auto evaluated = evaluate_subexpr(chain_expr.expressions.front());
-				if (evaluated.hasError()) {
-					result = query::QError(query::Failed());
+				if (evaluated.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 				auto prev_value = evaluated.valueOrThrow();
 				for (auto [next_expr, comp]: zip(evaluated_exprs | drop(1), chain_expr.operators)) {
-					if (next_expr.hasError()) {
-						result = query::QError(query::Failed());
+					if (next_expr.hasFailed()) {
+						result = query::Failed();
 						return;
 					}
 
 					auto next_value = next_expr.valueOrThrow();
-					if (!compare(
-							*prev_value.get<NumericValue>(), *next_value.get<NumericValue>(), comp
-						)) {
+					if (!compare(prev_value, next_value, comp)) {
 						result = CompileTimeValue{ false };
 						return;
 					}
@@ -400,7 +426,12 @@ namespace compiler::helios {
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
-				result = evalHoutExpr(ctx, expr.inner.ref());
+				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
@@ -408,8 +439,8 @@ namespace compiler::helios {
 
 				for (auto& sub_expr: expr.elements) {
 					const auto ctv_element_result = evalHoutExpr(ctx, sub_expr.ref());
-					if (ctv_element_result.hasError()) {
-						result = query::QError(query::Failed(ctv_element_result.error()));
+					if (ctv_element_result.hasFailed()) {
+						result = query::Failed();
 						return;
 					}
 					ctv_elements.emplace_back(ctv_element_result.valueOrThrow());
@@ -421,29 +452,52 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
-				for (auto& sub_type: expr.subtypes) {
-					// should we here short-path or not?
 
+				bool coercion_success = true;
+
+				for (auto& sub_type: expr.subtypes) {
 					auto coercion_qresult
 						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
-					if (coercion_qresult.hasError()) {
-						// @TODO: #1620 report error properly when HOUT exposes source positions.
-						result = query::QError(query::Failed());
-						return;
-					}
-					const auto sub_type_coerced
-						= coercion_qresult.valueOrThrow().coerce(ctx, sub_type->clone());
-
-					const auto sub_type_ctv
-						= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
-					if (sub_type_ctv.hasError()) {
-						result = query::QError(query::Failed());
-						return;
+					if (coercion_qresult.hasFailed()) {
+						coercion_success = false;
+						continue;
 					}
 
-					subtypes.emplace_back(
-						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
-					);
+					variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+						variant_case(Coercion, coercion) {
+							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
+
+							const auto sub_type_ctv
+								= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
+							if (sub_type_ctv.hasFailed()) {
+								result = query::Failed();
+								return;
+							}
+
+							subtypes.emplace_back(
+								sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+							);
+						}
+						variant_case(InvalidCoercion, _) {
+							coercion_success = false;
+
+							// @TODO: #1620 report error properly when HOUT exposes source positions.
+
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
+								"Cannot coerce variant subtype of type ",
+								sub_type->expression_type.getSymbolType().toString(),
+								" to meta type."
+							)));
+						}
+						variant_default {
+							CORE_PANIC("Unexpected coercion result when coercing to meta type.");
+						}
+					}
+				}
+
+				if (!coercion_success) {
+					result = query::Failed();
+					return;
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
@@ -454,14 +508,19 @@ namespace compiler::helios {
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
-				result = evalHoutExpr(ctx, seq.expressions.back().ref());
+				auto sub_result = evalHoutExpr(ctx, seq.expressions.back().ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
 			}
 
 			void visitCastExpr(const code::CastExpr& cast) final {
 				// @note: We assume that if we got here, then the cast is valid.
 				auto expr_to_cast = evalHoutExpr(ctx, cast.source_expr.ref());
-				if (expr_to_cast.hasError()) {
-					result = query::QError(query::Failed());
+				if (expr_to_cast.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 				const auto& ctv     = expr_to_cast.valueOrThrow();
@@ -469,9 +528,14 @@ namespace compiler::helios {
 				if (!numeric) CORE_PANIC("Cast expression on a non numeric type");
 
 				auto maybe_new_numeric = numeric->castTo(cast.target_type);
-				result                 = maybe_new_numeric.has_value()
+				auto sub_result        = maybe_new_numeric.has_value()
 				                           ? CompTimeEvalResult{ maybe_new_numeric.value() }
-				                           : query::QError(query::Failed());
+				                           : query::Failed();
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
 			}
 
 			/**
@@ -509,8 +573,8 @@ namespace compiler::helios {
 
 			void visitLiftToTypeExpr(const code::LiftToTypeExpr& lift) final {
 				auto ctv_to_lift = evalHoutExpr(ctx, lift.value_expr.ref());
-				if (ctv_to_lift.hasError()) {
-					result = query::QError(query::Failed());
+				if (ctv_to_lift.hasFailed()) {
+					result = query::Failed();
 					return;
 				}
 				// Panics if the CTV cannot be lifted to a type.
@@ -521,7 +585,76 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief Evaluates a HOUT call expression using VM Eval.
+		 * @brief A POD to encapsulate the results of `prepareLIRForDVM`.
+		 * - `func_to_call` - a mangled name of the function we evaluate.
+		 * - `functions` -
+		 */
+		struct LIRBuildResult {
+			std::string func_to_call;  // Mangled name of the function we evaluate.
+			std::vector<CRef<lir::Function>>
+				functions;             // List of LIR functions needed to evaluate `func_to_call`.
+		};
+
+		/**
+		 * @brief Collects all data needed to evaluate a function with the given `function_sym_id`
+		 * (target function). This includes:
+		 *- Collection all function dependencies - collecting all functions which are being called
+		 * by the target function.
+		 * - Retrieving the mangled name of the target function
+		 * - Compiling all of the necessary functions to LIR
+		 *
+		 * This data along with the argument CTVs is passed to `CompTimeDVM`, compiled to bytecode
+		 * and the function with the mangled name is called.
+		 *
+		 * @return A `QResult` with either a `LIRBuildResult` a (mangled_function_name,
+		 * all_necessary_lir_functions) or a `query::Failed` if any of the steps on the way failed.
+		 */
+		static query::QResult<LIRBuildResult> prepareLIRForDVM(
+			query::Context& ctx, SymID function_sym_id
+		) {
+			// Collect all function dependencies for this function. All functions needed in
+			// order to evaluate this one.
+			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
+
+			LIRBuildResult result;
+			result.functions.reserve(dependencies->size());
+
+			for (const SymID& func_id: *dependencies) {
+				// @TODO: #826 Change this code to a single query once it gets implemented.
+				auto  hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
+				auto& mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+
+				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
+
+				// When lowering the top level function, we store it's mangled name to know
+				// which function to call in the VM.
+				if (func_id == function_sym_id)
+					result.func_to_call = lir_func_result->mangled_name.str();
+
+				result.functions.push_back(lir_func_result);
+			}
+			return result;
+		}
+
+		/**
+		 * @brief Evaluates all argument expressions to CompileTimeValues.
+		 */
+		static query::QResult<std::vector<CompileTimeValue>> evaluateArguments(
+			query::Context& ctx, const std::vector<Box<code::Expr>>& args
+		) {
+			std::vector<CompileTimeValue> ctv_arguments;
+			ctv_arguments.reserve(args.size());
+
+			for (const auto& arg_expr: args) {
+				UNPACK_QRESULT(auto arg =, evalHoutExpr(ctx, arg_expr.ref()));
+				ctv_arguments.push_back(std::move(arg));
+			}
+
+			return ctv_arguments;
+		}
+
+		/**
+		 * @brief Evaluates a HOUT call expression using DVM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
 		static CompTimeEvalResult evaluateFunctionWithVm(
@@ -529,45 +662,18 @@ namespace compiler::helios {
 		) {
 			const auto* callee_ident
 				= dynamic_cast<const code::IdentifierExpr*>(call_expr->callee.get());
-			if (!callee_ident) return query::QError(query::Failed());
+			if (!callee_ident) return query::Failed();
 
 			const SymID function_sym_id = callee_ident->symbol;
 
-			// Get code of the called function.
-			// @todo: Change this code to a single query once it gets implemented #826.
-			auto fun_hout_result = ctx.query<QueryCodeOfFun>(function_sym_id);
+			auto args_result = evaluateArguments(ctx, call_expr->arguments);
+			if (args_result.hasFailed()) return query::Failed();
+			auto ctv_arguments = std::move(args_result.valueOrThrow());
 
-			// Collect all function dependencies for this function. All functions needed in
-			// order to evaluate this one.
-			auto dependencies = ctx.query<QueryTransitiveFunctionCalls>(function_sym_id);
+			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
+			if (lir_build_result.hasFailed()) return query::Failed();
+			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
 
-			std::string                      func_to_call_name;
-			std::vector<CRef<lir::Function>> all_lir_functions;
-			for (const SymID& func_id: *dependencies) {
-				auto hout_func_result = ctx.query<QueryCodeOfFun>(func_id);
-				auto mir_func_result  = ctx.query<mir::LowerToMIRFunction>({ hout_func_result });
-				if (mir_func_result->hasError()) return query::QError(mir_func_result->error());
-				CRef<mir::Function> mir_func = &mir_func_result->valueOrThrow();
-				auto lir_func_result         = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-
-				// When lowering the top level function, we store it's mangled name to know
-				// which function to call in the VM.
-				if (func_id == function_sym_id)
-					func_to_call_name = lir_func_result->mangled_name.str();
-
-				all_lir_functions.push_back(lir_func_result);
-			}
-
-			backend_vm::Module m(base::StrID("COMP_TIME"));
-			for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
-			vm::code::CodeCollection code = m.build();
-
-			std::vector<CompileTimeValue> ctv_arguments;
-			for (const auto& arg_expr: call_expr->arguments) {
-				auto arg_result = evalHoutExpr(ctx, arg_expr.ref());
-				if (arg_result.hasError()) return arg_result;
-				ctv_arguments.push_back(arg_result.valueOrThrow());
-			}
 
 			// Retrieve the functions return type.
 			auto callee_abs_type = callee_ident->expression_type.getSymbolType().getType();
@@ -578,10 +684,11 @@ namespace compiler::helios {
 			}
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
-			auto vm_eval_result
-				= executeInVm(func_to_call_name, code, ctv_arguments, func_type.getResultType());
+			auto vm_eval_result = executeInVm(
+				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+			);
 
-			if (!vm_eval_result) return query::QError(query::Failed());
+			if (!vm_eval_result) return query::Failed();
 			return vm_eval_result.value();
 		}
 
@@ -604,19 +711,19 @@ namespace compiler::helios {
 		 */
 		static auto evalHoutExpr(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			// Try evaluating with TreeEval(Short Path).
-			TreeEvalResult tree_eval_result = evaluateWithTreeEval(ctx, expr);
-			if (tree_eval_result.hasError()) {
-				variant_match(tree_eval_result.error()) {
-					variant_case(query::Failed, failed) { return query::QError(query::Failed()); }
-					variant_case(CouldNotShortPath, _) {
-						// If TreeEval failed, try to evaluate with VM.
-						const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
-						if (!call_expr) return query::QError(query::Failed());
-						return evaluateFunctionWithVm(ctx, call_expr);
-					}
+			UNPACK_QRESULT(TreeEvalValue tree_eval =, evaluateWithTreeEval(ctx, expr));
+
+			variant_match(tree_eval) {
+				variant_case(CompileTimeValue, ctv) { return ctv; }
+				variant_case(CouldNotShortPath, _) {
+					// If TreeEval failed, try to evaluate with VM.
+					const auto* call_expr = dynamic_cast<const code::CallExpr*>(expr.get());
+					if (!call_expr) return query::Failed();
+					return evaluateFunctionWithVm(ctx, call_expr);
 				}
+				variant_default { CORE_PANIC("Unexpected TreeEvalResult variant."); }
 			}
-			return tree_eval_result.valueOrThrow();
+			CORE_UNREACHABLE();
 		}
 
 		static auto provide(query::Context& ctx, const QKey key) -> PResult {
@@ -630,9 +737,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			auto expr = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (expr.hasError()) return query::QError(query::Failed());
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr.valueOrThrow().ref() });
+			UNPACK_QRESULT_MOVE(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
+			return ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -652,7 +758,7 @@ namespace compiler::helios {
 				tsh::Mutability::Mutable,
 			}
 		);
-		if (hout_qresult.hasError()) return query::QError(query::Failed());
+		if (hout_qresult.hasFailed()) return query::Failed();
 		return ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
 	}
 }

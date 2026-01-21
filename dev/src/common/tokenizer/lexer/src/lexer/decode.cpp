@@ -1,5 +1,8 @@
 #include "decode.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/message.hpp>
+
 #include <base/misc/convert.hpp>
 #include <base/misc/int_conv.hpp>
 
@@ -9,157 +12,129 @@
 
 namespace lexer {
 
-	namespace internal {
-		std::string decodeError(
-			Ref<tokenizer::TokenSource> file, usize byte, const std::string& reason
+	class AsciiByteError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "ascii_decode_error" };
+		}
+
+	public:
+		AsciiByteError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+		}
+	};
+
+	class Utf8UnexpectedContinuationError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "utf8_unexpected_continuation" };
+		}
+
+	public:
+		Utf8UnexpectedContinuationError(
+			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte
 		) {
-			std::stringstream res;
-			res << "In file: " << file->getFile().getFilePath().strView() << "\nAt byte " << byte
-				<< ": " << reason;
-			return res.str();
-		}
-	}
-
-	/**
-	 * @note This is a bit of a corner case where positions don't make sense.
-	 */
-	class DecodingError: public dia::Error {
-	private:
-		Ref<tokenizer::TokenSource> file;
-		usize                       byte;
-
-	public:
-		DecodingError(Ref<tokenizer::TokenSource> file, usize byte):
-			  dia::Error(dia::SourcePosition::fakePosition()),
-			  file(file),
-			  byte(byte) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return internal::decodeError(file, byte, reason());
-		}
-
-		[[nodiscard]]
-		virtual std::string reason() const
-			= 0;
-	};
-
-	class AsciiByteError final: public DecodingError {
-	private:
-		usize bad_byte;
-
-	public:
-		AsciiByteError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte):
-			  DecodingError(file, byte),
-			  bad_byte(bad_byte) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			return "ASCII decoding error: undefined ASCII byte " + base::toHexString(bad_byte, 2);
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
 		}
 	};
 
-	class Utf8UnexpectedContinuationError final: public DecodingError {
-	private:
-		usize bad_byte;
+	class Utf8BadByteStartError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "utf8_bad_byte_start" };
+		}
 
 	public:
-		Utf8UnexpectedContinuationError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte):
-			  DecodingError(file, byte),
-			  bad_byte(bad_byte) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			return "UTF-8 decoding error: Unexpected continuation byte "
-			     + base::toHexString(bad_byte, 2);
+		Utf8BadByteStartError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
 		}
 	};
 
-	class Utf8BadByteStartError final: public DecodingError {
-	private:
-		usize bad_byte;
-
-	public:
-		Utf8BadByteStartError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte):
-			  DecodingError(file, byte),
-			  bad_byte(bad_byte) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			return "UTF-8 decoding error: Invalid code-point starting byte "
-			     + base::toHexString(bad_byte, 2);
+	class Utf8BadNonContinuationError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "utf8_bad_non_continuation" };
 		}
-	};
-
-	class Utf8BadNonContinuationError final: public DecodingError {
-	private:
-		usize bad_byte;
-		usize code_point_start;
 
 	public:
 		Utf8BadNonContinuationError(
 			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte, usize code_point_start
-		):
-			  DecodingError(file, byte),
-			  bad_byte(bad_byte),
-			  code_point_start(code_point_start) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			std::stringstream ss;
-			ss << "UTF-8 decoding error: non-continuation byte ";
-			ss << base::toHexString(bad_byte, 2);
-			ss << " where continuation byte from code-point starting at position ";
-			ss << code_point_start << " was expected.";
-			return ss.str();
+		) {
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
+			addArgument<dia_int::TextArgument>("code_point_start", std::to_string(code_point_start));
 		}
 	};
 
-	class Utf8BadEofError final: public DecodingError {
-	private:
-		usize code_point_start;
+	class Utf8BadEofError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "utf8_bad_eof" };
+		}
 
 	public:
-		Utf8BadEofError(Ref<tokenizer::TokenSource> file, usize byte, usize code_point_start):
-			  DecodingError(file, byte),
-			  code_point_start(code_point_start) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			std::stringstream ss;
-			ss << "UTF-8 decoding error: EOF encountered before UTF-8 codepoint starting at byte ";
-			ss << code_point_start << " ended.";
-			return ss.str();
+		Utf8BadEofError(Ref<tokenizer::TokenSource> file, usize byte, usize code_point_start) {
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>("code_point_start", std::to_string(code_point_start));
 		}
 	};
 
-	class Utf8UndefinedCodepointError final: public DecodingError {
-	private:
-		UChar32 value;
+	class Utf8UndefinedCodepointError final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "lexer",
+				     .name          = "utf8_undefined_codepoint" };
+		}
 
 	public:
-		Utf8UndefinedCodepointError(Ref<tokenizer::TokenSource> file, usize byte, UChar32 value):
-			  DecodingError(file, byte),
-			  value(value) {}
-
-		[[nodiscard]]
-		std::string reason() const override {
-			return base::strConcat(
-				"UTF-8 decoding error: ",
-				"Codepoint undefined in the Unicode standard encountered starting here ",
-				"with value of ",
-				base::toHexString(base::safeIntConv<usize>(value))
+		Utf8UndefinedCodepointError(Ref<tokenizer::TokenSource> file, usize byte, UChar32 value) {
+			dia_int::CodeLocationArgument::FileLocation loc{
+				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
+			};
+			addArgument<dia_int::CodeLocationArgument>("code_location", std::move(loc));
+			addArgument<dia_int::TextArgument>("byte", std::to_string(byte));
+			addArgument<dia_int::TextArgument>(
+				"value", base::toHexString(base::safeIntConv<usize>(value))
 			);
 		}
 	};
 
 	template<>
-	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
+	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
 		auto      bytes = file->getContent().view();
 		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
@@ -176,7 +151,7 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
+	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
 		auto      bytes = file->getContent().view();
 		CharArray out;
 

@@ -24,6 +24,11 @@ namespace compiler::backend_vm {
 		void insertLirFunction(CRef<lir::Function> lir_function);
 
 		/**
+		 * @brief Inserts an extern C function into the module.
+		 */
+		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
+
+		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
 		void insertLirGlobal(
@@ -31,6 +36,11 @@ namespace compiler::backend_vm {
 			base::Optional<CRef<lir::Function>> global_ctor,
 			base::Optional<CRef<lir::Function>> global_dtor
 		);
+
+		/**
+		 * @brief Insert raw bytecode into a module.
+		 */
+		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
 		 * @brief Validates and builds module's representation as DVM program.

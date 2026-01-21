@@ -4,21 +4,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class NoSpecifierError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an access specifier.";
-		}
-
-	public:
-		NoSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-	};
 
 	LangElement::HashAlg& AccessBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, specifier);
@@ -30,7 +15,7 @@ namespace pst {
 		auto out      = makeBox<AccessBlock>(position, ctx);
 
 		if (not ACCESS_SPECIFIERS.contains(state[0].asKeyword())) {
-			state.log(makeBox<NoSpecifierError>(position));
+			state.logInt(makeBox<NoSpecifierError>(position));
 		} else {
 			out->context.specifiers.emplace_back(&state[0]);
 			out->specifier = state[0].asKeyword();
@@ -41,7 +26,7 @@ namespace pst {
 
 		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void AccessBlock::dprint(std::ostream& out) const {

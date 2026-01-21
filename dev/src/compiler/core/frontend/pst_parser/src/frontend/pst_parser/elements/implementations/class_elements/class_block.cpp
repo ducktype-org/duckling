@@ -8,13 +8,13 @@ namespace pst {
 		auto out      = makeBox<ClassBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(makeBox<error::BlockStartError>(state.getPosition()));
+			state.logInt(makeBox<error::BlockStartError>(state.getPosition()));
 			return nullptr;
 		}
 
 		state.parse(out).goDown();
 
-		while (state.notEmpty()) {
+		PST_WHILE(state.notEmpty()) {
 			MBox<ClassStmt> stmt;
 			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
 			out->statements.emplace_back(nullptr);
@@ -25,7 +25,7 @@ namespace pst {
 
 		out->fillSymbols();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ClassBlock::fillSymbols() {

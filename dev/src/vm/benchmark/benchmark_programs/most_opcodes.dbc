@@ -20,8 +20,8 @@ function run_every_opcode {
     div_l64_imm  0, 1;
     cmpEq_l64_l64 0, 8;
     cmpEq_l64_imm 0, 0;
-    cmpG_l64_l64  0, 8;
-    cmpG_l64_imm  0, 0;
+    cmpGt_l64_l64  0, 8;
+    cmpGt_l64_imm  0, 0;
     jmp_label Here;
     label Here;
     jmpIf_label Here2;

@@ -31,12 +31,11 @@ namespace query::external {
 	 * Set the previous query graph and mark previous graph input nodes (Input/SideInput)
 	 * as Green/Red based on provided input hashes.
 	 * This function wires external input knowledge into query internals.
+	 * @param graph_raw_bytes Raw bytes of serialized previous query graph.
+	 * @param inputs Vector of input data (QueryID + hash) used in previous compilation.
 	 */
-	void setPreviousGraph(query::internal::QueryGraph&& graph, std::vector<InputData>&& inputs);
-
-	/**
-	 * Wrapper to deserialize a query graph from raw bytes without exposing internals in callers.
-	 */
-	query::internal::QueryGraph deserialize(std::span<const std::byte> data);
+	void setPreviousGraphFromRawBytes(
+		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
+	);
 
 }  // namespace query::external

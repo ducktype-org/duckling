@@ -16,7 +16,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void FunDecl::dprint(std::ostream& out) const {

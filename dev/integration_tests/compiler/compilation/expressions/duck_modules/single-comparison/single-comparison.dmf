@@ -1,73 +1,72 @@
 fun main() -> i64 = {
-    # @TODO: #1571 Remove literal specifiers from all integration tests, one casts are implemented.
     # ( false )
-    if (4i64 < 4i64) {
+    if (4 < 4) {
         builtin_output_i64(1);
     }
 
     #   true 
-    if (3i64 < 4i64) {
+    if (3 < 4) {
     } else {
         builtin_output_i64(2);
     }
 
     # ( false )
-    if (0i64 > 0i64) {
+    if (0 > 0) {
         builtin_output_i64(3);
     }
 
     #   true
-    if (2i64 > 1i64) {
+    if (2 > 1) {
     } else {
         builtin_output_i64(4);
     } 
 
     # ( false )
-    if (5i64 <= 4i64) {
+    if (5 <= 4) {
         builtin_output_i64(5);
     }
 
     #    true
-    if (3i64 <= 4i64) {
+    if (3 <= 4) {
     } else {
         builtin_output_i64(6);
     }
 
     #  ( false )
-    if (-3i64 >= -2i64) {
+    if (-3 >= -2) {
         builtin_output_i64(7);
     }
 
     #    true
-    if (2i64 >= -1i64) {
+    if (2 >= -1) {
     } else {
         builtin_output_i64(8);
     }
 
     #  ( false )
-    if (-1i64 == 1i64) {
+    if (-1 == 1) {
         builtin_output_i64(9);
     }
 
     #    true
-    if (1i64 == 1i64) {
+    if (1 == 1) {
     } else {
         builtin_output_i64(10);
     }
 
     #  ( false )
-    if (4i64 != 4i64) {
+    if (4 != 4) {
         builtin_output_i64(11);
     }
 
     #    true
-    if (-1i64 != 1i64) {
+    if (-1 != 1) {
     } else {
         builtin_output_i64(12);
     }
 
-    let a: i64 = 5i64;
-    let b: i64 = 6i64;
+    let a: i64 = 5;
+    let b: i64 = 6;
 
     #           ( false )
     #             6 < 5
@@ -76,5 +75,5 @@ fun main() -> i64 = {
         builtin_output_i64(13);
     }
 
-    return 0i64;
+    return 0;
 }

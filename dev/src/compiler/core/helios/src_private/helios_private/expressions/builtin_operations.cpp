@@ -15,6 +15,10 @@ namespace {
 	/**
 	 * @brief Tries to find a common type for binary operation arguments through implicit coercion.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
+	 *
+	 * @TODO: #973 this function panics on query::Failed in coercions, should probably propagate
+	 * failed instead. If we conclude, that this will return empty optional on failure, we should
+	 * document it here.
 	 */
 	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypewithCoercion(
 		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
@@ -31,17 +35,21 @@ namespace {
 
 		// Try coercing left to right.
 		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_type);
-		if (lhs_to_rhs.hasValue()) {
+		if (lhs_to_rhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
-				rhs_type, std::move(lhs_to_rhs.valueOrThrow()), Coercion::emptyCoercion(rhs_type)
+				rhs_type,
+				std::move(lhs_to_rhs.valueOrThrow()).getCoercion(),
+				Coercion::emptyCoercion(rhs_type)
 			);
 		}
 
 		// Try coercing right to left.
 		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_type);
-		if (rhs_to_lhs.hasValue()) {
+		if (rhs_to_lhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
-				lhs_type, Coercion::emptyCoercion(lhs_type), std::move(rhs_to_lhs.valueOrThrow())
+				lhs_type,
+				Coercion::emptyCoercion(lhs_type),
+				std::move(rhs_to_lhs.valueOrThrow()).getCoercion()
 			);
 		}
 
@@ -97,6 +105,10 @@ namespace compiler::helios::code {
 			{ { base::StrID(">="), tsh::Kind::Float }, BuiltinBinary::FloatGteq },
 			{ { base::StrID("=="), tsh::Kind::Float }, BuiltinBinary::FloatEq },
 			{ { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
+
+			/// Meta type comparisons ///
+			{ { base::StrID("=="), tsh::Kind::Meta }, BuiltinBinary::MetaEq },
+			{ { base::StrID("!="), tsh::Kind::Meta }, BuiltinBinary::MetaNeq },
 
 			{ { keywordToStr(lang_def::Keyword::And), tsh::Kind::Bool }, BuiltinBinary::BooleanAnd },
 			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
