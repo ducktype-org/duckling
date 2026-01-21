@@ -396,4 +396,15 @@ namespace vm {
 		}
 		return memory.validateMemoryState();
 	}
+
+    void VMProcess::acquireGil(i64 id){
+        std::cout << "Thread " << id << " tries acquiring GIL\n";
+        gil.lock();
+        std::cout << "Thread " << id << " succeeded acquiring GIL\n";
+
+    }
+    void VMProcess::releaseGil(i64 id){
+        std::cout << "Thread " << id << " releaseing GIL\n";
+        gil.unlock();
+    }
 }
