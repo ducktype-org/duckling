@@ -1,6 +1,6 @@
 #include "type_builder.hpp"
 
-#include "vm/utils/stable_obj_id_name_map.hpp"
+#include <vm/utils/stable_obj_id_name_map.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>

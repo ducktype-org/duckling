@@ -8,7 +8,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include "vm/bytecode/validator/type_context.hpp"
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
