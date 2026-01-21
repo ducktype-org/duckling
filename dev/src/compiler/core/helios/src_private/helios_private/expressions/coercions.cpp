@@ -22,7 +22,7 @@ namespace compiler::helios {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
 		auto current_expr       = std::move(from);
-		auto source_symbol_type = from->expression_type.getSymbolType();
+		auto source_symbol_type = current_expr->expression_type.getSymbolType();
 
 		// If we are coercing from a reference type (`ref T` or `box T`) to a direct
 		// type (`U`), we must first dereference the source expression.
@@ -48,20 +48,22 @@ namespace compiler::helios {
 
 		if (source_type == to.getType()) {
 			// No coercion
-			return from;
+			return current_expr;
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion
-			return makeBox<code::CastExpr>(ctx, std::move(from), to);
+			return makeBox<code::CastExpr>(ctx, std::move(current_expr), to);
 		} else if (is_source_numeric and is_target_bool) {
 			// Numeric zero-check to bool
 			auto comparison = makeBox<code::BinaryOperatorExpr>(
 				ctx,
 				code::BuiltinBinary::IntegerNeq,
-				std::move(from),
+				std::move(current_expr),
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
-					numeric_value::NumericValue::createOfType(from->expression_type.getSymbolType())
+					numeric_value::NumericValue::createOfType(
+						current_expr->expression_type.getSymbolType()
+					)
 						.expect("Failed to create a NumericLiteral with 0 value. This should never "
 			                    "happen.")
 				)
@@ -71,7 +73,7 @@ namespace compiler::helios {
 		            or source_type.getKind() == tsh::Kind::Tuple)
 		           and to.getType().getKind() == tsh::Kind::Meta) {
 			// Lift value to type
-			return makeBox<code::LiftToTypeExpr>(ctx, std::move(from));
+			return makeBox<code::LiftToTypeExpr>(ctx, std::move(current_expr));
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
