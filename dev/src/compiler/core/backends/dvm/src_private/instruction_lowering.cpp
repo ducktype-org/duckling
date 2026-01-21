@@ -1,6 +1,8 @@
+#include "cast_operation_lowering.hpp"
+#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "program_lowering_context.hpp"
+#include "meta_operation_lowering.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -15,156 +17,166 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 namespace {
-	vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
-		switch (operation) {
-		/// Integer operations ///
-		case lir::Operation::IntegerAdd:
-			return OpKind::add;
-		case lir::Operation::IntegerSub:
-			return OpKind::sub;
-		case lir::Operation::IntegerNeg:
-			return OpKind::neg;
-		case lir::Operation::IntegerMul:
-			return OpKind::mul;
-		case lir::Operation::IntegerSDiv:
-			return OpKind::div;
-		case lir::Operation::IntegerSMod:
-			return OpKind::mod;
-		case lir::Operation::IntegerUDiv:
-			return OpKind::udiv;
-		case lir::Operation::IntegerUMod:
-			return OpKind::umod;
-
-		/// Floating point operations ///
-		case lir::Operation::FloatAdd:
-			return OpKind::fadd;
-		case lir::Operation::FloatSub:
-			return OpKind::fsub;
-		case lir::Operation::FloatMul:
-			return OpKind::fmul;
-		case lir::Operation::FloatDiv:
-			return OpKind::fdiv;
-		case lir::Operation::FloatNeg:
-			return OpKind::fneg;
-
-		/// Signed integer comparisons ///
-		case lir::Operation::IntegerEq:
-			return OpKind::cmpEq;
-		case lir::Operation::IntegerNeq:
-			return OpKind::cmpNeq;
-		case lir::Operation::IntegerSLt:
-			return OpKind::cmpL;
-		case lir::Operation::IntegerSLteq:
-			return OpKind::cmpLe;
-		case lir::Operation::IntegerSGt:
-			return OpKind::cmpG;
-		case lir::Operation::IntegerSGteq:
-			return OpKind::cmpGe;
-
-		/// Unsigned integer comparisons ///
-		case lir::Operation::IntegerULt:
-			return OpKind::ucmpL;
-		case lir::Operation::IntegerULteq:
-			return OpKind::ucmpLe;
-		case lir::Operation::IntegerUGt:
-			return OpKind::ucmpG;
-		case lir::Operation::IntegerUGteq:
-			return OpKind::ucmpGe;
-
-		/// Floating point comparisons ///
-		case lir::Operation::FloatLt:
-			return OpKind::fcmpL;
-		case lir::Operation::FloatGt:
-			return OpKind::fcmpG;
-		case lir::Operation::FloatLteq:
-			return OpKind::fcmpLe;
-		case lir::Operation::FloatGteq:
-			return OpKind::fcmpGe;
-		case lir::Operation::FloatEq:
-			return OpKind::fcmpEq;
-		case lir::Operation::FloatNeq:
-			return OpKind::fcmpNeq;
-
-		/// Logical operations ///
-		case lir::Operation::BooleanAnd:
-			return OpKind::log_and;
-		case lir::Operation::BooleanOr:
-			return OpKind::log_or;
-		case lir::Operation::BooleanNot:
-			return OpKind::log_not;
-
-		/// Other ///
-		case lir::Operation::Assign:
-			return OpKind::mov;
-		case lir::Operation::Call:
-			return OpKind::call;
-
-		default:
-			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
-		}
-		CORE_UNREACHABLE();
-	}
-
 	bool isComparison(OpKind op) {
-		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpL
-		    || op == OpKind::cmpLe || op == OpKind::cmpG || op == OpKind::cmpGe
-		    || op == OpKind::ucmpL || op == OpKind::ucmpLe || op == OpKind::ucmpG
+		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
+		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
+		    || op == OpKind::ucmpLt || op == OpKind::ucmpLe || op == OpKind::ucmpGt
 		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
-		    || op == OpKind::fcmpL || op == OpKind::fcmpLe || op == OpKind::fcmpG
+		    || op == OpKind::fcmpLt || op == OpKind::fcmpLe || op == OpKind::fcmpGt
 		    || op == OpKind::fcmpGe;
 	}
 
 	bool isUnaryOperation(OpKind op) {
 		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
 	}
+
+	/**
+	 * @brief Helper used to evaluate comparison operations at compile-time.
+	 * @note Keep the same semantics as in the compiler's comp_time and VM.
+	 * @return The result of the comparison.
+	 */
+	bool compTimeEvaluateComparison(
+		OpKind                       operation,
+		const ctv::CompileTimeValue& lhs_value,
+		const ctv::CompileTimeValue& rhs_value
+	) {
+		auto lhs_numeric_opt = lhs_value.get<ctv::NumericValue>();
+		auto rhs_numeric_opt = rhs_value.get<ctv::NumericValue>();
+		CORE_ASSERT(
+			lhs_numeric_opt.has_value() && rhs_numeric_opt.has_value(),
+			"Comparison between non-numeric immediates is not supported"
+		);
+		auto lhs_numeric = lhs_numeric_opt.value();
+		auto rhs_numeric = rhs_numeric_opt.value();
+		auto result      = std::visit(
+            [&](auto&& lhs_num) -> bool {
+                using LhsNumT    = std::decay_t<decltype(lhs_num)>;
+                auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
+                CORE_ASSERT(
+                    rhs_num_opt.has_value(),
+                    "Comparison between different numeric types is not supported"
+                );
+                auto rhs_num = rhs_num_opt.value();
+                switch (operation) {
+                case OpKind::cmpEq:
+                case OpKind::fcmpEq:
+                    return lhs_num == rhs_num;
+                case OpKind::cmpNeq:
+                case OpKind::fcmpNeq:
+                    return lhs_num != rhs_num;
+                case OpKind::cmpGt:
+                case OpKind::fcmpGt:
+                case OpKind::ucmpGt:
+                    return lhs_num > rhs_num;
+                case OpKind::cmpGe:
+                case OpKind::fcmpGe:
+                case OpKind::ucmpGe:
+                    return lhs_num >= rhs_num;
+                case OpKind::cmpLt:
+                case OpKind::fcmpLt:
+                case OpKind::ucmpLt:
+                    return lhs_num < rhs_num;
+                case OpKind::cmpLe:
+                case OpKind::fcmpLe:
+                case OpKind::ucmpLe:
+                    return lhs_num <= rhs_num;
+                default:
+                    CORE_PANIC("Unhandled comparison operation");
+                }
+            },
+            lhs_numeric.getStorage()
+        );
+		return result;
+	}
+
+	/**
+	 * @brief Gets the opposite direction of a comparison operation, e.g `a < b` becomes `b > a`.
+	 */
+	OpKind getComparisonOppositeDirection(OpKind operation) {
+		switch (operation) {
+		case OpKind::cmpEq:
+			return OpKind::cmpEq;
+
+		case OpKind::cmpNeq:
+			return OpKind::cmpNeq;
+
+		case OpKind::fcmpEq:
+			return OpKind::fcmpEq;
+
+		case OpKind::fcmpNeq:
+			return OpKind::fcmpNeq;
+
+		case OpKind::cmpGt:
+			return OpKind::cmpLt;
+
+		case OpKind::cmpGe:
+			return OpKind::cmpLe;
+
+		case OpKind::ucmpGt:
+			return OpKind::ucmpLt;
+
+		case OpKind::ucmpGe:
+			return OpKind::ucmpLe;
+
+		case OpKind::cmpLt:
+			return OpKind::cmpGt;
+
+		case OpKind::cmpLe:
+			return OpKind::cmpGe;
+
+		case OpKind::fcmpGt:
+			return OpKind::fcmpLt;
+
+		case OpKind::fcmpGe:
+			return OpKind::fcmpLe;
+
+		case OpKind::fcmpLt:
+			return OpKind::fcmpGt;
+
+		case OpKind::fcmpLe:
+			return OpKind::fcmpGe;
+
+		default:
+			CORE_PANIC("Unhandled comparison operation");
+		}
+	}
 }
 
-void FunctionLoweringContext::handleFunctionCall(
-	const lir::FunctionLiteral& called_function,
-	const DVMValue&             called_func_name,
+void FunctionLoweringContext::handleCall(
+	const FunctionCallInfo&     call_info,
 	const std::deque<DVMValue>& func_args,
 	base::Optional<DVMValue>    output
 ) {
 	CORE_ASSERT(
-		func_args.size() == called_function.parameter_layouts->size(),
-		"Function call argument count does not match function parameter count."
+		call_info.param_types.size() == func_args.size(),
+		"Argument count mismatch for extern C function call: ",
+		VISIT(call_info.call_target, callable, return callable.name)
 	);
 
-	vm::code::TypeOfData called_result_type
-		= program_context.lowerAndKeepTslType(called_function.return_type_layout);
-	std::vector<vm::code::TypeOfData> param_types
-		= *called_function.parameter_layouts | std::views::transform([&](const auto& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
-		  })
-	    | std::ranges::to<std::vector>();
-
-
 	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		if (typeName(called_result_type) != "void")
-			return pushTempLocal(called_result_type, "call_result");
+		if (call_info.return_type)
+			return pushTempLocal(call_info.return_type.value(), "call_result");
 		else
 			return {};
 	}();
 
-	// Instantiate function parameters on the stack.
-	for (const auto& [arg_id, func_arg, param_type]:
-	     std::views::zip(std::views::iota(0), func_args, param_types)) {
-		CORE_DEV_LOG(Backend, "Initializing: ", typeName(param_type), '\n');
+	for (const auto& [arg_idx, func_arg, arg_type]:
+	     std::views::zip(std::views::iota(0), func_args, call_info.param_types)) {
+		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
 
-		auto arg_name = base::strConcat("call", "_arg", arg_id, "_");
-
-		auto temp_arg = pushTempLocal(param_type, arg_name.c_str());
-
+		auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
+		auto temp_arg = pushTempLocal(arg_type, arg_name.c_str());
 		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 	}
 
-	pushInstruction({ OpKind::call, called_func_name });
+	pushInstruction({ OpKind::call,
+	                  VISIT(call_info.call_target, callable, return callable.asArgument()) });
 
 	if (output) {
 		pushInstruction({
 			OpKind::mov,
 			output.value(),
-			call_result_storage.value().asArgument(),
+			call_result_storage->asArgument(),
 		});
 	}
 
@@ -176,25 +188,63 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		= lir_instruction.arguments
 	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
 	    | std::ranges::to<std::deque>();
-
-	const auto operation = lirOpToOpKind(lir_instruction.operation);
-
 	const auto maybe_output
 		= lir_instruction.output.map([&](const auto& output) { return lowerLirValue(output); });
 
+	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
+
+	variant_match(dvm_operation) {
+		variant_case(MetaOperation, operation) {
+			MetaOperationLowerer lowerer(*this);
+			lowerer.lower(operation, args, maybe_output);
+			return;
+		}
+		variant_case(CastOperation, operation) {
+			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output, *this);
+			return;
+		}
+	}
+	auto operation = std::get<SimpleOperation>(dvm_operation).op;
+
+
 	if (isComparison(operation)) {
 		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-		// This resolves e.g. `x = a CMP b;`
-		// by splitting it into two instructions:
-		// a CMP b;
-		// cmov x, 1;
-		pushInstruction({ lirOpToOpKind(lir_instruction.operation), args[0], args[1] });
-		pushInstruction({ OpKind::cmov, maybe_output.value(), DVMValue(1).asArgument() });
+		CORE_ASSERT(
+			maybe_output.has_value(), "Comparison operations must have an output destination"
+		);
+		auto output = maybe_output.value();
+
+		if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
+			auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
+			auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
+			bool result    = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
+			if (result)
+				pushInstruction({ OpKind::mov, output, DVMImmediate(1).asArgument() });
+			else
+				pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+		} else {
+			if (args[0].is<DVMImmediate>()) {
+				// Swap arguments to place immediate on the right side.
+				std::swap(args[0], args[1]);
+				operation = getComparisonOppositeDirection(operation);
+			}
+			// This resolves e.g. `x = a CMP b;`
+			// by splitting it into three instructions:
+			// a CMP b;
+			// mov x, 0;
+			// cmov x, 1;
+			pushInstruction({ operation, args[0], args[1] });
+			pushInstruction({ OpKind::mov, output, DVMImmediate(0).asArgument() });
+			pushInstruction({ OpKind::cmov, output, DVMValue(1).asArgument() });
+		}
+
 	} else if (operation == OpKind::call) {
 		auto called_function  = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 		auto called_func_name = args.front();
 		args.pop_front();
-		handleFunctionCall(called_function, called_func_name, args, maybe_output);
+		handleCall(
+			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
+		);
 	} else if (isUnaryOperation(operation)) {
 		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
 		auto output = maybe_output.value();

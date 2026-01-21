@@ -12,18 +12,18 @@ namespace pst {
 			auto    opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon())
 				state.parse(opt.value()).one(Special::Semicolon);
-			return out;
+			PST_RETURN out;
 		}
 	}
 
 	i64 ClassStmt::countSpecifiers(LangParserState& state) {
 		i64 res = 0;
-		while (class_specs.contains(state[res].asKeyword())) res++;
+		PST_WHILE(class_specs.contains(state[res].asKeyword())) res++;
 		return res;
 	}
 
 	void ClassStmt::parseSpecifiers(LangParserState& state) {
-		while (class_specs.contains(state[0].asKeyword())) {
+		PST_WHILE(class_specs.contains(state[0].asKeyword())) {
 			context.specifiers.emplace_back(&state[0]);
 			state.parse(Ref(this)).eatOne();
 		}
@@ -83,6 +83,6 @@ namespace pst {
 		// Add Attributes
 		if (out) out->addAttributes(state, std::move(attributes));
 
-		return out;
+		PST_RETURN out;
 	}
 }

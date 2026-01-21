@@ -40,6 +40,25 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] const DVMGlobal& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
 
 		/**
+		 * @brief Retrieves the extern C function with the given name.
+		 * @note The extern C function must have been previously declared using
+		 * insertExternCFunction, panics otherwise.
+		 */
+		[[nodiscard]] const vm::code::ExternalCFunction& getExternCFunction(
+			const base::StrID& func_name
+		) const;
+
+		/**
+		 * @brief Inserts an extern C function into the program context.
+		 */
+		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
+
+		/**
+		 * @brief Insert raw bytecode into program context.
+		 */
+		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
+
+		/**
 		 * @brief Produces the final bytecode program.
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
@@ -54,8 +73,14 @@ namespace compiler::backend_vm::internal {
 
 		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
 
+		// Extern function name to definition.
+		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
+
+		// Additional, non-lir functions loaded into a module. Used in CTE.
+		std::vector<vm::code::Function> extra_bytecode_functions;
+
 		// Using names as keys to avoid issues with CRef hash/equality.
-		base::HashMap<base::StrID, DVMGlobal>            lir_global_to_dvm;
-		base::HashMap<base::StrID, vm::code::GlobalData> lir_global_to_dvm_data;
+		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
+		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
 	};
 }

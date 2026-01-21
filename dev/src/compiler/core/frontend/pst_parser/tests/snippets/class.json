@@ -18,9 +18,17 @@
 						"sourceStart": 20,
 						"sourceEnd": 22
 					},
-					"Identifier Expression": {
-						"name": {
-							"Name": "aaa"
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 20,
+								"sourceEnd": 22
+							},
+							"Identifier Expression": {
+								"name": {
+									"Name": "aaa"
+								}
+							}
 						}
 					}
 				},
@@ -67,7 +75,7 @@
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"body": {
@@ -111,7 +119,7 @@
 								"sourceEnd": 75
 							},
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Field": {
 								"is mutable": "true",
@@ -146,7 +154,7 @@
 												"sourceStart": 74,
 												"sourceEnd": 74
 											},
-											"Value Expr": {
+											"Numeric Value Expr": {
 												"number": "5"
 											}
 										}
@@ -230,7 +238,7 @@
 													}
 												}
 											}
-										}
+										},
 									]
 								},
 								"return": "unit",
@@ -299,7 +307,7 @@
 																									"sourceStart": 113,
 																									"sourceEnd": 113
 																								},
-																								"Top Level Expression": {
+																								"Expression Holder": {
 																									"expr": {
 																										"position": {
 																											"sourceStart": 113,
@@ -314,7 +322,7 @@
 																								}
 																							}
 																						}
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -324,7 +332,7 @@
 														}
 													}
 												}
-											}
+											},
 										]
 									}
 								}
@@ -336,7 +344,7 @@
 								"sourceEnd": 178
 							},
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Method": {
 								"name": {
@@ -377,7 +385,7 @@
 													}
 												}
 											}
-										}
+										},
 									]
 								},
 								"return": {
@@ -480,7 +488,7 @@
 														}
 													}
 												}
-											}
+											},
 										]
 									}
 								}
@@ -510,7 +518,7 @@
 												},
 												{
 													"Name": "math"
-												}
+												},
 											]
 										}
 									}
@@ -523,7 +531,7 @@
 								"sourceEnd": 373
 							},
 							"specifiers": [
-								"public"
+								"public",
 							],
 							"Access specification block": {
 								"specifier": "public",
@@ -539,7 +547,7 @@
 												"sourceEnd": 235
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Non Class Statement": {
 												"internal stmt": {
@@ -565,7 +573,7 @@
 																	},
 																	{
 																		"Name": "sqrt"
-																	}
+																	},
 																]
 															}
 														}
@@ -579,7 +587,7 @@
 												"sourceEnd": 282
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": "create",
@@ -618,7 +626,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												},
 												"inits": {
@@ -676,7 +684,7 @@
 																											"sourceStart": 263,
 																											"sourceEnd": 263
 																										},
-																										"Top Level Expression": {
+																										"Expression Holder": {
 																											"expr": {
 																												"position": {
 																													"sourceStart": 263,
@@ -691,7 +699,7 @@
 																										}
 																									}
 																								}
-																							}
+																							},
 																						]
 																					}
 																				}
@@ -700,7 +708,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												},
 												"body": {
@@ -753,7 +761,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												}
 											}
@@ -764,7 +772,7 @@
 												"sourceEnd": 316
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Copy Constructor": {
 												"name": "copy",
@@ -821,7 +829,7 @@
 																						"sourceStart": 310,
 																						"sourceEnd": 311
 																					},
-																					"Value Expr": {
+																					"Numeric Value Expr": {
 																						"number": "81"
 																					}
 																				}
@@ -829,7 +837,7 @@
 																		}
 																	}
 																}
-															}
+															},
 														]
 													}
 												}
@@ -841,7 +849,7 @@
 												"sourceEnd": 348
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": "abc",
@@ -893,7 +901,7 @@
 																					"sourceStart": 342,
 																					"sourceEnd": 343
 																				},
-																				"Value Expr": {
+																				"Numeric Value Expr": {
 																					"number": "81"
 																				}
 																			}
@@ -901,7 +909,7 @@
 																	}
 																}
 															}
-														}
+														},
 													]
 												}
 											}
@@ -912,7 +920,7 @@
 												"sourceEnd": 370
 											},
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Destructor": {
 												"body": {
@@ -923,14 +931,14 @@
 													"Code Block": []
 												}
 											}
-										}
+										},
 									]
 								}
 							}
-						}
+						},
 					]
 				}
 			}
-		}
+		},
 	]
 }

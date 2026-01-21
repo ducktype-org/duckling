@@ -1,19 +1,22 @@
-use crate::quackpack::core::Version;
-use std::collections::BTreeMap;
+use crate::quackpack::{core::Version, schemas::OneEntryMap};
+use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+pub type Dependencies = HashMap<String, Dependency>;
+
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Manifest {
     pub metadata: Metadata,
-    pub dependencies: BTreeMap<String, Dependency>,
-    pub dev_dependencies: BTreeMap<String, Dependency>,
-    pub features: BTreeMap<String, Vec<String>>,
-    pub targets: BTreeMap<String, CompilerOptions>,
-    pub profiles: BTreeMap<String, CompilerOptions>,
+    pub dependencies: Dependencies,
+    pub dev_dependencies: Dependencies,
+    pub features: HashMap<String, Vec<String>>,
+    pub profiles: HashMap<String, CompilerOptions>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Metadata {
     pub version: Version,
     pub authors: Vec<String>,
@@ -22,7 +25,8 @@ pub struct Metadata {
     pub description: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Dependency {
     pub version: Vec<Version>,
     pub source: DependencySource,
@@ -32,14 +36,16 @@ pub struct Dependency {
     pub is_alias_for: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencySource {
     pub inner: SourceInner,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(tag = "type")]
-#[serde(rename = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum SourceInner {
     Registry {
         registry_url: String,
@@ -56,21 +62,22 @@ pub enum SourceInner {
     },
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(untagged)]
 pub enum DependencyFeature {
     Simple(String),
-    Detailed(BTreeMap<String, DependencyCondition>),
+    Detailed(OneEntryMap<String, DependencyCondition>),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct CompilerOptions {
     pub compiler_flags: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencyCondition {
-    pub system: Option<Vec<String>>,
-    pub arch: Option<Vec<String>>,
     pub package_features: Option<Vec<String>>,
 }

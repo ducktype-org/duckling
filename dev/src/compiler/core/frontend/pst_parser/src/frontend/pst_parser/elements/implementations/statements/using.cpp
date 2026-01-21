@@ -11,7 +11,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Using, &out->names);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
@@ -22,10 +22,13 @@ namespace pst {
 
 	void Using::acceptVisitor(PstVisitor& visitor) const { visitor.visitUsing(*this); }
 
+	DeclKind Using::isDeclaration() const {
+		if (!names.internal()) return DeclKind::None;
+		return names.internal()->getStar() ? DeclKind::Transparent : DeclKind::Symbol;
+	}
+
 	base::Optional<base::StrID> Using::getDeclSymbolName() const {
-		std::string result = "<USING><";
-		for (const auto& name: names.internal()->getNames()) result += name.value.str();
-		result += ">";
-		return base::StrID(result.c_str());
+		return names.internal().toOpt().map([](const auto& x) { return x->getNames().back().value; }
+		);
 	}
 }

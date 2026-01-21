@@ -14,6 +14,6 @@ namespace pst::expr {
 		state.parse(out).eatOne();
 		state.parse(out).with(&out->expr, parse, length - 1);
 
-		return out;
+		PST_RETURN out;
 	}
 }

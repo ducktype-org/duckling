@@ -12,7 +12,7 @@ namespace pst {
 	class MatchCase final: public NotStmt {
 		struct CaseBranch {
 			NAMED_CHILD_OPT(condition, UniversalExprHolder);
-			NAMED_CHILD(result, UniversalExprHolder);
+			NAMED_CHILD(result, UniversalAllowBlockExprHolder);
 
 			/**
 			 * @note This method doesn't add all the data from CaseBranch, just the readable data
@@ -29,7 +29,7 @@ namespace pst {
 
 		struct CaseBranchView {
 			base::Optional<AccessLocked<UniversalExprHolder>> condition;
-			AccessLocked<UniversalExprHolder>                 result;
+			AccessLocked<UniversalAllowBlockExprHolder>       result;
 		};
 
 		NAMED_CHILD(pattern, FlowPattern);

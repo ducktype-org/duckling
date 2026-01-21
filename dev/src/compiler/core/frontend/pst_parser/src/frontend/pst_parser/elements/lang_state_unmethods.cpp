@@ -8,11 +8,21 @@
 namespace pst::internal {
 	dia::SourcePosition getPosition(LangParserState& state) { return state.getPosition(); }
 
-	void parseExprIntoHolder(LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun) {
-		state.parse(out).with(&out->expr, parse_fun);
+	void parseExprIntoHolder(
+		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
+	) {
+		state.parse(out).autoFallbackLen(length).with(&out->expr, parse_fun);
 	}
 
 	bool isSentinel(LangParserState& state, i64 fwd) {
 		return state[fwd].is(lexer::Token::Type::Sentinel);
+	}
+
+	const TokenStream& getTokenStream(LangParserState& state) { return state.ctokens(); }
+
+	u64 streamSize(LangParserState& state) { return state.ctokens().size(); }
+
+	bool isGood(LangParserState& state) {
+		return state.err->good() and (not state.int_err->hasErrors());
 	}
 }

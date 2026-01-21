@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(testFromFunctionLiterals);
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
+		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
 
@@ -91,9 +92,9 @@ private:
 		LIRModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
-			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
-			for (const auto& hout_func: unit->functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+			auto& unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			for (const auto& hout_func: unit.functions) {
+				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrPanic();
 				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -104,7 +105,7 @@ private:
 					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
 				);
 			}
-			for (const auto& hout_glob: unit->glob_data) {
+			for (const auto& hout_glob: unit.glob_data) {
 				variant_match(hout_glob.value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
@@ -348,7 +349,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit       = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+		auto hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
@@ -371,6 +373,80 @@ private:
 				= lir_global.initial_value.value().get<numeric_value::NumericValue>();
 			auto const_value = const_numeric->get<i64>();
 			ASSERT_EQUAL(const_value, 55);
+		});
+	}
+
+	void metaFunctionsTest() {
+		auto module = getLIROfModule(path("modules/meta_functions"));
+
+		withContextDo([&](query::Context& ctx) {
+			auto                  meta_type_entity = ctx.query<tsh::QueryMetaType>({});
+			CRef<tsl::TypeLayout> meta_layout
+				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
+
+			auto assert_is_meta_local
+				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
+
+			using enum compiler::lir::Operation;
+
+			{
+				auto create_box = module.lirFunc("createBox");
+				ASSERT_TRUE(create_box->validateParameters().isOk());
+				for (const auto& local: create_box->local_list) assert_is_meta_local(local);
+				const auto& block = create_box->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateBox);
+			}
+
+			{
+				auto create_ref = module.lirFunc("createRef");
+				ASSERT_TRUE(create_ref->validateParameters().isOk());
+				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
+				const auto& block = create_ref->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateRef);
+			}
+
+			{
+				auto create_ref = module.lirFunc("createConst");
+				ASSERT_TRUE(create_ref->validateParameters().isOk());
+				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
+				const auto& block = create_ref->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateConst);
+			}
+
+			{
+				auto create_variant = module.lirFunc("createVariant");
+				for (const auto& local: create_variant->local_list) assert_is_meta_local(local);
+				const auto& block = create_variant->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateVariant);
+				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
+			}
+
+			{
+				auto create_tuple = module.lirFunc("createTuple");
+				for (const auto& local: create_tuple->local_list) assert_is_meta_local(local);
+				const auto& block = create_tuple->block_order[0];
+				ASSERT_TRUE(block->instructions[0].operation == MetaCreateTuple);
+				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
+			}
+
+			{
+				auto mega_type = module.lirFunc("megaType");
+				for (const auto& local: mega_type->local_list) assert_is_meta_local(local);
+
+				int  create_variant_count = 0;
+				int  create_tuple_count   = 0;
+				bool call_found           = false;
+				for (const auto& instr: mega_type->block_order[0]->instructions)
+					if (instr.operation == MetaCreateTuple)
+						create_tuple_count++;
+					else if (instr.operation == MetaCreateVariant)
+						create_variant_count++;
+					else if (instr.operation == Call)
+						call_found = true;
+				ASSERT_EQUAL(create_tuple_count, 3);
+				ASSERT_EQUAL(create_variant_count, 1);
+				ASSERT_TRUE(call_found);
+			}
 		});
 	}
 

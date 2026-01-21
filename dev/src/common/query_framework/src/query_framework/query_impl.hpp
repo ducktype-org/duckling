@@ -7,6 +7,7 @@
 #include "context.hpp"
 #include "internal/acd.hpp"
 #include "internal/context_access.hpp"
+#include "internal/query_errors.hpp"
 #include "internal/query_graph/node_making.hpp"
 #include "q_stats/q_stats.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
@@ -122,12 +123,13 @@ namespace query::internal {
 					Query,
 					"[QUERY \"",
 					QueryIntType::QUERY_DATA.name,
-					"\"]: Caught failed exception.\n"
+					"\"]: Caught failed exception.\n",
+					qfe.what()
 				);
 
 				if constexpr (QueryImplType::USES_QRESULT
 				              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-					return QueryImplType::store(perfect_hash, query::QError(Failed()), acd);
+					return QueryImplType::store(perfect_hash, query::Failed(), acd);
 				} else {
 					CORE_PANIC(qfe.what());
 				}
@@ -260,13 +262,6 @@ namespace query::internal {
 	static_assert(                                                                                                                     \
 		LAZY_IMPLIES(                                                                                                                  \
 			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                    \
-		),                                                                                                                             \
-		"PResult must be a QResult if uses_qresult is true"                                                                            \
-	);                                                                                                                                 \
-	static_assert(                                                                                                                     \
-		LAZY_IMPLIES(                                                                                                                  \
-			type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                             \
-			::query::HasFailedInQResult<type::PResult>::value                                                                          \
 		),                                                                                                                             \
 		"PResult must be a QResult if uses_qresult is true"                                                                            \
 	);                                                                                                                                 \

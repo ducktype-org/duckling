@@ -1,6 +1,10 @@
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
+
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <filesystem/file.hpp>
 #include <hashing/add_to_hash.hpp>
@@ -8,12 +12,21 @@
 
 using namespace compiler::frontend;
 
+namespace {
+	base::Ref<SourceFile> getRef(AccessLocked<FileID> access) {
+		return GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+			access.illegalAccess().getID()
+		);
+	}
+}
+
 class SourceFileTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SourceFileTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		::compiler::frontend::use_module_modifier_remove = true;
 		TESTER_ADD_TEST(testSourceFileCreation);
 		TESTER_ADD_TEST(testSourceFileProperties);
 		TESTER_ADD_TEST(testPSTGeneration);
@@ -23,6 +36,8 @@ public:
 		TESTER_ADD_TEST(testMultipleSourceFiles);
 		TESTER_ADD_TEST(testFileModifiedUpdatesContent);
 		TESTER_ADD_TEST(testGetSourceFilesfromFile);
+		TESTER_ADD_TEST(testSourceFileRemovalClearsLookups);
+		TESTER_ADD_TEST(testSourceFileDanglingReferenceDetection);
 	}
 
 private:
@@ -288,6 +303,60 @@ private:
 			"source_file2 should be found"
 		);
 		fs::FileManager::deleteFile(temp_file);
+	}
+
+	void testSourceFileRemovalClearsLookups() {
+		std::vector<fs::File> cleanup_files;
+		auto                  module_builder = ModuleTreeBuilder::create();
+		module_builder->setName(base::StrID("sf_removal_mod"));
+		module_builder->setPackageID("sf_removal_pkg");
+		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
+		cleanup_files.push_back(main_file);
+		module_builder->setMainSourceFile(main_file);
+		auto module = module_builder->finalize();
+
+		auto source_path = fs::FileManager::createRandomVirtualFile("removal content");
+		cleanup_files.push_back(source_path);
+		ModuleTreeModifier::addSourceFile(module, source_path);
+		ASSERT_EQUAL(1, module->getSourceFiles().size());
+		auto sf_ref = getRef(module->getSourceFiles().front());
+
+		auto before = SourceFile::getSourceFilesfromFile(source_path);
+		ASSERT_EQUAL(1, before.size());
+
+		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
+		ASSERT_TRUE(module->getSourceFiles().size() == 0);
+		auto after = SourceFile::getSourceFilesfromFile(source_path);
+		ASSERT_TRUE(after.empty());
+
+		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
+	}
+
+	void testSourceFileDanglingReferenceDetection() {
+		std::vector<fs::File> cleanup_files;
+		auto                  module_builder = ModuleTreeBuilder::create();
+		module_builder->setName(base::StrID("sf_dangling_mod"));
+		module_builder->setPackageID("sf_dangling_pkg");
+		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
+		cleanup_files.push_back(main_file);
+		module_builder->setMainSourceFile(main_file);
+		auto module = module_builder->finalize();
+
+		auto source_path = fs::FileManager::createRandomVirtualFile("dangling content");
+		cleanup_files.push_back(source_path);
+		ModuleTreeModifier::addSourceFile(module, source_path);
+		ASSERT_EQUAL(1, module->getSourceFiles().size());
+		auto sf_ref  = getRef(module->getSourceFiles().front());
+		auto file_id = sf_ref->getFileID();
+
+		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
+
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { (void) GetFileID_Functor::get(file_id); },
+							  "Dangling SourceFile should panic after removal"
+		);)
+
+		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
 
 	void testComponentHashComputation() {

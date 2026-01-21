@@ -66,7 +66,12 @@ namespace dia_int {
 		usize               lines_before = 1;
 		usize               lines_after  = 1;
 
-	public:
+		/**
+		 * @brief Helper method to add the code lines components
+		 * from the source to the code list from [start, end) range.
+		 * If the start is at the beginning of the line adds a StartLineComponent.
+		 * @param[in,out] code_list The list to add the code lines to.
+		 */
 		static void addCodeLines(
 			std::vector<Box<dia_args::Component>>& code_list,
 			Ref<tokenizer::TokenSource>            source,
@@ -74,6 +79,7 @@ namespace dia_int {
 			usize                                  end
 		);
 
+	public:
 		Box<dia_args::Component> getValue(MessageBase&) override;
 
 		CodeArgument(std::string name, dia::SourcePosition position):
@@ -82,6 +88,7 @@ namespace dia_int {
 	};
 
 	class CodeLocationArgument final: public Argument {
+	public:
 		struct FileLocation {
 			std::string file;
 			u64         line;
@@ -95,6 +102,7 @@ namespace dia_int {
 			}
 		};
 
+	private:
 		FileLocation location;
 
 	public:
@@ -113,6 +121,9 @@ namespace dia_int {
 	 * @brief InteractiveElement is an interface for elements that can be used
 	 * as arguments in InteractiveArgument.
 	 * They can add new messages and entities when generating their value.
+	 *
+	 * We couldn't use Argument here directly because Argument requires a name
+	 * and InteractiveElement doesn't have a name.
 	 */
 	class InteractiveElement {
 	public:
@@ -211,8 +222,7 @@ namespace dia_int {
 	class MessageBase {
 	private:
 		std::vector<Box<Argument>> arguments;
-
-		std::vector<Box<Entity>> entities;
+		std::vector<Box<Entity>>   entities;
 
 		/**
 		 */
@@ -223,13 +233,15 @@ namespace dia_int {
 		 * @brief Messages that are directly attached to the this message and will be displayed
 		 * below it.
 		 */
-		std::vector<Box<MessageBase>> attached_messages;
+		std::vector<std::string> attached_messages;
 
 		/**
 		 * @brief Additional messages that are not attached directly to this diagnostic,
 		 * but may be the link destination or explore link target.
 		 */
 		base::HashMap<std::string, Box<MessageBase>> linked_messages;
+
+		bool has_been_built = false;
 
 		virtual Metadata getMetadata() const = 0;
 
@@ -293,6 +305,13 @@ namespace dia_int {
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
+		bool isError() const;
+
+		std::string debugString() const {
+			auto meta = getMetadata();
+			return meta.template_type + "::" + meta.type + "::" + meta.family + "::" + meta.name;
+		}
+
 		// ============================== ADDING MESSAGES ==============================
 
 		/**
@@ -305,18 +324,34 @@ namespace dia_int {
 		 * The pointer messages can also be linked here.
 		 */
 		void addLinkedMessage(std::string id, Box<MessageBase> message) {
-			linked_messages.insertOrAssign(std::move(id), std::move(message));
+			linked_messages.put(std::move(id), std::move(message));
 		}
 
 		/**
-		 * @brief Attachs a message that will be displayed below this message.
+		 * @brief Attachs a message that will always be displayed below this message.
+		 * (on the contrary to linked messages that will be displayed after clicking a link).
 		 */
-		void attachMessage(Box<MessageBase> note) { attached_messages.push_back(std::move(note)); }
+		std::string addAttachedMessage(Box<MessageBase> note) {
+			std::string id = MessageBase::getUniqueID();
+			this->addLinkedMessage(id, std::move(note));
+			attached_messages.push_back(id);
+			return id;
+		}
+
+		/**
+		 * @brief Same as above but with specified message id.
+		 */
+		void addAttachedMessage(const std::string& id, Box<MessageBase> note) {
+			this->addLinkedMessage(id, std::move(note));
+			attached_messages.push_back(id);
+		}
 
 		// ============================  BUILDING DIAGNOSTIC FILE =============================
 
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
+		 * @warning This method can only be called once because it modifies the arguments by using
+		 * getValue(msg&) on the arguments.
 		 */
 		Box<dia_args::Diagnostic> buildDiagnosticFile();
 
@@ -324,4 +359,32 @@ namespace dia_int {
 		virtual ~MessageBase() = default;
 	};
 
+	/**
+	 * @brief This is a helper base class for messages.
+	 * This is the same as MessageWithCodeFragmentAndCause, but without the cause pointer message.
+	 */
+	class MessageWithCodeFragment: public MessageBase {
+	protected:
+		MessageWithCodeFragment(dia::SourcePosition source_position);
+	};
+
+	/**
+	 * @brief This is a helper base class for messages.
+	 * The `cause` is the name of the pointer message.
+	 * A pointer message is a text displayed below the highlighted code fragment.
+	 *
+	 * So this class besides the code fragment also adds a pointer message titled "cause"
+	 * argument. All is handled by one SourcePosition, because the code fragment is the
+	 * source position and some lines around it, and the pointer message points to exactly
+	 * the given source position.
+	 *
+	 * The `code` and `code_location` arguments are the same arguments as any other,
+	 * they are not special in any way.
+	 * But they are very commonly used together with the `cause` pointer message,
+	 * so this base class adds them both based on the provided source position.
+	 */
+	class MessageWithCodeFragmentAndCause: public MessageBase {
+	protected:
+		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position);
+	};
 }

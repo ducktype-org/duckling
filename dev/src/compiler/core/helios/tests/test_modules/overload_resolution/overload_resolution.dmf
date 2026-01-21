@@ -56,11 +56,11 @@ var CALL_GOO_F64 = goo(get_f32(), true);
 # which is equal to other coercions like i64 -> f64 and would be ambiguous coercion matches.
 
 fun get_f64() -> f64 = {
-    return 3;
+    return 3.;
 }
 
 fun get_f32() -> f32 = {
-    return 3;
+    return 3.;
 }
 
 fun get_i64() -> i64 = {

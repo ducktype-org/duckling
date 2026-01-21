@@ -6,9 +6,7 @@
 namespace compiler::helios {
 
 
-	query::QResult<SymbolList, query::Failed> lookupChain(
-		query::Context& ctx, const LookupChainKey& key
-	) {
+	query::QResult<SymbolList> lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		CORE_ASSERT(!key.names.empty(), "lookupChain received zero names");
 
 		bool       first_symbol = true;
@@ -17,10 +15,10 @@ namespace compiler::helios {
 			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
 			                                     : HInterface::ofSymbol(result.back());
 
-			UNPACK_RESULT_MOVE(auto lookup =,
-			                   lookup_interface.lookupExpectUnique(
-								   pointed.position, ctx, pointed.value, key.params
-							   ););
+			UNPACK_QRESULT_MOVE(auto lookup =,
+			                    lookup_interface.lookupExpectUnique(
+									pointed.position, ctx, pointed.value, key.params
+								););
 			result.appendList(lookup);
 			first_symbol = false;
 		}

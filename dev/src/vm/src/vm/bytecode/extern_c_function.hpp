@@ -72,6 +72,7 @@
 #include <base/pointers/box.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include <vm/api/vm.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm::detail {

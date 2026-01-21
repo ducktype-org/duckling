@@ -1,6 +1,8 @@
+pub mod fetcher;
 mod manifest;
 mod package_ctx;
 mod package_loader;
+pub mod solver;
 mod venv_config;
 mod version;
 pub use manifest::*;

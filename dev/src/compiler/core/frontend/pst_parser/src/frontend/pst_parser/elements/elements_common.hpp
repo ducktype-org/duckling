@@ -2,9 +2,16 @@
 
 #include "../access.hpp"
 #include "../pst_state_forward.hpp"
+#include "../utility.hpp"     // IWYU pragma: export
 #include "elements_list.hpp"  // IWYU pragma: export
 
 #include <base/types/ints.hpp>
+
+#define PST_WHILE(condition) while (!state.isSkipping() && (condition))
+
+#define PST_RETURN                          \
+	if (state.isSkipping()) return nullptr; \
+	return
 
 namespace pst {
 	using lang_def::Keyword;
@@ -30,27 +37,27 @@ namespace pst::internal {
 	public:
 		Conditions() = delete;
 
-		static bool isComma(const LangParserState& state, i64 fwd);
-		static bool isSemicolon(const LangParserState& state, i64 fwd);
-		static bool isSentinel(const LangParserState& state, i64 fwd);
-		static bool isCurlyGroup(const LangParserState& state, i64 fwd);
-		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd);
-		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd);
-		static bool isAssign(const LangParserState& st, i64 fwd);
+		static bool isComma(const TokenStream& state, i64 fwd);
+		static bool isSemicolon(const TokenStream& state, i64 fwd);
+		static bool isSentinel(const TokenStream& state, i64 fwd);
+		static bool isCurlyGroup(const TokenStream& state, i64 fwd);
+		static bool isAssignOrSemicolon(const TokenStream& st, i64 fwd);
+		static bool isAssignOrCommaOrEnd(const TokenStream& st, i64 fwd);
+		static bool isAssign(const TokenStream& st, i64 fwd);
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
 		 */
-		static bool isBlockGroup(const LangParserState& st, i64 fwd);
-		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd);
+		static bool isBlockGroup(const TokenStream& st, i64 fwd);
+		static bool isImplementsOrBlockGroup(const TokenStream& st, i64 fwd);
 
 		template<lang_def::Keyword key>
-		static bool is(const LangParserState& st, i64 fwd) {
+		static bool is(const TokenStream& st, i64 fwd) {
 			return isKeyword(st, fwd, key);
 		}
 
 	private:
-		static bool isKeyword(const LangParserState& st, i64 fwd, lang_def::Keyword key);
+		static bool isKeyword(const TokenStream& st, i64 fwd, lang_def::Keyword key);
 	};
 
 	/**

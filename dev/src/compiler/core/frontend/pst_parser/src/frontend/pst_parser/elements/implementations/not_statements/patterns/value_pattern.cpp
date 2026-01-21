@@ -14,7 +14,7 @@ namespace pst {
 		auto out      = makeBox<ValuePattern>(position);
 		state.parse(out).one(&out->expression);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ValuePattern::dprint(std::ostream& out) const {
@@ -23,6 +23,10 @@ namespace pst {
 		out << R"("expression": )";
 		nullAwareDprint(expression, out);
 		out << "}";
+	}
+
+	AccessLocked<ValuePatternExprHolder> ValuePattern::getExpression() const {
+		return expression.give();
 	}
 
 	LangElement::HashAlg& ValuePattern::addElementDataToStableHash(HashAlg& partial_hash) const {

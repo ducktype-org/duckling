@@ -12,6 +12,7 @@ use crate::quackpack::core::Conditions;
 use crate::quackpack::core::Dependency;
 use crate::quackpack::core::DependencyDescription;
 use crate::quackpack::core::DependencyFeature;
+use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::manifest::Dependencies as DependenciesSchema;
 use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
 use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
@@ -65,7 +66,7 @@ fn parse_single_dependency(
         .as_ref()
         .map(|ored| ored.0.clone())
         .unwrap_or_default();
-    let desc = DependencyDescription::new(manifest_name, versions, source)
+    let desc = DependencyDescription::new(manifest_name, versions, source.into())
         .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
 
     scope.push(static_str_id!("features"));
@@ -100,17 +101,19 @@ fn parse_features(
                 result.push(DependencyFeature::new(name.into(), None));
             }
             FeatureSchema::Detailed(detailed_feature) => {
-                for (name, conditions) in detailed_feature.0.iter() {
-                    let name = name.into();
-                    scope.push(name);
-                    scope.push(static_str_id!("conditions"));
-                    result.push(DependencyFeature::new(
-                        name,
-                        Some(parse_conditions(conditions, scope)?),
-                    ));
-                    scope.pop();
-                    scope.pop();
-                }
+                let OneEntryMap {
+                    key: ref name,
+                    value: ref conditions,
+                } = detailed_feature.0;
+                let name = name.into();
+                scope.push(name);
+                scope.push(static_str_id!("conditions"));
+                result.push(DependencyFeature::new(
+                    name,
+                    Some(parse_conditions(conditions, scope)?),
+                ));
+                scope.pop();
+                scope.pop();
             }
         }
     }

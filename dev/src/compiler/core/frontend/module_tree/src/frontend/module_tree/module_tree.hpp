@@ -1,6 +1,7 @@
 #pragma once
 
 #include "access.hpp"
+#include "module_id.hpp"
 #include "source_file.hpp"
 
 #include <base/collections/maps.hpp>
@@ -33,6 +34,7 @@ namespace compiler::frontend {
 
 	class ModuleTreeBuilder;
 	class ModuleTreeModifier;
+	struct GetModuleID_Functor;
 
 	/**
 	 * @brief Represents a single module in the Duckling project tree.
@@ -40,7 +42,7 @@ namespace compiler::frontend {
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
 	 * including its source files, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
-	 * the main use case is to build a module tree form exesting folder, and then
+	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
 	 * But module tree can be also created manually.
 	 *
@@ -55,6 +57,8 @@ namespace compiler::frontend {
 	class ModuleTree final {
 		friend class ModuleTreeBuilder;
 		friend class ModuleTreeModifier;
+		friend struct GetModuleID_Functor;
+		friend struct ModuleID;
 
 	public:
 		ModuleID getModuleID() const;
@@ -171,6 +175,19 @@ namespace compiler::frontend {
 		 */
 		void updateModuleHashFromRootToThis();
 
+		/**
+		 * @brief Remove ModuleTree from static storage.
+		 * @note This will invalidate all references!
+		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
+		 */
+		static void removeModuleFromStorage(base::Ref<ModuleTree> module);
+
+		/**
+		 * Ensures a ModuleTree reference still points to a tracked instance during development
+		 * builds.
+		 */
+		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
+
 		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		base::Optional<ModuleID> m_id;
 
@@ -183,12 +200,14 @@ namespace compiler::frontend {
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>>
 			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccesLocked is
+		                    // happening with them. Do not use this in query unless AccessLocked is
 		                    // implemented for this
+
+		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
 
 		base::Optional<hashing::ComponentHash>
 			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // packege_name/root/submodule1/sub2
+		                            // package_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
 
@@ -370,8 +389,9 @@ namespace compiler::frontend {
 		/**
 		 * Removes a source file from its module.
 		 * @param file The SourceFile to remove.
+		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
-		static void removeSourceFile(base::Ref<SourceFile> file);
+		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
 
 		/**
 		 * Sets the main source file for the given module.
@@ -383,6 +403,7 @@ namespace compiler::frontend {
 		/**
 		 * Removes the main source file from the given module.
 		 * @param module The module to modify.
+		 * @TODO: #1253 - we need to invalidate query first and remove SourceFile from all caches
 		 */
 		static void removeMainSourceFile(base::Ref<ModuleTree> module);
 
@@ -437,8 +458,19 @@ namespace compiler::frontend {
 		 * Removes the module with the given ModuleID from the module map.
 		 * Also removes it from its parent's submodules and deletes associated source files.
 		 * @param module_id The ModuleID to remove.
+		 * This will set the parent of all submodules to the parent of the removed module.
+		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
 		 */
-		static void removeModule(base::Ref<ModuleTree> module);
+		static void removeSingleModule(base::Ref<ModuleTree> module);
+
+		/**
+		 * Removes the given module and all of its submodules recursively.
+		 * Parent hashes are updated once after the entire subtree is removed.
+		 * @param module_id The ModuleID to remove.
+		 * @TODO: #1253 - we need to invalidate query first and remove ModuleTree from all caches
+		 */
+		static void removeModuleRecursive(base::Ref<ModuleTree> module);
+
 
 		/**
 		 * Notifies that a file has been modified and updates its SourceFile.
@@ -470,4 +502,17 @@ namespace compiler::frontend {
 	 * @return The ModuleID of the created module tree
 	 */
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file);
+
+	/**
+	 * Creates a module tree from a string containing source code contents.
+	 * This is primarily used for REPL sessions and testing.
+	 * Creates a virtual file from the provided contents and sets it as the main source file.
+	 * If no package_id is provided, a random one is generated.
+	 * @param contents The source code content as a string
+	 * @param package_id Optional package ID; if empty, a random one is generated
+	 * @return The ModuleID of the created module tree
+	 */
+	ModuleID createModuleTreeFromContents(
+		std::string_view contents, base::Optional<std::string_view> package_id = {}
+	);
 }

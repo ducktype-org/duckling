@@ -6,7 +6,7 @@ use tempfile::{TempDir, tempdir};
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx,
-    quackpack::core::{GitRevision, Source},
+    quackpack::core::{BranchOrTag, Source, Version},
     static_str_id,
 };
 
@@ -18,7 +18,7 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     (dir, manifest)
 }
 
-fn make_errors_message<const N: usize>(root: &TempDir, errors: [&'static str; N]) -> String {
+fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
         "when trying to parse the user manifest at `{}/x`",
         root.path().display()
@@ -34,7 +34,7 @@ fn parse_metadata() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -53,11 +53,11 @@ fn parse_with_deps() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -84,11 +84,11 @@ fn parse_with_integer_dep_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 1
+    version: '1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -115,11 +115,11 @@ fn parse_with_negative_dep_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: -1
+    version: '-1'
 "#,
     );
     let ctx = DuckCtx::default();
@@ -139,11 +139,11 @@ fn parse_with_dep_or_versions() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1 or 2
+    version: 0.1 or 2 # Here it's not needed, because `or` makes it implicitly a string...
 "#,
     );
     let ctx = DuckCtx::default();
@@ -170,13 +170,13 @@ fn parse_with_git_dep() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
     version: 0.1 or 2
     source:
-      git_url: git
+      git_url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -192,8 +192,8 @@ dependencies:
     assert_eq!(a.desc().versions()[0].to_string(), "0.1.0");
     assert_eq!(a.desc().versions()[1].to_string(), "2.0.0");
     assert!(a.desc().source().is_git());
-    if let Source::Git(git_source) = a.desc().source() {
-        assert_eq!(git_source.url(), "git");
+    if let Source::Git(git_source) = a.desc().source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
     }
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
@@ -205,7 +205,7 @@ fn parse_with_extra_fields_fail() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -236,12 +236,12 @@ fn fail_registry_without_version() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
     source:
-      registry_url: xd
+      registry_url: https://google.com
 "#,
     );
     let ctx = DuckCtx::default();
@@ -266,11 +266,11 @@ fn parse_local_dep_with_versions() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     source:
       path: xd
 "#,
@@ -316,7 +316,7 @@ fn fail_no_metadata_name() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -363,7 +363,7 @@ fn parse_deps_sources() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -379,19 +379,19 @@ dependencies:
     source:
       path: /xd
   b:
-    version: 0.1
+    version: '0.1'
   c:
-    version: 0.1
+    version: '0.1'
     source:
       name: alias
   d:
-    version: 0.1
+    version: '0.1'
     source:
       name: alias
-      registry_url: xd
+      registry_url: https://google.com
   e:
     source:
-      git_url: git
+      git_url: https://google.com
       branch: branch
       commit: commit
 "#,
@@ -402,13 +402,12 @@ dependencies:
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 8);
 
-    // Test dependency a - local path
     let a = summary
         .dependencies()
         .get_dependency(static_str_id!("a"))
         .unwrap();
     assert!(a.desc().source().is_local());
-    if let Source::Local(local_source) = a.desc().source() {
+    if let Source::Local(local_source) = a.desc().source().as_ref() {
         assert_eq!(
             local_source.absolute(),
             manifest_path
@@ -424,13 +423,12 @@ dependencies:
     assert!(a.desc().versions().is_empty());
     assert_eq!(a.real_name(), a.desc().manifest_name());
 
-    // Test dependency a1 - relative parent path
     let a1 = summary
         .dependencies()
         .get_dependency(static_str_id!("a1"))
         .unwrap();
     assert!(a1.desc().source().is_local());
-    if let Source::Local(local_source) = a1.desc().source() {
+    if let Source::Local(local_source) = a1.desc().source().as_ref() {
         assert_eq!(
             local_source.absolute(),
             manifest_path
@@ -446,46 +444,42 @@ dependencies:
         assert_eq!(local_source.entry_in_manifest(), "../xd");
     }
 
-    // Test dependency a2 - home path
     let a2 = summary
         .dependencies()
         .get_dependency(static_str_id!("a2"))
         .unwrap();
     assert!(a2.desc().source().is_local());
-    if let Source::Local(local_source) = a2.desc().source() {
+    if let Source::Local(local_source) = a2.desc().source().as_ref() {
         let home_dir = home().unwrap();
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "~/xd");
     }
 
-    // Test dependency a3 - absolute path
     let a3 = summary
         .dependencies()
         .get_dependency(static_str_id!("a3"))
         .unwrap();
     assert!(a3.desc().source().is_local());
-    if let Source::Local(local_source) = a3.desc().source() {
+    if let Source::Local(local_source) = a3.desc().source().as_ref() {
         assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "/xd");
     }
 
-    // Test dependency b - registry
     let b = summary
         .dependencies()
         .get_dependency(static_str_id!("b"))
         .unwrap();
     assert!(b.desc().source().is_registry());
-    if let Source::Registry(registry_source) = b.desc().source() {
+    if let Source::Registry(registry_source) = b.desc().source().as_ref() {
         let default_registry = QpCtx::new(&ctx).registry_url().unwrap();
-        assert_eq!(registry_source.url(), default_registry);
+        assert_eq!(*registry_source.url(), default_registry);
     }
     assert_eq!(b.desc().versions().len(), 1);
     assert_eq!(b.desc().versions()[0].to_string(), "0.1.0");
     assert_eq!(b.real_name(), b.desc().manifest_name());
 
-    // Test dependency c - registry with alias
     let c = summary
         .dependencies()
         .get_dependency(static_str_id!("c"))
@@ -496,32 +490,30 @@ dependencies:
     assert_eq!(c.desc().manifest_name().to_string(), "c");
     assert_ne!(c.real_name(), c.desc().manifest_name());
 
-    // Test dependency d - custom registry with alias
     let d = summary
         .dependencies()
         .get_dependency(static_str_id!("d"))
         .unwrap();
     assert!(d.desc().source().is_registry());
-    if let Source::Registry(registry_source) = d.desc().source() {
-        assert_eq!(registry_source.url(), "xd");
+    if let Source::Registry(registry_source) = d.desc().source().as_ref() {
+        assert_eq!(registry_source.url().as_str(), "https://google.com/");
     }
     assert_eq!(d.desc().versions().len(), 1);
     assert_eq!(d.real_name().to_string(), "alias");
     assert_eq!(d.desc().manifest_name().to_string(), "d");
 
-    // Test dependency e - git
     let e = summary
         .dependencies()
         .get_dependency(static_str_id!("e"))
         .unwrap();
     assert!(e.desc().source().is_git());
-    if let Source::Git(git_source) = e.desc().source() {
-        assert_eq!(git_source.url(), "git");
+    if let Source::Git(git_source) = e.desc().source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
         assert_eq!(
-            git_source.rev(),
-            GitRevision::Branch(static_str_id!("branch"))
+            git_source.branch_or_tag(),
+            BranchOrTag::Branch(static_str_id!("branch"))
         );
-        assert_eq!(git_source.commit(), Some(static_str_id!("commit")));
+        assert_eq!(git_source.rev(), Some(static_str_id!("commit")));
     }
     assert!(e.desc().versions().is_empty());
     assert_eq!(e.real_name(), e.desc().manifest_name());
@@ -533,11 +525,11 @@ fn fail_exclusive_git_fields() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     source:
       git_url: git
       tag: tag
@@ -554,7 +546,7 @@ dependencies:
             &dir,
             [
                 "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: \
-                  `dependencies.a.source.branch`, `dependencies.a.source.commit`"
+                  `dependencies.a.source.branch`, `dependencies.a.source.tag`"
             ]
         )
     );
@@ -566,7 +558,7 @@ fn features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 features:
   a: []
@@ -592,7 +584,7 @@ fn features_expansion() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 features:
   a: [b]
@@ -659,11 +651,11 @@ fn dep_features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features: [a, b]
 "#,
     );
@@ -695,11 +687,11 @@ fn dep_features_with_conds() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     features:
       - a
       -
@@ -728,10 +720,8 @@ dependencies:
     assert!(feature_names.contains(&"b".to_string()));
     assert!(feature_names.contains(&"c".to_string()));
 
-    // Test conditional enablement based on platform
     let enabled_features = dep.enabled_features(vec![]);
 
-    // Feature 'a' should always be enabled (unconditional)
     assert!(enabled_features.contains(&static_str_id!("a")));
 }
 
@@ -741,11 +731,11 @@ fn empty_conditions_features() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
-    version: 0.1
+    version: '0.1'
     conditions:
       package_features: []
 "#,
@@ -764,4 +754,205 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn dep_features_with_invalid_conds() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    version: '0.1'
+    features:
+      -
+        b:
+          package_features:
+            - a
+        c:
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 11 column 9",
+            ]
+        )
+    );
+
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.1'
+
+dependencies:
+  a:
+    version: '0.1'
+    features:
+      - {}
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.features[0]: invalid length 0, expected a map with exactly one entry at line 10 column 9",
+            ]
+        )
+    );
+}
+
+#[test]
+fn git_url_points_to_local_dir() {
+    let root_dir = TempDir::new().unwrap();
+    let (dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    source:
+      git_url: {}
+"#,
+        root_dir.path().display()
+    ));
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                &format!("`{}` is not a valid URL", root_dir.path().display()),
+                "git dependency points to a file on the disk",
+                &format!(
+                    "either change it to a local dependency or change the URL to `file://{}`",
+                    root_dir.path().display()
+                ),
+                "relative URL without a base",
+            ]
+        )
+    );
+}
+
+#[test]
+fn valid_git_url_points_to_local_dir() {
+    let root_dir = TempDir::new().unwrap();
+    let (_dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: xd
+  version: 0.1
+
+dependencies:
+  a:
+    source:
+      git_url: file://{}
+"#,
+        root_dir.path().display()
+    ));
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    assert!(parse_manifest(&manifest_path, &qpctx).is_ok());
+}
+
+#[test]
+fn floats_explicit_string_work() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '0.10'
+  b:
+    version: ['0.10', 0.10]
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
+    assert_eq!(
+        summary
+            .dependencies()
+            .get_dependency("a".into())
+            .unwrap()
+            .desc()
+            .versions()[0],
+        Version::new(0, 10, 0)
+    );
+
+    assert_eq!(
+        summary
+            .dependencies()
+            .get_dependency("b".into())
+            .unwrap()
+            .desc()
+            .versions(),
+        [Version::new(0, 10, 0), Version::new(0, 10, 0)]
+    );
+}
+
+#[test]
+fn floats_dont_parse() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: 0.10
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let err = parse_manifest(&manifest_path, &qpctx).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.a.version: invalid type: floating point `0.1`, expected an ored semver string or a list of semver strings at line 8 column 14"
+            ]
+        )
+    );
+}
+
+#[test]
+fn floats_root_version_parses() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: 0.10
+"#,
+    );
+    let ctx = DuckCtx::default();
+    let qpctx = QpCtx::new(&ctx);
+    let manifest = parse_manifest(&manifest_path, &qpctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.root_description().version(), Version::new(0, 10, 0));
 }

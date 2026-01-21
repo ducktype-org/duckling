@@ -2,6 +2,9 @@
 
 #include "pst_query/pst_access_side_input.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
+
+#include <query_framework/query_errors.hpp>
 #include <query_framework/query_input_impl.hpp>
 
 namespace pst::internal {
@@ -12,5 +15,12 @@ namespace pst::internal {
 		ctx.query<PSTAccessSideInput>({ stable_hash });
 	}
 
-	void notifyBadAccess(query::Context&) { CORE_PANIC("PST-Access to a nullptr."); }
+	void notifyBadAccess(query::Context& ctx) {
+		ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+			"PST Accessed a nullptr LangElement.",
+			"To check the location of the bad access, enable "
+			" query dev logs."
+		));
+		query::throwFailed();
+	}
 }
