@@ -355,7 +355,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief The type of the final accessed field after applying all projections.
-		 * @note If the projection chain is empty, this type will be equal to the `base` type. It
+		 * @note If the projection chain is empty, this type will be equal to the base type. It
 		 * may differ from the base type if the projection chain is not empty.
 		 */
 		tsh::SymbolType<> type;

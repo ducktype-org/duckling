@@ -138,8 +138,6 @@ namespace compiler::helios::code {
 	) {
 		auto source_type = expr->expression_type.getSymbolType();
 
-		// @note: We use a self invoking lambda since Coercion can't be assigned to and we don't
-		// want to duplicate the lookup logic.
 		Coercion unary_coercion = [&]() -> Coercion {
 			// If the operation operates on Direct values we need to perform a
 			// coercion from a ref / box type the direct type. This is needed to handle cases

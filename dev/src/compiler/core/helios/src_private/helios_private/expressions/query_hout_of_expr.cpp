@@ -178,7 +178,7 @@ namespace compiler::helios::code {
 					}
 					opt_none { return {}; }
 				}
-				return {};
+				CORE_UNREACHABLE();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {

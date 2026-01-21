@@ -697,8 +697,9 @@ namespace compiler::helios::code {
 		  inner(std::move(inner)) {}
 
 	void MakeReferenceExpr::debugPrint(std::ostream& out) const {
-		out << "refof ";
+		out << "refof(";
 		inner->debugPrint(out);
+		out << ")";
 	}
 
 	Box<Expr> MakeReferenceExpr::clone() const {
