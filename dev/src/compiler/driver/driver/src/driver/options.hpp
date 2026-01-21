@@ -93,7 +93,7 @@ namespace compiler::driver {
 			options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
-			global_state::BackendOptions           backend_options;
+			global_state::BackendOptions      backend_options;
 			options_types::DebugOptions       debug_options;
 			options_types::IncrementalOptions incremental;
 		};
