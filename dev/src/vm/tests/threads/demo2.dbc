@@ -1,0 +1,20 @@
+global_data counter i64 {};
+
+function inc { i64 } -> void {
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type           n, i64;
+    mov_l64_imm              n, 100;
+	init_lany_type           thread_inc_id, i64;
+	set_threadctx			 inc;
+    call_builtinfunc 		 builtin_start_thread;
+
+	init_lany_type			 join_inc_ret, i64;
+	init_lany_type 			 join_inc_id, i64;
+    mov_l64_l64 			 join_inc_id, thread_inc_id;
+    call_builtinfunc 		 builtin_join_thread;	
+	
+    ret;
+}
