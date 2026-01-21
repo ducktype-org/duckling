@@ -6,7 +6,7 @@
 
 namespace concurrent {
 
-	WorkerData::WorkerData(u64 id, std::mt19937_64 rng): id(id), rng(rng) {}
+	WorkerData::WorkerData(WorkerID id, std::mt19937_64 rng): id(id), rng(rng) {}
 
 	CRef<std::vector<WDRef>> WorkerData::generateWorkerData() {
 		static std::vector<Box<WorkerData>> worker_data_instances;
@@ -18,7 +18,7 @@ namespace concurrent {
 
 		for (u64 i = 0; i < worker_count; i++) {
 			Box<WorkerData> worker_data
-				= Box<WorkerData>::fromPointer(new WorkerData(i, std::mt19937_64(i)));
+				= Box<WorkerData>::fromPointer(new WorkerData(WorkerID(i), std::mt19937_64(i)));
 
 			worker_data_instances.emplace_back(std::move(worker_data));
 			worker_data_references.emplace_back(worker_data_instances.back().refMut());

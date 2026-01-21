@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -7,6 +8,8 @@
 #include <random>
 
 namespace concurrent {
+
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(WorkerID);
 
 	struct WorkerData;
 
@@ -24,10 +27,10 @@ namespace concurrent {
 	 */
 	struct WorkerData final {
 	private:
-		WorkerData(u64 id, std::mt19937_64 rng);
+		WorkerData(WorkerID id, std::mt19937_64 rng);
 
-		u64             id;
-		std::mt19937_64 rng;
+		WorkerID                id;
+		mutable std::mt19937_64 rng;
 
 		/**
 		 * Internall method to create WorkerData instances.
@@ -43,11 +46,11 @@ namespace concurrent {
 		WorkerData& operator=(WorkerData&&)      = delete;
 
 		[[nodiscard]]
-		u64 getID() const {
+		WorkerID getID() const {
 			return id;
 		}
 
-		u64 randomU64() { return u64(rng()); }
+		u64 randomU64() const { return u64(rng()); }
 
 		/**
 		 * Get the worker data for all workers.
