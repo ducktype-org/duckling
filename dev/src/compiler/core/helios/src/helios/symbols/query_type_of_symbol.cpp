@@ -12,7 +12,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/deductions.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
@@ -50,8 +50,8 @@ namespace compiler::helios {
 				if (type_ctv.hasFailed()) {
 					setFailed();
 				} else {
-					setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::SymbolType<>>()->withMutability(
-						expected_mutability
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromProvidedType(
+						type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(), expected_mutability
 					));
 				}
 			}
@@ -76,9 +76,9 @@ namespace compiler::helios {
 						return;
 					}
 					const auto& expr_type = parsed.valueOrThrow()->expression_type;
-					setTypeOfSymbol(
-						expr_type.getSymbolType().withMutability(tsh::Mutability::Immutable)
-					);
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
+						expr_type, tsh::Mutability::Immutable
+					));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
@@ -101,7 +101,9 @@ namespace compiler::helios {
 					                  .valueOrThrow();
 
 					const auto& expr_type = parsed->expression_type;
-					setTypeOfSymbol(expr_type.getSymbolType().withMutability(decl_mutability));
+					setTypeOfSymbol(
+						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
+					);
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
