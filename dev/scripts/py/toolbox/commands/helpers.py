@@ -136,8 +136,7 @@ def thread_count(*args, **kwargs):
         "-j",
         "--thread-count",
         "thread_count",
-        prompt="Number of threads to use",
-        help="Number of threads used when linting. Defaults to the number of available threads.",
+        help="Number of threads used. Defaults to the number of available threads.",
         default=get_cpu_count(),
         type=int,
     )(*args, **kwargs)

@@ -34,7 +34,7 @@ def get_available_test_targets(build_dir: str) -> list[str]:
 def test_impl(
     build_dir: str,
     memcheck: bool = False,
-    parallel: int = get_cpu_count(),
+    thread_count: int = get_cpu_count(),
     label_regex: str | None = None,
     tests_regex: str | None = None,
     exclude_regex: str | None = None,
@@ -68,13 +68,13 @@ def test_impl(
 
     # Build tests (can be multiple targets)
     for target in build_targets:
-        bash_command(f"cmake --build {build_dir} --target {target} -j {int(parallel)}")
+        bash_command(f"cmake --build {build_dir} --target {target} -j {int(thread_count)}")
 
     # Build ctest command
     ctest_cmd = "ctest"
 
     # Add parallel execution
-    ctest_cmd += f" -j {int(parallel)}"
+    ctest_cmd += f" -j {int(thread_count)}"
 
     # Add label filtering
     if label_regex:
