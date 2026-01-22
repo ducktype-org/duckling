@@ -19,6 +19,12 @@ from click import command, option
 )
 @no_merge_base()
 @auto_fix()
+@option(
+    "--no-fix",
+    is_flag=True,
+    help="Do not apply automatic fixes, only report them.",
+    default=False,
+)
 @verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):
     """Check for violations of
