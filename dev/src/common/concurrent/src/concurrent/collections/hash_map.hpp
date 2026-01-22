@@ -164,7 +164,8 @@ namespace concurrent {
 		 * non-uniform, as the modulus used to select the buckets are the powers of two.
 		 *
 		 * @note In the future we might want to make SHARD_COUNT configurable, so it can be smaller
-		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent queries).
+		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent
+		 * queries).
 		 */
 		constexpr static u64 SHARD_COUNT = 129;
 
