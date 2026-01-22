@@ -166,7 +166,11 @@ def get_issues_from_github() -> list[str]:
             .get("closingIssuesReferences", {})
             .get("nodes", [])
         )
-        return [str(node["number"]) for node in nodes if "number" in node]
+        return [
+            str(node["number"])
+            for node in nodes
+            if node is not None and "number" in node
+        ]
     except BashCommandError as e:
         log_warning(f"Error while fetching issue numbers via gh api: {e}")
         return []
