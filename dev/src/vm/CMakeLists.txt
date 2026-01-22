@@ -52,10 +52,20 @@ llvm_map_components_to_libnames(llvm_libs
     Core
     ExecutionEngine
     Interpreter
+    OrcJIT
+    OrcShared
+    OrcTargetProcess
     MC
-    MCJIT
     Support
+    CodeGen
+    AsmParser
+    AsmPrinter
+    X86AsmParser
+    Object
     nativecodegen)
+
+# set(LLVM_BUILD_LLVM_DYLIB ON)
+# set(LLVM_LINK_LLVM_DYLIB ON)
 
 add_library(JitDep OBJECT
     ${jit_dependency}
@@ -83,10 +93,14 @@ target_compile_options(LibCommonVM_bc PRIVATE -emit-llvm)
 function(add_vm_variant suffix compile_def)
     set(lib_thread_vm_name "LibThreadVM_${suffix}")
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
-    make_module(${lib_thread_vm_name} USES ${vm_dependencies})
+    make_module(${lib_thread_vm_name} USES llvm_helpers ${vm_dependencies})
+    target_include_directories(${lib_thread_vm_name} PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(${lib_thread_vm_name} ${llvm_libs})
 
     add_library(${lib_thread_vm_name}_bc OBJECT ${vm_config_dependent_sources})
-    make_module(${lib_thread_vm_name}_bc USES ${vm_dependencies})
+    make_module(${lib_thread_vm_name}_bc USES llvm_helpers ${vm_dependencies})
+    target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
     target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
 
     if (compile_def)
@@ -102,7 +116,7 @@ function(add_vm_variant suffix compile_def)
     add_custom_command(
         OUTPUT ${common_bc}
         COMMAND llvm-link-19
-            --only-needed
+            # --only-needed
             $<TARGET_OBJECTS:LibCommonVM_bc>
             $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
             ${vm_dep_objects_bc}
@@ -111,7 +125,7 @@ function(add_vm_variant suffix compile_def)
         COMMAND opt-19
             -O3
             --enable-lto-internalization
-            #--inline-threshold=20000 # mozna dobra stala
+            --inline-threshold=20000 # mozna dobra stala
             --module-summary
             ${common_bc}.tmp
             -o ${common_bc}
@@ -130,11 +144,11 @@ function(add_vm_variant suffix compile_def)
     add_dependencies(JitDep CommonVMBitcode_${suffix})
 
     set(lib_vm_name "LibVM_${suffix}")
-    add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}>)
+    add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
     
     target_link_libraries(${lib_vm_name} ${llvm_libs})
 
-    make_module(${lib_vm_name} USES ${vm_dependencies})
+    make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
     
     target_compile_options(${lib_vm_name} PRIVATE
         -fembed-dir=${CMAKE_CURRENT_BINARY_DIR}
@@ -142,7 +156,7 @@ function(add_vm_variant suffix compile_def)
 
     set(exec_name "VM_${suffix}")
     add_executable(${exec_name} $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
-    target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})
+    target_link_libraries(${exec_name} PRIVATE ${lib_vm_name} "-Wl,--export-dynamic")
     target_link_libraries(${lib_vm_name} ${llvm_libs})
 endfunction()
 
@@ -151,9 +165,9 @@ add_vm_variant(tc "USE_TAIL_CALLS")
 add_vm_variant(sc "USE_SWITCH_CASE")
 
 # Default alias to "sc"
-add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc>)
+add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
 target_link_libraries(LibVM ${llvm_libs} ${JitDep})
-make_module(LibVM USES ${vm_dependencies})
+make_module(LibVM USES llvm_helpers ${vm_dependencies})
 add_executable(VM $<TARGET_OBJECTS:MainVM> $<TARGET_OBJECTS:JitDep>)
 target_link_libraries(VM LibVM ${llvm_libs} ${JitDep})
 
