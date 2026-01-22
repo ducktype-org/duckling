@@ -1,4 +1,4 @@
-from dev.scripts.py.toolbox.impl.test import test_impl
+from ..impl.test import test_impl
 from .helpers import (
     bash_command,
     exit_with_error,
@@ -23,7 +23,7 @@ def pr_validate_impl(
     if not duck_linter_impl():
         exit_with_error("Duck linter has failed")
 
-    # Step 2 - validate to-dos and fix-mes
+    # Step 2 - validate !todos and !fixmes
     if not todo_validate_impl():
         exit_with_error("T" + "ODO validation has failed")
 

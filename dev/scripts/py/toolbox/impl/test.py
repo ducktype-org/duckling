@@ -1,6 +1,6 @@
 import re
 
-from dev.scripts.py.toolbox.commands.helpers import get_cpu_count
+from ..commands.helpers import get_cpu_count
 from .helpers import (
     BashCommandError,
     bash_command,
