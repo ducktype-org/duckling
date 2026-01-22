@@ -217,6 +217,9 @@ namespace compiler::helios::code {
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
+				auto lhs_type = lhs->expression_type.getSymbolType();
+				auto rhs_type = rhs->expression_type.getSymbolType();
+
 				// @todo here we should:
 				// * lookup for user defined operators
 				// * type check
@@ -231,8 +234,8 @@ namespace compiler::helios::code {
 					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 						stmt->getSourcePosition(),
 						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, lhs->expression_type),
-						makeBox<InteractiveType>(ctx, rhs->expression_type)
+						makeBox<InteractiveType>(ctx, lhs_type),
+						makeBox<InteractiveType>(ctx, rhs_type)
 					));
 					// failed
 				}
@@ -399,6 +402,8 @@ namespace compiler::helios::code {
 				// if no function call is found, we try to use builtin operators:
 
 				auto inner = std::move(inner_res).valueOrThrow();
+				auto inner_type = inner->expression_type.getSymbolType();
+
 				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
@@ -416,7 +421,7 @@ namespace compiler::helios::code {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
 						stmt->getSourcePosition(),
 						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, inner->expression_type)
+						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
 				}
@@ -467,8 +472,8 @@ namespace compiler::helios::code {
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					auto lhs_type = result_exprs.at(i)->expression_type.getType();
-					auto rhs_type = result_exprs.at(i + 1)->expression_type.getType();
+					auto lhs_type = result_exprs.at(i)->expression_type.getSymbolType();
+					auto rhs_type = result_exprs.at(i + 1)->expression_type.getSymbolType();
 
 					auto result = findBinaryBuiltin(
 						ctx,

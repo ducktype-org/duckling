@@ -21,6 +21,8 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/expressions/coercions.hpp>
+#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -91,7 +93,7 @@ public:
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
 		TESTER_ADD_TEST(testErrorUnknownEscapeSequence);
-		TESTER_ADD_TEST(testInteractiveErrorMessages);
+		TESTER_ADD_TEST(testErrorMessages);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1705,7 +1707,7 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
-		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooE$metadata_v123", mangled_goo.str());
+		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 		std::cerr << "taw3e8\t" << mangled_glob_a.strView() << '\n';
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
@@ -2463,7 +2465,7 @@ private:
 		});
 	}
 
-	void testInteractiveErrorMessages() {
+	void testErrorMessages() {
         using namespace compiler::helios::code;
         using namespace compiler::helios;
         using dia_int::testDiagnosticMessage;
@@ -2471,7 +2473,7 @@ private:
         std::stringstream ss;
 
         query::utils::withContextDo([&](query::Context& ctx) {
-             const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, compiler::tsh::IntegralAbstractType::Signed });
+             const auto int32_type = ctx.query<compiler::tsh::QueryIntegralType>({ 32,Signed });
              auto st = compiler::tsh::SymbolType{
                 int32_type,
                 compiler::tsh::ReferenceKind::Direct,
