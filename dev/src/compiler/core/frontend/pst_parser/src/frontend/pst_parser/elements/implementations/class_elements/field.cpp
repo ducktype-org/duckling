@@ -17,7 +17,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Field::dprint(std::ostream& out) const {

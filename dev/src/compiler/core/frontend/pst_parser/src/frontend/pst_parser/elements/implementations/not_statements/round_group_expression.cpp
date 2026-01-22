@@ -16,7 +16,7 @@ namespace pst {
 		if (state.notEmpty()) state.parse(out).one(&out->expr);
 		state.parse(out).goUpAndSkip();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void RoundGroupExpr::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }

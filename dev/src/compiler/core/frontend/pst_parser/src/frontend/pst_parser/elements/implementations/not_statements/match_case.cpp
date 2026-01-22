@@ -45,7 +45,7 @@ namespace pst {
 			state.logInt(makeBox<MatchCaseWithNoBodyError>(state.getPosition()));
 			return nullptr;
 		}
-		return out;
+		PST_RETURN out;
 	}
 
 	void MatchCase::dprint(std::ostream& out) const {

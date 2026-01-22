@@ -24,7 +24,7 @@ namespace pst {
 
 		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Class::dprint(std::ostream& out) const {

@@ -89,7 +89,7 @@ namespace pst {
 
 			exitFallback(state);
 
-			return out;
+			PST_RETURN out;
 		}
 
 		MBox<Stmt> chooseStmt(LangParserState& state) {
@@ -207,7 +207,7 @@ namespace pst {
 		// Add Attributes
 		if (out) out->addPrefixes(state, std::move(prefixes));
 
-		return out;
+		PST_RETURN out;
 	}
 
 	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {

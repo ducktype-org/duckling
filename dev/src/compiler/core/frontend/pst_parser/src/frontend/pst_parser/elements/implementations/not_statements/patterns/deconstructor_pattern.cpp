@@ -12,7 +12,7 @@ namespace pst {
 
 		state.parse(out).one(&out->deconstructor_name);
 		state.parse(out).one(&out->arguments);
-		return out;
+		PST_RETURN out;
 	}
 
 	void DeconstructorPattern::dprint(std::ostream& out) const {

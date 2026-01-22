@@ -27,7 +27,7 @@ namespace pst::expr {
 			out->expressions.emplace_back();
 			state.parse(out).with(&out->expressions.back(), Lower::parse, length - 1 - start);
 		}
-		return out;
+		PST_RETURN out;
 	}
 
 	void Comma::dprint(std::ostream& out) const {

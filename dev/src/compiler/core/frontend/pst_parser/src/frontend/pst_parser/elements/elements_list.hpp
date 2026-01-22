@@ -75,7 +75,7 @@ namespace pst {
 		class PrefixOperator;
 		class SuffixOperator;
 		class BinaryOperator;
-		class ExprValue;
+		class ExprNumericValue;
 		class ExprStrValue;
 		class ExprCharValue;
 		class Literal;

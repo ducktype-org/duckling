@@ -129,22 +129,22 @@ namespace query {
 		/**
 		 * @brief Access the value, panic with given message on no value.
 		 */
-		constexpr const Value& valueOrPanicMsg(std::string_view message) const& {
+		constexpr const Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) const& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr const Value&& valueOrPanicMsg(std::string_view message) const&& {
+		constexpr const Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) const&& {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}
 
-		constexpr Value& valueOrPanicMsg(std::string_view message) & {
+		constexpr Value& valueOrPanicMsg([[maybe_unused]] std::string_view message) & {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::get<Value>(storage);
 		}
 
-		constexpr Value&& valueOrPanicMsg(std::string_view message) && {
+		constexpr Value&& valueOrPanicMsg([[maybe_unused]] std::string_view message) && {
 			if (!hasValue()) CORE_PANIC("Result is empty: {}", message);
 			return std::move(std::get<Value>(storage));
 		}

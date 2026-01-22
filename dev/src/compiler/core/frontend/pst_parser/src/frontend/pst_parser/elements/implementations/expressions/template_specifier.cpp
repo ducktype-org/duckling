@@ -21,7 +21,7 @@ namespace pst::expr {
 		state.parse(out).one(&out->inner);
 		state.parse(out).goUpAndSkip();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void TemplateSpecifier::dprint(std::ostream& out) const {

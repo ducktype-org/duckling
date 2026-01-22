@@ -43,7 +43,7 @@ namespace pst {
 		// @TODO: #1535 Change to not parsing expression when no tokens are left
 		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).one(&out->expr);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	base::Optional<AccessLocked<ExprHolder>> Action::getValue() const {

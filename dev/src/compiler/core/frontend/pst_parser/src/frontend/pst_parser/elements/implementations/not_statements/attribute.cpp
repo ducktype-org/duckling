@@ -17,7 +17,7 @@ namespace pst {
 			state.logSafeError(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	LangElement::HashAlg& Attribute::addElementDataToStableHash(HashAlg& partial_hash) const {

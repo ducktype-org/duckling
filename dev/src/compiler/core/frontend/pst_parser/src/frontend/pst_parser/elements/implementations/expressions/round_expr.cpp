@@ -24,7 +24,7 @@ namespace pst::expr {
 		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
 		state.parse(out).goUpAndSkip();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void RoundExpr::dprint(std::ostream& out) const {

@@ -27,7 +27,7 @@ namespace pst {
 
 		out->fillSymbols();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ClassBlock::fillSymbols() {
