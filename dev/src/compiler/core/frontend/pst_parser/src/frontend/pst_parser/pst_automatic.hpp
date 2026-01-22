@@ -11,14 +11,8 @@
  * There is no identifier next it doesn't do anything
  *  - for Box<T>* it calls the parser of T object into the specified location
  *
- * The optional argument ignorable additionally allows to control behaviour in case of error.
- * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.
- * It works as a kind of assumption that is something simple doesn't fit then it's missing not
- * wrong.
- *
  * all() takes the state and any number of additional arguments and calls parseOne on those
- * arguments from left to right. Additionally it makes the first parsed thing non-ignorable and the
- * rest ignorable so that infinite parsing loops are very unlikely.
+ * arguments from left to right. 
  */
 #pragma once
 
@@ -69,7 +63,7 @@ namespace pst {
 		//
 		// parses one of the available types
 		// template<class T>
-		// void one([[maybe_unused]]T t, [[maybe_unused]]bool ignorable = false) {
+		// void one([[maybe_unused]]T t) {
 		// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
 		// }
 
@@ -77,11 +71,10 @@ namespace pst {
 		 * @brief Parses the expected keyword. Skips on success, logs error on failure.
 		 * @param key The expected keyword.
 		 */
-		PSTAutomatic& one(Keyword key, bool ignorable = false) {
+		PSTAutomatic& one(Keyword key) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(key)) {
 				state.logInt(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
-				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -92,11 +85,10 @@ namespace pst {
 		 * @brief Parses the expected Special token. Skips on success, logs error on failure.
 		 * @param spec The expected special token.
 		 */
-		PSTAutomatic& one(Special spec, bool ignorable = false) {
+		PSTAutomatic& one(Special spec) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(spec)) {
 				state.logInt(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
-				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -107,11 +99,10 @@ namespace pst {
 		 * @brief Parses the expected operator. Skips on success, logs error on failure.
 		 * @param op The expected operator.
 		 */
-		PSTAutomatic& one(Operator op, bool ignorable = false) {
+		PSTAutomatic& one(Operator op) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.tryEat(op)) {
 				state.logInt(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
-				if (!ignorable) skipNotSemicolon();
 			} else {
 				el->addToken(state[-1]);
 			}
@@ -122,12 +113,11 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		PSTAutomatic& one(tpc::Keyword* result, bool ignorable = false) {
+		PSTAutomatic& one(tpc::Keyword* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isKeyword()) {
 				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
-				if (!ignorable) skipNotSemicolon();
 				return *this;
 			}
 			el->addToken(state[0]);
@@ -139,12 +129,11 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		PSTAutomatic& one(tpc::Identifier* result, bool ignorable = false) {
+		PSTAutomatic& one(tpc::Identifier* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.logInt(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
-				if (!ignorable) skipNotSemicolon();
 				return *this;
 			}
 			el->addToken(state[0]);
@@ -157,7 +146,7 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		PSTAutomatic& one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(tpc::OptionalIdentifier* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
@@ -171,12 +160,11 @@ namespace pst {
 		 * @brief Parses a string to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed string.
 		 */
-		PSTAutomatic& one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(tpc::StringValue* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().isString()) {
 				state.logInt(makeBox<tpc::NoStringError>(state.getPosition()));
 				result->value = base::StrID("<error>");
-				if (!ignorable) skipNotSemicolon();
 				return *this;
 			}
 			el->addToken(state[0]);
@@ -189,13 +177,12 @@ namespace pst {
 		 * success, does nothing on failure.
 		 * @param result The place to store the parsed string.
 		 */
-		PSTAutomatic& one(tpc::NumericValue* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(tpc::NumericValue* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			if (!state.ctokens().peek().is(lexer::Token::Type::NumLiteralGroup)) {
 				state.logInt(makeBox<tpc::NoNumericValueError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				result->type_specifier.reset();
-				if (!ignorable) skipNotSemicolon();
 				return *this;
 			}
 
@@ -217,7 +204,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(MBox<T>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(MBox<T>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
@@ -228,7 +215,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-		PSTAutomatic& one(AccessInternal<T, name>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(AccessInternal<T, name>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
@@ -240,8 +227,7 @@ namespace pst {
 		 */
 		template<std::derived_from<LangElement> T>
 		PSTAutomatic& one(
-			AccessInternalAnonymous<T>* result, [[maybe_unused]] bool ignorable = false
-		) {
+			AccessInternalAnonymous<T>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
@@ -252,7 +238,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
+		PSTAutomatic& one(base::Optional<MBox<T>>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
@@ -263,9 +249,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-		PSTAutomatic& one(
-			base::Optional<AccessInternal<T, name>>* result, [[maybe_unused]] bool ignorable = false
-		) {
+		PSTAutomatic& one(base::Optional<AccessInternal<T, name>>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
@@ -612,7 +596,7 @@ namespace pst {
 		 */
 		template<typename T>
 		void parseRest(T t) {
-			one(t, true);
+			one(t);
 		}
 
 		/**
@@ -620,7 +604,7 @@ namespace pst {
 		 */
 		template<typename T, typename... Q>
 		void parseRest(T t, Q... q) {
-			one(t, true);
+			one(t);
 			parseRest(q...);
 		}
 	};

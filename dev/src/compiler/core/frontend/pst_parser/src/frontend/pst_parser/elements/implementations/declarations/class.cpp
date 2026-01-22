@@ -20,7 +20,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(Keyword::Extends)) state.parse(out).one(&out->base);
 		if (state.parse(out).tryEat(Keyword::Implements))
-			state.parse(out).one(&out->implements, true);
+			state.parse(out).one(&out->implements);
 
 		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
 
