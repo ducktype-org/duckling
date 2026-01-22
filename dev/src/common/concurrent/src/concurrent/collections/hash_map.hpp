@@ -27,9 +27,6 @@ namespace concurrent {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class ConHashMap final {
-		// @TODO: #1747 For some reason StableHashMap here
-		// is much slower than std::unordered_map in
-		// concurrent scenarios. Investigate and fix, preferably by improving StableHashMap.
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
