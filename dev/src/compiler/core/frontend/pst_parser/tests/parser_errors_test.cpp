@@ -279,6 +279,9 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_let_field1{ "let x: i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 
