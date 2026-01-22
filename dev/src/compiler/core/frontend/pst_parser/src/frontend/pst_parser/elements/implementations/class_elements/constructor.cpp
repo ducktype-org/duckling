@@ -9,8 +9,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Constructor>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		state.parse(out).eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
@@ -27,7 +25,7 @@ namespace pst {
 			.all(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Constructor::dprint(std::ostream& out) const {

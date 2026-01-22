@@ -131,13 +131,11 @@ namespace compiler::helios::code {
 	 */
 	struct LiteralStringExpr final: public Expr {
 		/**
-		 * @note value is a StringValue, not a String.
-		 * Thus the character escaping sequences are kept in the value.
-		 * Ex. in "Hello world\n" new line character is kept as "\n" not as literal new line.
+		 * @note This value contains escape sequences, such as "\n", "\t", etc.
 		 */
-		tpc::StringValue value;
+		base::StrID value;
 
-		LiteralStringExpr(query::Context& ctx, tpc::StringValue value);
+		LiteralStringExpr(query::Context& ctx, base::StrID value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -147,7 +145,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		LiteralStringExpr(tsh::ExpressionType<> expression_type, tpc::StringValue value);
+		LiteralStringExpr(const tsh::ExpressionType<>& expression_type, base::StrID value);
 	};
 
 	/**
@@ -525,6 +523,59 @@ namespace compiler::helios::code {
 			Box<Expr>             source_expr,
 			tsh::SymbolType<>     target_type
 		);
+	};
+
+	/**
+	 * @brief Represents a reference creation expression (refof).
+	 * It takes an expression of type T and produces a value of type ref T.
+	 */
+	struct RefOfExpr final: public Expr {
+		Box<Expr> inner;
+
+		RefOfExpr(query::Context& ctx, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		RefOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a dereference operation on a reference/box type.
+	 *
+	 * This node is inserted in three cases:
+	 * - When a value of type `ref T` is coerced to `T`,
+	 * - When `ref T`/`box T` appears on the left-hand side of the assignment operator (it's worth
+	 * remembering that a reference is essentially a pointer with a convenient interface, thus all
+	 * assignments to it need to perform a dereference).
+	 * - During field access on a `ref T` / `box T` type.
+	 *
+	 * - In a context that requires a value, such as the right-hand side of an
+	 * assignment (`let x: T = ref_val`), this expression resolves to the value
+	 * pointed to by the reference and translates to a `load` instruction in LLVM.
+	 *
+	 * - In a context that requires a memory location, such as the left-hand side
+	 * of an assignment (`ref_val = new_t;`), this expression resolves to the memory
+	 * location itself, allowing it to be written to. This provides the address for a `store`
+	 * instruction in LLVM.
+	 */
+	struct DerefExpr final: public Expr {
+		Box<Expr> inner;
+
+		DerefExpr(query::Context& ctx, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
 	/**

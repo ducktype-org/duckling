@@ -4,6 +4,7 @@
 #include "errors.hpp"
 #include "numeric_literals.hpp"
 
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
@@ -23,6 +24,37 @@
 
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief This error message is used when there is a string literal with escape sequences
+		 * that failed to parse.
+		 */
+		class UnknownEscapeSequenceError final: public dia_int::MessageWithCodeFragmentAndCause {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "unknown_escape_sequence" };
+			}
+
+			class SupportedEscapeSequencesDocs final: public dia_int::MessageBase {
+				dia_int::Metadata getMetadata() const final {
+					return { .template_type = "message",
+						     .type          = "docs",
+						     .family        = "expressions",
+						     .name          = "supported_escape_sequences" };
+				}
+
+			public:
+				SupportedEscapeSequencesDocs(): MessageBase() {}
+			};
+
+		public:
+			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+				  MessageWithCodeFragmentAndCause(source_position) {
+				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
+				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
+			}
+		};
 
 		/**
 		 * This is an effective implementation of QueryHoutOfExpr.
@@ -80,19 +112,31 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx);
 			}
 
-			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
-				auto parsed_numeric_value = fromExprValue(ctx, stmt);
+			void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> stmt) override {
+				auto parsed_numeric_value = fromExprNumericValue(ctx, stmt);
 
 				if (parsed_numeric_value.has_value()) {
 					node = makeBox<LiteralNumericExpr>(ctx, parsed_numeric_value.value());
 				} else {
-					// Error was logged in fromExprValue.
+					// Error was logged in fromExprNumericValue.
 					return;
 				}
 			}
 
 			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
-				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				variant_match(unescape_result) {
+					variant_case(base::UnescapedString, result) {
+						node = makeBox<LiteralStringExpr>(ctx, base::StrID(result.value));
+					}
+					variant_case(base::UnknownEscapeSequence, error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
+					variant_default CORE_UNREACHABLE();
+				}
 			}
 
 			/**
@@ -125,12 +169,16 @@ namespace compiler::helios::code {
 			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
-				auto operation = findUnaryBuiltin(op, expr.ref());
-
-				if (operation)
-					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
-				else
-					return {};
+				auto result = findUnaryBuiltin(ctx, op, expr.ref());
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, coercion] = value;
+						auto coerced               = coercion.coerce(ctx, std::move(expr));
+						return makeBox<UnaryOperatorExpr>(operation, std::move(coerced));
+					}
+					opt_none { return {}; }
+				}
+				CORE_UNREACHABLE();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
@@ -343,8 +391,8 @@ namespace compiler::helios::code {
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasFailed()) return;  // failed
+				auto inner_res = fromPST(ctx, stmt->getExpr());
+				if (inner_res.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -354,8 +402,17 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto expr_type = inner.valueOrThrow()->expression_type.getType();
-				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.valueOrThrow()));
+				auto inner = std::move(inner_res).valueOrThrow();
+				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
+					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
+					// This should change to take value category into consideration as well as the
+					// `unique`/`leaking` specifiers.
+					node = makeBox<RefOfExpr>(ctx, std::move(inner));
+					return;
+				}
+
+				auto expr_type = inner->expression_type.getType();
+				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();

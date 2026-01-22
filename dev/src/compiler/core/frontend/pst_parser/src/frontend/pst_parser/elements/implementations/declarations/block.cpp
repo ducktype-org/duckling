@@ -14,7 +14,7 @@ namespace pst {
 			.all(Keyword::Block, &out->optional_name)
 			.withDef(&out->code_block, CodeBlock::CodeBlockType::Unordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Block::dprint(std::ostream& out) const {

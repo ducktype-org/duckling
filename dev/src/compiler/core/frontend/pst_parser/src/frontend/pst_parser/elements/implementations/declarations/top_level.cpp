@@ -19,7 +19,7 @@ namespace pst {
 		}
 		out->fillSymbols();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void TopLevel::fillSymbols() {

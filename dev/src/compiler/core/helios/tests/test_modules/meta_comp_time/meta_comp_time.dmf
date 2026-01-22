@@ -25,14 +25,13 @@ const E = createVariant(i16, i32, i64, i128);
 const F = createTuple(i16, i32, i64, i128);
 const megaGigaType = megaType(i128);
 
-# @TODO: #1571 Remove type specifiers from this file once casts exist in DVM.
 fun fib(n: i64) -> i64 = {
-   if (n < 2i64) { return n; }
-   return fib(n - 1i64) + fib(n - 2i64);
+   if (n < 2) { return n; }
+   return fib(n - 1) + fib(n - 2);
 }
 
 fun complexLogic(n: i64) -> type = {
-    if (fib(n) < 15i64) {
+    if (fib(n) < 15) {
         return createBox(i16);
     } else {
         return createRef(i64);

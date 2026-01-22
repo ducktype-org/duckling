@@ -13,7 +13,7 @@
 #include <iostream>
 
 namespace compiler::backend_llvm {
-	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
+	Module::Module(const base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
 	Module Module::fromIRCode(std::string_view llvm_ir_code) {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
@@ -71,7 +71,7 @@ namespace compiler::backend_llvm {
 	}
 
 	void Module::compile(
-		const std::filesystem::path& output_file, CompilationOutputType output_type
+		const std::filesystem::path& output_file, const CompilationOutputType output_type
 	) {
 		compileModuleToObject(impl.refMut(), output_file, output_type);
 		CORE_ASSERT(std::filesystem::exists(output_file), "LLVM compilation to file failed!");

@@ -58,7 +58,7 @@ namespace pst {
 		else if constexpr (key == Keyword::Let)
 			out->is_const = true;
 
-		return out;
+		PST_RETURN out;
 	}
 
 }

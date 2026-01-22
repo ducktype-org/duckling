@@ -10,7 +10,7 @@ namespace pst {
 	MAKE_ACCESS_VISITOR(
 		Pst,
 		Import,
-		StmtSpecifier,
+		SpecifierBlock,
 		Using,
 		Alias,
 		ExprStmt,
@@ -37,7 +37,7 @@ namespace pst {
 		Constructor,
 		CopyConstructor,
 		Destructor,
-		AccessBlock,
+		ClassSpecifierBlock,
 		Param,
 		CallArgument,
 		FlowPattern,

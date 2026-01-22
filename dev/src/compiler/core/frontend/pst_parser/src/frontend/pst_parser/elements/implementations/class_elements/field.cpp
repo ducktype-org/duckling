@@ -7,19 +7,18 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Field>(position, ctx);
 
-		out->parseSpecifiers(state);
-
-		if (state.parse(out).tryEat(Keyword::Const)) {
+		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
-			state.parse(out).eatOne();
-		}
+			state.parse(out).one(Keyword::Let);
+		} else
+			state.parse(out).tryEat(Keyword::Var);
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 		state.parse(out).one(&out->type);
 
 		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Field::dprint(std::ostream& out) const {

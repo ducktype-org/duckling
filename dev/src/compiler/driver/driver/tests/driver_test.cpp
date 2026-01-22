@@ -5,6 +5,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries.hpp>
 
@@ -54,6 +55,9 @@ public:
 				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
+				},
+				.backend_options = {
+					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
 				.incremental           = {}
