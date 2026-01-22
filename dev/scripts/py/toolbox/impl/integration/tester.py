@@ -31,7 +31,7 @@ def tester_impl(
         filter: str,
         fail_fast: bool,
         verbose: bool,
-        log_file: str,
+        log_file: str | Path,
         build_dir: str,
 ):
     """
