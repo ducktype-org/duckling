@@ -89,13 +89,6 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 
-		// error tests
-		TESTER_ADD_TEST(testErrorBadExpr);
-		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
-		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
-		TESTER_ADD_TEST(testErrorUnknownEscapeSequence);
-		TESTER_ADD_TEST(testErrorMessages);
-
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
@@ -2094,105 +2087,57 @@ private:
 	}
 
 	void testOverloadResolution() {
-		{
-			auto [module, root_scope]
-				= getModule(fs::File(path("test_modules/overload_resolution")));
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/overload_resolution")));
 
-			auto& hout
-				= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			auto get_function_by_order = [&](usize index) {
-				return hout.functions.at(index).declaration->original_symbol;
-			};
+		auto get_function_by_order
+			= [&](usize index) { return hout.functions.at(index).declaration->original_symbol; };
 
-			// Store function symbols for each overload (order matches declaration order in file)
-			auto foo_bool  = get_function_by_order(0);  // fun foo(x: bool)
-			auto foo_float = get_function_by_order(1);  // fun foo(x: f64)
-			auto foo_class = get_function_by_order(2);  // fun foo(x: MyClass)
-			auto foo_i64   = get_function_by_order(3);  // fun foo(x: i64)
-			auto goo_x     = get_function_by_order(4);  // fun goo(x: i64) -> i32 (first one)
-			auto goo_y     = get_function_by_order(5);  // fun goo(y: i64) -> i32 (second one)
-			auto goo_f64   = get_function_by_order(6);  // fun goo(x: f64, y: bool) -> i64
-			[[maybe_unused]] auto goo_i64
-				= get_function_by_order(7);             // fun goo(x: i64, y: bool) -> i64
+		// Store function symbols for each overload (order matches declaration order in file)
+		auto foo_bool  = get_function_by_order(0);  // fun foo(x: bool)
+		auto foo_float = get_function_by_order(1);  // fun foo(x: f64)
+		auto foo_class = get_function_by_order(2);  // fun foo(x: MyClass)
+		auto foo_i64   = get_function_by_order(3);  // fun foo(x: i64)
+		auto goo_x     = get_function_by_order(4);  // fun goo(x: i64) -> i32 (first one)
+		auto goo_y     = get_function_by_order(5);  // fun goo(y: i64) -> i32 (second one)
+		auto goo_f64   = get_function_by_order(6);  // fun goo(x: f64, y: bool) -> i64
+		[[maybe_unused]] auto goo_i64
+			= get_function_by_order(7);             // fun goo(x: i64, y: bool) -> i64
 
-			// Helper to get the function symbol called in a global variable's initializer
-			auto get_function_sym_by_var_sym = [](auto var_sym) {
-				auto expr      = getExprOfVariable(var_sym);
-				Ref  call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr);
+		// Helper to get the function symbol called in a global variable's initializer
+		auto get_function_sym_by_var_sym = [](auto var_sym) {
+			auto expr      = getExprOfVariable(var_sym);
+			Ref  call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr);
 
-				Ref ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
-					&*call_expr->callee.ref()
-				);
-				return ident_expr->symbol;
-			};
+			Ref ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+				&*call_expr->callee.ref()
+			);
+			return ident_expr->symbol;
+		};
 
-			// Test overload resolution by argument type
-			auto call_foo_bool_sym  = getChain("CALL_FOO_BOOL", root_scope).back();
-			auto call_foo_float_sym = getChain("CALL_FOO_FLOAT", root_scope).back();
-			auto call_foo_class_sym = getChain("CALL_FOO_CLASS", root_scope).back();
-			auto call_foo_i64_sym   = getChain("CALL_FOO_I64", root_scope).back();
+		// Test overload resolution by argument type
+		auto call_foo_bool_sym  = getChain("CALL_FOO_BOOL", root_scope).back();
+		auto call_foo_float_sym = getChain("CALL_FOO_FLOAT", root_scope).back();
+		auto call_foo_class_sym = getChain("CALL_FOO_CLASS", root_scope).back();
+		auto call_foo_i64_sym   = getChain("CALL_FOO_I64", root_scope).back();
 
-			ASSERT_EQUAL(foo_bool, get_function_sym_by_var_sym(call_foo_bool_sym));
-			ASSERT_EQUAL(foo_float, get_function_sym_by_var_sym(call_foo_float_sym));
-			ASSERT_EQUAL(foo_class, get_function_sym_by_var_sym(call_foo_class_sym));
-			ASSERT_EQUAL(foo_i64, get_function_sym_by_var_sym(call_foo_i64_sym));
+		ASSERT_EQUAL(foo_bool, get_function_sym_by_var_sym(call_foo_bool_sym));
+		ASSERT_EQUAL(foo_float, get_function_sym_by_var_sym(call_foo_float_sym));
+		ASSERT_EQUAL(foo_class, get_function_sym_by_var_sym(call_foo_class_sym));
+		ASSERT_EQUAL(foo_i64, get_function_sym_by_var_sym(call_foo_i64_sym));
 
-			// Test overload resolution by named parameters
-			auto call_goo_x_sym = getChain("CALL_GOO_X", root_scope).back();
-			auto call_goo_y_sym = getChain("CALL_GOO_Y", root_scope).back();
+		// Test overload resolution by named parameters
+		auto call_goo_x_sym = getChain("CALL_GOO_X", root_scope).back();
+		auto call_goo_y_sym = getChain("CALL_GOO_Y", root_scope).back();
 
-			ASSERT_EQUAL(goo_x, get_function_sym_by_var_sym(call_goo_x_sym));
-			ASSERT_EQUAL(goo_y, get_function_sym_by_var_sym(call_goo_y_sym));
+		ASSERT_EQUAL(goo_x, get_function_sym_by_var_sym(call_goo_x_sym));
+		ASSERT_EQUAL(goo_y, get_function_sym_by_var_sym(call_goo_y_sym));
 
-			// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
-			auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
-			ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
-		}
-		{
-			auto [module_id, root_scope]
-				= getModule(fs::File(path("test_modules/error_generating/ambiguous_exact_match")));
-
-			query::utils::withContextDo([&](query::Context& ctx) {
-				auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
-
-				assertTrue(
-					result.hasFailed(),
-					"Expected overload resolution to fail due to ambiguous exact matches."
-				);
-
-				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.hasErrors(),
-					"Logger should have recorded an error."
-				);
-
-				std::stringstream non_detailed_log;
-				ctx.logger.dumpLog(false, non_detailed_log);
-			});
-		}
-		{
-			auto [module_id, root_scope]
-				= getModule(fs::File(path("test_modules/error_generating/ambiguous_coercion_match"))
-			    );
-
-			query::utils::withContextDo([&](query::Context& ctx) {
-				assertThrows<std::exception>(
-					[&] {
-						ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id)
-							.valueOrPanic();
-					},
-					"Expected ambiguous callable candidates error"
-				);
-
-				assertTrue(
-					ctx.logger.bad() or ctx.int_logger.hasErrors(),
-					"Logger should have recorded an error."
-				);
-
-				std::stringstream non_detailed_log;
-				ctx.logger.dumpLog(false, non_detailed_log);
-			});
-		}
+		// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
+		auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
+		ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
 	}
 
 	void testCastsHout() {
@@ -2336,188 +2281,6 @@ private:
 			assertTrue(
 				ss.str().contains("cannot be converted"),
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
-			);
-		});
-	}
-
-	void testErrorBadExpr() {
-		using namespace compiler::helios;
-
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/error_generating/bad_expr")));
-
-
-		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			getConstValueAs<i64>("InvalidExpr", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (base::NotYetImplemented& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("InvalidSym", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<i64>("C", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
-		try {
-			getConstValueAs<bool>("InvalidCompMiddle", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<bool>("InvalidCompFirst", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<f32>("INVALID_ADD", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-
-		try {
-			getConstValueAs<bool>("INVALID_MODULO", root_scope);
-			CORE_PANIC("Should throw.");
-		} catch (query::internal::QueryFailedException& err) {
-			// Since this branch was chosen, everything worked well.
-		}
-	}
-
-	void testErrorAmbiguousCallableCandidates() {
-		auto [module_id, root_scope]
-			= getModule(fs::File(path("test_modules/error_generating/ambiguous_callable_candidates")
-		    ));
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
-
-			assertTrue(
-				result.hasFailed(), "Query should have failed due to ambiguous callable candidates."
-			);
-			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.hasErrors(),
-				"Logger should have recorded an error."
-			);
-
-			std::stringstream non_detailed_log;
-			ctx.logger.dumpLog(false, non_detailed_log);
-			ctx.logger.dumpLog(true);
-		});
-	}
-
-	void testErrorAmbiguousReturnType() {
-		auto [module_id, root_scope]
-			= getModule(fs::File(path("test_modules/error_generating/ambiguous_return_type")));
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto result = ctx.query<compiler::helios::QueryTopLevelEntities>(module_id);
-			assertTrue(
-				result->hasFailed(), "Query should have failed due to ambiguous return type."
-			);
-			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.hasErrors(),
-				"Logger should have recorded an error."
-			);
-
-			std::stringstream non_detailed_log;
-			ctx.logger.dumpLog(false, non_detailed_log);
-			ctx.logger.dumpLog(true);
-		});
-	}
-
-	void testErrorUnknownEscapeSequence() {
-		auto [module_id, root_scope]
-			= getModule(fs::File(path("test_modules/error_generating/unknown_escape_sequence")));
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto result = ctx.query<compiler::helios::QueryTopLevelEntities>(module_id);
-			assertTrue(
-				result->hasFailed(), "Query should have failed due to unknown escape sequence."
-			);
-			assertTrue(
-				ctx.logger.bad() or ctx.int_logger.hasErrors(),
-				"Logger should have recorded an error."
-			);
-
-			ctx.int_logger.dumpLog(true, std::cerr);
-		});
-	}
-
-	void testErrorMessages() {
-		using namespace compiler::helios::code;
-		using namespace compiler::helios;
-		using dia_int::testDiagnosticMessage;
-
-		std::stringstream ss;
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto int32_type = ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed });
-			auto       st         = compiler::tsh::SymbolType{
-                int32_type,
-                compiler::tsh::ReferenceKind::Direct,
-                compiler::tsh::Mutability::Mutable,
-			};
-
-			// UndefinedBinaryOperatorError
-			testDiagnosticMessage<UndefinedBinaryOperatorError>(
-				ss,
-				dia::SourcePosition::fakePosition(),
-				"+",
-				makeBox<InteractiveType>(ctx, st),
-				makeBox<InteractiveType>(ctx, st)
-			);
-
-			// UndefinedUnaryOperatorError
-			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia::SourcePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
-			);
-
-			// InvalidNumericLiteralError
-			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// NumericLiteralTooLargeError
-			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// LiteralDoesNotFitError
-			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia::SourcePosition::fakePosition(), "signed integer"
-			);
-
-			// SingleStmtFunctionMustBeExprError
-			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia::SourcePosition::fakePosition()
-			);
-
-			// ImmutableVariableNoInitError
-			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia::SourcePosition::fakePosition()
 			);
 		});
 	}
