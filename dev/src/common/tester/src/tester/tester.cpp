@@ -190,11 +190,9 @@ namespace tester {
 			std::to_string(tests.size()),
 			" tests.\n",
 		} });
-		beforeAll();
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		afterAll();
 		stream_printer.print({ {
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),

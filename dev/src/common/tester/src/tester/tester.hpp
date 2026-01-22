@@ -68,10 +68,6 @@ namespace tester {
 	protected:
 		using TestType = void (TestSuite::*)();
 
-		virtual void beforeAll() {}
-
-		virtual void afterAll() {}
-
 	private:
 		class CritTestError final: public std::exception {
 		public:
