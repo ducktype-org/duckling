@@ -9,8 +9,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Constructor>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		state.parse(out).eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))

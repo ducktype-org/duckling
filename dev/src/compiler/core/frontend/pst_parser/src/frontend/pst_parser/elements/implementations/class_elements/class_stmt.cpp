@@ -6,6 +6,7 @@
 
 namespace pst {
 	namespace internal {
+		// @TODO: #1535 Integrate the same way as non-class statements
 		template<std::derived_from<ClassStmt> T, class... Ts>
 		MBox<T> parseStmt(LangParserState& state, Ts... args) {
 			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
@@ -16,35 +17,8 @@ namespace pst {
 		}
 	}
 
-	i64 ClassStmt::countSpecifiers(LangParserState& state) {
-		i64 res = 0;
-		PST_WHILE(class_specs.contains(state[res].asKeyword())) res++;
-		return res;
-	}
-
-	void ClassStmt::parseSpecifiers(LangParserState& state) {
-		PST_WHILE(class_specs.contains(state[0].asKeyword())) {
-			context.specifiers.emplace_back(&state[0]);
-			state.parse(Ref(this)).eatOne();
-		}
-	}
-
-	void ClassStmt::dprintPrefix(std::ostream& out) const {
-		Stmt::dprintPrefix(out);
-		if (context.specifiers.size()) {
-			out << R"("specifiers":[)";
-			for (auto& spec: context.specifiers) {
-				tpc::nullAwareDprint(spec->asKeyword(), out);
-				out << ",";
-			}
-			out << "],";
-		}
-	}
-
 	MBox<ClassStmt> ClassStmt::chooseStmt(LangParserState& state, const ClassContext& ctx) {
-		i64 skip = countSpecifiers(state);
-
-		Keyword as_keyword = state[skip].asKeyword();
+		Keyword as_keyword = state[0].asKeyword();
 
 		switch (as_keyword) {
 		case Keyword::Fun:
@@ -59,29 +33,34 @@ namespace pst {
 			break;
 		}
 
-		if (state[skip].isStr(ctx.name)) return internal::parseStmt<ClassSpecial>(state, ctx);
-		if (state[skip].isBracketGroup(Token::Curly))
-			return internal::parseStmt<AccessBlock>(state, ctx);
+		if (state[0].isStr(ctx.name)) return internal::parseStmt<ClassSpecial>(state, ctx);
 
 		return internal::parseStmt<Field>(state, ctx);
 	}
 
 	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, attributes.size());
+		addToHash(partial_hash, prefixes.attributes.size());
+		addToHash(partial_hash, prefixes.specifiers.size());
 		addToHash(partial_hash, context.name.str());
-		addToHash(partial_hash, context.specifiers);
 		return partial_hash;
 	}
 
 	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
 		// Collect Attributes
-		auto attributes = collectAttributes(state);
+		auto prefixes = collectPrefixes(state);
 
-		// Parse Statement
-		MBox<ClassStmt> out = chooseStmt(state, ctx);
+		MBox<ClassStmt> out;
+
+		// Specifier block handling
+		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			out = internal::parseStmt<ClassSpecifierBlock>(state, ctx);
+		} else {
+			// Parse Statement
+			out = chooseStmt(state, ctx);
+		}
 
 		// Add Attributes
-		if (out) out->addAttributes(state, std::move(attributes));
+		if (out) out->addPrefixes(state, std::move(prefixes));
 
 		PST_RETURN out;
 	}

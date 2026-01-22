@@ -92,4 +92,17 @@ namespace pst {
 	public:
 		EmptyExprError(dia::SourcePosition pos): dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
+	class NoExternArgumentError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "no_extern_argument_error" };
+		}
+
+	public:
+		NoExternArgumentError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+	};
 }
