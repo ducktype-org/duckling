@@ -241,9 +241,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true>  extern_block{ "extern (\"C\") {class x{}}" };
 	Example<pst::Stmt, true>  complex_block{ "public extern (\"C\") debug {class x{}}" };
 	Example<pst::Stmt, true>  extern_block_two{ R"(extern ("C", "obj.o") {class x{}})" };
-	Example<pst::Stmt, false> bad_specifier{ "def class x{}" };
+	Example<pst::Stmt, false> bad_specifier{ "def class x{};" };
 	Example<pst::Stmt, false> empty_specifier{ "public;" };
-	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}}" };
+	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
@@ -485,9 +485,7 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::InvalidExternContentWarning>(
 			ss, dia::SourcePosition::fakePosition()
 		);
-		testDiagnosticMessage<pst::NoExternArgumentError>(
-			ss, dia::SourcePosition::fakePosition()
-		);
+		testDiagnosticMessage<pst::NoExternArgumentError>(ss, dia::SourcePosition::fakePosition());
 
 		testDiagnosticMessage<
 			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(

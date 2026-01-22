@@ -23,7 +23,6 @@ namespace pst {
 
 		out << R"("block": )";
 		nullAwareDprint(block, out);
-		out << R"(,)";
 
 		out << "}";
 	}
