@@ -1054,12 +1054,12 @@ namespace vm {
 	DEFINE_INT_TO_FLOAT(64)
 
 
-#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE)                                            \
+#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                        \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
 		{                                                                                     \
-			auto x       = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);  \
-			using IntT   = i##DST_SIZE;                                                       \
-			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                           \
+			using IntT   = DST_TYPE;                                                          \
+			using FloatT = SRC_TYPE;                                                          \
+			auto x       = readFromStack<FloatT>(local_stack, instr->arg1);                   \
 			IntT res;                                                                         \
 			if (std::isnan(x)) {                                                              \
 				res = IntT{ 0 };                                                              \
@@ -1074,18 +1074,17 @@ namespace vm {
 					res = static_cast<IntT>(x);                                               \
 				}                                                                             \
 			}                                                                                 \
-			writeToStack<i##DST_SIZE>(local_stack, instr->arg0, res);                         \
+			writeToStack<IntT>(local_stack, instr->arg0, res);                                \
 		}                                                                                     \
 		FUNCTION_CONT(1);                                                                     \
 	}
 
-#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE)                                             \
+#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                         \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {         \
 		{                                                                                      \
-			auto x = readFromStack<FLOAT_##SRC_SIZE##_TYPE>(local_stack, instr->arg1);         \
-			/* Logic inlined from interp_fptoui_sat */                                         \
-			using UIntT  = u##DST_SIZE;                                                        \
-			using FloatT = FLOAT_##SRC_SIZE##_TYPE;                                            \
+			using UIntT  = DST_TYPE;                                                           \
+			using FloatT = SRC_TYPE;                                                           \
+			auto  x      = readFromStack<FloatT>(local_stack, instr->arg1);                    \
 			UIntT res;                                                                         \
 			if (std::isnan(x)) {                                                               \
 				res = UIntT{ 0 };                                                              \
@@ -1099,20 +1098,20 @@ namespace vm {
 					res = static_cast<UIntT>(x);                                               \
 				}                                                                              \
 			}                                                                                  \
-			writeToStack<u##DST_SIZE>(local_stack, instr->arg0, res);                          \
+			writeToStack<UIntT>(local_stack, instr->arg0, res);                                \
 		}                                                                                      \
 		FUNCTION_CONT(1);                                                                      \
 	}
 
-#define DEFINE_FLOAT_TO_INT(SRC_SIZE)      \
-	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE)  \
-	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE)  \
-	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE) \
-	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE) \
-	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE) \
-	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE)
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                            \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, FLOAT_##SRC_SIZE##_TYPE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, FLOAT_##SRC_SIZE##_TYPE) \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, FLOAT_##SRC_SIZE##_TYPE)
 
 	DEFINE_FLOAT_TO_INT(32)
 	DEFINE_FLOAT_TO_INT(64)
