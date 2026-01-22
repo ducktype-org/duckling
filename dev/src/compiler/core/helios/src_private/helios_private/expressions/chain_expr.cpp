@@ -727,11 +727,10 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.logInt(
-					makeBox<EmptyChainExpressionError>(
-						chain_elements[0].unlock(query_ctx)->getSourcePosition()
-					)
-				);
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Chain expression resulted in empty expression sequence.",
+					chain_elements[0].unlock(query_ctx)->getSourcePosition()
+				));
 				return query::Failed();
 			}
 

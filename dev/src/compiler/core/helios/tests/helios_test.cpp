@@ -2515,12 +2515,6 @@ private:
                  dia::SourcePosition::fakePosition(),
                  "signed integer"
              );
-
-             // EmptyChainExpressionError
-             testDiagnosticMessage<EmptyChainExpressionError>(
-                 ss,
-                 dia::SourcePosition::fakePosition()
-             );
              
              // SingleStmtFunctionMustBeExprError
              testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
