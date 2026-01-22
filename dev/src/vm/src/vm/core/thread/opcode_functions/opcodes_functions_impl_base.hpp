@@ -1103,7 +1103,7 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                      \
 	}
 
-#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                \
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                            \
 	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, FLOAT_##SRC_SIZE##_TYPE)  \
 	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, FLOAT_##SRC_SIZE##_TYPE) \
 	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, FLOAT_##SRC_SIZE##_TYPE)         \
