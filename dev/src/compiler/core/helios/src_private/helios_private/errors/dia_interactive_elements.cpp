@@ -1,7 +1,5 @@
 #include "dia_interactive_elements.hpp"
 
-#include "helios_private/symbols/pst_symbol_data.hpp"
-
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
@@ -14,6 +12,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <diagnostic/source_position.hpp>
