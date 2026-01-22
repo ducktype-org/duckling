@@ -9,28 +9,21 @@ namespace pst {
 	 *
 	 * They are used to change the visibility of multiple definitions in a class
 	 */
-	class AccessBlock final: public ClassStmt {
-		static inline const std::set<lang_def::Keyword> ACCESS_SPECIFIERS = {
-			lang_def::Keyword::Public,
-			lang_def::Keyword::Private,
-			lang_def::Keyword::Protected,
-		};
-
-		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+	class ClassSpecifierBlock final: public ClassStmt {
 		NAMED_CHILD(block, ClassBlock);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
-		CLASS_STMT_PARSE(AccessBlock);
+		CLASS_STMT_CHILD_CONSTRUCTOR(ClassSpecifierBlock, ElementKind::ClassSpecifierBlock);
+		CLASS_STMT_PARSE(ClassSpecifierBlock);
 
-		~AccessBlock() override = default;
+		~ClassSpecifierBlock() override = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Access specification block";
+			return "Class specifier block";
 		}
 
 		[[nodiscard]]

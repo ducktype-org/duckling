@@ -8,8 +8,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Destructor>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		state.parse(out).eatOne();
 
 		tpc::Identifier ident;
