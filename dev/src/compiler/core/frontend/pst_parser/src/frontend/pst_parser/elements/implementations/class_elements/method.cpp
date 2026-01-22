@@ -1,14 +1,12 @@
 #include "../../hierarchy/class_elements/method.hpp"
 
-#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
 	MBox<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<Method>(position, ctx);
-
-		out->parseSpecifiers(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
@@ -19,7 +17,7 @@ namespace pst {
 			.one(NamedOperator::Assign)
 			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Method::dprint(std::ostream& out) const {

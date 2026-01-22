@@ -2,7 +2,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/hout/elements.hpp>
@@ -58,6 +58,7 @@ public:
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testReferences);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
 		TESTER_ADD_TEST(testSimpleHOUT);
@@ -88,6 +89,7 @@ public:
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
+		TESTER_ADD_TEST(testErrorUnknownEscapeSequence);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -672,7 +674,7 @@ private:
 			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
 			);
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, tpc::StringValue("hello"))
+				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
 			);
 
 			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
@@ -1108,6 +1110,160 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
 		});
+	}
+
+	void testReferences() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/references")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
+
+		{
+			// Check type of r.
+			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
+			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
+			auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
+		}
+		{
+			// Check if RefOfExpr was inserted.
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(1)
+			);
+			auto make_ref_expr = dynamic_cast<const compiler::helios::code::RefOfExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(make_ref_expr != nullptr);
+		}
+		{
+			// Check if deref was inserted when assigning a `ref T = T`
+			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
+				*function.body->statements.at(2)
+			);
+			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				ass_stmt.location_expr.get()
+			);
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// Check if deref was inserted when assigning T = ref T.
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(3)
+			);
+			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// Check if `ref T = ref T` performs value assignment, not rebinding.
+			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
+				*function.body->statements.at(5)
+			);
+			auto deref_lhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				ass_stmt.location_expr.get()
+			);
+			auto deref_rhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				ass_stmt.new_value_expr.get()
+			);
+			ASSERT_TRUE(deref_lhs != nullptr);
+			ASSERT_TRUE(deref_rhs != nullptr);
+		}
+		{
+			// Check if ref T = ref T + 1. Derefs should be inserted on both sides.
+			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
+				*function.body->statements.at(6)
+			);
+
+			auto deref1_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				ass_stmt.location_expr.get()
+			);
+			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
+				ass_stmt.new_value_expr.get()
+			);
+			auto deref2_expr
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->lhs.get());
+			ASSERT_TRUE(deref1_expr != nullptr);
+			ASSERT_TRUE(deref2_expr != nullptr);
+		}
+		{
+			// Check deref in call expressions.
+			auto& call_stmt = dynamic_cast<const compiler::helios::code::ExprStmt&>(
+				*function.body->statements.at(7)
+			);
+			auto& call_expr
+				= dynamic_cast<const compiler::helios::code::CallExpr&>(*call_stmt.expr.get());
+
+			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				call_expr.arguments.at(0).get()
+			);
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// Check deref in unary operator: var z: i32 = -r;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(8)
+			);
+			auto un_expr = dynamic_cast<const compiler::helios::code::UnaryOperatorExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(un_expr != nullptr);
+
+			// The operand of '-' should be a DerefExpr
+			auto deref_expr
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(un_expr->expr.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// Check deref in binary operator with two refs: var p: i32 = r + r2;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(9)
+			);
+			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(bin_expr != nullptr);
+
+			// Both sides of '+' should be DerefExpr
+			auto deref_lhs
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->lhs.get());
+			auto deref_rhs
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->rhs.get());
+
+			ASSERT_TRUE(deref_lhs != nullptr);
+			ASSERT_TRUE(deref_rhs != nullptr);
+		}
+		{
+			// Check deref in field access: var val: i32 = ref_point.x;
+			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*function.body->statements.at(12)
+			);
+			auto outer_deref = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				var_stmt.initial_value->get()
+			);
+			ASSERT_TRUE(outer_deref != nullptr);
+			auto access_expr
+				= dynamic_cast<const compiler::helios::code::AccessExpr*>(outer_deref->inner.get());
+			ASSERT_TRUE(access_expr != nullptr);
+
+			auto inner_deref
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(inner_deref != nullptr);
+			auto ident_expr = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(
+				inner_deref->inner.get()
+			);
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
+			// Check deref in returns.
+			auto& ret_stmt = dynamic_cast<const compiler::helios::code::ReturnStmt&>(
+				*function.body->statements.at(13)
+			);
+			auto deref_expr
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
 	}
 
 	void testKeywordLiterals() {
@@ -2286,6 +2442,23 @@ private:
 			std::stringstream non_detailed_log;
 			ctx.logger.dumpLog(false, non_detailed_log);
 			ctx.logger.dumpLog(true);
+		});
+	}
+
+	void testErrorUnknownEscapeSequence() {
+		auto [module_id, root_scope]
+			= getModule(fs::File(path("test_modules/error_generating/unknown_escape_sequence")));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto result = ctx.query<compiler::helios::QueryTopLevelEntities>(module_id);
+			assertTrue(
+				result->hasFailed(), "Query should have failed due to unknown escape sequence."
+			);
+			assertTrue(
+				ctx.logger.bad() or ctx.int_logger.hasErrors(),
+				"Logger should have recorded an error."
+			);
+
+			ctx.int_logger.dumpLog(true, std::cerr);
 		});
 	}
 

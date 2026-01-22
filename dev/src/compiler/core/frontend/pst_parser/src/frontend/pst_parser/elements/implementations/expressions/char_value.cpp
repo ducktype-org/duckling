@@ -24,7 +24,7 @@ namespace pst::expr {
 			fastForward(state, length);
 		}
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ExprCharValue::dprint(std::ostream& out) const {

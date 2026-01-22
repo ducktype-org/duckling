@@ -19,7 +19,7 @@ namespace pst {
 			state.parse(out).assign(&out->stmt, std::move(stmt));
 		}
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {

@@ -7,8 +7,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Field>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		if (state.parse(out).tryEat(Keyword::Const)) {
 			out->is_mutable = false;
 			state.parse(out).eatOne();
@@ -19,7 +17,7 @@ namespace pst {
 
 		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Field::dprint(std::ostream& out) const {

@@ -31,7 +31,7 @@ def setup_build_impl(
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
-    
+
     # If LTO is enabled, ensure we're using Clang and LLD
     if enable_link_time_optimization:
         if "clang++" not in cxx_compiler:
@@ -52,6 +52,12 @@ def setup_build_impl(
             rmtree(bld / Path("CMakeFiles"))
         except FileNotFoundError:
             pass
+
+    # This is needed for CMake File API.
+    # Used by e.g. `./toolbox.py test`.
+    bash_command(f"mkdir -p {build_dir}/.cmake/api/v1/query/")
+    bash_command(f"touch {build_dir}/.cmake/api/v1/query/codemodel-v2")
+
     cmd_parts = [
         f"cmake",
         f'-G "{build_system}"',
@@ -60,7 +66,6 @@ def setup_build_impl(
         f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
         f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
         f"-D CMAKE_C_COMPILER={cc_compiler}",
-        f"-D GCOV_VERSION={gcov_version}",
         f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
         f"-D BUILD_SHARED_LIBS={'ON' if shared_libs else 'OFF'}",
@@ -68,6 +73,8 @@ def setup_build_impl(
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
     ]
+    if coverage:
+        cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
     if should_add_linker_flags(linker):

@@ -60,7 +60,7 @@ namespace pst {
 		Pattern,
 		Namespace,
 		CodeDecl,
-		StmtSpecifier,
+		SpecifierBlock,
 		Action,
 		ExprStmt,
 		Class,
@@ -74,7 +74,7 @@ namespace pst {
 		Constructor,
 		CopyConstructor,
 		Destructor,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt
 	};
 
@@ -88,20 +88,36 @@ namespace pst {
 		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
 		using AttrBoxList = std::vector<Box<Attribute>>;
 
-		AttrList attributes;
+		using SpecList    = std::vector<AccessInternalAnonymous<StmtSpecifier>>;
+		using SpecBoxList = std::vector<Box<StmtSpecifier>>;
+
+		struct Prefixes {
+			AttrList attributes;
+			SpecList specifiers;
+		};
+
+		struct PrefixBoxes {
+			AttrBoxList attributes;
+			SpecBoxList specifiers;
+		};
+
+		Prefixes prefixes;
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrBoxList collectAttributes(LangParserState& state);
+		static PrefixBoxes collectPrefixes(LangParserState& state);
 
 		/**
-		 * @brief Prepends attributes after parsing handling sub elements and position.
+		 * @brief Prepends prefixes after parsing handling sub elements and position.
 		 */
-		void addAttributes(LangParserState& state, AttrBoxList&& additions);
+		void addPrefixes(LangParserState& state, PrefixBoxes&& additions);
 
-		void dprintAttributes(std::ostream& out) const;
+		/**
+		 * @brief Prints prefixes(attributes and specifiers)
+		 */
+		void dprintPrefixes(std::ostream& out) const;
 
 		void dprintPrefix(std::ostream& out) const override;
 
@@ -119,12 +135,22 @@ namespace pst {
 
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
+		[[nodiscard]]
+		auto getAttributes() const {
+			std::vector<AccessLocked<Attribute>> attributes;
+			for (auto& attr: prefixes.attributes) attributes.push_back(attr.give());
+			return attributes;
+		}
+
 		/**
-		 * @note This might need to return a vector of borrow pointers instead
+		 * @brief Returns a list of specifiers from last to first.
 		 */
 		[[nodiscard]]
-		auto& getAttributes() const {
-			return attributes;
+		auto getSpecifiers() const {
+			std::vector<AccessLocked<StmtSpecifier>> specifiers;
+			for (auto& spec: prefixes.specifiers) specifiers.push_back(spec.give());
+			std::ranges::reverse(specifiers);
+			return specifiers;
 		}
 
 		[[nodiscard]]
@@ -179,11 +205,9 @@ namespace pst {
 	 *
 	 * includes:
 	 *  - name - class name
-	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                     name;
-		std::vector<CRef<lexer::Token>> specifiers;
+		base::StrID name;
 	};
 
 	/**
@@ -191,20 +215,7 @@ namespace pst {
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		inline static const std::set<lang_def::Keyword> class_specs = {
-			lang_def::Keyword::Public,
-			lang_def::Keyword::Private,
-			lang_def::Keyword::Protected,
-			lang_def::Keyword::Static,
-		};
 		ClassContext context;
-
-		void parseSpecifiers(LangParserState& state);
-
-		[[nodiscard]]
-		static i64 countSpecifiers(LangParserState& state);
-
-		void dprintPrefix(std::ostream& out) const override;
 
 		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
 			  Stmt(kind, pos),
