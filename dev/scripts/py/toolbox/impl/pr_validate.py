@@ -1,3 +1,4 @@
+from dev.scripts.py.toolbox.impl.test import test_impl
 from .helpers import (
     bash_command,
     exit_with_error,
@@ -12,15 +13,46 @@ from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 def pr_validate_impl(
     clang_tidy_path: str, clang_format_path: str, build_dir: str, thread_count: int
 ):
-    # Step 1 - build
+    """
+    Perform PR validation steps.
+    First tries to run steps that are quick to run, then progresses to the
+    more time-consuming ones.
+    """
+
+    # Step 1 - duck linter
+    if not duck_linter_impl():
+        exit_with_error("Duck linter has failed")
+
+    # Step 2 - validate to-dos and fix-mes
+    if not todo_validate_impl():
+        exit_with_error("T" + "ODO validation has failed")
+
+    # Step 3 - issue checker
+    if not issue_checker_impl([]):
+        exit_with_error("Issue checker has failed")
+
+    # Step 4 - Run formatting checker
+    _, clang_format_failed = cpp_linter_impl(
+        clang_tidy_path=None,
+        clang_format_path=clang_format_path,
+        build_dir=build_dir,
+        thread_count=thread_count,
+    )
+
+    if clang_format_failed:
+        exit_with_error(
+            f"C++ formatting check failed. Please run `./scripts/formatting/format_repo_cpp.sh {clang_format_path}` or fix the issues manually."
+        )
+
+    # Step 5 - build
     bash_command(
         f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
     )
 
-    # Step 2 - test
-    bash_command(f"cmake --build {build_dir} -- test")
+    # Step 6 - test
+    test_impl(build_dir=build_dir, parallel=thread_count)
 
-    # Step 3 - integration tests
+    # Step 7 - integration tests
     tester_impl(
         clean=False,
         dry=False,
@@ -31,27 +63,12 @@ def pr_validate_impl(
         build_dir=build_dir,
     )
 
-    # Step 4 - duck linter
-    if not duck_linter_impl():
-        exit_with_error("Duck linter has failed")
-
-    # Step 5 - cpp linter
-    clang_tidy_failed, clang_format_failed = cpp_linter_impl(
+    # Step 8 - clang-tidy
+    clang_tidy_failed, _ = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
-        clang_format_path=clang_format_path,
+        clang_format_path=None,
         build_dir=build_dir,
         thread_count=thread_count,
     )
-
-    # Step 6 - validate to-dos and fix-mes
-    if not todo_validate_impl():
-        exit_with_error("T" + "ODO validation has failed")
-
-    # Step 7 - issue checker
-    if not issue_checker_impl([]):
-        exit_with_error("Issue checker has failed")
-
-    if clang_tidy_failed or clang_format_failed:
-        exit_with_error(
-            f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"
-        )
+    if clang_tidy_failed:
+        exit_with_error("C++ clang-tidy check has failed")

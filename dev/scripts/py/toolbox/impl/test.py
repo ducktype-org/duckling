@@ -1,4 +1,6 @@
 import re
+
+from dev.scripts.py.toolbox.commands.helpers import get_cpu_count
 from .helpers import (
     BashCommandError,
     bash_command,
@@ -23,7 +25,7 @@ def get_available_test_targets(build_dir: str) -> list[str]:
             if match:
                 targets.append(match.group(1))
         return targets
-    except BashCommandError as e:
+    except BashCommandError:
         exit_with_error(
             "Error querying CMake File API. Please re-run `./toolbox.py setup-build`."
         )
@@ -31,8 +33,8 @@ def get_available_test_targets(build_dir: str) -> list[str]:
 
 def test_impl(
     build_dir: str,
-    memcheck: bool,
-    parallel: int,
+    memcheck: bool = False,
+    parallel: int = get_cpu_count(),
     label_regex: str | None = None,
     tests_regex: str | None = None,
     exclude_regex: str | None = None,

@@ -68,6 +68,7 @@ def clang_format(*args, **kwargs):
         "clang_format_path",
         prompt="clang-format path",
         type=str,
+        help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
         default="clang-format-19",
     )(*args, **kwargs)
 
@@ -79,6 +80,7 @@ def clang_tidy(*args, **kwargs):
         "clang_tidy_path",
         prompt="clang-tidy path",
         type=str,
+        help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
         default="clang-tidy-19",
     )(*args, **kwargs)
 
@@ -122,6 +124,9 @@ def no_merge_base(*args, **kwargs):
         "--no-merge-base",
         is_flag=True,
         type=bool,
+        help="On no-merge-base: compare against the latest commit on `branch`"
+        "instead of the commit which is the LCA of `branch` and current branch."
+        "This feature allows using a shallow clone.",
         default=False,
     )(*args, **kwargs)
 

@@ -12,12 +12,8 @@ from click import command
 @build_dir(
     help="Path to build folder with compile_commands.json",
 )
-@clang_format(
-    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
-)
-@clang_tidy(
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-)
+@clang_format()
+@clang_tidy()
 @thread_count(
     help="Number of threads used when building and linting. Defaults to the number of available threads.",
 )

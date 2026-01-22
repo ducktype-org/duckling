@@ -31,9 +31,9 @@ def issue_checker_impl(
         if not issues:
             return True
 
-    valid_issue_numbers = []
+    valid_issue_numbers: list[str] = []
     for num in issues:
-        num_str = str(num).strip()
+        num_str: str = str(num).strip()
         if not num_str:
             continue
         if not num_str.isdigit() or int(num_str) <= 0:

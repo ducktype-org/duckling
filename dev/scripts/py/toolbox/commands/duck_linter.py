@@ -16,14 +16,10 @@ from click import command, option
 @branch(
     help="The branch relative to which the diff is created.",
 )
-@no_merge_base(
-    help="On no-merge-base: compare against the latest commit on `branch` "
-    "instead of the commit which is the LCA of `branch` and current branch. "
-    "This feature allows to run the checker on a shallow clone.",
-)
+@no_merge_base()
 @option(
-    "--no-fix",  
-    is_flag=True, 
+    "--no-fix",
+    is_flag=True,
     help="Apply fixes automatically instead of prompting."
 )
 @verbose(help="Also shows checked files that didn't have any errors.")

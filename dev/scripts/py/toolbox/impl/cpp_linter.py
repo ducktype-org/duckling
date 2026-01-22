@@ -1,9 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
-from os import cpu_count
 from pathlib import Path
 import sys
 import tempfile
-from typing import List, Dict, Tuple
 
 from .helpers import (
     BashCommandError,
@@ -19,14 +17,37 @@ from .list_files import list_files_impl
 
 
 def cpp_linter_impl(
-    clang_tidy_path: str,
-    clang_format_path: str,
+    clang_tidy_path: str | None,
+    clang_format_path: str | None,
     build_dir: str,
     thread_count: int,
     branch: str = "origin/main",
     all: bool = False,
     no_merge_base: bool = False,
 ) -> tuple[bool, bool]:
+    """
+    Perform C++ linting using clang-tidy and clang-format.
+
+    Linter can run only clang_tidy, only clang-format, or both.
+    If you want to run only one of them, set the other path to None.
+    If both paths are None, the linter will exit with an error.
+
+    Args:
+        clang_tidy_path: Path to the clang-tidy executable
+        clang_format_path: Path to the clang-format executable
+        build_dir: Path to the build directory
+        thread_count: Number of threads to use for parallel linting
+        branch: Git branch to compare against for modified files
+        all: If True, lint all C++ files in the repo; otherwise, only modified files
+        no_merge_base: If True, skip merge base calculation when determining modified files
+
+    """
+
+    if not clang_tidy_path and not clang_format_path:
+        exit_with_error(
+            "At least one of clang_tidy_path or clang_format_path must be set"
+        )
+
     build_folder = Path(build_dir)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
@@ -59,7 +80,7 @@ def cpp_linter_impl(
     return clang_tidy_failed, clang_format_failed
 
 
-def get_repo_cpp_files() -> Dict[str, List[Tuple[int, int]]]:
+def get_repo_cpp_files() -> dict[str, list[tuple[int, int]]]:
     # Use the new standardized file listing for C++ files
     return list_files_impl(
         extensions=[".cpp", ".hpp", ".cc", ".cxx", ".h"],
@@ -70,7 +91,7 @@ def get_repo_cpp_files() -> Dict[str, List[Tuple[int, int]]]:
 
 def get_modified_files_and_lines(
     branch: str, no_merge_base: bool = False
-) -> Dict[str, List[Tuple[int, int]]]:
+) -> dict[str, list[tuple[int, int]]]:
     # Use the shared implementation from list_files module
     return list_files_impl(
         branch=branch, no_merge_base=no_merge_base, only_modified=True, lines=True
@@ -79,7 +100,7 @@ def get_modified_files_and_lines(
 
 def get_files_for_linter(
     all: bool, branch: str, no_merge_base: bool
-) -> Dict[str, List[List[int]]]:
+) -> dict[str, list[list[int]]]:
     if all:
         files_to_lint = get_repo_cpp_files()
     else:
@@ -148,7 +169,11 @@ def clang_format_on(
 
 
 def run_linter_on(
-    clang_tidy_path: str, clang_format_path: str, build_folder: Path, file, diff
+    clang_tidy_path: str | None,
+    clang_format_path: str | None,
+    build_folder: Path,
+    file,
+    diff,
 ) -> tuple[str, bool, bool]:
     clang_format_failed = False
     clang_tidy_failed = False
@@ -157,10 +182,14 @@ def run_linter_on(
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 
-        if clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file):
+        if clang_tidy_path and clang_tidy_on(
+            clang_tidy_path, build_folder, file, diff, log_file
+        ):
             clang_tidy_failed = True
 
-        if clang_format_on(clang_format_path, file, diff, log_file):
+        if clang_format_path and clang_format_on(
+            clang_format_path, file, diff, log_file
+        ):
             clang_format_failed = True
 
         log_file.seek(0)
