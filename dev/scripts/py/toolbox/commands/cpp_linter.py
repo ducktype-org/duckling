@@ -2,6 +2,7 @@ from click import command
 
 from .helpers import (
     all_flag,
+    auto_fix,
     branch,
     build_dir,
     clang_format,
@@ -31,6 +32,7 @@ from ..impl.helpers import (
 @thread_count(
     help="Number of threads used when linting. Defaults to the number of available threads.",
 )
+@auto_fix()
 def cpp_linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 

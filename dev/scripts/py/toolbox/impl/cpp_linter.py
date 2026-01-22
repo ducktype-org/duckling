@@ -24,6 +24,7 @@ def cpp_linter_impl(
     branch: str = "origin/main",
     all: bool = False,
     no_merge_base: bool = False,
+    auto_fix: bool = False,
 ) -> tuple[bool, bool]:
     """
     Perform C++ linting using clang-tidy and clang-format.
@@ -40,6 +41,7 @@ def cpp_linter_impl(
         branch: Git branch to compare against for modified files
         all: If True, lint all C++ files in the repo; otherwise, only modified files
         no_merge_base: If True, skip merge base calculation when determining modified files
+        auto_fix: If True, apply automatic fixes when possible
 
     """
 
@@ -72,8 +74,11 @@ def cpp_linter_impl(
 
     if clang_format_failed:
         log_new_line()
-        to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
-        if to_format.lower() in ["y", ""]:
+        apply = auto_fix
+        if not auto_fix:
+            to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
+            apply = to_format.lower() in ["y", "yes", ""]
+        if apply:
             bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
 

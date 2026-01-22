@@ -150,3 +150,11 @@ def verbose(*args, **kwargs):
         is_flag=True,
         default=False,
     )(*args, **kwargs)
+
+def auto_fix(*args, **kwargs):
+    return create_option(
+        "--auto-fix",
+        is_flag=True,
+        help="Apply fixes automatically instead of prompting.",
+        default=False,
+    )(*args, **kwargs)

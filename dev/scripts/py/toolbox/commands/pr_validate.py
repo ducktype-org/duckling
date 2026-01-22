@@ -1,5 +1,6 @@
 from ..impl.pr_validate import pr_validate_impl
 from .helpers import (
+    auto_fix,
     build_dir,
     clang_format,
     clang_tidy,
@@ -17,6 +18,7 @@ from click import command
 @thread_count(
     help="Number of threads used when building and linting. Defaults to the number of available threads.",
 )
+@auto_fix()
 def pr_validate(*args, **kwargs):
     """Runs a set of actions to validate branch state before PR.
     Actions include: building everything, running tests, linter, duck-linter, todo-validate, issue-checker.

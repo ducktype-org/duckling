@@ -1,6 +1,7 @@
 from ..impl.duck_linter import duck_linter_impl
 from .helpers import (
     all_flag,
+    auto_fix,
     branch,
     no_merge_base,
     verbose,
@@ -17,11 +18,7 @@ from click import command, option
     help="The branch relative to which the diff is created.",
 )
 @no_merge_base()
-@option(
-    "--auto-fix",
-    is_flag=True,
-    help="Apply fixes automatically instead of prompting."
-)
+@auto_fix()
 @verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):
     """Check for violations of
