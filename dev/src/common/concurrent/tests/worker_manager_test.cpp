@@ -1,7 +1,6 @@
 #include <concurrent/base/collections/hash_map.hpp>
-#include <concurrent/worker/worker_data.hpp>
-
 #include <concurrent/module_flags/worker_count.hpp>
+#include <concurrent/worker/worker_data.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
 #include <tester/tester.hpp>
@@ -109,7 +108,7 @@ private:
 
 				// Update the task count for this worker
 				worker_task_counts.maybePutAndUpdate(
-					static_cast<usize>(wd->getID()), 0, [](u64& count_ref) { count_ref++; }
+					static_cast<u64>(wd->getID()), 0ULL, [](u64& count_ref) { count_ref++; }
 				);
 			});
 

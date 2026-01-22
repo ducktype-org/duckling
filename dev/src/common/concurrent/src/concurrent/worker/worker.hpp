@@ -1,8 +1,7 @@
 #pragma once
 
-#include <concurrent/worker/worker_data.hpp>
-
 #include <concurrent/worker/task.hpp>
+#include <concurrent/worker/worker_data.hpp>
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/ints.hpp>
