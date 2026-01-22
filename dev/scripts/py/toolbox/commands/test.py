@@ -2,6 +2,8 @@ from ..impl.test import test_impl
 from .helpers import (
     build_dir,
     get_cpu_count,
+    thread_count,
+    verbose,
 )
 from click import command, option, INT
 
@@ -18,14 +20,7 @@ from click import command, option, INT
     is_flag=True,
     default=False,
 )
-@option(
-    "-j",
-    "--parallel",
-    help="Run tests in parallel with optional number of jobs",
-    type=INT,
-    default=get_cpu_count(),
-    show_default=True,
-)
+@thread_count()
 @option(
     "-L",
     "--label-regex",
@@ -47,13 +42,7 @@ from click import command, option, INT
     type=str,
     default=None,
 )
-@option(
-    "-V",
-    "--verbose",
-    help="Enable verbose output from tests",
-    is_flag=True,
-    default=False,
-)
+@verbose()
 @option(
     "--output-on-failure",
     help="Output anything outputted by the test program if the test should fail",

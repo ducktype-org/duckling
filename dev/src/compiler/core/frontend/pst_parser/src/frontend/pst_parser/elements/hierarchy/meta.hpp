@@ -221,9 +221,6 @@ namespace pst {
 			  Stmt(kind, pos),
 			  context(std::move(ctx)) {}
 
-	private:
-		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
-
 	protected:
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 

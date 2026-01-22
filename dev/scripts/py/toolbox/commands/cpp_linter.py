@@ -2,10 +2,12 @@ from click import command
 
 from .helpers import (
     all_flag,
+    auto_fix,
     branch,
     build_dir,
     clang_format,
     clang_tidy,
+    no_fix,
     no_merge_base,
     thread_count,
 )
@@ -25,20 +27,14 @@ from ..impl.helpers import (
 @build_dir(
     help="Path to build folder with compile_commands.json",
 )
-@clang_format(
-    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
-)
-@clang_tidy(
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
-)
-@no_merge_base(
-    help="On no-merge-base: compare against the latest commit on `branch` "
-    "instead of the commit which is the LCA of `branch` and current branch. "
-    "This feature allows to run the checker on a shallow clone.",
-)
+@clang_format()
+@clang_tidy()
+@no_merge_base()
 @thread_count(
     help="Number of threads used when linting. Defaults to the number of available threads.",
 )
+@auto_fix()
+@no_fix()
 def cpp_linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 

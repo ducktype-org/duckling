@@ -33,7 +33,7 @@ def list_files_impl(
         if lines:
             # For all files with lines, we return all lines in each file
             files = _get_all_tracked_files(extensions)
-            result = {}
+            result: dict[str, list[tuple[int, int]]] = {}
             for file in files:
                 # Skip directories (e.g., git submodules)
                 if os.path.isdir(file):
