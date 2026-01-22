@@ -6,7 +6,6 @@
 
 namespace pst {
 	namespace internal {
-		// @TODO: #1535 Integrate the same way as non-class statements
 		template<std::derived_from<ClassStmt> T, class... Ts>
 		MBox<T> parseStmt(LangParserState& state, Ts... args) {
 			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
@@ -23,7 +22,8 @@ namespace pst {
 		switch (as_keyword) {
 		case Keyword::Fun:
 			return internal::parseStmt<Method>(state, ctx);
-		case Keyword::Const:
+		case Keyword::Let:
+		case Keyword::Var:
 			return internal::parseStmt<Field>(state, ctx);
 		case Keyword::Alias:
 		case Keyword::Using:
