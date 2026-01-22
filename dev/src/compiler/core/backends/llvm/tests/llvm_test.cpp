@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -200,6 +201,22 @@ private:
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+
+	void referencesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/references");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Just a simple load count verification.
+		std::smatch matches;
+		int         ptr_loads    = 0;
+		std::string search_range = ir;
+		std::regex  ptr_load_regex{ R"(load ptr, ptr %\S+)" };
+		while (std::regex_search(search_range, matches, ptr_load_regex)) {
+			ptr_loads++;
+			search_range = matches.suffix();
+		}
+		assertTrue(ptr_loads == 17, "Too few pointer loads");
+	}
 
 	void floatingPointTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/floating_point");

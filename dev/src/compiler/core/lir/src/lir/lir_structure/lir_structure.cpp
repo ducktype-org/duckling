@@ -99,12 +99,23 @@ namespace compiler::lir {
 			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
+		void printChain(const std::vector<LIRPlace::Projection>& chain, std::ostream& loc_output) {
+			for (const auto& proj: chain) {
+				variant_match(proj.storage) {
+					variant_case(LIRPlace::FieldProjection, field) {
+						loc_output << "." << name(field.field_id).strView();
+					}
+					variant_case_novalue(LIRPlace::DerefProjection) { loc_output << ".*"; }
+				}
+			}
+		}
+
 		void printOutput(const LIRPlace& output, std::ostream& loc_output) {
 			variant_match(output.base) {
 				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
 				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
-			for (const auto& arg: output.access_chain) loc_output << "." << name(arg).strView();
+			printChain(output.projection_chain, loc_output);
 		}
 
 		void printValue(const LIRValue& location) {
@@ -115,7 +126,8 @@ namespace compiler::lir {
 						variant_case(LIRLocalRef, local) { printLocal(local, output); }
 						variant_case(LIRGlobal, global) { printGlobal(global, output); }
 					}
-					for (const auto& arg: place.access_chain) output << "." << name(arg).strView();
+
+					printChain(place.projection_chain, output);
 				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
