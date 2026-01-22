@@ -3,6 +3,7 @@ from .helpers import (
     all_flag,
     auto_fix,
     branch,
+    no_fix,
     no_merge_base,
     verbose,
 )
@@ -19,12 +20,7 @@ from click import command, option
 )
 @no_merge_base()
 @auto_fix()
-@option(
-    "--no-fix",
-    is_flag=True,
-    help="Do not apply automatic fixes, only report them.",
-    default=False,
-)
+@no_fix()
 @verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):
     """Check for violations of

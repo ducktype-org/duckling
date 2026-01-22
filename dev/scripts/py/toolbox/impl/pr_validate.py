@@ -11,7 +11,12 @@ from .integration.tester import tester_impl, DEFAULT_LOG_FILE_PATH
 
 
 def pr_validate_impl(
-    clang_tidy_path: str, clang_format_path: str, build_dir: str, thread_count: int, auto_fix: bool
+    clang_tidy_path: str,
+    clang_format_path: str,
+    build_dir: str,
+    thread_count: int,
+    auto_fix: bool,
+    no_fix: bool,
 ):
     """
     Perform PR validation steps.
@@ -20,7 +25,7 @@ def pr_validate_impl(
     """
 
     # Step 1 - duck linter
-    if not duck_linter_impl(auto_fix=auto_fix):
+    if not duck_linter_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("Duck linter has failed")
 
     # Step 2 - validate !todos and !fixmes
@@ -38,6 +43,7 @@ def pr_validate_impl(
         build_dir=build_dir,
         thread_count=thread_count,
         auto_fix=auto_fix,
+        no_fix=no_fix,
     )
 
     if clang_format_failed:
@@ -71,6 +77,8 @@ def pr_validate_impl(
         build_dir=build_dir,
         thread_count=thread_count,
         auto_fix=auto_fix,
+        no_fix=no_fix,
     )
+
     if clang_tidy_failed:
         exit_with_error("C++ clang-tidy check has failed")

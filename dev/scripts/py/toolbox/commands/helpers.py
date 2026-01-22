@@ -1,6 +1,6 @@
 import os
 
-from click import option, Choice
+from click import Option, UsageError, option, Choice
 
 
 def create_option(*def_arg, **def_kwargs):
@@ -151,10 +151,50 @@ def verbose(*args, **kwargs):
         default=False,
     )(*args, **kwargs)
 
+
 def auto_fix(*args, **kwargs):
     return create_option(
         "--auto-fix",
         is_flag=True,
         help="Apply fixes automatically instead of prompting.",
         default=False,
+        cls=MutuallyExclusiveOption,
+        mutually_exclusive=["no_fix"],
     )(*args, **kwargs)
+
+
+def no_fix(*args, **kwargs):
+    return create_option(
+        "--no-fix",
+        is_flag=True,
+        help="Do not apply automatic fixes, only report them.",
+        default=False,
+        cls=MutuallyExclusiveOption,
+        mutually_exclusive=["auto_fix"],
+    )(*args, **kwargs)
+
+
+## HERE DEFINE HELPER CLASSES USED IN OPTIONS
+
+
+class MutuallyExclusiveOption(Option):
+    # Thanks to: https://stackoverflow.com/questions/37310718/mutually-exclusive-option-groups-in-python-click
+    def __init__(self, *args, **kwargs):
+        self.mutually_exclusive = set(kwargs.pop("mutually_exclusive", []))
+        help = kwargs.get("help", "")
+        if self.mutually_exclusive:
+            ex_str = ", ".join(self.mutually_exclusive)
+            kwargs["help"] = help + (
+                " NOTE: This argument is mutually exclusive with "
+                " arguments: [" + ex_str + "]."
+            )
+        super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
+
+    def handle_parse_result(self, ctx, opts, args):
+        if self.mutually_exclusive.intersection(opts) and self.name in opts:
+            raise UsageError(
+                "Illegal usage: `{}` is mutually exclusive with "
+                "arguments `{}`.".format(self.name, ", ".join(self.mutually_exclusive))
+            )
+
+        return super(MutuallyExclusiveOption, self).handle_parse_result(ctx, opts, args)

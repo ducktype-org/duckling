@@ -25,6 +25,7 @@ def cpp_linter_impl(
     all: bool = False,
     no_merge_base: bool = False,
     auto_fix: bool = False,
+    no_fix: bool = False,
 ) -> tuple[bool, bool]:
     """
     Perform C++ linting using clang-tidy and clang-format.
@@ -42,7 +43,7 @@ def cpp_linter_impl(
         all: If True, lint all C++ files in the repo; otherwise, only modified files
         no_merge_base: If True, skip merge base calculation when determining modified files
         auto_fix: If True, apply automatic fixes when possible
-
+        no_fix: If True, do not apply automatic fixes, only report them
     """
 
     if not clang_tidy_path and not clang_format_path:
@@ -72,7 +73,7 @@ def cpp_linter_impl(
             clang_tidy_failed |= ct_failed
             clang_format_failed |= cf_failed
 
-    if clang_format_failed:
+    if clang_format_failed and not no_fix:
         log_new_line()
         apply = auto_fix
         if not auto_fix:

@@ -7,6 +7,7 @@ from .helpers import (
     build_dir,
     clang_format,
     clang_tidy,
+    no_fix,
     no_merge_base,
     thread_count,
 )
@@ -33,6 +34,7 @@ from ..impl.helpers import (
     help="Number of threads used when linting. Defaults to the number of available threads.",
 )
 @auto_fix()
+@no_fix()
 def cpp_linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 
