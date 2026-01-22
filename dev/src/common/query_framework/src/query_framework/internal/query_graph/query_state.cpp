@@ -644,7 +644,8 @@ namespace query::internal {
 		// STEP 2b: Remove unstable nodes that have only 1 child
 		// Queue for nodes to process; we process from roots to leaves
 		// REQUIREMENT: THERE CANNOT BE DUPLICATES IN PARENTS, and the parent map cannot contain
-		// deleted nodes. It is good if the children are also not deleted, but it is not necessary.
+		// deleted nodes. SAME for CHILDREN, since we reverse the graph for the step 2b.
+		// This is ensured by the previous steps and the deduplication calls.
 
 		// Two passes: remove nodes with a single parent, then transpose to remove nodes with single
 		// child
@@ -653,6 +654,7 @@ namespace query::internal {
 			// To not add same parent multiple times
 			VectorMap<bool> was_original_child(node_count, false);
 
+			// This is important since we process nodes with all their parents processed
 			VectorMap<usize> number_of_processed_parents(node_count, 0);
 
 			IF_BUILD_TYPE_DEV(VectorMap<bool> processed(node_count, false);)
@@ -661,18 +663,26 @@ namespace query::internal {
 			// It is declared here to avoid reallocations
 			VectorStack<LocalNodeID> children_to_process;
 
-			// Invariant: All parents of the current node are processed correctly
-			// and current node has all FINAL living parents in parent_map.
-			// Current node is not removed and will not be removed.
-			// Also, number_of_parents[current] has the correct value of FINAL living parents.
-			// Current node has either more than 1 parent or it must be preserved.
-			// The children of the current node aren't processed yet.
-			// We remove unstable children that have only 1 parent (current), and connect children
-			// of removed children to current. This does not increase the number of edges in the
-			// graph, but removes unnecessary nodes. We also remove nodes that after processing have
-			// only 1 child and are not needed to be preserved by connecting their only child to all
-			// their parents. This also does not increase the number of edges in the graph, but
-			// decreases the number of nodes.
+			// Invariant: 1. All parents of the current node are processed correctly by this
+			// algorithm
+			// 2. Current node has > 1 living parents or it is a preserved node
+			// 3. Current node is not removed and will not be removed. This is important since we
+			// connect grandchildren to current
+			// 4. The parents of current migt have been removed already, but the
+			// number_of_parents[current] must cointain number of living parents Also the
+			// number_of_processed_parents[current] must be correct and contains the number of
+			// living processed parents. Point 3 must hold for correctness and linear complexity.
+			// 5. All chindren of current are unprocessed. So they weren't removed yet. This point
+			// is equivalent to point 1. Algorithm flow: We remove unstable children that have only
+			// 1 parent (current), and connect their children (grandchildren of current) to current
+			// directly. This might create new children for current that have only 1 parent
+			// (current), se we also need to process them. This continues until no more children can
+			// be removed. If the children cannot be removed, we schedule them for processing later.
+			// If current node has not all parents processed yet, we skip it for now and the last
+			// processed parent will re-schedule it. This is required to keep the invariant correct.
+			// The algorithm works in amortized linear time since each node is processed only once,
+			// and each edge is processed only once.
+
 			while (!to_process.empty()) {
 				usize current = to_process.pop();
 
@@ -792,6 +802,8 @@ namespace query::internal {
 					was_original_child[children[j]] = false;
 			}
 
+			// Clear the vector Queue for re-use
+			// This only saves memory
 			to_process.clear();
 
 			// Assert that all nodes are either processed or removed
