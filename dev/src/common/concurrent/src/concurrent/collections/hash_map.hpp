@@ -162,6 +162,9 @@ namespace concurrent {
 		 * @important In the current implementation GCD(SHARD_COUNT, 2) must be 1.
 		 * Otherwise, the distribution of keys over buckets in individual shards is highly
 		 * non-uniform, as the modulus used to select the buckets are the powers of two.
+		 *
+		 * @note In the future we might want to make SHARD_COUNT configurable, so it can be smaller
+		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent queries).
 		 */
 		constexpr static u64 SHARD_COUNT = 129;
 
