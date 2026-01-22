@@ -18,7 +18,7 @@ from click import command, option
 )
 @no_merge_base()
 @option(
-    "--no-fix",
+    "--auto-fix",
     is_flag=True,
     help="Apply fixes automatically instead of prompting."
 )
