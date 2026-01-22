@@ -156,6 +156,21 @@ public:
 	bool remove(const std::string& key) { return m_map.erase(key); }
 };
 
+class DuckMapOrig {
+	concurrent::ConHashMapOrig<std::string, int, std::hash<std::string>> m_map;
+
+public:
+	void put(const std::string& key, int value) { m_map.maybePut(key, value); }
+
+	std::optional<int> get(const std::string& key) {
+		auto v = m_map.atMaybe(key);
+		if (v.has_value()) return *v.value();
+		return {};
+	}
+
+	bool remove(const std::string& key) { return m_map.erase(key); }
+};
+
 class DuckStdMap {
 	concurrent::ConHashMapStd<std::string, int> m_map;
 
@@ -275,6 +290,8 @@ int main(int argc, char** argv) {
 		run<DuckMap>(num_workers, num_keys, num_ops, key_set);
 	else if (strcmp(argv[2], "DuckStdMap") == 0)
 		run<DuckStdMap>(num_workers, num_keys, num_ops, key_set);
+	else if (strcmp(argv[2], "DuckMapOrig") == 0)
+		run<DuckMapOrig>(num_workers, num_keys, num_ops, key_set);
 	else if (strcmp(argv[2], "ThreadUnsafeMap") == 0)
 		run<ThreadUnsafeMap>(num_workers, num_keys, num_ops, key_set);
 	else if (strcmp(argv[2], "ThreadUnsafeDuckMap") == 0)
