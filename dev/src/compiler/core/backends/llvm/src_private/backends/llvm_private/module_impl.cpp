@@ -1,3 +1,4 @@
+#include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -15,11 +16,34 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 namespace compiler::backend_llvm {
+	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
+
 	ModuleImpl::ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {
 		const std::string target_triple = llvm::sys::getDefaultTargetTriple();
 		setTargetMachine(target_triple);
 		this->module->setDataLayout(target_machine->createDataLayout());
 		this->module->setTargetTriple(target_machine->getTargetTriple().getTriple());
+	}
+
+	/**
+	 * @brief Convert our OptimizationLevel enum to LLVM's CodeGenOptLevel for machine code gen.
+	 */
+	llvm::CodeGenOptLevel toLLVMCodeGenOptLevel(const LLVMOptimizationLevel level) {
+		switch (level) {
+		case LLVMOptimizationLevel::O0:
+			return llvm::CodeGenOptLevel::None;
+		case LLVMOptimizationLevel::O1:
+			return llvm::CodeGenOptLevel::Less;
+		case LLVMOptimizationLevel::O2:
+			return llvm::CodeGenOptLevel::Default;
+		case LLVMOptimizationLevel::O3:
+			return llvm::CodeGenOptLevel::Aggressive;
+		case LLVMOptimizationLevel::Os:
+			return llvm::CodeGenOptLevel::Default;
+		case LLVMOptimizationLevel::Oz:
+			return llvm::CodeGenOptLevel::Default;
+		}
+		CORE_UNREACHABLE();
 	}
 
 	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {
@@ -60,7 +84,9 @@ namespace compiler::backend_llvm {
 						opt,
 						llvm::Reloc::PIC_,
 						std::nullopt,
-						llvm::CodeGenOptLevel::None
+						toLLVMCodeGenOptLevel(
+							global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+						)
 					));
 				return this->target_machine.refMut().toOpt().value();
 			}
