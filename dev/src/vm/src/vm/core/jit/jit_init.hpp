@@ -5,4 +5,4 @@
 #pragma once
 
 // add to init::init possibly
-__attribute__((noinline))void llvmInit();
+__attribute__((noinline)) void llvmInit();

@@ -404,13 +404,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_ptr)(FUNCTION_ARGS) {
 		{
-			auto* code_ptr = reinterpret_cast<char*>(instr->arg0);
-			char  buffer[1'000];
-			memcpy(buffer, code_ptr, 100);
-
-			std::ofstream file{ "output.out" };
-			for (char c: buffer) file << c;
-
 			// performFunctionCall(instr, local_stack, frame, thread, instr->arg1);
 			auto* func_ptr = reinterpret_cast<JitOpFun*>(instr->arg0);
 			std::cerr << "Attempting JITted function call\n";

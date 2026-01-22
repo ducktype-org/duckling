@@ -74,11 +74,9 @@ void llvmInit() {
 	lljitInstance = ExitOnErr(LLJITBuilder().create());
 
 	auto& jd = lljitInstance->getMainJITDylib();
-	jd.addGenerator(cantFail(
-		llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-			lljitInstance->getDataLayout().getGlobalPrefix()
-		)
-	));
+	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
+		lljitInstance->getDataLayout().getGlobalPrefix()
+	)));
 
 	// Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(StringRef(opcodes, sizeof(opcodes)), "", false);
@@ -105,8 +103,8 @@ void llvmInit() {
 					// CORE_PANIC("Duplicate opcode function name: ", name);
 				} else {
 					// Sanity check, that instructions sizes make sense.
-					std::cerr << "found " << name << " number: " << static_cast<uint64_t>(opcode) << " with "
-							  << F.getInstructionCount() << " instructions\n";
+					std::cerr << "found " << name << " number: " << static_cast<uint64_t>(opcode)
+							  << " with " << F.getInstructionCount() << " instructions\n";
 					FuncMap[opcode] = &F;
 				}
 			}

@@ -9,8 +9,7 @@
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>  // maybe remove this dependency?
 
 namespace vm {
-    using JitOpFun = void(vm::MicroInstruction const**, std::byte**, vm::Frame**, vm::VMThread*);
+	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
 }
 
 vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data);
-
