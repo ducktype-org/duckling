@@ -36,7 +36,7 @@ jobs:
           submodules: true
 
       - name: Install dependencies
-        run: sudo apt -y install doxygen graphviz llvm-19 llvm-19-dev
+        run: sudo apt -y install doxygen graphviz llvm-19 llvm-19-dev clang-19
 
       - name: Create Python virtual environment
         working-directory: ${{ env.DEV_DIR }}
@@ -52,7 +52,7 @@ jobs:
            -B ${{ env.BUILD_DIR }} \
            -D BUILD_DOCS=ON \
            -D CMAKE_BUILD_TYPE=Debug
-      
+
       - name: Build docs
         working-directory: ${{ env.DEV_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- docs
@@ -74,10 +74,10 @@ jobs:
           echo "${{ secrets.WWW_SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           echo "${{ secrets.WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-      
+
       # Move "doxygen" to specified directory on server.
       # The destination directory is ignored by the server and preconfigured one is used.
-      # rsync is a tool for syncing files between two locations and avoiding 
+      # rsync is a tool for syncing files between two locations and avoiding
       # unnecessary copying.
       # -a: archive mode, preserves permissions, timestamps, enables recursion,
       # -z: compresses data during transfer,
