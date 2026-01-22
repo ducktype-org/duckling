@@ -25,7 +25,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome};
+use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome, quackpack::core::PackageId};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
@@ -69,6 +69,10 @@ impl StoragePaths {
             sync_lock_base,
             data_lock_base,
         }
+    }
+
+    pub(super) fn pkg_dir(&self, package: &PackageId) -> PathBuf {
+        self.package_dir.join(package.storage_name())
     }
 
     pub(super) fn clean_lock(&self) -> &Path {

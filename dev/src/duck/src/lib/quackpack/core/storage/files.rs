@@ -51,12 +51,18 @@
 //! however only relatively new virtual environments.
 
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
     io::{self, Read, Write},
     path::Path,
 };
 
-use crate::QuackResult;
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    QuackResult, StrId,
+    quackpack::core::{FeatureName, Git, GitId, PackageId},
+};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -104,4 +110,22 @@ impl PathExt for Path {
             Err(e) => Err(e.into()),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PackageFreeze {
+    pub dependencies: HashMap<StrId, PackageId>,
+    pub used_flags: Vec<FeatureName>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Dependency {
+    id: PackageId,
+    data: PackageFreeze,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct GitFetchCacheEntry {
+    source: Git,
+    result: GitId,
 }

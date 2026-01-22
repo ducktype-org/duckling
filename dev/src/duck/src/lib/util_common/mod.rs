@@ -1,4 +1,5 @@
 pub mod error;
+pub mod hash;
 pub mod toml_config;
 pub mod yaml_config;
 
