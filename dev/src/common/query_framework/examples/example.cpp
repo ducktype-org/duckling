@@ -1,5 +1,7 @@
 #include "example.hpp"
 
+#include <diagnostic_interactive/message.hpp>
+
 #include <diagnostic/diagnostic_converters.hpp>
 #include <init/init.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -15,44 +17,43 @@
 
 // make this link less bug-prone...:
 struct IMPLEMENT_QUERY(Query1, uint64_t) {
-	struct InfoInQuery1 final: dia::Info {
-		explicit InfoInQuery1(const dia::SourcePosition& source_position): Info(source_position) {}
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Some random log from Query1.";
+	/**
+	 * @brief Some dummy docs message for demonstration purposes.
+	 *
+	 * Search in editor for the `docs/example/example.yaml` to see how the message is defined in the
+	 * `yaml` template file.
+	 */
+	class ExampleDocs final: public dia_int::MessageBase {
+		dia_int::Metadata getMetadata() const final {
+			return {
+				.template_type = "message", .type = "docs", .family = "example", .name = "example"
+			};
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Misc;
+		ExampleDocs(std::string language_name) {
+			addArgument<dia_int::TextArgument>("language_name", std::move(language_name));
+			addArgument<dia_int::TextArgument>("country_name", "Poland");
 		}
 	};
 
-	struct ErrorInQuery1 final: dia::Error {
-		struct NoteInQuery1 final: dia::Note {
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "A useless note in an example error in Query1.";
-			}
-		};
-
-		explicit ErrorInQuery1(const dia::SourcePosition& source_position): Error(source_position) {
-			addNote(makeBox<NoteInQuery1>());
-		}
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "An example error in Query1.";
+	/**
+	 * @brief Some dummy error message for demonstration purposes.
+	 *
+	 * Search in editor for the `error/misc/example.yaml` to see how the message is defined in the
+	 * `yaml` template file.
+	 */
+	class ExampleError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return {
+				.template_type = "message", .type = "error", .family = "misc", .name = "example"
+			};
 		}
 
 	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Misc;
+		ExampleError(dia::SourcePosition source_pos, std::string argument):
+			  MessageWithCodeFragmentAndCause(source_pos) {
+			addArgument<dia_int::TextArgument>("argument", std::move(argument));
 		}
 	};
 
@@ -62,8 +63,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// Log something, with example file path.
-		context.log(makeBox<InfoInQuery1>(dia::SourcePosition::fakePosition()));
-		context.log(makeBox<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
+		context.logInt(makeBox<ExampleDocs>("Duckling"));
+		context.logInt(makeBox<ExampleError>(dia::SourcePosition::fakePosition(), "wrong type"));
 		return squareValue(context, key);
 	}
 
@@ -147,10 +148,7 @@ int main() {
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";
-	query::Context::logger.dumpLog(true);
-
-	std::cerr << "And here are the logs in JSON:\n";
-	query::Context::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
+	query::Context::int_logger.terminalPrint(std::cerr);
 
 	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
 

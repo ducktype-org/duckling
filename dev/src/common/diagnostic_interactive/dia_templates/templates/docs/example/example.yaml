@@ -7,7 +7,6 @@ metadata:
   active_until: "now"
   template_type: "message"
 
-
 params:
   language_name:
     description: "The best programming language in the world."

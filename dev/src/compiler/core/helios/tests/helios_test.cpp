@@ -2271,7 +2271,6 @@ private:
 			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
 			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
 
-			ctx.logger.clear();
 			assertTrue(
 				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasFailed(),
 				"Trying to lift an unliftable tuple to a type should fail."
