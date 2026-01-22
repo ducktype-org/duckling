@@ -13,13 +13,14 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios_private/expressions/errors.hpp>
+#include <helios_private/errors/interactive_errors.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -90,6 +91,7 @@ public:
 		TESTER_ADD_TEST(testErrorAmbiguousCallableCandidates);
 		TESTER_ADD_TEST(testErrorAmbiguousReturnType);
 		TESTER_ADD_TEST(testErrorUnknownEscapeSequence);
+		TESTER_ADD_TEST(testInteractiveErrorMessages);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -1703,7 +1705,7 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
-		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
+		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooE$metadata_v123", mangled_goo.str());
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 		std::cerr << "taw3e8\t" << mangled_glob_a.strView() << '\n';
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
@@ -2150,6 +2152,7 @@ private:
 
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto result = ctx.query<compiler::helios::QueryModuleHOUTRecursively>(module_id);
+
 				assertTrue(
 					result.hasFailed(),
 					"Expected overload resolution to fail due to ambiguous exact matches."
@@ -2459,6 +2462,77 @@ private:
 			ctx.int_logger.dumpLog(true, std::cerr);
 		});
 	}
+
+	void testInteractiveErrorMessages() {
+        using namespace compiler::helios::code;
+        using namespace compiler::helios;
+        using dia_int::testDiagnosticMessage;
+
+        std::stringstream ss;
+
+        query::utils::withContextDo([&](query::Context& ctx) {
+             const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, compiler::tsh::IntegralAbstractType::Signed });
+             auto st = compiler::tsh::SymbolType{
+                int32_type,
+                compiler::tsh::ReferenceKind::Direct,
+                compiler::tsh::Mutability::Mutable,
+             };
+
+             // UndefinedBinaryOperatorError
+             testDiagnosticMessage<UndefinedBinaryOperatorError>(
+                 ss,
+                 dia::SourcePosition::fakePosition(),
+                 "+",
+                 makeBox<InteractiveType>(ctx, st),
+                 makeBox<InteractiveType>(ctx, st)
+             );
+
+             // UndefinedUnaryOperatorError
+             testDiagnosticMessage<UndefinedUnaryOperatorError>(
+                 ss,
+                 dia::SourcePosition::fakePosition(),
+                 "-",
+                 makeBox<InteractiveType>(ctx, st)
+             );
+
+             // InvalidNumericLiteralError
+             testDiagnosticMessage<InvalidNumericLiteralError>(
+                 ss,
+                 dia::SourcePosition::fakePosition()
+             );
+
+             // NumericLiteralTooLargeError
+             testDiagnosticMessage<NumericLiteralTooLargeError>(
+                 ss,
+                 dia::SourcePosition::fakePosition()
+             );
+             
+             // LiteralDoesNotFitError
+             testDiagnosticMessage<LiteralDoesNotFitError>(
+                 ss,
+                 dia::SourcePosition::fakePosition(),
+                 "signed integer"
+             );
+
+             // EmptyChainExpressionError
+             testDiagnosticMessage<EmptyChainExpressionError>(
+                 ss,
+                 dia::SourcePosition::fakePosition()
+             );
+             
+             // SingleStmtFunctionMustBeExprError
+             testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
+                 ss,
+                 dia::SourcePosition::fakePosition()
+             );
+
+             // ImmutableVariableNoInitError
+             testDiagnosticMessage<ImmutableVariableNoInitError>(
+                 ss,
+                 dia::SourcePosition::fakePosition()
+             );
+        });
+    }
 
 	void testScopeParentsAndDepth() {
 		auto all_scopes = compiler::helios::getAllHeliosScopes();

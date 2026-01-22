@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "errors.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -725,10 +727,9 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-						chain_elements[0].unlock(query_ctx)->getSourcePosition(),
-						"Chain expression is empty"
+				query_ctx.logInt(
+					makeBox<EmptyChainExpressionError>(
+						chain_elements[0].unlock(query_ctx)->getSourcePosition()
 					)
 				);
 				return query::Failed();

@@ -223,20 +223,16 @@ namespace compiler::helios::code {
 				// * make function call
 				// For now we support just builtins
 
-				// if no function call is found, we try to use builtin operators:
-				auto lhs_type = lhs->expression_type.getType();
-				auto rhs_type = rhs->expression_type.getType();
-
 				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<code::UndefinedBinaryOperator>(
+					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 						stmt->getSourcePosition(),
 						stmt->getOperator().str(),
-						lhs_type.toString(),
-						rhs_type.toString()
+						makeBox<InteractiveType>(ctx, lhs->expression_type),
+						makeBox<InteractiveType>(ctx, rhs->expression_type)
 					));
 					// failed
 				}
@@ -411,15 +407,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto expr_type = inner->expression_type.getType();
 				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<UndefinedUnaryOperator>(
-						stmt->getSourcePosition(), stmt->getOperator().str(), expr_type.toString()
+					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						makeBox<InteractiveType>(ctx, inner->expression_type)
 					));
 					// failed
 				}
@@ -487,11 +484,11 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.log(makeBox<code::UndefinedBinaryOperator>(
+						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 							stmt->getSourcePosition(),
 							pst_operators.at(i).str(),
-							lhs_type.toString(),
-							rhs_type.toString()
+							makeBox<InteractiveType>(ctx, lhs_type),
+							makeBox<InteractiveType>(ctx, rhs_type)
 						));
 
 						return;
