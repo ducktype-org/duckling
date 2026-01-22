@@ -16,6 +16,7 @@ add_files(
 	thread/low_program/instruction.cpp
 	thread/vmthread.cpp
     thread/vmvalue.cpp
+	jit/jit_compiler.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 
@@ -24,4 +25,5 @@ add_files(
 	jit/opcode_definitions.cpp
 )
 
-set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE) 
+set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
+
