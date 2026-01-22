@@ -1,12 +1,11 @@
 #include "lir_structure.hpp"
 
 #include <helios/hout/hout.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/lower/queries.hpp>
-
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/simple.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/lower/queries.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
