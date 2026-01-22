@@ -69,9 +69,7 @@ namespace compiler::helios {
 			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 		);
 
-		[[nodiscard]] bool isEmptyCoercion() const noexcept {
-			return validated_from.getType() == to.getType();
-		}
+		[[nodiscard]] bool isEmptyCoercion() const noexcept { return validated_from == to; }
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
 			return { from_and_to, from_and_to };
