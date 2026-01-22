@@ -95,7 +95,7 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
-<function-type> ::= "F" <function-qualifier>* <return-type> (<function-argument>)* "E"
+<function-type> ::= "F" <function-qualifier>* <return-type> <function-argument>* "E"
 
 <return-type> ::= <type>
 
