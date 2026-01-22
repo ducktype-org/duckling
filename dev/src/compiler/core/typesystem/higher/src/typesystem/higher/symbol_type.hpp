@@ -188,6 +188,12 @@ namespace compiler::tsh {
 			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
 		}
 
+		[[nodiscard]]
+		SymbolType getPointeeSymbolType() const {
+			CORE_ASSERT(reference_kind != ReferenceKind::Direct, "Cannot dereference a Direct type");
+			return withReferenceKind(ReferenceKind::Direct);
+		}
+
 		/**
 		 * @brief Three-way comparison with another SymbolType.
 		 *

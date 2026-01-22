@@ -1,6 +1,6 @@
 #include "pst_walkers.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/class_elements/access_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/class_specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
@@ -17,7 +17,7 @@ namespace compiler::helios {
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {
-			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::ClassSpecifierBlock>()) {
 				auto access_block = access_block_opt.value();
 				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
 			} else

@@ -66,7 +66,7 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 		writeToView<TYPE>(view, VALUE);                                                        \
 	} while (false)
 
-#if defined(__clang__) && __clang__ >= 13
+#if defined(__clang_major__) && __clang_major__ >= 13
 	#define MUST_TAIL [[clang::musttail]]
 #elif defined(__GNUG__) && __GNUG__ >= 15
 	#define MUST_TAIL [[gnu::musttail]]

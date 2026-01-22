@@ -577,7 +577,7 @@ namespace compiler::tsh {
 		);
 
 		[[nodiscard]] bool hasNoOpDestructor() const override {
-			// @TODO #1273: this is a placeholder, implemnt proper logic
+			// @TODO: #1273 this is a placeholder, implement proper logic
 			return false;
 		}
 
@@ -674,7 +674,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override {
-			// @TODO #1274: this is a placeholder, implemnt proper logic
+			// @TODO: #1274 this is a placeholder, implement proper logic
 			return false;
 		}
 
@@ -719,7 +719,7 @@ namespace compiler::tsh {
 		ModuleAbstractTypeImpl() = default;
 
 		[[nodiscard]] bool hasNoOpDestructor() const override {
-			// @TODO #1275: this is a placeholder, implemnt proper logic
+			// @TODO: #1275 this is a placeholder, implement proper logic
 			return false;
 		}
 
