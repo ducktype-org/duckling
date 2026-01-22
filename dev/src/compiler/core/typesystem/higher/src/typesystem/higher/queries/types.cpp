@@ -83,7 +83,7 @@ namespace compiler::tsh {
 
 			if (!cache.contains({ size, signedness })) {
 				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Invalid size of float type: ", size, "."),
+					base::strConcat("Invalid size of integral type: ", size, "."),
 					"The only allowed sizes are 16, 32, 64, 80, and 128."
 				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
