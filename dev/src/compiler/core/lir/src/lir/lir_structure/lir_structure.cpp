@@ -1,8 +1,8 @@
 #include "lir_structure.hpp"
 
-#include "helios/hout/hout.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/lower/queries.hpp"
+#include <helios/hout/hout.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/lower/queries.hpp>
 
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/simple.hpp>
@@ -17,7 +17,6 @@
 namespace compiler::lir {
 	/**
 	 * @brief Creates LIR local data from MIR local data.
-	 * @todo change argument to MIR local reference.
 	 * @important remember that LIRLocal should only be stored in a LIR function.
 	 *
 	 * @param ctx
