@@ -12,7 +12,7 @@
  *  - for Box<T>* it calls the parser of T object into the specified location
  *
  * all() takes the state and any number of additional arguments and calls parseOne on those
- * arguments from left to right. 
+ * arguments from left to right.
  */
 #pragma once
 
@@ -73,11 +73,10 @@ namespace pst {
 		 */
 		PSTAutomatic& one(Keyword key) {
 			PST_AUTOMATIC_SKIP(*this);
-			if (!state.tryEat(key)) {
+			if (!state.tryEat(key))
 				state.logInt(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
-			} else {
+			else
 				el->addToken(state[-1]);
-			}
 			return *this;
 		}
 
@@ -87,11 +86,10 @@ namespace pst {
 		 */
 		PSTAutomatic& one(Special spec) {
 			PST_AUTOMATIC_SKIP(*this);
-			if (!state.tryEat(spec)) {
+			if (!state.tryEat(spec))
 				state.logInt(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
-			} else {
+			else
 				el->addToken(state[-1]);
-			}
 			return *this;
 		}
 
@@ -101,11 +99,10 @@ namespace pst {
 		 */
 		PSTAutomatic& one(Operator op) {
 			PST_AUTOMATIC_SKIP(*this);
-			if (!state.tryEat(op)) {
+			if (!state.tryEat(op))
 				state.logInt(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
-			} else {
+			else
 				el->addToken(state[-1]);
-			}
 			return *this;
 		}
 
@@ -226,8 +223,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		PSTAutomatic& one(
-			AccessInternalAnonymous<T>* result) {
+		PSTAutomatic& one(AccessInternalAnonymous<T>* result) {
 			PST_AUTOMATIC_SKIP(*this);
 			with(result, T::parse);
 			return *this;
