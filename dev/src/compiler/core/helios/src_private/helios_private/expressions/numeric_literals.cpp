@@ -29,13 +29,9 @@ namespace compiler::helios::code {
 				if (result.ec
 				    == std::errc::invalid_argument) {  // Not a number at all. This will be returned
 					                                   // when trying to parse "abc".
-					ctx.logInt(
-						makeBox<InvalidNumericLiteralError>(position)
-					);
+					ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
 				} else if (result.ec == std::errc::result_out_of_range) {
-					ctx.logInt(
-						makeBox<NumericLiteralTooLargeError>(position)
-					);
+					ctx.logInt(makeBox<NumericLiteralTooLargeError>(position));
 				}
 				return false;
 			}
@@ -45,9 +41,7 @@ namespace compiler::helios::code {
 			// "123" literal and stop on the first non numeric char. Here we check that the whole
 			// string was parsed.
 			if (result.ptr != value.data() + value.size()) {
-				ctx.logInt(
-					makeBox<InvalidNumericLiteralError>(position)
-				);
+				ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
 				return false;
 			}
 			return true;
@@ -64,11 +58,7 @@ namespace compiler::helios::code {
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 
 			if (!base::fitsIn<TargetInt>(parsed_value)) {
-				ctx.logInt(
-					makeBox<LiteralDoesNotFitError>(
-						position, "signed integer type"
-					)
-				);
+				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "signed integer type"));
 				return {};
 			}
 
@@ -85,11 +75,7 @@ namespace compiler::helios::code {
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			if (!base::fitsIn<TargetUInt>(parsed_value)) {
-				ctx.logInt(
-					makeBox<LiteralDoesNotFitError>(
-						position, "unsigned integer type"
-					)
-				);
+				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "unsigned integer type"));
 				return {};
 			}
 			return numeric_value::NumericValue(static_cast<TargetUInt>(parsed_value));

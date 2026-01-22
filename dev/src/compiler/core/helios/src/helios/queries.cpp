@@ -15,7 +15,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
@@ -560,11 +561,7 @@ namespace compiler::helios {
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
 				return block;
 			} else {
-				ctx.logInt(
-					makeBox<SingleStmtFunctionMustBeExprError>(
-						stmt->getSourcePosition()
-					)
-				);
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
@@ -738,10 +735,7 @@ namespace compiler::helios {
 					// checking for emptiness, which causes a panic.
 					// @todo write a test for this once helios error handling is more robust
 					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-						ctx.logInt(makeBox<
-								ImmutableVariableNoInitError>(
-							stmt->getSourcePosition()
-						));
+						ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition()));
 						return;  // fail
 					}
 

@@ -1,3 +1,4 @@
+#include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
@@ -13,15 +14,15 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios_private/expressions/errors.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/coercions.hpp>
+#include <helios_private/expressions/errors.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -2466,69 +2467,60 @@ private:
 	}
 
 	void testErrorMessages() {
-        using namespace compiler::helios::code;
-        using namespace compiler::helios;
-        using dia_int::testDiagnosticMessage;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios;
+		using dia_int::testDiagnosticMessage;
 
-        std::stringstream ss;
+		std::stringstream ss;
 
-        query::utils::withContextDo([&](query::Context& ctx) {
-             const auto int32_type = ctx.query<compiler::tsh::QueryIntegralType>({ 32,Signed });
-             auto st = compiler::tsh::SymbolType{
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto int32_type = ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto       st         = compiler::tsh::SymbolType{
                 int32_type,
                 compiler::tsh::ReferenceKind::Direct,
                 compiler::tsh::Mutability::Mutable,
-             };
+			};
 
-             // UndefinedBinaryOperatorError
-             testDiagnosticMessage<UndefinedBinaryOperatorError>(
-                 ss,
-                 dia::SourcePosition::fakePosition(),
-                 "+",
-                 makeBox<InteractiveType>(ctx, st),
-                 makeBox<InteractiveType>(ctx, st)
-             );
+			// UndefinedBinaryOperatorError
+			testDiagnosticMessage<UndefinedBinaryOperatorError>(
+				ss,
+				dia::SourcePosition::fakePosition(),
+				"+",
+				makeBox<InteractiveType>(ctx, st),
+				makeBox<InteractiveType>(ctx, st)
+			);
 
-             // UndefinedUnaryOperatorError
-             testDiagnosticMessage<UndefinedUnaryOperatorError>(
-                 ss,
-                 dia::SourcePosition::fakePosition(),
-                 "-",
-                 makeBox<InteractiveType>(ctx, st)
-             );
+			// UndefinedUnaryOperatorError
+			testDiagnosticMessage<UndefinedUnaryOperatorError>(
+				ss, dia::SourcePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+			);
 
-             // InvalidNumericLiteralError
-             testDiagnosticMessage<InvalidNumericLiteralError>(
-                 ss,
-                 dia::SourcePosition::fakePosition()
-             );
+			// InvalidNumericLiteralError
+			testDiagnosticMessage<InvalidNumericLiteralError>(
+				ss, dia::SourcePosition::fakePosition()
+			);
 
-             // NumericLiteralTooLargeError
-             testDiagnosticMessage<NumericLiteralTooLargeError>(
-                 ss,
-                 dia::SourcePosition::fakePosition()
-             );
-             
-             // LiteralDoesNotFitError
-             testDiagnosticMessage<LiteralDoesNotFitError>(
-                 ss,
-                 dia::SourcePosition::fakePosition(),
-                 "signed integer"
-             );
-             
-             // SingleStmtFunctionMustBeExprError
-             testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-                 ss,
-                 dia::SourcePosition::fakePosition()
-             );
+			// NumericLiteralTooLargeError
+			testDiagnosticMessage<NumericLiteralTooLargeError>(
+				ss, dia::SourcePosition::fakePosition()
+			);
 
-             // ImmutableVariableNoInitError
-             testDiagnosticMessage<ImmutableVariableNoInitError>(
-                 ss,
-                 dia::SourcePosition::fakePosition()
-             );
-        });
-    }
+			// LiteralDoesNotFitError
+			testDiagnosticMessage<LiteralDoesNotFitError>(
+				ss, dia::SourcePosition::fakePosition(), "signed integer"
+			);
+
+			// SingleStmtFunctionMustBeExprError
+			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
+				ss, dia::SourcePosition::fakePosition()
+			);
+
+			// ImmutableVariableNoInitError
+			testDiagnosticMessage<ImmutableVariableNoInitError>(
+				ss, dia::SourcePosition::fakePosition()
+			);
+		});
+	}
 
 	void testScopeParentsAndDepth() {
 		auto all_scopes = compiler::helios::getAllHeliosScopes();

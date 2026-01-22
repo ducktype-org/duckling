@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -401,7 +401,7 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto inner = std::move(inner_res).valueOrThrow();
+				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
@@ -412,7 +412,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner));
+				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();

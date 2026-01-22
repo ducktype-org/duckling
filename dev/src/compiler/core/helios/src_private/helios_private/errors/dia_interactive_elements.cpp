@@ -1,9 +1,13 @@
-#include "interactive_errors.hpp"
+#include "dia_interactive_elements.hpp"
+
+#include "helios_private/symbols/pst_symbol_data.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
@@ -145,6 +149,38 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	dia::SourcePosition getFunctionLikeSourcePosition(
+		query::Context& ctx, pst::Access<pst::LangElement> function_like
+	) {
+		switch (function_like->getElementKind()) {
+		case pst::ElementKind::Fun: {
+			auto fun = function_like.dynamicCast<pst::Fun>().value();
+			return dia::SourcePosition::merge(
+				fun->getNameIdentifier().position, fun->getParams().unlock(ctx)->getSourcePosition()
+			);
+		}
+		case pst::ElementKind::FunDecl: {
+			auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
+			return dia::SourcePosition::merge(
+				fun_decl->getNameIdentifier().position,
+				fun_decl->getParams().unlock(ctx)->getSourcePosition()
+			);
+		}
+		case pst::ElementKind::ClassMethod: {
+			auto class_method = function_like.dynamicCast<pst::Method>().value();
+			return dia::SourcePosition::merge(
+				class_method->getNameIdentifier().position,
+				class_method->getParams().unlock(ctx)->getSourcePosition()
+			);
+		}
+		default:
+			CORE_PANIC(
+				"Expected a function, function-like or a method expected while getting function "
+				"source position."
+			);
+		}
+	}
+
 	InteractiveFunction::InteractiveFunction(
 		query::Context&                               ctx,
 		SymID                                         function_symbol,
@@ -152,14 +188,9 @@ namespace compiler::helios {
 	):
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
-		auto maybe_function = getSymRef(function_symbol)->getPSTData()->pst_element.unlock(ctx);
-		if (maybe_function->getElementKind() == pst::ElementKind::Fun) {
-			auto function  = maybe_function.dynamicCast<pst::Fun>().value();
-			auto fun_decl  = function->getParams().unlock(ctx);
-			auto fun_ident = function->getNameIdentifier();
-			auto position
-				= dia::SourcePosition::merge(fun_ident.position, fun_decl->getSourcePosition());
-			auto id = MessageBase::getUniqueID();
+		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstSymbolData>(), pst_data) {
+			auto position = getFunctionLikeSourcePosition(ctx, pst_data->pst_element.unlock(ctx));
+			auto id       = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));
 		}
 		this->displayed_name = name(function_symbol).str();

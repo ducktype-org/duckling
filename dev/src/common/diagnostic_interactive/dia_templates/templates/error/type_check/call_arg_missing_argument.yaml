@@ -7,39 +7,44 @@ metadata:
   active_until: "now"
   template_type: "message"
 
-
 params:
   code:
-    description: "The code snippet where the error occurred."
-  code_location:
-    description: "The location of the code snippet."
-  call_code:
     description: "The code snippet of the function call."
-  call_code_location:
+  code_location:
     description: "The location of the function call code snippet."
+  missing_arg_code:
+    description: "The code snippet of function declaration where the argument is missing."
+    optional: true
+  missing_arg_code_location:
+    description: "The location of the function declaration code snippet where the argument is missing."
+    optional: true
 
 header_message:
   - "The call is missing a required argument with no default value."
 
 description:
   - codeblock:
-      param: "call_code"
-    location:
-      param: "call_code_location"
-  - "For the function declared here: "
-  - codeblock:
       param: "code"
     location:
       param: "code_location"
-
+  - case:
+      is_param_provided: "missing_arg_code"
+    of:
+      true:
+        - "For the function declared here: "
+        - codeblock:
+            param: "missing_arg_code"
+          location:
+            param: "missing_arg_code_location"
+      false: "The function declaration where the argument is missing is not available."
 
 pointer_messages:
   cause:
     priority: 1
     type: "error"
-    content:
-      - "missing argument is required here"
-  call_cause:
+    content: []
+  missing_arg:
     priority: 1
     type: "error"
-    content: []
+    content:
+      - "missing argument is required here"
