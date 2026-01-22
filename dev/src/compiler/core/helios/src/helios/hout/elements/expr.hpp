@@ -549,7 +549,9 @@ namespace compiler::helios::code {
 	 *
 	 * This node is inserted in three cases:
 	 * - When a value of type `ref T` is coerced to `T`,
-	 * - When `ref T`/`box T` appears on the left-hand side of the assignment operator.
+	 * - When `ref T`/`box T` appears on the left-hand side of the assignment operator (it's worth
+	 * remembering that a reference is essentially a pointer with a convenient interface, thus all
+	 * assignments to it need to perform a dereference).
 	 * - During field access on a `ref T` / `box T` type.
 	 *
 	 * - In a context that requires a value, such as the right-hand side of an

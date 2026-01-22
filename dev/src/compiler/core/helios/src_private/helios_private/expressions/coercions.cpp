@@ -30,11 +30,7 @@ namespace compiler::helios {
 		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
 			current_expr       = makeBox<code::DerefExpr>(ctx, std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
-
-			// If underlying types are the same, return just the derefed value.
-			if (source_symbol_type == to) return current_expr;
-
-			// Otherwise if underlying types differ, proceed with the standard coercion.
+			// If underlying types differ, proceed with the standard coercion.
 		}
 
 		auto source_type = source_symbol_type.getType();

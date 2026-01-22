@@ -368,9 +368,10 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Extend the MIRPlace structure by adding a new FieldProjection to the projection
-		 * chain.
-		 * @note If the current `type` of the MIRPlace if a reference or a box a DerefProjection
-		 * will be automatically added.
+		 * chain. Panics is a FieldProjection is added on a non direct type.
+		 * @note This projection requires the type of the whole projection chain to be a direct
+		 * type. Which means a deref should be inserted in HOUT whenever a field is accessed through
+		 * a reference.
 		 *
 		 * @param ctx The query context for type resolution.
 		 * @param field The next field to access.
