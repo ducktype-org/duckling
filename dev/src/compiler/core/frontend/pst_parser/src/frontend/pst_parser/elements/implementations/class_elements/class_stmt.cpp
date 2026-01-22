@@ -11,7 +11,8 @@ namespace pst {
 		template<class T>
 		struct StmtClassifiers {
 			/**
-			 * @brief Function that checks heuristically for a potential end of a typical class statement.
+			 * @brief Function that checks heuristically for a potential end of a typical class
+			 * statement.
 			 *
 			 * Sentinel just indicates there are no more tokens.
 			 * The typical valid ends are:
@@ -56,7 +57,7 @@ namespace pst {
 
 		MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx) {
 			if (state[0].is(Special::Semicolon)
-				&& (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
 				state.tokens().skip();
 				return nullptr;
 			}

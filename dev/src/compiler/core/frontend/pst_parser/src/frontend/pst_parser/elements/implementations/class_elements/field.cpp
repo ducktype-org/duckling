@@ -10,8 +10,7 @@ namespace pst {
 		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
 			state.parse(out).one(Keyword::Let);
-		}
-		else
+		} else
 			state.parse(out).tryEat(Keyword::Var);
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
