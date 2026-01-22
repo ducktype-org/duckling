@@ -4,8 +4,11 @@ clean_cmd: "rm -rf build"
 
 backend: "nobackend"
 
-compile_dvm_backend_cmd: "@{duckc_path} compile_package -a build --dvm-backend duck_modules/@{Name} -n package_@{Name}"
-compile_llvm_backend_cmd: "@{duckc_path} compile_package  -a build duck_modules/@{Name} -n package_@{Name}"
+compile_dvm_options: ""
+compile_llvm_options: ""
+
+compile_dvm_backend_cmd: "@{duckc_path} compile_package -a build --dvm-backend duck_modules/@{Name} -n package_@{Name} @{compile_dvm_options}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package  -a build duck_modules/@{Name} -n package_@{Name} @{compile_llvm_options}"
 
 compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/query/query*/*.dbc" # ??
@@ -51,4 +54,5 @@ SubDirs:
   - functions
   - constants
   - classes
+  - optimisations
   - references

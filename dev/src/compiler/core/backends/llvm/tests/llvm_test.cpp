@@ -1,6 +1,7 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/backend_options.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -22,6 +23,10 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		global_state::setters::setBackendOptions({
+			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
+		});
+
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
