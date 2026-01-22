@@ -47,8 +47,10 @@ namespace artifacts {
 	 * and backend outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same
 	 * module/package can collide on paths. See:
 	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp
-	 *  - \ref dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
-	 *  - \ref dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp
 	 */
 	struct FileArtifact final {
 		const Ref<ArtifactCollection> PARENT;
