@@ -29,7 +29,7 @@ namespace pst {
 				state.logSafeError(
 					makeBox<NoExternArgumentError>(dia::SourcePosition(state.getPosition()))
 				);
-				return out;
+				return nullptr;
 			}
 
 			state.parse(out).goDown();
@@ -38,7 +38,7 @@ namespace pst {
 		} else {
 			state.parse(out).one(&out->specifier);
 		}
-		return out;
+		PST_RETURN out;
 	}
 
 	void StmtSpecifier::dprint(std::ostream& out) const {

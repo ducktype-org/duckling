@@ -12,7 +12,7 @@ namespace pst {
 		// @TODO: #1535 Figure out ordering with context
 		state.parse(out).withDef(&out->block, CodeBlock::Unordered);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	/**

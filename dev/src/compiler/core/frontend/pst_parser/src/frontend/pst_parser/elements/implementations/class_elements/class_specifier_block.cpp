@@ -17,7 +17,7 @@ namespace pst {
 
 		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ClassSpecifierBlock::dprint(std::ostream& out) const {
