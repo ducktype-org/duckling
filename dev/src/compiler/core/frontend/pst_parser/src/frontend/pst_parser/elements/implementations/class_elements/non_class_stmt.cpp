@@ -7,8 +7,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<NonClassStmt>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		Keyword as_keyword = state[0].asKeyword();
 		CORE_ASSERT(
 			as_keyword == Keyword::Alias || as_keyword == Keyword::Using
@@ -20,7 +18,7 @@ namespace pst {
 		out->inner_decl_kind        = out->inner_stmt.internal()->isDeclaration();
 		out->inner_decl_symbol_name = out->inner_stmt.internal()->getDeclSymbolName();
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void NonClassStmt::dprint(std::ostream& out) const {

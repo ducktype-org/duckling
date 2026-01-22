@@ -57,7 +57,7 @@ namespace pst::expr {
 			length -= fwd;
 		}
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ChainExpr::dprint(std::ostream& out) const {

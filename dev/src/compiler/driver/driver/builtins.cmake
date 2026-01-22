@@ -102,3 +102,7 @@ add_custom_target(
         DEPENDS ${BUILTINS_EMBEDS}
 )
 
+add_custom_target(
+        builtins_object_file
+        SOURCES ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
+)

@@ -37,8 +37,7 @@
 namespace compiler::helios::code {
 
 	/**
-	 * @brief Error messages
-	 * This error message is used when there are both function symbols and non-function valid
+	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
 	 */
 	class CallInvalidCallablesError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -448,8 +447,12 @@ namespace compiler::helios::code {
 					// @TODO: #1412 handle dealias expressions:
 					auto sym = result.back();
 
-					// const auto sym = looked_up_symbols.valueOrThrow().back();
 					if (kind(sym) == SymbolKind::Field) {
+						// Insert a deref if source of field access is not a direct type.
+						if (current_expr->expression_type.getSymbolType().getRefKind()
+						    != tsh::ReferenceKind::Direct) {
+							current_expr = makeBox<DerefExpr>(query_ctx, std::move(current_expr));
+						}
 						auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
 						return ChainState::ofExpr(std::move(node));
 					} else if (kind(sym) == SymbolKind::Namespace) {

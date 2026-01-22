@@ -22,11 +22,9 @@ namespace pst {
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
-		state.parse(out).with(
-			&out->body, ClassBlock::parse, { .name = out->name, .specifiers = {} }
-		);
+		state.parse(out).with(&out->body, ClassBlock::parse, { .name = out->name });
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Class::dprint(std::ostream& out) const {

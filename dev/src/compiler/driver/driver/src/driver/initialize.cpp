@@ -1,10 +1,13 @@
 #include "initialize.hpp"
 
+#include "options.hpp"
+
 #include <diagnostic_interactive/logger.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/collect_input.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
@@ -90,6 +93,10 @@ namespace compiler::driver {
 		void handleIncrementalOptions(const options_types::IncrementalOptions& inc_options) {
 			if (inc_options.enabled) loadPreviousQueryGraphIfExists();
 		}
+
+		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
+			global_state::setters::setBackendOptions(backend_options);
+		}
 	}
 
 	void initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
@@ -106,14 +113,21 @@ namespace compiler::driver {
 		is_initialized = true;
 
 		variant_match(options.mode) {
-			variant_case(CompilerModeOfOperationAndOptions::BareMode, options) {
-				handleDebugOptions(options.debug_options);
+			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
+				handleDebugOptions(bare_options.debug_options);
 			}
-			variant_case(CompilerModeOfOperationAndOptions::PackageCompilationMode, options) {
-				handleDebugOptions(options.debug_options);
-				handleArtifactsOptions(options.compilation_artifacts);
-				handlePackageOptions(options.main_package_info);
-				handleIncrementalOptions(options.incremental);
+			variant_case(
+				CompilerModeOfOperationAndOptions::PackageCompilationMode,
+				package_compilation_options
+			) {
+				handleDebugOptions(package_compilation_options.debug_options);
+				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
+				handlePackageOptions(package_compilation_options.main_package_info);
+				handleBackendOptions(package_compilation_options.backend_options);
+				handleIncrementalOptions(package_compilation_options.incremental);
+			}
+			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
+				handleDebugOptions(repl_options.debug_options);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

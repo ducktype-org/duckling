@@ -24,8 +24,11 @@ namespace compiler::helios::code {
 	);
 
 	/**
-	 * @brief Finds a builtin unary operation for a given expression and for given operator.
+	 * @brief Finds a builtin unary operation for a given expression and for given operator. If the
+	 * given expression's type is not direct, performs the necessary coercion.
 	 * Returns None if no such operation exists.
 	 */
-	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr);
+	base::Optional<std::tuple<BuiltinUnary, Coercion>> findUnaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+	);
 }

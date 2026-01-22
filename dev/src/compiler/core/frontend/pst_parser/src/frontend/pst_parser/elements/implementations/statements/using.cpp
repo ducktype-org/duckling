@@ -11,7 +11,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Using, &out->names);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
@@ -28,7 +28,11 @@ namespace pst {
 	}
 
 	base::Optional<base::StrID> Using::getDeclSymbolName() const {
-		return names.internal().toOpt().map([](const auto& x) { return x->getNames().back().value; }
-		);
+		if (auto child = names.internal()) {
+			if (child->getNames().empty()) return {};
+			return child->getNames().back().value;
+		} else {
+			return {};
+		}
 	}
 }

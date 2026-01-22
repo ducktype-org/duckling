@@ -45,79 +45,33 @@ namespace compiler::lir {
 		return function->queryUnstablePerfectHash();
 	}
 
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id);
+	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
+		tsh::FunctionAbstractType type
+			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
+		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+		          .getType();
 
-	/**
-	 * @brief Creates LIR local data from MIR local data.
-	 * @todo change argument to MIR local reference.
-	 * @important remember that LIRLocal should only be stored in a LIR function.
-	 *
-	 * @param ctx
-	 * @param mir_local
-	 * @return LIRLocal
-	 */
-	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
+			"Handling errors in MIR is not supported yet"
+		);
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
-		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+		std::vector<CRef<tsl::TypeLayout>> parameter_types;
+		parameter_types.reserve(type.getParameterTypes().size());
+		for (const auto& param: type.getParameterTypes())
+			// Discard information-less parameters from LIR function parameter lists.
+			if (param.getType().carriesInformation(ctx))
+				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
+		return FunctionLiteral{
+			.mangled_name = mangled_name,
+			.abi          = symbol_abi,
+			.parameter_layouts
+			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
+			.return_type_layout = return_type,
+		};
 	}
-
-	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
-
-		return LIRLocal{ bool_layout };
-	}
-
-	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
-
-		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
-	}
-
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name,
-					LIRGlobalType::Constant,   name.value,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
-				};
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
-	}
-
-	LIRPlace::LIRPlace(
-		query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
-	):
-		  base(base),
-		  access_chain(std::move(access_chain)),
-		  layout(
-			  this->access_chain.size() == 0
-				  ? getBaseLayout()
-				  : ctx.query<tsl::QuerySymbolTypeLayout>(
-						ctx.query<helios::QueryTypeOfSymbol>(this->access_chain.back())
-							->valueOrThrow()
-					)
-		  ) {}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
@@ -132,6 +86,8 @@ namespace compiler::lir {
 		// Variable Assignment
 		case mir::Operation::Assign:
 			return Operation::Assign;
+		case mir::Operation::AddressOf:
+			return Operation::AddressOf;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -275,13 +231,30 @@ namespace compiler::lir {
 			}
 
 			[[nodiscard]]
-			LIRPlace getPlace(mir::MIRPlace mir_place) const {
+			LIRPlace getPlace(const mir::MIRPlace& mir_place) const {
+				std::vector<LIRPlace::Projection> lir_projection_chain;
+				lir_projection_chain.reserve(mir_place.projection_chain.size());
+
+				// Map all MIR projections to LIR projections.
+				for (const auto& proj: mir_place.projection_chain) {
+					variant_match(proj.storage) {
+						variant_case(mir::MIRPlace::FieldProjection, field) {
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::field(field.field_id)
+							);
+						}
+						variant_case_novalue(mir::MIRPlace::DerefProjection) {
+							lir_projection_chain.push_back(LIRPlace::Projection::deref());
+						}
+					}
+				}
+
 				variant_match(mir_place.base) {
 					variant_case(mir::MIRLocalRef, local) {
-						return { ctx, getLocal(local), mir_place.access_chain };
+						return { getLocal(local), std::move(lir_projection_chain) };
 					}
 					variant_case(mir::MIRGlobal, global) {
-						return { ctx, getGlobal(global), mir_place.access_chain };
+						return { getGlobal(global), std::move(lir_projection_chain) };
 					}
 				}
 				CORE_UNREACHABLE();
@@ -513,6 +486,7 @@ namespace compiler::lir {
 					}
 					return curr_block;
 				}
+				case mir::Operation::AddressOf:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -788,31 +762,4 @@ namespace compiler::lir {
 		};
 	}
 
-	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
-		tsh::FunctionAbstractType type
-			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
-		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
-		          .getType();
-
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
-
-		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
-		std::vector<CRef<tsl::TypeLayout>> parameter_types;
-		parameter_types.reserve(type.getParameterTypes().size());
-		for (const auto& param: type.getParameterTypes())
-			// Discard information-less parameters from LIR function parameter lists.
-			if (param.getType().carriesInformation(ctx))
-				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
-
-		return FunctionLiteral{
-			.mangled_name = mangled_name,
-			.abi          = symbol_abi,
-			.parameter_layouts
-			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
-			.return_type_layout = return_type,
-		};
-	}
 }

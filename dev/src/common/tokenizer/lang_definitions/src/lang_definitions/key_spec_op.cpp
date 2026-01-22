@@ -71,6 +71,7 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Extern, "extern", KeywordFlagsOptions::IsSpecifier },
 			{ Keyword::Debug, "debug", KeywordFlagsOptions::IsSpecifier },
+			{ Keyword::Static, "static", KeywordFlagsOptions::IsSpecifier },
 
 			// If doesn't always indicate statement start.
 			{ Keyword::If, "if", KeywordFlags() },
@@ -143,7 +144,6 @@ namespace lang_def {
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
 		});
 

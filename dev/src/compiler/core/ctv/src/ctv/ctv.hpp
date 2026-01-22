@@ -6,6 +6,8 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <string_id/string_id.hpp>
+
 #include <string>
 
 namespace compiler::ctv {
@@ -41,7 +43,8 @@ namespace compiler::ctv {
 		};
 
 	private:
-		using Storage = std::variant<bool, NumericValue, UnitCTV, TupleCTV, tsh::SymbolType<>>;
+		using Storage
+			= std::variant<bool, NumericValue, base::StrID, UnitCTV, TupleCTV, tsh::SymbolType<>>;
 		Storage value;
 
 	public:
