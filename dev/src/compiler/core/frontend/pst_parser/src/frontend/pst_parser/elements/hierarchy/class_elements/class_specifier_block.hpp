@@ -23,7 +23,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Access specification block";
+			return "Class specifier block";
 		}
 
 		[[nodiscard]]

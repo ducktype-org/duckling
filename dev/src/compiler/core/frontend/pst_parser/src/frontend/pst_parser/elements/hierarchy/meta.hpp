@@ -205,7 +205,6 @@ namespace pst {
 	 *
 	 * includes:
 	 *  - name - class name
-	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
 		base::StrID name;

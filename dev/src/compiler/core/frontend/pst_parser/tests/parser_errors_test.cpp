@@ -485,6 +485,9 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::InvalidExternContentWarning>(
 			ss, dia::SourcePosition::fakePosition()
 		);
+		testDiagnosticMessage<pst::NoExternArgumentError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
 
 		testDiagnosticMessage<
 			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(

@@ -783,11 +783,15 @@ namespace compiler::helios {
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//
 			// The Class situation is a bit more complicated
-			// @TODO: #1746 Fix/figure out class handling
+			// @TODO: #1535 Fix/figure out class handling
 			while (true) {
 				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
-					specifiers.append_range(
-						pst_element.dynamicCast<pst::Stmt>().value()->getSpecifiers()
+					// Can swap to append range when g++ 15 is more commonly available
+					auto to_add = as_stmt.value()->getSpecifiers();
+					specifiers.insert(
+						specifiers.end(),
+						std::make_move_iterator(to_add.begin()),
+						std::make_move_iterator(to_add.end())
 					);
 				}
 				if (auto result_stmt = getAncestor(

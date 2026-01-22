@@ -49,7 +49,6 @@ namespace pst {
 		if (call_list) {
 			out << R"("call_list": )";
 			nullAwareDprint(call_list.value(), out);
-			out << ",";
 		}
 
 		out << "}";
