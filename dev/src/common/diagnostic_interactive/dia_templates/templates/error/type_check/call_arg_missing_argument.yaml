@@ -36,7 +36,7 @@ description:
             param: "missing_arg_code"
           location:
             param: "missing_arg_code_location"
-      false: "The function declaration where the argument is missing is not available."
+      false: "The function declaration is not available."
 
 pointer_messages:
   cause:
