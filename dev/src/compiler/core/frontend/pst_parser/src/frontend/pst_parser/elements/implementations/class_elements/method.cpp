@@ -8,8 +8,6 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<Method>(position, ctx);
 
-		out->parseSpecifiers(state);
-
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
