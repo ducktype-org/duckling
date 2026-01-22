@@ -29,6 +29,7 @@ namespace pst {
 		FunDecl,
 		Pattern,
 		Block,
+		SpecifierBlock,
 
 		Using,
 		Alias,
@@ -65,15 +66,13 @@ namespace pst {
 		// classes:
 		ClassField,
 		ClassMethod,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt,
 		ClassSpecial,
 
 		// use it, once its docs are more stable:
 		ClassConstructor,
 		ClassDestructor,
-
-		// note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
 
 		// others:
 		Param,
