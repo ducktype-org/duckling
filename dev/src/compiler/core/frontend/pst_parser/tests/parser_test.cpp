@@ -73,7 +73,7 @@ public:
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
-		TESTER_ADD_TEST(testFunDecl);
+		TESTER_ADD_TEST(testFunDeclFFI);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -183,7 +183,7 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
-	void testFunDecl() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");

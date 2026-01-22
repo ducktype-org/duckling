@@ -557,7 +557,7 @@
 									}
 								},
 							],
-							"Access specification block": {
+							"Class specifier block": {
 								"code block": {
 									"position": {
 										"sourceStart": 207,
