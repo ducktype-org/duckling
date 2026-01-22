@@ -163,7 +163,7 @@ namespace concurrent {
 		 * Otherwise, the distribution of keys over buckets in individual shards is highly
 		 * non-uniform, as the modulus used to select the buckets are the powers of two.
 		 */
-		constexpr static u64 SHARD_COUNT = 128;
+		constexpr static u64 SHARD_COUNT = 129;
 
 		/**
 		 * The shards of the map.
