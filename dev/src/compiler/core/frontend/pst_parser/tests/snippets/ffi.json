@@ -9,34 +9,166 @@
 				"sourceStart": 0,
 				"sourceEnd": 91
 			},
-			"StmtSpecifier": {
-				"specifier": "extern",
-				"call_list": {
+			"specifiers": [
+				{
 					"position": {
-						"sourceStart": 7,
-						"sourceEnd": 9
+						"sourceStart": 0,
+						"sourceEnd": 10
 					},
-					"call list": [
-						{
+					"StmtSpecifier": {
+						"specifier": "extern",
+						"call_list": {
 							"position": {
 								"sourceStart": 7,
 								"sourceEnd": 9
 							},
-							"Call argument": {
-								"name": "<ANONYMOUS>",
-								"value": {
+							"call list": [
+								{
 									"position": {
 										"sourceStart": 7,
 										"sourceEnd": 9
 									},
-									"Expression Holder": {
-										"expr": {
+									"Call argument": {
+										"name": "<ANONYMOUS>",
+										"value": {
 											"position": {
 												"sourceStart": 7,
 												"sourceEnd": 9
 											},
-											"String Value Expr": {
-												"string": "C"
+											"Expression Holder": {
+												"expr": {
+													"position": {
+														"sourceStart": 7,
+														"sourceEnd": 9
+													},
+													"String Value Expr": {
+														"string": "C"
+													}
+												}
+											}
+										}
+									}
+								},
+							]
+						}
+					}
+				},
+			],
+			"Specifier block": {
+				"block": {
+					"position": {
+						"sourceStart": 12,
+						"sourceEnd": 91
+					},
+					"Code Block": [
+						{
+							"position": {
+								"sourceStart": 18,
+								"sourceEnd": 41
+							},
+							"Function": {
+								"name": {
+									"Name": "getpid"
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 32,
+										"sourceEnd": 33
+									},
+									"function parameter list": []
+								},
+								"return": {
+									"position": {
+										"sourceStart": 38,
+										"sourceEnd": 40
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 38,
+												"sourceEnd": 40
+											},
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 48,
+								"sourceEnd": 89
+							},
+							"Expr Stmt": {
+								"position": {
+									"sourceStart": 48,
+									"sourceEnd": 88
+								},
+								"Top Level Expression": {
+									"expr": {
+										"position": {
+											"sourceStart": 48,
+											"sourceEnd": 88
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 48,
+													"sourceEnd": 53
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "struct"
+													}
+												}
+											},
+											"operator": "Result",
+											"right_expr": {
+												"position": {
+													"sourceStart": 62,
+													"sourceEnd": 88
+												},
+												"Block Expression": {
+													"block": {
+														"position": {
+															"sourceStart": 62,
+															"sourceEnd": 88
+														},
+														"Code Block": [
+															{
+																"position": {
+																	"sourceStart": 72,
+																	"sourceEnd": 82
+																},
+																"Var": {
+																	"name": {
+																		"Name": "x"
+																	},
+																	"mutable": true,
+																	"type": {
+																		"position": {
+																			"sourceStart": 79,
+																			"sourceEnd": 81
+																		},
+																		"Top Level Expression": {
+																			"expr": {
+																				"position": {
+																					"sourceStart": 79,
+																					"sourceEnd": 81
+																				},
+																				"Keyword Expression": {
+																					"keyword": "i32"
+																				}
+																			}
+																		}
+																	}
+																}
+															},
+														]
+													}
+												}
 											}
 										}
 									}
@@ -44,134 +176,6 @@
 							}
 						},
 					]
-				},
-				"stmt": {
-					"position": {
-						"sourceStart": 12,
-						"sourceEnd": 91
-					},
-					"Code Block or Statement": {
-						"position": {
-							"sourceStart": 12,
-							"sourceEnd": 91
-						},
-						"Code Block": [
-							{
-								"position": {
-									"sourceStart": 18,
-									"sourceEnd": 41
-								},
-								"Function": {
-									"name": {
-										"Name": "getpid"
-									},
-									"parameters": {
-										"position": {
-											"sourceStart": 32,
-											"sourceEnd": 33
-										},
-										"function parameter list": []
-									},
-									"return": {
-										"position": {
-											"sourceStart": 38,
-											"sourceEnd": 40
-										},
-										"Top Level Expression": {
-											"expr": {
-												"position": {
-													"sourceStart": 38,
-													"sourceEnd": 40
-												},
-												"Keyword Expression": {
-													"keyword": "i32"
-												}
-											}
-										}
-									}
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 48,
-									"sourceEnd": 89
-								},
-								"Expr Stmt": {
-									"position": {
-										"sourceStart": 48,
-										"sourceEnd": 88
-									},
-									"Top Level Expression": {
-										"expr": {
-											"position": {
-												"sourceStart": 48,
-												"sourceEnd": 88
-											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 48,
-														"sourceEnd": 53
-													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "struct"
-														}
-													}
-												},
-												"operator": "Result",
-												"right_expr": {
-													"position": {
-														"sourceStart": 62,
-														"sourceEnd": 88
-													},
-													"Block Expression": {
-														"block": {
-															"position": {
-																"sourceStart": 62,
-																"sourceEnd": 88
-															},
-															"Code Block": [
-																{
-																	"position": {
-																		"sourceStart": 72,
-																		"sourceEnd": 82
-																	},
-																	"Var": {
-																		"name": {
-																			"Name": "x"
-																		},
-																		"mutable": true,
-																		"type": {
-																			"position": {
-																				"sourceStart": 79,
-																				"sourceEnd": 81
-																			},
-																			"Top Level Expression": {
-																				"expr": {
-																					"position": {
-																						"sourceStart": 79,
-																						"sourceEnd": 81
-																					},
-																					"Keyword Expression": {
-																						"keyword": "i32"
-																					}
-																				}
-																			}
-																		}
-																	}
-																},
-															]
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							},
-						]
-					}
 				}
 			}
 		},
@@ -180,60 +184,111 @@
 				"sourceStart": 94,
 				"sourceEnd": 147
 			},
-			"StmtSpecifier": {
-				"specifier": "extern",
-				"call_list": {
+			"specifiers": [
+				{
 					"position": {
-						"sourceStart": 101,
-						"sourceEnd": 114
+						"sourceStart": 94,
+						"sourceEnd": 115
 					},
-					"call list": [
-						{
+					"StmtSpecifier": {
+						"specifier": "extern",
+						"call_list": {
 							"position": {
 								"sourceStart": 101,
-								"sourceEnd": 103
+								"sourceEnd": 114
 							},
-							"Call argument": {
-								"name": "<ANONYMOUS>",
-								"value": {
+							"call list": [
+								{
 									"position": {
 										"sourceStart": 101,
 										"sourceEnd": 103
 									},
-									"Expression Holder": {
-										"expr": {
+									"Call argument": {
+										"name": "<ANONYMOUS>",
+										"value": {
 											"position": {
 												"sourceStart": 101,
 												"sourceEnd": 103
 											},
-											"String Value Expr": {
-												"string": "C"
+											"Expression Holder": {
+												"expr": {
+													"position": {
+														"sourceStart": 101,
+														"sourceEnd": 103
+													},
+													"String Value Expr": {
+														"string": "C"
+													}
+												}
 											}
 										}
 									}
-								}
-							}
-						},
-						{
-							"position": {
-								"sourceStart": 106,
-								"sourceEnd": 114
-							},
-							"Call argument": {
-								"name": "<ANONYMOUS>",
-								"value": {
+								},
+								{
 									"position": {
 										"sourceStart": 106,
 										"sourceEnd": 114
 									},
-									"Expression Holder": {
-										"expr": {
+									"Call argument": {
+										"name": "<ANONYMOUS>",
+										"value": {
 											"position": {
 												"sourceStart": 106,
 												"sourceEnd": 114
 											},
-											"String Value Expr": {
-												"string": "libname"
+											"Expression Holder": {
+												"expr": {
+													"position": {
+														"sourceStart": 106,
+														"sourceEnd": 114
+													},
+													"String Value Expr": {
+														"string": "libname"
+													}
+												}
+											}
+										}
+									}
+								},
+							]
+						}
+					}
+				},
+			],
+			"Function": {
+				"name": {
+					"Name": "SSL_new"
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 132,
+						"sourceEnd": 139
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 133,
+								"sourceEnd": 138
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"position": {
+											"sourceStart": 136,
+											"sourceEnd": 138
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 136,
+													"sourceEnd": 138
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
 											}
 										}
 									}
@@ -242,74 +297,19 @@
 						},
 					]
 				},
-				"stmt": {
+				"return": {
 					"position": {
-						"sourceStart": 117,
-						"sourceEnd": 147
+						"sourceStart": 144,
+						"sourceEnd": 146
 					},
-					"Code Block or Statement": {
-						"position": {
-							"sourceStart": 117,
-							"sourceEnd": 147
-						},
-						"Function": {
-							"name": {
-								"Name": "SSL_new"
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 144,
+								"sourceEnd": 146
 							},
-							"parameters": {
-								"position": {
-									"sourceStart": 132,
-									"sourceEnd": 139
-								},
-								"function parameter list": [
-									{
-										"position": {
-											"sourceStart": 133,
-											"sourceEnd": 138
-										},
-										"Parameter": {
-											"Parameter": {
-												"name": {
-													"Name": "a"
-												},
-												"type": {
-													"position": {
-														"sourceStart": 136,
-														"sourceEnd": 138
-													},
-													"Top Level Expression": {
-														"expr": {
-															"position": {
-																"sourceStart": 136,
-																"sourceEnd": 138
-															},
-															"Keyword Expression": {
-																"keyword": "i32"
-															}
-														}
-													}
-												}
-											}
-										}
-									},
-								]
-							},
-							"return": {
-								"position": {
-									"sourceStart": 144,
-									"sourceEnd": 146
-								},
-								"Top Level Expression": {
-									"expr": {
-										"position": {
-											"sourceStart": 144,
-											"sourceEnd": 146
-										},
-										"Keyword Expression": {
-											"keyword": "i32"
-										}
-									}
-								}
+							"Keyword Expression": {
+								"keyword": "i32"
 							}
 						}
 					}

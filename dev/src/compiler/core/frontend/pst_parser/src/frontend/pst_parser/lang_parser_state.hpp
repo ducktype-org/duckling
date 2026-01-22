@@ -128,13 +128,13 @@ namespace pst {
 			CORE_PANIC("old fail is unsupported for language parsing");
 		}
 
-		/**
-		 * @brief Logs an error relatively to the current token.
-		 */
 		void log(Box<dia::Message>) override {
 			CORE_PANIC("old logger is unsupported for language parsing");
 		}
 
+		/**
+		 * @brief Logs an error.
+		 */
 		void logInt(Box<dia_int::MessageBase> message) override {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
@@ -143,6 +143,20 @@ namespace pst {
 			if (message->isError()) {
 				skip_till_fallback    = true;
 				skipped_entries_depth = 1;
+			}
+			int_err->log(std::move(message));
+		}
+
+		/**
+		 * @brief Logs an error that doesn't require skipping to a fallback.
+		 *
+		 * @note This is for very specific usecases where behaviour is reliable.
+		 * Care needs to be taken so that each element has all the data needed for hashing.
+		 */
+		void logSafeError(Box<dia_int::MessageBase> message) {
+			if (isSkipping()) {
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
+				return;
 			}
 			int_err->log(std::move(message));
 		}
