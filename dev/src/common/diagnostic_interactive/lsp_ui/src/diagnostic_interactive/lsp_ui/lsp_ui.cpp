@@ -241,7 +241,7 @@ namespace dia_int::lsp {
 	}
 
 	/**
-	 * @brief If the evaluation of the diagnotic failed, return a diagnostic
+	 * @brief If the evaluation of the diagnostic failed, return a diagnostic
 	 * indicating the failure.
 	 */
 	LSPDiagnosticResult failedResult(
