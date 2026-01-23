@@ -20,12 +20,15 @@
 //!     └── venv_data/
 //!         ├── <package id>
 //!         └── ...
+
 use std::{
     fs::ReadDir,
     path::{Path, PathBuf},
 };
 
-use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome, quackpack::core::PackageId};
+use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome};
+
+use super::package_id::PackageId;
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
@@ -41,7 +44,7 @@ const CHECKSUM_FILENAME: &str = "checksum.txt";
 
 #[derive(Debug)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
-pub(super) struct StoragePaths {
+pub struct StoragePaths {
     root: PathBuf,
     package_dir: PathBuf,
     venv_dir: PathBuf,
@@ -51,7 +54,7 @@ pub(super) struct StoragePaths {
 }
 
 impl StoragePaths {
-    pub(super) fn new(layout: &DuckHome) -> Self {
+    pub fn new(layout: &DuckHome) -> Self {
         let root = layout.storage_dir().to_path_buf();
 
         let package_dir = root.join(PKG_DIR_NAME);
@@ -71,23 +74,23 @@ impl StoragePaths {
         }
     }
 
-    pub(super) fn pkg_dir(&self, package: &PackageId) -> PathBuf {
+    pub fn pkg_dir(&self, package: &PackageId) -> PathBuf {
         self.package_dir.join(package.storage_name())
     }
 
-    pub(super) fn clean_lock(&self) -> &Path {
+    pub fn clean_lock(&self) -> &Path {
         &self.clean_lock
     }
 
-    pub(super) fn venv_dir(&self, venv_id: StrId) -> PathBuf {
+    pub fn venv_dir(&self, venv_id: StrId) -> PathBuf {
         self.venv_dir.join(venv_id)
     }
 
-    pub(super) fn vevn_metadata(&self, venv_id: StrId) -> PathBuf {
+    pub fn vevn_metadata(&self, venv_id: StrId) -> PathBuf {
         self.venv_dir(venv_id).join(METADATA_FILENAME)
     }
 
-    pub(super) fn vevn_backup_metadata(&self, venv_id: StrId) -> PathBuf {
+    pub fn vevn_backup_metadata(&self, venv_id: StrId) -> PathBuf {
         self.venv_dir(venv_id).join(BACKUP_METADATA_FILENAME)
     }
 
@@ -95,7 +98,7 @@ impl StoragePaths {
     /// The yielded packages need not be correct (may be missing checksum).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub(super) fn iter_pkgs(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_pkgs(&self) -> Option<QuackResult<ReadDir>> {
         let dir = self.package_dir.as_path();
         if !dir.is_dir() {
             None
@@ -108,7 +111,7 @@ impl StoragePaths {
     /// The yielded venvs need not be correct (may have invalid data).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub(super) fn iter_vens(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_vens(&self) -> Option<QuackResult<ReadDir>> {
         let dir = self.venv_dir.as_path();
         if !dir.is_dir() {
             None
@@ -120,7 +123,7 @@ impl StoragePaths {
     /// Returns an iterator over all sync locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub(super) fn iter_sync_locks(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_sync_locks(&self) -> Option<QuackResult<ReadDir>> {
         let dir = self.sync_lock_base.as_path();
         if !dir.is_dir() {
             None
@@ -132,7 +135,7 @@ impl StoragePaths {
     /// Returns an iterator over all data locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub(super) fn iter_data_locks(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_data_locks(&self) -> Option<QuackResult<ReadDir>> {
         let dir = self.data_lock_base.as_path();
         if !dir.is_dir() {
             None

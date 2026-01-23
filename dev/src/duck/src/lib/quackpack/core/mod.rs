@@ -14,5 +14,3 @@ pub use solver::*;
 mod package;
 pub use venv_config::*;
 pub use version::Version;
-mod package_id;
-pub use package_id::*;

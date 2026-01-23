@@ -54,19 +54,28 @@ use std::{
     collections::HashMap,
     fs::OpenOptions,
     io::{self, Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
+    time::SystemTime,
 };
 
+use rustvil::fs::{MkdirOptions, PathExt as _};
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::{
-    QuackResult, StrId,
-    quackpack::core::{FeatureName, Git, GitId, PackageId},
+    QuackResult, QuackResultContext, StrId,
+    quackpack::{
+        core::{FeatureName, Git, storage::paths::StoragePaths},
+        schemas::registry,
+    },
+    util_common::hash,
 };
+
+use super::package_id::{GitId, PackageId};
 
 const BUFFER_SIZE: usize = 4096;
 
-pub(super) trait PathExt {
+pub trait PathExt {
     /// Copy the contents of one file into another and synchronize the result to disk.
     fn transfer_file_to<P: AsRef<Path>>(&self, to: P) -> QuackResult<()>;
 
@@ -112,7 +121,11 @@ impl PathExt for Path {
     }
 }
 
+#[derive(Debug)]
+pub struct CorruptedFileError {}
+
 #[derive(Debug, Serialize, Deserialize)]
+/// Information required to build a package in a given dependencies realization.
 pub struct PackageFreeze {
     pub dependencies: HashMap<StrId, PackageId>,
     pub used_flags: Vec<FeatureName>,
@@ -128,4 +141,136 @@ struct Dependency {
 struct GitFetchCacheEntry {
     source: Git,
     result: GitId,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+/// Realization of requirements stored in virtual environment manifest.
+/// Contains all the information required to build and run code using the given virtual environment.
+pub struct VenvFreeze {
+    pub direct_dependencies: HashMap<StrId, PackageId>,
+    pub dependencies: HashMap<StrId, PackageFreeze>,
+    pub git_fetch_cache: HashMap<Git, GitId>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+/// State of virtual environment in the storage. Stores the freeze for the given
+/// virtual environment, copy of manifest's metadata, and additional info
+/// required for storage functioning: last location and access info.
+pub struct StorageVenv {
+    pub freeze: VenvFreeze,
+    pub original_schema: registry::Manifest,
+    pub is_ephemeral: bool,
+    pub last_location: PathBuf,
+    pub last_modification: SystemTime,
+    pub last_access: SystemTime,
+}
+
+impl StorageVenv {
+    pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
+        // @TODO: #1353 EnableInterrupts
+        let content = path.read_to_string()?;
+        let Some((data, checksum)) = content.rsplit_once("\n") else {
+            return Ok(Err(CorruptedFileError {}));
+        };
+        let current_hash = hash::sha256_string(data);
+        if current_hash != checksum {
+            return Ok(Err(CorruptedFileError {}));
+        }
+        Ok(serde_json::from_str(data).map_err(|_| CorruptedFileError {}))
+    }
+
+    pub fn save(&self, path: &Path) -> QuackResult<()> {
+        let data = serde_json::to_string(self)?;
+        let checksum = hash::sha256_string(&data);
+        let mut file = path.touch()?;
+        // @TODO: #1353 EnableInterrupts
+        file.write_all(format!("{data}\n{checksum}").as_ref())?;
+        file.flush()?;
+        file.sync_all()?;
+        Ok(())
+    }
+}
+
+/// Convert the state of a virtual environment into canonical form and return its state.
+///
+/// If neither the main nor backup file is valid, the environment directory is removed.
+pub fn fix_and_load_venv(
+    storage: &StoragePaths,
+    venv_id: StrId,
+) -> QuackResult<Option<StorageVenv>> {
+    // NOTE: when external entity changes the storage disregarding the rules, we have
+    // toctou here and an exception might be thrown later. We ignore that to keep sanity.
+    if !storage.venv_dir(venv_id).is_dir() {
+        debug!("storage for venv `{venv_id}` is not a directory");
+        return Ok(None);
+    }
+    let path = storage.vevn_metadata(venv_id);
+    let backup_path = storage.vevn_backup_metadata(venv_id);
+    let existed = path.exists();
+    let backup_existed = backup_path.exists();
+    // if main file is valid, return state held in it
+    if existed {
+        let data = StorageVenv::load(&path)?;
+        if let Ok(venv) = data {
+            return Ok(Some(venv));
+        }
+    }
+
+    // otherwise, the state is not canonical, and current state, if it exists,
+    // is held in the backup file
+    if backup_existed {
+        let data = StorageVenv::load(&path)?;
+        if let Ok(venv) = data {
+            // @TODO: #1353 EnableInterrupts
+            backup_path.transfer_file_to(&path)?;
+            if !existed {
+                // @TODO: #1353 EnableInterrupts
+                storage.venv_dir(venv_id).try_fsync_dir()?;
+            }
+            return Ok(Some(venv));
+        }
+    }
+    // both files are not valid, so the venv does not exist,
+    // put it in the canonical form by deleting its directory
+    // @TODO: #1353 EnableInterrupts
+    storage.venv_dir(venv_id).rmtree()?;
+    Ok(None)
+}
+
+/// Save a new canonical state of the virtual environment to storage.
+///
+/// Assumes that the current ``metadata`` file is valid. This is typically ensured
+/// by calling :func:`fix_and_load_venv` before.
+pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: StorageVenv) -> QuackResult<()> {
+    let path = storage.vevn_metadata(venv_id);
+    let backup_path = storage.vevn_backup_metadata(venv_id);
+    let existed = path.exists();
+    let backup_existed = backup_path.exists();
+    let parent = path
+        .parent()
+        .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
+    if !parent.exists() {
+        // @TODO: #1353 EnableInterrupts
+        parent.mkdir(MkdirOptions::WithParents)?;
+    }
+    if existed {
+        // move old current state to backup file, as when error occurs during
+        // overwriting the main file, the invariants will be upkept.
+        // (the backup file will be valid)
+        // @TODO: #1353 EnableInterrupts
+        path.transfer_file_to(&backup_path)?;
+        if !backup_existed {
+            // @TODO: #1353 EnableInterrupts
+            storage.venv_dir(venv_id).try_fsync_dir()?;
+        }
+    }
+    venv.save(&path)?;
+    if !existed {
+        // also initialize the `.old` file, such that issues
+        // relating to unavailable directory `fsync` are minimized
+        // @TODO: #1353 EnableInterrupts
+        path.transfer_file_to(&backup_path)?;
+        storage.venv_dir(venv_id).try_fsync_dir()?;
+    }
+    Ok(())
 }
