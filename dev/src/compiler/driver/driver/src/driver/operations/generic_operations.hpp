@@ -58,6 +58,10 @@ namespace compiler::driver {
 		CompileModule,
 		KeyOf_CompileModule,
 		query::QResult<artifacts::FileArtifact>,
-		({ .used_hashes = query::UsedHashes::StableHash, .can_be_loaded_from_disk = true })
+		({
+			.used_hashes             = query::UsedHashes::StableHash,
+			.can_be_loaded_from_disk = true,
+			.preserve_in_graph       = true,
+		})
 	);
 }

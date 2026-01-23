@@ -1,4 +1,0 @@
-fun main() -> i64 = {
-    builtin_output_string("This is an unknown escape sequence: \c");
-    return 0;
-}

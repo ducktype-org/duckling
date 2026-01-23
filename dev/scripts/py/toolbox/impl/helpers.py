@@ -1,5 +1,5 @@
+from typing import NoReturn
 import click
-import os
 import pathlib
 import re
 import shutil
@@ -8,18 +8,18 @@ import sys
 
 
 # Regex patterns for compiler version detection
-CLANG_VERSION_PATTERN = re.compile(r'(?:^|/)clang\+\+-(\d+)$')
-GCC_VERSION_PATTERN = re.compile(r'(?:^|/)g\+\+-(\d+)$')
+CLANG_VERSION_PATTERN = re.compile(r"(?:^|/)clang\+\+-(\d+)$")
+GCC_VERSION_PATTERN = re.compile(r"(?:^|/)g\+\+-(\d+)$")
 
 
-def with_venv(cmd):
+def with_venv(cmd: str) -> None:
     if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
 
     bash_command(f"source .venv/bin/activate && {cmd}")
 
 
-def exit_with_error(msg):
+def exit_with_error(msg: str) -> NoReturn:
     click.echo(click.style("[ERROR]: ", fg="red", bold=True), nl=False)
     click.echo(click.style(msg, fg="red"))
 
@@ -52,14 +52,16 @@ def exec_bash_command(
     verbose: bool = False,
     decode: bool = True,
     log_to_file=sys.stdout,
-) -> tuple[bytes, bytes]:
+) -> tuple[bytes | str, bytes | str]:
     """
     This is the lowest level access to calling a bash command in toolbox.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
     if dry or verbose:
-        log_bash(f'cd "{cwd.absolute()}" && {replace_special(command)}', file=log_to_file)
+        log_bash(
+            f'cd "{cwd.absolute()}" && {replace_special(command)}', file=log_to_file
+        )
         if dry:
             return bytes(), bytes()
 
@@ -133,7 +135,7 @@ def abort_if_false(ctx, param, value):
         ctx.abort()
 
 
-def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
+def get_llvm_strings(version: str, os: str, arch: str) -> tuple[str, str, str, str]:
     """
     Takes `version`, `os` and `arch` params and returns a tuple[link_to_download, downloaded_file, extracted_file, friendly_name]
     """
@@ -168,7 +170,7 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
         )
 
 
-def get_llvm_source_strings(version) -> tuple[str, str, str, str]:
+def get_llvm_source_strings(version: str) -> tuple[str, str, str, str]:
     """
     Takes `version` param and returns a tuple[link_to_download, downloaded_file, extracted_file, friendly_name]
     for LLVM source code.
@@ -193,7 +195,7 @@ def replace_special(command: str) -> str:
     return command
 
 
-def truncate_str(string, max_len=10, surround="`"):
+def truncate_str(string: str, max_len: int = 10, surround: str = "`"):
     """
     Truncate a string and adds `surround` char around the string. If string is longer than `max_len` does string[:max_len] + surround + '...'.
     """
@@ -202,11 +204,22 @@ def truncate_str(string, max_len=10, surround="`"):
 
 # this class overrides the click.Option class, so it can get ctx
 # and infer and set the default value from other options
-def default_compiler_from_ctx(default_name):
+class PromptForCoverageIfBuildNotOptimised(click.Option):
+    def prompt_for_value(self, ctx: click.Context) -> bool:
+        build_type = ctx.params.get("type")
+        if build_type and "Opt" in build_type:
+            # skip prompt entirely
+            return False
+        return super().prompt_for_value(ctx)
+
+
+# this class overrides the click.Option class, so it can get ctx
+# and infer and set the default value from other options
+def default_compiler_from_ctx(default_name: str):
 
     class OptionDefaultFromCtx(click.Option):
 
-        def get_default(self, ctx, call=True):
+        def get_default(self, ctx: click.Context, call: bool = True):
             if default_name == "cc_compiler":
                 self.default = infer_cc_compiler(ctx)
             elif default_name == "cxx_compiler":
@@ -216,7 +229,7 @@ def default_compiler_from_ctx(default_name):
     return OptionDefaultFromCtx
 
 
-def infer_cc_compiler(ctx):
+def infer_cc_compiler(ctx: click.Context):
     """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
@@ -238,7 +251,7 @@ def infer_cc_compiler(ctx):
     return cc_compiler
 
 
-def infer_cxx_compiler(ctx):
+def infer_cxx_compiler(ctx: click.Context):
     """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
@@ -260,7 +273,7 @@ def infer_cxx_compiler(ctx):
     return cxx_compiler
 
 
-def get_program_version(prog):
+def get_program_version(prog: str) -> str | None:
     version_out = sp.run([prog, "--version"], capture_output=True, text=True)
     version_info = version_out.stdout.splitlines()[0]
     match = re.search(r"(\d+(\.\d+)+)", version_info)
@@ -272,7 +285,9 @@ def get_dev_directory():
     return pathlib.Path.cwd().absolute()
 
 
-def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
+def check_if_compilers_are_compatible(
+    cxx_compiler: str | None, cc_compiler: str | None
+):
     if cxx_compiler is None or cc_compiler is None:
         exit_with_error("Couldn't get the compilers")
 
@@ -298,7 +313,7 @@ def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
         )
 
 
-def parse_version_tuple(version_str):
+def parse_version_tuple(version_str: str):
     # Strip suffixes like '-rc1', '-dev' if present
     clean = version_str.split("-")[0]
     return tuple(int(part) for part in clean.split(".") if part.isdigit())
@@ -316,7 +331,7 @@ def supports_cmake_linker_type():
     return current >= required
 
 
-def should_add_linker_flags(linker):
+def should_add_linker_flags(linker: str):
     if linker == "default":
         return False
     if shutil.which(linker) is not None:
@@ -342,7 +357,7 @@ def default_linker_from_ctx():
 
     class OptionDefaultLinkerFromCtx(click.Option):
 
-        def get_default(self, ctx, call=True):
+        def get_default(self, ctx: click.Context, call: bool = True):
             linker = ctx.params.get("linker")
             if linker is None:
                 self.default = detect_available_linker()
@@ -357,18 +372,18 @@ def infer_gcov_from_compiler(cxx_compiler):
     """Infer GCOV version from C++ compiler"""
     if cxx_compiler is None:
         return "gcov"
-    
+
     # Get the compiler basename
-    compiler_name = cxx_compiler.split('/')[-1]
-    
+    compiler_name = cxx_compiler.split("/")[-1]
+
     # Determine compiler type and extract version if present
-    is_clang = compiler_name.startswith('clang++')
-    is_gcc = compiler_name.startswith('g++')
-    
+    is_clang = compiler_name.startswith("clang++")
+    is_gcc = compiler_name.startswith("g++")
+
     if not is_clang and not is_gcc:
         # Unknown compiler type, default to gcov
         return "gcov"
-    
+
     # Try to extract version from compiler name (e.g., clang++-19, g++-14)
     if is_clang:
         match = CLANG_VERSION_PATTERN.search(cxx_compiler)
@@ -378,13 +393,13 @@ def infer_gcov_from_compiler(cxx_compiler):
         match = GCC_VERSION_PATTERN.search(cxx_compiler)
         if match:
             return f"gcov-{match.group(1)}"
-    
+
     # Check if it's an unversioned compiler (exact match)
-    if compiler_name == 'clang++':
+    if compiler_name == "clang++":
         return "llvm-cov"
-    elif compiler_name == 'g++':
+    elif compiler_name == "g++":
         return "gcov"
-    
+
     # No version in name, try to get it by running the compiler
     try:
         version = get_program_version(cxx_compiler)
@@ -394,16 +409,16 @@ def infer_gcov_from_compiler(cxx_compiler):
     except (FileNotFoundError, sp.SubprocessError, OSError):
         # If compiler doesn't exist or can't get version, fall through
         pass
-    
+
     # Final fallback
     return "llvm-cov" if is_clang else "gcov"
 
 
 def default_gcov_from_ctx():
     """Create a click.Option class that infers the default GCOV from compiler"""
-    
+
     class OptionDefaultGcovFromCtx(click.Option):
-        
+
         def get_default(self, ctx, call=True):
             gcov_version = ctx.params.get("gcov_version")
             if gcov_version is None:
@@ -412,5 +427,5 @@ def default_gcov_from_ctx():
             else:
                 self.default = gcov_version
             return super(OptionDefaultGcovFromCtx, self).get_default(ctx, call)
-    
+
     return OptionDefaultGcovFromCtx

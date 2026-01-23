@@ -10,3 +10,4 @@
 #include "param.hpp"                    // IWYU pragma: export
 #include "patterns/patterns.hpp"        // IWYU pragma: export
 #include "round_group_expression.hpp"   // IWYU pragma: export
+#include "stmt_specifier.hpp"           // IWYU pragma: export

@@ -561,6 +561,72 @@ DEF_MICRO_INSTR(cast_l16_type, vm::opargs::StackLocal16, vm::opargs::Type)
 DEF_MICRO_INSTR(cast_l32_type, vm::opargs::StackLocal32, vm::opargs::Type)
 DEF_MICRO_INSTR(cast_l64_type, vm::opargs::StackLocal64, vm::opargs::Type)
 
+// ========= CONVERSION OPERATIONS ========
+// Sign Extension
+DEF_MICRO_INSTR(sext_l16_l8, vm::opargs::StackLocal16, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sext_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sext_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+// Zero Extension
+DEF_MICRO_INSTR(zext_l16_l8, vm::opargs::StackLocal16, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(zext_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(zext_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(zext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+// Truncation
+DEF_MICRO_INSTR(trunc_l8_l16, vm::opargs::StackLocal8, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(trunc_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(trunc_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(trunc_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(trunc_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(trunc_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+
+// Int to Float
+DEF_MICRO_INSTR(sitofp_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(uitofp_l32_l8, vm::opargs::StackLocal32, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sitofp_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(uitofp_l32_l16, vm::opargs::StackLocal32, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sitofp_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(uitofp_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(sitofp_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(uitofp_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+
+DEF_MICRO_INSTR(sitofp_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(uitofp_l64_l8, vm::opargs::StackLocal64, vm::opargs::StackLocal8)
+DEF_MICRO_INSTR(sitofp_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(uitofp_l64_l16, vm::opargs::StackLocal64, vm::opargs::StackLocal16)
+DEF_MICRO_INSTR(sitofp_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(uitofp_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(sitofp_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(uitofp_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+
+// Float to Int (Saturating)
+DEF_MICRO_INSTR(fptosi_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l8_l32, vm::opargs::StackLocal8, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l16_l32, vm::opargs::StackLocal16, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l32_l32, vm::opargs::StackLocal32, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptosi_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+DEF_MICRO_INSTR(fptoui_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
+DEF_MICRO_INSTR(fptosi_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l8_l64, vm::opargs::StackLocal8, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l16_l64, vm::opargs::StackLocal16, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptosi_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fptoui_l64_l64, vm::opargs::StackLocal64, vm::opargs::StackLocal64)
+
+DEF_MICRO_INSTR(fptrunc_l32_l64, vm::opargs::StackLocal32, vm::opargs::StackLocal64)
+DEF_MICRO_INSTR(fpext_l64_l32, vm::opargs::StackLocal64, vm::opargs::StackLocal32)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction
