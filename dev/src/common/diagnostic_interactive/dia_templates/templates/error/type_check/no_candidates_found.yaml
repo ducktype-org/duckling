@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "No matching function found."
+  - "Call failed because no functions found."
 
 description:
   - codeblock:

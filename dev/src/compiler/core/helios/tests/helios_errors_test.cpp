@@ -70,14 +70,13 @@ private:
 	}
 
 	void testErrorLogging() {
-		// No operator found
+		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = true + false;)", { "No builtin binary operator" }, 1
 		);
 		checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
 
-		// Function calls (when the called entity is in from the source code or generated)
-
+		// ============================ Function calls ============================
 		checkForErrorOnCompileModule(
 			R"(
 fun a(x: i32) -> i32 = 0;
@@ -114,6 +113,16 @@ fun a() = {
 }
 )",
 			{ "call is missing a required argument", "declaration is not available." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+fun a() = {
+	b(1,2,3);
+}
+)",
+			{ "no functions found" },
 			1
 		);
 
@@ -178,7 +187,7 @@ var AMBIGUOUS_CALL: i32 = ambiguous();
 			1
 		);
 
-		// Typecheck errors (non function call related)
+		// ============================ Typecheck errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() -> i64 = 1.0;)", { "Type `f32` cannot be converted to type `i64`." }, 1
 		);
@@ -198,7 +207,13 @@ fun example(x: i64) = {
 			1
 		);
 
-		// Other errors
+		// ============================ Other errors ============================
+		checkForErrorOnCompileModule(
+			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun a() = 1000i8;)", { "Literal doesn't fit in the declared signed integer type." }, 1
+		);
 		checkForErrorOnCompileModule(
 			R"(
 fun main() -> i64 = {
