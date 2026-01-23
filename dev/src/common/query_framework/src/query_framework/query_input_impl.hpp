@@ -25,5 +25,6 @@
 		::query::HasStablePerfectHash<query_type::QKey>,                                         \
 		"queryStablePerfectHash must be implemented for side inputs keys"                        \
 	);                                                                                           \
+	static_assert(query_type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");    \
 	decltype(query_type::id) query_type::id                                                      \
 		= ::query::internal::registerQuery(query_type::QUERY_DATA);
