@@ -106,7 +106,7 @@ namespace pst {
 		};
 
 		Prefixes prefixes;
-		bool implicit_return{};
+		bool     implicit_return{};
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  LangElement(position),
@@ -127,10 +127,8 @@ namespace pst {
 		void dprintPrefix(std::ostream& out) const override;
 
 		void calcElementPathHashRecursive() override;
-		
-		void makeImplicitReturn() {
-			implicit_return = true;
-		}
+
+		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
 		[[nodiscard]]
@@ -166,7 +164,7 @@ namespace pst {
 		bool isStatement() const final {
 			return true;
 		}
-		
+
 		[[nodiscard]]
 		bool isImplicitReturn() const {
 			return implicit_return;
