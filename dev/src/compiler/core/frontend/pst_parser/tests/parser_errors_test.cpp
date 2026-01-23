@@ -226,9 +226,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, true>  simple_round_group{ "(a + b)" };
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
-	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
-	Example<pst::Stmt, true>  simple_stmt_implicit_return{ "x = a + b" };
-	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
+	Example<pst::Stmt, true> simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true> simple_stmt_implicit_return{ "x = a + b" };
+	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 

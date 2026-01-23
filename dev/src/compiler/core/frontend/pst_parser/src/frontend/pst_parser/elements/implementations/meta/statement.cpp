@@ -89,11 +89,10 @@ namespace pst {
 
 			auto opt = out.toOpt();
 			if (opt && opt.value()->trailingSemicolon()) {
-				if (could_implicitly_return) {
+				if (could_implicitly_return)
 					makeImplicitReturn(out.refMut());
-				} else {
+				else
 					state.parse(opt.value()).one(Special::Semicolon);
-				}
 			}
 
 			exitFallback(state);
