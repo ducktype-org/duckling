@@ -36,6 +36,17 @@ public:
 	}
 
 private:
+	/**
+	 * @brief Helper function that check for HELIOS compilation
+	 * errors in a module with given content, when compiling it to HOUT module.
+	 *
+	 * It creates a virtual file from the `module_content` argument
+	 * and creates a module tree from it every function call.
+
+	 * @param module_content The content of the module main source file.
+	 * @param present_phrases List of phrases that should be present in the logged errors.
+	 * @param logged_msg_count Expected number of logged error messages.
+	 */
 	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
 		const std::vector<std::string_view>& present_phrases,

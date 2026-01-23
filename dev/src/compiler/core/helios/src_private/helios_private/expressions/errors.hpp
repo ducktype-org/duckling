@@ -11,7 +11,7 @@
 
 namespace compiler::helios::code {
 
-	class UndefinedBinaryOperatorError: public dia_int::MessageWithCodeFragmentAndCause {
+	class UndefinedBinaryOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -33,7 +33,7 @@ namespace compiler::helios::code {
 		}
 	};
 
-	class UndefinedUnaryOperatorError: public dia_int::MessageWithCodeFragmentAndCause {
+	class UndefinedUnaryOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -51,7 +51,7 @@ namespace compiler::helios::code {
 		}
 	};
 
-	class InvalidNumericLiteralError: public dia_int::MessageWithCodeFragmentAndCause {
+	class InvalidNumericLiteralError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class NumericLiteralTooLargeError: public dia_int::MessageWithCodeFragmentAndCause {
+	class NumericLiteralTooLargeError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -77,7 +77,7 @@ namespace compiler::helios::code {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class LiteralDoesNotFitError: public dia_int::MessageWithCodeFragmentAndCause {
+	class LiteralDoesNotFitError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

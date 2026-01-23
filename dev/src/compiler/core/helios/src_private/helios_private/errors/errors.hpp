@@ -3,7 +3,7 @@
 #include <diagnostic_interactive/message.hpp>
 
 namespace compiler::helios {
-	class SingleStmtFunctionMustBeExprError: public dia_int::MessageWithCodeFragmentAndCause {
+	class SingleStmtFunctionMustBeExprError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -16,7 +16,7 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class ImmutableVariableNoInitError: public dia_int::MessageWithCodeFragmentAndCause {
+	class ImmutableVariableNoInitError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

@@ -110,6 +110,12 @@ namespace compiler::helios::code {
 		bool                         is_for_candidate_function
 	);
 
+	/**
+	 * @brief Helper function that retrieves PST of the parameter list
+	 * from a function-like declaration. A function-like can be a function,
+	 * a `fundecl` or a class method. It used to exctract PST position of the
+	 * parameters for error messages.
+	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl
 	);

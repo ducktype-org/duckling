@@ -148,6 +148,11 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	/**
+	 * @brief Get source position from a PST element of a function-like character
+	 * (pst of a function, function declaration or class method). We want only the
+	 * name and parameters to be included in the source position.
+	 */
 	dia::SourcePosition getFunctionLikeSourcePosition(
 		query::Context& ctx, pst::Access<pst::LangElement> function_like
 	) {

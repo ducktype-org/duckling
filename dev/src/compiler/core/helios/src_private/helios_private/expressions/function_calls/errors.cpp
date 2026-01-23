@@ -161,6 +161,9 @@ namespace compiler::helios::code {
 		}
 	};
 
+	/**
+	 * Documentation in the header file.
+	 */
 	pst::Access<pst::ParamList> getFunctionParamList(
 		query::Context& ctx, pst::Access<pst::LangElement> function_decl
 	) {
@@ -174,6 +177,7 @@ namespace compiler::helios::code {
 			return fun_decl->getParams().unlock(ctx);
 		}
 		case pst::ElementKind::ClassMethod: {
+			// @TODO: #1547 When class methods are being implemented think of the errors messages
 			auto class_method = function_decl.dynamicCast<pst::Method>().value();
 			return class_method->getParams().unlock(ctx);
 		}
