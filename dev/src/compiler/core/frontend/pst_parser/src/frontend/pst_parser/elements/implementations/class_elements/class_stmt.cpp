@@ -50,13 +50,15 @@ namespace pst {
 			MBox<T> out = T::parse(state, ctx, std::forward<Ts...>(args)...);
 
 			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon())
-				state.parse(opt.value()).one(Special::Semicolon);
+			if (opt && opt.value()->trailingSemicolon()) {
+				if (could_implicitly_return) {
+					makeImplicitReturn(out.refMut());
+				} else {
+					state.parse(opt.value()).one(Special::Semicolon);
+				}
+			}
 
 			exitFallback(state);
-
-			if (opt && opt.value()->trailingSemicolon() && could_implicitly_return)
-				makeImplicitReturn(out.refMut());
 
 			PST_RETURN out;
 		}

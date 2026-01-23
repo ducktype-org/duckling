@@ -227,14 +227,14 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
 	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true>  simple_stmt_implicit_return{ "x = a + b" };
 	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
-	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
 
-	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\";" };
+	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\"" };
 	Example<pst::Stmt, true>  private_specifier{ "private fun foo() = {}" };
 	Example<pst::Stmt, true>  protected_specifier{ "protected class x{}" };
 	Example<pst::Stmt, true>  public_block{ "public {class x{}}" };

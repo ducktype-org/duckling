@@ -88,13 +88,15 @@ namespace pst {
 			MBox<T> out = T::parse(state);
 
 			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon())
-				state.parse(opt.value()).one(Special::Semicolon);
+			if (opt && opt.value()->trailingSemicolon()) {
+				if (could_implicitly_return) {
+					makeImplicitReturn(out.refMut());
+				} else {
+					state.parse(opt.value()).one(Special::Semicolon);
+				}
+			}
 
 			exitFallback(state);
-
-			if (opt && opt.value()->trailingSemicolon() && could_implicitly_return)
-				makeImplicitReturn(out.refMut());
 
 			PST_RETURN out;
 		}
@@ -274,7 +276,7 @@ namespace pst {
 			}
 			out << "],";
 		}
-		if (isImplicitReturn()) out << R"("implicit_return": "true",)";
+		if (isImplicitReturn()) out << R"("implicit_return": 1,)";
 	}
 
 	void Stmt::addPrefixes(LangParserState& state, PrefixBoxes&& additions) {
