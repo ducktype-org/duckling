@@ -364,21 +364,22 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
+			std::cerr << "Inside jit_call_entrypoint\n";
+
 			struct JitData {
 				JitOpFun* func_ptr;
 				uint      counter;
-			};
 
-			std::cerr << "Inside jit_call_entrypoint\n";
+				JitData(): func_ptr{ nullptr }, counter{ 0 } {}
+			};
 
 			static std::vector<JitData> jit_data;  // TODO: move this to thread? couldn't as thead
 			                                       // does not know the execution style
 
-			auto func_id = instr->arg0;
+			auto func_id = instr->arg0;            // TODO: manage the size when inserting new code
 			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
 
-			auto& my_data   = jit_data[func_id];
-			my_data.counter = 0;
+			auto& my_data = jit_data[func_id];
 
 			if (my_data.counter == 0) {
 				std::cerr << "Getting functions\n";
@@ -389,28 +390,12 @@ namespace vm {
 				std::cerr << "Returned from compileJit\n";
 			}
 
+			performFunctionCall(instr, local_stack, frame, thread, func_id);
 			if (my_data.func_ptr) {
-				const_cast<MicroInstruction&>(*instr) = vm::makeLowInstruction(
-					low::MicroOpcode::call_func_ptr,
-					reinterpret_cast<intptr_t>(my_data.func_ptr),
-					func_id
-				);
-			} else {
-				performFunctionCall(instr, local_stack, frame, thread, instr->arg0);
+				std::cerr << "Attempting JITted function call\n";
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				std::cerr << "JITed function returned\n";
 			}
-		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_func_ptr)(FUNCTION_ARGS) {
-		{
-			// performFunctionCall(instr, local_stack, frame, thread, instr->arg1);
-			auto* func_ptr = reinterpret_cast<JitOpFun*>(instr->arg0);
-			std::cerr << "Attempting JITted function call\n";
-			performFunctionCall(instr, local_stack, frame, thread, instr->arg1);
-			assert(func_ptr != reinterpret_cast<JitOpFun*>(instr->arg0));
-			(*func_ptr)(&instr, &local_stack, &frame, &thread);
-			std::cerr << "JITed function returned\n";
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
