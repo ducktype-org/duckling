@@ -407,10 +407,12 @@ namespace vm {
 			// performFunctionCall(instr, local_stack, frame, thread, instr->arg1);
 			auto* func_ptr = reinterpret_cast<JitOpFun*>(instr->arg0);
 			std::cerr << "Attempting JITted function call\n";
+			performFunctionCall(instr, local_stack, frame, thread, instr->arg1);
+			assert(func_ptr != reinterpret_cast<JitOpFun*>(instr->arg0));
 			(*func_ptr)(&instr, &local_stack, &frame, &thread);
 			std::cerr << "JITed function returned\n";
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {

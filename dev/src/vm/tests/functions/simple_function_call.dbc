@@ -1,5 +1,5 @@
 	function check {i64} -> void {
-		# output_l64          arg0;
+		output_l64          arg0;
 		init_lany_type a, i64;
 		mov_l64_imm a, 10;
 		mul_l64_imm a, 2;
@@ -19,7 +19,8 @@
 		input_l64           check_arg0;
 		call_func          	check;
 
-		mov_l64_imm			ret_val, 0;
+		mov_l64_imm			ret_val, 42;
+		output_l64          ret_val;
 		deinit; # *argv
 		deinit; # argc
 		ret;
