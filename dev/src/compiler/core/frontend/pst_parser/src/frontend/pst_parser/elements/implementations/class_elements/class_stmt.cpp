@@ -41,6 +41,8 @@ namespace pst {
 		MBox<T> parseStmt(LangParserState& state, const ClassContext& ctx, Ts... args) {
 			// We skip the first token as its the keyword we already found
 			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			bool could_implicitly_return = !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon) 
+				&& state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
 
 			fallbackLen(state, length);
 
@@ -51,6 +53,10 @@ namespace pst {
 				state.parse(opt.value()).one(Special::Semicolon);
 
 			exitFallback(state);
+
+			if (opt && opt.value()->trailingSemicolon() && could_implicitly_return) {
+				makeImplicitReturn(out.refMut());
+			}
 
 			PST_RETURN out;
 		}
@@ -92,6 +98,7 @@ namespace pst {
 	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
+		addToHash(partial_hash, isImplicitReturn());
 		addToHash(partial_hash, context.name.str());
 		return partial_hash;
 	}
