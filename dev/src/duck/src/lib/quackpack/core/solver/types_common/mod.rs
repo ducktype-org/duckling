@@ -7,7 +7,3 @@ pub use expanded::{
     ExpandedLocGit, ExpandedLocLocal, ExpandedLocRegistry, ExpandedLocation, ExpandedPackage,
 };
 pub use not_expanded::{LocGit, LocLocal, LocRegistry, Location, Package};
-
-use crate::quackpack::core::FeatureName;
-
-pub type PresentFeature = Option<FeatureName>;

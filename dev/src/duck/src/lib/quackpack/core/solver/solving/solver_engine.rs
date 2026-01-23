@@ -16,6 +16,7 @@ use crate::{
 };
 
 // Input for solver engine type, currently here, after implementing the gathering information stage will be moved there.
+#[derive(Debug)]
 pub struct GatheredInfo<'a> {
     pub gathered_manifests: HashMap<ExpandedPackage, &'a Manifest>,
     pub all_possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -26,16 +27,7 @@ pub struct GatheredInfo<'a> {
     pub preexisting_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
 }
 
-/// Main entry point.
-/// Creates an engine and runs it.
-pub fn run_engine(
-    input: &GatheredInfo,
-    new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
-) -> QuackResult<FoundSolution> {
-    let engine = SolverEngine::new(input);
-    engine.run(new_dependencies)
-}
-
+#[derive(Debug)]
 /// Struct performing dependencies resolving.
 pub struct SolverEngine<'a> {
     input: &'a GatheredInfo<'a>,
@@ -43,6 +35,15 @@ pub struct SolverEngine<'a> {
 }
 
 impl<'a> SolverEngine<'a> {
+    /// Main entry point.
+    /// Creates an engine and runs it.
+    pub fn run_engine(
+        input: &GatheredInfo,
+        new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
+    ) -> QuackResult<FoundSolution> {
+        let engine = SolverEngine::new(input);
+        engine.run(new_dependencies)
+    }
     /// Creates a new SolverEngine from the given GatheredInfo reference.
     fn new(input: &'a GatheredInfo) -> Self {
         Self {
@@ -74,7 +75,7 @@ impl<'a> SolverEngine<'a> {
         for (new_dep, new_dep_features) in new_dependencies.iter() {
             self.model.require_package(new_dep)?;
             for feature in new_dep_features.iter() {
-                self.model.require_package_with_feature(new_dep, *feature)?;
+                self.model.require_package_with_feature(new_dep, feature)?;
             }
         }
         self.model.solve()
@@ -83,12 +84,17 @@ impl<'a> SolverEngine<'a> {
     /// Creates necesseary varaiables for all the packages.
     fn create_package_variables(&mut self) -> QuackResult<()> {
         for pkg in self.input.gathered_manifests.keys() {
-            self.model.add_package_var(pkg.clone())?;
-            for possible_features in self.input.all_possible_features.get(pkg).iter() {
-                for feature in possible_features.iter() {
-                    self.model
-                        .add_package_with_feature_var(pkg.clone(), *feature)?;
-                }
+            self.model.add_package_var(pkg.clone());
+            for feature in self
+                .input
+                .all_possible_features
+                .get(pkg)
+                .iter()
+                .copied()
+                .flatten()
+            {
+                self.model
+                    .add_package_with_feature_var(pkg.clone(), *feature);
             }
         }
         Ok(())
@@ -123,7 +129,7 @@ impl<'a> SolverEngine<'a> {
         self.model.require_substantiate_dep_features(
             &edge,
             &self.input.all_possible_features,
-            possible_realizations,
+            &possible_realizations,
         )?;
         Ok(())
     }
@@ -135,16 +141,16 @@ impl<'a> SolverEngine<'a> {
         manifest_dependency: &Dependency,
         possible_realizations: &[ExpandedPackage],
     ) -> QuackResult<()> {
-        for realization in possible_realizations.iter() {
+        for realization in possible_realizations {
             self.model
-                .add_dependency_version_realisation_var(edge.clone(), realization.version)?;
+                .add_dependency_version_realisation_var(edge.clone(), realization.version);
         }
 
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
-            for dep_forcing_feature in manifest_dependency.enableing_features() {
+            for dep_forcing_feature in manifest_dependency.enableing_features()? {
                 self.model
                     .require_satisfying_dep_version(edge, Some(dep_forcing_feature))?;
             }
@@ -179,10 +185,10 @@ impl<'a> SolverEngine<'a> {
             }
             for feature in forced.iter() {
                 self.model
-                    .add_dependency_feature_realisation_var(edge.clone(), *feature)?;
+                    .add_dependency_feature_realisation_var(edge.clone(), *feature);
             }
             self.model
-                .require_satisfying_dep_feature(edge, parent_feature.cloned(), forced)?;
+                .require_satisfying_dep_feature(edge, parent_feature, forced)?;
         }
         Ok(())
     }
@@ -307,7 +313,7 @@ metadata:
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = run_engine(&input, &new_dependencies).unwrap();
+        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
         assert!(output.new_features == HashMap::new());
         assert!(
@@ -410,7 +416,7 @@ dependencies:
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = run_engine(&input, &new_dependencies).unwrap();
+        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
         assert!(
             output.new_features
@@ -524,7 +530,7 @@ features:
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = run_engine(&input, &new_dependencies).unwrap();
+        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
         assert!(
             output.new_features
@@ -618,7 +624,7 @@ features:
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = run_engine(&input, &new_dependencies).unwrap();
+        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
         assert!(
             output.new_features

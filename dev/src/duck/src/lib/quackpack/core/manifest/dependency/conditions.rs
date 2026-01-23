@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::QuackError;
 use crate::quackpack::schemas::registry;
+use crate::{QuackError, qp_bail_internal};
 use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 #[derive(Debug)]
@@ -9,7 +9,7 @@ use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 /// This is enabled for `any(system) and any(arch) and any(flags)`.
 pub struct Conditions {
     /// Required root package features for this condition.
-    pub required_root_package_features: Option<Vec<FeatureName>>,
+    required_root_package_features: Option<Vec<FeatureName>>,
 }
 
 impl Conditions {
@@ -55,6 +55,15 @@ impl Conditions {
         // @TODO: #1353 We could work with plain iterators and/or keep `required_root_package_features` as a HashSet,
         //  but only if creating temporary HashSets becomes a bottleneck. Also connected with !TODO above, in `is_enabled_for`.
         !enabled_features.is_disjoint(&required_features)
+    }
+
+    /// Returns root packages mentioned in the manifest
+    pub fn required_root_package_features(&self) -> QuackResult<&Option<Vec<FeatureName>>> {
+        if self.required_root_package_features == Some(vec![]) {
+            qp_bail_internal!("The list of root packages shuold either be None or nonempty")
+        } else {
+            Ok(&self.required_root_package_features)
+        }
     }
 }
 

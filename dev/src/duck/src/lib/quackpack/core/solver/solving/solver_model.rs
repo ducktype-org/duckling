@@ -1,5 +1,5 @@
-/// Module containing a wrapper over russcip::Model, with utilities related to dependency resolving.
-/// By `child` in the context of a given dependency relation we mean the package realising that dependency.
+//! Module containing a wrapper over [`Model`]`, with utilities related to dependency resolving.
+//! By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
@@ -16,10 +16,12 @@ use crate::{
         FeatureName, Version,
         solver::{
             solving::scip_ext::BinModelExt,
-            types_common::{DependencyEdge, ExpandedPackage, PresentFeature},
+            types_common::{DependencyEdge, ExpandedPackage},
         },
     },
 };
+
+type PresentFeature<'a> = Option<&'a FeatureName>;
 
 /// Creates a unique mapping of packages to their variable names.
 fn package_var_name(pkg: &ExpandedPackage) -> StrId {
@@ -54,7 +56,9 @@ fn dependency_version_var_name(dep: &DependencyEdge, version: Option<Version>) -
 type FeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 type ChildVersionsToVars = HashMap<Option<Version>, Rc<Variable>>;
 type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
-/// Wrapper of russcip::Model, adding mappings from appropriate variable identifiers to their variables.
+
+#[derive(Debug)]
+/// Wrapper of [`Model`]`, adding mappings from appropriate variable identifiers to their variables.
 pub struct SolverModel<'a, State> {
     model: Model<State>,
 
@@ -100,65 +104,51 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             ),
             Some(feature) => {
                 let feature_to_var_map = self.package_to_feature_vars.get(pkg).context_internal("Package and feature variable was not added to the model before retrieval attempt")?;
-                feature_to_var_map.get(&feature).cloned().context_internal("Package and feature variable was not added to the model before retrieval attempt")
+                feature_to_var_map.get(feature).cloned().context_internal("Package with feature variable was not added to the model before retrieval attempt")
             }
         }
     }
 
     /// Returns the mapping from child features to variables, associated with the given dependency.
-    fn get_feature_to_var_map_for_dep(
-        &mut self,
-        dep: &DependencyEdge,
-    ) -> QuackResult<&ChildFeaturesToVars> {
-        if !self.dependency_to_feature_vars.contains_key(dep) {
-            self.dependency_to_feature_vars
-                .insert(dep.clone(), HashMap::new());
-        }
+    fn get_feature_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildFeaturesToVars {
         self.dependency_to_feature_vars
-            .get(dep)
-            .context_internal("We have just added an empty map")
+            .entry(dep.clone())
+            .or_insert_with(HashMap::new)
     }
 
     /// Returns the variable associated with the given (dependency, child feature) pair.
     fn get_dependency_feature_variable(
         &mut self,
         dep: &DependencyEdge,
-        feature: FeatureName,
+        feature: &FeatureName,
     ) -> QuackResult<Rc<Variable>> {
-        let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep)?;
-        feature_to_var_map.get(&feature).cloned().context_internal(
-            "Dependency and feature variable not added to the model before retrieval of variable attempt",
+        let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep);
+        feature_to_var_map.get(feature).cloned().context_internal(
+            "Dependency with feature variable not added to the model before retrieval of variable attempt",
         )
     }
 
     /// Returns the mapping from child versions to variables, associated with the given dependency.
-    fn get_version_to_var_map_for_dep(
-        &mut self,
-        dep: &DependencyEdge,
-    ) -> QuackResult<&ChildVersionsToVars> {
-        if !self.dependency_to_version_vars.contains_key(dep) {
-            self.dependency_to_version_vars
-                .insert(dep.clone(), HashMap::new());
-        }
+    fn get_version_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildVersionsToVars {
         self.dependency_to_version_vars
-            .get(dep)
-            .context_internal("We have just added an empty map")
+            .entry(dep.clone())
+            .or_insert_with(HashMap::new)
     }
 
     /// Returns the variable associated with the given (dependency, child version) pair.
     fn get_dependency_version_variable(
         &mut self,
         dep: &DependencyEdge,
-        version: Option<Version>,
+        version: &Option<Version>,
     ) -> QuackResult<Rc<Variable>> {
-        let version_to_var_map = self.get_version_to_var_map_for_dep(dep)?;
-        version_to_var_map.get(&version).cloned().context_internal(
-            "Dependency and version variable not added to the model before retrieval attempt",
+        let version_to_var_map = self.get_version_to_var_map_for_dep(dep);
+        version_to_var_map.get(version).cloned().context_internal(
+            "Dependency with version variable not added to the model before retrieval attempt",
         )
     }
 
     /// Creates the variable associated with the package and adds it to the model.
-    pub fn add_package_var(&mut self, pkg: ExpandedPackage) -> QuackResult<()> {
+    pub fn add_package_var(&mut self, pkg: ExpandedPackage) {
         let objective_coef = if self.preexisting_packages.contains(&pkg) {
             0.0
         } else {
@@ -171,22 +161,16 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                     .add(var().name(&var_name).bin().obj(objective_coef)),
             )
         });
-        Ok(())
     }
 
     /// Creates the variable associated with the (package, feature) pair and adds it to the model.
-    pub fn add_package_with_feature_var(
-        &mut self,
-        pkg: ExpandedPackage,
-        feature: FeatureName,
-    ) -> QuackResult<()> {
+    pub fn add_package_with_feature_var(&mut self, pkg: ExpandedPackage, feature: FeatureName) {
         let var_name = package_with_feature_var_name(&pkg, feature);
         self.package_to_feature_vars
             .entry(pkg)
             .or_default()
             .entry(feature)
             .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.001))));
-        Ok(())
     }
 
     /// Creates a variable associated with the (dependency, child feature) pair and adds it to the model.
@@ -194,14 +178,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         dep: DependencyEdge,
         feature: FeatureName,
-    ) -> QuackResult<()> {
+    ) {
         let var_name = dependency_feature_var_name(&dep, feature);
         self.dependency_to_feature_vars
             .entry(dep)
             .or_default()
             .entry(feature)
             .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
-        Ok(())
     }
 
     /// Creates a variable associated with the (dependency, child version) pair and adds it to the model.
@@ -209,14 +192,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         dep: DependencyEdge,
         version: Option<Version>,
-    ) -> QuackResult<()> {
+    ) {
         let var_name = dependency_version_var_name(&dep, version);
         self.dependency_to_version_vars
             .entry(dep)
             .or_default()
             .entry(version)
             .or_insert_with(|| Rc::new(self.model.add(var().name(&var_name).bin().obj(0.0))));
-        Ok(())
     }
 
     /// Adds a constraint that forces the package to be present in the solution to the model.
@@ -230,7 +212,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn require_package_with_feature(
         &mut self,
         pkg: &ExpandedPackage,
-        feature: FeatureName,
+        feature: &FeatureName,
     ) -> QuackResult<()> {
         let var = self.get_package_variable(pkg, Some(feature))?;
         self.model.add(cons().coef(&var, 1.0).eq(1.0));
@@ -247,9 +229,9 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
         let feature_vars = child_features
             .iter()
-            .map(|feature| self.get_dependency_feature_variable(edge, *feature))
+            .map(|feature| self.get_dependency_feature_variable(edge, feature))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
-        self.model.implies_one_all(parent_var, feature_vars);
+        self.model.one_implies_all(parent_var, feature_vars);
         Ok(())
     }
 
@@ -261,11 +243,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     ) -> QuackResult<()> {
         let parent_var = self.get_package_variable(&edge.parent, parent_feature)?;
         let version_vars = self
-            .get_version_to_var_map_for_dep(edge)?
+            .get_version_to_var_map_for_dep(edge)
             .values()
             .cloned()
             .collect();
-        self.model.implies_all_any(vec![parent_var], version_vars);
+        self.model.all_implies_any(vec![parent_var], version_vars);
         Ok(())
     }
 
@@ -274,7 +256,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// has to be present.
     pub fn require_substantiate_dep(&mut self, edge: &DependencyEdge) -> QuackResult<()> {
         for (pkg_version, version_realization_var) in
-            self.get_version_to_var_map_for_dep(edge)?.clone()
+            self.get_version_to_var_map_for_dep(edge).clone()
         {
             let pkg_var = self.get_package_variable(
                 &ExpandedPackage {
@@ -283,7 +265,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                 },
                 None,
             )?;
-            self.model.implies(version_realization_var.clone(), pkg_var);
+            self.model.implies(&version_realization_var, &pkg_var);
         }
         Ok(())
     }
@@ -295,20 +277,20 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         dep: &DependencyEdge,
         possible_features: &HashMap<ExpandedPackage, HashSet<FeatureName>>,
-        possible_dep_realisations: Vec<ExpandedPackage>,
+        possible_dep_realisations: &[ExpandedPackage],
     ) -> QuackResult<()> {
         for pkg in possible_dep_realisations {
             let version_realization_var =
-                self.get_dependency_version_variable(dep, pkg.version())?;
+                self.get_dependency_version_variable(dep, &pkg.version())?;
             for (feature, feature_realization_var) in
-                self.get_feature_to_var_map_for_dep(dep)?.clone()
+                self.get_feature_to_var_map_for_dep(dep).clone()
             {
                 if !possible_features
-                    .get(&pkg)
+                    .get(pkg)
                     .context_internal("Possible features map does not contain looked up package")?
                     .contains(&feature)
                 {
-                    self.model.implies_all_any(
+                    self.model.all_implies_any(
                         vec![
                             version_realization_var.clone(),
                             feature_realization_var.clone(),
@@ -316,12 +298,12 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                         vec![],
                     );
                 } else {
-                    self.model.implies_all_any(
+                    self.model.all_implies_any(
                         vec![
                             version_realization_var.clone(),
                             feature_realization_var.clone(),
                         ],
-                        vec![self.get_package_variable(&pkg, Some(feature))?],
+                        vec![self.get_package_variable(pkg, Some(&feature))?],
                     );
                 }
             }
@@ -425,7 +407,7 @@ fn new_edges(
     solution: &Solution,
 ) -> HashMap<DependencyEdge, Option<Version>> {
     let mut new_edges = HashMap::new();
-    for (edge, version_to_var_map) in dependency_to_version_vars.into_iter() {
+    for (edge, version_to_var_map) in dependency_to_version_vars {
         if let Some(chosen_realisation) = version_to_var_map
             .iter()
             .filter_map(|(version, var)| {
