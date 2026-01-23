@@ -30,13 +30,13 @@ fn package_var_name(pkg: &ExpandedPackage) -> StrId {
 
 /// Creates a unique mapping of pairs of form (package, feature) to its variable name.
 fn package_with_feature_var_name(pkg: &ExpandedPackage, feature: FeatureName) -> StrId {
-    StrId::new(format!("{}@{:?}", package_var_name(pkg), feature))
+    StrId::new(format!("{}@{}", package_var_name(pkg), feature))
 }
 
 /// Creates a unique mapping of a pair of form (dependency relation, child feature) to its variable name.
 fn dependency_feature_var_name(dep: &DependencyEdge, feature: FeatureName) -> StrId {
     StrId::new(format!(
-        "{}->{:?}@_@{:?}",
+        "{}->{:?}@_@{}",
         package_var_name(&dep.parent),
         dep.dependency_loc,
         feature
