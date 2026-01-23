@@ -59,13 +59,11 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	inline static std::map<KHash, query::CacheEntry<QResult>> cache{};
 
-	// static auto provide(Context& context, QKey key) -> PResult;
-
 	static auto provide(Context& context, QKey key) -> PResult {
 		// Log something, with example file path.
 		context.logInt(makeBox<ExampleDocs>("Duckling"));
 		context.logInt(makeBox<ExampleError>(dia::SourcePosition::fakePosition(), "wrong type"));
-		return squareValue(context, key);
+		return squareValue(context, key.v);
 	}
 
 	static auto load(KHash key) -> LoadResult {
@@ -90,8 +88,8 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
 struct IMPLEMENT_QUERY(Query2, uint64_t) {
 	inline static std::map<KHash, query::CacheEntry<QResult>> cache;
 
-	static auto provide(Context& context, QKey key) -> PResult {
-		return key + context.query<Query1>(key + 1);
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return key.v + ctx.query<Query1>({ key.v + 1 });
 	}
 
 	static auto load(KHash key) -> LoadResult {
@@ -116,8 +114,8 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
 struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	inline static std::map<KHash, query::CacheEntry<QResult>> cache;
 
-	static auto provide(Context& context, QKey key) -> PResult {
-		return key + context.query<CyclicQuery>((key + 1) % 5);
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return key.v + ctx.query<CyclicQuery>({ (key.v + 1) % 5 });
 	}
 
 	static auto load(KHash key) -> LoadResult {
@@ -143,14 +141,14 @@ int main() {
 	// The instant logs may be printed in a different order than when they are dumped,
 	// because the instant logging is instant, while the dumping is ordered.
 
-	std::cerr << query::entryPoint<Query2>(2) << "\n";
+	std::cerr << query::entryPoint<Query2>({ 2 }) << "\n";
 	query::internal::ContextAccess::getState()->getGraph().debugPrintForDrawing(std::cerr);
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";
 	query::Context::int_logger.terminalPrint(std::cerr);
 
-	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
+	std::cerr << query::entryPoint<CyclicQuery>({ 0 }) << "\n";
 
 	return 0;
 }

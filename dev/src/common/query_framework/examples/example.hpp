@@ -4,11 +4,22 @@
 
 #include <cstdint>
 
-DECLARE_QUERY(Query1, uint64_t, uint64_t, ({ .uses_qresult = false }))
+struct Key1 {
+	u64            v;
+	constexpr auto operator<=>(const Key1& oth) const = default;
 
-DECLARE_QUERY(Query2, uint64_t, uint64_t, ({ .uses_qresult = false }))
+	[[nodiscard]]
+	u64 queryUnstablePerfectHash() const {
+		return v;
+	}
+};
 
-DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t, ({ .uses_qresult = false }))
+
+DECLARE_QUERY(Query1, Key1, u64, ({ .uses_qresult = false }))
+
+DECLARE_QUERY(Query2, Key1, u64, ({ .uses_qresult = false }))
+
+DECLARE_QUERY(CyclicQuery, Key1, u64, ({ .uses_qresult = false }))
 
 /**
  * @brief Simple query extension
