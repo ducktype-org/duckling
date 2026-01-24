@@ -37,13 +37,6 @@ fun test_calls() = {
     builtin_output_i64(goo(c = 10));        # 13
 }
 
-# @todo: #
-# fun test_fali() = {
-#     using N.*;
-# 
-#     foo(d = 3);
-# }
-
 fun main() -> i64 = {
 
     let a = foo(a = 1);         # 42
