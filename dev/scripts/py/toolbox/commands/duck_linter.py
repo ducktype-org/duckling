@@ -1,7 +1,9 @@
 from ..impl.duck_linter import duck_linter_impl
 from .helpers import (
     all_flag,
+    auto_fix,
     branch,
+    no_fix,
     no_merge_base,
     verbose,
 )
@@ -16,16 +18,9 @@ from click import command, option
 @branch(
     help="The branch relative to which the diff is created.",
 )
-@no_merge_base(
-    help="On no-merge-base: compare against the latest commit on `branch` "
-    "instead of the commit which is the LCA of `branch` and current branch. "
-    "This feature allows to run the checker on a shallow clone.",
-)
-@option(
-    "--no-fix",  
-    is_flag=True, 
-    help="Apply fixes automatically instead of prompting."
-)
+@no_merge_base()
+@auto_fix()
+@no_fix()
 @verbose(help="Also shows checked files that didn't have any errors.")
 def duck_linter(*args, **kwargs):
     """Check for violations of

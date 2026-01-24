@@ -38,11 +38,6 @@
 
 #include <iostream>
 
-/**
- * Simple function for showing compilation errors.
- */
-void printContextErrors() { query::Context::logger.dumpLog(true, std::cerr); }
-
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
 	    .add(clah::ParamBuilder::ofFlag()
@@ -292,7 +287,6 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					defer(printContextErrors());
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
 
@@ -377,8 +371,6 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend")
 		                                  ? compiler::driver::BackendType::DVM
 		                                  : compiler::driver::BackendType::LLVM;
-
-					defer(printContextErrors());
 
 					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options

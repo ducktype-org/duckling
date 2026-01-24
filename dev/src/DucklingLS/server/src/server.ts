@@ -119,6 +119,12 @@ connection.onRequest("textDocument/semanticTokens/full", (params) =>
 	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
 );
 
+connection.onRequest("duckling/restart", async () => {
+    connection.window.showInformationMessage("Restarting Duckling Daemon...");
+    await compilerDaemonClient.restart(connection);
+    connection.window.showInformationMessage("Duckling Daemon Restarted");
+});
+
 connection.onDefinition(
 	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
         return await handleDefinition(params, documents, compilerDaemonClient, connection);
@@ -175,12 +181,6 @@ documents.onDidClose(e => {
 documents.onDidChangeContent(change => {
 	// The document has changed, so we need to update it in the compiler daemon
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
-		// Get the LSPTree for the document
-		compilerDaemonClient.getSemanticTokens(change.document.uri, connection).then((LSPTree) => {
-			console.log("SERVER: semantic tokens received");
-			console.log(LSPTree);
-		});
-
 		// Revalidate the document
 		validateDuckling(change.document, connection, compilerDaemonClient);
 	});

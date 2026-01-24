@@ -120,16 +120,14 @@ namespace lsp {
 	) {
 		std::vector<SemanticToken> tokens;
 		for (auto& file: files) {
-			query::utils::withContextDo([&file, &tokens](query::Context& ctx) {
-				auto pst = ctx.query<compiler::frontend::QueryFilePST>(file->getFileID());
-				if (pst->getLogger()->bad()) {
-					std::stringstream ss;
-					pst->getLogger()->dumpLog(true, ss);
-					std::cerr << ss.str() << "\n";
-				};
-				auto element = pst->getRootElement();
-				getSemanticTokens(element, tokens);
-			});
+			auto pst = file->getPST();
+			if (pst->getLogger()->bad()) {
+				std::stringstream ss;
+				pst->getLogger()->dumpLog(true, ss);
+				std::cerr << ss.str() << "\n";
+			};
+			auto element = pst->getRootElement();
+			getSemanticTokens(element, tokens);
 		}
 
 		std::vector<std::string> token_strings(tokens.size());

@@ -71,6 +71,14 @@ namespace query::internal {
 		     | std::ranges::to<std::vector<NodeID>>();
 	}
 
+	const std::vector<NodeID>& QueryGraph::getDirectDependencies(const NodeID& node_id) const {
+		CORE_ASSERT(
+			node_deps.contains(node_id),
+			"Node not found in dep graph when requesting direct dependencies."
+		);
+		return node_deps.at(node_id);
+	}
+
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
 		std::vector<NodeID> all_nodes;
@@ -125,26 +133,62 @@ namespace query::internal {
 	}
 
 	std::vector<byte> QueryGraph::serialize() const {
+		const usize         node_count = node_deps.size();
+		std::vector<NodeID> nodes;
+		nodes.reserve(node_count);
+		base::HashMap<NodeID, usize> node_to_index;
+		node_to_index.reserve(node_count);
+
+		usize next_index = 0;
+		for (const auto& [node, _]: node_deps) {
+			node_to_index.emplace(node, next_index++);
+			nodes.push_back(node);
+		}
+
+		std::vector<std::vector<usize>> adjacency(node_count);
+		for (const auto& node: nodes) {
+			const auto& deps = node_deps.at(node);
+			auto&       out  = adjacency.at(node_to_index.at(node));
+			out.reserve(deps.size());
+			for (const auto& dep: deps) {
+				CORE_ASSERT(
+					node_to_index.contains(dep),
+					"Dependency node missing from graph during serialization."
+				);
+				out.push_back(node_to_index.at(dep));
+			}
+		}
+
+		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
+		                                               .adjacency = std::move(adjacency) });
+	}
+
+	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
 
-		constexpr usize node_id_size
+		constexpr usize NODE_ID_SIZE
 			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
+
+		auto& nodes     = reduced_graph.nodes;
+		auto& adjacency = reduced_graph.adjacency;
+		CORE_ASSERT(nodes.size() == adjacency.size(), "Reduced graph data is inconsistent");
+
+		const usize node_count  = nodes.size();
+		usize       total_edges = 0;
+		for (const auto& deps: adjacency) total_edges += deps.size();
 
 		std::vector<byte> buffer;
 
 		// Calculate the total size of the serialized data
-		usize total_size = sizeof(usize);  // map_size
-		for (const auto& [node, deps]: node_deps) {
-			total_size += node_id_size;
-			total_size += sizeof(usize);  // deps_size
-			total_size += deps.size() * node_id_size;
-		}
+		usize total_size = sizeof(usize);  // node_count
+		total_size += node_count * NODE_ID_SIZE;
+		total_size += node_count * sizeof(usize);
+		total_size += total_edges * sizeof(usize);
 		buffer.reserve(total_size);
 
 		auto write = [&](const auto& value) -> void {
-			using T = std::decay_t<decltype(value)>;
-
+			using T               = std::decay_t<decltype(value)>;
 			auto serialized_value = std::bit_cast<std::array<byte, sizeof(T)>>(value);
 			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
 		};
@@ -154,18 +198,17 @@ namespace query::internal {
 			write(node.hash.val.data);
 		};
 
-		// Serialize the size of the node_deps map
-		write(node_deps.size());
+		// Serialize the size of the node list
+		write(node_count);
+		for (const auto& node: nodes) write_node_id(node);
 
-		// Serialize each entry in the map
-		for (const auto& [node, deps]: node_deps) {
-			write_node_id(node);
-
-			// Serialize the dependencies vector size
+		for (usize idx = 0; idx < node_count; ++idx) {
+			const auto& deps = adjacency.at(idx);
 			write(deps.size());
-
-			// Serialize each dependency (NodeID)
-			for (const auto& dep: deps) write_node_id(dep);
+			for (usize dep_idx: deps) {
+				CORE_ASSERT(dep_idx < node_count, "Dependency index out of range in reduced graph");
+				write(dep_idx);
+			}
 		}
 
 		return buffer;
@@ -181,9 +224,6 @@ namespace query::internal {
 		// Compile-time check to ensure HVType and QIDType are trivial
 		static_assert(std::is_trivial_v<HVType>, "HVType must be a trivial type.");
 		static_assert(std::is_trivial_v<QIDType>, "QIDType must be a trivial type.");
-
-		constexpr usize node_id_size
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
 
 		QueryGraph  graph;
 		usize       offset    = 0;
@@ -211,37 +251,40 @@ namespace query::internal {
 			return NodeID(QueryID(q_id), { HType(hash) });
 		};
 
-		// Deserialize the size of the node_deps map
+		// Deserialize the size of the node list
 		usize map_size = 0;
 		read(map_size);
 
-		// Deserialize each entry in the map
+		std::vector<NodeID> nodes;
+		nodes.reserve(map_size);
+		// Deserialize each node entry
 		for (usize i = 0; i < map_size; ++i) {
 			NodeID raw_node = read_node_id();
-			NodeID node     = node_mapper(raw_node);
+			nodes.emplace_back(node_mapper(raw_node));
+		}
 
-			// Deserialize the dependencies vector size
+		// Deserialize the adjacency lists
+		for (usize node_index = 0; node_index < map_size; ++node_index) {
 			usize deps_size = 0;
 			read(deps_size);
 
-			if (deps_size * node_id_size + offset > data_size)
-				throw std::out_of_range("Buffor size exceeded during deserialization");
-
-			// Deserialize each dependency (NodeID)
 			std::vector<NodeID> deps;
 			deps.reserve(deps_size);
 
+			// Deserialize each dependency index
 			for (usize j = 0; j < deps_size; ++j) {
-				NodeID raw_dep = read_node_id();
-				deps.emplace_back(node_mapper(raw_dep));
+				usize dep_index = 0;
+				read(dep_index);
+				if (dep_index >= nodes.size())
+					throw std::out_of_range("Dependency index out of range during deserialization");
+				deps.emplace_back(nodes.at(dep_index));
 			}
 
-			// Add the deserialized entry to the graph
-			auto [it, inserted] = graph.node_deps.emplace(node, std::move(deps));
+			auto [it, inserted] = graph.node_deps.emplace(nodes.at(node_index), std::move(deps));
 			if (!inserted) CORE_PANIC("Duplicate node detected during deserialization");
 		}
 
-		// Check here oif offset is equal to data_size
+		// Ensure that the entire buffer was consumed
 		CORE_ASSERT(offset == data_size, "Deserialization did not consume the entire buffer");
 
 		return graph;
