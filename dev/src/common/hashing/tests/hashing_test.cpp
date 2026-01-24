@@ -269,8 +269,16 @@ private:
 		                                .finalize();
 
 
-		const std::string expected_hash
-			= "b2288f243a2cf2ce6c04b098b2f5ea7d140e961fc234cf55d08a42599847ad89";
+		// Different compilers produce different type names for std::string
+		// (e.g., GCC uses std::__cxx11::basic_string while Clang uses std::basic_string)
+		const std::string expected_hash =
+#ifdef __clang__
+			"1fe69db23ab26446f1f3eb153abbe9f68a144871c7c6dd5c444776f17acfcc44";
+#elif defined(__GNUC__)
+			"3140a2b64e65e32a3e96bf125284a7de13c304e3ee4087bd1de33b8e76f09ffd";
+#else
+#error "Unsupported compiler"
+#endif
 		const std::string computed_hash = hash_value.toStringHex();
 
 		assertTrue(
