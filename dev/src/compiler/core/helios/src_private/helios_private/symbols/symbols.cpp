@@ -62,7 +62,7 @@ namespace compiler::helios {
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
 	namespace internal {
-		constexpr auto global_variable_pst_context
+		constexpr auto GLOBAL_VARIABLE_PST_CONTEXT
 			= [](this auto self, query::Context& ctx, const pst::Access<pst::LangElement>& el
 		      ) -> bool {
 			switch (el->getElementKind()) {
@@ -103,7 +103,7 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		return internal::global_variable_pst_context(
+		return internal::GLOBAL_VARIABLE_PST_CONTEXT(
 			ctx, getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
 		);
 	}

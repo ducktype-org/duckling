@@ -12,15 +12,15 @@ either in the scheme or it's implementation, they should be reflected here.
 // Q seems to be free and stands for both query and quack
 <language-prefix> ::= "_Q"
 
-// REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
-// if it's correct.
-<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
-
 <scheme-version> ::= <compact-number>                       // version of the mangling scheme
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function-type>                       // functions
              | <repl-expression-wrapper>                    // REPL expressions
+
+// REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
+// if it's correct.
+<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>

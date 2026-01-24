@@ -57,7 +57,7 @@ namespace compiler::helios::mangler {
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool do_not_mangle(query::Context& ctx, auto key) {
+		bool doNotMangle(query::Context& ctx, auto key) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
 				return false;
@@ -350,7 +350,7 @@ namespace compiler::helios::mangler {
 					}
 					variant_case_novalue(builtin::BuiltinFunctionData) {
 						// Builtins have a C linkage (CAbi), so they are handled by the
-						// `do_not_mangle` check in `provide()`
+						// `doNotMangle` check in `provide()`
 						CORE_UNREACHABLE();
 					}
 					variant_case(houtgen::GeneratedSymbolData, gen_data) {
@@ -455,7 +455,7 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if (internal::do_not_mangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
+			if (internal::doNotMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack
