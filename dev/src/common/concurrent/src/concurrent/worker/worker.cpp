@@ -45,7 +45,7 @@ void concurrent::Worker::run() {
 
 				if (task_queue.empty()) {
 					lock.unlock();
-					this->no_tasks_callback(this->worker_data);
+					no_tasks_callback(worker_data);
 					lock.lock();
 				}
 
@@ -58,7 +58,7 @@ void concurrent::Worker::run() {
 				task        = task_queue.front();
 				task_queue.pop();
 			}
-			task(this->worker_data);
+			task(worker_data);
 		}
 	} };
 }
