@@ -2,6 +2,7 @@ add_library(Concurrent
     src/concurrent/module_flags/worker_count.cpp
     src/concurrent/worker/worker.cpp
     src/concurrent/worker/worker_manager.cpp
+    src/concurrent/task_pool/task_pool.cpp
     src/concurrent/utils/nop_wait.cpp
     src/concurrent/base/collections/hash_map.cpp
 )
