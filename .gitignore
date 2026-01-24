@@ -5,6 +5,9 @@
 !.gitignore
 !.github/
 
+# CodeQL generated files:
+_codeql_detected_source_root
+
 # Editor files:
 .vscode/
 compile_commands.json
