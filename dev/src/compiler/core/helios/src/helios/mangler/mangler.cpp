@@ -54,6 +54,28 @@ namespace compiler::helios::mangler {
 
 	namespace internal {
 		/**
+		 * @brief Check if the symbol should be mangled in the first place.
+		 * @note: See mangling-scheme.md for details
+		 */
+		bool do_not_mangle(query::Context& ctx, auto key) {
+			if (key.kind != ManglingSymbolKind::Standard) {
+				// Non-standard symbols can't have C mangling
+				return false;
+			}
+
+			const auto sym_id = std::get<SymID>(key.symbol_key);
+			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
+				variant_match(abi->valueOrThrow()) {
+					variant_case_novalue(CAbi) { return true; }
+					variant_case_novalue(DefaultAbi) { return false; }
+					variant_default { CORE_UNREACHABLE(); }
+				}
+			}
+
+			return false;
+		}
+
+		/**
 		 * @brief A shorter representation of a number in base-62, used to save space
 		 * @note: See mangling-scheme.md for details
 		 */
@@ -326,6 +348,11 @@ namespace compiler::helios::mangler {
 						// If the symbol originates from the PST, use its path.
 						return path(ctx, symbol_id) + funcType(ctx, symbol_id);
 					}
+					variant_case_novalue(builtin::BuiltinFunctionData) {
+						// Builtins have a C linkage (CAbi), so they are handled by the
+						// `do_not_mangle` check in `provide()`
+						CORE_UNREACHABLE();
+					}
 					variant_case(houtgen::GeneratedSymbolData, gen_data) {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
@@ -342,9 +369,6 @@ namespace compiler::helios::mangler {
 							// Other cases of generated symbols cannot be functions.
 						}
 					}
-					// The last case is that the symbol is a builtin function, which is handled
-					// in a separate branch of ImplementationOf_QueryMangledSymbol::provide.
-					// @TODO: #1700 Simplify this handling of builtin functions.
 				}
 				CORE_UNREACHABLE();
 			}
@@ -431,30 +455,7 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if (key.kind == ManglingSymbolKind::Standard) {
-				auto sym_id = std::get<SymID>(key.symbol_key);
-				// a temporary hack:
-				// @TODO: #895 fix it when we add script based package targets
-				if (name(sym_id) == "main") {
-					// main is not mangled
-					return base::StrID{ "main" };
-				}
-
-				if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(sym_id)->other)) {
-					// Builtin functions are not mangled
-					// @TODO: #1700 Simplify this handling of builtin functions.
-					// i.e. probably make it similar to mangling regular functions.
-					return name(sym_id);
-				}
-
-				if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
-					variant_match(abi->valueOrThrow()) {
-						variant_case_novalue(CAbi) { return name(sym_id); }
-						variant_case_novalue(DefaultAbi) { /* Handled below */ }
-						variant_default { CORE_UNREACHABLE(); }
-					}
-				}
-			}
+			if (internal::do_not_mangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack

@@ -6,7 +6,7 @@ either in the scheme or it's implementation, they should be reflected here.
 ```rust
 
 <mangled-symbol-name> ::= <language-prefix> <scheme-version> <encoding> <opt-metadata>
-                       | <repl-expression-wrapper>
+                        | <no-mangling>                     // C linkage (builtins, extern C, special e.g. main)
 
 // note: global identifiers starting with underscore and a capital letter are reserved in C
 // Q seems to be free and stands for both query and quack
@@ -20,6 +20,7 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <encoding> ::= <path>                                       // variables and constants
              | <path> <function-type>                       // functions
+             | <repl-expression-wrapper>                    // REPL expressions
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>

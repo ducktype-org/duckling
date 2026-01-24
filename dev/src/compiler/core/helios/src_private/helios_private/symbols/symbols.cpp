@@ -11,6 +11,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -60,11 +61,10 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	bool isGlobalVar(query::Context& ctx, SymID id) {
-		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
-
-		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_context
-			= [&](const pst::Access<pst::LangElement>& el) -> bool {
+	namespace internal {
+		constexpr auto global_variable_pst_context
+			= [](this auto self, query::Context& ctx, const pst::Access<pst::LangElement>& el
+		      ) -> bool {
 			switch (el->getElementKind()) {
 			case pst::ElementKind::TopLevel:
 			case pst::ElementKind::Namespace:
@@ -82,14 +82,30 @@ namespace compiler::helios {
 			case pst::ElementKind::Variable:
 			case pst::ElementKind::StmtSpecifier:
 				// we panic if there is no parent:
-				return global_variable_pst_context(el->getParent().value().unlock(ctx));
+				return self(ctx, el->getParent().value().unlock(ctx));
 
 			default:
 				CORE_PANIC("Unexpected pst path of variable");
 			}
 		};
+	}
 
-		return global_variable_pst_context(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
+	bool isGlobalFun(SymID id) {
+		CORE_ASSERT(
+			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
+				|| getSymRef(id)->common.kind == SymbolKind::Function,
+			"Not a function."
+		);
+
+		return scopeDepth(scope(id)) == 1;
+	}
+
+	bool isGlobalVar(query::Context& ctx, SymID id) {
+		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+
+		return internal::global_variable_pst_context(
+			ctx, getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
+		);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
