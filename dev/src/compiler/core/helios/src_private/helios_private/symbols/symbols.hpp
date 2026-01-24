@@ -30,12 +30,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query symbol associated with given element in PST
 	 */
-	DECLARE_QUERY(
-		QuerySymbolOfSTMT,
-		pst::GenericPSTQueryKey<>,
-		SymID,
-		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
-	);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID, ({ .uses_qresult = false }));
 
 	struct KeyOf_LookupInSymbol {
 		/**

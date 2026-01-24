@@ -89,6 +89,7 @@ from click import Choice, option, command
     is_flag=True,
 )
 @option(
+    "-i",
     "--strip-symbol-information",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,

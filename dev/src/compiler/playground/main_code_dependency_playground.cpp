@@ -14,9 +14,9 @@
 #include <iostream>
 
 void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
+	if (query::Context::int_logger.messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
+		query::Context::int_logger.dumpLog(true, std::cerr);
 	}
 }
 

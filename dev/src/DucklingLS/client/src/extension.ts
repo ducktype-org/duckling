@@ -1,5 +1,5 @@
 import * as path from "path";
-import { workspace, ExtensionContext } from "vscode";
+import { workspace, ExtensionContext, commands } from "vscode";
 
 import {
 	LanguageClient,
@@ -47,6 +47,12 @@ export function activate(context: ExtensionContext) {
 
 	// Start the client. This will also launch the server
 	client.start();
+
+	context.subscriptions.push(
+		commands.registerCommand('duckling.restartServer', () => {
+			client.sendRequest('duckling/restart');
+		})
+	);
 }
 
 // This method is called when your extension is deactivated

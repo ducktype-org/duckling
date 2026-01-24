@@ -90,15 +90,20 @@ namespace dia_int {
 	class CodeLocationArgument final: public Argument {
 	public:
 		struct FileLocation {
-			std::string file;
-			u64         line;
-			u64         column;
+			std::string         file;
+			u64                 line;
+			u64                 column;
+			base::Optional<u64> end_line{};
+			base::Optional<u64> end_column{};
 
 			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
-				auto [line, column] = pos.getStartLineColumn();
-				return { .file   = pos.getSource()->getFile().getFilePath().string(),
-					     .line   = (u64) line,
-					     .column = (u64) column };
+				auto [line, column]         = pos.getStartLineColumn();
+				auto [end_line, end_column] = pos.getEndLineColumn();
+				return { .file       = pos.getSource()->getFile().getFilePath().string(),
+					     .line       = (u64) line,
+					     .column     = (u64) column,
+					     .end_line   = end_line,
+					     .end_column = end_column };
 			}
 		};
 
