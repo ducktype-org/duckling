@@ -46,7 +46,7 @@ namespace hashing {
 			std::integral I        = u32,
 			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
-			constexpr std::string_view       sv = base::typeName<T, true>();
+			constexpr std::string_view       sv = base::typeName<T>();
 			std::array<std::byte, sv.size()> byte_arr;
 			for (std::size_t i = 0; i < sv.size(); ++i) byte_arr[i] = static_cast<std::byte>(sv[i]);
 			return StrToIntegral<I, HashAlgorithm>{ std::span{ byte_arr.begin(), byte_arr.end() } };
