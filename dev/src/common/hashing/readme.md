@@ -69,7 +69,7 @@ you can specify exactly what bytes should be passed to the hashing algorithm by 
 friend constexpr void addToHash(hash_algorithm auto& h, const T& t) noexcept { /*...*/ }
 ~~~~~
 
-This function besides your type also takes a reference to a hashing algorithm.
+This function, besides your type, also takes a reference to a hashing algorithm.
 As you can see, this parameter is constrained by a concept which you can get by including `<hashing/hash_algorithm_utils.hpp>`.
 Though it is not strictly necessary it can help to detect bugs early and gives somewhat better error messages.
 
