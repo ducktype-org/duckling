@@ -19,6 +19,7 @@ def duck_linter_impl(
     verbose: bool = False,
     no_merge_base: bool = False,
     no_fix: bool = False,
+    auto_fix: bool = False,
 ) -> bool:
     """
     Main implementation of the duck linter.
@@ -30,6 +31,7 @@ def duck_linter_impl(
     - verbose: If True, print detailed output for each file.
     - no_merge_base: If True, do not use the merge base for determining changed files.
     - no_fix: If True, do not apply automatic fixes.
+    - auto_fix: If True, apply automatic fixes.
     """
 
     failed_files: set[SourceFile] = set(
@@ -40,14 +42,17 @@ def duck_linter_impl(
     )
 
     if failed_files and not no_fix:
-        total_fixes = sum(f.getFixCount() for f in failed_files)
-        log_new_line()
-        log_info(
-            f"Can perform {total_fixes} automatic fix(es) across {len(failed_files)} file(s)."
-        )
+        apply = auto_fix
+        if not auto_fix:
+            total_fixes = sum(f.getFixCount() for f in failed_files)
+            log_new_line()
+            log_info(
+                f"Can perform {total_fixes} automatic fix(es) across {len(failed_files)} file(s)."
+            )
+            response = get_input("Do you want to apply these fixes? [Y/n]")
+            apply = response.lower() in ["y", "yes", ""]
 
-        response = get_input("Do you want to apply these fixes? [Y/n]")
-        if response.lower() in ["y", "yes", ""]:
+        if apply:
             for f in failed_files:
                 f.applyFixes()
             log_info("Fixes applied!")

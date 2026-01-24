@@ -8,7 +8,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/stmt_specifier.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -96,6 +96,10 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// Builtin functions are implemented in C/C++ and use the C ABI.
+			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other))
+				return CAbi{};
+
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
 				if (specifier.unlock(ctx)->getSpecifier() == pst::Keyword::Extern) {

@@ -31,9 +31,12 @@ public:
 		TESTER_ADD_TEST(checkLiteralErrorHandling);
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(invalidPrimitiveTypes);
+		TESTER_ADD_TEST(checkCastingInstructions);
 	}
 
 private:
+	void checkCastingInstructions() { runTestOnVm("casting.dbc", "", "11111111111", {}); }
+
 	void jump() { runTestOnVm("jump.dbc", "", "5", {}); }
 
 	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, {}, 1'337); }

@@ -44,6 +44,10 @@
 #include <vm/core/thread/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <cmath>
+#include <limits>
+#include <type_traits>
+
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -998,9 +1002,122 @@ namespace vm {
 	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
 #define CAST_PRIMITIVE(SIZE) \
 	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
-
 	FOR_EACH(CAST_PRIMITIVE, 8, 16, 32, 64)
 #undef CAST_PRIMITIVE
+
+
+#define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			auto val = readFromStack<SRC_TYPE>(local_stack, instr->arg1);                 \
+			writeToStack<DST_TYPE>(local_stack, instr->arg0, static_cast<DST_TYPE>(val)); \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}
+
+	// Sign Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 16, 8, i16, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 8, i32, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 8, i64, i8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 32, 16, i32, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 16, i64, i16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(sext, 64, 32, i64, i32)
+
+	// Zero Extension
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 16, 8, u16, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 8, u32, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 8, u64, u8)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 32, 16, u32, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 16, u64, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(zext, 64, 32, u64, u32)
+
+	// Truncation
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 16, u8, u16)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 32, u8, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 8, 64, u8, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 32, u16, u32)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 16, 64, u16, u64)
+	DEFINE_STATIC_CAST_CONVERSION_OP(trunc, 32, 64, u32, u64)
+
+
+#define DEFINE_INT_TO_FLOAT(DST_SIZE)                                                    \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, i8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 8, FLOAT_##DST_SIZE##_TYPE, u8)   \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, i16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 16, FLOAT_##DST_SIZE##_TYPE, u16) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, i32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 32, FLOAT_##DST_SIZE##_TYPE, u32) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(sitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, i64) \
+	DEFINE_STATIC_CAST_CONVERSION_OP(uitofp, DST_SIZE, 64, FLOAT_##DST_SIZE##_TYPE, u64)
+
+	DEFINE_INT_TO_FLOAT(32)
+	DEFINE_INT_TO_FLOAT(64)
+
+
+#define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                                     \
+			using IntT   = DST_TYPE;                                                          \
+			using FloatT = SRC_TYPE;                                                          \
+			auto x       = readFromStack<FloatT>(local_stack, instr->arg1);                   \
+			IntT res;                                                                         \
+			if (std::isnan(x)) {                                                              \
+				res = IntT{ 0 };                                                              \
+			} else {                                                                          \
+				constexpr FloatT min = static_cast<FloatT>(std::numeric_limits<IntT>::min()); \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<IntT>::max()); \
+				if (x <= min) {                                                               \
+					res = std::numeric_limits<IntT>::min();                                   \
+				} else if (x >= max) {                                                        \
+					res = std::numeric_limits<IntT>::max();                                   \
+				} else {                                                                      \
+					res = static_cast<IntT>(x);                                               \
+				}                                                                             \
+			}                                                                                 \
+			writeToStack<IntT>(local_stack, instr->arg0, res);                                \
+		}                                                                                     \
+		FUNCTION_CONT(1);                                                                     \
+	}
+
+#define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                         \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			using UIntT  = DST_TYPE;                                                           \
+			using FloatT = SRC_TYPE;                                                           \
+			auto  x      = readFromStack<FloatT>(local_stack, instr->arg1);                    \
+			UIntT res;                                                                         \
+			if (std::isnan(x)) {                                                               \
+				res = UIntT{ 0 };                                                              \
+			} else {                                                                           \
+				constexpr FloatT max = static_cast<FloatT>(std::numeric_limits<UIntT>::max()); \
+				if (x <= FloatT{ 0 }) {                                                        \
+					res = UIntT{ 0 };                                                          \
+				} else if (x >= max) {                                                         \
+					res = std::numeric_limits<UIntT>::max();                                   \
+				} else {                                                                       \
+					res = static_cast<UIntT>(x);                                               \
+				}                                                                              \
+			}                                                                                  \
+			writeToStack<UIntT>(local_stack, instr->arg0, res);                                \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}
+
+#define DEFINE_FLOAT_TO_INT(SRC_SIZE)                                            \
+	DEFINE_FPTOSI_OP(fptosi, 8, SRC_SIZE, std::int8_t, FLOAT_##SRC_SIZE##_TYPE)  \
+	DEFINE_FPTOUI_OP(fptoui, 8, SRC_SIZE, std::uint8_t, FLOAT_##SRC_SIZE##_TYPE) \
+	DEFINE_FPTOSI_OP(fptosi, 16, SRC_SIZE, i16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 16, SRC_SIZE, u16, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 32, SRC_SIZE, i32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 32, SRC_SIZE, u32, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOSI_OP(fptosi, 64, SRC_SIZE, i64, FLOAT_##SRC_SIZE##_TYPE)         \
+	DEFINE_FPTOUI_OP(fptoui, 64, SRC_SIZE, u64, FLOAT_##SRC_SIZE##_TYPE)
+
+	DEFINE_FLOAT_TO_INT(32)
+	DEFINE_FLOAT_TO_INT(64)
+
+	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
+	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{

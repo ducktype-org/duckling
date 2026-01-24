@@ -16,6 +16,6 @@ namespace pst::expr {
 		state.parse(out).one(Keyword::Not);
 		state.parse(out).with(&out->expr, Self::parse, length - 1);
 
-		return out;
+		PST_RETURN out;
 	}
 }

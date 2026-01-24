@@ -19,7 +19,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_code_generation/class_constructors.cpp
-	src_private/helios_private/errors/interactive_errors.cpp
+	src_private/helios_private/errors/dia_interactive_elements.cpp
 
 	src/helios/queries.cpp
 	src/helios/scope_symbol_id.cpp
@@ -35,10 +35,16 @@ add_library(HELIOS STATIC
 	src/helios/utils/go_to_definition.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
+	src/helios/repl_utils/repl_queries.cpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp
+	USES Base TypeSystemHigher PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+	
+duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
 	USES Base TypeSystemHigher PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")

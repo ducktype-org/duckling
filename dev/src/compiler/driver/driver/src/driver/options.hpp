@@ -1,9 +1,7 @@
 #pragma once
 
+#include <global_state/backend_options.hpp>
 #include <linker/link.hpp>
-
-#include <base/collections/optional.hpp>
-#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
@@ -12,47 +10,10 @@
 #include <variant>
 
 namespace compiler::driver {
-	// @note: a lot of code in this file is left as hypothetical comments
-	// as it is unused for now, but sets a vision for the code structure
-	// in the future.
-	// I'm not 100% sure if this place is the best place for this code,
-	// as in the end those options should be accessible (via global_state module of other things)
-	// in the core-compiler, and we don't want to have a dependency on the driver module there.
-
 	/**
 	 * Definition of options that are used by the compiler to control its behavior.
 	 */
 	namespace options_types {
-		/**
-		 * Options used for actual compilation of the source code.
-		 */
-		struct CompilationOptions final {
-			// struct OptimizationOptions {
-			//     u64 level;
-			// };
-
-			struct BackendOptions final {
-				struct DVMBackend {};
-
-				struct LLVMBackend {};
-
-				// /**
-				//  * If empty, then DVM backend is not available.
-				//  */
-				// base::Optional<VMBackend> dvm_backend;
-
-				// /**
-				//  * If empty, then LLVM backend is not available.
-				//  */
-				// base::Optional<LLVMBackend> llvm_backend;
-			};
-
-			CompilationOptions(BackendOptions backend): backend(backend) {}
-
-			// OptimizationOptions optimization;
-			BackendOptions backend;
-		};
-
 		/**
 		 * Options used to control debug related behavior like
 		 * logging, dump of intermediate representations, etc.
@@ -132,22 +93,32 @@ namespace compiler::driver {
 			options_types::PackageInfo      main_package_info;
 			options_types::ArtifactsOptions compilation_artifacts;
 			// std::vector<options_types::DependencyInfo> dependencies;
-			// options_types::CompilationOptions compilation_options;
+			global_state::BackendOptions      backend_options;
 			options_types::DebugOptions       debug_options;
 			options_types::IncrementalOptions incremental;
 		};
 
 		/**
+		 * Repl mode does not create a main package, does not enable incremental compilation,
+		 * and does not persist artifacts to disk.
+		 */
+		struct ReplMode final {
+			options_types::DebugOptions debug_options;
+		};
+
+		/**
 		 * @note: in the future this might hold more modes,
-		 * like repl mode, script compilation mode, lsp deamon, etc.
+		 * like script compilation mode, lsp deamon, etc.
 		 * don't refrain from refactoring this file (and module) if needed.
 		 * We might also want to restrain compiler functionality based on the mode.
 		 */
-		std::variant<BareMode, PackageCompilationMode> mode;
+		std::variant<BareMode, PackageCompilationMode, ReplMode> mode;
 
 		CompilerModeOfOperationAndOptions(BareMode bare_mode): mode(bare_mode) {}
 
 		CompilerModeOfOperationAndOptions(PackageCompilationMode package_mode):
 			  mode(package_mode) {}
+
+		CompilerModeOfOperationAndOptions(ReplMode repl_mode): mode(repl_mode) {}
 	};
 };

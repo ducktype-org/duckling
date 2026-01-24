@@ -15,6 +15,12 @@
         "onLanguage:duckling"
     ],
     "contributes": {
+        "commands": [
+            {
+                "command": "duckling.restartServer",
+                "title": "DucklingLS: Restart languge server"
+            }
+        ],
         "languages": [
             {
                 "id": "duckling",

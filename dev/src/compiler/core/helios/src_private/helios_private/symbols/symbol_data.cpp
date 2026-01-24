@@ -18,8 +18,14 @@ namespace compiler::helios {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
+		// @TODO: #1807 Refactor the code so that it's impossible to create
+		// two symbols with the same counter but different return types.
+		base::Bit256 GeneratedSymbolData::ReplExpressionWrapper::queryUnstablePerfectHash() const {
+			return { return_type.queryUnstablePerfectHash(), counter };
+		}
+
 		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable>& data
+			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
 		):
 			  data(data) {}
 
@@ -66,13 +72,22 @@ namespace compiler::helios {
 					          ->valueOrThrow()
 					          .getType()
 					          .as<tsh::FunctionAbstractType>();
-					return tsh::SymbolType{
-						function_type.getParameterTypes().at(param.parameter_index).getType(),
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
+					return param_symbol_type.withMutability(tsh::Mutability::Immutable);
+				}
+				variant_case(Variable, var) { return var.type; }
+				variant_case(ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						{},
+						repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(Variable, var) { return var.type; }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -112,6 +127,9 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper) {
+				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

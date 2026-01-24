@@ -7,15 +7,14 @@ metadata:
   active_until: "now"
   template_type: "message"
 
-
 params:
   language_name:
-    description: "The best programming languague in the world."
+    description: "The best programming language in the world."
   country_name:
     description: "The country of origin of this language."
 
 header_message:
-  - "Important! The best programming lanaguage in the world is `"
+  - "Important! The best programming language in the world is `"
   - param: "language_name"
   - "`."
 

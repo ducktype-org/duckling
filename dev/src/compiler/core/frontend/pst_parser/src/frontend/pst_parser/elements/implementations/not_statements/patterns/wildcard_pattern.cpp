@@ -10,7 +10,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<WildcardPattern>(position);
 		state.parse(out).eatOne();
-		return out;
+		PST_RETURN out;
 	}
 
 	void WildcardPattern::dprint(std::ostream& out) const {

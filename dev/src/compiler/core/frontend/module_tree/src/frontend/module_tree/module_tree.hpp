@@ -42,7 +42,7 @@ namespace compiler::frontend {
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
 	 * including its source files, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
-	 * the main use case is to build a module tree form exesting folder, and then
+	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
 	 * But module tree can be also created manually.
 	 *
@@ -200,14 +200,14 @@ namespace compiler::frontend {
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>>
 			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccesLocked is
+		                    // happening with them. Do not use this in query unless AccessLocked is
 		                    // implemented for this
 
 		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
 
 		base::Optional<hashing::ComponentHash>
 			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // packege_name/root/submodule1/sub2
+		                            // package_name/root/submodule1/sub2
 		base::Optional<hashing::ComponentHash::HashType>
 			m_hash;                 //< This is the actual hash for the Module used in SideInput
 
@@ -502,4 +502,17 @@ namespace compiler::frontend {
 	 * @return The ModuleID of the created module tree
 	 */
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file);
+
+	/**
+	 * Creates a module tree from a string containing source code contents.
+	 * This is primarily used for REPL sessions and testing.
+	 * Creates a virtual file from the provided contents and sets it as the main source file.
+	 * If no package_id is provided, a random one is generated.
+	 * @param contents The source code content as a string
+	 * @param package_id Optional package ID; if empty, a random one is generated
+	 * @return The ModuleID of the created module tree
+	 */
+	ModuleID createModuleTreeFromContents(
+		std::string_view contents, base::Optional<std::string_view> package_id = {}
+	);
 }

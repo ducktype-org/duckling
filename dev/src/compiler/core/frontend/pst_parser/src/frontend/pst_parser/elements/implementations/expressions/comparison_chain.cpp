@@ -32,7 +32,7 @@ namespace pst::expr {
 		out->sub_expr.emplace_back(nullptr);
 		state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
 
-		return out;
+		PST_RETURN out;
 	}
 
 	void ComparisonChain::dprint(std::ostream& out) const {
