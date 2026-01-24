@@ -131,17 +131,10 @@ either in the scheme or it's implementation, they should be reflected here.
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol
-                  | <special-member-name>                   // ctors, dtors, etc.
                   | <unnamed-type-name>                     // unnamed type or closure
                   | <operator-name>
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
-
-// more special methods could be added in the future
-<special-member-name> ::= "C" <type>* "E"                   // constructor
-                        | "C" <identifier> <type>* "E"      // named constructor
-                        | "D" <type>* "E"                   // destructor
-                        | "M"                               // move constructor
 
 <operator-name> ::= <chain-operator>
                   | <unary-operator-name>                   // inside class, no need for argument type
