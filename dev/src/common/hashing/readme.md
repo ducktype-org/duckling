@@ -150,19 +150,19 @@ With it's defaults it can be used as a drop-in replacement for `std::hash`:
 
 But it can also be customized.
 There is one template parameters that can be specified: `HashAlgorithm`.
-
-* The first one chooses the underlying algorithm that converts bytes to the hash value.
-
-    Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
-
-    There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
+By specifying it we can choose the underlying algorithm that converts bytes to the hash value.
 
 
-    <html>
-    <body>
-    <!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>7B </span><span>00 00 00 C8 01 00 00 </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
-    </body>
-    </html>
+Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
+
+There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object).
+
+
+<html>
+<body>
+<!--StartFragment--><html><body><!--StartFragment--><pre><div style='color: #808080; background-color: #ffffff00; font-family: Consolas, 'Courier New', monospace, monospace; font-size: 14px;'><div><span>line    0:    </span><span style='color: #cd3131; font-weight: bold;'>7B </span><span>00 00 00 C8 01 00 00 </span></div></div></pre><!--EndFragment--></body></html><!--EndFragment-->
+</body>
+</html>
 
 Using different hashing algorithms:
 
