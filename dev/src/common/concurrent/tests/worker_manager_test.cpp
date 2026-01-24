@@ -21,8 +21,8 @@ public:
 
 private:
 	void basicFunctionalityTest() {
-		std::atomic_int no_task_counter = 0;
-		auto            now             = std::chrono::steady_clock::now();
+		std::atomic<usize> no_task_counter = 0;
+		auto               now             = std::chrono::steady_clock::now();
 
 		concurrent::WorkerManager worker_manager([&no_task_counter](concurrent::WDRef) {
 			no_task_counter.fetch_add(1, std::memory_order_relaxed);
@@ -34,7 +34,7 @@ private:
 		auto free_workers = worker_manager.getFreeWorkers(concurrent::getWorkerCount());
 		ASSERT_EQUAL(free_workers.size(), concurrent::getWorkerCount());
 
-		std::atomic_int task_finished_counter = 0;
+		std::atomic<usize> task_finished_counter = 0;
 		for (const auto& id: worker_manager.getAllWorkers()) {
 			worker_manager.scheduleTaskOnWorker(id, [&task_finished_counter](concurrent::WDRef) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
@@ -84,7 +84,7 @@ private:
 		std::queue<concurrent::Task> tasks;
 		std::mutex                   task_mutex;
 
-		std::atomic_int                  total_completed_tasks = 0;
+		std::atomic<usize>               total_completed_tasks = 0;
 		concurrent::ConHashMap<u64, u64> results;
 		concurrent::ConHashMap<u64, u64> worker_task_counts;
 
@@ -116,7 +116,7 @@ private:
 			[&tasks, &task_mutex, &worker_manager](concurrent::WDRef wd) {
 				// This callback is invoked when a worker has no tasks.
 			    // We can use it to assign new tasks to the worker.
-				std::lock_guard<std::mutex> lock(task_mutex);
+				std::scoped_lock lock(task_mutex);
 
 				for (usize i = 0; i < task_batch_size; i++) {
 					if (!tasks.empty()) {

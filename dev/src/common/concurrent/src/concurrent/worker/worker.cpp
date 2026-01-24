@@ -5,7 +5,7 @@
 void concurrent::Worker::pushTask(Task&& task) {
 	CORE_ASSERT(loop_run_flag, "Cannot push task to stopped worker");
 	{
-		std::lock_guard lock(m);
+		std::scoped_lock lock(m);
 		task_queue.push(std::move(task));
 	}
 	cv.notify_one();
@@ -17,7 +17,7 @@ concurrent::Worker::Worker(WDRef worker_data, NoTasksCallback no_tasks_callback)
 	  real_thread() {}
 
 [[nodiscard]] bool concurrent::Worker::isFree() const {
-	std::lock_guard lock(m);
+	std::scoped_lock lock(m);
 	return !is_occupied.load() && task_queue.empty();
 }
 
@@ -27,7 +27,7 @@ concurrent::Worker::Worker(WDRef worker_data, NoTasksCallback no_tasks_callback)
 
 concurrent::Worker::~Worker() {
 	{
-		std::lock_guard<std::mutex> lock(m);
+		std::scoped_lock lock(m);
 		loop_run_flag = false;
 	}
 	cv.notify_one();

@@ -1,6 +1,7 @@
 #include "worker_manager.hpp"
 
 #include <concurrent/worker/worker.hpp>
+
 #include <ranges>
 
 concurrent::WorkerManager::WorkerManager(concurrent::NoTasksCallback no_tasks_callback):
