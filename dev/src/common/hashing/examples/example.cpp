@@ -100,8 +100,7 @@ int main() {
 	};
 
 	// we can also visualize the bytes that were hashed
-	std::cout << Hash<DebugHash>{}(type3{}) << '\n'
-			  << Hash<DebugHash>{}(type4{}) << '\n';
+	std::cout << Hash<DebugHash>{}(type3{}) << '\n' << Hash<DebugHash>{}(type4{}) << '\n';
 	// there is also a stateful hash that can be used to Hash multiple objects together
 	hashing::StatefulHash<hashing::DebugHash> hasher2;
 
