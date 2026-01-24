@@ -4,8 +4,8 @@
 
 concurrent::WorkerManager::WorkerManager(concurrent::NoTasksCallback no_tasks_callback):
 	  num_workers(getWorkerCount()),
-	  workers({ std::views::iota(usize{ 0 }, num_workers)
-                | std::views::transform([&no_tasks_callback](usize i) {
+	  workers({ std::ranges::views::iota(usize{ 0 }, num_workers)
+                | std::ranges::views::transform([&no_tasks_callback](usize i) {
 					  return makeBox<Worker>(WorkerData::getWorkerData()->at(i), no_tasks_callback);
 				  })
                 | std::ranges::to<std::vector<Box<Worker>>>() }) {
@@ -16,7 +16,7 @@ concurrent::WorkerManager::WorkerManager(concurrent::NoTasksCallback no_tasks_ca
 
 std::vector<concurrent::WorkerID> concurrent::WorkerManager::getAllWorkers() {
 	return workers
-	     | std::views::transform([](const Box<Worker>& worker) { return worker->getId(); })
+	     | std::ranges::views::transform([](const Box<Worker>& worker) { return worker->getId(); })
 	     | std::ranges::to<std::vector<WorkerID>>();
 }
 
