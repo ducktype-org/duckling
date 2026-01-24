@@ -277,7 +277,7 @@ private:
 #elif defined(__GNUC__)
 			"3140a2b64e65e32a3e96bf125284a7de13c304e3ee4087bd1de33b8e76f09ffd";
 #else
-#error "Unsupported compiler"
+	#error "Unsupported compiler"
 #endif
 		const std::string computed_hash = hash_value.toStringHex();
 

@@ -182,14 +182,15 @@ namespace base {
 	 * @brief Returns the name of the passed type `T`.
 	 *
 	 * @tparam T The type to get the name of
-	 * @tparam pretty If true (default), returns a clean, compiler-independent type name (e.g., "int", "MyClass").
-	 *                If false, returns the full compiler-specific function signature including the type
-	 *                (e.g., "auto base::typeName() [T = int, pretty = false]" on Clang).
-	 *                Use pretty=true for portable type names; use pretty=false when you need the raw compiler output.
+	 * @tparam pretty If true (default), returns a clean, compiler-independent type name (e.g.,
+	 * "int", "MyClass"). If false, returns the full compiler-specific function signature including
+	 * the type (e.g., "auto base::typeName() [T = int, pretty = false]" on Clang). Use pretty=true
+	 * for portable type names; use pretty=false when you need the raw compiler output.
 	 *
 	 * @note From https://stackoverflow.com/a/56766138
-	 * @warning When pretty=true, some standard library types (e.g., std::string) may still have 
-	 *          compiler-specific representations (Clang: "std::basic_string<char>", GCC: "std::__cxx11::basic_string<char>")
+	 * @warning When pretty=true, some standard library types (e.g., std::string) may still have
+	 *          compiler-specific representations (Clang: "std::basic_string<char>", GCC:
+	 * "std::__cxx11::basic_string<char>")
 	 */
 	template<class T, bool pretty = true>
 	constexpr auto typeName() {
@@ -197,27 +198,24 @@ namespace base {
 #ifdef __clang__
 		name   = __PRETTY_FUNCTION__;
 		prefix = "auto base::typeName() [T = ";
-		if constexpr (pretty) {
+		if constexpr (pretty)
 			suffix = ", pretty = true]";
-		} else {
+		else
 			suffix = ", pretty = false]";
-		}
 #elif defined(__GNUC__)
 		name   = __PRETTY_FUNCTION__;
 		prefix = "constexpr auto base::typeName() [with T = ";
-		if constexpr (pretty) {
+		if constexpr (pretty)
 			suffix = "; bool pretty = true]";
-		} else {
+		else
 			suffix = "; bool pretty = false]";
-		}
 #elif defined(_MSC_VER)
 		name   = __FUNCSIG__;
 		prefix = "auto __cdecl base::type_name<";
-		if constexpr (pretty) {
+		if constexpr (pretty)
 			suffix = ",true>(void)";
-		} else {
+		else
 			suffix = ",false>(void)";
-		}
 #endif
 		if constexpr (pretty) {
 			name.remove_prefix(prefix.size());
