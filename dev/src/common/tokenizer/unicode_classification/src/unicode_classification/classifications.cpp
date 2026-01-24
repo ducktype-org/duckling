@@ -61,7 +61,9 @@ namespace unicode {
 		std::cerr << "size: " << uset.size() << "\n";
 		icu::UnicodeString ustring;
 		uset.toPattern(ustring, true);
-		std::cerr << "pattern: " << ustring << "\n";
+		std::string utf8;
+		ustring.toUTF8String(utf8);
+		std::cerr << "pattern: " << utf8 << "\n";
 		UChar32 rb = 0, re = 0;
 		for (int32_t rangeid = 0; rangeid < uset.getRangeCount(); rangeid++) {
 			rb = uset.getRangeStart(rangeid);

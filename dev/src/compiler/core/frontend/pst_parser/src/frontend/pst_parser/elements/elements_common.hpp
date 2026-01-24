@@ -85,7 +85,7 @@ namespace pst::internal {
 	};
 
 	/**
-	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T> >).
+	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T>>).
 	 * It is needed because Box beeing Box cannot be "copied".
 	 *
 	 * @tparam ParserElement Element contained in the reference
@@ -153,7 +153,9 @@ namespace pst::internal {
 
 		bool operator==(const ForwardBorrowIterator& other) const { return it == other.it; }
 
-		auto operator<=>(const ForwardBorrowIterator& other) const { return it <=> other.it; }
+		auto operator<=>(const ForwardBorrowIterator& other) const {
+			return std::addressof(*it) <=> std::addressof(*other.it);
+		}
 	};
 
 #define DECLARE_CONST_ELEMENT_ITERATOR(container, TypeOfElement)                                \

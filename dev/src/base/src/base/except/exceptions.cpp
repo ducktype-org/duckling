@@ -14,7 +14,7 @@
 
 namespace base {
 
-	std::string getCurrentStackTrace(u16 max_depth) {
+	std::string getCurrentStackTrace([[maybe_unused]] u16 max_depth) {
 #ifdef __cpp_lib_stacktrace
 		if (max_depth > 0)
 			return prettyStacktraceString(std::stacktrace::current(0, max_depth));

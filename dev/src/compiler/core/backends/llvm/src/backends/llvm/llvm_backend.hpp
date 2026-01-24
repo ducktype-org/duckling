@@ -11,6 +11,7 @@
 #include <string_id/string_id.hpp>
 
 #include <filesystem>
+#include <span>
 
 namespace compiler::backend_llvm {
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
@@ -45,7 +46,7 @@ namespace compiler::backend_llvm {
 		 *
 		 * @return Module created by parsing the given bitcode.
 		 */
-		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
+		static Module fromLLVMBC(const std::span<unsigned char> llvm_bc_data);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 

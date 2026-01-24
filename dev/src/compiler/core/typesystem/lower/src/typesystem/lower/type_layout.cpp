@@ -9,6 +9,7 @@
 
 #include <query_framework/context.hpp>
 
+#include <algorithm>
 #include <sstream>
 
 using base::bytes2bits;

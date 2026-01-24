@@ -17,6 +17,7 @@
 #include <tester/tester.hpp>
 
 #include <sstream>
+#include <string>
 #include <type_traits>
 
 struct Key1 {

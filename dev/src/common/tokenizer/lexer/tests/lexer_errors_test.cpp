@@ -2,6 +2,9 @@
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
+#include <unicode/unistr.h>
+#include <unicode/ustream.h>
+
 #include <array>
 #include <sstream>
 #include <utility>

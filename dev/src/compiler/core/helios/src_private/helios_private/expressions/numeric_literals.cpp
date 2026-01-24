@@ -86,6 +86,7 @@ namespace compiler::helios::code {
 			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
+
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};

@@ -6,6 +6,7 @@
 #include <base/collections/maps.hpp>
 
 #include <ostream>
+#include <span>
 #include <vector>
 
 namespace query::internal {

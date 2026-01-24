@@ -3,6 +3,9 @@
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
+#include <unicode/unistr.h>
+#include <unicode/ustream.h>
+
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest

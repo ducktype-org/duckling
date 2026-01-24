@@ -113,7 +113,7 @@ namespace hashing {
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above
 		else if constexpr (Options.allow_std_hash && internal::can_stdhash<T>) {
-			addToHash(hash_alg, std::hash<T>{}(t));
+			addToHash(hash_alg, ::std::hash<T>{}(t));
 		} else {
 			static_assert(
 				false, "Please provide an 'addToHash' or 'hashDecompose' overload for this type"

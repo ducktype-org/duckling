@@ -51,6 +51,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
 	string(CONCAT ADDITIONAL_CLANG_FLAGS
+		"-stdlib=libc++ "
+		"-fexperimental-library " # for std::jthread https://libcxx.llvm.org/Status/Cxx20.html
 		"-Werror=return-type "
 		"-Werror=return-stack-address "
 		"-Werror=free-nonheap-object "

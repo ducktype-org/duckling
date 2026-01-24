@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -45,7 +46,7 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 	blob_count = base::safeIntConv<u32>(std::stoull(buffer));
 
 	u32 read_blobs = 0;
-	while (read_blobs < blob_count && content && !content.eof()) {
+	while (read_blobs < blob_count && static_cast<bool>(content) && !content.eof()) {
 		// Get name size.
 		u32 name_size = 0;
 		std::getline(content, buffer, ARTC_DELIM);
