@@ -148,6 +148,8 @@ namespace fs {
 
 		/**
 		 * @brief Converts this virtual path to a physical path.
+		 * This replaces the vfs root directory of the path
+		 * with the physical filesystem root directory.
 		 * @return FilePath representing the physical path.
 		 * @throws CORE_PANIC if the path is not virtual or conversion fails.
 		 */

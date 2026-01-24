@@ -93,6 +93,14 @@ namespace time_stats {
 		);
 		std::cerr << "\n";
 
+		std::cerr << "Graph optimization time: ";
+		timer::printAs(
+			std::cerr,
+			time_statistics.at(std::to_underlying(TimeCategories::GraphOptimization)),
+			timer::TimeUnit::Milliseconds
+		);
+		std::cerr << "\n";
+
 		std::cerr << "Total compilation time (note that subcategories may overlap): ";
 		timer::printAs(
 			std::cerr,
