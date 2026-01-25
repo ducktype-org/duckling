@@ -4,9 +4,6 @@
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_code.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/type_unique_code.hpp>
 #include <tester/tester.hpp>
 
 #include <map>
@@ -151,7 +148,6 @@ class HashingTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(typeCodeDefTest);
 		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
@@ -159,19 +155,6 @@ public:
 	}
 
 private:
-	void typeCodeDefTest() {
-		static_assert(std::integral<u32>, "u32 should be integral");
-		static_assert(std::integral<u64>, "u64 should be integral");
-		static_assert(std::integral<TypeCode<>::value_type>, "value_type should be integral");
-		TypeCode<u64> thcb1;
-		TypeCode<u64> thcb2;
-		assertTrue(
-			std::is_same_v<TypeCode<u64>::value_type, u64>, "TypeCode should have value_type"
-		);
-		[[maybe_unused]] auto _ = static_cast<TypeCode<u64>::value_type>(thcb1);
-		assertTrue(thcb1 <= thcb2, "TypeCode should be comparable");
-	}
-
 	void hashAlgorithmUtilsTest() {
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
@@ -279,7 +262,7 @@ private:
 	void hashingAlgorithmsTest() {
 		Fnv1a_32                  h2;
 		[[maybe_unused]] Fnv1a_64 qwe{ 123 };
-		constexpr std::span       sp = "hello";
+		constexpr std::span       SP = "hello";
 		assertTrue(
 			std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32"
 		);
@@ -292,40 +275,40 @@ private:
 		);
 		std::string s = "qwertyuiopasdfghjk";
 		h2(std::span{ reinterpret_cast<std::byte*>(s.data()), s.size() });
-		h2(std::as_bytes(sp));
-		constexpr auto arr = std::array<char, 123>{};
-		h2(std::as_bytes(std::span{ arr }));
+		h2(std::as_bytes(SP));
+		constexpr auto ARR = std::array<char, 123>{};
+		h2(std::as_bytes(std::span{ ARR }));
 		Fnv1a_64              h3, h4{ 14'695'981'039'346'656'037ull };
 		[[maybe_unused]] auto discard = h3.finalize();
 		assertTrue(
 			h4.finalize() == h4.finalize(),
 			"h3 and h4 should have been initialized with the same value"
 		);
-		h4(std::as_bytes(sp));
+		h4(std::as_bytes(SP));
 		const auto& r = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 		h4(std::as_bytes(std::span{ r }));
 		auto h5 = h4;
 		assertTrue(h5.finalize() == h4.finalize(), "casted h5 should be equal to casted h4");
 		h4(std::as_bytes(std::span{ s.data(), s.size() }));
 		h5(std::as_bytes(std::span{ s.data(), s.size() }));
-		h4(std::as_bytes(sp));
-		h5(std::as_bytes(sp));
+		h4(std::as_bytes(SP));
+		h5(std::as_bytes(SP));
 		assertTrue(h4.finalize() == h5.finalize(), "casted h4 should be equal to casted h5");
 
 		DebugHash dh;
 		dh(std::as_bytes(std::span{ s.data(), s.size() }));
-		dh(std::as_bytes(sp));
+		dh(std::as_bytes(SP));
 		std::array<char, 16> array{};
 		dh(std::as_bytes(std::span{ array }));
 		Hash<DebugHash>{}(std::array<char, 16>{});
-		dh(std::as_bytes(std::span{ sp.data(), sp.size() }));
-		constexpr std::string_view sv2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
-		constexpr auto             str_size = [&] {
+		dh(std::as_bytes(std::span{ SP.data(), SP.size() }));
+		constexpr std::string_view SV2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
+		constexpr auto             STR_SIZE = [&] {
             DebugHash d;
-            internal::hashRangeAsBytes(d, sv2);
+            internal::hashRangeAsBytes(d, SV2);
             return d.finalize().size();
 		}();
-		assertTrue(str_size == 187, "string should have 660 characters");
+		assertTrue(STR_SIZE == 187, "string should have 660 characters");
 
 		assertTrue(
 			hash_algorithm<default_hash_algorithm_for<u32>>,

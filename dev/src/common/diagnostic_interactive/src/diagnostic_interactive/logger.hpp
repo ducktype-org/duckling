@@ -66,11 +66,6 @@ namespace dia_int {
 			std::ostream&              out,
 			bool                       catch_exceptions = true
 		);
-
-		// Placeholder for future implementation
-		// static void evaluateToLanguageServerMessage(
-		// 	CRef<dia_args::Diagnostic> diagnostic_args, std::ostream& out
-		// );
 	};
 
 	/**

@@ -441,6 +441,11 @@ namespace compiler::helios::code {
 
 		if (verify_result.hasFailed()) return query::Failed();
 
+		if (candidates.empty()) {
+			ctx.logInt(makeBox<NoCandidatesFoundError>(call_expr->getSourcePosition()));
+			return query::Failed();
+		}
+
 		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
 			return query::Failed{};

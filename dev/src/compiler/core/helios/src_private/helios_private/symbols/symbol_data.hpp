@@ -83,9 +83,23 @@ namespace compiler::helios {
 			return &std::get<T>(other);
 		}
 
+		template<class T>
+		[[nodiscard]]
+		base::Optional<CRef<T>> getDataOpt() const {
+			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
+			return std::nullopt;
+		}
+
 		[[nodiscard]]
 		CRef<PstSymbolData> getPSTData() const {
 			return getData<PstSymbolData>();
+		}
+
+		[[nodiscard]]
+		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
+			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr)
+				return CRef<PstSymbolData>(ptr);
+			return std::nullopt;
 		}
 
 		/**
