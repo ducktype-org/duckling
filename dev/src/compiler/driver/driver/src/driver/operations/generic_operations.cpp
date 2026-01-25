@@ -1,3 +1,8 @@
+/**
+ * @file generic_operations.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "generic_operations.hpp"
 
 #include <driver/module_flags/module_flags.hpp>

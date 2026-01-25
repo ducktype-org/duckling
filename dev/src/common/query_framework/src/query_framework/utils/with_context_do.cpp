@@ -20,6 +20,9 @@ namespace query::utils {
 			}
 		};
 
+		/**
+		 * \parallel thread-safe as long as the passed function is thread-safe
+		 */
 		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, std::any, ({ .uses_qresult = false }))
 
 		struct IMPLEMENT_QUERY(DoWithContext, std::any) {

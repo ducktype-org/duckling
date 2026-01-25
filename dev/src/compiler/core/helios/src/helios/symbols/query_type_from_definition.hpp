@@ -19,6 +19,8 @@ namespace compiler::helios {
 	 *	...
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryTypeFromDefinition_Result>, ({}));
 }

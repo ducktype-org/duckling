@@ -21,11 +21,16 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query FULL HOUTUnit of single module
+	 *
+	 * \parallel key helpers like isGlobalVar don’t modify globals
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, query::QResult<HOUTUnit>, ({}))
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryModuleHOUTRecursively, frontend::ModuleID, query::QResult<std::vector<HOUTUnit>>, ({})
@@ -33,6 +38,9 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Debug/testing query for extracting top-level functions and constants from module
+	 *
+	 * \parallel key helpers like isGlobalVar don’t modify globals
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 
@@ -40,12 +48,16 @@ namespace compiler::helios {
 	 * @brief Query declaration of function: types, args and its names.
 	 * @note Unlike QueryCodeOfFun, this query works for all SymID-s that represent functions,
 	 * be it user-defined, extern, built-in, or generated.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryDeclOfFun, SymID, CRef<query::QResult<HOUTFunctionDeclaration>>, ({}));
 
 	/**
 	 * @brief Query code of a function.
 	 * @note Works only for SymID-s that actually represent PST-function (i.e. PST symbol).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryCodeOfFun, SymID, query::QResult<HOUTFunction>, ({}));
 }

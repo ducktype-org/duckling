@@ -1,3 +1,8 @@
+/**
+ * @file compile_dvm.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "compile_dvm.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
