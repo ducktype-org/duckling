@@ -113,6 +113,15 @@ namespace concurrent {
 		}
 		if (task_status_map.getCopy(task.id) == TaskStatus::Done) {
 			new_task_or_completed_cv.notify_all();
+			completed_tasks.fetch_add(1);
+			std::cout << base::strConcat(
+				"Worker ",
+				static_cast<usize>(concurrent::Worker::getCurrentWorkerID()),
+				" found task ",
+				task.id,
+				" already done\n"
+			);
+			return true;
 		}
 
 		std::cout << base::strConcat(
@@ -120,7 +129,7 @@ namespace concurrent {
 			static_cast<usize>(concurrent::Worker::getCurrentWorkerID()),
 			" not completed task ",
 			task.id,
-			" (already in progress or done)\n"
+			" (in progress)\n"
 		);
 		completed_tasks.fetch_add(1);
 		return false;
