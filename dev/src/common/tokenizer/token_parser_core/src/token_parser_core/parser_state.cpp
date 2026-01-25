@@ -1,7 +1,7 @@
 #include "parser_state.hpp"
 
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace tpc {
 	TokenStream& ParserState::tokens() { return *current_stream; }
@@ -36,12 +36,8 @@ namespace tpc {
 		                                      .post_jump     = 1 });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 		variant_match(fallback_stack.back().saved_context) {
-			variant_case(CRef<ParserContext>, ctx_ref) {
-				current_context = ctx_ref;
-			}
-			variant_case(Box<ParserContext>, ctx_ref) {
-				current_context = ctx_ref.ref();
-			}
+			variant_case(CRef<ParserContext>, ctx_ref) { current_context = ctx_ref; }
+			variant_case(Box<ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
 		}
 	}
 
@@ -60,8 +56,8 @@ namespace tpc {
 			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		u64 fwd        = fallback_stack.back().post_jump;
-		current_stream = std::move(fallback_stack.back().saved_stream);
+		u64 fwd         = fallback_stack.back().post_jump;
+		current_stream  = std::move(fallback_stack.back().saved_stream);
 		current_context = std::move(fallback_stack.back().saved_context);
 		fallback_stack.pop_back();
 		tokens().skip(base::safeIntConv<i64>(fwd));

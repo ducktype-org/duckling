@@ -18,7 +18,7 @@ namespace tpc {
 	public:
 		ParserContext() = default;
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		virtual Box<ParserContext> copy() const {
 			return makeBox<ParserContext>();
 		}
@@ -42,8 +42,8 @@ namespace tpc {
 		 * @brief Data needed to handle restoring to a fallback
 		 */
 		struct Fallback {
-			SubStreamType                                        type;
-			Box<TokenStream>                                     saved_stream;
+			SubStreamType                                         type;
+			Box<TokenStream>                                      saved_stream;
 			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
 			/**
 			 * @brief Jump done after restoring a fallback.
