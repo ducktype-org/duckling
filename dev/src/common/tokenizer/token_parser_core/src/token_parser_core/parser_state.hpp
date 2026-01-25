@@ -12,6 +12,14 @@
 namespace tpc {
 
 	/**
+	 * @brief Lightweight parsing context that can be restored on fallbacks.
+	 */
+	class ParserContext {
+	public:
+		ParserContext() {};
+	};
+
+	/**
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
@@ -27,8 +35,9 @@ namespace tpc {
 		 * @brief Data needed to handle restoring to a fallback
 		 */
 		struct Fallback {
-			SubStreamType    type;
-			Box<TokenStream> saved_stream;
+			SubStreamType                                        type;
+			Box<TokenStream>                                     saved_stream;
+			std::variant<Box<ParserContext>, Ref<ParserContext>> saved_context;
 			/**
 			 * @brief Jump done after restoring a fallback.
 			 */
@@ -38,6 +47,21 @@ namespace tpc {
 		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
+
+		std::variant<Box<ParserContext>, Ref<ParserContext>> current_context;
+
+		ParserState(
+			TokenStream&&        tokens,
+			Box<ParserContext>&& ctx,
+			Ref<dia::Logger>     err,
+			Ref<dia_int::Logger> int_err
+		):
+			  current_stream(makeBox<TokenStream>(std::move(tokens))),
+			  fallback_stack(),
+			  current_context(std::move(ctx)),
+			  err(err),
+			  int_err(int_err) {}
+
 
 	public:
 		/**
@@ -64,6 +88,7 @@ namespace tpc {
 		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
+			  current_context(makeBox<ParserContext>()),
 			  err(err),
 			  int_err(int_err) {}
 

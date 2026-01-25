@@ -33,8 +33,10 @@ namespace pst {
 
 	void LangParserState::setFallback(u64 length) {
 		auto new_stream = ctokens().getSubstream(length);
-		fallback_stack.emplace_back(Fallback{
-			.type = NonRecursive, .saved_stream = std::move(current_stream), .post_jump = length });
+		fallback_stack.emplace_back(Fallback{ .type          = NonRecursive,
+		                                      .saved_stream  = std::move(current_stream),
+		                                      .saved_context = std::move(current_context),
+		                                      .post_jump     = length });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
 

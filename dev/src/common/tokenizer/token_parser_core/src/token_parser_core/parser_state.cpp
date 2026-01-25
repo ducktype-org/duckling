@@ -29,8 +29,10 @@ namespace tpc {
 
 	void ParserState::goDown() {
 		auto new_stream = ctokens().getRecursive();
-		fallback_stack.emplace_back(Fallback{
-			.type = Recursive, .saved_stream = std::move(current_stream), .post_jump = 1 });
+		fallback_stack.emplace_back(Fallback{ .type          = Recursive,
+		                                      .saved_stream  = std::move(current_stream),
+		                                      .saved_context = std::move(current_context),
+		                                      .post_jump     = 1 });
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 	}
 
@@ -39,7 +41,8 @@ namespace tpc {
 			!fallback_stack.empty() && fallback_stack.back().type == SubStreamType::Recursive,
 			"No recursive token stream to go up from"
 		);
-		current_stream = std::move(fallback_stack.back().saved_stream);
+		current_stream  = std::move(fallback_stack.back().saved_stream);
+		current_context = std::move(fallback_stack.back().saved_context);
 		fallback_stack.pop_back();
 	}
 

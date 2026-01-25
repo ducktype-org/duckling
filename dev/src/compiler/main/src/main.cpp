@@ -183,7 +183,8 @@ clah::Clah getClahForMain() {
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
-					auto pst = pst::PST(file_to_parse);
+					// @TODO: #1879 Currently defaults to program
+					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 

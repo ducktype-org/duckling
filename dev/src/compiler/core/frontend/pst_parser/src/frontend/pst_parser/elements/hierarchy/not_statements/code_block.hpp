@@ -7,27 +7,9 @@ namespace pst {
 	 * @brief Code Block that contains statements.
 	 */
 	class CodeBlock final: public NotStmt {
-	public:
-		/**
-		 * @brief Type of code block
-		 *
-		 * Relevant for some behaviors, for example path to node as different blocks can be ordered
-		 * like in a function or more unordered like in the global scope. Undefined is just a
-		 * default that will cause an error if another type is not set.
-		 *
-		 * Unordered - Statements that declare the different symbols, statements that don't declare
-		 * symbols and transparent statements have separate orders. Ordered - Order of statements is
-		 * as one list. Undefined - Illegal default state.
-		 */
-		enum CodeBlockType {
-			Unordered,
-			Ordered,
-			Undefined,
-		};
-
 	private:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
-		CodeBlockType                              type = Undefined;
+		BlockOrderType                             type = Undefined;
 
 		/**
 		 * This is the division of statements inside the block based on their symbol declaration
@@ -51,7 +33,7 @@ namespace pst {
 			this->element_kind = ElementKind::CodeBlock;
 		}
 
-		static MBox<CodeBlock> parse(LangParserState& state, CodeBlockType order_type);
+		static MBox<CodeBlock> parse(LangParserState& state, BlockOrderType order_type);
 		~CodeBlock() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;

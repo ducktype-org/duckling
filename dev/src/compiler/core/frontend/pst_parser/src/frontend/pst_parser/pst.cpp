@@ -4,9 +4,14 @@
 
 namespace pst::internal {
 	Box<LangParserState> makeState(
-		tpc::TokenStream&& token_stream, Ref<dia::Logger> logger, Ref<dia_int::Logger> int_logger
+		tpc::TokenStream&&       token_stream,
+		Box<LangParserContext>&& ctx,
+		Ref<dia::Logger>         logger,
+		Ref<dia_int::Logger>     int_logger
 	) {
-		return base::makeBox<LangParserState>(std::move(token_stream), logger, int_logger);
+		return base::makeBox<LangParserState>(
+			std::move(token_stream), std::move(ctx), logger, int_logger
+		);
 	}
 
 	std::vector<ImportType> extractState(Box<LangParserState> state_ptr) {

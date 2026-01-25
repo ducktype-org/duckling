@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lang_parser_context.hpp"
 #include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
 #include "pst_state_forward.hpp"  // IWYU pragma: keep
@@ -14,7 +15,6 @@
 #include <utility>
 
 namespace pst {
-
 	/**
 	 * @brief State used for parsing Duckling to PST
 	 */
@@ -31,9 +31,12 @@ namespace pst {
 
 	public:
 		LangParserState(
-			tpc::TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err
+			tpc::TokenStream&&       tokens,
+			Box<LangParserContext>&& ctx,
+			Ref<dia::Logger>         err,
+			Ref<dia_int::Logger>     int_err
 		):
-			  tpc::ParserState(std::move(tokens), err, int_err) {}
+			  tpc::ParserState(std::move(tokens), std::move(ctx), err, int_err) {}
 
 		/**
 		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
