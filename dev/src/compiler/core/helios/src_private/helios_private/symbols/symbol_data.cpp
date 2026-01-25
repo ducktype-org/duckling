@@ -30,7 +30,7 @@ namespace compiler::helios {
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256, void>(
+			return hashing::justHash<hashing::SHA256>(
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}
