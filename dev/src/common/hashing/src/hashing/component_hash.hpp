@@ -26,7 +26,7 @@ namespace hashing {
 	 */
 	struct ComponentHash final {
 		// Hash algorithm and result type used for hierarchical path hashing
-		using HashAlg  = StatefulHash<hashing::SHA256, void>;
+		using HashAlg  = StatefulHash<hashing::SHA256>;
 		using HashType = HashAlg::result_type;
 
 		HashAlg  partial;

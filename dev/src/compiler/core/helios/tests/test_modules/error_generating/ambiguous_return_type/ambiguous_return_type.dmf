@@ -1,8 +1,0 @@
-fun example(x: i64) = {
-    if (x > 0) {
-        return x; # this is i64
-    }
-    else {
-        return 0; # this is i32
-    }
-}

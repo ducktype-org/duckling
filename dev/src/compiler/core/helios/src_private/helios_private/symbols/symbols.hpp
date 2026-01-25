@@ -32,12 +32,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
-	DECLARE_QUERY(
-		QuerySymbolOfSTMT,
-		pst::GenericPSTQueryKey<>,
-		SymID,
-		({ .used_hashes = query::UsedHashes::StableHash, .uses_qresult = false })
-	);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID, ({ .uses_qresult = false }));
 
 	struct KeyOf_LookupInSymbol {
 		/**

@@ -36,6 +36,12 @@ namespace time_stats {
 		DriverExit,
 
 		/**
+		 * Time spent on graph optimization before serializing it to disk.
+		 * This time is included in DriverExit time.
+		 */
+		GraphOptimization,
+
+		/**
 		 * Time spent on PST construction, tracked by the PST.
 		 */
 		PSTConstruction,

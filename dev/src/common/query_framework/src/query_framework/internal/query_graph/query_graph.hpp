@@ -30,6 +30,14 @@ namespace query::internal {
 		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 	public:
+		/**
+		 * @brief Reduced graph representation used for compact serialization.
+		 */
+		struct ReducedGraphData final {
+			std::vector<NodeID>             nodes;
+			std::vector<std::vector<usize>> adjacency;
+		};
+
 		QueryGraph()                             = default;
 		QueryGraph(const QueryGraph&)            = delete;
 		QueryGraph(QueryGraph&&)                 = default;
@@ -57,6 +65,9 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
+		/** @brief Returns the immediate dependencies of a @p node_id. */
+		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
+
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
 
@@ -80,9 +91,20 @@ namespace query::internal {
 
 		/**
 		 * @brief Serializes the QueryGraph into a vector of bytes.
+		 * @note This DOES NOT optimize anything, it just serializes.
 		 * @return A vector of bytes representing the serialized QueryGraph.
 		 */
 		[[nodiscard]] std::vector<byte> serialize() const;
+
+		/**
+		 * @brief Serializes an already reduced graph description.
+		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
+		 * each adjacency index references the precomputed NodeID at the same position. This helper
+		 * is meant for scenarios where another algorithm (e.g. QueryState::reduceOptimizeGraph) has
+		 * already produced a compacted graph representation and we only need to emit bytes without
+		 * rebuilding the mapping.
+		 */
+		[[nodiscard]] static std::vector<byte> serializeReducedGraph(ReducedGraphData reduced_graph);
 
 		/**
 		 * @brief Deserializes a QueryGraph from a vector of bytes.

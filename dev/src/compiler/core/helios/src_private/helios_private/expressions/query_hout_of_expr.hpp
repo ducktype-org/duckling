@@ -20,10 +20,7 @@ namespace compiler::helios {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
-		QueryHoutOfExpr,
-		pst::GenericPSTQueryKey<pst::ExprElement>,
-		ExprConstructionResult,
-		({ .used_hashes = query::UsedHashes::StableHash })
+		QueryHoutOfExpr, pst::GenericPSTQueryKey<pst::ExprElement>, ExprConstructionResult, ({})
 	)
 
 	/**
