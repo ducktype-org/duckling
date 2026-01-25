@@ -42,6 +42,15 @@ namespace artifacts {
 	/**
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
+	 *
+	 * \parallel During compilation/lowering/backends files can be written to disk. Processed files
+	 * and backend outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same
+	 * module/package can collide on paths. See:
+	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
+	 *  - \ref
+	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp
 	 */
 	struct FileArtifact final {
 		const Ref<ArtifactCollection> PARENT;
@@ -167,13 +176,26 @@ namespace artifacts {
 	private:
 		const std::filesystem::path PATH;
 
+		/**
+		 * @name  Artifacts storage
+		 * @brief Global artifacts hierarchy for build/query outputs (files and blobs), persisted to
+		 * disk.
+		 * \parallel Written by CompileModule and other driver operations; concurrent writes can race.
+		 * @note Accessed by \ref getRootCollection and \ref setRootCollection
+		 * @{
+		 */
 		base::HashMap<base::StrID, FileArtifact> file_artifacts;
 		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
 		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
 
-		base::HashMap<base::StrID, Box<ArtifactCollection>>
-			sub_collections;  /// Box, because we may need stable refs. Cannot be base::StableHashMap,
-		                      /// because we are using a private constructor of collection.
+		/**
+		 * Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using
+		 * a private constructor of collection.
+		 */
+		base::HashMap<base::StrID, Box<ArtifactCollection>> sub_collections;
+		/**
+		 * @}
+		 */
 
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 

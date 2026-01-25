@@ -11,26 +11,36 @@
 namespace compiler::tsh {
 	/**
 	 * @brief Query to get the Unit type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryUnitType, query::EmptyKey, UnitAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Void type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryVoidType, query::EmptyKey, VoidAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Byte type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryByteType, query::EmptyKey, ByteAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Bool type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryBoolType, query::EmptyKey, BoolAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Char type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryCharType, query::EmptyKey, CharAbstractType, ({ .uses_qresult = false }))
 
@@ -67,6 +77,8 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get an Integral type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryIntegralType,
@@ -77,12 +89,16 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get a Float (floating point) type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get a RawPointer type.
 	 * The boolean key denotes whether the raw pointer points to mutable data.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryRawPointerType, query::BoolKey, RawPointerAbstractType, ({ .uses_qresult = false })
@@ -90,17 +106,23 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get a typed Pointer type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the String type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the DynamicArray type.
 	 * The AbstractType of the elements of the array is given as a key.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType, ({ .uses_qresult = false })
@@ -128,6 +150,9 @@ namespace compiler::tsh {
 		}
 	};
 
+	/**
+	 * \query_thread_safe_if_cache
+	 */
 	DECLARE_QUERY(
 		QueryTupleType, KeyFor_QueryTupleType, TupleAbstractType, ({ .uses_qresult = false })
 	)
@@ -154,6 +179,9 @@ namespace compiler::tsh {
 		}
 	};
 
+	/**
+	 * \query_thread_safe_if_cache
+	 */
 	DECLARE_QUERY(
 		QueryVariantType, KeyFor_QueryVariantType, VariantAbstractType, ({ .uses_qresult = false })
 	)
@@ -204,6 +232,8 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the Function type.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryFunctionType,
@@ -214,6 +244,8 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the Class type.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
@@ -221,11 +253,15 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the Meta type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Namespace type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryNamespaceType, query::EmptyKey, NamespaceAbstractType, ({ .uses_qresult = false })
@@ -233,11 +269,15 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Query to get the Module type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the Import type.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportAbstractType, ({ .uses_qresult = false }))
 }

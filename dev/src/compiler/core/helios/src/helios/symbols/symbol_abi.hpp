@@ -33,6 +33,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Get the ABI of the HELIOS symbol ID.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QuerySymbolABI, SymID, CRef<QuerySymbolABI_Result>, ({}));
 }

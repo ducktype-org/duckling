@@ -7,6 +7,10 @@
 #include <base/pointers/ref.hpp>
 
 namespace query::internal {
+	/**
+	 * @brief Per-query state powering evaluation across the compiler.
+	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
+	 */
 	class QueryState final {
 	public:
 		/**

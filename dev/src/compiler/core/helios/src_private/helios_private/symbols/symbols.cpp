@@ -52,6 +52,8 @@ namespace compiler::helios {
 	 *
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
@@ -419,6 +421,8 @@ namespace compiler::helios {
 		namespace {
 			/**
 			 * Query all builtin symbols.
+			 *
+			 * \query_thread_safe_if_cache_and_struct
 			 */
 			DECLARE_QUERY(
 				QueryGlobalBuiltinSymbols,

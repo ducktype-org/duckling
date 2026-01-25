@@ -6,7 +6,7 @@ INPUT = "@DOXYGEN_INPUT_DIR@"
 OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
 GENERATE_XML = YES
 RECURSIVE = YES
-FILE_PATTERNS = *.hpp *.cpp *.md *.py
+FILE_PATTERNS = *.hpp *.cpp *.md *.py *.dox
 EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/config/*" \
                    */toolbox.py \
@@ -41,6 +41,11 @@ ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
+            "parallel=\xrefitem parallel \"Parallel\" \"Parallel\"" \
+            "query_thread_safe=Query thread safety group: \ref query_thread_safe_group @ingroup query_thread_safe_group" \
+            "query_thread_safe_if_cache=Query thread safety group: \ref query_thread_safe_if_cache_group @ingroup query_thread_safe_if_cache_group" \
+            "query_thread_safe_if_cache_and_struct=Query thread safety group: \ref query_thread_safe_if_cache_and_struct_group @ingroup query_thread_safe_if_cache_and_struct_group" \
+            "query_not_thread_safe=Query thread safety group: \ref query_not_thread_safe_group @ingroup query_not_thread_safe_group" \
             "TODO=\todo" \
             "tip=\remark" \
             "hint=\remark" \
@@ -95,6 +100,9 @@ EXTRACT_PRIVATE        = YES
 
 EXTRACT_STATIC         = YES
 
+# Enable nesting of groups
+
+GROUP_NESTED_COMPOUNDS = YES
 
 # For doxygen-awesome:
 
@@ -107,3 +115,8 @@ HTML_COLORSTYLE        = LIGHT
 # To customize layout
 # Currently the only change is to make "Detailed Description" appear at the top of documentation website of every "file"
 LAYOUT_FILE = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/DoxygenLayout.xml"
+
+# Enable anonymous namespaces
+EXTRACT_ANON_NSPACE = YES
+EXTRACT_PRIVATE     = YES
+EXTRACT_STATIC      = YES
