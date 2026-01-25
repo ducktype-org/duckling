@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace pst {
 	/**
 	 * @brief Type of ordering in a code block and top level

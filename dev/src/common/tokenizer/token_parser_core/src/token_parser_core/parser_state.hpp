@@ -16,7 +16,7 @@ namespace tpc {
 	 */
 	class ParserContext {
 	public:
-		ParserContext() {};
+		ParserContext() {}
 	};
 
 	/**

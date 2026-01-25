@@ -1,20 +1,23 @@
 #pragma once
 
-#include <token_parser_core/parser_state.hpp>
 #include "ordering.hpp"
+
+#include <token_parser_core/parser_state.hpp>
 
 namespace pst {
 	class LangParserState;
 
 	class LangParserContext: public tpc::ParserContext {
 	private:
-		friend class LangParserState;		
+		friend class LangParserState;
 
-		base::StrID class_name;
+		base::StrID    class_name;
 		BlockOrderType block_order;
 
 	public:
-		LangParserContext(base::StrID class_name, BlockOrderType block_order): class_name(class_name), block_order(block_order) {}
+		LangParserContext(base::StrID class_name, BlockOrderType block_order):
+			  class_name(class_name),
+			  block_order(block_order) {}
 
 		static Box<LangParserContext> programBaseContext() {
 			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Unordered);

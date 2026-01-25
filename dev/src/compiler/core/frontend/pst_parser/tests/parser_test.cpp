@@ -79,7 +79,9 @@ public:
 	}
 
 private:
-	pst::PST<> prepare(const std::string& filename) { return { fs::File(filename), pst::PSTType::Program }; }
+	pst::PST<> prepare(const std::string& filename) {
+		return { fs::File(filename), pst::PSTType::Program };
+	}
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst = prepare(path(filename));
