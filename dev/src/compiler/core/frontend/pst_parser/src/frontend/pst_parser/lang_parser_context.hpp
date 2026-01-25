@@ -7,14 +7,13 @@
 namespace pst {
 	class LangParserState;
 
-	class LangParserContext: public tpc::ParserContext {
-	private:
+	class LangParserContext final: public tpc::ParserContext {
+	public:
 		friend class LangParserState;
 
 		base::StrID    class_name;
 		BlockOrderType block_order;
 
-	public:
 		LangParserContext(base::StrID class_name, BlockOrderType block_order):
 			  class_name(class_name),
 			  block_order(block_order) {}
@@ -28,7 +27,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		Box<LangParserContext> copy() const {
+		Box<tpc::ParserContext> copy() const override {
 			return base::makeBox<LangParserContext>(class_name, block_order);
 		}
 	};

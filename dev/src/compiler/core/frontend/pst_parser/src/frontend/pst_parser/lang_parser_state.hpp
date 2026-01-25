@@ -29,6 +29,8 @@ namespace pst {
 
 		void checkAllParsed();
 
+		void copyOwnContext();
+
 	public:
 		LangParserState(
 			tpc::TokenStream&&       tokens,
@@ -97,6 +99,12 @@ namespace pst {
 		 * @brief Do final checks that everything is parsed.
 		 */
 		void finalize();
+
+		[[nodiscard]]
+		CRef<LangParserContext> getContext() const;
+
+		void setContextClassName(base::StrID);
+		void setConstextBlockOrdering(BlockOrderType);
 
 		/**
 		 * @brief Adds to the balance of skipped_entries
