@@ -113,7 +113,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     fn get_feature_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildFeaturesToVars {
         self.dependency_to_feature_vars
             .entry(dep.clone())
-            .or_insert_with(HashMap::new)
+            .or_default()
     }
 
     /// Returns the variable associated with the given (dependency, child feature) pair.
@@ -132,7 +132,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     fn get_version_to_var_map_for_dep(&mut self, dep: &DependencyEdge) -> &ChildVersionsToVars {
         self.dependency_to_version_vars
             .entry(dep.clone())
-            .or_insert_with(HashMap::new)
+            .or_default()
     }
 
     /// Returns the variable associated with the given (dependency, child version) pair.
@@ -232,6 +232,26 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .map(|feature| self.get_dependency_feature_variable(edge, feature))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         self.model.one_implies_all(parent_var, feature_vars);
+        Ok(())
+    }
+
+    /// For each pair (parent_feature, forced_child_features) adds a condition that
+    /// presence of the parent package with parent feature forces presence of the child with all the forced features.
+    /// Note: Use only for scenarios where both parent and child have belonged to the previous freeze.
+    pub fn require_satisfying_dep_feature_for_preexisting(
+        &mut self,
+        parent: &ExpandedPackage,
+        child: &ExpandedPackage,
+        forcing: Vec<(FeatureName, Vec<FeatureName>)>,
+    ) -> QuackResult<()> {
+        for (parent_feature, forced_child_features) in forcing {
+            let parent_var = self.get_package_variable(parent, Some(&parent_feature))?;
+            let child_vars = forced_child_features
+                .into_iter()
+                .map(|feature| self.get_package_variable(child, Some(&feature)))
+                .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
+            self.model.one_implies_all(parent_var, child_vars);
+        }
         Ok(())
     }
 

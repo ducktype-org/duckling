@@ -25,6 +25,7 @@ pub struct GatheredInfo<'a> {
 
     pub preexisting_packages: HashSet<ExpandedPackage>,
     pub preexisting_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    pub preexisting_dependencies: HashMap<DependencyEdge, Option<Version>>,
 }
 
 #[derive(Debug)]
@@ -106,12 +107,6 @@ impl<'a> SolverEngine<'a> {
         parent: &ExpandedPackage,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let possible_realizations = get_possible_realisations(
-            manifest_dependency,
-            &self.input.versions_for_location,
-            &self.input.location_resolver,
-        )?;
-
         let edge = DependencyEdge::from_manifest_and_parent(
             parent.clone(),
             manifest_dependency,
@@ -119,15 +114,76 @@ impl<'a> SolverEngine<'a> {
         )
         .context_internal("Failed to expand a location")?;
 
+        // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
+        let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
+            return self.add_constraints_for_edge(&edge, manifest_dependency);
+        };
+        let realisation = ExpandedPackage {
+            location: edge.dependency_loc.clone(),
+            version: *realization_ver,
+        };
+
+        // Each feature of the parent may force some additional features of the child,
+        // not present in the previous freeze.
+        // We try to add them to the chosen realisation.
+        let mut forcing = vec![];
+        let possible_child_features = self
+            .input
+            .all_possible_features
+            .get(&realisation)
+            .context_internal("Possible features map does not contain looked up package")?;
+        for parent_feature in self
+            .input
+            .all_possible_features
+            .get(parent)
+            .iter()
+            .cloned()
+            .flatten()
+        {
+            if let Some(parent_preexisting) = self.input.preexisting_features.get(parent)
+                && parent_preexisting.contains(parent_feature)
+            {
+                // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
+                continue;
+            }
+            let forced = manifest_dependency.enabled_features(vec![*parent_feature]);
+            if forced
+                .iter()
+                .any(|feature| !possible_child_features.contains(feature))
+            {
+                // (*) Previously chosen realisation of the dependency does not support some of the forced flags,
+                // so we have to treat the dependency normally and add all the constraints.
+                return self.add_constraints_for_edge(&edge, manifest_dependency);
+            } else {
+                forcing.push((*parent_feature, forced));
+            }
+        }
+        // If (*) never happened, we just add conditions that parent feature forces some new realisation features.
+        self.model
+            .require_satisfying_dep_feature_for_preexisting(parent, &realisation, forcing)
+    }
+
+    /// Creates all standard constraints for a dependency edge.
+    fn add_constraints_for_edge(
+        &mut self,
+        edge: &DependencyEdge,
+        manifest_dependency: &Dependency,
+    ) -> QuackResult<()> {
+        let possible_realizations = get_possible_realisations(
+            manifest_dependency,
+            &self.input.versions_for_location,
+            &self.input.location_resolver,
+        )?;
+
         self.create_dependency_version_realization_conditions(
-            &edge,
+            edge,
             manifest_dependency,
             &possible_realizations,
         )?;
-        self.create_dependency_feature_realization_conditions(&edge, manifest_dependency)?;
-        self.model.require_substantiate_dep(&edge)?;
+        self.create_dependency_feature_realization_conditions(edge, manifest_dependency)?;
+        self.model.require_substantiate_dep(edge)?;
         self.model.require_substantiate_dep_features(
-            &edge,
+            edge,
             &self.input.all_possible_features,
             &possible_realizations,
         )?;
@@ -300,16 +356,14 @@ metadata:
             (location_b, exp_location_b.clone()),
         ]);
 
-        let preexisting_packages = HashSet::new();
-        let preexisting_features = HashMap::new();
-
         let input = GatheredInfo {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
             location_resolver,
-            preexisting_packages,
-            preexisting_features,
+            preexisting_packages: HashSet::new(),
+            preexisting_features: HashMap::new(),
+            preexisting_dependencies: HashMap::new(),
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
@@ -403,16 +457,14 @@ dependencies:
             (location_b, exp_location_b.clone()),
         ]);
 
-        let preexisting_packages = HashSet::new();
-        let preexisting_features = HashMap::new();
-
         let input = GatheredInfo {
             gathered_manifests,
             all_possible_features,
             versions_for_location,
             location_resolver,
-            preexisting_packages,
-            preexisting_features,
+            preexisting_packages: HashSet::new(),
+            preexisting_features: HashMap::new(),
+            preexisting_dependencies: HashMap::new(),
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
@@ -527,6 +579,7 @@ features:
             location_resolver,
             preexisting_packages,
             preexisting_features,
+            preexisting_dependencies: HashMap::new(),
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
@@ -612,7 +665,6 @@ features:
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
         let preexisting_packages = HashSet::from([exp_pkg_b.clone()]);
-        let preexisting_features = HashMap::new();
 
         let input = GatheredInfo {
             gathered_manifests,
@@ -620,7 +672,8 @@ features:
             versions_for_location,
             location_resolver,
             preexisting_packages,
-            preexisting_features,
+            preexisting_features: HashMap::new(),
+            preexisting_dependencies: HashMap::new(),
         };
 
         let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
@@ -629,6 +682,143 @@ features:
         assert!(
             output.new_features
                 == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
+        )
+    }
+
+    #[test]
+    /// `a` is required, `a` requires `b` with `xd`, `b` requires `c`, with `xdd` if `b` with `xd`;
+    /// `b` preexists with no features, as well as `c`.
+    fn new_feature_of_preexisting_package_chain_with_no_features() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    features:
+    - xd
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+
+dependencies:
+  c:
+    version: '3'
+    features:
+    - xdd:
+        package_features: [xd]
+
+features:
+  xd: []
+"#,
+        );
+        let (_dir_c, path_c) = prepare_manifest(
+            r#"
+metadata:
+  name: c
+  version: '3'
+
+features:
+  xdd: []
+"#,
+        );
+        let ctx = DuckCtx::default();
+        let qpctx = QpCtx::new(&ctx);
+        let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
+        let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
+        let location_a = Location::Registry(LocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let location_b = Location::Registry(LocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let location_c = Location::Registry(LocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
+        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_c = ExpandedLocation::Registry(ExpandedLocRegistry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("c"),
+        });
+        let exp_pkg_a = ExpandedPackage {
+            location: exp_location_a.clone(),
+            version: Some(Version::new(1, 0, 0)),
+        };
+        let exp_pkg_b = ExpandedPackage {
+            location: exp_location_b.clone(),
+            version: Some(Version::new(2, 0, 0)),
+        };
+        let exp_pkg_c = ExpandedPackage {
+            location: exp_location_c.clone(),
+            version: Some(Version::new(3, 0, 0)),
+        };
+        let gathered_manifests = HashMap::from([
+            (exp_pkg_a.clone(), manifest_a.manifest()),
+            (exp_pkg_b.clone(), manifest_b.manifest()),
+            (exp_pkg_c.clone(), manifest_c.manifest()),
+        ]);
+        let all_possible_features = HashMap::from([
+            (exp_pkg_a.clone(), HashSet::new()),
+            (exp_pkg_b.clone(), HashSet::from([FeatureName::new("xd")])),
+            (exp_pkg_c.clone(), HashSet::from([FeatureName::new("xdd")])),
+        ]);
+        let versions_for_location = HashMap::from([
+            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_c.clone(), vec![Some(Version::new(3, 0, 0))]),
+        ]);
+        let location_resolver = HashMap::from([
+            (location_a.clone(), exp_location_a.clone()),
+            (location_b.clone(), exp_location_b.clone()),
+            (location_c.clone(), exp_location_c.clone()),
+        ]);
+
+        let preexisting_packages = HashSet::from([exp_pkg_b.clone(), exp_pkg_c.clone()]);
+        let preexisting_dependencies = HashMap::from([(
+            DependencyEdge {
+                parent: exp_pkg_b.clone(),
+                dependency_loc: exp_location_c.clone(),
+            },
+            Some(Version::new(3, 0, 0)),
+        )]);
+
+        let input = GatheredInfo {
+            gathered_manifests,
+            all_possible_features,
+            versions_for_location,
+            location_resolver,
+            preexisting_packages,
+            preexisting_features: HashMap::new(),
+            preexisting_dependencies,
+        };
+
+        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(
+            output.new_features
+                == HashMap::from([
+                    (exp_pkg_b, HashSet::from([FeatureName::new("xd")])),
+                    (exp_pkg_c, HashSet::from([FeatureName::new("xdd")]))
+                ])
         )
     }
 }

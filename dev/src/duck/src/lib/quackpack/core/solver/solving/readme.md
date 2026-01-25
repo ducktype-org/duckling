@@ -15,6 +15,7 @@ I assumed this also contains `Prev`, because to verify that `Prev` is dependency
 Linear program
 --------------
 
+### General case
 Assume that we have a package `P`, identified by its location `L(P)` and version `V(P)`.
 Assume that it has a dependency on a package `Q` and the dependency is described by a location `V(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
 
@@ -53,13 +54,20 @@ so for example, for all the versions `V_i` and all the features `G_j` we get the
 var(P->Q_i_x) + var(P->Q_x_Gj) - var(QiGj) <= 1
 ```
 
-5. Preexisting packages.
-Variables for the preexisting packages get an addition condition of being equal to 0.
-I believe this allow scip to perform heavy heuristics and eliminate the part of the problem conserning `Prev`.
+### Preexisting parent and child
+If the dependency was resolved in the previous freeze, we try to utilise this fact (if not, there would be no gain from making solver incremental).
 
-But in a few days I will fix this, so that for `P` in `Prev` the solver_engine checks if the inequality has to be added (the only case is that we may want to add a new feature to `P`, which forces some dependency or some features of a dependency; in the second case we can just check if we can add those features to the already chosen dependency realisation).
+Let us say that in the previous freeze the chosen realisation was `Q` in version `V(Q)`.
+Then the only thing that can happen is that in the new freeze `P` may appear with new features which can force some additional features of `Q`.
 
-TLDR: Currently incremental does not make the linear problem smaller and we just trust scip heuristics, but I will fix this in a few days.
+For each possible feature `F_i` of `P`, if it was not in the previous freeze and it forces some features `G_1, ..., G_n` of `Q`, not present in the previous freeze, there are two cases.
+
+1. Some `G_i` is not a valid feature of `Q`.
+In such case, we have to choose a different realisation of the dependency than `Q`, so we resort to the general case.
+2. Otherwise we simply add a condition that `P` with `F_i` forces `G_1, ..., G_n` on `Q`:
+```
+n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
+```
 
 Outcome
 -------
