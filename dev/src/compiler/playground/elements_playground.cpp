@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	fs::File   file(argv[1]);
-	pst::PST<> pst(file);
+	pst::PST<> pst(file, pst::PSTType::Program);
 
 	if (pst.getLogger()->bad()) {
 		pst.getLogger()->dumpLog(false, std::cerr);
