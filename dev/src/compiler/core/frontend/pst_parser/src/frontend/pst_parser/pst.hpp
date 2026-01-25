@@ -170,13 +170,13 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::File& path, PSTType type, hashing::ComponentHash hash_ctx = {})
+		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
 
 		requires ParseAble<>:
 			  file(tokenizer::makeTokenSource(path)),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
-			parse(makeParserContext(type));
+			parse(makeParserContext(std::move(pst_ctx)));
 		}
 
 		static PST fromContents(
