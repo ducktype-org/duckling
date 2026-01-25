@@ -12,8 +12,8 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./element_testing file_name\n";
 		return 1;
 	}
-	fs::File   file(argv[1]);
-	pst::PST<> pst(file, pst::PSTType::Program);
+	fs::File file(argv[1]);
+	pst::PST pst(file, pst::PSTType::Program);
 
 	if (pst.getLogger()->bad()) {
 		pst.getLogger()->dumpLog(false, std::cerr);

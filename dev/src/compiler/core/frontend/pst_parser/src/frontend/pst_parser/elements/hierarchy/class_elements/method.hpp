@@ -40,9 +40,6 @@ namespace pst {
 			return params.give();
 		}
 
-		/**
-		 * @note Optional of MCRef here is intentional
-		 */
 		[[nodiscard]]
 		base::Optional<AccessLocked<ExprHolder>> getRet() const;
 

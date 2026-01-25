@@ -25,7 +25,7 @@ namespace pst {
 		void finalizeParsing(Ref<LangParserState>);
 	}
 
-	enum PSTType {
+	enum class PSTType {
 		Program,
 		Script,
 	};
@@ -50,6 +50,14 @@ namespace pst {
 		constexpr static bool ParseAble
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
+		/**
+		 * @brief The context passed to parsing.
+		 *
+		 * For most cases PSTType is enough as it covers the default options
+		 * When passing of custom context is needed the box with context option can be used.
+		 *
+		 * When making an expanded tree only the passed box with context is accepted.
+		 */
 		using PSTContext = std::variant<PSTType, Box<LangParserContext>>;
 
 	private:

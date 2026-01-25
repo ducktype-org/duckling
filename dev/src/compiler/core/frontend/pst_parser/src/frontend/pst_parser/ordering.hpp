@@ -12,7 +12,7 @@ namespace pst {
 	 * symbols and transparent statements have separate orders. Ordered - Order of statements is
 	 * as one list. Undefined - Illegal default state.
 	 */
-	enum BlockOrderType {
+	enum class BlockOrderType {
 		Unordered,
 		Ordered,
 		Undefined,

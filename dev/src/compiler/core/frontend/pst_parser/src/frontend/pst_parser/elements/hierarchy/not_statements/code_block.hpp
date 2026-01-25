@@ -9,7 +9,7 @@ namespace pst {
 	class CodeBlock final: public NotStmt {
 	private:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
-		BlockOrderType                             type = Undefined;
+		BlockOrderType                             type = BlockOrderType::Undefined;
 
 		/**
 		 * This is the division of statements inside the block based on their symbol declaration

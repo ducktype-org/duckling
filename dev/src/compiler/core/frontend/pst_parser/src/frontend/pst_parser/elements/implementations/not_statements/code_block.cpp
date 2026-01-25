@@ -8,7 +8,9 @@ namespace pst {
 
 
 	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, BlockOrderType order_type) {
-		CORE_ASSERT(order_type != Undefined, "Parsing with an undefined ordering type");
+		CORE_ASSERT(
+			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
+		);
 
 		auto position = state.getPosition();
 		auto out      = makeBox<CodeBlock>(position);
@@ -66,10 +68,10 @@ namespace pst {
 
 	void CodeBlock::calcElementPathHashRecursive() {
 		auto path = getElementPathHash();
-		if (type == Ordered) {
+		if (type == BlockOrderType::Ordered) {
 			auto ordered = hashing::ComponentHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);
-		} else if (type == Unordered) {
+		} else if (type == BlockOrderType::Unordered) {
 			calcOrderedListChildPath(statements, path);
 		}
 	}
