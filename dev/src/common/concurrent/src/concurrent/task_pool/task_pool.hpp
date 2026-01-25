@@ -106,6 +106,8 @@ namespace concurrent {
 		 */
 		void startExecution();
 
+        void waitExecutionCompletion();
+
 		/**
 		 * @brief Query (execute) a task immediately.
 		 *
@@ -151,26 +153,35 @@ namespace concurrent {
 		 */
 		[[nodiscard]] bool isTaskDone(TaskID id) const;
 
+		/**
+		 * @brief Callback invoked when a worker has no tasks.
+		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
+		 */
+		void onWorkerNoTasks();
+
+		void printQueuesDebugInfo();
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
 		 * @return Optional PoolTask if one was available.
 		 */
-		base::Optional<PoolTask> tryStealFromGlobal();
+		base::Optional<PoolTask> tryStealFromGlobalUnlocked();
 
 		/**
 		 * @brief Try to steal a task from another worker's pool.
-		 * @param exclude_worker_id Worker ID to exclude from stealing.
+         * @param worker_id The ID of the worker to steal from.
 		 * @return Optional PoolTask if one was available.
 		 */
-		base::Optional<PoolTask> tryStealFromWorker(WorkerID exclude_worker_id);
+		base::Optional<PoolTask> tryStealFromWorkerUnlocked(WorkerID worker_id);
 
 		/**
 		 * @brief Try to find and execute any available work.
 		 * @param wd The worker data reference of the calling worker.
 		 * @return True if work was found and executed, false otherwise.
 		 */
-		bool tryDoWork();
+		base::Optional<PoolTask> findWorkUnlocked();
+
+		[[nodiscard]] bool isWorkAvailableUnlocked();
 
 		/**
 		 * @brief Tries to execute the given task.
@@ -185,19 +196,14 @@ namespace concurrent {
 		 * @param worker_id The worker ID.
 		 * @param task The task to add.
 		 */
-		void addToWorkerPool(std::lock_guard<std::mutex>&, WorkerID worker_id, PoolTask task);
+		void addToWorkerPoolUnlocked(WorkerID worker_id, PoolTask &&task);
 
 		/**
 		 * @brief Add a task to the global pool.
 		 * @param task The task to add.
 		 */
-		void addToGlobalPool(std::lock_guard<std::mutex>&, PoolTask task);
+		void addToGlobalPoolUnlocked(PoolTask &&task);
 
-		/**
-		 * @brief Callback invoked when a worker has no tasks.
-		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
-		 */
-		void onWorkerNoTasks();
 
 		/// Reference to the WorkerManager.
 		WorkerManager& worker_manager;
@@ -208,9 +214,9 @@ namespace concurrent {
 		/// Main mutex protecting pool queues (global_pool, worker_pools, pending_tasks).
 		mutable std::mutex pool_mutex;
 		/// Global task pool (shared among all workers).
-		std::queue<PoolTask> global_pool;
+		std::deque<PoolTask> global_pool;
 		/// Per-worker task pools.
-		std::vector<std::queue<PoolTask>> worker_pools;
+		std::vector<std::deque<PoolTask>> worker_pools;
 
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
@@ -223,7 +229,7 @@ namespace concurrent {
 		std::atomic<usize> completed_tasks{ 0 };
 
 		/// Total number of tasks (used in execute()).
-		std::atomic<usize> total_tasks{ 0 };
+		std::atomic<usize> added_tasks{ 0 };
 
 		/// Flag indicating if execution is in progress.
 		std::atomic<bool> is_executing{ false };
