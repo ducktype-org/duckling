@@ -84,15 +84,15 @@ namespace query::internal {
 			return edge.value().active_edge;
 		}
 
-		enum class CycleCheckResult : bool {
-			CycleFound,
-			CycleNotFound,
+		struct QueryCycle {
+			std::vector<NodeID> cycle_nodes;
 		};
 
 		/**
 		 * Walks the given node, until there is a cycle, or it can't walk no more.
+		 * @return QueryCycle if a cycle was found, empty optional otherwise.
 		 */
-		CycleCheckResult cycleCheck(const NodeID node_id) const {
+		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const {
 			
 			auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
 				auto walk_one = walk(walk_zero);
@@ -105,16 +105,29 @@ namespace query::internal {
 
 			while (true) {
 				current_node_slow = walk(current_node_slow.value());
-				if (current_node_slow.empty()) return CycleCheckResult::CycleNotFound;
+				if (current_node_slow.empty()) return {};
 				
 				current_node_fast = double_walk(current_node_fast.value());
-				if (current_node_fast.empty()) return CycleCheckResult::CycleNotFound;
+				if (current_node_fast.empty()) return {};
 
 				if (current_node_slow.value() == current_node_fast.value())
-					return CycleCheckResult::CycleFound;
+					break;
 			}
 
-			CORE_UNREACHABLE();
+			// We are here, so the cycle was found.
+			// Now we need to reconstruct the cycle nodes.
+			std::vector<NodeID> cycle_nodes;
+
+			NodeID cycle_start = current_node_slow.value();
+			cycle_nodes.push_back(cycle_start);
+
+			NodeID walker = walk(cycle_start).value();
+			while (walker != cycle_start) {
+				cycle_nodes.push_back(walker);
+				walker = walk(walker).value();
+			}
+			
+			return QueryCycle{ .cycle_nodes = std::move(cycle_nodes) };
 		}
 	};
 }

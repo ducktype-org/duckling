@@ -84,7 +84,9 @@ namespace query {
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
 			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
-			if (main_query_state.getActiveGraph()->cycleCheck(my_node) == internal::ActiveGraph::CycleCheckResult::CycleFound) {
+			auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(my_node);
+
+			if (maybe_cycle.has_value()) {
 				// we hit a cycle!
 				// for now just panic
 
@@ -93,8 +95,22 @@ namespace query {
 					my_node.q_id.asInt(),
 					".",
 					my_node.hash.val.toStringHex()),
-					"The cycle is not reported in detail yet."
-				));
+					base::strConcat("The cycle:\n",
+						[&maybe_cycle]() -> std::string {
+							std::string result;
+							auto cycle = maybe_cycle.value();
+							for (auto node_id : cycle.cycle_nodes) {
+								result += "  - Query node ";
+								result += base::strConcat(
+									node_id.q_id.asInt(),
+									".",
+									node_id.hash.val.toStringHex(),
+									"\n"
+								);
+							}
+							return result;
+						}()
+				)));
 				CORE_ASSERT(false, "Query cycle detected involving query node:", my_node.q_id.asInt(), ".", my_node.hash.val.toStringHex());
 			}
 
