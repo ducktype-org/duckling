@@ -100,10 +100,10 @@ Full example is included bellow, here is a step by step guide:
 
 ### Including dependencies
 
-In order to create such implementation one must first include the query declaration as well as `query_framework/query_impl.hpp`:
+In order to create such implementation one must first include the query declaration as well as `query_framework/standard_query/query_impl.hpp`:
 
 ~~~~~cpp
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 #include "decl.hpp" // query declaration
 ~~~~~
 
@@ -344,17 +344,17 @@ For meaning and default values of each tag refer to `query_data.hpp`.
 Running queries from outside the query framework
 ================================================
 
-In order to call a query from "outside" the framework, one should use a special function: `queryEntryPoint`.
-See `src/query_framework/query_entry_point` for code details.
+In order to call a query from "outside" the framework, one should use a special function: `entryPoint`.
+See `src/query_framework/entry/query_entry_point` for code details.
 
 ~~~~~cpp
     :caption: Query call from outside example
 
-    #include <query_framework/query_entry_point.hpp>
+    #include <query_framework/entry/query_entry_point.hpp>
     #include <iostream>
 
     int mani() {
-        std::cerr << query::queryEntryPoint<MyQuery>(some_key) << "\n";
+        std::cerr << query::entryPoint<MyQuery>(some_key) << "\n";
     }
 ~~~~~
 
@@ -417,7 +417,7 @@ It is important to ensure that it is impossible to modify cached data in any way
 Auto cache example: by copy:
 ~~~~~~~~~~cpp
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
 
@@ -434,7 +434,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 .. code-block:: cpp
 :caption: Auto cache example: by reference
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 // Here we can return reference as it is stable:
 DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, CRef<std::string>);

@@ -3,7 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <typesystem/higher/abstract_type_impl.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
