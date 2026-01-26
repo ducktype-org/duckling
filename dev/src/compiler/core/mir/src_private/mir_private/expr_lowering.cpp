@@ -448,11 +448,6 @@ namespace compiler::mir {
 			}
 		}
 
-		void visitMoveExpr(const hc::MoveExpr&) override {
-			throw base::NotYetImplemented("Move expr in lowering to MIR");
-			// TODOP
-		}
-
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));

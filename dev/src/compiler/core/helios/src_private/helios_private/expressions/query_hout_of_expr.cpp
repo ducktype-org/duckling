@@ -416,8 +416,6 @@ namespace compiler::helios::code {
 				if (op.value == lang_def::keywordToStr(lang_def::Keyword::Move)) {
 					// @TODOP: #1549 This should check value categories and see if the object can be
 					// moved. For now we use the default logic with no checks.
-					node = makeBox<MoveExpr>(ctx, std::move(inner));
-					return;
 				}
 
 				if (op.value == lang_def::keywordToStr(lang_def::Keyword::Copy)) {

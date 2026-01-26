@@ -598,26 +598,6 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents a move of the inner expression. Inserted explicitly by the `move` operator
-	 * or implicitly by TODOP.
-	 * TODOP: Value category verification?
-	 */
-	struct MoveExpr final: public Expr {
-		Box<Expr> inner;
-
-		MoveExpr(query::Context& ctx, Box<Expr> inner);
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		MoveExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
-	};
-
-	/**
 	 * @brief Represents a compile-time cast of a value to a type.
 	 *
 	 * This is meant to be added by coercions when a value of type `type` is expected,

@@ -34,7 +34,6 @@ namespace compiler::helios::code {
 		MakeBoxExpr,
 		RefOfExpr,
 		DerefExpr,
-		MoveExpr,
 		CastExpr,
 		LiftToTypeExpr
 	);

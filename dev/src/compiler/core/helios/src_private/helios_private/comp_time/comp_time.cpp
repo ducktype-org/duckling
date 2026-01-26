@@ -544,10 +544,6 @@ namespace compiler::helios {
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitMoveExpr(const code::MoveExpr&) final {
-				throw base::NotYetImplemented("MoveExpr in comp time");
-			}
-
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.
