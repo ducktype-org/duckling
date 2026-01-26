@@ -87,6 +87,14 @@ namespace query::internal {
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
 
+		/**
+		 * @brief Adds a node to the query graph.
+		 * 
+		 * If the node already exists, resets its data.
+		 * @TODO PR: in the future, we might want to disallow cache less queries and panic on adding existing node
+		 */
+		void addGraphNode(NodeID node_id);
+
 
 		/*********************************\
 		| Active query state interface:   |

@@ -122,6 +122,8 @@ namespace query::internal {
 			// PROLOG:
 			// we put the node, it does not have any deps yet,
 			// actual cycle checks are done in ctx.query
+			// @TODO PR: we might want to put it under one more layer of abstraction:
+			ContextAccess::getState()->addGraphNode(node_id);
 			ContextAccess::getState()->getActiveGraph()->putNode(node_id);
 
 

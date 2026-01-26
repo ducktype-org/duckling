@@ -137,6 +137,11 @@ namespace query::internal {
 	// 	node_data.at(node).color = Color::Done;
 	// }
 
+	void QueryState::addGraphNode(NodeID node_id) {
+		node_data.insert_or_assign(node_id, NodeData());
+		query_graph.node_deps.insert_or_assign(node_id, std::vector<NodeID>{});
+	}
+
 	base::Optional<base::CRef<QueryGraph>> QueryState::getPreviousGraph() const {
 		if (!previous.has_value()) return base::Optional<base::CRef<QueryGraph>>{};
 		return &previous.value().graph;

@@ -14,6 +14,7 @@
 		::query::internal::ContextAccess::getState()->getGraphMutable()->addDependency(          \
 			from, node_id                                                                        \
 		);                                                                                       \
+		::query::internal::ContextAccess::getState()->addGraphNode(node_id);                     \
 		return ::query::internal::SideInputMockValue{};                                          \
 	}                                                                                            \
 	static_assert(                                                                               \
