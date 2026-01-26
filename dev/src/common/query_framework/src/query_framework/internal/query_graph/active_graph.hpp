@@ -66,18 +66,28 @@ namespace query::internal {
 		 * Walks the given node, until there is a cycle, or it can't walk no more.
 		 */
 		CycleCheckResult cycleCheck(const NodeID node_id) const {
-			auto current_node_slow = node_id;
-			auto current_node_fast = node_id;
+			
+			auto double_walk = [this](NodeID node_id) -> base::Optional<NodeID> {
+				auto walk_one = walk(node_id);
+				if (walk_one.empty()) return {};
+				return walk(walk_one.value());
+			};
+
+			base::Optional<NodeID> current_node_slow = node_id;
+			base::Optional<NodeID> current_node_fast = node_id;
 
 			while (true) {
-				auto next = walk(current_node);
+				current_node_slow = walk(current_node_slow.value());
+				if (current_node_slow.empty()) return CycleCheckResult::CycleNotFound;
+				
+				current_node_fast = double_walk(current_node_fast.value());
+				if (current_node_fast.empty()) return CycleCheckResult::CycleNotFound;
 
-				if (next.empty()) return CycleCheckResult::CycleNotFound;
-
-				if (next.value() == node_id) return CycleCheckResult::CycleFound;
-
-				current_node = next.value();
+				if (current_node_slow.value() == current_node_fast.value())
+					return CycleCheckResult::CycleFound;
 			}
+			
+			CORE_UNREACHABLE();
 		}
 	};
 }
