@@ -2,6 +2,7 @@
 
 #include "node_id.hpp"
 #include "query_graph.hpp"
+#include "active_graph.hpp"
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
@@ -21,41 +22,15 @@ namespace query::internal {
 		enum class PrevColor { Red, Green };
 
 	private:
-		/**
-		 * @brief Color of a node in the graph that is used for cycle detection.
-		 */
-		enum class Color {
-			Visiting,
-			Done,
-		};
 
 		/**
 		 * @brief Data structure that holds (non-graph) information about a node in the graph.
+		 *
+		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as computed/in progress.
 		 */
 		struct NodeData final {
-			Color color;
 
-			/**
-			 * @brief NodeID of last node "calling" this query.
-			 * Should only hold value when color==Visiting.
-			 * Used for cycle recovery.
-			 */
-			NodeID parent;
-
-			NodeData() = delete;
-
-			NodeData(Color color, NodeID parent): color(color), parent(parent) {}
 		};
-
-		/**
-		 * Amount of actively calculating queries.
-		 */
-		u64 query_stack_size = 0;
-
-		/**
-		 * The runtime data of the graph.
-		 */
-		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
 		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
@@ -81,22 +56,17 @@ namespace query::internal {
 			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
 		};
 
-		/**
-		 * The query graph that holds the dependencies and structure of the queries.
-		 */
-		QueryGraph query_graph;
-
-		/**
-		 * The previous compilation data if any.
-		 */
-		base::Optional<PreviousCompilation> previous;
-
 	public:
 		QueryState()                             = default;
 		QueryState(const QueryState&)            = delete;
 		QueryState(QueryState&&)                 = delete;
 		QueryState& operator=(const QueryState&) = delete;
 		QueryState& operator=(QueryState&&)      = delete;
+
+
+		/***************************\
+		| Simple graph interface:   |
+		\***************************/
 
 		/**
 		 * @brief Returns the mutable query graph.
@@ -117,24 +87,36 @@ namespace query::internal {
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
 
-		/**
-		 * @brief Returns the current size of the query stack.
-		 */
-		[[nodiscard]]
-		u64 queryStackSize() const;
 
-		/**
-		 * @brief Marks beginning of new query calculation.
-		 * The graph will add a node to a graph or update its data if it already exists.
-		 * @note @p called_by is used only for cycle recovery, addDependency has to be always called
-		 * explicitly.
-		 */
-		void setEntry(internal::NodeID node, internal::NodeID called_by);
+		/*********************************\
+		| Active query state interface:   |
+		\*********************************/
 
-		/**
-		 * @brief Marks exit of a query calculation.
-		 */
-		void setExit(internal::NodeID node);
+		Ref<ActiveGraph> getActiveGraph() { return &active_graph; }
+
+
+		// /**
+		//  * @brief Returns the amount of currently active queries.
+		//  */
+		// [[nodiscard]]
+		// u64 activeQueryCount() const;
+
+		// /**
+		//  * @brief Marks beginning of new query calculation.
+		//  * The graph will add a node to a graph or update its data if it already exists.
+		//  */
+		// void setEntry(internal::NodeID node);
+
+		// /**
+		//  * @brief Marks exit of a query calculation.
+		//  */
+		// void setExit(internal::NodeID node);
+
+
+		/***************************\
+		| Incremental interface:    |
+		\***************************/
+
 
 		/**
 		 * @brief Sets the color of a node from the previous compilation.
@@ -158,7 +140,7 @@ namespace query::internal {
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
 		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
 		 * @note This is for internal use in QueryFramework only. It is used to map nodes when
-		 * deserializnig previous graph in incremental compilation.
+		 * deserializing previous graph in incremental compilation.
 		 */
 		NodeID remapUnstableOrUnregisteredNodes(NodeID node);
 
@@ -186,6 +168,12 @@ namespace query::internal {
 		 */
 		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
 
+
+		/***************************\
+		| Serialization interface:  |
+		\***************************/
+
+
 		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to
@@ -196,5 +184,33 @@ namespace query::internal {
 		 */
 		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
 		) const;
+
+	private:
+		
+		/***************************\
+		| All of the actual state:  |
+		\***************************/
+
+
+		/**
+		 * The runtime data of the graph.
+		 */
+		base::HashMap<NodeID, NodeData> node_data;
+
+		/**
+		 * The query graph that holds the dependencies and structure of the queries.
+		 */
+		QueryGraph query_graph;
+
+		/**
+		 * The active graph that holds the currently active queries.
+		*/
+		ActiveGraph active_graph;
+
+		/**
+		 * The previous compilation data if any.
+		 */
+		base::Optional<PreviousCompilation> previous;
+		
 	};
 }

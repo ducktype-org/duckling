@@ -27,13 +27,31 @@ namespace query::internal {
 		};
 
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
+		std::atomic<u64>                    active_node_count = 0;
 
 	public:
 		/**
 		 * Adds a node to the query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id) { active_nodes.put(node_id, {}); }
+		void putNode(NodeID node_id) {
+			active_nodes.put(node_id, {});
+			active_node_count++;
+		}
+
+		void removeNode(NodeID node_id) {
+			auto was_removed = active_nodes.erase(node_id);
+			if (was_removed) active_node_count--;
+		}
+
+		/**
+		 * @return Current size of the active graph.
+		 * Note that this can be called concurrently with other operations,
+		 * so the result might be immediately outdated.
+		 * It should be treated as a good-enough approximation, or in assertions
+		 * such as "size() == 0" to check for emptiness.
+		 */
+		auto size() const -> u64 { return active_node_count.load(); }
 
 		/**
 		 * Removes active edge of a given node.
@@ -86,7 +104,7 @@ namespace query::internal {
 				if (current_node_slow.value() == current_node_fast.value())
 					return CycleCheckResult::CycleFound;
 			}
-			
+
 			CORE_UNREACHABLE();
 		}
 	};

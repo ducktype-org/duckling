@@ -166,6 +166,11 @@ namespace concurrent {
 			return shards[lock.shard_index].contains(key);
 		}
 
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].erase(key);
+		}
+
 	private:
 		/**
 		 * Number of shards used in the map.
