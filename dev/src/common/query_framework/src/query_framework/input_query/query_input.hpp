@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "query_int.hpp"  // IWYU pragma: export
+#include <query_framework/query_int.hpp>  // IWYU pragma: export
 
 namespace query::internal {
 	/**

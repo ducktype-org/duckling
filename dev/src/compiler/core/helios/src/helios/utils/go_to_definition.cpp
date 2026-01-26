@@ -6,7 +6,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 
-#include <query_frameworkcontext/context.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
 

@@ -1,7 +1,10 @@
 #include "with_context_do.hpp"
 
-#include "..entry/query_entry_point.hpp"
-#include "../standard_query/query_impl.hpp"
+#include "query_entry_point.hpp"
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace query::utils {
 	namespace {

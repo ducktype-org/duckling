@@ -16,7 +16,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_frameworkcontext/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>

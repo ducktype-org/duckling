@@ -16,7 +16,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <logger/logger.hpp>
-#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/api/vm.hpp>

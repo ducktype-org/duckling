@@ -9,7 +9,7 @@
 
 #include <base/str/str_utils.hpp>
 
-#include <query_frameworkcontext/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/bytecode/bytecode.hpp>

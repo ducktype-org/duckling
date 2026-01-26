@@ -6,7 +6,7 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::frontend;

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "context.hpp"                           // IWYU pragma: export
-#include "internal/context_access.hpp"           // IWYU pragma: export
-#include "internal/query_data/query_id.hpp"      // IWYU pragma: export
-#include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
-#include "query_hash.hpp"                        // IWYU pragma: export
+#include <query_framework/context/context.hpp>                           // IWYU pragma: export
+#include <query_framework/internal/context_access.hpp>           // IWYU pragma: export
+#include <query_framework/internal/query_data/query_id.hpp>      // IWYU pragma: export
+#include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
+#include <query_framework/utils/query_hash.hpp>                        // IWYU pragma: export
 
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
 	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \

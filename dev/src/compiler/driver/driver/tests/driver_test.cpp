@@ -14,7 +14,7 @@
 #include <query_framework/external/api.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>

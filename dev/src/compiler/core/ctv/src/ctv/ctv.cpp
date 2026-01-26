@@ -3,7 +3,7 @@
 #include <ctv/numeric_value.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_frameworkcontext/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
 
 #include <sstream>

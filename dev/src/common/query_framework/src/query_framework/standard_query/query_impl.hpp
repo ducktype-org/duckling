@@ -8,13 +8,13 @@
 #include <query_framework/internal/acd.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_errors.hpp>
-#include <query_frameworkinternal/query_graph/node_making.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include "query_cache_macros.hpp"  // IWYU pragma: export
-#include "query_errors.hpp"
-#include "query_hash.hpp"
-#include "query_int.hpp"
-#include "query_result.hpp"
+#include <query_framework/standard_query/query_cache_macros.hpp>  // IWYU pragma: export
+#include <query_framework/query_errors.hpp>
+#include <query_framework/utils/query_hash.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>

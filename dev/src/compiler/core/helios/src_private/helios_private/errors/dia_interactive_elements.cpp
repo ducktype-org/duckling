@@ -16,7 +16,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_frameworkcontext/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios {

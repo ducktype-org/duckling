@@ -10,7 +10,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-#include <query_frameworkcontext/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <variant>

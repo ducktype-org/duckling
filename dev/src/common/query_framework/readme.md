@@ -350,7 +350,7 @@ See `src/query_framework/query_entry_point` for code details.
 ~~~~~cpp
     :caption: Query call from outside example
 
-    #include <query_frameworkentry/query_entry_point.hpp>
+    #include <query_framework/entry/query_entry_point.hpp>
     #include <iostream>
 
     int mani() {

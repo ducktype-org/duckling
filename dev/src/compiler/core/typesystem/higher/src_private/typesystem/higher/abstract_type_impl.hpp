@@ -12,7 +12,7 @@
 
 #include <base/pointers/box.hpp>
 
-#include <query_frameworkcontext/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <utility>
 #include <vector>

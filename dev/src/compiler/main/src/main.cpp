@@ -33,7 +33,7 @@
 #include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
 #include <iostream>

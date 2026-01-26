@@ -4,7 +4,7 @@
 
 #include <diagnostic/diagnostic_converters.hpp>
 #include <init/init.hpp>
-#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <iostream>

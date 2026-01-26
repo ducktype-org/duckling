@@ -2,7 +2,7 @@
 
 #include <lir/lir_structure/lir_structure.hpp>  // @TODO: #404 relax it
 
-#include <query_frameworkcontext/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
