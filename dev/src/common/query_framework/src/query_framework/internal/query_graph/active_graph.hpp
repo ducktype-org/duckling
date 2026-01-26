@@ -61,7 +61,16 @@ namespace query::internal {
 		/**
 		 * Sets new active edge of a given node.
 		 */
-		void setEdge(NodeID node_id, NodeID edge) { active_nodes.update(node_id, { edge }); }
+		void setEdge(NodeID node_id, NodeID edge) {
+			// Note that there might be some concurrent operations
+			// between following assertion and update, 
+			// but the assertion must always pass anyway (when the active graph is used correctly).
+			CORE_ASSERT(
+				active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
+				"Setting edge for node that already has an active edge"
+			);
+			active_nodes.update(node_id, { edge });
+		}
 
 		/**
 		 * Performs the following:

@@ -153,7 +153,10 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
-
+		
+		/**
+		 * Atomically updates the value associated with the given key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
