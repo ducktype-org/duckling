@@ -2,7 +2,7 @@
 
 #include <helios/hout/hout.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <vm/core/process/interface_types.hpp>
 

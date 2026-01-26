@@ -16,7 +16,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 

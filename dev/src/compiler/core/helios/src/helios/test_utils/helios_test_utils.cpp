@@ -15,9 +15,9 @@
 
 #include <base/misc/anycast.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {

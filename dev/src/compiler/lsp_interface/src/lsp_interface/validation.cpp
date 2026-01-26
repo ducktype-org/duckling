@@ -7,8 +7,8 @@
 #include <frontend/module_tree/source_file.hpp>
 #include <helios/queries.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 
 namespace lsp {
 	using namespace compiler;

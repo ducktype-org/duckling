@@ -5,7 +5,7 @@
 
 #include <base/collections/optional.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace compiler::tsh {
 	namespace {

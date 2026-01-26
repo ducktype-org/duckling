@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "../../query_hash.hpp"
+#include "../../utils/query_hash.hpp"
 #include "node_id.hpp"
 
 #include <base/types/bit256.hpp>

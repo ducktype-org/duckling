@@ -11,8 +11,8 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;

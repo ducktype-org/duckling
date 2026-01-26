@@ -9,7 +9,7 @@
 #include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <type_traits>
 

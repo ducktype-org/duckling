@@ -15,9 +15,9 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;
