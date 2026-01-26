@@ -34,8 +34,10 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(SequenceExpr)
+	EXPR_VISITOR(MakeBoxExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
+	EXPR_VISITOR(MoveExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
@@ -706,6 +708,27 @@ namespace compiler::helios::code {
 		return makeBox<RefOfExpr>(expression_type, inner->clone());
 	}
 
+	MakeBoxExpr::MakeBoxExpr(query::Context&, Box<Expr> inner):
+		  Expr(tsh::ExpressionType<>(
+			  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  inner(std::move(inner)) {}
+
+	MakeBoxExpr::MakeBoxExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner):
+		  Expr(expression_type),
+		  inner(std::move(inner)) {}
+
+	void MakeBoxExpr::debugPrint(std::ostream& out) const {
+		out << "boxof(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> MakeBoxExpr::clone() const {
+		return makeBox<MakeBoxExpr>(expression_type, inner->clone());
+	}
+
 	DerefExpr::DerefExpr(query::Context&, Box<Expr> inner):
 		  Expr(tsh::ExpressionType<>(
 			  inner->expression_type.getSymbolType().getPointeeSymbolType(
@@ -727,6 +750,26 @@ namespace compiler::helios::code {
 	Box<Expr> DerefExpr::clone() const {
 		return makeBox<DerefExpr>(expression_type, inner->clone());
 	}
+
+	MoveExpr::MoveExpr(query::Context&, Box<Expr> inner):
+		  Expr(tsh::ExpressionType<>(
+			  inner->expression_type.getSymbolType(),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary
+	          )  // Value after move is an rvalue <-> temporary.
+		  )),
+		  inner(std::move(inner)) {}
+
+	MoveExpr::MoveExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner):
+		  Expr(expression_type),
+		  inner(std::move(inner)) {}
+
+	void MoveExpr::debugPrint(std::ostream& out) const {
+		out << "move(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> MoveExpr::clone() const { return makeBox<MoveExpr>(expression_type, inner->clone()); }
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr):
 		  Expr(tsh::ExpressionType(

@@ -40,8 +40,9 @@ namespace compiler::tsh {
 			const auto from_ref_kind = key.source.getRefKind();
 			const auto to_ref_kind   = key.target.getRefKind();
 
-			// Direct types cannot be coerced into non direct types.
-			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind != ReferenceKind::Direct)
+			// Direct types cannot be coerced into non direct types, apart from boxes which
+			// apparently can xd. TODOP
+			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind == ReferenceKind::Ref)
 				return false;
 
 			// Box types cannot be coerced into ref types.

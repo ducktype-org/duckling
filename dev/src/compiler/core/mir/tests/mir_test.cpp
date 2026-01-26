@@ -37,6 +37,7 @@ public:
 		TESTER_ADD_TEST(functionEndTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -660,6 +661,26 @@ private:
 			ASSERT_TRUE(found_simple_address_of);
 			ASSERT_TRUE(found_address_of_with_deref);
 			ASSERT_TRUE(found_complex_assignment);
+		});
+	}
+
+	void boxesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/boxes")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			for (const auto& func: unit.functions) {
+				std::cout << "Lowered function name: " << func.declaration->original_name.strView()
+						  << '\n';
+				auto& mir_func = (compiler::mir::Function&) ctx
+				                     .query<compiler::mir::LowerToMIRFunction>({ func })
+				                     ->valueOrThrow();
+
+				std::cout << "==============================\n";
+				mir_func.debugPrint(std::cout);
+				std::cout << '\n';
+			}
 		});
 	}
 

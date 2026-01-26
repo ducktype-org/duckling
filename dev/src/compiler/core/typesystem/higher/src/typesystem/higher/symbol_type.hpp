@@ -172,6 +172,11 @@ namespace compiler::tsh {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
 			}
+			if (reference_kind == ReferenceKind::Box) {
+				// TODOP: Box types don't have trivial destructors, as they have to deallocate the
+				// memory
+				return false;
+			}
 			if (abstract_type.hasNoOpDestructor()) return true;
 			// @TODO #1271: add more cases where destructor is trivial
 			// NOTE: abstract_type check should probably be the last one as it may be expensive

@@ -30,7 +30,32 @@ namespace compiler::helios {
 		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
 			current_expr       = makeBox<code::DerefExpr>(ctx, std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
-			// If underlying types differ, proceed with the standard coercion.
+
+			// If underlying types are the same, return just the derefed value.
+			if (source_symbol_type == to) return current_expr;
+
+			// Otherwise if underlying types differ, proceed with the standard coercion.
+		}
+
+		// If `from` is direct and `to` is a box, create a MakeBoxExpression.
+		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
+		    && to.getRefKind() == tsh::ReferenceKind::Box) {
+			current_expr       = makeBox<code::MakeBoxExpr>(ctx, std::move(current_expr));
+			source_symbol_type = current_expr->expression_type.getSymbolType();
+
+			// Otherwise if underlying types differ, proceed with the standard coercion.
+		}
+
+
+		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Box
+		    && to.getRefKind() == tsh::ReferenceKind::Ref) {
+			source_symbol_type = source_symbol_type.withReferenceKind(tsh::ReferenceKind::Ref);
+
+			// Otherwise if underlying types differ, perform the recursive coercion.
+			// box i64 -> ref i32
+			// TODOP: Rethink that. Using CastExpr here is kinda stupid. Since this is basically a noop.
+			current_expr
+				= makeBox<code::CastExpr>(ctx, std::move(current_expr), source_symbol_type);
 		}
 
 		auto source_type = source_symbol_type.getType();

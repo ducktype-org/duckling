@@ -398,15 +398,37 @@ namespace compiler::mir {
 		}
 
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
+			const auto& inner_type = expr.inner->expression_type.getSymbolType();
+
+			// If a reference of box is taken, no address of instruction is inserted.
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
+				output(lowerSubExpr(*expr.inner, continuation));
+			} else {
+				auto       hole          = continuation->addHole();
+				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
+				const auto res_inner     = lowered_inner.getResult(function);
+				const auto result_type   = expr.expression_type.getSymbolType();
+
+				noValueOutput(
+					lowered_inner.begin,
+					hole,
+					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+					result_type
+				);
+			}
+		}
+
+		void visitMakeBoxExpr(const hc::MakeBoxExpr& expr) override {
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);
 			const auto result_type   = expr.expression_type.getSymbolType();
 
+			// TODOP: Rethink alloc box.
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
+				Instruction(Operation::AllocBox, {}, { res_inner }, {}, expr_scope),
 				result_type
 			);
 		}
@@ -424,6 +446,11 @@ namespace compiler::mir {
 					CORE_UNREACHABLE();
 				}
 			}
+		}
+
+		void visitMoveExpr(const hc::MoveExpr&) override {
+			throw base::NotYetImplemented("Move expr in lowering to MIR");
+			// TODOP
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {

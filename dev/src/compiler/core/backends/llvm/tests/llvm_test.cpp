@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -134,6 +135,7 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
+		llvm_module.debugPrint();
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
 	}
@@ -216,6 +218,14 @@ private:
 			search_range = matches.suffix();
 		}
 		assertTrue(ptr_loads == 17, "Too few pointer loads");
+	}
+
+	void boxesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/boxes");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		std::cout << "LLVM IR:\n";
+		std::cout << ir << '\n';
 	}
 
 	void floatingPointTest() {

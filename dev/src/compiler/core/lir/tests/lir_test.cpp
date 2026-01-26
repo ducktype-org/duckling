@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -447,6 +448,16 @@ private:
 		ASSERT_TRUE(found_simple_address_of);
 		ASSERT_TRUE(found_address_of_with_deref);
 		ASSERT_TRUE(found_complex_assignment);
+	}
+
+	void boxesTest() {
+		auto module   = getLIROfModule(path("modules/boxes"));
+		auto lir_func = module.lirFunc("test_boxes");
+
+		withContextDo([&](query::Context& ctx) {
+			lir_func->debugPrint(ctx, std::cout);
+			std::cout << '\n';
+		});
 	}
 
 	void metaFunctionsTest() {

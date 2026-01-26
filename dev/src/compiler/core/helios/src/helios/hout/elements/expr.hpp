@@ -544,6 +544,26 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents a box creation expression.
+	 * It takes an expression of type T and produces a value of type box T.
+	 * TODOP: Decide should this be explicit or not. Currently it's not.
+	 */
+	struct MakeBoxExpr final: public Expr {
+		Box<Expr> inner;
+
+		MakeBoxExpr(query::Context& ctx, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MakeBoxExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+	};
+
+	/**
 	 * @brief Represents a dereference operation on a reference/box type.
 	 *
 	 * This node is inserted in three cases:
@@ -575,6 +595,26 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a move of the inner expression. Inserted explicitly by the `move` operator
+	 * or implicitly by TODOP.
+	 * TODOP: Value category verification?
+	 */
+	struct MoveExpr final: public Expr {
+		Box<Expr> inner;
+
+		MoveExpr(query::Context& ctx, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MoveExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
 	/**

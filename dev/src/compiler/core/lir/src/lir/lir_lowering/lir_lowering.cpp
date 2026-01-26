@@ -88,6 +88,8 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
+		case mir::Operation::AllocBox:
+			return Operation::AllocBox;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -487,6 +489,7 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				case mir::Operation::AddressOf:
+				case mir::Operation::AllocBox:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -542,11 +545,49 @@ namespace compiler::lir {
 					);
 					return curr_block;
 				}
-				case mir::Operation::DestructIf:
-					// @TODO implement it, once we know how to call destructors
-					CORE_DEV_LOG(Compiler, "DestructIf not implemented in LIR, skipping", "\n");
+				case mir::Operation::DestructIf: {
+					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+					const auto& type        = to_destruct.type;
+
+					if (type.getRefKind() == tsh::ReferenceKind::Box) {
+						auto pointee_type = type.getPointeeSymbolType();
+
+						auto lir_place = getLocation(to_destruct);
+						// FreeBox is discarded if it operates on no information (ex. Unit).
+						if (lir_place.has_value()) {
+							curr_block->instructions.emplace_back(
+								Operation::FreeBox,
+								base::Optional<LIRPlace>{},
+								std::vector{ lir_place.value() }
+							);
+						}
+						if (!pointee_type.hasNoOpDestructor()) {
+							// TODOP: This is a stub. We should insert a proper destructor call here
+							// before the FreeBox. For not we just support boxes with trivial
+							// destructors.
+
+							// @TODO implement it, once we know how to call destructors
+							// TODOP: Try removing that.
+							CORE_DEV_LOG(
+								Compiler,
+								"DestructIf not implemented for types with non-trivial "
+								"destructors, skipping",
+								"\n"
+							);
+
+							// throw base::NotYetImplemented(
+							// 	base::strConcat(
+							// 		"Destruction of a box with a non-trivial destructor is not "
+							// 		"implemented yet. Type: ",
+							// 		pointee_type.toString()
+							// 	)
+							// );
+						}
+					}
+
 
 					return curr_block;
+				}
 				case mir::Operation::Call: {
 					auto output = getOutput(mir_instruction.output);
 					auto args   = getLocations(mir_instruction.arguments);
