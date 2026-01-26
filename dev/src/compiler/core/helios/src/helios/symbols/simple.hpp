@@ -6,12 +6,12 @@
 
 #pragma once
 
+#include "symbol_id.hpp"
 #include "symbol_kind.hpp"
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/scope_id.hpp>
-#include <helios/symbol_id.hpp>
 
 #include <string_id/string_id.hpp>
 

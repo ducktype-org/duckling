@@ -10,7 +10,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/types/bits_and_bytes.hpp>

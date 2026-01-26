@@ -2,7 +2,7 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <base/collections/maps.hpp>

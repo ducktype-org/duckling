@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../symbol_id.hpp"
 #include "expr.hpp"
 
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <base/pointers/box.hpp>

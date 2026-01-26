@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/extend_cpp/flag.hpp>
 

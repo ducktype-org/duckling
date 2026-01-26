@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
 

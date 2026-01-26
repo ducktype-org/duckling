@@ -7,7 +7,7 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <diagnostic/source_position.hpp>

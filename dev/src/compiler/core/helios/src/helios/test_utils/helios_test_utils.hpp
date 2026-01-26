@@ -5,7 +5,7 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_id.hpp>
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>

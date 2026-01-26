@@ -1,4 +1,4 @@
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <base/types/bit256.hpp>
