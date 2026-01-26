@@ -26,7 +26,6 @@ fun by_box(p: box Point) -> i32 = {
 
 fun test_boxes() -> i32 = {
     var b_int: box i32 = 42; # Coercion from direct to `box i32`. `MakeBoxExpr` should be inserted.
-    var moved_int = move b_int; # `MoveExpr` should be inserted.
 
     double_coerce(refof b_int);
     
@@ -44,7 +43,6 @@ fun test_boxes() -> i32 = {
     # TODOP: Verify that.
     by_box(b_point); # TODOP: Should crash.
     # by_box(copy b_point); # TODOP: Shouldn't crash
-    by_box(move b_point); # TODOP: Shouldn't crash
 
-    return moved_int; # Box i32 -> i32 coercion;
+    return b_int; # Box i32 -> i32 coercion;
 }

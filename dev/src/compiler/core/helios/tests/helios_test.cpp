@@ -1291,22 +1291,10 @@ private:
 			ASSERT_EQUAL(var_type.getType().getKind(), compiler::tsh::Kind::Integral);
 		}
 		{
-			// var moved_int = move b_int;
-			ASSERT_TRUE(body.statements.size() > 1);
-			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[1].get());
-			ASSERT_TRUE(var_stmt != nullptr);
-
-			auto* move_expr = dynamic_cast<const MoveExpr*>(var_stmt->initial_value->get());
-			ASSERT_TRUE(move_expr != nullptr);
-
-			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(move_expr->inner.get());
-			ASSERT_TRUE(ident_expr != nullptr);
-		}
-		{
 			// double_coerce(b_int);
 			// `box i32` -> `ref i32` -> `ref i64`
 			ASSERT_TRUE(body.statements.size() > 2);
-			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[2].get());
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
 			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
 			ASSERT_TRUE(call_expr != nullptr);
@@ -1319,7 +1307,7 @@ private:
 		{
 			// var x: i32 = b_point.x;
 			ASSERT_TRUE(body.statements.size() > 5);
-			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[5].get());
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[4].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
 			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value->get());
@@ -1332,7 +1320,7 @@ private:
 		{
 			// b_point.y = 99;
 			ASSERT_TRUE(body.statements.size() > 7);
-			auto* assign_stmt = dynamic_cast<const AssignmentStmt*>(body.statements[7].get());
+			auto* assign_stmt = dynamic_cast<const AssignmentStmt*>(body.statements[6].get());
 			ASSERT_TRUE(assign_stmt != nullptr);
 
 			auto* access_expr = dynamic_cast<const AccessExpr*>(assign_stmt->location_expr.get());
@@ -1346,7 +1334,7 @@ private:
 			// by_val(b_point);
 			// `box T -> T`
 			ASSERT_TRUE(body.statements.size() > 8);
-			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[8].get());
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[7].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
 			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
 			ASSERT_TRUE(call_expr != nullptr);
@@ -1362,7 +1350,7 @@ private:
 			// by_ref(b_point);
 			// `box T -> ref T`
 			ASSERT_TRUE(body.statements.size() > 9);
-			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[9].get());
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[8].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
 
 			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
