@@ -20,7 +20,7 @@ namespace query::internal {
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
 
-			// @TODO PR?: we will also need to store key refs here (in type-erased way),
+			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
 			// we might want to put in in multiple hash maps, as key operations will be
 			// performed less often and will need less strict synchronization.
 			// We might want to store Ref<void> – maybe we need custom base type?.

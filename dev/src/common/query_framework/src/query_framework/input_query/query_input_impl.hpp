@@ -6,7 +6,11 @@
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/utils/query_hash.hpp>                  // IWYU pragma: export
 
-// note PR: we don't care about active graph for inputs, since they don't have dependencies
+/**
+ * @brief Implements a side-input query.
+ * @note We don't care here about active graph, since inputs have no dependencies.
+ * @TODO: #1887 make it clear what query invocation layers happen here. 
+ */
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
 	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \
 		-> query_type::QResult {                                                                 \

@@ -7,12 +7,10 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp> // @TODO PR: move to outer query-invocation layer
+#include <diagnostic_interactive/placeholder.hpp> // @TODO: 1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
 
-// #include <diagnostic/logger.hpp>
-// #include <diagnostic/message.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>

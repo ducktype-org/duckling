@@ -15,7 +15,6 @@
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <algorithm>
-// #include <iostream> PR
 #include <unordered_set>
 #include <utility>
 #include <vector>
