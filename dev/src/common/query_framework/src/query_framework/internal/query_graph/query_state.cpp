@@ -142,7 +142,10 @@ namespace query::internal {
 		return &previous.value().graph;
 	}
 
-	// u64 QueryState::queryStackSize() const { return query_stack_size; }
+	u64 QueryState::activeQueryCount() const { 
+		// @TODO PR: test it!
+		return active_graph.size();
+	}
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
 		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");

@@ -38,7 +38,7 @@ namespace query {
 	template<typename QueryType>
 	auto entryPoint(const typename QueryType::QKey& key) -> decltype(auto) {
 		CORE_ASSERT(
-			Context::getState().queryStackSize() == 0, "query::entryPoint called from within query!"
+			Context::getState().activeQueryCount() == 0, "query::entryPoint called from within query!"
 		);
 		return internal::EntryPointHelper::callQuery<QueryType>(key);
 	}

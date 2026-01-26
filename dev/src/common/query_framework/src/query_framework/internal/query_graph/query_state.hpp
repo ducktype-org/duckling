@@ -95,11 +95,11 @@ namespace query::internal {
 		Ref<ActiveGraph> getActiveGraph() { return &active_graph; }
 
 
-		// /**
-		//  * @brief Returns the amount of currently active queries.
-		//  */
-		// [[nodiscard]]
-		// u64 activeQueryCount() const;
+		/**
+		 * @brief Returns the amount of currently active queries.
+		 */
+		[[nodiscard]]
+		u64 activeQueryCount() const;
 
 		// /**
 		//  * @brief Marks beginning of new query calculation.

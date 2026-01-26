@@ -94,8 +94,8 @@ namespace query::internal {
 		 */
 		CycleCheckResult cycleCheck(const NodeID node_id) const {
 			
-			auto double_walk = [this](NodeID node_id) -> base::Optional<NodeID> {
-				auto walk_one = walk(node_id);
+			auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
+				auto walk_one = walk(walk_zero);
 				if (walk_one.empty()) return {};
 				return walk(walk_one.value());
 			};
