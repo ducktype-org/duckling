@@ -344,8 +344,8 @@ For meaning and default values of each tag refer to `query_data.hpp`.
 Running queries from outside the query framework
 ================================================
 
-In order to call a query from "outside" the framework, one should use a special function: `queryEntryPoint`.
-See `src/query_framework/query_entry_point` for code details.
+In order to call a query from "outside" the framework, one should use a special function: `entryPoint`.
+See `src/query_framework/entry/query_entry_point` for code details.
 
 ~~~~~cpp
     :caption: Query call from outside example
@@ -354,7 +354,7 @@ See `src/query_framework/query_entry_point` for code details.
     #include <iostream>
 
     int mani() {
-        std::cerr << query::queryEntryPoint<MyQuery>(some_key) << "\n";
+        std::cerr << query::entryPoint<MyQuery>(some_key) << "\n";
     }
 ~~~~~
 
