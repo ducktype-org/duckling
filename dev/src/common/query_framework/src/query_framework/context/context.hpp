@@ -7,11 +7,12 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/placeholder.hpp> // @TODO PR: move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
+// #include <diagnostic/logger.hpp>
+// #include <diagnostic/message.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
@@ -62,7 +63,8 @@ namespace query {
 		 * buffer per-thread.
 		 * @{
 		 */
-		static dia::Logger     logger;
+		// static dia::Logger     logger;
+
 		static dia_int::Logger int_logger;
 		/**
 		 * @}
@@ -77,12 +79,22 @@ namespace query {
 			
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
+			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
+
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
 			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
 			if (main_query_state.getActiveGraph()->cycleCheck(my_node) == internal::ActiveGraph::CycleCheckResult::CycleFound) {
 				// we hit a cycle!
 				// for now just panic
+
+				logInt(makeBox<dia_int::PlaceholderHeaderError>(
+					base::strConcat("Query cycle detected involving query node:",
+					my_node.q_id.asInt(),
+					".",
+					my_node.hash.val.toStringHex()),
+					"The cycle is not reported in detail yet."
+				));
 				CORE_ASSERT(false, "Query cycle detected involving query node:", my_node.q_id.asInt(), ".", my_node.hash.val.toStringHex());
 			}
 

@@ -13,7 +13,8 @@
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <logger/logger.hpp>
+// #include <logger/logger.hpp>
+
 #include <query_framework/context/context.hpp>
 #include <query_framework/internal/acd.hpp>
 #include <query_framework/internal/context_access.hpp>
