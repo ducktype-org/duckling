@@ -38,10 +38,12 @@ namespace query::internal {
 	 * @param key Query key
 	 * @param from node id of caller
 	 * @return QueryImplType::QResult
+	* @TODO PR: remove from parameter?
 	 */
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
 		typename QueryImplType::QResult {
+
 		using QueryIntType = QueryImplType::QueryType;
 
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
@@ -53,6 +55,10 @@ namespace query::internal {
 
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
+			// @TODO PR: sync ideas, we might want to detect if a query should be loaded based on its state?
+			// Or is cache entry effectively a state?
+			// Maybe this is what ACD is for?
+
 			// @FUTURE: Add ACD check here...
 			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
 
@@ -97,20 +103,31 @@ namespace query::internal {
 				}
 			}
 
+			/*******************************************************************\
+			| Now we actually compute the query result by calling provide().    |
+			\*******************************************************************/
 
-			// Use of defer here makes it also called when an exception is thrown.
-			// it is before setEntry, because setEntry can throw on cycle
+			
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(ContextAccess::getState()->setExit(node_id));
+			
+			// EPILOG
+			// Use of defer here makes it also called when an exception is thrown.
+			// it is before setEntry, because setEntry can throw on cycle
+			defer({
+				ContextAccess::getState()->getActiveGraph()->removeNode(node_id); // node is calculated, we are all done
+			});
 
-			// prolog:
-			ContextAccess::getState()->setEntry(node_id, from);
+			// PROLOG:
+			// we put the node, it does not have any deps yet,
+			// actual cycle checks are done in ctx.query
+			ContextAccess::getState()->getActiveGraph()->putNode(node_id);
+
 
 			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
-			// epilog:
+			// EPILOG pt2:
 			defer(CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;

@@ -84,7 +84,7 @@ namespace query::internal {
 			return edge.value().active_edge;
 		}
 
-		enum CycleCheckResult : bool {
+		enum class CycleCheckResult : bool {
 			CycleFound,
 			CycleNotFound,
 		};

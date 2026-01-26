@@ -194,6 +194,8 @@ namespace query::internal {
 
 		/**
 		 * The runtime data of the graph.
+		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as computed/in progress.
+		 * @TODO PR: synchronize code ideas with task pool changes 
 		 */
 		base::HashMap<NodeID, NodeData> node_data;
 

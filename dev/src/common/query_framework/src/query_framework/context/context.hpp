@@ -74,11 +74,25 @@ namespace query {
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
+			
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
-			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
+
+			// Here, the node should already exist in the active graph.
+			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
+			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
+			if (main_query_state.getActiveGraph()->cycleCheck(my_node) == internal::ActiveGraph::CycleCheckResult::CycleFound) {
+				// we hit a cycle!
+				// for now just panic
+				CORE_ASSERT(false, "Query cycle detected involving query node:", my_node.q_id.asInt(), ".", my_node.hash.val.toStringHex());
+			}
 
 			this->active = false;
-			defer(this->active = true);
+			defer({
+				this->active = true;
+				// We remove the edge after the query call is done.
+				// This is because active graph only tracks currently active queries and dependencies.
+				main_query_state.getActiveGraph()->removeEdge(my_node);
+			});
 
 			return OthQuery::internal_query(key, my_node);
 		}
