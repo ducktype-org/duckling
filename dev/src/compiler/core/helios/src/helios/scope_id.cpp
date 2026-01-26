@@ -1,4 +1,4 @@
-#include "scope_symbol_id.hpp"
+#include "scope_id.hpp"
 
 #include <helios_private/scopes/scope_data.hpp>
 

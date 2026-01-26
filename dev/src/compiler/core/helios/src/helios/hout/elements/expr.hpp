@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../scope_symbol_id.hpp"
+#include "../../symbol_id.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <typesystem/higher/expression_type.hpp>

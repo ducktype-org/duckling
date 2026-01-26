@@ -10,7 +10,8 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/elements_list.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/scope_id.hpp>
+#include <helios/symbol_id.hpp>
 
 #include <string_id/string_id.hpp>
 

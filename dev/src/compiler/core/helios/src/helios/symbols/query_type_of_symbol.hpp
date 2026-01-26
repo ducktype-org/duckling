@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>

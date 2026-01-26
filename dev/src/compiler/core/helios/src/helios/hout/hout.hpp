@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "../scope_symbol_id.hpp"
+#include "../symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
 #include "hout_fd.hpp"        // IWYU pragma: keep
 

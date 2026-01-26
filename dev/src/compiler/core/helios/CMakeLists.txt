@@ -22,7 +22,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 
 	src/helios/queries.cpp
-	src/helios/scope_symbol_id.cpp
+    src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
 	src/helios/hout/elements/expr.cpp
