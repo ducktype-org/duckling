@@ -1,8 +1,8 @@
 #include "node_id.hpp"
 
 #include <concurrent/collections/hash_map.hpp>
-#include <base/collections/optional.hpp>
 
+#include <base/collections/optional.hpp>
 
 namespace query::internal {
 	/**
@@ -20,10 +20,10 @@ namespace query::internal {
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
 
-            // @TODO PR?: we will also need to store key refs here (in type-erased way),
-            // we might want to put in in multiple hash maps, as key operations will be 
-            // performed less often and will need less strict synchronization.
-            // We might want to store Ref<void> – maybe we need custom base type?.
+			// @TODO PR?: we will also need to store key refs here (in type-erased way),
+			// we might want to put in in multiple hash maps, as key operations will be
+			// performed less often and will need less strict synchronization.
+			// We might want to store Ref<void> – maybe we need custom base type?.
 		};
 
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
@@ -38,51 +38,46 @@ namespace query::internal {
 		/**
 		 * Removes active edge of a given node.
 		 */
-		void removeEdge(NodeID node_id) {
-            active_nodes.update(node_id, {});
-        }
+		void removeEdge(NodeID node_id) { active_nodes.update(node_id, {}); }
 
-        /**
+		/**
 		 * Sets new active edge of a given node.
 		 */
-		void setEdge(NodeID node_id, NodeID edge) { 
-            active_nodes.update(node_id, {edge});
-        }
+		void setEdge(NodeID node_id, NodeID edge) { active_nodes.update(node_id, { edge }); }
 
-        /**
-         * Performs the following:
-         * * if node_id is not present in the graph, return empty optional,
-         * * if node_id does not currently have an active edge, return empty optional,
-         * * otherwise return the node the the active edge of provided node points to.
-         */
-        base::Optional<NodeID> walk(NodeID node_id) const {
-            auto edge = active_nodes.atMaybeCopy(node_id);
-            if (edge.empty()) return {};
-            return edge.value().active_edge;
-        }
+		/**
+		 * Performs the following:
+		 * * if node_id is not present in the graph, return empty optional,
+		 * * if node_id does not currently have an active edge, return empty optional,
+		 * * otherwise return the node the the active edge of provided node points to.
+		 */
+		base::Optional<NodeID> walk(NodeID node_id) const {
+			auto edge = active_nodes.atMaybeCopy(node_id);
+			if (edge.empty()) return {};
+			return edge.value().active_edge;
+		}
 
-        enum CycleCheckResult: bool {
-            CycleFound,
-            CycleNotFound,
-        };
+		enum CycleCheckResult : bool {
+			CycleFound,
+			CycleNotFound,
+		};
 
-        /**
-         * Walks the given node, until there is a cycle, or it can't walk no more.
-         */
-        CycleCheckResult cycleCheck(const NodeID node_id) const {
-            auto current_node_slow = node_id;
-            auto current_node_fast = node_id;
+		/**
+		 * Walks the given node, until there is a cycle, or it can't walk no more.
+		 */
+		CycleCheckResult cycleCheck(const NodeID node_id) const {
+			auto current_node_slow = node_id;
+			auto current_node_fast = node_id;
 
-            while (true) {
-                auto next = walk(current_node);
+			while (true) {
+				auto next = walk(current_node);
 
-                if (next.empty()) return CycleCheckResult::CycleNotFound;
-                
-                if (next.value() == node_id) return CycleCheckResult::CycleFound;
-               
-                current_node = next.value();
-            }
+				if (next.empty()) return CycleCheckResult::CycleNotFound;
 
-        };
+				if (next.value() == node_id) return CycleCheckResult::CycleFound;
+
+				current_node = next.value();
+			}
+		}
 	};
 }
