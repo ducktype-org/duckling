@@ -5,12 +5,9 @@
  */
 #pragma once
 
-
-#include "hout/hout_fd.hpp"
-#include "scope_symbol_id.hpp"
-
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>

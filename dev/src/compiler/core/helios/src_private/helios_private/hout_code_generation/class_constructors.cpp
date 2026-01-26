@@ -2,7 +2,7 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
