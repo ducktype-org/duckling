@@ -10,7 +10,7 @@ namespace query::internal {
 	 * Its primary purpose is to store the count of currently executing queries and to detect query
 	 * cycles.
 	 *
-	 * @note Operations on this graph are thread safe, and should handle concurrnet cycle detection.
+	 * @note Operations on this graph are thread safe, and can handle concurrent cycle detection.
 	 *
 	 * @note For now, this is naive implementation performance-wise.
 	 * In the future, if this will be noticeable, we might want to optimize it to for example only
@@ -31,7 +31,7 @@ namespace query::internal {
 
 	public:
 		/**
-		 * Adds a node to the query graph.
+		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
 		void putNode(NodeID node_id) {
@@ -39,6 +39,9 @@ namespace query::internal {
 			active_node_count++;
 		}
 
+		/**
+		 * Removes a node from the active query graph.
+		 */
 		void removeNode(NodeID node_id) {
 			auto was_removed = active_nodes.erase(node_id);
 			if (was_removed) active_node_count--;
@@ -84,13 +87,22 @@ namespace query::internal {
 			return edge.value().active_edge;
 		}
 
-		struct QueryCycle {
+		/**
+		 * Helper struct representing a found query cycle.
+		 * See cycleCheck() for more details.
+		 */
+		struct QueryCycle final {
 			std::vector<NodeID> cycle_nodes;
 		};
 
 		/**
 		 * Walks the given node, until there is a cycle, or it can't walk no more.
-		 * @return QueryCycle if a cycle was found, empty optional otherwise.
+		 * @return QueryCycle if a cycle was found AND the initial node was part of the cycle,
+		 *         empty optional otherwise.
+		 *
+		 * @note This method uses Floyd's Tortoise and Hare algorithm to detect cycles.
+		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
+		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
 		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const {
 			
@@ -117,15 +129,23 @@ namespace query::internal {
 			// We are here, so the cycle was found.
 			// Now we need to reconstruct the cycle nodes.
 			std::vector<NodeID> cycle_nodes;
+			bool is_the_initial_node_on_the_cycle = false;
 
 			NodeID cycle_start = current_node_slow.value();
 			cycle_nodes.push_back(cycle_start);
+			if (cycle_start == node_id)
+				is_the_initial_node_on_the_cycle = true;
 
 			NodeID walker = walk(cycle_start).value();
 			while (walker != cycle_start) {
 				cycle_nodes.push_back(walker);
+				if (walker == node_id)
+					is_the_initial_node_on_the_cycle = true;
 				walker = walk(walker).value();
 			}
+
+			if (!is_the_initial_node_on_the_cycle)
+				return {};
 			
 			return QueryCycle{ .cycle_nodes = std::move(cycle_nodes) };
 		}
