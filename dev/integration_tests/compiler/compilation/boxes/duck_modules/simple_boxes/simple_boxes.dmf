@@ -3,8 +3,6 @@ class Point {
     y: i32;
 }
 
-# TODOP: OK
-
 fun main() -> i32 = {
     var b_int: box i32 = 42;
     

@@ -8,10 +8,10 @@ fun foo(a: i64) -> () = {
 
 fun main() -> i64 = {
     let a: i64 = 123;
-    let ref_a: box i64 = a;
+    let box_a: box i64 = a;
 
     # @TODO: #1823 Reconsider that.
-    foo(a);
+    foo(box_a);
 
     return 0;
 }

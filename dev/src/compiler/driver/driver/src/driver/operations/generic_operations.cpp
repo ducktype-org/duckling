@@ -122,7 +122,7 @@ namespace compiler::driver {
 					);
 				}
 
-				if (driver::llvm_dump_ir) {
+				if (driver::llvm_dump_ir||true) {
 					base::StrID llvm_ir_path
 						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
 					llvm_module.dumpLLVMToFile(llvm_ir_path);

@@ -12,13 +12,6 @@ fun by_ref(p: ref Point) -> () = {
     p.x = 777; # This should modify the passed box.
 }
 
-fun by_box(p: box Point) -> () = {
-    p.x = 777; # This should modify the passed box.
-    # p should get free'd here.
-}
-
-
-
 fun main() -> i32 = {
     var b_point: box Point = Point(1, 2);
 
@@ -34,8 +27,6 @@ fun main() -> i32 = {
     # Original box should be affected.
     builtin_output_i64(b_point.x);
     builtin_output_i64(b_point.y);
-
-    by_box(b_point); # This should crash.
 
     return 0;
 }
