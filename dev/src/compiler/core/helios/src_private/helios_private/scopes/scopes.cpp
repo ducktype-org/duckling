@@ -23,8 +23,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>

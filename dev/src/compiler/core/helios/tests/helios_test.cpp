@@ -39,10 +39,10 @@
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
-#include <query_framework/internal/query_errors.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
-#include <query_framework/query_result.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include <query_framework/internal/query_errors.hpp>
+#include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::helios::test_utils;

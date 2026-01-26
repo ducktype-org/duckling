@@ -2,8 +2,8 @@
 
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/utils/query_hash.hpp>
 #include <query_framework/input_query/query_input.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 namespace pst::internal {
 	struct PSTAccessKey final {

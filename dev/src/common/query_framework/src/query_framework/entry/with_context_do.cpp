@@ -3,8 +3,8 @@
 #include "query_entry_point.hpp"
 
 #include <query_framework/query_int.hpp>
-#include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace query::utils {
 	namespace {

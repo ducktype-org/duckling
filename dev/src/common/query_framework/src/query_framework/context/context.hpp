@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "context_fd.hpp"                        // IWYU pragma: keep
-#include <query_framework/internal/query_graph/node_id.hpp>
-#include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
-#include <query_framework/internal/query_graph/query_state.hpp>
+#include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
 
@@ -15,6 +12,9 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
+#include <query_framework/internal/query_graph/query_state.hpp>
 
 namespace query {
 

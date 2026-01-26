@@ -5,8 +5,8 @@
 #include "queries.hpp"
 #include "source_file.hpp"
 
-#include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::frontend {
 
