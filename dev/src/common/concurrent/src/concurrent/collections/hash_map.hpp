@@ -133,6 +133,16 @@ namespace concurrent {
 		}
 
 		/**
+		 * Atomically retrieves a copy of the value associated with the given key.
+		 * Return empty optional, if the key is not present in the map.
+		 */
+		[[nodiscard]]
+		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].atMaybeCopy(key);
+		}
+
+		/**
 		 * Atomically retrieves a reference to the value associated with the given key.
 		 *
 		 * @important Usage of the reference must be synchronized externally.
