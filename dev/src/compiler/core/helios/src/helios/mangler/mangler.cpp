@@ -6,7 +6,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>

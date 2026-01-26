@@ -1,7 +1,7 @@
 #include "mir_builders.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>

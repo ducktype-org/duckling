@@ -3,7 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/kind.hpp>
 #include <typesystem/higher/mutability.hpp>
