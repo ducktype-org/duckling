@@ -6,7 +6,7 @@
 #include <base/collections/optional.hpp>  // base::Optional
 #include <base/str/str_utils.hpp>         // base::strConcat
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 /**
  * PResult type for MyQuery

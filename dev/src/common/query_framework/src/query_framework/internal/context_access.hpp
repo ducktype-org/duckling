@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../context.hpp"
+#include "..context/context.hpp"
 #include "query_graph/query_state.hpp"
 
 namespace query::internal {

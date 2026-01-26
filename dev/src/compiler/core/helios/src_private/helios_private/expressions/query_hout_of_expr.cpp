@@ -20,7 +20,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
 	namespace {

@@ -28,7 +28,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <type_traits>
 #include <utility>

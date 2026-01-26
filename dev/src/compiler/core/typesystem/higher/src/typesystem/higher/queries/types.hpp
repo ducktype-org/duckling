@@ -6,7 +6,7 @@
 #include <base/collections/maps.hpp>
 
 #include <query_framework/query_int.hpp>
-#include <query_framework/simple_keys.hpp>
+#include <query_frameworkutils/simple_keys.hpp>
 
 namespace compiler::tsh {
 	/**

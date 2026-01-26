@@ -2,7 +2,7 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 namespace compiler::frontend {
 

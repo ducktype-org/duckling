@@ -11,7 +11,7 @@
 #include <helios/symbols/simple.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 namespace compiler::helios::code {
 

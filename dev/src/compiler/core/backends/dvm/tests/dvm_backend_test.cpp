@@ -9,8 +9,8 @@
 
 #include <base/str/str_utils.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_frameworkcontext/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>

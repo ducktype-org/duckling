@@ -4,12 +4,12 @@
  */
 #pragma once
 
-#include "context.hpp"
-#include "internal/acd.hpp"
-#include "internal/context_access.hpp"
-#include "internal/query_errors.hpp"
-#include "internal/query_graph/node_making.hpp"
-#include "q_stats/q_stats.hpp"
+#include <query_framework/context/context.hpp>
+#include <query_framework/internal/acd.hpp>
+#include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_errors.hpp>
+#include <query_frameworkinternal/query_graph/node_making.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_errors.hpp"
 #include "query_hash.hpp"

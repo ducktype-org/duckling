@@ -30,7 +30,7 @@ POP_DIAGNOSTIC;
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 /**
  * @brief Starts the LSP server on the specified port.

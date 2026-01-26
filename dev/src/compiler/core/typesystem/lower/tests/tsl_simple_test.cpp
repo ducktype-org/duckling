@@ -5,8 +5,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_frameworkcontext/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsl;

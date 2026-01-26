@@ -7,7 +7,7 @@
 
 #include <base/collections/maps.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 namespace compiler::helios {
 	/**

@@ -5,15 +5,15 @@
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_frameworkentry/query_entry_point.hpp>
 #include <query_framework/query_errors.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_input.hpp>
-#include <query_framework/query_input_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include <query_framework/simple_keys.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_frameworkutils/simple_keys.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>

@@ -11,7 +11,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 #include <memory>
 #include <sstream>

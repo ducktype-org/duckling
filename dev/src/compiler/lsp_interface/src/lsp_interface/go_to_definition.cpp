@@ -12,7 +12,7 @@
 
 #include <base/collections/optional.hpp>
 
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <token_source/source.hpp>
 
 #include <format>

@@ -21,7 +21,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 #include <vm/bytecode/extern_c_function.hpp>
 #include <vm/bytecode/instructions.hpp>

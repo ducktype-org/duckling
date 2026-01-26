@@ -10,9 +10,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 #include <query_framework/query_cache_macros.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::driver {
 

@@ -7,9 +7,9 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_frameworkcontext/context.hpp>
+#include <query_frameworkentry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <iostream>
 

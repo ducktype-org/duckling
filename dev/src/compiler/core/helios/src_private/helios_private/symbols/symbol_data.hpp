@@ -10,7 +10,7 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/context.hpp>  // @TODO: #404 relax to fd
+#include <query_frameworkcontext/context.hpp>  // @TODO: #404 relax to fd
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {

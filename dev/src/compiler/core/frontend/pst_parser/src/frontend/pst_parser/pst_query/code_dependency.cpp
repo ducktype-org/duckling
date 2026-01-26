@@ -4,7 +4,7 @@
 #include "pst_access_side_input.hpp"
 
 #include <diagnostic/location.hpp>
-#include <query_framework/context.hpp>
+#include <query_frameworkcontext/context.hpp>
 
 #include <ranges>
 #include <set>

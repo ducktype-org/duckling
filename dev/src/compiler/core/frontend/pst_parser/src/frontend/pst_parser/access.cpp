@@ -5,7 +5,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 
 #include <query_framework/query_errors.hpp>
-#include <query_framework/query_input_impl.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
 
 namespace pst::internal {
 
