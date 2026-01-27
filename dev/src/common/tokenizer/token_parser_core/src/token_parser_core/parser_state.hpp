@@ -12,7 +12,9 @@
 namespace tpc {
 
 	/**
-	 * @brief Lightweight parsing context that can be restored on fallbacks.
+	 * @brief Lightweight parsing context that can be changed and is restored on exiting a fallback.
+	 *
+	 * @note This is a base class, the data depends on the needs of the parser.
 	 */
 	class ParserContext {
 	public:
@@ -41,7 +43,7 @@ namespace tpc {
 		/**
 		 * @brief Data needed to handle restoring to a fallback
 		 */
-		struct Fallback {
+		struct Fallback final {
 			SubStreamType                                         type;
 			Box<TokenStream>                                      saved_stream;
 			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;

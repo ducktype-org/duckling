@@ -25,6 +25,15 @@ namespace pst {
 		void finalizeParsing(Ref<LangParserState>);
 	}
 
+	/**
+	 * @brief Type of file parser, used for parsing context defaults
+	 *
+	 * Program - Top level is unordered
+	 * Script - Top level is ordered
+	 *
+	 * Currently doesn't change anything
+	 * @TODO: #1891 Will add the behaviour
+	 */
 	enum class PSTType {
 		Program,
 		Script,
