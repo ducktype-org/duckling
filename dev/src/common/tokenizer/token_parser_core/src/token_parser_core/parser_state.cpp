@@ -30,10 +30,12 @@ namespace tpc {
 
 	void ParserState::goDown() {
 		auto new_stream = ctokens().getRecursive();
-		fallback_stack.emplace_back(Fallback{ .type          = Recursive,
-		                                      .saved_stream  = std::move(current_stream),
-		                                      .saved_context = std::move(current_context),
-		                                      .post_jump     = 1, });
+		fallback_stack.emplace_back(Fallback{
+			.type          = Recursive,
+			.saved_stream  = std::move(current_stream),
+			.saved_context = std::move(current_context),
+			.post_jump     = 1,
+		});
 		current_stream = makeBox<TokenStream>(std::move(new_stream));
 		variant_match(fallback_stack.back().saved_context) {
 			variant_case(CRef<ParserContext>, ctx_ref) { current_context = ctx_ref; }
