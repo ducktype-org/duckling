@@ -772,7 +772,7 @@ namespace compiler::helios {
 			void visitConst(pst::Access<pst::Const>) override {
 				// Consts inside functions do not produce any HOUT statement.
 				// They are translated to HOUT global data instead.
-}
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
