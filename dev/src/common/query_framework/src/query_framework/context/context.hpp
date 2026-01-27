@@ -61,7 +61,6 @@ namespace query {
 		 * buffer per-thread.
 		 * @{
 		 */
-		// static dia::Logger     logger;
 
 		static dia_int::Logger int_logger;
 		/**
@@ -87,6 +86,7 @@ namespace query {
 			if (maybe_cycle.has_value()) {
 				// we hit a cycle!
 				// for now just panic
+				// @TODO: #1888 change that
 
 				logInt(makeBox<dia_int::PlaceholderHeaderError>(
 					base::strConcat("Query cycle detected involving query node:",
