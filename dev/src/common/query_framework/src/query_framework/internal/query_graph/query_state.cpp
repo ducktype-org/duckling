@@ -146,7 +146,7 @@ namespace query::internal {
 		return &previous.value().graph;
 	}
 
-	u64 QueryState::activeQueryCount() const { 
+	u64 QueryState::activeQueryCount() const {
 		// @TODO PR: test it!
 		return active_graph.size();
 	}

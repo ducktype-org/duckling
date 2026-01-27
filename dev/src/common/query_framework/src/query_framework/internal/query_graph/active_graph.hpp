@@ -27,7 +27,7 @@ namespace query::internal {
 		};
 
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
-		std::atomic<u64>                    active_node_count = 0;
+		std::atomic<u64>                           active_node_count = 0;
 
 	public:
 		/**
@@ -66,7 +66,7 @@ namespace query::internal {
 		 */
 		void setEdge(NodeID node_id, NodeID edge) {
 			// Note that there might be some concurrent operations
-			// between following assertion and update, 
+			// between following assertion and update,
 			// but the assertion must always pass anyway (when the active graph is used correctly).
 			CORE_ASSERT(
 				active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
@@ -105,7 +105,6 @@ namespace query::internal {
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
 		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const {
-			
 			auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
 				auto walk_one = walk(walk_zero);
 				if (walk_one.empty()) return {};
@@ -118,35 +117,31 @@ namespace query::internal {
 			while (true) {
 				current_node_slow = walk(current_node_slow.value());
 				if (current_node_slow.empty()) return {};
-				
+
 				current_node_fast = double_walk(current_node_fast.value());
 				if (current_node_fast.empty()) return {};
 
-				if (current_node_slow.value() == current_node_fast.value())
-					break;
+				if (current_node_slow.value() == current_node_fast.value()) break;
 			}
 
 			// We are here, so the cycle was found.
 			// Now we need to reconstruct the cycle nodes.
 			std::vector<NodeID> cycle_nodes;
-			bool is_the_initial_node_on_the_cycle = false;
+			bool                is_the_initial_node_on_the_cycle = false;
 
 			NodeID cycle_start = current_node_slow.value();
 			cycle_nodes.push_back(cycle_start);
-			if (cycle_start == node_id)
-				is_the_initial_node_on_the_cycle = true;
+			if (cycle_start == node_id) is_the_initial_node_on_the_cycle = true;
 
 			NodeID walker = walk(cycle_start).value();
 			while (walker != cycle_start) {
 				cycle_nodes.push_back(walker);
-				if (walker == node_id)
-					is_the_initial_node_on_the_cycle = true;
+				if (walker == node_id) is_the_initial_node_on_the_cycle = true;
 				walker = walk(walker).value();
 			}
 
-			if (!is_the_initial_node_on_the_cycle)
-				return {};
-			
+			if (!is_the_initial_node_on_the_cycle) return {};
+
 			return QueryCycle{ .cycle_nodes = std::move(cycle_nodes) };
 		}
 	};

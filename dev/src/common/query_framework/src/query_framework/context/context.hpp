@@ -7,7 +7,7 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp> // @TODO: 1887 move to outer query-invocation layer
+#include <diagnostic_interactive/placeholder.hpp>  // @TODO: 1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
 
@@ -73,7 +73,7 @@ namespace query {
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
-			
+
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
 			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
@@ -89,27 +89,34 @@ namespace query {
 				// @TODO: #1888 change that
 
 				logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Query cycle detected involving query node:",
-					my_node.q_id.asInt(),
-					".",
-					my_node.hash.val.toStringHex()),
-					base::strConcat("The cycle:\n",
+					base::strConcat(
+						"Query cycle detected involving query node:",
+						my_node.q_id.asInt(),
+						".",
+						my_node.hash.val.toStringHex()
+					),
+					base::strConcat(
+						"The cycle:\n",
 						[&maybe_cycle]() -> std::string {
 							std::string result;
-							auto cycle = maybe_cycle.value();
-							for (auto node_id : cycle.cycle_nodes) {
+							auto        cycle = maybe_cycle.value();
+							for (auto node_id: cycle.cycle_nodes) {
 								result += "  - Query node ";
 								result += base::strConcat(
-									node_id.q_id.asInt(),
-									".",
-									node_id.hash.val.toStringHex(),
-									"\n"
+									node_id.q_id.asInt(), ".", node_id.hash.val.toStringHex(), "\n"
 								);
 							}
 							return result;
 						}()
-				)));
-				CORE_ASSERT(false, "Query cycle detected involving query node:", my_node.q_id.asInt(), ".", my_node.hash.val.toStringHex());
+					)
+				));
+				CORE_ASSERT(
+					false,
+					"Query cycle detected involving query node:",
+					my_node.q_id.asInt(),
+					".",
+					my_node.hash.val.toStringHex()
+				);
 			}
 
 			this->active = false;

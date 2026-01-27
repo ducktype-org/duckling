@@ -41,7 +41,6 @@ namespace query::internal {
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
 		typename QueryImplType::QResult {
-
 		using QueryIntType = QueryImplType::QueryType;
 
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
@@ -110,16 +109,17 @@ namespace query::internal {
 			| result by calling provide().                                      |
 			\*******************************************************************/
 
-			
+
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			
+
 			// EPILOG
 			// Use of defer here makes it also called when an exception is thrown.
 			// it is before setEntry, because setEntry can throw on cycle
 			defer({
-				ContextAccess::getState()->getActiveGraph()->removeNode(node_id); // node is calculated, we are all done
+				ContextAccess::getState()->getActiveGraph()->removeNode(node_id
+				);  // node is calculated, we are all done
 			});
 
 			// PROLOG:
@@ -234,9 +234,8 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                \
-	auto type::QueryType::internal_query(const type::QKey& key)                                        \
-		-> type::QResult {                                                                                                             \
-		return ::query::internal::standardQueryEntry<type>(key);                                                                 \
+	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
+		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \

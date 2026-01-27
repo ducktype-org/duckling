@@ -1,8 +1,8 @@
 #pragma once
 
+#include "active_graph.hpp"
 #include "node_id.hpp"
 #include "query_graph.hpp"
-#include "active_graph.hpp"
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
@@ -22,15 +22,13 @@ namespace query::internal {
 		enum class PrevColor { Red, Green };
 
 	private:
-
 		/**
 		 * @brief Data structure that holds (non-graph) information about a node in the graph.
 		 *
-		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as computed/in progress.
+		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
+		 * computed/in progress.
 		 */
-		struct NodeData final {
-
-		};
+		struct NodeData final {};
 
 		/**
 		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
@@ -63,7 +61,6 @@ namespace query::internal {
 		QueryState& operator=(const QueryState&) = delete;
 		QueryState& operator=(QueryState&&)      = delete;
 
-
 		/***************************\
 		| Simple graph interface:   |
 		\***************************/
@@ -89,19 +86,18 @@ namespace query::internal {
 
 		/**
 		 * @brief Adds a node to the query graph.
-		 * 
+		 *
 		 * If the node already exists, resets its data.
-		 * @TODO: #1889 in the future, we might want to disallow cache less queries and panic on adding existing node
+		 * @TODO: #1889 in the future, we might want to disallow cache less queries and panic on
+		 * adding existing node
 		 */
 		void addGraphNode(NodeID node_id);
-
 
 		/*********************************\
 		| Active query state interface:   |
 		\*********************************/
 
 		Ref<ActiveGraph> getActiveGraph() { return &active_graph; }
-
 
 		/**
 		 * @brief Returns the amount of currently active queries.
@@ -194,7 +190,6 @@ namespace query::internal {
 		) const;
 
 	private:
-		
 		/***************************\
 		| All of the actual state:  |
 		\***************************/
@@ -202,8 +197,9 @@ namespace query::internal {
 
 		/**
 		 * The runtime data of the graph.
-		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as computed/in progress.
-		 * @TODO PR: synchronize code ideas with task pool changes 
+		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
+		 * computed/in progress.
+		 * @TODO PR: synchronize code ideas with task pool changes
 		 */
 		base::HashMap<NodeID, NodeData> node_data;
 
@@ -214,13 +210,12 @@ namespace query::internal {
 
 		/**
 		 * The active graph that holds the currently active queries.
-		*/
+		 */
 		ActiveGraph active_graph;
 
 		/**
 		 * The previous compilation data if any.
 		 */
 		base::Optional<PreviousCompilation> previous;
-		
 	};
 }

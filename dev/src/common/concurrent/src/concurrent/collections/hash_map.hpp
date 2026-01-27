@@ -153,7 +153,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
-		
+
 		/**
 		 * Atomically updates the value associated with the given key.
 		 */
