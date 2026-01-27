@@ -14,6 +14,10 @@ namespace query::external {
 	struct InputData;
 }
 
+namespace query {
+	class MetadataStorage;  // Forward declaration for friend access
+}
+
 namespace query::internal {
 	/**
 	 * Unique identifier of query type.
@@ -28,6 +32,7 @@ namespace query::internal {
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
 		friend class QueryState;
+		friend class query::MetadataStorage;
 		friend void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
 		/**

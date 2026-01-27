@@ -15,6 +15,7 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
 namespace query {
 
@@ -28,6 +29,7 @@ namespace query {
 	 * 	* call other query
 	 *  * log
 	 *  * report compiler error
+	 *  * add metadata to the current query node
 	 *
 	 * @FUTURE: there exist a concept of "custom context" types as
 	 * a way to hack-in the query model. This however will most likely be
@@ -81,6 +83,42 @@ namespace query {
 			defer(this->active = true);
 
 			return OthQuery::internal_query(key, my_node);
+		}
+
+		/**
+		 * @brief Add metadata to the current query node.
+		 *
+		 * This method allows attaching typed metadata to the current query node (my_node).
+		 * Metadata can only be added to queries that have preserve_in_graph = true.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param args Arguments forwarded to MetadataT constructor
+		 *
+		 * @note Must be called from within a query's provide() method.
+		 * @note The query must have preserve_in_graph = true, otherwise this will panic.
+		 *
+		 * Example:
+		 * @code
+		 * DECLARE_METADATA_SIMPLE(MyMeta, MyType)
+		 *
+		 * // Inside provide():
+		 * ctx.addMetadata<metadata_MyMeta>(my_value);
+		 * @endcode
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata> void addMetadata(Args&&... args) {
+			assertActive();
+
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				my_node.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(my_node.q_id.getData().name)
+			);
+
+			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
 		/**

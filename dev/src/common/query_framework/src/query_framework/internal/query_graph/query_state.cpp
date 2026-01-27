@@ -162,6 +162,11 @@ namespace query::internal {
 		previous.emplace(std::move(graph));
 	}
 
+	void QueryState::setPreviousMetadata(::query::MetadataStorage&& metadata) {
+		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
+		previous->metadata = std::move(metadata);
+	}
+
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
 		// measure time spent in red-green sweep:
 		timer::AddToTime _(&total_red_green_sweep_time);
@@ -351,6 +356,13 @@ namespace query::internal {
 			auto [it, inserted] = query_graph.node_deps.emplace(node, std::move(prev_deps));
 			CORE_ASSERT(inserted, "Node should not exist in current graph during merge");
 			const auto& deps = it->second;
+
+			// Merge metadata for nodes with preserve_in_graph = true
+			if (node.q_id.registered() && node.q_id.getData().tags.preserve_in_graph) {
+				auto extracted_opt = previous->metadata.extract(node);
+				if (extracted_opt.has_value())
+					metadata_storage.emplace(std::move(extracted_opt).value());
+			}
 
 			for (const auto& child: deps) stack.push_back(Frame{ .node = child });
 		}

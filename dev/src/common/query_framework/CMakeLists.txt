@@ -15,6 +15,8 @@ add_library(QueryFramework
 	src/query_framework/query_errors.cpp
 
 	src/query_framework/query_result.hpp
+
+	src/query_framework/internal/query_metadata/metadata_storage.cpp
 )
 
 make_module(QueryFramework USES Base Diagnostic DiagnosticInteractive Timer Logger CompilerTimeStats Concurrent)
