@@ -45,8 +45,10 @@ namespace query::internal {
 		void removeNode(NodeID node_id) {
 			auto was_removed = active_nodes.erase(node_id);
 
-			if (was_removed) active_node_count--;
-			else CORE_PANIC("Removing non-existing node from active graph");
+			if (was_removed)
+				active_node_count--;
+			else
+				CORE_PANIC("Removing non-existing node from active graph");
 		}
 
 		/**
