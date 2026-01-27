@@ -62,7 +62,7 @@ namespace query::internal {
 		QueryState& operator=(QueryState&&)      = delete;
 
 		/***************************\
-		| Simple graph interface:   |
+		| Query graph interface:    |
 		\***************************/
 
 		/**
@@ -93,6 +93,7 @@ namespace query::internal {
 		 */
 		void addGraphNode(NodeID node_id);
 
+
 		/*********************************\
 		| Active query state interface:   |
 		\*********************************/
@@ -105,22 +106,10 @@ namespace query::internal {
 		[[nodiscard]]
 		u64 activeQueryCount() const;
 
-		// /**
-		//  * @brief Marks beginning of new query calculation.
-		//  * The graph will add a node to a graph or update its data if it already exists.
-		//  */
-		// void setEntry(internal::NodeID node);
-
-		// /**
-		//  * @brief Marks exit of a query calculation.
-		//  */
-		// void setExit(internal::NodeID node);
-
 
 		/***************************\
 		| Incremental interface:    |
 		\***************************/
-
 
 		/**
 		 * @brief Sets the color of a node from the previous compilation.
