@@ -1279,7 +1279,7 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* make_box_expr = dynamic_cast<const MakeBoxExpr*>(var_stmt->initial_value->get());
+			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value->get());
 			ASSERT_TRUE(make_box_expr != nullptr);
 
 			auto* literal_expr

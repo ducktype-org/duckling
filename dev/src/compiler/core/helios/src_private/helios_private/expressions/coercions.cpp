@@ -33,10 +33,10 @@ namespace compiler::helios {
 			// If underlying types differ, proceed with the standard coercion.
 		}
 
-		// If `from` is direct and `to` is a box, create a MakeBoxExpression.
+		// If `from` is direct and `to` is a box, create a BoxOfExpression.
 		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && to.getRefKind() == tsh::ReferenceKind::Box) {
-			current_expr       = makeBox<code::MakeBoxExpr>(ctx, std::move(current_expr));
+			current_expr       = makeBox<code::BoxOfExpr>(ctx, std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
 			// If underlying types differ, proceed with the standard coercion.
 		}

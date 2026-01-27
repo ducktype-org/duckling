@@ -418,7 +418,7 @@ namespace compiler::mir {
 			}
 		}
 
-		void visitMakeBoxExpr(const hc::MakeBoxExpr& expr) override {
+		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);

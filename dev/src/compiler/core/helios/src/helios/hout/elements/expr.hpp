@@ -551,10 +551,10 @@ namespace compiler::helios::code {
 	 * TODOP: What about box to box coercions?
 	 * TODOP: Rename to BoxOfExpr
 	 */
-	struct MakeBoxExpr final: public Expr {
+	struct BoxOfExpr final: public Expr {
 		Box<Expr> inner;
 
-		MakeBoxExpr(query::Context& ctx, Box<Expr> inner);
+		BoxOfExpr(query::Context& ctx, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -563,7 +563,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		MakeBoxExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+		BoxOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
 	/**
