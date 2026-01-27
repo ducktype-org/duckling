@@ -264,22 +264,21 @@ private:
 		ASSERT_TRUE(map.getCopy(1) >= (OPS_PER_THREAD - 1) * thread_count);
 	}
 
-
 	/**
 	 * Tests multi-threaded erases to the concurrent::ConHashMap on random keys.
 	 */
 	template<u64 thread_count>
 	void multiThreadedEraseTest() {
 		constexpr u64 OPS_PER_THREAD = 10'000;
-		constexpr u64 ELEMENTS_COUNT   = thread_count * OPS_PER_THREAD;
+		constexpr u64 ELEMENTS_COUNT = thread_count * OPS_PER_THREAD;
 
 		concurrent::ConHashMap<u64, u64> map;
 
 		// prepopulate the map
 		for (u64 i = 0; i < ELEMENTS_COUNT; i++) map.put(i, i * 10);
-		
+
 		std::vector<std::jthread> threads;
-		std::atomic<u64> erase_count = 0;
+		std::atomic<u64>          erase_count = 0;
 
 		threads.reserve(thread_count);
 		for (u64 i = 0; i < thread_count; i++) {
@@ -287,7 +286,6 @@ private:
 
 			threads.emplace_back([&map, &erase_count, rng]() mutable {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
-
 					u64 key = rng() % ELEMENTS_COUNT;
 
 					auto was_erased = map.erase(key);
@@ -299,9 +297,8 @@ private:
 		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
 
 		u64 element_count_after_erase = 0;
-		for (u64 i = 0; i < ELEMENTS_COUNT; i++) {
+		for (u64 i = 0; i < ELEMENTS_COUNT; i++)
 			if (map.contains(i)) element_count_after_erase++;
-		}
 
 		ASSERT_TRUE(ELEMENTS_COUNT - erase_count == element_count_after_erase);
 	}
