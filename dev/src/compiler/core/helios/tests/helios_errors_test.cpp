@@ -248,6 +248,16 @@ private:
 			{ "cannot be evaluated at compile-time" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					let x: i64;
+				}
+			)",
+			{ "Immutable variables must have an initial value." },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
