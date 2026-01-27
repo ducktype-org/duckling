@@ -20,7 +20,7 @@ namespace query {
 
 		// Helper to read a u64 from a byte span, advancing the offset
 		u64 readU64(std::span<const std::byte> data, usize& offset) {
-			u64 value;
+			u64 value = 0;
 			std::memcpy(&value, data.data() + offset, sizeof(u64));
 			offset += sizeof(u64);
 			return value;
@@ -67,7 +67,7 @@ namespace query {
 		std::vector<base::StrID>        strid_table;  // ID -> StrID value
 		base::HashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
 
-		for (const auto& [node_id, type_map]: storage_) {
+		for (const auto& [node_id, type_map]: storage) {
 			for (const auto& [type_id, metadata_vec]: type_map) {
 				// Collect type names
 				if (!type_to_id.contains(type_id)) {
@@ -99,9 +99,9 @@ namespace query {
 		for (const auto& str_id: strid_table) writeString(result, str_id.strView());
 
 		// Write node count
-		writeU64(result, storage_.size());
+		writeU64(result, storage.size());
 
-		for (const auto& [node_id, type_map]: storage_) {
+		for (const auto& [node_id, type_map]: storage) {
 			// Serialize NodeID: QueryID as u64 + KeyHash as Bit256
 			writeU64(result, node_id.q_id.asInt());
 
@@ -226,10 +226,8 @@ namespace query {
 					}
 
 					// Add to storage
-					if (!storage.storage_.contains(node_id))
-						storage.storage_.put(node_id, TypeMap{});
-					auto& node_map = storage.storage_.at(node_id);
-
+					if (!storage.storage.contains(node_id)) storage.storage.put(node_id, TypeMap{});
+					auto& node_map = storage.storage.at(node_id);
 					if (!node_map.contains(type_id))
 						node_map.put(type_id, std::vector<Box<BaseMetadata>>{});
 

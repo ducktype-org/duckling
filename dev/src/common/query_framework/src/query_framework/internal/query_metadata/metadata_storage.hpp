@@ -116,7 +116,7 @@ namespace query {
 	 */
 	class MetadataRegistry final {
 	private:
-		base::HashMap<base::StrID, DeserializerVariant> registry_;
+		base::HashMap<base::StrID, DeserializerVariant> registry;
 
 		MetadataRegistry() = default;
 
@@ -143,11 +143,11 @@ namespace query {
 		 */
 		bool registerType(base::StrID type_id, BytesDeserializeFunc deserialize_func) {
 			CORE_ASSERT(
-				!registry_.contains(type_id),
+				!registry.contains(type_id),
 				"Metadata type already registered: {}",
 				type_id.strView()
 			);
-			registry_.put(type_id, DeserializerVariant{ deserialize_func });
+			registry.put(type_id, DeserializerVariant{ deserialize_func });
 			return true;
 		}
 
@@ -160,11 +160,11 @@ namespace query {
 		 */
 		bool registerStrIDType(base::StrID type_id, StrIDDeserializeFunc deserialize_func) {
 			CORE_ASSERT(
-				!registry_.contains(type_id),
+				!registry.contains(type_id),
 				"Metadata type already registered: {}",
 				type_id.strView()
 			);
-			registry_.put(type_id, DeserializerVariant{ deserialize_func });
+			registry.put(type_id, DeserializerVariant{ deserialize_func });
 			return true;
 		}
 
@@ -176,8 +176,8 @@ namespace query {
 		 */
 		[[nodiscard]]
 		base::Optional<DeserializerVariant> getDeserializer(base::StrID type_id) const {
-			auto it = registry_.find(type_id);
-			if (it == registry_.end()) return {};
+			auto it = registry.find(type_id);
+			if (it == registry.end()) return {};
 			return it->second;
 		}
 
@@ -186,7 +186,7 @@ namespace query {
 		 */
 		[[nodiscard]]
 		bool isRegistered(base::StrID type_id) const {
-			return registry_.contains(type_id);
+			return registry.contains(type_id);
 		}
 
 		/**
@@ -194,8 +194,8 @@ namespace query {
 		 */
 		[[nodiscard]]
 		bool isStrIDType(base::StrID type_id) const {
-			auto it = registry_.find(type_id);
-			if (it == registry_.end()) return false;
+			auto it = registry.find(type_id);
+			if (it == registry.end()) return false;
 			return std::holds_alternative<StrIDDeserializeFunc>(it->second);
 		}
 	};
@@ -230,7 +230,7 @@ namespace query {
 		using TypeMap     = base::HashMap<base::StrID, std::vector<Box<BaseMetadata>>>;
 		using MetadataMap = base::HashMap<internal::NodeID, TypeMap>;
 
-		MetadataMap storage_;
+		MetadataMap storage;
 
 	public:
 		MetadataStorage()                                  = default;
@@ -256,8 +256,8 @@ namespace query {
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			// Get or create the node's metadata map
-			if (!storage_.contains(node_id)) storage_.put(node_id, {});
-			auto& node_map = storage_.at(node_id);
+			if (!storage.contains(node_id)) storage.put(node_id, {});
+			auto& node_map = storage.at(node_id);
 
 			// Get or create the type's vector
 			if (!node_map.contains(type_id)) node_map.put(type_id, {});
@@ -280,8 +280,8 @@ namespace query {
 			std::vector<CRef<MetadataT>> result;
 			base::StrID                  type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) return result;
+			auto node_it = storage.find(node_id);
+			if (node_it == storage.end()) return result;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
@@ -311,8 +311,8 @@ namespace query {
 		bool hasMetadata(internal::NodeID node_id) const {
 			base::StrID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) return false;
+			auto node_it = storage.find(node_id);
+			if (node_it == storage.end()) return false;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
@@ -333,8 +333,8 @@ namespace query {
 		usize getMetadataCount(internal::NodeID node_id) const {
 			base::StrID type_id = MetadataT::TYPE_ID;
 
-			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) return 0;
+			auto node_it = storage.find(node_id);
+			if (node_it == storage.end()) return 0;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
@@ -351,11 +351,11 @@ namespace query {
 		 */
 		[[nodiscard]]
 		base::Optional<ExtractedNodeMetadata> extract(internal::NodeID node_id) {
-			auto it = storage_.find(node_id);
-			if (it == storage_.end()) return {};
+			auto it = storage.find(node_id);
+			if (it == storage.end()) return {};
 
 			ExtractedNodeMetadata result(node_id, std::move(it->second));
-			storage_.erase(it);
+			storage.erase(it);
 			return result;
 		}
 
@@ -365,7 +365,7 @@ namespace query {
 		 * @param extracted The extracted metadata to emplace (must be rvalue).
 		 */
 		void emplace(ExtractedNodeMetadata&& extracted) {
-			storage_.put(extracted.node_id, std::move(extracted.type_map));
+			storage.put(std::move(extracted).node_id, std::move(extracted.type_map));
 		}
 
 		/**
@@ -373,12 +373,12 @@ namespace query {
 		 *
 		 * @param node_id The NodeID to clear metadata for
 		 */
-		void clearNodeMetadata(internal::NodeID node_id) { storage_.erase(node_id); }
+		void clearNodeMetadata(internal::NodeID node_id) { storage.erase(node_id); }
 
 		/**
 		 * @brief Clear all metadata storage.
 		 */
-		void clear() { storage_.clear(); }
+		void clear() { storage.clear(); }
 
 		/**
 		 * @brief Check if storage is empty.
@@ -386,7 +386,7 @@ namespace query {
 		 */
 		[[nodiscard]]
 		bool empty() const {
-			return storage_.empty();
+			return storage.empty();
 		}
 
 		/**

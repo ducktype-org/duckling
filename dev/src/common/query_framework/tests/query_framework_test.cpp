@@ -518,7 +518,7 @@ namespace metadata_tests {
 	 * @brief Simple serializable type for testing DECLARE_METADATA macro.
 	 */
 	struct SerializableData {
-		u64         value1;
+		u64         value1 = 0;
 		std::string value2;
 
 		SerializableData() = default;

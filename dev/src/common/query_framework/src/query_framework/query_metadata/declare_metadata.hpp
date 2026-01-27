@@ -184,9 +184,9 @@ namespace query {
 		[[nodiscard]]                                                                          \
 		static metadata_##name deserialize(std::span<const std::byte> data) {                  \
 			CORE_ASSERT(data.size() >= sizeof(typ), "Insufficient data for deserialization");  \
-			alignas(typ) unsigned char buffer[sizeof(typ)];                                    \
-			std::memcpy(buffer, data.data(), sizeof(typ));                                     \
-			return metadata_##name{ *reinterpret_cast<const typ*>(buffer) };                   \
+			alignas(typ) std::array<unsigned char, sizeof(typ)> buffer{};                      \
+			std::memcpy(buffer.data(), data.data(), sizeof(typ));                              \
+			return metadata_##name{ *reinterpret_cast<const typ*>(buffer.data()) };            \
 		}                                                                                      \
                                                                                                \
 	private:                                                                                   \
