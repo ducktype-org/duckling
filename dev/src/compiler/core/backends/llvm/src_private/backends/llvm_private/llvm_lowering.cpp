@@ -988,8 +988,8 @@ namespace compiler::backend_llvm {
 					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
 
 				// Store the value in the allocated memory.
-				// TODOP: This is suboptimal. Would be nicer if class constructors took this* as the
-				// first argument, then we could pass the malloc pointer directly to the malloc.
+				// TODO: #1895 This is suboptimal. In the future class constructors should take the
+				// allocated memory pointer as a parameter and construct it in-place.
 				builder.CreateStore(value_to_box, allocated_ptr);
 				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
 				break;
