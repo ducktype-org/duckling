@@ -86,9 +86,7 @@ namespace compiler::helios {
 				} else {
 					// @TODO: #1620 make this error reporting better.
 					ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-						"Identifier '",
-						name(expr.symbol),
-						"' cannot be evaluated at compile-time."
+						"Identifier '", name(expr.symbol), "' cannot be evaluated at compile-time."
 					)));
 					result = query::Failed();
 					return;
