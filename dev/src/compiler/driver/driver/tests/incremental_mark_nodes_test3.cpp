@@ -1,3 +1,5 @@
+#include "incremental_metadata_test_common.hpp"  // IWYU pragma: keep
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
