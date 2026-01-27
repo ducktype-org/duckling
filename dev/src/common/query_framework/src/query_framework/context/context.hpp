@@ -7,7 +7,7 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/placeholder.hpp>  // @TODO: 1887 move to outer query-invocation layer
+#include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
 
