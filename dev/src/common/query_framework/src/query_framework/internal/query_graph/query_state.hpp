@@ -194,12 +194,11 @@ namespace query::internal {
 		| All of the actual state:  |
 		\***************************/
 
-
 		/**
 		 * The runtime data of the graph.
 		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
 		 * computed/in progress.
-		 * @TODO PR: synchronize code ideas with task pool changes
+		 * @TODO: #1889 decide if we need this at all.
 		 */
 		base::HashMap<NodeID, NodeData> node_data;
 
