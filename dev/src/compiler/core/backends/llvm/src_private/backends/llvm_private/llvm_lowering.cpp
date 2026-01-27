@@ -996,8 +996,7 @@ namespace compiler::backend_llvm {
 			}
 			case FreeBox: {
 				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
-
-				// TODOP: Figure out the destructors.
+				// @TODO: #1894 This may change based on the way we handle destructors.
 
 				// Get or insert the free.
 				llvm::FunctionCallee free_func = module->getOrInsertFunction(

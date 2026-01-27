@@ -34,7 +34,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** Simple byte by byte assignment */
 	Assign,
 	AddressOf,
-	AllocBox, // Free box isn't needed since we have DestructIf which will be mapped to FreeBox in LIR.
+	/** FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR */
+	AllocBox,
 
 	/**
 		@brief Placeholder.
@@ -90,7 +91,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** See readme.md for more info about destruct. */
 	Destruct,
 	/** See readme.md for more info about DestructIf. */
-	DestructIf, // This maps to a destructor call + FreeBox in case of boxes.d
+	DestructIf, 
 
 	ReturnVoid,
 	ReturnValue,

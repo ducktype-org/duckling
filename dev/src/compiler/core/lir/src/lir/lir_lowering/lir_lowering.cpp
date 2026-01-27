@@ -549,10 +549,14 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
+					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
+					// Currently this approach generates a free on every DestructIf if it operates
+					// on a box type (even if the box was moved). This will cause double free's if
+					// the box was moved around between other box variables. In the future we should
+					// insert a proper destructor call here before the FreeBox.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto pointee_type = type.getPointeeSymbolType();
-
 						auto lir_place = getLocation(to_destruct);
+
 						// FreeBox is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
 							curr_block->instructions.emplace_back(
@@ -560,30 +564,17 @@ namespace compiler::lir {
 								base::Optional<LIRPlace>{},
 								std::vector{ lir_place.value() }
 							);
-						}
-						if (!pointee_type.hasNoOpDestructor()) {
-							// TODOP: This is a stub. We should insert a proper destructor call here
-							// before the FreeBox. For not we just support boxes with trivial
-							// destructors.
-
-							// @TODO implement it, once we know how to call destructors
-							// TODOP: Try removing that.
-							CORE_DEV_LOG(
-								Compiler,
-								"DestructIf not implemented for types with non-trivial "
-								"destructors, skipping",
-								"\n"
-							);
-
-							// throw base::NotYetImplemented(
-							// 	base::strConcat(
-							// 		"Destruction of a box with a non-trivial destructor is not "
-							// 		"implemented yet. Type: ",
-							// 		pointee_type.toString()
-							// 	)
-							// );
+							return curr_block;
 						}
 					}
+
+					// @TODO: #929 Implement it, once we know how to call destructors
+					CORE_DEV_LOG(
+						Compiler,
+						"DestructIf not implemented for types with non-trivial "
+						"destructors, skipping",
+						"\n"
+					);
 
 
 					return curr_block;

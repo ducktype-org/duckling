@@ -400,8 +400,6 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-				auto op = stmt->getOperator();
-
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
@@ -411,16 +409,6 @@ namespace compiler::helios::code {
 					// `unique`/`leaking` specifiers.
 					node = makeBox<RefOfExpr>(ctx, std::move(inner));
 					return;
-				}
-
-				if (op.value == lang_def::keywordToStr(lang_def::Keyword::Move)) {
-					// @TODOP: #1549 This should check value categories and see if the object can be
-					// moved. For now we use the default logic with no checks.
-				}
-
-				if (op.value == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
-					// @TODOP: #1549 This should check value categories and see if the object can be
-					// moved. For now we use the default logic with no checks.
 				}
 
 				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner));

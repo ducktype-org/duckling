@@ -545,8 +545,11 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a box creation expression.
-	 * It takes an expression of type T and produces a value of type box T.
-	 * TODOP: Decide should this be explicit or not. Currently it's not.
+	 *
+	 * Currently, box types are not created explicitly, so this node gets created each time we
+	 * encounter a `Direct` to `Box` coercion.
+	 * TODOP: What about box to box coercions?
+	 * TODOP: Rename to BoxOfExpr
 	 */
 	struct MakeBoxExpr final: public Expr {
 		Box<Expr> inner;

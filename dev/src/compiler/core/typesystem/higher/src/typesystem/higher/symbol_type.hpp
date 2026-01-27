@@ -173,8 +173,8 @@ namespace compiler::tsh {
 				return true;
 			}
 			if (reference_kind == ReferenceKind::Box) {
-				// TODOP: Box types don't have trivial destructors, as they have to deallocate the
-				// memory
+				// Box types don't have trivial destructors, as they have to deallocate the
+				// memory.
 				return false;
 			}
 			if (abstract_type.hasNoOpDestructor()) return true;

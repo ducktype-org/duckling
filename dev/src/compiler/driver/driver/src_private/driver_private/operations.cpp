@@ -93,6 +93,8 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
 
+			std::cout << hout_unit.debugPrint(ctx) << '\n';
+
 
 			auto module_name
 				= base::StrID(base::strConcat(
