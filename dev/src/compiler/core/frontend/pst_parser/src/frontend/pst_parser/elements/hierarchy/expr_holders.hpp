@@ -13,6 +13,8 @@
 namespace pst {
 	/**
 	 * @brief Class that keeps an expression with information whether it's a top-level expression.
+	 *
+	 * It's intended to be the only holder that is visible to further stages of compilation.
 	 */
 	class ExprHolder: public NotStmt {
 	protected:

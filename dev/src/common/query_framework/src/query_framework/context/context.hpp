@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "context_fd.hpp"                        // IWYU pragma: keep
-#include "internal/query_graph/node_id.hpp"
-#include "internal/query_graph/node_making.hpp"  // IWYU pragma: export
-#include "internal/query_graph/query_state.hpp"
+#include "context_fd.hpp"  // IWYU pragma: keep
 
 #include <diagnostic_interactive/logger.hpp>
 
@@ -15,6 +12,9 @@
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
+#include <query_framework/internal/query_graph/query_state.hpp>
 
 namespace query {
 
@@ -32,6 +32,9 @@ namespace query {
 	 * @FUTURE: there exist a concept of "custom context" types as
 	 * a way to hack-in the query model. This however will most likely be
 	 * discarded.
+	 *
+	 * \parallel Current implementation uses a global vector; not thread-safe; serialize or buffer
+	 * per-thread.
 	 */
 	struct Context final {
 	private:
@@ -52,8 +55,18 @@ namespace query {
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
+		/**
+		 * @name Logs storage
+		 * @brief Global/vector-backed logging facility.
+		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
+		 * buffer per-thread.
+		 * @{
+		 */
 		static dia::Logger     logger;
 		static dia_int::Logger int_logger;
+		/**
+		 * @}
+		 */
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;

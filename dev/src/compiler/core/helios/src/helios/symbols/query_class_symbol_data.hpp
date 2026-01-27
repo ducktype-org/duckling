@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -50,6 +50,8 @@ namespace compiler::helios {
 	 * @brief Query all the information about a class definition.
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in its definition.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>, ({}))
 }

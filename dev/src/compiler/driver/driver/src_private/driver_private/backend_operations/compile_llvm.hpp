@@ -5,7 +5,7 @@
 #include <backends/llvm/llvm_backend.hpp>
 
 #include <artifacts/artifacts.hpp>
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 namespace compiler::driver {
 

@@ -9,15 +9,15 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios {
 	using namespace dia_int;
