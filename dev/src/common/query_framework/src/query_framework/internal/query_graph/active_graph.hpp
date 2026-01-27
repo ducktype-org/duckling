@@ -128,6 +128,11 @@ namespace query::internal {
 
 			// We are here, so the cycle was found.
 			// Now we need to reconstruct the cycle nodes.
+			// Note that due to the assumptions on the active graph usage,
+			// the found cycle cannot change while we reconstruct it,
+			// as no nodes can be removed from the graph until their active edges
+			// are "computed" and removed.
+
 			std::vector<NodeID> cycle_nodes;
 			bool                is_the_initial_node_on_the_cycle = false;
 
