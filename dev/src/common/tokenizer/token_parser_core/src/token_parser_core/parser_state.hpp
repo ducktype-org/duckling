@@ -12,7 +12,10 @@
 namespace tpc {
 
 	/**
-	 * @brief Lightweight parsing context that can be changed and is restored on exiting a fallback.
+	 * @brief Lightweight parsing context.
+	 * @note It is used during parsing, and can be changed during this process,
+	 *       in particular when passing the context to subelements beeing parsed.
+	 *       It can also be restored on exiting a fallback.
 	 *
 	 * @note This is a base class, the data depends on the needs of the parser.
 	 */
@@ -185,5 +188,7 @@ namespace tpc {
 			}
 			return false;
 		}
+
+		virtual ~ParserState() = default;
 	};
 }
