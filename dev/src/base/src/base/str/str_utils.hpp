@@ -92,6 +92,10 @@ namespace base {
 
 		constexpr void strConcat(std::string& out, Bits bits);
 		constexpr void strConcat(std::string& out, Bytes bytes);
+
+		constexpr void strConcat(std::string& out, std::monostate) {
+			strConcat(out, "<monostate>");
+		}
 	}
 
 	/**
@@ -117,6 +121,14 @@ namespace base {
 		(internal::strConcat(out, std::forward<T>(elements)), ...);
 		return out;
 	}
+
+	/**
+	 * @brief Concept that checks whether the given types can be processed by strConcat.
+	 */
+	template<typename... T>
+	concept strConcatable = requires(T&&... elements) {
+		{ strConcat(std::forward<T>(elements)...) } -> std::convertible_to<std::string>;
+	};
 
 	/**
 	 * @brief Converts a single value to std::string using strConcat infrastructure.
