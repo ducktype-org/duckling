@@ -218,6 +218,17 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					let x: i64 = 0;
+					x = 1;
+				}
+			)",
+			{ "Left side of assignment can't be immutable." },
+			1
+		);
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1

@@ -663,10 +663,6 @@ namespace compiler::helios {
 					return;
 				}
 
-				// When this code was being written, this check could not be tested.
-				// The optional result of this visitor is getting unwrapped without
-				// checking for emptiness, which causes a panic.
-				// @todo write a test for this once helios error handling is more robust
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -750,10 +746,6 @@ namespace compiler::helios {
 				if (stmt->getValue().empty()) {
 					// no initial value case
 
-					// When this code was being written, this check could not be tested.
-					// The optional result of this visitor is getting unwrapped without
-					// checking for emptiness, which causes a panic.
-					// @todo write a test for this once helios error handling is more robust
 					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
 						ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition()));
 						is_failed = true;
