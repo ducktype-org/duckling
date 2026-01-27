@@ -674,9 +674,9 @@ private:
 	}
 
 	void cycleDetectionTest() {
-		// note: this test will change when proper cycle handling will
+		// @TODO: #1888 this test will change when proper cycle handling will
 		// be introduced.
-		assertThrows<base::NotYetImplemented>(
+		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CyclicQuery1>({ 1 }); }, "Cycle detection did not throw."
 		);
 	}
