@@ -358,7 +358,7 @@ namespace query::internal {
 			const auto& deps = it->second;
 
 			// Merge metadata for nodes with preserve_in_graph = true
-			if (node.q_id.registered() && node.q_id.getData().tags.preserve_in_graph) {
+			if (node.q_id.getData().tags.preserve_in_graph) {
 				auto extracted_opt = previous->metadata.extract(node);
 				if (extracted_opt.has_value())
 					metadata_storage.emplace(std::move(extracted_opt).value());

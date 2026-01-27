@@ -17,7 +17,6 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
-
 #include <string_id/string_id.hpp>
 
 #include <cstddef>
@@ -46,7 +45,8 @@ namespace query {
 		 * @return std::vector<std::byte> The serialized data.
 		 */
 		[[nodiscard]]
-		virtual std::vector<std::byte> serialize() const = 0;
+		virtual std::vector<std::byte> serialize() const
+			= 0;
 
 		/**
 		 * @brief Get the type ID (StrID) of this metadata type.
@@ -54,7 +54,8 @@ namespace query {
 		 * @return base::StrID The unique type identifier.
 		 */
 		[[nodiscard]]
-		virtual base::StrID getTypeID() const = 0;
+		virtual base::StrID getTypeID() const
+			= 0;
 
 		/**
 		 * @brief Check if this metadata type uses StrID table for optimized serialization.
@@ -176,9 +177,7 @@ namespace query {
 		[[nodiscard]]
 		base::Optional<DeserializerVariant> getDeserializer(base::StrID type_id) const {
 			auto it = registry_.find(type_id);
-			if (it == registry_.end()) {
-				return {};
-			}
+			if (it == registry_.end()) return {};
 			return it->second;
 		}
 
@@ -196,9 +195,7 @@ namespace query {
 		[[nodiscard]]
 		bool isStrIDType(base::StrID type_id) const {
 			auto it = registry_.find(type_id);
-			if (it == registry_.end()) {
-				return false;
-			}
+			if (it == registry_.end()) return false;
 			return std::holds_alternative<StrIDDeserializeFunc>(it->second);
 		}
 	};
@@ -259,15 +256,11 @@ namespace query {
 			auto metadata = makeBox<MetadataT>(std::forward<Args>(args)...);
 
 			// Get or create the node's metadata map
-			if (!storage_.contains(node_id)) {
-				storage_.put(node_id, {});
-			}
+			if (!storage_.contains(node_id)) storage_.put(node_id, {});
 			auto& node_map = storage_.at(node_id);
 
 			// Get or create the type's vector
-			if (!node_map.contains(type_id)) {
-				node_map.put(type_id, {});
-			}
+			if (!node_map.contains(type_id)) node_map.put(type_id, {});
 			auto& type_vec = node_map.at(type_id);
 
 			type_vec.push_back(std::move(metadata));
@@ -282,27 +275,22 @@ namespace query {
 		 *         Returns empty vector if no metadata of this type exists.
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, BaseMetadata>
-		[[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		std::vector<CRef<MetadataT>> getMetadata(internal::NodeID node_id) const {
 			std::vector<CRef<MetadataT>> result;
 			base::StrID                  type_id = MetadataT::TYPE_ID;
 
 			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) {
-				return result;
-			}
+			if (node_it == storage_.end()) return result;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
-			if (type_it == node_map.end()) {
-				return result;
-			}
+			if (type_it == node_map.end()) return result;
 
 			const auto& type_vec = type_it->second;
 			result.reserve(type_vec.size());
 
-			for (const auto& metadata_ptr : type_vec) {
+			for (const auto& metadata_ptr: type_vec) {
 				// Safe downcast - we know the type matches because we used type id as key
 				const auto* typed_ptr = static_cast<const MetadataT*>(metadata_ptr.get());
 				result.push_back(CRef<MetadataT>(typed_ptr));
@@ -319,21 +307,16 @@ namespace query {
 		 * @return true if the node has at least one metadata of this type
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, BaseMetadata>
-		[[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		bool hasMetadata(internal::NodeID node_id) const {
 			base::StrID type_id = MetadataT::TYPE_ID;
 
 			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) {
-				return false;
-			}
+			if (node_it == storage_.end()) return false;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
-			if (type_it == node_map.end()) {
-				return false;
-			}
+			if (type_it == node_map.end()) return false;
 
 			return !type_it->second.empty();
 		}
@@ -346,21 +329,16 @@ namespace query {
 		 * @return usize Number of metadata instances of this type
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, BaseMetadata>
-		[[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		usize getMetadataCount(internal::NodeID node_id) const {
 			base::StrID type_id = MetadataT::TYPE_ID;
 
 			auto node_it = storage_.find(node_id);
-			if (node_it == storage_.end()) {
-				return 0;
-			}
+			if (node_it == storage_.end()) return 0;
 
 			const auto& node_map = node_it->second;
 			auto        type_it  = node_map.find(type_id);
-			if (type_it == node_map.end()) {
-				return 0;
-			}
+			if (type_it == node_map.end()) return 0;
 
 			return type_it->second.size();
 		}
@@ -374,9 +352,7 @@ namespace query {
 		[[nodiscard]]
 		base::Optional<ExtractedNodeMetadata> extract(internal::NodeID node_id) {
 			auto it = storage_.find(node_id);
-			if (it == storage_.end()) {
-				return {};
-			}
+			if (it == storage_.end()) return {};
 
 			ExtractedNodeMetadata result(node_id, std::move(it->second));
 			storage_.erase(it);

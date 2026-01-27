@@ -35,10 +35,10 @@ namespace query {
 
 		// Helper to read a string from a byte span, advancing the offset
 		std::string_view readString(std::span<const std::byte> data, usize& offset) {
-			u64 len = readU64(data, offset);
+			u64   len = readU64(data, offset);
 			auto* ptr = reinterpret_cast<const char*>(data.data() + offset);
 			offset += len;
-			return {ptr, len};
+			return { ptr, len };
 		}
 
 		// Helper to write bytes to a byte vector (length-prefixed)
@@ -49,7 +49,7 @@ namespace query {
 
 		// Helper to read bytes from a byte span, advancing the offset
 		std::span<const std::byte> readBytes(std::span<const std::byte> data, usize& offset) {
-			u64 len = readU64(data, offset);
+			u64  len    = readU64(data, offset);
 			auto result = data.subspan(offset, len);
 			offset += len;
 			return result;
@@ -60,15 +60,15 @@ namespace query {
 		std::vector<std::byte> result;
 
 		// First pass: collect all unique type names and assign IDs
-		std::vector<base::StrID>        type_table;   // ID -> StrID
-		base::HashMap<base::StrID, u64> type_to_id;   // StrID -> ID
+		std::vector<base::StrID>        type_table;  // ID -> StrID
+		base::HashMap<base::StrID, u64> type_to_id;  // StrID -> ID
 
 		// Also collect all unique StrID values from StrID-type metadata
 		std::vector<base::StrID>        strid_table;  // ID -> StrID value
 		base::HashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
 
-		for (const auto& [node_id, type_map] : storage_) {
-			for (const auto& [type_id, metadata_vec] : type_map) {
+		for (const auto& [node_id, type_map]: storage_) {
+			for (const auto& [type_id, metadata_vec]: type_map) {
 				// Collect type names
 				if (!type_to_id.contains(type_id)) {
 					u64 new_id = type_table.size();
@@ -77,7 +77,7 @@ namespace query {
 				}
 
 				// Collect StrID values from StrID-type metadata
-				for (const auto& metadata : metadata_vec) {
+				for (const auto& metadata: metadata_vec) {
 					if (metadata->usesStrIDTable()) {
 						base::StrID str_value = metadata->getStrIDValue();
 						if (!strid_to_id.contains(str_value)) {
@@ -92,20 +92,16 @@ namespace query {
 
 		// Write type table
 		writeU64(result, type_table.size());
-		for (const auto& type_id : type_table) {
-			writeString(result, type_id.strView());
-		}
+		for (const auto& type_id: type_table) writeString(result, type_id.strView());
 
 		// Write StrID table
 		writeU64(result, strid_table.size());
-		for (const auto& str_id : strid_table) {
-			writeString(result, str_id.strView());
-		}
+		for (const auto& str_id: strid_table) writeString(result, str_id.strView());
 
 		// Write node count
 		writeU64(result, storage_.size());
 
-		for (const auto& [node_id, type_map] : storage_) {
+		for (const auto& [node_id, type_map]: storage_) {
 			// Serialize NodeID: QueryID as u64 + KeyHash as Bit256
 			writeU64(result, node_id.q_id.asInt());
 
@@ -116,14 +112,14 @@ namespace query {
 			// Write type count
 			writeU64(result, type_map.size());
 
-			for (const auto& [type_id, metadata_vec] : type_map) {
+			for (const auto& [type_id, metadata_vec]: type_map) {
 				// Write type ID (index in type table)
 				writeU64(result, type_to_id.at(type_id));
 
 				// Write metadata count
 				writeU64(result, metadata_vec.size());
 
-				for (const auto& metadata : metadata_vec) {
+				for (const auto& metadata: metadata_vec) {
 					if (metadata->usesStrIDTable()) {
 						// For StrID types, write only the index in StrID table
 						base::StrID str_value = metadata->getStrIDValue();
@@ -143,14 +139,12 @@ namespace query {
 	MetadataStorage MetadataStorage::deserialize(std::span<const std::byte> data) {
 		MetadataStorage storage;
 
-		if (data.empty()) {
-			return storage;
-		}
+		if (data.empty()) return storage;
 
 		usize offset = 0;
 
 		// Read type table
-		u64 type_table_size = readU64(data, offset);
+		u64                      type_table_size = readU64(data, offset);
 		std::vector<base::StrID> type_table;
 		type_table.reserve(type_table_size);
 
@@ -160,7 +154,7 @@ namespace query {
 		}
 
 		// Read StrID table
-		u64 strid_table_size = readU64(data, offset);
+		u64                      strid_table_size = readU64(data, offset);
 		std::vector<base::StrID> strid_table;
 		strid_table.reserve(strid_table_size);
 
@@ -181,10 +175,8 @@ namespace query {
 			offset += sizeof(base::Bit256);
 
 			// Reconstruct NodeID
-			internal::NodeID node_id{
-				internal::QueryID{ q_id_val },
-				internal::KeyHash{ .val = hash_val }
-			};
+			internal::NodeID node_id{ internal::QueryID{ q_id_val },
+				                      internal::KeyHash{ .val = hash_val } };
 
 			// Assert that NodeID is registered and has preserve_in_graph = true
 			CORE_ASSERT(
@@ -229,19 +221,17 @@ namespace query {
 						variant_case(BytesDeserializeFunc, func) {
 							// Read metadata bytes
 							auto metadata_bytes = readBytes(data, offset);
-							metadata_opt = func(metadata_bytes);
+							metadata_opt        = func(metadata_bytes);
 						}
 					}
 
 					// Add to storage
-					if (!storage.storage_.contains(node_id)) {
+					if (!storage.storage_.contains(node_id))
 						storage.storage_.put(node_id, TypeMap{});
-					}
 					auto& node_map = storage.storage_.at(node_id);
 
-					if (!node_map.contains(type_id)) {
+					if (!node_map.contains(type_id))
 						node_map.put(type_id, std::vector<Box<BaseMetadata>>{});
-					}
 
 					node_map.at(type_id).push_back(std::move(metadata_opt).value());
 				}

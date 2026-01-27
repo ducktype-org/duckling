@@ -5,6 +5,7 @@
 #pragma once
 
 #include <base/types/ints.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_metadata/declare_metadata.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -39,9 +40,8 @@ struct IMPLEMENT_QUERY(MetadataPersistenceTestQuery, u64) {
 		ctx.addMetadata<metadata_TestCounter>(key_val * 10);
 
 		// Add StrID metadata
-		ctx.addMetadata<metadata_TestSourceFile>(
-			base::StrID{ std::string{ "test/source_" } + std::to_string(key_val) + ".duck" }
-		);
+		ctx.addMetadata<metadata_TestSourceFile>(base::StrID{
+			std::string{ "test/source_" } + std::to_string(key_val) + ".duck" });
 
 		return key_val;
 	}
