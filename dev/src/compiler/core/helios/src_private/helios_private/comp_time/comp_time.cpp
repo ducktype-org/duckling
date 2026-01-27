@@ -90,7 +90,8 @@ namespace compiler::helios {
 						name(expr.symbol),
 						"' cannot be evaluated at compile-time."
 					)));
-					return; // failed
+					result = query::Failed();
+					return;
 				}
 			}
 
