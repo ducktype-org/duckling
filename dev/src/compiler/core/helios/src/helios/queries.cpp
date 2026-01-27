@@ -529,7 +529,7 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
-				
+
 				if (stmt_maker.is_failed) {
 					// @TODO: #1753 change here to grab errors from all statements.
 					query::throwFailed();
