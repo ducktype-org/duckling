@@ -5,5 +5,6 @@ mod not_expanded;
 pub use dependency_edge::DependencyEdge;
 pub use expanded::{
     ExpandedLocGit, ExpandedLocLocal, ExpandedLocRegistry, ExpandedLocation, ExpandedPackage,
+    InternedExpandedLocation,
 };
-pub use not_expanded::{LocGit, LocLocal, LocRegistry, Location, Package};
+pub use not_expanded::{InternedLocation, LocGit, LocLocal, LocRegistry, Location, Package};

@@ -280,7 +280,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         {
             let pkg_var = self.get_package_variable(
                 &ExpandedPackage {
-                    location: edge.dependency_loc.clone(),
+                    location: edge.dependency_loc,
                     version: pkg_version,
                 },
                 None,
@@ -415,7 +415,7 @@ fn new_features(
             pkg_features = pkg_features.difference(features).cloned().collect();
         }
         if !pkg_features.is_empty() {
-            new_features.insert(pkg.clone(), pkg_features);
+            new_features.insert(*pkg, pkg_features);
         }
     }
     new_features

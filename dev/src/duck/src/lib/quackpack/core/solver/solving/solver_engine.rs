@@ -10,7 +10,9 @@ use crate::{
     quackpack::core::{
         Dependency, FeatureName, Manifest, Version,
         solving::solver_model::{FoundSolution, SolverModel},
-        types_common::{DependencyEdge, ExpandedLocation, ExpandedPackage, Location},
+        types_common::{
+            DependencyEdge, ExpandedPackage, InternedExpandedLocation, InternedLocation,
+        },
         util::get_possible_realisations,
     },
 };
@@ -20,8 +22,8 @@ use crate::{
 pub struct GatheredInfo<'a> {
     pub gathered_manifests: HashMap<ExpandedPackage, &'a Manifest>,
     pub all_possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub versions_for_location: HashMap<ExpandedLocation, Vec<Option<Version>>>,
-    pub location_resolver: HashMap<Location, ExpandedLocation>,
+    pub versions_for_location: HashMap<InternedExpandedLocation, Vec<Option<Version>>>,
+    pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 
     pub preexisting_packages: HashSet<ExpandedPackage>,
     pub preexisting_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
@@ -85,7 +87,7 @@ impl<'a> SolverEngine<'a> {
     /// Creates necesseary varaiables for all the packages.
     fn create_package_variables(&mut self) -> QuackResult<()> {
         for pkg in self.input.gathered_manifests.keys() {
-            self.model.add_package_var(pkg.clone());
+            self.model.add_package_var(*pkg);
             for feature in self
                 .input
                 .all_possible_features
@@ -94,8 +96,7 @@ impl<'a> SolverEngine<'a> {
                 .copied()
                 .flatten()
             {
-                self.model
-                    .add_package_with_feature_var(pkg.clone(), *feature);
+                self.model.add_package_with_feature_var(*pkg, *feature);
             }
         }
         Ok(())
@@ -108,7 +109,7 @@ impl<'a> SolverEngine<'a> {
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let edge = DependencyEdge::from_manifest_and_parent(
-            parent.clone(),
+            *parent,
             manifest_dependency,
             &self.input.location_resolver,
         )
@@ -119,7 +120,7 @@ impl<'a> SolverEngine<'a> {
             return self.add_constraints_for_edge(&edge, manifest_dependency);
         };
         let realisation = ExpandedPackage {
-            location: edge.dependency_loc.clone(),
+            location: edge.dependency_loc,
             version: *realization_ver,
         };
 
@@ -276,7 +277,7 @@ mod test {
         DuckCtx, QpCtx,
         quackpack::core::{
             parse_manifest,
-            types_common::{ExpandedLocRegistry, LocRegistry},
+            types_common::{ExpandedLocRegistry, ExpandedLocation, LocRegistry, Location},
         },
     };
 
@@ -315,41 +316,41 @@ metadata:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let location_b = Location::Registry(LocRegistry {
+        }));
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("a"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_a =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("a"),
+            }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a.clone(),
+            location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
         };
         let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b.clone(),
+            location: exp_location_b,
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a.clone(), manifest_a.manifest()),
-            (exp_pkg_b.clone(), manifest_b.manifest()),
+            (exp_pkg_a, manifest_a.manifest()),
+            (exp_pkg_b, manifest_b.manifest()),
         ]);
-        let all_possible_features = HashMap::from([
-            (exp_pkg_a.clone(), HashSet::new()),
-            (exp_pkg_b.clone(), HashSet::new()),
-        ]);
+        let all_possible_features =
+            HashMap::from([(exp_pkg_a, HashSet::new()), (exp_pkg_b, HashSet::new())]);
         let versions_for_location = HashMap::from([
-            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
         ]);
         let location_resolver = HashMap::from([
             (location_a, exp_location_a),
@@ -416,46 +417,46 @@ dependencies:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let location_b = Location::Registry(LocRegistry {
+        }));
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("a"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_a =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("a"),
+            }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a.clone(),
+            location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
         };
         let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b.clone(),
+            location: exp_location_b,
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a.clone(), manifest_a.manifest()),
-            (exp_pkg_b.clone(), manifest_b.manifest()),
+            (exp_pkg_a, manifest_a.manifest()),
+            (exp_pkg_b, manifest_b.manifest()),
         ]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a.clone(), HashSet::from([FeatureName::new("xd")])),
-            (exp_pkg_b.clone(), HashSet::new()),
+            (exp_pkg_a, HashSet::from([FeatureName::new("xd")])),
+            (exp_pkg_b, HashSet::new()),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
         ]);
-        let location_resolver = HashMap::from([
-            (location_a, exp_location_a.clone()),
-            (location_b, exp_location_b.clone()),
-        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
         let input = GatheredInfo {
             gathered_manifests,
@@ -467,12 +468,12 @@ dependencies:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
         let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
         assert!(
             output.new_features
-                == HashMap::from([(exp_pkg_a.clone(), HashSet::from([FeatureName::new("xd")]))])
+                == HashMap::from([(exp_pkg_a, HashSet::from([FeatureName::new("xd")]))])
         );
         assert!(
             output.new_edges
@@ -526,51 +527,53 @@ features:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let location_b = Location::Registry(LocRegistry {
+        }));
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("a"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_a =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("a"),
+            }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a.clone(),
+            location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
         };
         let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b.clone(),
+            location: exp_location_b,
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a.clone(), manifest_a.manifest()),
-            (exp_pkg_b.clone(), manifest_b.manifest()),
+            (exp_pkg_a, manifest_a.manifest()),
+            (exp_pkg_b, manifest_b.manifest()),
         ]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a.clone(), HashSet::new()),
+            (exp_pkg_a, HashSet::new()),
             (
-                exp_pkg_b.clone(),
+                exp_pkg_b,
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
         ]);
         let location_resolver =
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b.clone()]);
+        let preexisting_packages = HashSet::from([exp_pkg_b]);
         let preexisting_features =
-            HashMap::from([(exp_pkg_b.clone(), HashSet::from([FeatureName::new("xdd")]))]);
+            HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xdd")]))]);
 
         let input = GatheredInfo {
             gathered_manifests,
@@ -582,9 +585,9 @@ features:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
         let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
                 == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
@@ -622,49 +625,51 @@ features:
         let qpctx = QpCtx::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
-        let location_a = Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let location_b = Location::Registry(LocRegistry {
+        }));
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("a"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_a =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("a"),
+            }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a.clone(),
+            location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
         };
         let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b.clone(),
+            location: exp_location_b,
             version: Some(Version::new(2, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a.clone(), manifest_a.manifest()),
-            (exp_pkg_b.clone(), manifest_b.manifest()),
+            (exp_pkg_a, manifest_a.manifest()),
+            (exp_pkg_b, manifest_b.manifest()),
         ]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a.clone(), HashSet::new()),
+            (exp_pkg_a, HashSet::new()),
             (
-                exp_pkg_b.clone(),
+                exp_pkg_b,
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
         ]);
         let location_resolver =
             HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b.clone()]);
+        let preexisting_packages = HashSet::from([exp_pkg_b]);
 
         let input = GatheredInfo {
             gathered_manifests,
@@ -734,68 +739,71 @@ features:
         let manifest_a = parse_manifest(&path_a, &qpctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &qpctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &qpctx).unwrap();
-        let location_a = Location::Registry(LocRegistry {
+        let location_a = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let location_b = Location::Registry(LocRegistry {
+        }));
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let location_c = Location::Registry(LocRegistry {
+        }));
+        let location_c = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
-        });
-        let exp_location_a = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("a"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_c = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("c"),
-        });
+        }));
+        let exp_location_a =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("a"),
+            }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
+        let exp_location_c =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("c"),
+            }));
         let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a.clone(),
+            location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
         };
         let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b.clone(),
+            location: exp_location_b,
             version: Some(Version::new(2, 0, 0)),
         };
         let exp_pkg_c = ExpandedPackage {
-            location: exp_location_c.clone(),
+            location: exp_location_c,
             version: Some(Version::new(3, 0, 0)),
         };
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a.clone(), manifest_a.manifest()),
-            (exp_pkg_b.clone(), manifest_b.manifest()),
-            (exp_pkg_c.clone(), manifest_c.manifest()),
+            (exp_pkg_a, manifest_a.manifest()),
+            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_c, manifest_c.manifest()),
         ]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a.clone(), HashSet::new()),
-            (exp_pkg_b.clone(), HashSet::from([FeatureName::new("xd")])),
-            (exp_pkg_c.clone(), HashSet::from([FeatureName::new("xdd")])),
+            (exp_pkg_a, HashSet::new()),
+            (exp_pkg_b, HashSet::from([FeatureName::new("xd")])),
+            (exp_pkg_c, HashSet::from([FeatureName::new("xdd")])),
         ]);
         let versions_for_location = HashMap::from([
-            (exp_location_a.clone(), vec![Some(Version::new(1, 0, 0))]),
-            (exp_location_b.clone(), vec![Some(Version::new(2, 0, 0))]),
-            (exp_location_c.clone(), vec![Some(Version::new(3, 0, 0))]),
+            (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
+            (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
+            (exp_location_c, vec![Some(Version::new(3, 0, 0))]),
         ]);
         let location_resolver = HashMap::from([
-            (location_a.clone(), exp_location_a.clone()),
-            (location_b.clone(), exp_location_b.clone()),
-            (location_c.clone(), exp_location_c.clone()),
+            (location_a, exp_location_a),
+            (location_b, exp_location_b),
+            (location_c, exp_location_c),
         ]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b.clone(), exp_pkg_c.clone()]);
+        let preexisting_packages = HashSet::from([exp_pkg_b, exp_pkg_c]);
         let preexisting_dependencies = HashMap::from([(
             DependencyEdge {
-                parent: exp_pkg_b.clone(),
-                dependency_loc: exp_location_c.clone(),
+                parent: exp_pkg_b,
+                dependency_loc: exp_location_c,
             },
             Some(Version::new(3, 0, 0)),
         )]);
@@ -810,9 +818,9 @@ features:
             preexisting_dependencies,
         };
 
-        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
+        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
         let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
                 == HashMap::from([

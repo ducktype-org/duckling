@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::quackpack::core::{
     Dependency, Source,
-    solver::types_common::{ExpandedLocation, ExpandedPackage},
+    solver::types_common::ExpandedPackage,
     types_common::{
-        Location,
+        InternedExpandedLocation, InternedLocation, Location,
         not_expanded::{LocGit, LocLocal, LocRegistry},
     },
 };
@@ -12,14 +12,14 @@ use crate::quackpack::core::{
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct DependencyEdge {
     pub parent: ExpandedPackage,
-    pub dependency_loc: ExpandedLocation,
+    pub dependency_loc: InternedExpandedLocation,
 }
 
 impl DependencyEdge {
     pub fn from_manifest_and_parent(
         parent: ExpandedPackage,
         manifest_dependency: &Dependency,
-        location_resolver: &HashMap<Location, ExpandedLocation>,
+        location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
     ) -> Option<Self> {
         let child_loc = match &manifest_dependency.desc().source().inner {
             Source::Registry(registry) => Location::Registry(LocRegistry {
@@ -35,9 +35,11 @@ impl DependencyEdge {
                 rev: git.rev(),
             }),
         };
-        location_resolver.get(&child_loc).map(|child_loc| Self {
-            parent,
-            dependency_loc: child_loc.clone(),
-        })
+        location_resolver
+            .get(&InternedLocation::new(child_loc))
+            .map(|child_loc| Self {
+                parent,
+                dependency_loc: *child_loc,
+            })
     }
 }

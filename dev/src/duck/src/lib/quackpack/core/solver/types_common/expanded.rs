@@ -1,4 +1,9 @@
-use std::path::PathBuf;
+use std::{
+    collections::HashSet,
+    ops::Deref,
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
+};
 
 use url::Url;
 
@@ -6,6 +11,60 @@ use crate::{
     QuackResult, StrId, qp_bail_internal,
     quackpack::core::{Version, version::CompatibilityCheck},
 };
+
+static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
+    OnceLock::new();
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+/// Interned version of [`Location`].
+pub struct InternedExpandedLocation {
+    pub inner: &'static ExpandedLocation,
+}
+
+impl InternedExpandedLocation {
+    pub fn new(source: ExpandedLocation) -> Self {
+        let mut cache = INTERNED_EXPANDED_LOCATION_CACHE
+            .get_or_init(Default::default)
+            .lock()
+            // NOTE: `.unwrap()` should never panic: from docs:
+            // Errors
+            //
+            // If another user of this mutex panicked while holding the mutex,
+            // then this call will return an error once the mutex is acquired.
+            // The acquired mutex guard will be contained in the returned error.
+            //
+            // Panics
+            //
+            // This function might panic when called if the lock is already held by the current thread.
+            .unwrap();
+        let reference = cache.get(&source).copied().unwrap_or_else(|| {
+            let static_ref = Box::leak(Box::new(source));
+            cache.insert(static_ref);
+            static_ref
+        });
+        Self { inner: reference }
+    }
+}
+
+impl From<ExpandedLocation> for InternedExpandedLocation {
+    fn from(value: ExpandedLocation) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Deref for InternedExpandedLocation {
+    type Target = ExpandedLocation;
+
+    fn deref(&self) -> &'static Self::Target {
+        self.inner
+    }
+}
+
+impl AsRef<ExpandedLocation> for InternedExpandedLocation {
+    fn as_ref(&self) -> &'static ExpandedLocation {
+        self.inner
+    }
+}
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ExpandedLocation {
@@ -45,9 +104,9 @@ impl ExpandedLocation {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedPackage {
-    pub location: ExpandedLocation,
+    pub location: InternedExpandedLocation,
     pub version: Option<Version>,
 }
 

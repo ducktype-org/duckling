@@ -4,15 +4,17 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, Version,
-        types_common::{ExpandedLocation, ExpandedPackage, Location, Package},
+        types_common::{
+            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+        },
         version::CompatibilityCheck,
     },
 };
 
 pub fn get_possible_realisations(
     dependency_description: &Dependency,
-    versions_for_location: &HashMap<ExpandedLocation, Vec<Option<Version>>>,
-    location_resolver: &HashMap<Location, ExpandedLocation>,
+    versions_for_location: &HashMap<InternedExpandedLocation, Vec<Option<Version>>>,
+    location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
         let version = dependency_description
@@ -21,13 +23,15 @@ pub fn get_possible_realisations(
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
         let only_package = Package {
-            location: Location::from(dependency_description),
+            location: InternedLocation::new(Location::from(dependency_description)),
             version: Some(*version),
         }
         .resolve(location_resolver);
         Ok(only_package.iter().cloned().collect())
     } else {
-        let Some(location) = location_resolver.get(&Location::from(dependency_description)) else {
+        let Some(location) = location_resolver.get(&InternedLocation::new(Location::from(
+            dependency_description,
+        ))) else {
             return Ok(vec![]);
         };
         let baseline_versions = if location.is_local() {
@@ -56,7 +60,7 @@ pub fn get_possible_realisations(
         Ok(good_versions
             .into_iter()
             .map(|version| ExpandedPackage {
-                location: location.clone(),
+                location: *location,
                 version,
             })
             .collect())
@@ -76,7 +80,8 @@ mod test {
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
-                ExpandedLocRegistry, ExpandedLocation, ExpandedPackage, LocRegistry, Location,
+                ExpandedLocRegistry, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
+                InternedLocation, LocRegistry, Location,
             },
             util::get_possible_realisations,
         },
@@ -112,14 +117,15 @@ dependencies:
             .all_dependencies()
             .get(&StrId::new("b"))
             .unwrap();
-        let location_b = Location::Registry(LocRegistry {
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),
@@ -165,14 +171,15 @@ dependencies:
             .all_dependencies()
             .get(&StrId::new("b"))
             .unwrap();
-        let location_b = Location::Registry(LocRegistry {
+        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = ExpandedLocation::Registry(ExpandedLocRegistry {
-            url: Url::parse("http://localhost:9001").unwrap(),
-            real_name: StrId::from("b"),
-        });
+        }));
+        let exp_location_b =
+            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
+                url: Url::parse("http://localhost:9001").unwrap(),
+                real_name: StrId::from("b"),
+            }));
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),

@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    sync::{Mutex, OnceLock},
+};
 
 use url::Url;
 
@@ -6,10 +10,63 @@ use crate::{
     QuackResult, StrId, qp_bail_internal,
     quackpack::core::{
         BranchOrTag, Dependency, Source, Version,
-        types_common::{ExpandedLocation, ExpandedPackage},
+        types_common::{ExpandedPackage, expanded::InternedExpandedLocation},
         version::CompatibilityCheck,
     },
 };
+
+static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+/// Interned version of [`Location`].
+pub struct InternedLocation {
+    pub inner: &'static Location,
+}
+
+impl InternedLocation {
+    pub fn new(source: Location) -> Self {
+        let mut cache = INTERNED_LOCATION_CACHE
+            .get_or_init(Default::default)
+            .lock()
+            // NOTE: `.unwrap()` should never panic: from docs:
+            // Errors
+            //
+            // If another user of this mutex panicked while holding the mutex,
+            // then this call will return an error once the mutex is acquired.
+            // The acquired mutex guard will be contained in the returned error.
+            //
+            // Panics
+            //
+            // This function might panic when called if the lock is already held by the current thread.
+            .unwrap();
+        let reference = cache.get(&source).copied().unwrap_or_else(|| {
+            let static_ref = Box::leak(Box::new(source));
+            cache.insert(static_ref);
+            static_ref
+        });
+        Self { inner: reference }
+    }
+}
+
+impl From<Location> for InternedLocation {
+    fn from(value: Location) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Deref for InternedLocation {
+    type Target = Location;
+
+    fn deref(&self) -> &'static Self::Target {
+        self.inner
+    }
+}
+
+impl AsRef<Location> for InternedLocation {
+    fn as_ref(&self) -> &'static Location {
+        self.inner
+    }
+}
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Location {
@@ -69,9 +126,9 @@ impl Location {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Package {
-    pub location: Location,
+    pub location: InternedLocation,
     pub version: Option<Version>,
 }
 
@@ -103,14 +160,13 @@ impl Package {
 
     pub fn resolve(
         self,
-        location_resolver: &HashMap<Location, ExpandedLocation>,
+        location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
     ) -> Option<ExpandedPackage> {
-        match location_resolver.get(&self.location) {
-            None => None,
-            Some(loc) => Some(ExpandedPackage {
-                location: loc.clone(),
+        location_resolver
+            .get(&self.location)
+            .map(|loc| ExpandedPackage {
+                location: *loc,
                 version: self.version,
-            }),
-        }
+            })
     }
 }
