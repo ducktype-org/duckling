@@ -59,13 +59,9 @@ namespace query {
 		 * @brief Global/vector-backed logging facility.
 		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
 		 * buffer per-thread.
-		 * @{
 		 */
-
 		static dia_int::Logger int_logger;
-		/**
-		 * @}
-		 */
+
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;

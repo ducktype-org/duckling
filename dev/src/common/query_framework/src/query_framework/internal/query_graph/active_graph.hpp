@@ -12,7 +12,7 @@ namespace query::internal {
 	 *
 	 * @note Operations on this graph are thread safe, and can handle concurrent cycle detection.
 	 *
-	 * @note For now, this is naive implementation performance-wise.
+	 * @note For now, this is a naive implementation performance-wise.
 	 * In the future, if this will be noticeable, we might want to optimize it to for example only
 	 * storing pointers to data in the proper query graph, for always lock-free operations.
 	 */
@@ -44,7 +44,9 @@ namespace query::internal {
 		 */
 		void removeNode(NodeID node_id) {
 			auto was_removed = active_nodes.erase(node_id);
+
 			if (was_removed) active_node_count--;
+			else CORE_PANIC("Removing non-existing node from active graph");
 		}
 
 		/**
@@ -54,7 +56,7 @@ namespace query::internal {
 		 * It should be treated as a good-enough approximation, or in assertions
 		 * such as "size() == 0" to check for emptiness.
 		 */
-		auto size() const -> u64 { return active_node_count.load(); }
+		u64 size() const { return active_node_count.load(); }
 
 		/**
 		 * Removes active edge of a given node.
