@@ -93,7 +93,6 @@ namespace query::internal {
 		 */
 		void addGraphNode(NodeID node_id);
 
-
 		/*********************************\
 		| Active query state interface:   |
 		\*********************************/
