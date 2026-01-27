@@ -1,7 +1,10 @@
 #include "with_context_do.hpp"
 
-#include "../query_entry_point.hpp"
-#include "../query_impl.hpp"
+#include "query_entry_point.hpp"
+
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace query::utils {
 	namespace {
@@ -20,6 +23,9 @@ namespace query::utils {
 			}
 		};
 
+		/**
+		 * \parallel thread-safe as long as the passed function is thread-safe
+		 */
 		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, std::any, ({ .uses_qresult = false }))
 
 		struct IMPLEMENT_QUERY(DoWithContext, std::any) {

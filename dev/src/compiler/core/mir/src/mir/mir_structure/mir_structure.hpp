@@ -14,7 +14,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <utility>

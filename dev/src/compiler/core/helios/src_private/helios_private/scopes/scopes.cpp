@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scope_data.hpp>
@@ -23,8 +23,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>

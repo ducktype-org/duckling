@@ -4,8 +4,8 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 
 void printContextErrors() {
 	if (query::Context::int_logger.messageCount() > 0) {

@@ -1,3 +1,8 @@
+/**
+ * @file compile_llvm.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "compile_llvm.hpp"
 
 #include "builtins_registry.hpp"

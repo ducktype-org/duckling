@@ -4,7 +4,7 @@
 
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/query_hash.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
 #include <span>

@@ -6,7 +6,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 

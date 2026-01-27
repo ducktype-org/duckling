@@ -2,7 +2,7 @@
 
 #include "../visitors.hpp"
 
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \

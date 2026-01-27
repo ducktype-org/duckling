@@ -25,7 +25,7 @@ namespace pst {
 		} else {
 			state.parse(out).goDown();
 
-			state.parse(out).one(&out->iterator, true);
+			state.parse(out).one(&out->iterator);
 
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
 				state.parse(out).one(&out->type);

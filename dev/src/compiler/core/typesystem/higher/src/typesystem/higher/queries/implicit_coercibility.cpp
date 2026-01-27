@@ -1,6 +1,6 @@
 #include "implicit_coercibility.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <set>
 

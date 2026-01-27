@@ -5,7 +5,7 @@
 
 #include <base/collections/optional.hpp>
 
-#include <query_framework/query_hash.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 namespace compiler::frontend {
 

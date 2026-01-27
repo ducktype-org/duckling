@@ -8,16 +8,16 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/misc/anycast.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path) {

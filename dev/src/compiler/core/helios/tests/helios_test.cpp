@@ -14,8 +14,8 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -38,11 +38,11 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/internal/query_errors.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_result.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::helios::test_utils;

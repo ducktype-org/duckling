@@ -1,6 +1,6 @@
 #include "context.hpp"
 
-#include "internal/query_graph/query_state.hpp"
+#include <query_framework/internal/query_graph/query_state.hpp>
 
 namespace query {
 	dia_int::Logger Context::int_logger{};
