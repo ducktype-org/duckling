@@ -424,7 +424,6 @@ namespace compiler::mir {
 			const auto res_inner     = lowered_inner.getResult(function);
 			const auto result_type   = expr.expression_type.getSymbolType();
 
-			// TODOP: Rethink alloc box.
 			noValueOutput(
 				lowered_inner.begin,
 				hole,

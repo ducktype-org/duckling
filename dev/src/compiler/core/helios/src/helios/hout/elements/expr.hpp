@@ -549,7 +549,6 @@ namespace compiler::helios::code {
 	 * Currently, box types are not created explicitly, so this node gets created each time we
 	 * encounter a `Direct` to `Box` coercion.
 	 * TODOP: What about box to box coercions?
-	 * TODOP: Rename to BoxOfExpr
 	 */
 	struct BoxOfExpr final: public Expr {
 		Box<Expr> inner;

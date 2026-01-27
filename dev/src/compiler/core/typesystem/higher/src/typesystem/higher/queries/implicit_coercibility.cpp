@@ -41,7 +41,7 @@ namespace compiler::tsh {
 			const auto to_ref_kind   = key.target.getRefKind();
 
 			/*
-			 * The current coercion logic regarding symbol types is:
+			 * The current coercion logic regarding reference kinds is:
 			 * 						  FROM
 			 * 			    | Direct | Ref | Box
 			 *	 	Direct 	|  Yes	 | Yes | Yes
