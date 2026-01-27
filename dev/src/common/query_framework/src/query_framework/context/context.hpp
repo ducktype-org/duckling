@@ -90,21 +90,6 @@ namespace query {
 		 *
 		 * This method allows attaching typed metadata to the current query node (my_node).
 		 * Metadata can only be added to queries that have preserve_in_graph = true.
-		 *
-		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
-		 * @tparam Args Argument types for constructing the metadata
-		 * @param args Arguments forwarded to MetadataT constructor
-		 *
-		 * @note Must be called from within a query's provide() method.
-		 * @note The query must have preserve_in_graph = true, otherwise this will panic.
-		 *
-		 * Example:
-		 * @code
-		 * DECLARE_METADATA_SIMPLE(MyMeta, MyType)
-		 *
-		 * // Inside provide():
-		 * ctx.addMetadata<metadata_MyMeta>(my_value);
-		 * @endcode
 		 */
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata> void addMetadata(Args&&... args) {
