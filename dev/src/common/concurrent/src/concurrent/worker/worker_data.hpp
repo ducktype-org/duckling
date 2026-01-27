@@ -7,7 +7,7 @@
 
 #include <random>
 
-namespace concurrent {
+namespace concurrent::worker {
 
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(WorkerID);
 

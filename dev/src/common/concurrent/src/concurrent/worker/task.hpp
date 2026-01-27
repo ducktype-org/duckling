@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace concurrent {
+namespace concurrent::worker {
 	/**
 	 * @brief Represents a task to be executed by a worker.
 	 */

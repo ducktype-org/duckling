@@ -4,7 +4,7 @@
 
 #include <concurrent/module_flags/worker_count.hpp>
 
-namespace concurrent {
+namespace concurrent::worker {
 
 	WorkerData::WorkerData(WorkerID id, std::mt19937_64 rng): id(id), rng(rng) {}
 

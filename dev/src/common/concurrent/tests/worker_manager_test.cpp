@@ -24,9 +24,13 @@ private:
 		std::atomic<usize> no_task_counter = 0;
 		auto               now             = std::chrono::steady_clock::now();
 
-		concurrent::WorkerManager worker_manager([&no_task_counter](concurrent::WDRef) {
-			no_task_counter.fetch_add(1, std::memory_order_relaxed);
-		});
+		concurrent::worker::WorkerManager worker_manager;
+
+		for (const auto& id: worker_manager.getAllWorkers()) {
+			worker_manager.setNoTasksCallback(id, [&no_task_counter](concurrent::worker::WDRef) {
+				no_task_counter.fetch_add(1, std::memory_order_relaxed);
+			});
+		}
 
 		auto all_workers = worker_manager.getAllWorkers();
 		ASSERT_EQUAL(all_workers.size(), concurrent::getWorkerCount());
@@ -36,10 +40,13 @@ private:
 
 		std::atomic<usize> task_finished_counter = 0;
 		for (const auto& id: worker_manager.getAllWorkers()) {
-			worker_manager.scheduleTaskOnWorker(id, [&task_finished_counter](concurrent::WDRef) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
-				task_finished_counter.fetch_add(1, std::memory_order_relaxed);
-			});
+			worker_manager.scheduleTaskOnWorker(
+				id,
+				[&task_finished_counter](concurrent::worker::WDRef) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+					task_finished_counter.fetch_add(1, std::memory_order_relaxed);
+				}
+			);
 		}
 
 		// Wait for all tasks to complete
@@ -81,8 +88,8 @@ private:
 			return a;
 		};
 
-		std::queue<concurrent::Task> tasks;
-		std::mutex                   task_mutex;
+		std::queue<concurrent::worker::Task> tasks;
+		std::mutex                           task_mutex;
 
 		std::atomic<usize>               total_completed_tasks = 0;
 		concurrent::ConHashMap<u64, u64> results;
@@ -96,7 +103,7 @@ private:
 		// Complexity is really hard to estimate here, but each task should take a few milliseconds.
 		for (u64 i = 0; i < task_count; i++)
 			tasks.emplace([&fib, i, &results, &worker_task_counts, &total_completed_tasks](
-							  concurrent::WDRef wd
+							  concurrent::worker::WDRef wd
 						  ) {
 				u64 result = fib(start + i);
 
@@ -112,23 +119,29 @@ private:
 				);
 			});
 
-		concurrent::WorkerManager worker_manager(
-			[&tasks, &task_mutex, &worker_manager](concurrent::WDRef wd) {
-				// This callback is invoked when a worker has no tasks.
-			    // We can use it to assign new tasks to the worker.
-				std::scoped_lock lock(task_mutex);
+		concurrent::worker::WorkerManager worker_manager;
 
-				for (usize i = 0; i < task_batch_size; i++) {
-					if (!tasks.empty()) {
-						auto task = tasks.front();
-						tasks.pop();
-						worker_manager.scheduleTaskOnWorker(wd->getID(), std::move(task));
-					} else {
-						break;
+		for (auto& id: worker_manager.getAllWorkers()) {
+			worker_manager.setNoTasksCallback(
+				id,
+				[&tasks, &task_mutex, &worker_manager](concurrent::worker::WDRef wd) {
+					// This callback is invoked when a worker has no tasks.
+				    // We can use it to assign new tasks to the worker.
+					std::scoped_lock lock(task_mutex);
+
+					for (usize i = 0; i < task_batch_size; i++) {
+						if (!tasks.empty()) {
+							auto task = tasks.front();
+							tasks.pop();
+							worker_manager.scheduleTaskOnWorker(wd->getID(), std::move(task));
+						} else {
+							break;
+						}
 					}
 				}
-			}
-		);
+			);
+		}
+
 
 		while (total_completed_tasks.load(std::memory_order_relaxed) < task_count) {
 			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)

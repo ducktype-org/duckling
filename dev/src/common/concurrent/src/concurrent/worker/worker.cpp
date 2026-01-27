@@ -2,34 +2,31 @@
 
 #include <base/except/exceptions.hpp>
 
-namespace concurrent {
+namespace concurrent::worker {
 	void Worker::pushTask(Task&& task) {
 		CORE_ASSERT(loop_run_flag, "Cannot push task to stopped worker");
 		{
-			std::scoped_lock lock(m);
+			std::scoped_lock lock(mut);
 			task_queue.push(std::move(task));
 		}
-		cv.notify_one();
+		task_cv.notify_one();
 	}
 
-	Worker::Worker(WDRef worker_data, NoTasksCallback no_tasks_callback):
-		  no_tasks_callback(std::move(no_tasks_callback)),
-		  worker_data(worker_data),
-		  real_thread() {}
+	Worker::Worker(WDRef worker_data): worker_data(worker_data), real_thread() {}
 
 	[[nodiscard]] bool Worker::isFree() const {
-		std::scoped_lock lock(m);
-		return !is_occupied.load() && task_queue.empty();
+		std::scoped_lock lock(mut);
+		return !is_occupied && task_queue.empty();
 	}
 
 	[[nodiscard]] WorkerID Worker::getId() const { return worker_data->getID(); }
 
 	Worker::~Worker() {
 		{
-			std::scoped_lock lock(m);
+			std::scoped_lock lock(mut);
 			loop_run_flag = false;
 		}
-		cv.notify_one();
+		task_cv.notify_one();
 		real_thread.join();
 	}
 
@@ -40,7 +37,7 @@ namespace concurrent {
 			while (loop_run_flag) {
 				Task task;
 				{
-					std::unique_lock lock(m);
+					std::unique_lock lock(mut);
 
 					if (task_queue.empty()) {
 						lock.unlock();
@@ -50,7 +47,7 @@ namespace concurrent {
 
 					while (task_queue.empty()) {
 						is_occupied = false;
-						cv.wait(lock);
+						task_cv.wait(lock);
 						if (!loop_run_flag) return;
 					}
 					is_occupied = true;
@@ -60,5 +57,9 @@ namespace concurrent {
 				task(worker_data);
 			}
 		} };
+	}
+
+	void Worker::setNoTasksCallback(NoTasksCallback callback) {
+		no_tasks_callback = std::move(callback);
 	}
 }

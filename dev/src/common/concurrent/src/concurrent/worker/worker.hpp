@@ -11,7 +11,7 @@
 #include <queue>
 #include <thread>
 
-namespace concurrent {
+namespace concurrent::worker {
 	using NoTasksCallback = std::function<void(WDRef)>;
 
 	/**
@@ -20,17 +20,26 @@ namespace concurrent {
 	 * Worker's inner thread is joined upon destruction.
 	 */
 	class Worker final {
-	public:
-		Worker(WDRef worker_data, NoTasksCallback no_tasks_callback);
-		~Worker();
+		friend class WorkerManager;
 
+	public:
+		Worker()                         = delete;
 		Worker(const Worker&)            = delete;
 		Worker(Worker&&)                 = delete;
 		Worker& operator=(const Worker&) = delete;
 		Worker& operator=(Worker&&)      = delete;
 
+		~Worker();
+
+		/**
+		 * @brief Starts the worker's main loop in a separate thread.
+		 */
 		void run();
 
+		/**
+		 * @brief Pushes a task to the worker's task queue.
+		 * @param task The task to be executed.
+		 */
 		void pushTask(Task&& task);
 
 		/**
@@ -50,19 +59,27 @@ namespace concurrent {
 		 */
 		[[nodiscard]] WorkerID getId() const;
 
+		/**
+		 * @brief Sets the callback to be invoked when there are no tasks.
+		 */
+		void setNoTasksCallback(NoTasksCallback callback);
+
 	private:
+		Worker(WDRef worker_data);
+
 		std::atomic_bool is_occupied
 			= false;  /// Indicates whether the worker is currently executing a task.
 		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
-		NoTasksCallback no_tasks_callback;      /// Callback when there are no tasks.
+		NoTasksCallback no_tasks_callback{};    /// Callback when there are no tasks.
 
 		const WDRef worker_data;
 
 		std::queue<Task> task_queue;
 
-		mutable std::mutex      m;
-		std::condition_variable cv;
+		mutable std::mutex mut;  /// Internal synchronization mutex.
+		std::condition_variable
+			task_cv;             /// Condition variable to notify the worker thread of new tasks.
 
 		std::jthread real_thread;
 	};
