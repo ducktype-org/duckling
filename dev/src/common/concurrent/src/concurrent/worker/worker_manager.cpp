@@ -58,6 +58,7 @@ namespace concurrent::worker {
 	}
 
 	void WorkerManager::setNoTasksCallback(WorkerID worker_id, NoTasksCallback callback) {
+		// A task may be already waiting on task_cv, so we need to wake him up.
 		workers[static_cast<usize>(worker_id)]->setNoTasksCallback(std::move(callback));
 	}
 }

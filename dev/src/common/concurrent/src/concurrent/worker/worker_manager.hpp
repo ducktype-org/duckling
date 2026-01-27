@@ -59,6 +59,11 @@ namespace concurrent::worker {
 		 * @brief Sets a callback to be called when the worker has no tasks to execute.
 		 * @param worker_id The ID of the worker.
 		 * @param callback The callback function to be called.
+		 * @note If a worker is free, it will call the new callback
+		 * immediately. This means, that the callback may be called more than once
+		 * if the worker has no tasks - once in the method call, and later when the worker
+		 * loop checks for tasks. If the first call adds tasks, then the second call will not
+		 * happen.
 		 */
 		void setNoTasksCallback(WorkerID worker_id, NoTasksCallback callback);
 

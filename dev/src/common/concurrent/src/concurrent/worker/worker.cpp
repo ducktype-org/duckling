@@ -16,7 +16,7 @@ namespace concurrent::worker {
 
 	[[nodiscard]] bool Worker::isFree() const {
 		std::scoped_lock lock(mut);
-		return !is_occupied && task_queue.empty();
+		return isFreeNoLock();
 	}
 
 	[[nodiscard]] WorkerID Worker::getId() const { return worker_data->getID(); }
@@ -60,6 +60,17 @@ namespace concurrent::worker {
 	}
 
 	void Worker::setNoTasksCallback(NoTasksCallback callback) {
-		no_tasks_callback = std::move(callback);
+		{
+			std::unique_lock lock(mut);
+			no_tasks_callback = std::move(callback);
+
+			if (isFreeNoLock()) {
+				lock.unlock();
+				no_tasks_callback(worker_data);
+				lock.lock();
+			}
+		}
 	}
+
+	bool Worker::isFreeNoLock() const { return !is_occupied && task_queue.empty(); }
 }

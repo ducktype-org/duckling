@@ -61,17 +61,26 @@ namespace concurrent::worker {
 
 		/**
 		 * @brief Sets the callback to be invoked when there are no tasks.
+		 * @param callback The callback function.
+		 * @note If a worker is free, it will call the new callback
+		 * immediately. This means, that the callback may be called more than once
+		 * if the worker has no tasks - once in the method call, and later when the worker
+		 * loop checks for tasks. If the first call adds tasks, then the second call will not
+		 * happen.
 		 */
 		void setNoTasksCallback(NoTasksCallback callback);
 
 	private:
 		Worker(WDRef worker_data);
-
-		std::atomic_bool is_occupied
-			= false;  /// Indicates whether the worker is currently executing a task.
+		/**
+		 * @brief Indicates whether the worker is currently executing a task.
+		 * @note This flag is set to false initially (for isFree to work correctly), or when the
+		 * worker is actually waiting on task_cv.
+		 */
+		std::atomic_bool is_occupied   = false;
 		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
-		NoTasksCallback no_tasks_callback{};    /// Callback when there are no tasks.
+		NoTasksCallback no_tasks_callback = [](WDRef) {};  /// Callback when there are no tasks.
 
 		const WDRef worker_data;
 
@@ -82,5 +91,10 @@ namespace concurrent::worker {
 			task_cv;             /// Condition variable to notify the worker thread of new tasks.
 
 		std::jthread real_thread;
+
+		/**
+		 * @brief Checks if a worker is free without locking the mutex.
+		 */
+		[[nodiscard]] bool isFreeNoLock() const;
 	};
 }
