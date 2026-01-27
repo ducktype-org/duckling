@@ -169,6 +169,9 @@ namespace concurrent {
 			return shards[lock.shard_index].contains(key);
 		}
 
+		/**
+		 * Atomically erases the given key->value pair from the map.
+		 */
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].erase(key);
