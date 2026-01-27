@@ -14,7 +14,7 @@ static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLo
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Interned version of [`Source`].
 pub struct InternedSource {
-    pub inner: &'static Source,
+    inner: &'static Source,
 }
 
 impl InternedSource {

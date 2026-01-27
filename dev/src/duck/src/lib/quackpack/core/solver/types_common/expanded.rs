@@ -18,7 +18,7 @@ static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Expande
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 /// Interned version of [`Location`].
 pub struct InternedExpandedLocation {
-    pub inner: &'static ExpandedLocation,
+    inner: &'static ExpandedLocation,
 }
 
 impl InternedExpandedLocation {

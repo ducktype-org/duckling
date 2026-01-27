@@ -17,11 +17,11 @@ Linear program
 
 ### General case
 Assume that we have a package `P`, identified by its location `L(P)` and version `V(P)`.
-Assume that it has a dependency on a package `Q` and the dependency is described by a location `V(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
+Assume that it has a dependency on a package `Q` and the dependency is described by a location `L(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
 
 Then we would have the following inequalities:
 
-1. Forcing presence of `V` in one of the good versions (`var(P)` implies any of `var(P->Q_1_)`, ..., `var(P->Q_n_x)`), where `var(P->Q_i_x)` is a variable signifying that `Q` in version `V(Q)_i` was chosen to satisfy the dependency.
+1. Forcing the presence of `Q` in one of the good versions (`var(P)` implies any of `var(P->Q_1_)`, ..., `var(P->Q_n_x)`), where `var(P->Q_i_x)` is a variable signifying that `Q` in version `V(Q)_i` was chosen to satisfy the dependency.
 
 Note: if the dependency is only forced by some features of `P`, instead of `var(P)` we use `var(P, F)`, for any such feature `F`.
 
@@ -29,7 +29,7 @@ Note: if the dependency is only forced by some features of `P`, instead of `var(
 var(P) - var(P->Q_V1_x) - ... - var(P->Q_Vn_x) <= 0
 ```
 
-2. Forcing presence of `Q` with the appropriate features.
+2. Forcing the presence of `Q` with the appropriate features.
 `P` forces `Q` to be present with some features by default, moreover features of `P` can force additional features of `Q`.
 
 Assume that a feature `F_P` of `P` forces features `G_1, ..., G_n` of `Q`.
@@ -71,7 +71,7 @@ n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
 
 Outcome
 -------
-The solver engine yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
+The [``solver engine``](solver_engine.rs) yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
 It is the case that `Prev` unioned with this output is a correct resolution, but it may be possible to trim it, since we have accounted for the added/changed dependencies, but haven't removed dependencies removed from the manifest since the last compilation.
 
-So for example, if our project depended on `a` and `b`, and then we have removed the dependency on `b` and added the dependency on `c`, `a` and `b` belong to `Prev` and solver engine finds a solution to the dependency on `c`, reusing as many packages added for `a` and `b` as needed. But now, the packages used only to satisfy the dependencies of `b` can be simply removed, and this is done in the `new_freeze_generation` module.
+So for example, if our project depended on `a` and `b`, and then we have removed the dependency on `b` and added the dependency on `c`, `a` and `b` belong to `Prev` and [``solver engine``](solver_engine.rs) finds a solution to the dependency on `c`, reusing as many packages added for `a` and `b` as needed. But now, the packages used only to satisfy the dependencies of `b` can be simply removed, and this is done in the `new_freeze_generation` module.

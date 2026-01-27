@@ -20,7 +20,7 @@ static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = On
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 /// Interned version of [`Location`].
 pub struct InternedLocation {
-    pub inner: &'static Location,
+    inner: &'static Location,
 }
 
 impl InternedLocation {
@@ -77,7 +77,7 @@ pub enum Location {
 
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.desc().source().inner {
+        match &dependency.desc().source().as_ref() {
             Source::Registry(registry) => Self::Registry(LocRegistry {
                 url: registry.url().clone(),
                 real_name: dependency.real_name(),

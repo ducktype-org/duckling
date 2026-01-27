@@ -252,6 +252,10 @@ impl<'a> SolverEngine<'a> {
 }
 
 /// Creates an iterator of all possible parent features and None.
+/// This function is used when trying to determine
+/// which features of the child are forced by which features of the parent.
+/// The [`None`] signifies the lack of any parent features,
+/// so that features of the child forced by default can be considered.
 fn parent_features_to_consider<'a>(
     input: &'a GatheredInfo,
     edge: &DependencyEdge,
