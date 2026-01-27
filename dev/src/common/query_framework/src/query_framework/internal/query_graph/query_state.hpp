@@ -165,7 +165,6 @@ namespace query::internal {
 		| Serialization interface:  |
 		\***************************/
 
-
 		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to

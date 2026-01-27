@@ -300,6 +300,9 @@ private:
 		for (u64 i = 0; i < ELEMENTS_COUNT; i++)
 			if (map.contains(i)) element_count_after_erase++;
 
+		message(base::strConcat("Erased elements: ", erase_count.load(), " / ", ELEMENTS_COUNT, "\n")
+		);
+
 		ASSERT_TRUE(ELEMENTS_COUNT - erase_count == element_count_after_erase);
 	}
 };
