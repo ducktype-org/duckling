@@ -12,12 +12,9 @@
  * @TODO: #1887 make it clear what query invocation layers happen here. 
  */
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                   \
-	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeID from) \
+	auto query_type::internal_query(const query_type::QKey& key) \
 		-> query_type::QResult {                                                                 \
 		auto node_id = ::query::internal::makeNodeID<query_type>(key);                           \
-		::query::internal::ContextAccess::getState()->getGraphMutable()->addDependency(          \
-			from, node_id                                                                        \
-		);                                                                                       \
 		::query::internal::ContextAccess::getState()->addGraphNode(node_id);                     \
 		return ::query::internal::SideInputMockValue{};                                          \
 	}                                                                                            \

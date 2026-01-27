@@ -120,7 +120,7 @@ namespace query {
 				main_query_state.getActiveGraph()->removeEdge(my_node);
 			});
 
-			return OthQuery::internal_query(key, my_node);
+			return OthQuery::internal_query(key);
 		}
 
 		/**

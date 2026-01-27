@@ -37,10 +37,9 @@ namespace query::internal {
 	 * @param key Query key
 	 * @param from node id of caller
 	 * @return QueryImplType::QResult
-	* @TODO PR: remove from parameter?
 	 */
 	template<typename QueryImplType>
-	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
+	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
 		typename QueryImplType::QResult {
 
 		using QueryIntType = QueryImplType::QueryType;
@@ -54,7 +53,11 @@ namespace query::internal {
 
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
-			// @TODO PR: sync ideas, we might want to detect if a query should be loaded based on its state?
+			/****************************************************\
+			| Query result was cached, we return it directly.    |
+			\****************************************************/
+
+			// @TODO: #1889 we might want to detect if a query should be loaded based on its state?
 			// Or is cache entry effectively a state?
 			// Maybe this is what ACD is for?
 
@@ -103,7 +106,8 @@ namespace query::internal {
 			}
 
 			/*******************************************************************\
-			| Now we actually compute the query result by calling provide().    |
+			| Now we enter a section, in which we actually compute the query    |
+			| result by calling provide().                                      |
 			\*******************************************************************/
 
 			
@@ -230,9 +234,9 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                \
-	auto type::QueryType::internal_query(const type::QKey& key, ::query::internal::NodeID from)                                        \
+	auto type::QueryType::internal_query(const type::QKey& key)                                        \
 		-> type::QResult {                                                                                                             \
-		return ::query::internal::standardQueryEntry<type>(key, from);                                                                 \
+		return ::query::internal::standardQueryEntry<type>(key);                                                                 \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \
