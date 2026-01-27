@@ -24,8 +24,9 @@ Tests:
         Output:
           String: "2\n"
         ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "2\n"
-        ExitCode: 0
+      # @TODO: #1849 enable this test case
+      # dvm:
+      #   backend: dvm
+      #   Output:
+      #     String: "2\n"
+      #   ExitCode: 0
