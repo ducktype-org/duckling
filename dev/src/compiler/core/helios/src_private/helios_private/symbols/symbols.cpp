@@ -63,35 +63,6 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	namespace internal {
-		constexpr auto GLOBAL_VARIABLE_PST_CONTEXT
-			= [](this auto self, query::Context& ctx, const pst::Access<pst::LangElement>& el
-		      ) -> bool {
-			switch (el->getElementKind()) {
-			case pst::ElementKind::TopLevel:
-			case pst::ElementKind::Namespace:
-				return true;
-
-			case pst::ElementKind::Class:
-			case pst::ElementKind::Fun:
-			case pst::ElementKind::If:
-			case pst::ElementKind::While:
-			case pst::ElementKind::For:
-				return false;
-
-			case pst::ElementKind::CodeBlock:
-			case pst::ElementKind::CodeBlockOrStmt:
-			case pst::ElementKind::Variable:
-			case pst::ElementKind::StmtSpecifier:
-				// we panic if there is no parent:
-				return self(ctx, el->getParent().value().unlock(ctx));
-
-			default:
-				CORE_PANIC("Unexpected pst path of variable");
-			}
-		};
-	}
-
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
@@ -105,8 +76,32 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		return internal::GLOBAL_VARIABLE_PST_CONTEXT(
-			ctx, getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
+		return std::invoke(
+			[&ctx](this auto self, const pst::Access<pst::LangElement>& el) -> bool {
+				switch (el->getElementKind()) {
+				case pst::ElementKind::TopLevel:
+				case pst::ElementKind::Namespace:
+					return true;
+
+				case pst::ElementKind::Class:
+				case pst::ElementKind::Fun:
+				case pst::ElementKind::If:
+				case pst::ElementKind::While:
+				case pst::ElementKind::For:
+					return false;
+
+				case pst::ElementKind::CodeBlock:
+				case pst::ElementKind::CodeBlockOrStmt:
+				case pst::ElementKind::Variable:
+				case pst::ElementKind::StmtSpecifier:
+					// we panic if there is no parent:
+					return self(el->getParent().value().unlock(ctx));
+
+				default:
+					CORE_PANIC("Unexpected pst path of variable");
+				}
+			},
+			getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
 		);
 	}
 

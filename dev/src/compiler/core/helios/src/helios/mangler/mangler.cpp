@@ -57,22 +57,22 @@ namespace compiler::helios::mangler {
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
 		 */
-		bool doNotMangle(query::Context& ctx, const auto& key) {
+		bool shouldMangle(query::Context& ctx, const auto& key) {
 			if (key.kind != ManglingSymbolKind::Standard) {
 				// Non-standard symbols can't have C mangling
-				return false;
+				return true;
 			}
 
 			const auto sym_id = std::get<SymID>(key.symbol_key);
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
-					variant_case_novalue(CAbi) { return true; }
-					variant_case_novalue(DefaultAbi) { return false; }
+					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
 				}
 			}
 
-			return false;
+			return true;
 		}
 
 		/**
@@ -270,7 +270,7 @@ namespace compiler::helios::mangler {
 					}
 					variant_case_novalue(builtin::BuiltinFunctionData) {
 						// Builtins have a C linkage (CAbi), so they are handled by the
-						// `doNotMangle` check in `provide()`
+						// `shouldMangle` check in `provide()`
 						CORE_UNREACHABLE();
 					}
 					variant_case(houtgen::GeneratedSymbolData, gen_data) {
@@ -357,30 +357,30 @@ namespace compiler::helios::mangler {
 		std::string encoding(query::Context& ctx, const auto& key) {
 			switch (key.kind) {
 			case ManglingSymbolKind::Standard:
-				return internal::symbolEncoding(ctx, std::get<0>(key.symbol_key));
+				return internal::symbolEncoding(ctx, std::get<SymID>(key.symbol_key));
 				break;
 
 			case ManglingSymbolKind::ModuleConstructor:
 				return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleConstructor>(
-					ctx, std::get<1>(key.symbol_key)
+					ctx, std::get<special_symbol_keys::LIRModuleID>(key.symbol_key)
 				);
 				break;
 
 			case ManglingSymbolKind::ModuleDestructor:
 				return internal::specialSymbolEncoding<ManglingSymbolKind::ModuleDestructor>(
-					ctx, std::get<1>(key.symbol_key)
+					ctx, std::get<special_symbol_keys::LIRModuleID>(key.symbol_key)
 				);
 				break;
 
 			case ManglingSymbolKind::GlobalVariableConstructor:
 				return internal::specialSymbolEncoding<ManglingSymbolKind::GlobalVariableConstructor>(
-					ctx, std::get<0>(key.symbol_key)
+					ctx, std::get<SymID>(key.symbol_key)
 				);
 				break;
 
 			case ManglingSymbolKind::GlobalVariableDestructor:
 				return internal::specialSymbolEncoding<ManglingSymbolKind::GlobalVariableDestructor>(
-					ctx, std::get<0>(key.symbol_key)
+					ctx, std::get<SymID>(key.symbol_key)
 				);
 				break;
 
@@ -404,7 +404,7 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if (internal::doNotMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
+			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
 
 			// note: global identifiers starting with underscore and a capital letter are
 			// reserved in C. Q seems to be free and stands for both query and quack
