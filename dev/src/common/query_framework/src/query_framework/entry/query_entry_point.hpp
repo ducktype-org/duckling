@@ -5,12 +5,12 @@
  */
 #pragma once
 
-#include "context.hpp"
-#include "internal/query_data/query_id.hpp"
-#include "internal/query_graph/node_id.hpp"
-#include "simple_keys.hpp"
-
 #include <base/except/exceptions.hpp>
+
+#include <query_framework/context/context.hpp>
+#include <query_framework/internal/query_data/query_id.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/utils/simple_keys.hpp>
 
 namespace query {
 

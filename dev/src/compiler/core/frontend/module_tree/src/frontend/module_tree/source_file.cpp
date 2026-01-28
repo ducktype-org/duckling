@@ -83,7 +83,8 @@ namespace compiler::frontend {
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			parse_tree.emplace(pst::PST(file, getComponentHash()));
+			// @TODO: #1879 Program chosen as default type
+			parse_tree.emplace(pst::PST(file, pst::PSTType::Program, getComponentHash()));
 			return &parse_tree.value();
 		}
 	}

@@ -9,7 +9,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/query_input.hpp>
+#include <query_framework/input_query/query_input.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {

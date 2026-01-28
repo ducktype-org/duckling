@@ -7,7 +7,7 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -16,7 +16,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 

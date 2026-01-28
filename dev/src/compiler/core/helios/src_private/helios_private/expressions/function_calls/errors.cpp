@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
@@ -17,7 +17,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/source_position.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::helios::code {
 	using namespace dia_int;

@@ -12,8 +12,8 @@
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/query_cache_macros.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>

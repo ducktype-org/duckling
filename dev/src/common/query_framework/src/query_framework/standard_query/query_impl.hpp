@@ -4,18 +4,6 @@
  */
 #pragma once
 
-#include "context.hpp"
-#include "internal/acd.hpp"
-#include "internal/context_access.hpp"
-#include "internal/query_errors.hpp"
-#include "internal/query_graph/node_making.hpp"
-#include "q_stats/q_stats.hpp"
-#include "query_cache_macros.hpp"  // IWYU pragma: export
-#include "query_errors.hpp"
-#include "query_hash.hpp"
-#include "query_int.hpp"
-#include "query_result.hpp"
-
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_hashmap.hpp>
@@ -26,6 +14,17 @@
 #include <base/str/str_utils.hpp>
 
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/internal/acd.hpp>
+#include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_errors.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>
+#include <query_framework/q_stats/q_stats.hpp>
+#include <query_framework/query_errors.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>  // IWYU pragma: export
+#include <query_framework/utils/query_hash.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>

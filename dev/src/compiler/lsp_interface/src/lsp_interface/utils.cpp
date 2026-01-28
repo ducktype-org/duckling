@@ -8,7 +8,7 @@
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #define ext_is_ok(ext) \
 	ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift" || ext == ".ds"

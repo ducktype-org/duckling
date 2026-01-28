@@ -2,7 +2,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include <lexer/token.hpp>
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace pst {
 	/**

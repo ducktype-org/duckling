@@ -4,15 +4,15 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 using namespace compiler::tsh;

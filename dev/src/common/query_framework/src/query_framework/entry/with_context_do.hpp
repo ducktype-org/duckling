@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../query_int.hpp"
+#include <query_framework/context/context_fd.hpp>
 
 #include <any>
 #include <functional>

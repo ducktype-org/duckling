@@ -9,8 +9,9 @@
 #include <helios/queries.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -20,7 +21,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
 #include <string_view>
