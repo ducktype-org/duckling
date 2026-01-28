@@ -34,7 +34,7 @@ namespace compiler::helios {
 
 	/**
 	 * @return whether SymID is a global function.
-	 * @note This function iterates through parents of the PST elements of the symbol to obtain this
+	 * @note This function iterates through parents of the PST elements of the symbol.
 	 */
 	bool isGlobalFun(SymID);
 
