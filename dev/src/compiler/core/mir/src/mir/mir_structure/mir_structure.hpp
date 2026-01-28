@@ -467,6 +467,11 @@ namespace compiler::mir {
 			return std::holds_alternative<MIRPlace>(value) && std::get<MIRPlace>(value).isGlobal();
 		}
 
+		[[nodiscard]]
+		bool isConstant() const {
+			return std::holds_alternative<MIRConstant>(value);
+		}
+
 		/**
 		 * @brief Returns true if this value contains valuable information.
 		 * Valuable information is either a reference to a block or function,

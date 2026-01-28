@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -669,18 +671,94 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(3) })
+			                     ->valueOrThrow();
 
-			for (const auto& func: unit.functions) {
-				std::cout << "Lowered function name: " << func.declaration->original_name.strView()
-						  << '\n';
-				auto& mir_func = (compiler::mir::Function&) ctx
-				                     .query<compiler::mir::LowerToMIRFunction>({ func })
-				                     ->valueOrThrow();
+			auto i64_type = ctx.query<QueryIntegralType>(64);
 
-				std::cout << "==============================\n";
-				mir_func.debugPrint(std::cout);
-				std::cout << '\n';
+			bool found_alloc_box_int      = false;
+			bool found_alloc_box_point    = false;
+			bool found_field_access_read  = false;
+			bool found_field_access_write = false;
+			bool found_by_val_deref       = false;
+			bool found_by_ref_passthrough = false;
+
+			using namespace compiler::mir;
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					if (instr.operation == Operation::AllocBox) {
+						// var b_int: box i32 = 42;
+						// var b_point: box Point = Point(10, 20);
+						const auto& arg = instr.arguments[0];
+						if (arg.isConstant())
+							found_alloc_box_int = true;
+						else
+							found_alloc_box_point = true;
+					} else if (instr.operation == Operation::Assign) {
+						const auto& out_place = instr.output.value();
+						// b_point.y = 99;
+						if (out_place.projection_chain.size() == 2) {
+							bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
+								out_place.projection_chain[0].storage
+							);
+							if (is_deref
+							    && std::holds_alternative<MIRPlace::FieldProjection>(
+									out_place.projection_chain[1].storage
+								)) {
+								found_field_access_write = true;
+							}
+						} else {
+							// var x: i32 = b_point.x;
+							const auto& arg_place = instr.arguments[0].get<MIRPlace>();
+							if (arg_place.projection_chain.size() == 2) {
+								bool is_deref = std::holds_alternative<MIRPlace::DerefProjection>(
+									arg_place.projection_chain[0].storage
+								);
+								if (is_deref
+								    && std::holds_alternative<MIRPlace::FieldProjection>(
+										arg_place.projection_chain[1].storage
+									)) {
+									found_field_access_read = true;
+								}
+							}
+						}
+					} else if (instr.operation == Operation::Call) {
+						// by_val(b_point);
+						// by_ref(refof b_point);
+						const auto& callee      = instr.arguments[0].get<MIRFunctionLiteral>();
+						const auto  callee_name = compiler::helios::name(callee.helios_id);
+						if (callee_name == "by_val") {
+							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
+							if (arg_place.projection_chain.size() == 1
+							    && std::holds_alternative<MIRPlace::DerefProjection>(
+									arg_place.projection_chain[0].storage
+								)) {
+								found_by_val_deref = true;
+							}
+						} else if (callee_name == "by_ref") {
+							const auto& arg_place = instr.arguments[1].get<MIRPlace>();
+
+							if (arg_place.projection_chain.empty()) found_by_ref_passthrough = true;
+						}
+					}
+				}
 			}
+
+			// return b_int;
+			const auto& last_block = mir_func.blocks[mir_func.block_order.back()];
+			if (last_block.terminator.operation == Operation::ReturnValue) {
+				const auto& ret_val = last_block.terminator.arguments[0].get<MIRPlace>();
+				ASSERT_EQUAL(ret_val.type.getType(), i64_type);
+				ASSERT_TRUE(ret_val.type.getRefKind() == ReferenceKind::Direct);
+			}
+
+			ASSERT_TRUE(found_alloc_box_int);
+			ASSERT_TRUE(found_alloc_box_point);
+			ASSERT_TRUE(found_field_access_read);
+			ASSERT_TRUE(found_field_access_write);
+			ASSERT_TRUE(found_by_val_deref);
+			ASSERT_TRUE(found_by_ref_passthrough);
 		});
 	}
 
