@@ -12,6 +12,26 @@
 namespace tpc {
 
 	/**
+	 * @brief Lightweight parsing context.
+	 * @note It is used during parsing, and can be changed during this process,
+	 *       in particular when passing the context to subelements beeing parsed.
+	 *       It can also be restored on exiting a fallback.
+	 *
+	 * @note This is a base class, the data depends on the needs of the parser.
+	 */
+	class ParserContext {
+	public:
+		ParserContext() = default;
+
+		[[nodiscard]]
+		virtual Box<ParserContext> copy() const {
+			return makeBox<ParserContext>();
+		}
+
+		virtual ~ParserContext() = default;
+	};
+
+	/**
 	 * @brief Implements higher level token stream interactions
 	 */
 	class ParserState {
@@ -26,9 +46,10 @@ namespace tpc {
 		/**
 		 * @brief Data needed to handle restoring to a fallback
 		 */
-		struct Fallback {
-			SubStreamType    type;
-			Box<TokenStream> saved_stream;
+		struct Fallback final {
+			SubStreamType                                         type;
+			Box<TokenStream>                                      saved_stream;
+			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
 			/**
 			 * @brief Jump done after restoring a fallback.
 			 */
@@ -38,6 +59,21 @@ namespace tpc {
 		Box<TokenStream> current_stream;
 
 		std::vector<Fallback> fallback_stack;  ///< Internal storage of fallback token streams
+
+		std::variant<Box<ParserContext>, CRef<ParserContext>> current_context;
+
+		ParserState(
+			TokenStream&&        tokens,
+			Box<ParserContext>&& ctx,
+			Ref<dia::Logger>     err,
+			Ref<dia_int::Logger> int_err
+		):
+			  current_stream(makeBox<TokenStream>(std::move(tokens))),
+			  fallback_stack(),
+			  current_context(std::move(ctx)),
+			  err(err),
+			  int_err(int_err) {}
+
 
 	public:
 		/**
@@ -64,6 +100,7 @@ namespace tpc {
 		ParserState(TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),
 			  fallback_stack(),
+			  current_context(makeBox<ParserContext>()),
 			  err(err),
 			  int_err(int_err) {}
 
@@ -151,5 +188,7 @@ namespace tpc {
 			}
 			return false;
 		}
+
+		virtual ~ParserState() = default;
 	};
 }

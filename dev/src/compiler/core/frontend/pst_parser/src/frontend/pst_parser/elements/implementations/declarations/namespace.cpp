@@ -12,7 +12,7 @@ namespace pst {
 
 		state.parse(out)
 			.all(Keyword::Namespace, &out->name)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Unordered);
+			.withDef(&out->body, BlockOrderType::Unordered);
 
 		PST_RETURN out;
 	}
