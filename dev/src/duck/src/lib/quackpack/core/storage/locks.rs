@@ -9,7 +9,7 @@
 //!   mutable access to the storage as a whole: during clean operation we
 //!   delete existing packages, so operations which could make a new reference
 //!   to an orphaned package must be ruled out.
-//! - [`RunLock`]: "pins" venv, such that dependencies can be safely loaded, while
+//! - [`RunLock`]: *pins* venv, such that dependencies can be safely loaded, while
 //!   avoiding holding lock guarding venv data for too long. Holding this lock
 //!   guarantees that dependencies saved in venv data will not change, even
 //!   without holding venv data lock — operations which require mutable access to
@@ -19,13 +19,13 @@
 //!   (be deleted), the data lock must be held.
 //! - [`TrySyncLock`]: grants mutable access to the storage-stored virtual environment
 //!   configuration. Respects all of the conditions given in the descriptions of the
-//!   previous two locks. If the operation would block, `quackpack.util.locks.common.LockWouldBlock` is
-//!   raised instead. As we do not assume any fair queueing of lock operations,
+//!   previous two locks. If the operation would block, [`WoudlBloc`](io::ErrorKind::WouldBlock) is
+//!   returned instead. As we do not assume any fair queueing of lock operations,
 //!   this prevents error-prone situation, in which two concurrent synchronization
 //!   operations would execute out of the order in which the user started them.
 //!
 //! Control over access to a virtual environment data file should be done using
-//! [`PathExt::lock_shared`]/[`PathExt::lock`]
+//! [`PathExt::lock_shared`](rustvil::fs::PathExt::lock_shared)/[`PathExt::lock`](rustvil::fs::PathExt::lock)
 //!
 //! All implementations use the following locks:
 //!
@@ -41,24 +41,25 @@
 //!     access to SYNC_LOCK[venv_id],
 //!   - holding [`RunLock`] is shared access to SYNC_LOCK[venv_id]
 //!
-//! - on other platforms ``quackpack.util.lock.SoftwareFileLock``
+//! - on other platforms `SoftwareFileLock`
 //!   is used: it works by exclusively creating the file to acquire and delete
 //!   it to release. It only provides exclusive locks, so the locking
 //!   mechanism is somewhat different:
 //!
-//!   - taking ``CleanLock`` takes CLEAN_LOCK and then waits for all SYNC_LOCK-s
+//!   - taking [`CleanLock`] takes CLEAN_LOCK and then waits for all SYNC_LOCK-s
 //!     to be released, but only those that were present at the start of the
-//!     operation (that is explained below in ``RunLock`` description),
-//!   - taking ``TrySyncLock`` needs CLEAN_LOCK while acquireing SYNC_LOCK — that
+//!     operation (that is explained below in [`RunLock`] description),
+//!   - taking [`TrySyncLock`] needs CLEAN_LOCK while acquiring SYNC_LOCK — that
 //!     makes it so that if clean operation has started, no new synchronization
 //!     can start (and clean operation waits for all ongoing ones),
-//!   - ``RunLock`` takes SYNC_LOCK exclusively instead — that is less efficient
+//!   - [`RunLock`] takes SYNC_LOCK exclusively instead — that is less efficient
 //!     that locking it in a shared mode, but we do not have access to that.
 //!     We do not need to take CLEAN_LOCK as in synchronization operation,
 //!     as run operation does not need mutable access to venv dependencies.
 //!     The clean lock might wait for completion of all run operations as they too
 //!     hold SYNC_LOCK, but as it takes a snapshot of the list of held locks,
 //!     any newly spawned run operations do not delay clean operation any further.
+//!
 //!
 //! Note that the `SoftwareFileLock` implementation is susceptible to deadlocks:
 //! if process holding a lock exists abnormally, it does not delete the file
@@ -72,4 +73,132 @@
 //! modify state, so freeing a lock of killed process does not have any negative
 //! impact on state coherency.
 
-use rustvil::fs::PathExt;
+use rustvil::fs::FileLockGuard;
+use rustvil::fs::PathExt as _;
+use rustvil::fs::ShouldBlock;
+use std::fs;
+use std::io;
+use std::path::Path;
+
+use crate::QuackResult;
+use crate::StrId;
+use crate::quackpack::core::storage::paths::StoragePaths;
+
+#[derive(Debug)]
+/// A lock that guarantees no virtual environment data mutations are in progress.
+///
+/// This lock ensures exclusive access to the global state of the storage. It is
+/// intended for operations like garbage collection or clean-up which may remove
+/// shared resources.
+///
+/// # Original comment (no longer relevant, all locks support shared)
+/// On POSIX/Windows, acquires an exclusive lock on the clean lock file.
+/// On platforms lacking shared lock support, it also waits for all sync locks
+/// present at the time of acquisition to be released.
+pub struct CleanLock {
+    lock: FileLockGuard,
+}
+
+impl CleanLock {
+    pub fn new(storage: &StoragePaths) -> io::Result<Self> {
+        let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
+        Ok(Self { lock })
+    }
+}
+
+#[derive(Debug)]
+/// A non-blocking lock for mutable access to a virtual environment's dependencies.
+///
+/// Ensures the operation does not interfere with global clean operations or
+/// other concurrent synchronization tasks. If it cannot acquire the required
+/// locks, it returns [`WoudlBloc`](io::ErrorKind::WouldBlock).
+pub struct TrySyncLock {
+    clean_lock: FileLockGuard,
+    sync_lock: FileLockGuard,
+}
+
+impl TrySyncLock {
+    pub fn new(storage: &StoragePaths, venv_id: StrId) -> io::Result<Self> {
+        let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
+        let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
+        Ok(Self {
+            clean_lock,
+            sync_lock,
+        })
+    }
+}
+
+#[derive(Debug)]
+/// A lock granting safe read-only access to a virtual environment's dependency configuration.
+/// Holding this lock guarantees the dependencies remain unchanged for the duration.
+pub struct RunLock {
+    lock: FileLockGuard,
+}
+
+impl RunLock {
+    pub fn new(storage: &StoragePaths, venv_id: StrId) -> io::Result<Self> {
+        let lock = storage.sync_lock(venv_id).lock_shared(ShouldBlock::Yes)?;
+        Ok(Self { lock })
+    }
+}
+
+/// Cleans up leftover lock files from previously aborted or crashed processes.
+/// Deletes lock files only if the corresponding virtual environment directories no longer exist.
+pub fn cleanup_locks(storage: &StoragePaths) -> QuackResult<()> {
+    cleanup_locks_impl(storage, storage.iter_sync_locks()?)?;
+    cleanup_locks_impl(storage, storage.iter_data_locks()?)?;
+    Ok(())
+}
+
+fn cleanup_locks_impl(
+    storage: &StoragePaths,
+    dir_iterator: Option<fs::ReadDir>,
+) -> QuackResult<()> {
+    for lockfile in dir_iterator.into_iter().flatten() {
+        let lockfile = lockfile?;
+        let name = lockfile.file_name().to_string_lossy().into_owned().into();
+        // @TODO: #1353 EnableInterrupts
+        if !storage.venv_dir(name).is_dir() {
+            try_delete_lock(&lockfile.path())?;
+        }
+    }
+    Ok(())
+}
+
+/// On Windows, trying to delete file opened by another process
+/// leads to an ERROR_SHARING_VIOLATION error.
+#[cfg(windows)]
+fn try_delete_lock(path: &Path) -> QuackResult<()> {
+    match path.rm() {
+        Ok(()) => Ok(()),
+        Err(e)
+            if e.kind() == io::ErrorKind::NotFound
+                // ERROR_SHARING_VIOLATION is presumably mapped to PermissionDenied.
+                || e.kind() == io::ErrorKind::PermissionDenied =>
+        {
+            Ok(())
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+#[cfg(not(windows))]
+fn try_delete_lock(path: &Path) -> QuackResult<()> {
+    let _guard = match path.lock(ShouldBlock::No) {
+        Ok(guard) => Some(guard),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(e)
+            // We only try to delete lock if that is possible, if we would need
+            // to block we skip that lock.
+            if e.kind() == io::ErrorKind::WouldBlock
+                || e.kind() == io::ErrorKind::PermissionDenied =>
+        {
+            None
+        }
+        Err(e) => return Err(e.into()),
+    };
+    // Due to the lock taking mechanism we use, we may simply
+    // delete the file if we own it, see `_posix_acquire`.
+    path.rm()?;
+    Ok(())
+}

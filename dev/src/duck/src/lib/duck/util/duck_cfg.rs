@@ -1,7 +1,9 @@
+use std::time::Duration;
+
 use tracing::debug;
 
 use crate::{
-    QuackResult, QuackResultContext, duck::util::duck_home::DuckHome,
+    QuackResult, QuackResultContext, duck::util::duck_home::DuckHome, qp_err,
     util_common::toml_config::TomlConfig,
 };
 
@@ -9,6 +11,8 @@ use crate::{
 pub struct DuckCfg {
     inner: TomlConfig,
 }
+
+const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_hours(24);
 
 impl DuckCfg {
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
@@ -56,6 +60,21 @@ impl DuckCfg {
 
     pub fn toml_config(&self) -> &TomlConfig {
         &self.inner
+    }
+
+    pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
+        let config_seconds = self
+            .inner
+            .get_int("storage.temporary_lifetime")
+            .context("when trying to get a storage temporary lifetime")?;
+        let Some(secs) = config_seconds else {
+            return Ok(DEFAULT_STORAGE_LIFETIME);
+        };
+        let Ok(as_u64) = secs.try_into() else {
+            return Err(qp_err!("{}", self.inner.make_location_error()))
+                .context("`storage.temporary_lifetime` does not fit in `u64`");
+        };
+        Ok(Duration::from_secs(as_u64))
     }
 }
 

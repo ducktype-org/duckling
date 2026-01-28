@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::{StrId, quackpack::core::Version, util_common::hash::sha256_string};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
 pub enum PackageId {
     Registry(RegistryId),
     Git(GitId),
@@ -34,7 +34,7 @@ impl PackageId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct RegistryId {
     pub id: StrId,
     pub version: Version,
@@ -55,7 +55,7 @@ impl RegistryId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct GitId {
     pub url: Url,
     pub commit: StrId,
@@ -75,7 +75,7 @@ impl GitId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct LocalId {
     pub path: PathBuf,
 }

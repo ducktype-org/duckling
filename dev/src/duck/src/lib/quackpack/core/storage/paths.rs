@@ -22,11 +22,14 @@
 //!         └── ...
 
 use std::{
-    fs::ReadDir,
+    fs::{DirEntry, ReadDir},
+    io,
     path::{Path, PathBuf},
 };
 
-use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome};
+use rustvil::fs::PathExt;
+
+use crate::{QuackResult, StrId, duck::util::duck_home::DuckHome, qp_bail_internal};
 
 use super::package_id::PackageId;
 
@@ -82,6 +85,14 @@ impl StoragePaths {
         &self.clean_lock
     }
 
+    pub fn sync_lock(&self, venv_id: StrId) -> PathBuf {
+        self.sync_lock_base.join(venv_id)
+    }
+
+    pub fn data_lock(&self, venv_id: StrId) -> PathBuf {
+        self.data_lock_base.join(venv_id)
+    }
+
     pub fn venv_dir(&self, venv_id: StrId) -> PathBuf {
         self.venv_dir.join(venv_id)
     }
@@ -98,12 +109,15 @@ impl StoragePaths {
     /// The yielded packages need not be correct (may be missing checksum).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_pkgs(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_pkgs(&self) -> QuackResult<impl Iterator<Item = io::Result<DirEntry>>> {
         let dir = self.package_dir.as_path();
         if !dir.is_dir() {
-            None
+            Ok(None.into_iter().flatten())
         } else {
-            Some(dir.read_dir().map_err(Into::into))
+            dir.read_dir()
+                .map_err(Into::into)
+                .map(Some)
+                .map(|x| x.into_iter().flatten())
         }
     }
 
@@ -111,36 +125,62 @@ impl StoragePaths {
     /// The yielded venvs need not be correct (may have invalid data).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_vens(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_vens(&self) -> QuackResult<impl Iterator<Item = io::Result<DirEntry>>> {
         let dir = self.venv_dir.as_path();
         if !dir.is_dir() {
-            None
+            Ok(None.into_iter().flatten())
         } else {
-            Some(dir.read_dir().map_err(Into::into))
+            dir.read_dir()
+                .map_err(Into::into)
+                .map(Some)
+                .map(|x| x.into_iter().flatten())
         }
     }
 
     /// Returns an iterator over all sync locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_sync_locks(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_sync_locks(&self) -> QuackResult<impl Iterator<Item = io::Result<DirEntry>>> {
         let dir = self.sync_lock_base.as_path();
         if !dir.is_dir() {
-            None
+            Ok(None.into_iter().flatten())
         } else {
-            Some(dir.read_dir().map_err(Into::into))
+            dir.read_dir()
+                .map_err(Into::into)
+                .map(Some)
+                .map(|x| x.into_iter().flatten())
         }
     }
 
     /// Returns an iterator over all data locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_data_locks(&self) -> Option<QuackResult<ReadDir>> {
+    pub fn iter_data_locks(&self) -> QuackResult<impl Iterator<Item = io::Result<DirEntry>>> {
         let dir = self.data_lock_base.as_path();
         if !dir.is_dir() {
-            None
+            Ok(None.into_iter().flatten())
         } else {
-            Some(dir.read_dir().map_err(Into::into))
+            dir.read_dir()
+                .map_err(Into::into)
+                .map(Some)
+                .map(|x| x.into_iter().flatten())
         }
+    }
+
+    pub fn is_package_stored(&self, id: &PackageId) -> bool {
+        if id.is_local() {
+            return false;
+        }
+        let dir = self.pkg_dir(id);
+        dir.is_dir() && dir.join(CHECKSUM_FILENAME).exists()
+    }
+
+    pub fn add_checksum(&self, id: &PackageId) -> QuackResult<()> {
+        if id.is_local() {
+            qp_bail_internal!("attempting to add a checksum for a local package")
+        }
+        let dir = self.pkg_dir(id);
+        dir.join(CHECKSUM_FILENAME).touch()?;
+        Ok(())
     }
 }

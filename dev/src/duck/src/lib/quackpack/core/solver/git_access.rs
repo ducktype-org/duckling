@@ -1,10 +1,12 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use crate::StrId;
+use url::Url;
+
+use crate::{QuackResult, StrId};
 
 pub trait GitAccess {
-    fn git_path(&self, url: StrId, commit: StrId) -> &Path;
-    fn is_stored(&self, url: StrId, commit: StrId) -> bool;
-    fn store(&mut self, url: StrId, commit: StrId, sorce_path: &Path);
+    fn git_path(&self, url: Url, commit: StrId) -> PathBuf;
+    fn is_stored(&self, url: Url, commit: StrId) -> bool;
+    fn store(&mut self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()>;
     // fn get_cached_git
 }

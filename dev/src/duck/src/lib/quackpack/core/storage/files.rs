@@ -124,7 +124,7 @@ impl PathExt for Path {
 #[derive(Debug)]
 pub struct CorruptedFileError {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 /// Information required to build a package in a given dependencies realization.
 pub struct PackageFreeze {
     pub dependencies: HashMap<StrId, PackageId>,
@@ -143,12 +143,12 @@ struct GitFetchCacheEntry {
     result: GitId,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 /// Realization of requirements stored in virtual environment manifest.
 /// Contains all the information required to build and run code using the given virtual environment.
 pub struct VenvFreeze {
     pub direct_dependencies: HashMap<StrId, PackageId>,
-    pub dependencies: HashMap<StrId, PackageFreeze>,
+    pub dependencies: HashMap<PackageId, PackageFreeze>,
     pub git_fetch_cache: HashMap<Git, GitId>,
 }
 
@@ -241,7 +241,7 @@ pub fn fix_and_load_venv(
 ///
 /// Assumes that the current ``metadata`` file is valid. This is typically ensured
 /// by calling :func:`fix_and_load_venv` before.
-pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: StorageVenv) -> QuackResult<()> {
+pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &StorageVenv) -> QuackResult<()> {
     let path = storage.vevn_metadata(venv_id);
     let backup_path = storage.vevn_backup_metadata(venv_id);
     let existed = path.exists();
