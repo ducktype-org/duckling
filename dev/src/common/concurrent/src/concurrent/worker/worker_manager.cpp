@@ -6,7 +6,7 @@
 
 namespace concurrent::worker {
 
-	[[nodiscard]] std::vector<WRef> WorkerManager::getAllWorkers() const {
+	std::vector<WRef> WorkerManager::getAllWorkers() const {
 		return workers
 		     | std::ranges::views::transform([](const Box<Worker>& worker) { return worker.get(); })
 		     | std::ranges::to<std::vector<WRef>>();
@@ -38,7 +38,7 @@ namespace concurrent::worker {
 		// NOLINTEND(concurrency-mt-unsafe)
 	}
 
-	[[nodiscard]] bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
+	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
 
 	void WorkerManager::setNoTasksCallback(WRef worker, const NoTasksCallback& callback) {
 		worker->setNoTasksCallback(callback);

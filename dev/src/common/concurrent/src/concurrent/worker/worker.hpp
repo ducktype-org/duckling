@@ -1,7 +1,5 @@
 #pragma once
 
-#include <concurrent/worker/task.hpp>
-
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
