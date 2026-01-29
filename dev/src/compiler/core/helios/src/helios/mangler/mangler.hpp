@@ -1,4 +1,4 @@
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>
@@ -40,6 +40,8 @@ namespace compiler::helios::mangler {
 
 	/**
 	 * @brief Gets the mangled name of a symbol from SymID.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 

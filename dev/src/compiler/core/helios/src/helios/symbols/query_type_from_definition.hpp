@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -19,6 +19,8 @@ namespace compiler::helios {
 	 *	...
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryTypeFromDefinition_Result>, ({}));
 }

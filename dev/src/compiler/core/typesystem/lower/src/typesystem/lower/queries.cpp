@@ -1,6 +1,6 @@
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsl {
 	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {

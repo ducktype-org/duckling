@@ -9,7 +9,7 @@
 #include <base/types/floats.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <type_traits>
 #include <variant>

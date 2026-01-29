@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
 			return (not parsed.hasErrors()) == good;
 		}
 
@@ -68,7 +68,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +89,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -122,7 +122,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, hashing::ComponentHash{}, context
+				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
 			);
 			return (not parsed.hasErrors()) == good;
 		}

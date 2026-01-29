@@ -13,9 +13,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
@@ -30,7 +31,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/query_errors.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -528,6 +529,12 @@ namespace compiler::helios {
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx, return_type);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
+
+				if (stmt_maker.is_failed) {
+					// @TODO: #1753 change here to grab errors from all statements.
+					query::throwFailed();
+				}
+
 				if (stmt_maker.out.has_value())
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
@@ -560,20 +567,29 @@ namespace compiler::helios {
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
 				return block;
 			} else {
-				ctx.log(
-					makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-						stmt->getSourcePosition(),
-						"Function body in single-statement function must be an expression statement"
-					)
-				);
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
 
+		/**
+		 * @brief Visitor that creates HOUT statements from PST statements.
+		 * It is used locally in queryCodeOfCodeBlock.
+		 */
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&   ctx;
 			tsh::SymbolType<> return_type;
 
+			/**
+			 * Whether the statement generation has failed.
+			 */
+			bool is_failed = false;
+
+			/**
+			 * The output statement.
+			 * If is_failed is false, but out is empty, it means that the PST statement
+			 * did not produce any HOUT statement (e.g., alias or using).
+			 */
 			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
@@ -647,10 +663,6 @@ namespace compiler::helios {
 					return;
 				}
 
-				// When this code was being written, this check could not be tested.
-				// The optional result of this visitor is getting unwrapped without
-				// checking for emptiness, which causes a panic.
-				// @todo write a test for this once helios error handling is more robust
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -734,17 +746,10 @@ namespace compiler::helios {
 				if (stmt->getValue().empty()) {
 					// no initial value case
 
-					// When this code was being written, this check could not be tested.
-					// The optional result of this visitor is getting unwrapped without
-					// checking for emptiness, which causes a panic.
-					// @todo write a test for this once helios error handling is more robust
 					if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-						ctx.log(makeBox<
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getSourcePosition(),
-							base::strConcat("Immutable variables must have an initial value")
-						));
-						return;  // fail
+						ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition()));
+						is_failed = true;
+						return;
 					}
 
 					throw base::NotYetImplemented(
@@ -765,8 +770,8 @@ namespace compiler::helios {
 			}
 
 			void visitConst(pst::Access<pst::Const>) override {
-				// @TODO: #1666 Support const statements in function bodies.
-				CORE_PANIC("Const stmt in function body not supported in HOUT yet\n");
+				// Consts inside functions do not produce any HOUT statement.
+				// They are translated to HOUT global data instead.
 			}
 		};
 

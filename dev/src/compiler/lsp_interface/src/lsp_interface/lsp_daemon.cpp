@@ -19,6 +19,7 @@ POP_DIAGNOSTIC;
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
+#include "validation.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -29,7 +30,7 @@ POP_DIAGNOSTIC;
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 /**
  * @brief Starts the LSP server on the specified port.
@@ -40,7 +41,7 @@ void server(i32 port) {
 	crow::SimpleApp                           app;
 	lsp::ExportKeywords                       lsp;
 	std::unordered_map<std::string, fs::File> files;
-	auto virtual_root = fs::FileManager::createRandomVirtualDirectory();
+	auto virtual_root = fs::FileManager::getVirtualRootDirectory();
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -120,18 +121,20 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([&virtual_root](const std::string& base64_path) {
 		try {
-			const auto path = base64::decode_into<std::string>(base64_path);
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			auto       path          = virtual_root.getFilePath().join(relative_path);
+			if (not path.exists()) return crow::response(404, "File not found");
 
-			if (!virtual_root.getFilePath().join(path).exists())
-				return crow::response(404, "File not found");
-
-			auto              file   = fs::File(virtual_root.getFilePath().join(path));
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
-			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
-			return crow::response(200, ss.str());
-		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+			const auto file     = fs::File(path);
+			auto       json_str = lsp::getDiagnosticJsonFromCompiler(file);
+			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
+			crow::response res(200, json_str);
+			res.set_header("Content-Type", "application/json");
+			return res;
+		} catch (const std::exception& e) {
+			CROW_LOG_ERROR << e.what();
+			return crow::response(400, e.what());
+		}
 	});
 
 	/**
@@ -177,7 +180,7 @@ void server(i32 port) {
 			query::utils::withContextDo([&file, &out, offset](query::Context& ctx) {
 				auto src_files = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 				for (auto& src_file: src_files) {
-					auto pst = ctx.query<compiler::frontend::QueryFilePST>(src_file->getFileID());
+					auto pst        = src_file->getPST();
 					auto pst_root   = pst->getRootElement();
 					auto element    = lsp::findElement(pst_root, offset, true);
 					auto definition = lsp::findDefinition(element, ctx);

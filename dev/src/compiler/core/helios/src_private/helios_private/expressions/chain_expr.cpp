@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "errors.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -14,7 +16,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -30,7 +32,7 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
 
@@ -725,12 +727,10 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.log(
-					dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>::make(
-						chain_elements[0].unlock(query_ctx)->getSourcePosition(),
-						"Chain expression is empty"
-					)
-				);
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Chain expression resulted in empty expression sequence.",
+					chain_elements[0].unlock(query_ctx)->getSourcePosition()
+				));
 				return query::Failed();
 			}
 

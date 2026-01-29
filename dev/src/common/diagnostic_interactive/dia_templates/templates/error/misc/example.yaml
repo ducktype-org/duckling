@@ -1,0 +1,40 @@
+metadata:
+  type: "error"
+  family: "misc"
+  name: "example"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the placeholder is located."
+  
+  code_location:
+    description: "Location of the code snippet."
+    component_type: "code_location"
+
+  some_argument:
+    description: "Some clue about the error."
+
+
+header_message:
+  - "This is an example non-aggresive error message."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "Try better."
+
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: 
+      - "The issue is "
+      - param: "some_argument"
+

@@ -24,6 +24,8 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
+
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();

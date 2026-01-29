@@ -7,16 +7,16 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <iostream>
 
 void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
+	if (query::Context::int_logger.messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
+		query::Context::int_logger.dumpLog(true, std::cerr);
 	}
 }
 
