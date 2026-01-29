@@ -5,20 +5,28 @@
 #include <random>
 
 namespace concurrent::worker {
-	void Worker::scheduleTask(Task&& task) {
+	void Worker::scheduleTask(const Task& task) {
 		CORE_ASSERT(loop_run_flag, "Cannot push task to stopped worker");
 		{
 			std::scoped_lock lock(mut);
-			task_queue.push(std::move(task));
 			is_free = false;
+			task_queue.push(task);
 		}
 		task_cv.notify_one();
 	}
 
-	bool Worker::isFree() const {
-		std::scoped_lock lock(mut);
-		return is_free;
+	bool Worker::scheduleTaskIfFree(const Task& task) {
+		{
+			std::scoped_lock lock(mut);
+			if (!is_free) return false;
+			is_free = false;
+			task_queue.push(task);
+		}
+		task_cv.notify_one();
+		return true;
 	}
+
+	bool Worker::isFree() const { return is_free; }
 
 	Worker::~Worker() {
 		{
@@ -75,4 +83,6 @@ namespace concurrent::worker {
 	}
 
 	Worker::Worker(usize seed): rng(seed) {}
+
+
 }

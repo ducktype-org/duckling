@@ -164,7 +164,7 @@ private:
 						if (!tasks.empty()) {
 							auto task = tasks.front();
 							tasks.pop();
-							worker->scheduleTask(std::move(task));
+							worker->scheduleTask(task);
 						} else {
 							break;
 						}

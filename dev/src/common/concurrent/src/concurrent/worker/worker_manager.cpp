@@ -21,20 +21,17 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	void WorkerManager::scheduleTaskOnWorker(WRef worker, Task task) {
-		worker->scheduleTask(std::move(task));
+	void WorkerManager::scheduleTaskOnWorker(WRef worker, const Task& task) {
+		worker->scheduleTask(task);
 	}
 
-	void WorkerManager::scheduleTaskOnAnyWorker(Task task) {
-		for (auto& worker: workers) {
-			if (worker->isFree()) {
-				worker->scheduleTask(std::move(task));
-				return;
-			}
-		}
+	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+		for (auto& worker: workers)
+			if (worker->scheduleTaskIfFree(task)) return;
+
 		// NOLINTBEGIN(concurrency-mt-unsafe)
 		// If no free worker is found, push to a random worker
-		workers[static_cast<usize>(std::rand()) % (workers.size())]->scheduleTask(std::move(task));
+		workers[static_cast<usize>(std::rand()) % (workers.size())]->scheduleTask(task);
 		// NOLINTEND(concurrency-mt-unsafe)
 	}
 

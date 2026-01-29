@@ -33,6 +33,7 @@ namespace concurrent::worker {
 		friend class WorkerManager;
 
 	public:
+		Worker()                         = delete;
 		Worker(const Worker&)            = delete;
 		Worker(Worker&&)                 = delete;
 		Worker& operator=(const Worker&) = delete;
@@ -44,7 +45,14 @@ namespace concurrent::worker {
 		 * @brief Pushes a task to the worker's task queue.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTask(Task&& task);
+		void scheduleTask(const Task& task);
+
+		/**
+		 * @brief Pushes a task to the worker's task queue only if the worker is free.
+		 * @param task The task to be executed.
+		 * @return True if the task was pushed, false otherwise.
+		 */
+		bool scheduleTaskIfFree(const Task& task);
 
 		/**
 		 * @brief Checks if a worker is free.
