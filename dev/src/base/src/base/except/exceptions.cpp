@@ -38,7 +38,8 @@ namespace base {
 		 * to avoid any possible issues during panic the handling itself.
 		 *
 		 * \parallel There is no synchronization here, if multiple threads panic at the same time,
-		 * it will race with UB.
+		 * it will race with UB. There is not trivial way to solve it, since we don't want to use
+		 * potentially throwing mechanisms.
 		 */
 		std::string* firstPanicWhatStr() {
 			static std::string what_str;
