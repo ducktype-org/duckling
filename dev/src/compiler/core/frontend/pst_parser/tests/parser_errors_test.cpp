@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
 			return (not parsed.hasErrors()) == good;
 		}
 
@@ -68,7 +68,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +89,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, hashing::ComponentHash{}, pst::CodeBlock::CodeBlockType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -122,7 +122,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, hashing::ComponentHash{}, context
+				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -226,15 +226,15 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, true>  simple_round_group{ "(a + b)" };
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
-	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
-	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
-	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
+	Example<pst::Stmt, true> simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true> simple_stmt_implicit_return{ "x = a + b" };
+	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simple_using{ "using std.math" };
 
-	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\";" };
+	Example<pst::Stmt, true>  public_specifier{ "public expand \"return 0;\"" };
 	Example<pst::Stmt, true>  private_specifier{ "private fun foo() = {}" };
 	Example<pst::Stmt, true>  protected_specifier{ "protected class x{}" };
 	Example<pst::Stmt, true>  public_block{ "public {class x{}}" };

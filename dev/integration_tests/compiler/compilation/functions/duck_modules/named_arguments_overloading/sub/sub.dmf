@@ -1,0 +1,10 @@
+
+const x = 1;
+
+fun foo(a: i64) -> i64 = {
+    return x + a;
+}
+
+fun foo(c: i64) -> i64 = {
+    return x + c + 10;
+}

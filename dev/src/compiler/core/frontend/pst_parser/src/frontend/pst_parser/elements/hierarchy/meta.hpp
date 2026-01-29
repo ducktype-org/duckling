@@ -11,8 +11,6 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 
-#include <set>
-
 namespace pst {
 
 	using TokenStreamCondition = bool(const tpc::TokenStream&, i64);
@@ -78,11 +76,17 @@ namespace pst {
 		NonClassStmt
 	};
 
+	namespace internal {
+		void makeImplicitReturn(MRef<Stmt>);
+	}
+
 	/**
 	 * @brief A general element that is a common ancestor of all statements.
 	 */
 	class Stmt: public LangElement {
 		StmtKind kind;
+
+		friend void internal::makeImplicitReturn(MRef<Stmt>);
 
 	protected:
 		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
@@ -102,6 +106,7 @@ namespace pst {
 		};
 
 		Prefixes prefixes;
+		bool     implicit_return{};
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  LangElement(position),
@@ -122,6 +127,8 @@ namespace pst {
 		void dprintPrefix(std::ostream& out) const override;
 
 		void calcElementPathHashRecursive() override;
+
+		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
 		[[nodiscard]]
@@ -156,6 +163,11 @@ namespace pst {
 		[[nodiscard]]
 		bool isStatement() const final {
 			return true;
+		}
+
+		[[nodiscard]]
+		bool isImplicitReturn() const {
+			return implicit_return;
 		}
 
 		[[nodiscard]]

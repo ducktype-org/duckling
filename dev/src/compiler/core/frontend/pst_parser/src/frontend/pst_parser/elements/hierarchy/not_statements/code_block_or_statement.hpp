@@ -23,7 +23,7 @@ namespace pst {
 		}
 
 		static MBox<CodeBlockOrStmt> parse(
-			LangParserState& state, CodeBlock::CodeBlockType code_block_order_type
+			LangParserState& state, BlockOrderType code_block_order_type
 		);
 		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
