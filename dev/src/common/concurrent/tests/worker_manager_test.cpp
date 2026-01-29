@@ -40,7 +40,8 @@ private:
 		constexpr usize    TASK_WAIT_TIME_MS     = 100;
 		for (const auto& id: worker_manager.getAllWorkers()) {
 			worker_manager.scheduleTaskOnWorker(
-				id, [&task_finished_counter, TASK_WAIT_TIME_MS](concurrent::worker::WRef) {
+				id,
+				[&task_finished_counter, TASK_WAIT_TIME_MS](concurrent::worker::WRef) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(TASK_WAIT_TIME_MS));
 					task_finished_counter.fetch_add(1, std::memory_order_relaxed);
 				}
@@ -53,7 +54,7 @@ private:
 		while (task_finished_counter.load(std::memory_order_relaxed)
 		           < concurrent::worker::getWorkerCount()
 		       || no_task_counter.load(std::memory_order_relaxed)
-		              < concurrent::worker::getWorkerCount())
+		              < concurrent::worker::getWorkerCount() * 2)
 			std::this_thread::yield();
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
@@ -131,7 +132,8 @@ private:
 
 		for (const auto& id: worker_manager.getAllWorkers()) {
 			worker_manager.setNoTasksCallback(
-				id, [&tasks, &task_mutex](concurrent::worker::WRef worker) {
+				id,
+				[&tasks, &task_mutex](concurrent::worker::WRef worker) {
 					// This callback is invoked when a worker has no tasks.
 				    // We can use it to assign new tasks to the worker.
 					std::scoped_lock lock(task_mutex);
