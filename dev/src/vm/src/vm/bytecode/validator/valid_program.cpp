@@ -11,7 +11,7 @@
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
-	auto program         = ValidProgram();
+	auto program = ValidProgram();
 	program.insertTypes(getBuiltinTypes());
 	return program;
 }
@@ -23,8 +23,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
-	const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;

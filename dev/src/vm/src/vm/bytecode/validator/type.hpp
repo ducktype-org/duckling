@@ -3,10 +3,12 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
-#include <base/types/bits_and_bytes.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
+
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <unordered_set>
 #include <variant>
@@ -14,69 +16,20 @@
 namespace vm::code::type {
 	using TypeID = usize;
 
-	// @TODO: #1306 TypeRef should become base::CRef<Type>
-	using TypeRef = TypeID;
+	class Type;
+	using TypeCRef = base::CRef<Type>;
 
 	namespace kind {
-		struct Primitive {
-			usize size;
-		};
-
-		struct Pointer {
-			TypeRef inner;
-		};
-
-		struct FixedSizeTable {
-			TypeRef inner;
-			usize   table_size;
-		};
-
-		struct DynamicTable {
-			TypeRef inner;
-		};
-
-		/**
-         * @brief Struct/Class (data) type representation.
-         * If declared as a class contains a vtable field at the front of field vector.
-         */
-		struct Data {
-			struct Field {
-				Bytes   offset;
-				TypeRef type;
-			};
-
-			STRONG_TYPEDEF_ID_DIRECT_CREATION(FieldID);
-
-			base::HashMap<base::StrID, FieldID> field_name_map;
-			std::vector<Field>                  fields;
-
-			// All the types this type directly or indirectly inherits from.
-			std::unordered_set<TypeRef> super_types;
-
-            // In a class-like way. Only one superclass allowed
-			base::Optional<TypeRef> extends;
-
-            // In a interface-like way. Multiple interfaces allowed
-			std::unordered_set<TypeRef> implements;
-
-			bool is_abstract = false;
-		};
-
-		struct Variant {
-			usize                type_tag_size_bytes;
-			std::vector<TypeRef> alternatives;
-		};
-
-		struct Function {
-			std::vector<TypeRef> parameters;
-			TypeRef              result;
-		};
-
-		struct Opaque {
-			usize size;
-		};
+		struct Primitive;
+		struct Pointer;
+		struct FixedSizeTable;
+		struct DynamicTable;
+		struct Data;
+		struct DataField;
+		struct Variant;
+		struct Function;
+		struct Opaque;
 	}
-
 
 	template<class T>
 	concept InnerType = base::IsOneOf<
@@ -97,11 +50,6 @@ namespace vm::code::type {
 			  name(name),
 			  id(id),
 			  inner(std::move(inner_type)) {}
-
-		[[nodiscard]]
-		TypeRef getRef() const {
-			return id;
-		}
 
 		[[nodiscard]] base::StrID getName() const { return name; }
 
@@ -125,14 +73,9 @@ namespace vm::code::type {
 			return size;
 		}
 
-		// @todo: Interface below may change
-
-		// @TODO: move function below to kind:: structures without `option`
-		// Forward here version with option
-
 		/**
 		 * Get inner type of pointer, fixed size or dynamic table
-		 * @return some(inner type) for pointer, fixed size or dynamic table. none otherwise
+		 * @return Some(inner type) for pointer, fixed size or dynamic table. none otherwise
 		 */
 		base::Optional<TypeCRef> getInnerType() const;
 
@@ -141,14 +84,13 @@ namespace vm::code::type {
 
 		// data
 		[[nodiscard]]
-		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+		base::Optional<Bytes> getFieldOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
-		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
+		base::Optional<base::CRef<std::vector<kind::DataField>>> getFields() const;
 
 		// variant
 		base::Optional<usize>                 getTypeTagSizeBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
-
 
 		// inheritance
 		[[nodiscard]]
@@ -174,7 +116,71 @@ namespace vm::code::type {
 		base::StrID name;
 		TypeID      id;
 
-		std::variant<Primitive, Pointer> inner;
+		Inner inner;
 	};
+
+	namespace kind {
+		struct Primitive {
+			usize size;
+		};
+
+		struct Pointer {
+			TypeRef inner;
+
+			Pointer(TypeRef inner): inner(inner) {}
+		};
+
+		struct FixedSizeTable {
+			TypeRef inner;
+			usize   table_size;
+		};
+
+		struct DynamicTable {
+			TypeRef inner;
+		};
+
+		/**
+		 * @brief A field inside a Data type.
+		 */
+		struct DataField {
+			STRONG_TYPEDEF_ID_DIRECT_CREATION(FieldID);
+			Bytes   offset;
+			TypeRef type;
+		};
+
+		/**
+		 * @brief Struct/Class (data) type representation.
+		 * If declared as a class contains a vtable field at the front of field vector.
+		 */
+		struct Data {
+			base::HashMap<base::StrID, FieldID> field_name_map;
+			std::vector<DataField>              fields;
+
+			// All the types this type directly or indirectly inherits from.
+			std::unordered_set<TypeRef> super_types;
+
+			// In a class-like way. Only one superclass allowed
+			base::Optional<TypeRef> extends;
+
+			// In a interface-like way. Multiple interfaces allowed
+			std::unordered_set<TypeRef> implements;
+
+			bool is_abstract = false;
+		};
+
+		struct Variant {
+			usize                type_tag_size_bytes;
+			std::vector<TypeRef> alternatives;
+		};
+
+		struct Function {
+			std::vector<TypeRef> parameters;
+			TypeRef              result;
+		};
+
+		struct Opaque {
+			usize size;
+		};
+	}
 
 }

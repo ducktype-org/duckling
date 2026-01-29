@@ -28,7 +28,5 @@ namespace vm::code::detail {
 	 * @note Assumes that the newly added types won't invalidate the state. Assumes types are
 	 * validated.
 	 */
-	void rebuildTypeMetadata(
-		Ref<TypeMetadata> type_metadata, const ObjIdNameMap<TypeOfData>& types
-	);
+	void rebuildTypeMetadata(Ref<TypeMetadata> type_metadata, const ObjIdNameMap<TypeOfData>& types);
 }

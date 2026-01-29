@@ -1,9 +1,9 @@
 #include "type_builder.hpp"
 
-#include <vm/utils/stable_obj_id_name_map.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>
 
@@ -19,7 +19,7 @@ namespace {
 		const ErrorContextType&                  error_context_inh,
 		base::HashMap<base::StrID, base::StrID>& vtable,
 		vm::TypeMetadata&                        metadata,
-		const vm::ObjIdNameMap<TypeOfData>&    types
+		const vm::ObjIdNameMap<TypeOfData>&      types
 	) {
 		for (const auto& impl: inh.implementations) vtable.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
@@ -46,7 +46,9 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	FieldVector buildFieldVector(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const vm::ObjIdNameMap<TypeOfData>& types
+		const InheritableType&              inh,
+		vm::TypeMetadata&                   metadata,
+		const vm::ObjIdNameMap<TypeOfData>& types
 	) {
 		auto to_low_type = [&](const TypeOfData& tod) {
 			return metadata.at(VISIT(tod, type, return type.name));
@@ -78,7 +80,9 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	vm::InheritanceMetadata buildInheritanceMetadata(
-		const InheritableType& inh, vm::TypeMetadata& metadata, const vm::ObjIdNameMap<TypeOfData>& types
+		const InheritableType&              inh,
+		vm::TypeMetadata&                   metadata,
+		const vm::ObjIdNameMap<TypeOfData>& types
 	) {
 		vm::TypeCRef tp    = metadata.at(inh.name);
 		auto get_type_cref = [&](base::StrID name) -> vm::TypeCRef { return metadata.at(name); };

@@ -8,12 +8,11 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type_context.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -45,7 +44,9 @@ namespace {
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const PointerType& pointer, const ObjIdNameMap<TypeOfData>& tod_map, Args&&... error_args
+		const vm::code::type::kind::Pointer& pointer,
+		const ObjIdNameMap<TypeOfData>&      tod_map,
+		Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
 		if (!std::holds_alternative<ExpectedT>(*pointed_type))
@@ -1331,9 +1332,8 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(
-		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
-	) const {
+	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
+		const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
