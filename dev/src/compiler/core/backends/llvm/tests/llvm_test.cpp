@@ -224,8 +224,32 @@ private:
 		auto        llvm_module = getLLVMModuleFromPath("modules/boxes");
 		std::string ir          = llvm_module.dumpLLVMToString();
 
-		std::cout << "LLVM IR:\n";
-		std::cout << ir << '\n';
+		// @TODO: #1894 This test is far to simple. Make it better once it's possible.
+		auto count_matches = [&](const std::string& text) {
+			std::smatch matches;
+			int         count        = 0;
+			std::string search_range = ir;
+			std::regex  ptr_load_regex{ text };
+			while (std::regex_search(search_range, matches, ptr_load_regex)) {
+				count++;
+				search_range = matches.suffix();
+			}
+			return count;
+		};
+
+		std::regex alloc_re(R"(call ptr @__duck_alloc\(i64 4\))");
+		assertTrue(
+			std::regex_search(ir, alloc_re), "Expected @__duck_alloc with size 4 for 'box i32'"
+		);
+		std::regex store_re(R"(store i32 42, ptr)");
+		assertTrue(std::regex_search(ir, store_re), "Expected 'store i32 42' for box init");
+		std::regex dealloc_re(R"(call void @__duck_dealloc\(ptr)");
+		assertTrue(std::regex_search(ir, dealloc_re), "Expected @__duck_dealloc");
+
+		int alloc_count   = count_matches(R"(call ptr @__duck_alloc)");
+		int dealloc_count = count_matches(R"(call void @__duck_dealloc)");
+		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
+		ASSERT_EQUAL_PRINT(alloc_count, 1);
 	}
 
 	void floatingPointTest() {
