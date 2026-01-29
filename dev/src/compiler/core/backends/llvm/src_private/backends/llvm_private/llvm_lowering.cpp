@@ -988,7 +988,7 @@ namespace compiler::backend_llvm {
 					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
 
 				// Store the value in the allocated memory.
-				// TODO: #1895 This is suboptimal. In the future class constructors should take the
+				// @TODO: #1895 This is suboptimal. In the future class constructors should take the
 				// allocated memory pointer as a parameter and construct it in-place.
 				builder.CreateStore(value_to_box, allocated_ptr);
 				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);

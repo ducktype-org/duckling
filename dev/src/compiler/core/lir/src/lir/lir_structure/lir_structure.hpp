@@ -28,7 +28,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Assign,
 	AddressOf, 
 	AllocBox,
-	// @TODO: XXX This approach may be temporary and depends on how we handle destructors in the future.
+	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
 	FreeBox,
 
 	/**

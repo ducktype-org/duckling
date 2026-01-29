@@ -129,15 +129,11 @@ void builtin_free_string(str s) {
 // This is an intended abstraction over the allocation. In the future, different allocators for
 // different architectures will be supported here. For now we just malloc.
 void* __duck_alloc(uint64_t size) {
-	printf("ALLOC");
 	void* ptr = malloc(size);
 	if (ptr == nullptr) exit(1);
 	return ptr;
 }
 
-void __duck_dealloc(void* ptr) {
-	printf("FREE");
-	free(ptr);
-}
+void __duck_dealloc(void* ptr) { free(ptr); }
 
 // NOLINTEND

@@ -2,8 +2,6 @@
  * @file mir_tests.cpp
  */
 
-#include "typesystem/higher/symbol_type.hpp"
-
 #include <ctv/ctv.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
