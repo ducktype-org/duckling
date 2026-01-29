@@ -175,8 +175,7 @@ namespace query::internal {
 			offset += sizeof(base::Bit256);
 
 			// Reconstruct NodeID
-			NodeID node_id{ QueryID{ q_id_val },
-				                      KeyHash{ .val = hash_val } };
+			NodeID node_id{ QueryID{ q_id_val }, KeyHash{ .val = hash_val } };
 
 			// Assert that NodeID is registered and has preserve_in_graph = true
 			CORE_ASSERT(

@@ -4,6 +4,7 @@
 #include "query_graph.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
@@ -83,7 +84,7 @@ namespace query::internal {
 			 * Metadata from previous compilation.
 			 * Metadata for green nodes will be moved into current metadata_storage during merge.
 			 */
-			MetadataStorage metadata;
+			base::Optional<MetadataStorage> metadata;
 
 			PreviousCompilation() = delete;
 

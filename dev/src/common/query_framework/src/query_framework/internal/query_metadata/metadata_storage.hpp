@@ -127,9 +127,11 @@ namespace query::internal {
 		 * @brief Data structure for registered metadata type.
 		 */
 		struct RegisterData {
-			DeserializerVariant       deserializer;
+			DeserializerVariant deserializer;
 		};
+
 		using TypeId = BaseMetadata::TypeId;
+
 	private:
 		base::HashMap<TypeId, RegisterData> registry;
 
@@ -179,7 +181,7 @@ namespace query::internal {
 				"Metadata type already registered: {}",
 				type_id.strView()
 			);
-			registry.put(type_id, RegisterData{ .deserializer =deserialize_func });
+			registry.put(type_id, RegisterData{ .deserializer = deserialize_func });
 			return true;
 		}
 
@@ -219,11 +221,12 @@ namespace query::internal {
 	 * @brief Data structure for extracted node metadata (for move operations).
 	 */
 	struct ExtractedNodeMetadata final {
-		NodeID                                           node_id;
+		NodeID                                                                        node_id;
 		base::StableHashMap<MetadataRegistry::TypeId, std::vector<Box<BaseMetadata>>> type_map;
 
 		ExtractedNodeMetadata(
-			NodeID id, base::StableHashMap<MetadataRegistry::TypeId, std::vector<Box<BaseMetadata>>>&& map
+			NodeID                                                                          id,
+			base::StableHashMap<MetadataRegistry::TypeId, std::vector<Box<BaseMetadata>>>&& map
 		):
 			  node_id(id),
 			  type_map(std::move(map)) {}
@@ -244,7 +247,7 @@ namespace query::internal {
 		 */
 		using TypeId = BaseMetadata::TypeId;
 
-		using TypeMap     = base::StableHashMap<TypeId, std::vector<Box<BaseMetadata>>>;
+		using TypeMap = base::StableHashMap<TypeId, std::vector<Box<BaseMetadata>>>;
 
 		/**
 		 * @brief The main storage map: NodeID -> TypeMap
@@ -259,12 +262,12 @@ namespace query::internal {
 		MetadataMap storage;
 
 	public:
-        MetadataStorage()                                  = default;  
-        MetadataStorage(MetadataStorage&&)                 = default;  
-	
-        MetadataStorage& operator=(MetadataStorage&&)      = delete;  
-        MetadataStorage(const MetadataStorage&)            = delete;  
-        MetadataStorage& operator=(const MetadataStorage&) = delete;  
+		MetadataStorage()                  = default;
+		MetadataStorage(MetadataStorage&&) = default;
+
+		MetadataStorage& operator=(MetadataStorage&&)      = delete;
+		MetadataStorage(const MetadataStorage&)            = delete;
+		MetadataStorage& operator=(const MetadataStorage&) = delete;
 
 		/**
 		 * @brief Add a metadata instance to a node.

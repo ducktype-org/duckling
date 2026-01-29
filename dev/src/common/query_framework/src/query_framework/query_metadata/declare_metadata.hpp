@@ -63,9 +63,12 @@ namespace query {
 
 	/**
 	 * @brief Concept for trivially copyable types that can be serialized automatically.
+	 * More info: https://en.cppreference.com/w/cpp/types/is_trivially_copyable.html
 	 */
 	template<typename T>
-	concept TriviallySerializable = std::is_trivially_copyable_v<T>;
+	concept TriviallySerializable = std::is_trivially_copyable_v<
+		T>;  // && std::is_implicit_lifetime_v<T>: This is not supported by gcc14, although
+	         // std::is_trivially_copyable_v<T> implies std::is_implicit_lifetime_v<T>
 
 }  // namespace query
 
@@ -83,120 +86,130 @@ namespace query {
  * Example:
  * @code
  * DECLARE_METADATA(SourceLocation, SourceLocationData);
- * // Creates: struct metadata_SourceLocation : public query::BaseMetadata { ... }
+ * // Usage:
+ * ctx.addMetadata<metadata_SourceLocation>(loc_data);
  * @endcode
  */
-#define DECLARE_METADATA(name, typ)                                                            \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {                               \
-		static_assert(                                                                         \
-			::query::HasSerialize<typ>,                                                        \
-			"Type '" #typ "' must implement 'std::vector<std::byte> serialize() const'"        \
-		);                                                                                     \
-		static_assert(                                                                         \
-			::query::HasDeserialize<typ>,                                                      \
-			"Type '" #typ "' must implement 'static " #typ                                     \
-			" deserialize(std::span<const std::byte>)'"                                        \
-		);                                                                                     \
-                                                                                               \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };           \
-                                                                                               \
-		typ value;                                                                             \
-                                                                                               \
-		metadata_##name() = delete;                                                            \
-                                                                                               \
-		explicit metadata_##name(typ val): value(std::move(val)) {}                            \
-                                                                                               \
-		template<typename... Args>                                                             \
-		requires std::constructible_from<typ, Args...>                                         \
-		explicit metadata_##name(Args&&... args): value(std::forward<Args>(args)...) {}        \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		std::vector<std::byte> serialize() const override {                                    \
-			return value.serialize();                                                          \
-		}                                                                                      \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		base::StrID getTypeID() const override {                                               \
-			return TYPE_ID;                                                                    \
-		}                                                                                      \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		static metadata_##name deserialize(std::span<const std::byte> data) {                  \
-			return metadata_##name{ typ::deserialize(data) };                                  \
-		}                                                                                      \
-                                                                                               \
-	private:                                                                                   \
-		static Box<::query::internal::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
-			return makeBox<metadata_##name>(metadata_##name::deserialize(data));               \
-		}                                                                                      \
-		static bool _doRegister() {                                                            \
-			return ::query::internal::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
-		}                                                                                      \
-		static inline bool _registered = _doRegister();                                        \
+#define DECLARE_METADATA(name, type)                                                               \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {                         \
+		using Self = metadata_##name;                                                              \
+                                                                                                   \
+		static_assert(                                                                             \
+			::query::HasSerialize<type>,                                                           \
+			"type '" #type "' must implement 'std::vector<std::byte> serialize() const'"           \
+		);                                                                                         \
+		static_assert(                                                                             \
+			::query::HasDeserialize<type>,                                                         \
+			"Type '" #type "' must implement 'static " #type                                       \
+			" deserialize(std::span<const std::byte>)'"                                            \
+		);                                                                                         \
+                                                                                                   \
+		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };               \
+                                                                                                   \
+		type value;                                                                                \
+                                                                                                   \
+		Self() = delete;                                                                           \
+                                                                                                   \
+                                                                                                   \
+		template<typename... Args>                                                                 \
+		requires std::constructible_from<type, Args...>                                            \
+		explicit Self(Args&&... args): value(std::forward<Args>(args)...) {}                       \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		std::vector<std::byte> serialize() const override {                                        \
+			return value.serialize();                                                              \
+		}                                                                                          \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		base::StrID getTypeID() const override {                                                   \
+			return TYPE_ID;                                                                        \
+		}                                                                                          \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		static Self deserialize(std::span<const std::byte> data) {                                 \
+			return Self{ type::deserialize(data) };                                                \
+		}                                                                                          \
+                                                                                                   \
+	private:                                                                                       \
+		static Box<::query::internal::BaseMetadata> boxDeserialize(std::span<const std::byte> data \
+		) {                                                                                        \
+			return makeBox<Self>(Self::deserialize(data));                                         \
+		}                                                                                          \
+		static bool doRegister() {                                                                 \
+			return ::query::internal::MetadataRegistry::instance().registerType(                   \
+				TYPE_ID, &boxDeserialize                                                           \
+			);                                                                                     \
+		}                                                                                          \
+		static inline bool registered = doRegister();                                              \
 	}
 
 /**
  * @brief Macro to declare a metadata type for trivially copyable values.
  *
- * Creates a struct `metadata_##name` that wraps a value of type `typ`.
- * The wrapped type must be trivially copyable (std::is_trivially_copyable_v<typ> == true).
+ * Creates a struct `metadata_##name` that wraps a value of type `type`.
+ * The wrapped type must be trivially copyable (std::is_trivially_copyable_v<type> == true).
  *
  * Serialization/deserialization is automatic using memcpy.
  *
  * @param name The name suffix for the metadata struct (creates metadata_##name)
- * @param typ The type of value this metadata wraps (must be trivially copyable)
+ * @param type The type of value this metadata wraps (must be trivially copyable)
  *
  * Example:
  * @code
  * DECLARE_METADATA_SIMPLE(Counter, u64);
- * // Creates: struct metadata_Counter : public query::BaseMetadata { u64 value; ... }
+ * // Usage:
+ * ctx.addMetadata<metadata_Counter>(42);
  * @endcode
  */
-#define DECLARE_METADATA_SIMPLE(name, typ)                                                     \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {                               \
-		static_assert(                                                                         \
-			::query::TriviallySerializable<typ>,                                               \
-			"Type '" #typ                                                                      \
-			"' must be trivially copyable for DECLARE_METADATA_SIMPLE. "                       \
-			"Use DECLARE_METADATA for complex types."                                          \
-		);                                                                                     \
-                                                                                               \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };           \
-                                                                                               \
-		typ value;                                                                             \
-                                                                                               \
-		metadata_##name() = delete;                                                            \
-                                                                                               \
-		explicit metadata_##name(typ val): value(std::move(val)) {}                            \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		std::vector<std::byte> serialize() const override {                                    \
-			std::vector<std::byte> result(sizeof(typ));                                        \
-			std::memcpy(result.data(), &value, sizeof(typ));                                   \
-			return result;                                                                     \
-		}                                                                                      \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		base::StrID getTypeID() const override {                                               \
-			return TYPE_ID;                                                                    \
-		}                                                                                      \
-                                                                                               \
-		[[nodiscard]]                                                                          \
-		static metadata_##name deserialize(std::span<const std::byte> data) {                  \
-			CORE_ASSERT(data.size() >= sizeof(typ), "Insufficient data for deserialization");  \
-			alignas(typ) std::array<unsigned char, sizeof(typ)> buffer{};                      \
-			std::memcpy(buffer.data(), data.data(), sizeof(typ));                              \
-			return metadata_##name{ *reinterpret_cast<const typ*>(buffer.data()) };            \
-		}                                                                                      \
-                                                                                               \
-	private:                                                                                   \
-		static Box<::query::internal::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
-			return makeBox<metadata_##name>(metadata_##name::deserialize(data));               \
-		}                                                                                      \
-		static bool _doRegister() {                                                            \
-			return ::query::internal::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
-		}                                                                                      \
-		static inline bool _registered = _doRegister();                                        \
+#define DECLARE_METADATA_SIMPLE(name, type)                                                        \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {                         \
+		using Self = metadata_##name;                                                              \
+		static_assert(                                                                             \
+			::query::TriviallySerializable<type>,                                                  \
+			"Type '" #type                                                                         \
+			"' must be trivially copyable for DECLARE_METADATA_SIMPLE. "                           \
+			"Use DECLARE_METADATA for complex types."                                              \
+		);                                                                                         \
+                                                                                                   \
+		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };               \
+                                                                                                   \
+		type value;                                                                                \
+                                                                                                   \
+		Self() = delete;                                                                           \
+                                                                                                   \
+		explicit Self(type val): value(std::move(val)) {}                                          \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		std::vector<std::byte> serialize() const override {                                        \
+			std::vector<std::byte> result(sizeof(type));                                           \
+			std::memcpy(result.data(), &value, sizeof(type));                                      \
+			return result;                                                                         \
+		}                                                                                          \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		base::StrID getTypeID() const override {                                                   \
+			return TYPE_ID;                                                                        \
+		}                                                                                          \
+                                                                                                   \
+		[[nodiscard]]                                                                              \
+		static Self deserialize(std::span<const std::byte> data) {                                 \
+			CORE_ASSERT(data.size() == sizeof(type), "Bad data size for deserialization");         \
+			alignas(type) std::array<unsigned char, sizeof(type)> buffer{};                        \
+			std::memcpy(buffer.data(), data.data(), sizeof(type));                                 \
+			return Self{ *std::launder(reinterpret_cast<const type*>(buffer.data())) };            \
+		}                                                                                          \
+                                                                                                   \
+	private:                                                                                       \
+		static Box<::query::internal::BaseMetadata> boxDeserialize(std::span<const std::byte> data \
+		) {                                                                                        \
+			return makeBox<Self>(Self::deserialize(data));                                         \
+		}                                                                                          \
+		static bool doRegister() {                                                                 \
+			return ::query::internal::MetadataRegistry::instance().registerType(                   \
+				TYPE_ID, &boxDeserialize                                                           \
+			);                                                                                     \
+		}                                                                                          \
+		static inline bool registered = doRegister();                                              \
 	}
 
 /**
@@ -211,49 +224,51 @@ namespace query {
  * Example:
  * @code
  * DECLARE_METADATA_STRID(SourceFile);
- * // Creates: struct metadata_SourceFile : public query::BaseMetadata { base::StrID value; ... }
- *
  * // Usage:
  * ctx.addMetadata<metadata_SourceFile>(base::StrID{"src/main.duck"});
  * @endcode
  */
-#define DECLARE_METADATA_STRID(name)                                                              \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {                                  \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };              \
-                                                                                                  \
-		base::StrID value;                                                                        \
-                                                                                                  \
-		metadata_##name() = delete;                                                               \
-                                                                                                  \
-		explicit metadata_##name(base::StrID val): value(std::move(val)) {}                       \
-                                                                                                  \
-		[[nodiscard]]                                                                             \
-		std::vector<std::byte> serialize() const override {                                       \
-			/* Not used for StrID types - serialization uses getStrIDValue() */                   \
-			return {};                                                                            \
-		}                                                                                         \
-                                                                                                  \
-		[[nodiscard]]                                                                             \
-		base::StrID getTypeID() const override {                                                  \
-			return TYPE_ID;                                                                       \
-		}                                                                                         \
-                                                                                                  \
-		[[nodiscard]]                                                                             \
-		bool usesStrIDTable() const override {                                                    \
-			return true;                                                                          \
-		}                                                                                         \
-                                                                                                  \
-		[[nodiscard]]                                                                             \
-		base::StrID getStrIDValue() const override {                                              \
-			return value;                                                                         \
-		}                                                                                         \
-                                                                                                  \
-	private:                                                                                      \
-		static Box<::query::internal::BaseMetadata> _fromStrID(base::StrID str_value) {                     \
-			return makeBox<metadata_##name>(str_value);                                           \
-		}                                                                                         \
-		static bool _doRegister() {                                                               \
-			return ::query::internal::MetadataRegistry::instance().registerStrIDType(TYPE_ID, &_fromStrID); \
-		}                                                                                         \
-		static inline bool _registered = _doRegister();                                           \
+#define DECLARE_METADATA_STRID(name)                                                   \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {             \
+		using Self = metadata_##name;                                                  \
+                                                                                       \
+		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };   \
+                                                                                       \
+		base::StrID value;                                                             \
+                                                                                       \
+		Self() = delete;                                                               \
+                                                                                       \
+		explicit Self(base::StrID val): value(std::move(val)) {}                       \
+                                                                                       \
+		[[nodiscard]]                                                                  \
+		std::vector<std::byte> serialize() const override {                            \
+			CORE_PANIC("StrID metadata should use string table serialization");        \
+			CORE_UNREACHABLE;                                                          \
+		}                                                                              \
+                                                                                       \
+		[[nodiscard]]                                                                  \
+		base::StrID getTypeID() const override {                                       \
+			return TYPE_ID;                                                            \
+		}                                                                              \
+                                                                                       \
+		[[nodiscard]]                                                                  \
+		bool usesStrIDTable() const override {                                         \
+			return true;                                                               \
+		}                                                                              \
+                                                                                       \
+		[[nodiscard]]                                                                  \
+		base::StrID getStrIDValue() const override {                                   \
+			return value;                                                              \
+		}                                                                              \
+                                                                                       \
+	private:                                                                           \
+		static Box<::query::internal::BaseMetadata> fromStrID(base::StrID str_value) { \
+			return makeBox<Self>(str_value);                                           \
+		}                                                                              \
+		static bool doRegister() {                                                     \
+			return ::query::internal::MetadataRegistry::instance().registerStrIDType(  \
+				TYPE_ID, &fromStrID                                                    \
+			);                                                                         \
+		}                                                                              \
+		static inline bool registered = doRegister();                                  \
 	}
