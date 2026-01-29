@@ -3,6 +3,7 @@
 clean_cmd: "rm -rf build"
 
 backend: "nobackend"
+valgrind: "false"
 
 compile_dvm_options: ""
 compile_llvm_options: ""
@@ -27,7 +28,13 @@ PreCase: "@{clean_cmd} && mkdir build;
 Run: "
   case '@{backend}' in
     dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
-    llvm) @{compiled_to_llvm}                     ;;
+    llvm)
+      if [ '@{valgrind}' = 'true' ]; then
+        valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
+      else
+        @{compiled_to_llvm};
+      fi
+      ;;
     nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
   esac;"
