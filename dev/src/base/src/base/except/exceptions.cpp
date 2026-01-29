@@ -2,7 +2,6 @@
 #include <base/except/exceptions.hpp>
 
 #include <iostream>
-// #include <ostream>
 #include <string_view>
 #include <version>  // IWYU pragma: keep
 
@@ -28,15 +27,26 @@ namespace base {
 
 	namespace /* Panic state */ {
 		constinit std::atomic_flag was_first_panic = false;
+		
+		/**
+		 * Storage for the reason behind the first panic occurred. 
+		 *
+		 * @note Raw pointer is used here, as we want this code to use as little logic as possible,
+		 * to avoid any possible issues during panic the handling itself.
+		 */
+		std::string* firstPanicWhatStr() {
+			static std::string what_str;
+			return &what_str;
+		}
 	}
 
 	Panic::Panic(std::string_view position, std::string_view reason):
 		  position(position),
 		  reason(reason) {
-		makeWhatStr();
-	}
-
-	void Panic::makeWhatStr() {
+		
+		// note that multiple threads might race on it, and only one will win.
+		// For not its ok, in the future we might want to add some per-thread first panic tracking,
+		// if this becomes an issue.
 		bool am_i_first_panic = not was_first_panic.test_and_set();
 
 		what_str.clear();
@@ -45,7 +55,13 @@ namespace base {
 		what_str += reason + ":\n\n";
 		what_str += "Stacktrace:\n";
 		what_str += getCurrentStackTrace();
+
+		if (am_i_first_panic) {
+			// store the first panic what str
+			*firstPanicWhatStr() = what_str;
+		}
 	}
+
 
 	const std::string& Panic::getPosition() const { return position; }
 

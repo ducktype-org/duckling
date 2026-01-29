@@ -35,17 +35,16 @@ namespace base {
 		std::string reason;
 
 		std::string what_str;
-		void        makeWhatStr();
 
 	public:
 		Panic(std::string_view position, std::string_view reason);
 
 		[[nodiscard]]
 		const std::string& getPosition() const;
+
 		[[nodiscard]]
 		const char* what() const noexcept final;
 
-		// void print(std::ostream& out) const;
 		void printToCerr() const;
 	};
 
