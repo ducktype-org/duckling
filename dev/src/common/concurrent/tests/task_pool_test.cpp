@@ -53,10 +53,11 @@ class TaskPoolTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::setWorkerCount(10);
-		// TESTER_ADD_TEST(basicFunctionalityTest);
-		// TESTER_ADD_TEST(testFibbonaciSchedule);
-		// TESTER_ADD_TEST(testFibbonaciQuery);
+		concurrent::setWorkerCount(2);
+		TESTER_ADD_TEST(basicFunctionalityTest);
+		TESTER_ADD_TEST(testFibbonaciSchedule);
+		TESTER_ADD_TEST(testFibbonaciScheduleReversed);
+		TESTER_ADD_TEST(testFibbonaciQuery);
 		TESTER_ADD_TEST(testFibbonaciScheduleAndQuery);
 		// TESTER_ADD_TEST(deadlockTest);
 	}
@@ -64,7 +65,6 @@ public:
 private:
 	void deadlockTest() {
 		// Test designed to trigger potential deadlock scenarios with 2 workers
-		concurrent::setWorkerCount(2);
 
 		concurrent::WorkerManager worker_manager([](concurrent::WDRef wd) { noTaskCallback(wd); });
 		concurrent::TaskPool      task_pool(worker_manager);
@@ -98,6 +98,7 @@ private:
 		concurrent::PoolTask task4(
 			4,
 			[t2, task3, &completed_tasks, &task_pool](concurrent::WDRef) mutable {
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				// Schedule dependencies
 				auto handle2 = task_pool.schedule(std::move(t2));
 				auto handle3 = task_pool.schedule(std::move(task3));
@@ -110,17 +111,13 @@ private:
 
 
 		task_pool.addInitialTasks({ t1, task4 });
-		task_pool.startExecution();
+		task_pool.execute();
 
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
 		flushWorkers(worker_manager);
 		clearNoTaskCallback();
-
-		int final_completed = completed_tasks.load();
-		// Expect: 4(Root) + 2(T2) + 3(T3) + 1(T1) + 20(T2 nested) + 10(T1 nested) = 6 tasks
-		ASSERT_EQUAL(final_completed, 6);
 	}
 
 	void basicFunctionalityTest() {
@@ -142,7 +139,7 @@ private:
 		for (usize i = 0; i < TASK_COUNT; ++i) tasks.emplace_back(i, task);
 
 		task_pool.addInitialTasks(std::move(tasks));
-		task_pool.startExecution();
+		task_pool.execute();
 
 		task_pool.waitExecutionCompletion();
 		std::cout << "Execution completed.\n";
@@ -199,9 +196,68 @@ private:
 		});
 
 		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.startExecution();
+		task_pool.execute();
 
 		task_pool.waitExecutionCompletion();
+
+		std::cout << "Execution completed.\n";
+
+		flushWorkers(worker_manager);
+
+		clearNoTaskCallback();
+	}
+
+	void testFibbonaciScheduleReversed() {
+		concurrent::WorkerManager worker_manager([](concurrent::WDRef wd) { noTaskCallback(wd); });
+		concurrent::TaskPool      task_pool(worker_manager);
+		setNoTaskCallback([&task_pool](concurrent::WDRef) mutable { task_pool.onWorkerNoTasks(); });
+
+		concurrent::ConHashMap<u64, u64> fib_cache;
+
+
+		std::function<u64(u64)> fib_task_gen;
+		fib_task_gen = [&task_pool, &fib_cache, &fib_task_gen](u64 n) -> u64 {
+			std::cout << base::strConcat(
+				"Worker ",
+				static_cast<usize>(concurrent::Worker::getCurrentWorkerID()),
+				" computing fib(",
+				n,
+				")\n"
+			);
+			if (n <= 1) {
+				fib_cache.put(n, n);
+				return n;
+			}
+
+			concurrent::PoolTask task1(n - 1, [n, &fib_task_gen](concurrent::WDRef) {
+				return fib_task_gen(n - 1);
+			});
+
+			concurrent::PoolTask task2(n - 2, [n, &fib_task_gen](concurrent::WDRef) {
+				return fib_task_gen(n - 2);
+			});
+
+			auto future1 = task_pool.schedule(std::move(task1));
+			auto future2 = task_pool.schedule(std::move(task2));
+
+			future2.await();
+			future1.await();
+
+			auto value1 = fib_cache.getCopy(n - 1);
+			auto value2 = fib_cache.getCopy(n - 2);
+
+			u64 result = (value1 + value2) % static_cast<u64>(1e9 + 7);
+			fib_cache.put(n, result);
+			std::cout << base::strConcat("...");
+			return result;
+		};
+
+		concurrent::PoolTask initial_task(250, [&fib_task_gen](concurrent::WDRef) {
+			return fib_task_gen(250);
+		});
+
+		task_pool.addInitialTasks({ std::move(initial_task) });
+		task_pool.execute();
 
 		std::cout << "Execution completed.\n";
 
@@ -257,7 +313,7 @@ private:
 		});
 
 		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.startExecution();
+		task_pool.execute();
 
 		task_pool.waitExecutionCompletion();
 
@@ -316,9 +372,7 @@ private:
 		});
 
 		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.startExecution();
-
-		task_pool.waitExecutionCompletion();
+		task_pool.execute();
 
 		std::cout << "Execution completed.\n";
 

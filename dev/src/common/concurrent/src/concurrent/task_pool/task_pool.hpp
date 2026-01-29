@@ -104,7 +104,7 @@ namespace concurrent {
 		 * Distributes initial tasks: one to each worker, rest to global pool.
 		 * Blocks until all tasks are completed.
 		 */
-		void startExecution();
+		void execute();
 
         void waitExecutionCompletion();
 
@@ -174,20 +174,16 @@ namespace concurrent {
 		 */
 		base::Optional<PoolTask> tryStealFromWorkerUnlocked(WorkerID worker_id);
 
-		/**
-		 * @brief Try to find and execute any available work.
-		 * @param wd The worker data reference of the calling worker.
-		 * @return True if work was found and executed, false otherwise.
-		 */
-		base::Optional<PoolTask> findWorkUnlocked();
-
-		[[nodiscard]] bool isWorkAvailableUnlocked();
+		base::Optional<PoolTask> tryStealFromWorkerUnlocked(WorkerID worker_id, TaskID task_id);
 
 		/**
 		 * @brief Tries to execute the given task.
-         * If the task is already in progress or done, does nothing and returns false.
-         * If the task is not started, marks it as in progress, executes it and returns true.
+         * If the task is already in progress or done, does nothing.
+         * If the task is not started, executes it.
 		 * @param task The task to execute.
+		 * @return True if the task has been completed by us or was already 
+		 * done at some moment in the middle of the function.
+		 * Otherwise returns false.
 		 */
 		bool tryExecuteTask(const PoolTask& task);
 
@@ -222,8 +218,11 @@ namespace concurrent {
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		ConHashMap<TaskID, TaskStatus> task_status_map;
 
-		/// Condition variable for signaling task completion or new task arrived.
-		std::condition_variable new_task_or_completed_cv;
+		/// Condition variable for signaling task completion.
+		std::condition_variable task_completed_cv;
+
+		/// Condition variable for signaling execution completion.
+		std::condition_variable execution_completed_cv;
 
 		/// Counter for completed tasks (used in execute()).
 		std::atomic<usize> completed_tasks{ 0 };
