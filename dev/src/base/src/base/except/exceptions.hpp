@@ -40,9 +40,6 @@ namespace base {
 		Panic(std::string_view position, std::string_view reason);
 
 		[[nodiscard]]
-		const std::string& getPosition() const;
-
-		[[nodiscard]]
 		const char* what() const noexcept final;
 
 		void printToCerr() const;

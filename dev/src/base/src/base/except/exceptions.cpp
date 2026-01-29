@@ -51,8 +51,13 @@ namespace base {
 
 		what_str.clear();
 		what_str += "Unexpected compiler error occurred:\n";
-		what_str += getPosition() + ":\n";
-		what_str += reason + ":\n\n";
+		
+		what_str += position;
+		what_str += ":\n";
+
+		what_str += reason;
+		what_str += ":\n\n";
+		
 		what_str += "Stacktrace:\n";
 		what_str += getCurrentStackTrace();
 
@@ -63,13 +68,7 @@ namespace base {
 	}
 
 
-	const std::string& Panic::getPosition() const { return position; }
-
 	const char* Panic::what() const noexcept { return what_str.c_str(); }
-
-	// void Panic::print(std::ostream& out) const {
-	// 	out << what_str;
-	// }
 
 	void Panic::printToCerr() const { std::cerr << what_str; }
 
