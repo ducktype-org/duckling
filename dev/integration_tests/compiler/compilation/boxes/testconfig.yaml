@@ -7,10 +7,22 @@ Tests:
         Output:
           String: "42\n123\n1\n2\n99\n100\n"
         ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        Output:
+          String: "42\n123\n1\n2\n99\n100\n"
+        ExitCode: 0
   box_coercions:
     Cases: 
       llvm:
         backend: llvm
+        Output:
+          String: "2\n1\n2\n777\n2\n"
+        ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
         Output:
           String: "2\n1\n2\n777\n2\n"
         ExitCode: 0
