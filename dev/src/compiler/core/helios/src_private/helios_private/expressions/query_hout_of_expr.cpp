@@ -404,7 +404,7 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator().str() == "&") {
+				if (stmt->getOperator().value == "&") {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
