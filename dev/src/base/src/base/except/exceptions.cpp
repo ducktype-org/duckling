@@ -1,6 +1,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <atomic>
 #include <iostream>
 #include <string_view>
 #include <version>  // IWYU pragma: keep
@@ -32,23 +33,15 @@ namespace base {
 		constinit std::atomic_flag was_first_panic = false;
 
 		/**
-		 * Storage for the reason behind the first panic occurred.
-		 *
-		 * @note Raw pointer is used here, as we want this code to use as little logic as possible,
-		 * to avoid any possible issues during panic the handling itself.
-		 *
-		 * \parallel There is no synchronization here, if multiple threads panic at the same time,
-		 * it will race with UB. There is not trivial way to solve it, since we don't want to use
-		 * potentially throwing mechanisms.
+		 * @brief Atomic pointer to allocated memory that stores what() string of the first panic.
+		 * @note When this is used, the memory is never deallocated and we just leak. This is ok,
+		 * since the program panicked anyway.
 		 */
-		std::string* firstPanicWhatStr() {
-			static std::string what_str;
-			return &what_str;
-		}
+		constinit std::atomic<char*> first_panic_what_str_copy = nullptr;
 	}
 
 	Panic::Panic(std::string_view position, std::string_view reason) {
-		// note that multiple threads might race on it, and only one will win.
+		// Note that multiple threads might safely race on was_first_panic, and only one will win.
 		// For not its ok, in the future we might want to add some per-thread first panic tracking,
 		// if this becomes an issue.
 		const bool am_i_first_panic = not was_first_panic.test_and_set();
@@ -74,12 +67,27 @@ namespace base {
 
 		if (am_i_first_panic) {
 			// store the first panic what str
-			*firstPanicWhatStr() = what_str;
+			auto size = what_str.size();
+
+			auto buffor = new char[size + 1];
+			for (size_t i = 0; i < size; i++) buffor[i] = what_str.at(i);
+			buffor[size] = '\0';
+
+			first_panic_what_str_copy.store(buffor);
+
 		} else {
 			// append the first panic what str
 			what_str
 				+= "\n\n==================== FIRST PANIC DETAILS BELOW ====================\n\n";
-			what_str += *firstPanicWhatStr();
+
+			char* first_panic_what_str_pointer = first_panic_what_str_copy.load();
+
+			if (first_panic_what_str_pointer != nullptr) {
+				what_str += first_panic_what_str_pointer;
+			} else {
+				what_str += "No details about the first panic are available.\n";
+				what_str += "This is most likely due two multiple panics happening in different threads. In such case, the first panic might have been to slow to store its details before another panic happened.\n";
+			}
 		}
 	}
 

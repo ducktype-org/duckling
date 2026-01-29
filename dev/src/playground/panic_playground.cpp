@@ -1,5 +1,7 @@
 #include <base/except/exceptions.hpp>
 
+#include <thread>
+
 struct T {
 	~T() { CORE_ASSERT_NOEXCEPT(false, "panic in panic!"); }
 };
@@ -9,4 +11,11 @@ int main() {
 		T t;
 		CORE_PANIC("Fresh, crispy panic for my dudes <3");
 	} catch (const base::Panic& p) { p.printToCerr(); }
+
+	// Test multi-threaded panics
+	std::jthread t1([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
+	std::jthread t2([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
+	std::jthread t3([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
+	std::jthread t4([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
+	std::jthread t5([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
 }
