@@ -45,7 +45,7 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept final;
 
-		void print(std::ostream& out) const;
+		// void print(std::ostream& out) const;
 		void printToCerr() const;
 	};
 

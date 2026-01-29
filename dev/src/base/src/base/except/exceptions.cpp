@@ -2,7 +2,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <iostream>
-#include <ostream>
+// #include <ostream>
 #include <string_view>
 #include <version>  // IWYU pragma: keep
 
@@ -25,6 +25,11 @@ namespace base {
 #endif
 	}
 
+
+	namespace /* Panic state */ {
+		constinit std::atomic_flag was_first_panic = false;
+	}
+
 	Panic::Panic(std::string_view position, std::string_view reason):
 		  position(position),
 		  reason(reason) {
@@ -32,6 +37,8 @@ namespace base {
 	}
 
 	void Panic::makeWhatStr() {
+		bool am_i_first_panic = not was_first_panic.test_and_set();
+
 		what_str.clear();
 		what_str += "Unexpected compiler error occurred:\n";
 		what_str += getPosition() + ":\n";
@@ -44,12 +51,11 @@ namespace base {
 
 	const char* Panic::what() const noexcept { return what_str.c_str(); }
 
-	void Panic::print(std::ostream& out) const {
-		// @TODO: use printer/error framework here
-		out << what_str;
-	}
+	// void Panic::print(std::ostream& out) const {
+	// 	out << what_str;
+	// }
 
-	void Panic::printToCerr() const { print(std::cerr); }
+	void Panic::printToCerr() const { std::cerr << what_str; }
 
 	LogicError::LogicError(std::string_view message): message(message) {}
 
