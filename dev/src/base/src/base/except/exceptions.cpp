@@ -49,6 +49,9 @@ namespace base {
 		// if this becomes an issue.
 		const bool am_i_first_panic = not was_first_panic.test_and_set();
 
+		std::cerr << ">>>> PANIC OCCURRED <<<< first panic: " << std::boolalpha << am_i_first_panic
+				  << "\n";
+
 		if (not am_i_first_panic) {
 			what_str
 				+= "======== THIS IS NOT THE FIRST PANIC IN THE PROGRAM EXECUTION! ========\n\n";

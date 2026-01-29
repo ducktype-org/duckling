@@ -136,9 +136,11 @@ namespace base {
  * @note If this assertion fails the program will be terminated.
  */
 #define CORE_ASSERT_NOEXCEPT(cond, what, ...)               \
+	bool CORE_ASSERT_NOEXCEPT_was_panic = false;            \
 	try {                                                   \
 		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__); \
 	} catch (const base::Panic& e) {                        \
 		e.printToCerr();                                    \
-		std::terminate();                                   \
-	}
+		CORE_ASSERT_NOEXCEPT_was_panic = true;              \
+	}                                                       \
+	if (CORE_ASSERT_NOEXCEPT_was_panic) { std::terminate(); }
