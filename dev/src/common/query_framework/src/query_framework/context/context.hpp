@@ -92,7 +92,7 @@ namespace query {
 		 * Metadata can only be added to queries that have preserve_in_graph = true.
 		 */
 		template<typename MetadataT, typename... Args>
-		requires std::derived_from<MetadataT, BaseMetadata> void addMetadata(Args&&... args) {
+		requires std::derived_from<MetadataT, internal::BaseMetadata> void addMetadata(Args&&... args) {
 			assertActive();
 
 			// Check that the query has preserve_in_graph = true

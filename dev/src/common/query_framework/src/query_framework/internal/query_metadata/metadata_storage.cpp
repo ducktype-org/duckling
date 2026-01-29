@@ -9,7 +9,7 @@
 
 #include <cstring>
 
-namespace query {
+namespace query::internal {
 
 	namespace {
 		// Helper to write a u64 to a byte vector
@@ -175,8 +175,8 @@ namespace query {
 			offset += sizeof(base::Bit256);
 
 			// Reconstruct NodeID
-			internal::NodeID node_id{ internal::QueryID{ q_id_val },
-				                      internal::KeyHash{ .val = hash_val } };
+			NodeID node_id{ QueryID{ q_id_val },
+				                      KeyHash{ .val = hash_val } };
 
 			// Assert that NodeID is registered and has preserve_in_graph = true
 			CORE_ASSERT(
@@ -227,11 +227,11 @@ namespace query {
 
 					// Add to storage
 					if (!storage.storage.contains(node_id)) storage.storage.put(node_id, TypeMap{});
-					auto& node_map = storage.storage.at(node_id);
+					auto& node_map = *storage.storage.atMaybe(node_id).value();
 					if (!node_map.contains(type_id))
 						node_map.put(type_id, std::vector<Box<BaseMetadata>>{});
 
-					node_map.at(type_id).push_back(std::move(metadata_opt).value());
+					node_map.atMaybe(type_id).value()->push_back(std::move(metadata_opt).value());
 				}
 			}
 		}

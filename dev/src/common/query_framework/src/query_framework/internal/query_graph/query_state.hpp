@@ -83,7 +83,7 @@ namespace query::internal {
 			 * Metadata from previous compilation.
 			 * Metadata for green nodes will be moved into current metadata_storage during merge.
 			 */
-			::query::MetadataStorage metadata;
+			MetadataStorage metadata;
 
 			PreviousCompilation() = delete;
 
@@ -108,7 +108,7 @@ namespace query::internal {
 		/**
 		 * @brief Storage for metadata attached to query nodes.
 		 */
-		::query::MetadataStorage metadata_storage;
+		MetadataStorage metadata_storage;
 
 	public:
 		QueryState()                             = default;
@@ -177,7 +177,7 @@ namespace query::internal {
 		 * @brief Sets the previous compilation metadata storage.
 		 * Must be called after setPreviousGraph.
 		 */
-		void setPreviousMetadata(::query::MetadataStorage&& metadata);
+		void setPreviousMetadata(MetadataStorage&& metadata);
 
 		/**
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
@@ -233,7 +233,7 @@ namespace query::internal {
 		 *         Returns empty vector if no metadata of this type exists.
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, ::query::BaseMetadata> [[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		std::vector<CRef<MetadataT>> getMetadata(NodeID node_id) const {
 			return metadata_storage.getMetadata<MetadataT>(node_id);
 		}
@@ -246,7 +246,7 @@ namespace query::internal {
 		 * @return true if the node has at least one metadata of this type
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, ::query::BaseMetadata> [[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		bool hasMetadata(NodeID node_id) const {
 			return metadata_storage.hasMetadata<MetadataT>(node_id);
 		}
@@ -259,7 +259,7 @@ namespace query::internal {
 		 * @return usize Number of metadata instances of this type
 		 */
 		template<typename MetadataT>
-		requires std::derived_from<MetadataT, ::query::BaseMetadata> [[nodiscard]]
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
 		usize getMetadataCount(NodeID node_id) const {
 			return metadata_storage.getMetadataCount<MetadataT>(node_id);
 		}
@@ -270,7 +270,7 @@ namespace query::internal {
 		 * @return const reference to the metadata storage.
 		 */
 		[[nodiscard]]
-		const ::query::MetadataStorage& getMetadataStorage() const {
+		const MetadataStorage& getMetadataStorage() const {
 			return metadata_storage;
 		}
 
@@ -286,7 +286,7 @@ namespace query::internal {
 		 * @param args Arguments forwarded to MetadataT constructor
 		 */
 		template<typename MetadataT, typename... Args>
-		requires std::derived_from<MetadataT, ::query::BaseMetadata>
+		requires std::derived_from<MetadataT, BaseMetadata>
 		void addMetadataInternal(NodeID node_id, Args&&... args) {
 			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
 		}

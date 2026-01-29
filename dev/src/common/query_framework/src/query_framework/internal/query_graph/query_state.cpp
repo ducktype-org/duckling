@@ -162,7 +162,7 @@ namespace query::internal {
 		previous.emplace(std::move(graph));
 	}
 
-	void QueryState::setPreviousMetadata(::query::MetadataStorage&& metadata) {
+	void QueryState::setPreviousMetadata(MetadataStorage&& metadata) {
 		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
 		previous->metadata = std::move(metadata);
 	}

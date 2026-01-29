@@ -32,7 +32,7 @@ namespace query::internal {
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
 		friend class QueryState;
-		friend class query::MetadataStorage;
+		friend class MetadataStorage;
 		friend void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
 		/**

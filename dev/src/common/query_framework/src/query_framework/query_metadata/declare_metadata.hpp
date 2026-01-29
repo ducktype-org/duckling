@@ -87,7 +87,7 @@ namespace query {
  * @endcode
  */
 #define DECLARE_METADATA(name, typ)                                                            \
-	struct metadata_##name final: public ::query::BaseMetadata {                               \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {                               \
 		static_assert(                                                                         \
 			::query::HasSerialize<typ>,                                                        \
 			"Type '" #typ "' must implement 'std::vector<std::byte> serialize() const'"        \
@@ -126,11 +126,11 @@ namespace query {
 		}                                                                                      \
                                                                                                \
 	private:                                                                                   \
-		static Box<::query::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
+		static Box<::query::internal::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
 			return makeBox<metadata_##name>(metadata_##name::deserialize(data));               \
 		}                                                                                      \
 		static bool _doRegister() {                                                            \
-			return ::query::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
+			return ::query::internal::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
 		}                                                                                      \
 		static inline bool _registered = _doRegister();                                        \
 	}
@@ -153,7 +153,7 @@ namespace query {
  * @endcode
  */
 #define DECLARE_METADATA_SIMPLE(name, typ)                                                     \
-	struct metadata_##name final: public ::query::BaseMetadata {                               \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {                               \
 		static_assert(                                                                         \
 			::query::TriviallySerializable<typ>,                                               \
 			"Type '" #typ                                                                      \
@@ -190,11 +190,11 @@ namespace query {
 		}                                                                                      \
                                                                                                \
 	private:                                                                                   \
-		static Box<::query::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
+		static Box<::query::internal::BaseMetadata> _deserialize(std::span<const std::byte> data) {      \
 			return makeBox<metadata_##name>(metadata_##name::deserialize(data));               \
 		}                                                                                      \
 		static bool _doRegister() {                                                            \
-			return ::query::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
+			return ::query::internal::MetadataRegistry::instance().registerType(TYPE_ID, &_deserialize); \
 		}                                                                                      \
 		static inline bool _registered = _doRegister();                                        \
 	}
@@ -218,7 +218,7 @@ namespace query {
  * @endcode
  */
 #define DECLARE_METADATA_STRID(name)                                                              \
-	struct metadata_##name final: public ::query::BaseMetadata {                                  \
+	struct metadata_##name final: public ::query::internal::BaseMetadata {                                  \
 		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };              \
                                                                                                   \
 		base::StrID value;                                                                        \
@@ -249,11 +249,11 @@ namespace query {
 		}                                                                                         \
                                                                                                   \
 	private:                                                                                      \
-		static Box<::query::BaseMetadata> _fromStrID(base::StrID str_value) {                     \
+		static Box<::query::internal::BaseMetadata> _fromStrID(base::StrID str_value) {                     \
 			return makeBox<metadata_##name>(str_value);                                           \
 		}                                                                                         \
 		static bool _doRegister() {                                                               \
-			return ::query::MetadataRegistry::instance().registerStrIDType(TYPE_ID, &_fromStrID); \
+			return ::query::internal::MetadataRegistry::instance().registerStrIDType(TYPE_ID, &_fromStrID); \
 		}                                                                                         \
 		static inline bool _registered = _doRegister();                                           \
 	}

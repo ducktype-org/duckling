@@ -36,7 +36,7 @@ namespace query::external {
 
 	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes) {
 		auto state    = ::query::internal::ContextAccess::getState();
-		auto metadata = ::query::MetadataStorage::deserialize(metadata_raw_bytes);
+		auto metadata = ::query::internal::MetadataStorage::deserialize(metadata_raw_bytes);
 		state->setPreviousMetadata(std::move(metadata));
 	}
 

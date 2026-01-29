@@ -1143,7 +1143,7 @@ private:
 		ASSERT_EQUAL(meta.value.value2, meta_deserialized.value.value2);
 
 		// Test metadata storage directly
-		query::MetadataStorage storage;
+		query::internal::MetadataStorage storage;
 		auto test_node = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 99'999 });
 
 		// Initially empty
@@ -1168,7 +1168,7 @@ private:
 		// =========================================================
 		// Test full MetadataStorage serialize/deserialize roundtrip
 		// =========================================================
-		query::MetadataStorage storage2;
+		query::internal::MetadataStorage storage2;
 
 		auto node1 = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 1 });
 		auto node2 = query::internal::makeNodeID<MetadataTestQuery>(query::U64Key{ 2 });
@@ -1200,7 +1200,7 @@ private:
 		ASSERT_TRUE(serialized_storage.size() > 0);
 
 		// Deserialize into a new storage
-		auto restored = query::MetadataStorage::deserialize(serialized_storage);
+		auto restored = query::internal::MetadataStorage::deserialize(serialized_storage);
 
 		// Verify SimpleMeta on node1
 		auto restored_simple1 = restored.getMetadata<metadata_SimpleMeta>(node1);
