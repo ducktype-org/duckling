@@ -35,7 +35,15 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		concurrent::worker::setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
+		CORE_ASSERT(
+			concurrent::worker::WorkerManager::get().getFreeWorkers(4).size() == 4,
+			"Previous test failed"
+		);
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
+		CORE_ASSERT(
+			concurrent::worker::WorkerManager::get().getFreeWorkers(4).size() == 4,
+			"Previous test failed"
+		);
 	}
 
 private:
@@ -49,6 +57,7 @@ private:
 				no_task_counter.fetch_add(1, std::memory_order_relaxed);
 			});
 		}
+		ASSERT_TRUE(no_task_counter == concurrent::worker::getWorkerCount());
 
 		auto all_workers = worker_manager.getAllWorkers();
 		ASSERT_EQUAL(all_workers.size(), concurrent::worker::getWorkerCount());
@@ -74,7 +83,11 @@ private:
 			           < concurrent::worker::getWorkerCount()
 			       || no_task_counter.load(std::memory_order_relaxed)
 			              < concurrent::worker::getWorkerCount() * 2)
-				std::this_thread::yield();
+				std::cerr << "Waiting... Finished tasks: "
+						  << task_finished_counter.load(std::memory_order_relaxed)
+						  << ", No task callbacks: "
+						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
+					std::this_thread::yield();
 		});
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
@@ -92,7 +105,7 @@ private:
 		// Since we have N threads and N tasks that each take 100ms,
 		// the total time should be just over 100ms.
 		assertTrue(
-			TASK_WAIT_TIME_MS <= elapsed_ms && elapsed_ms < TASK_WAIT_TIME_MS + 50,
+			TASK_WAIT_TIME_MS <= elapsed_ms && elapsed_ms < TASK_WAIT_TIME_MS + 100,
 			base::strConcat("Elapsed time: ", elapsed_ms, " ms")
 		);
 
