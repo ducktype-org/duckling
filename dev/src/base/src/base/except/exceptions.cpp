@@ -49,8 +49,6 @@ namespace base {
 		// if this becomes an issue.
 		const bool am_i_first_panic = not was_first_panic.test_and_set();
 
-		std::cerr << ">>>> PANIC OCCURRED <<<< first panic: " << std::boolalpha << am_i_first_panic
-				  << "\n";
 
 		if (not am_i_first_panic) {
 			what_str
@@ -59,7 +57,6 @@ namespace base {
 			what_str += "See below for the first panic details.\n\n";
 		}
 
-		what_str.clear();
 		what_str += "Panic occurred:\n";
 
 		what_str += position;
@@ -72,6 +69,7 @@ namespace base {
 		what_str += getCurrentStackTrace();
 
 		if (am_i_first_panic) {
+			std::cerr << "SETTING FIRST PANIC\n";
 			// store the first panic what str
 			*firstPanicWhatStr() = what_str;
 		} else {
