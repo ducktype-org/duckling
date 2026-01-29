@@ -15,7 +15,7 @@ namespace concurrent::worker {
 		task_cv.notify_one();
 	}
 
-	[[nodiscard]] bool Worker::isFree() const {
+	bool Worker::isFree() const {
 		std::scoped_lock lock(mut);
 		return is_free;
 	}
