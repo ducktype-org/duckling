@@ -45,13 +45,6 @@ namespace concurrent::worker {
 		[[nodiscard]] std::vector<WRef> getFreeWorkers(usize max_count) const;
 
 		/**
-		 * @brief Schedules a task on a specific worker.
-		 * @param worker The worker to schedule the task on.
-		 * @param task The task to be executed.
-		 */
-		void scheduleTaskOnWorker(WRef worker, const Task& task);
-
-		/**
 		 * @brief Schedules a task on any worker, while preferring free workers.
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.

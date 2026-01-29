@@ -21,10 +21,6 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	void WorkerManager::scheduleTaskOnWorker(WRef worker, const Task& task) {
-		worker->scheduleTask(task);
-	}
-
 	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
 		for (auto& worker: workers)
 			if (worker->scheduleTaskIfFree(task)) return;

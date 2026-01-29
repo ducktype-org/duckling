@@ -58,14 +58,12 @@ private:
 
 		std::atomic<usize> task_finished_counter = 0;
 		constexpr usize    TASK_WAIT_TIME_MS     = 100;
-		for (const auto& id: worker_manager.getAllWorkers()) {
-			worker_manager.scheduleTaskOnWorker(
-				id,
-				[&task_finished_counter, TASK_WAIT_TIME_MS](concurrent::worker::WRef) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(TASK_WAIT_TIME_MS));
-					task_finished_counter.fetch_add(1, std::memory_order_relaxed);
-				}
-			);
+		for (const auto& worker: worker_manager.getAllWorkers()) {
+			worker->scheduleTask([&task_finished_counter,
+			                      TASK_WAIT_TIME_MS](concurrent::worker::WRef) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(TASK_WAIT_TIME_MS));
+				task_finished_counter.fetch_add(1, std::memory_order_relaxed);
+			});
 		}
 
 		// Wait for all tasks to complete
