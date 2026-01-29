@@ -67,7 +67,7 @@ namespace concurrent::tester {
 		/**
 		 * @brief Try to linearize the recorded history.
 		 * @return None if linearization was successful, or the index of
-		 * the first "return" record in the history.
+		 * the first non-linearizable "return" record in the history.
 		 */
 		base::Optional<usize> linearize() {
 			// Handle trivial case of empty history.

@@ -91,12 +91,16 @@ namespace concurrent::tester {
 			return records.at(i);
 		}
 
+		/**
+		 * @param upto The index of the instruction up to which to print (inclusive).
+		 * @return The stringified history.
+		 */
 		[[nodiscard]]
-		std::string toString(usize upto = -1ULL) const {
+		std::string toString(usize upto = -2ULL) const {
 			std::string out = "History:";
-			upto            = std::min(upto, records.size());
+			upto            = std::min(upto + 1, records.size());
 			for (usize i = 0; i < upto; ++i) {
-				out += "\n";
+				out += "\n" + std::to_string(i) + ": ";
 				out += records.at(i).toString();
 			}
 			return out;

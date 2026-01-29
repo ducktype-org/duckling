@@ -88,18 +88,18 @@ private:
 		assertEqual(
 			race_tester.getHistory()->toString(),
 			"History:\n"
-			"Thread 0 calls wait(30)\n"
-			"Thread 1 calls wait(30)\n"
-			"Thread 2 calls wait(30)\n"
-			"Thread 0 returns 30\n"
-			"Thread 1 returns 60\n"
-			"Thread 1 calls wait50()\n"
-			"Thread 2 returns 90\n"
-			"Thread 2 calls wait(20)\n"
-			"Thread 0 calls wait50()\n"
-			"Thread 2 returns 110\n"
-			"Thread 1 returns <monostate>\n"
-			"Thread 0 returns <monostate>",
+			"0: Thread 0 calls wait(30)\n"
+			"1: Thread 1 calls wait(30)\n"
+			"2: Thread 2 calls wait(30)\n"
+			"3: Thread 0 returns 30\n"
+			"4: Thread 1 returns 60\n"
+			"5: Thread 1 calls wait50()\n"
+			"6: Thread 2 returns 90\n"
+			"7: Thread 2 calls wait(20)\n"
+			"8: Thread 0 calls wait50()\n"
+			"9: Thread 2 returns 110\n"
+			"10: Thread 1 returns <monostate>\n"
+			"11: Thread 0 returns <monostate>",
 			"History should match expected output."
 		);
 	}
@@ -161,6 +161,9 @@ private:
 				auto            tested     = makeBox<GoodConcurrentCounter>();
 				auto            sequential = makeBox<SequentialConcurrentCounter>();
 				_RaceTesterGood race_tester{ tested.refMut(), sequential.ref() };
+				race_tester.run(worker_count, worker);
+				// std::cerr << race_tester.getHistory()->toString() << std::endl;
+				// assertTrue(race_tester.check(), "Good counter should be linearizable.");
 				assertTrue(
 					race_tester.runAndCheck(worker_count, worker),
 					"Good counter should be linearizable."
@@ -197,9 +200,7 @@ private:
 				_RaceTesterBad race_tester{ tested.refMut(), sequential.ref() };
 				failed = not race_tester.runAndCheck(worker_count, worker);
 			}
-			// CTest limits concurrency, so this test fails in CI.
-			// You can uncomment the assert and run the test binary directly to see it work.
-			// assertTrue(failed, "Bad counter should not be linearizable.");
+			assertTrue(failed, "Bad counter should not be linearizable.");
 		}
 	}
 
