@@ -40,15 +40,22 @@ namespace pst {
 		template<std::derived_from<ClassStmt> T, class... Ts>
 		MBox<T> parseStmt(LangParserState& state, const ClassContext& ctx, Ts... args) {
 			// We skip the first token as its the keyword we already found
-			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			u64  length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			bool could_implicitly_return
+				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
+			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
 
 			fallbackLen(state, length);
 
 			MBox<T> out = T::parse(state, ctx, std::forward<Ts...>(args)...);
 
 			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon())
-				state.parse(opt.value()).one(Special::Semicolon);
+			if (opt && opt.value()->trailingSemicolon()) {
+				if (could_implicitly_return)
+					makeImplicitReturn(out.refMut());
+				else
+					state.parse(opt.value()).one(Special::Semicolon);
+			}
 
 			exitFallback(state);
 
@@ -92,6 +99,7 @@ namespace pst {
 	LangElement::HashAlg& ClassStmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
+		addToHash(partial_hash, isImplicitReturn());
 		addToHash(partial_hash, context.name.str());
 		return partial_hash;
 	}
