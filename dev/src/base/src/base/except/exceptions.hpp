@@ -45,7 +45,6 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept final;
 
-		// @TODO: use Printer
 		void print(std::ostream& out) const;
 		void printToCerr() const;
 	};
@@ -71,7 +70,7 @@ namespace base {
 	/**
 	 * @brief Exception to throw in unimplemented segments.
 	 */
-	class NotYetImplemented: public Exception {
+	class NotYetImplemented final: public Exception {
 		std::string message;
 
 	public:
