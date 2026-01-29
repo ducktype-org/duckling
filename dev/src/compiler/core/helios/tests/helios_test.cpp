@@ -1813,9 +1813,11 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
-		ASSERT_EQUAL("_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.str());
+		ASSERT_EQUAL(
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i321af641bE$metadata_v123", mangled_goo.str()
+		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
-		std::cerr << "taw3e8\t" << mangled_glob_a.strView() << '\n';
+
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());

@@ -13,7 +13,7 @@ namespace pst {
 
 		state.parse(out)
 			.all(Keyword::While, &out->optional_name, &out->condition)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+			.withDef(&out->body, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}
