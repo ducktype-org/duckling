@@ -40,8 +40,8 @@ namespace concurrent::worker {
 
 	[[nodiscard]] bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
 
-	void WorkerManager::setNoTasksCallback(WRef worker, NoTasksCallback callback) {
-		worker->setNoTasksCallback(std::move(callback));
+	void WorkerManager::setNoTasksCallback(WRef worker, const NoTasksCallback& callback) {
+		worker->setNoTasksCallback(callback);
 	}
 
 	WorkerManager& WorkerManager::get() {

@@ -75,7 +75,7 @@ namespace concurrent::worker {
 		 * loop checks for tasks. If the first call adds tasks, then the second call will not
 		 * happen.
 		 */
-		void setNoTasksCallback(WRef worker, NoTasksCallback callback);
+		void setNoTasksCallback(WRef worker, const NoTasksCallback& callback);
 
 	private:
 		WorkerManager() = default;

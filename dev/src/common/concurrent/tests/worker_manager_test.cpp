@@ -6,6 +6,26 @@
 
 #include <thread>
 
+template<class F>
+void runOrTimeout(F func, usize timeout_ms = 5'000) {
+	std::atomic<bool> finished = false;
+
+	std::jthread worker_thread([&func, &finished]() {
+		func();
+		finished.store(true, std::memory_order_relaxed);
+	});
+
+	auto start = std::chrono::steady_clock::now();
+	while (!finished.load(std::memory_order_relaxed)) {
+		auto now = std::chrono::steady_clock::now();
+		auto elapsed_ms
+			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+		if (elapsed_ms > timeout_ms)
+			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+}
+
 class WorkerManagerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS WorkerManagerTest
@@ -51,11 +71,13 @@ private:
 		// Wait for all tasks to complete
 		// We also expect that during this time the no_tasks_callback
 		// has been called at least once per worker.
-		while (task_finished_counter.load(std::memory_order_relaxed)
-		           < concurrent::worker::getWorkerCount()
-		       || no_task_counter.load(std::memory_order_relaxed)
-		              < concurrent::worker::getWorkerCount() * 2)
-			std::this_thread::yield();
+		runOrTimeout([&] {
+			while (task_finished_counter.load(std::memory_order_relaxed)
+			           < concurrent::worker::getWorkerCount()
+			       || no_task_counter.load(std::memory_order_relaxed)
+			              < concurrent::worker::getWorkerCount() * 2)
+				std::this_thread::yield();
+		});
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
 		std::cerr << "No task callback called " << val << " times.\n";
@@ -152,11 +174,13 @@ private:
 		}
 
 
-		while (total_completed_tasks.load(std::memory_order_relaxed) < task_count) {
-			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
-					  << " / " << task_count << " tasks.\n";
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
+		runOrTimeout([&] {
+			while (total_completed_tasks.load(std::memory_order_relaxed) < task_count) {
+				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
+						  << " / " << task_count << " tasks.\n";
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		});
 		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
 				  << task_count << " tasks.\n";
 

@@ -64,7 +64,7 @@ namespace concurrent::worker {
 		 * loop checks for tasks. If the first call adds tasks, then the second call will not
 		 * happen.
 		 */
-		void setNoTasksCallback(NoTasksCallback callback);
+		void setNoTasksCallback(const NoTasksCallback& callback);
 
 		u64 randomU64() const { return u64(rng()); }
 
