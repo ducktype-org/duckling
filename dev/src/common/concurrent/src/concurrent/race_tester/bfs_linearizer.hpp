@@ -57,8 +57,8 @@ namespace concurrent::tester {
 
 			State(std::vector<Op> next_ops, SequentialImplementation sequential_state):
 				  next_ops(std::move(next_ops)),
-				  sequential_state(std::move(sequential_state)) {
-				earliest_end = this->next_ops.at(0).end;
+				  sequential_state(std::move(sequential_state)),
+				  earliest_end(this->next_ops.at(0).end) {
 				for (usize i = 1; i < this->next_ops.size(); ++i)
 					earliest_end = std::min(earliest_end, this->next_ops.at(i).end);
 			}

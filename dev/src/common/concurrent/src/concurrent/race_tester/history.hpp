@@ -70,7 +70,7 @@ namespace concurrent::tester {
 			}
 		};
 
-		void push_back(Record record) {
+		void pushBack(Record record) {
 			std::lock_guard guard(mutex);
 			records.push_back(std::move(record));
 			num_threads = std::max(num_threads, record.thread_id + 1);
@@ -92,7 +92,7 @@ namespace concurrent::tester {
 		}
 
 		[[nodiscard]]
-		std::string toString(usize upto = -1) const {
+		std::string toString(usize upto = -1ULL) const {
 			std::string out = "History:";
 			upto            = std::min(upto, records.size());
 			for (usize i = 0; i < upto; ++i) {

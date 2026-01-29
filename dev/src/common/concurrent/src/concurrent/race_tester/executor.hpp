@@ -32,7 +32,7 @@ namespace concurrent::tester {
 			const std::string&                                   description,
 			std::function<_ResultsVariant(Ref<TestedInterface>)> operation
 		) {
-			history->push_back(typename _History::Record{
+			history->pushBack(typename _History::Record{
 				thread_id,
 				typename _History::Call{
 					.operation   = operation,
@@ -42,7 +42,7 @@ namespace concurrent::tester {
 
 			auto result = operation(tested_instance);
 
-			history->push_back(typename _History::Record{
+			history->pushBack(typename _History::Record{
 				thread_id,
 				typename _History::Return{ std::move(result) },
 			});
