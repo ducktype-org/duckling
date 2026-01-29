@@ -3,6 +3,7 @@
 clean_cmd: "rm -rf build"
 
 backend: "nobackend"
+# If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
 valgrind: "false"
 
 compile_dvm_options: ""
