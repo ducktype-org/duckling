@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/except/exceptions.hpp>
+#include <base/misc/noexcept.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
 #include <array>
@@ -37,6 +39,18 @@ namespace base {
 		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
 		 */
 		[[nodiscard]] std::string toStringHex() const;
+
+		/*
+		 * @brief Converts the Bit256 to a u64 by taking the least significant 64 bits.
+		 * Use this only when Bit356 was created from single u64 value.
+		 */
+		constexpr explicit operator u64() const RELEASE_NOEXCEPT {
+			CORE_ASSERT(
+				data.at(1) == 0 && data.at(2) == 0 && data.at(3) == 0,
+				"Bit256 value too large to convert to u64"
+			);
+			return data.at(0);
+		}
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
 			for (usize i = 4;
