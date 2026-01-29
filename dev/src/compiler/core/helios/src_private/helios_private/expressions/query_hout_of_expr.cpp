@@ -131,9 +131,11 @@ namespace compiler::helios::code {
 						node = makeBox<LiteralStringExpr>(ctx, base::StrID(result.value));
 					}
 					variant_case(base::UnknownEscapeSequence, error) {
-						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition(), error.value
-						));
+						ctx.logInt(
+							makeBox<UnknownEscapeSequenceError>(
+								stmt->getSourcePosition(), error.value
+							)
+						);
 					}
 					variant_default CORE_UNREACHABLE();
 				}
@@ -231,12 +233,14 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-						stmt->getSourcePosition(),
-						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, lhs_type),
-						makeBox<InteractiveType>(ctx, rhs_type)
-					));
+					ctx.logInt(
+						makeBox<code::UndefinedBinaryOperatorError>(
+							stmt->getSourcePosition(),
+							stmt->getOperator().str(),
+							makeBox<InteractiveType>(ctx, lhs_type),
+							makeBox<InteractiveType>(ctx, rhs_type)
+						)
+					);
 					// failed
 				}
 			}
@@ -404,7 +408,7 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
+				if (stmt->getOperator().str() == "&") {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
@@ -418,11 +422,13 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getSourcePosition(),
-						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, inner_type)
-					));
+					ctx.logInt(
+						makeBox<UndefinedUnaryOperatorError>(
+							stmt->getSourcePosition(),
+							stmt->getOperator().str(),
+							makeBox<InteractiveType>(ctx, inner_type)
+						)
+					);
 					// failed
 				}
 			}
@@ -489,12 +495,14 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-							stmt->getSourcePosition(),
-							pst_operators.at(i).str(),
-							makeBox<InteractiveType>(ctx, lhs_type),
-							makeBox<InteractiveType>(ctx, rhs_type)
-						));
+						ctx.logInt(
+							makeBox<code::UndefinedBinaryOperatorError>(
+								stmt->getSourcePosition(),
+								pst_operators.at(i).str(),
+								makeBox<InteractiveType>(ctx, lhs_type),
+								makeBox<InteractiveType>(ctx, rhs_type)
+							)
+						);
 
 						return;
 					}
@@ -558,11 +566,13 @@ namespace compiler::helios {
 				if (log_error.has_value()) {
 					(*log_error)(ctx);
 				} else {
-					ctx.logInt(makeBox<IncompatibleTypesError>(
-						pst_expr.element.unlock(ctx)->getSourcePosition(),
-						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
-						makeBox<InteractiveType>(ctx, expected_type)
-					));
+					ctx.logInt(
+						makeBox<IncompatibleTypesError>(
+							pst_expr.element.unlock(ctx)->getSourcePosition(),
+							makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
+							makeBox<InteractiveType>(ctx, expected_type)
+						)
+					);
 				}
 				return query::Failed();
 			}

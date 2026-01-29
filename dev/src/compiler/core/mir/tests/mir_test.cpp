@@ -602,13 +602,13 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					//  var r = refof x;
+					//  var r = &x;
 					if (instr.operation == Operation::AddressOf) {
 						auto& arg = instr.arguments[0].get<MIRPlace>();
 						if (arg.projection_chain.empty()) {
 							found_simple_address_of = true;
 						}
-						// var r = refof p.x;
+						// var r = &p.x;
 						else if (arg.projection_chain.size() == 2) {
 							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
 								arg.projection_chain[0].storage
@@ -636,7 +636,8 @@ private:
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
 							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
+							   && std::holds_alternative<MIRPlace::DerefProjection>(
+									  chain[4].storage
 							   );
 
 							if (pattern_ok) {
@@ -646,9 +647,8 @@ private:
 								if (compiler::helios::name(f_p.field_id) == base::StrID("p")
 								    && compiler::helios::name(f_x.field_id) == base::StrID("x")) {
 									auto constant = instr.arguments[0].get<MIRConstant>();
-									auto num
-										= constant.value.get<compiler::numeric_value::NumericValue>(
-										);
+									auto num      = constant.value
+									               .get<compiler::numeric_value::NumericValue>();
 									if (num->get<i32>() == 999) found_complex_assignment = true;
 								}
 							}
