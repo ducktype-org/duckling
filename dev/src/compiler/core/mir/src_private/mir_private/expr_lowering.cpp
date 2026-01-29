@@ -400,7 +400,7 @@ namespace compiler::mir {
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
 			const auto& inner_type = expr.inner->expression_type.getSymbolType();
 
-			// If a reference of box is taken, no address of instruction is inserted.
+			// If a reference of box is taken, no `AddressOf` instruction is inserted.
 			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
 				output(lowerSubExpr(*expr.inner, continuation));
 			} else {

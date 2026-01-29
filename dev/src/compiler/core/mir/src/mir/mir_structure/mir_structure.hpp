@@ -91,7 +91,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** See readme.md for more info about destruct. */
 	Destruct,
 	/** See readme.md for more info about DestructIf. */
-	DestructIf, 
+	DestructIf,
 
 	ReturnVoid,
 	ReturnValue,

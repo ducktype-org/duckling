@@ -135,7 +135,6 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
-		llvm_module.debugPrint();
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
 	}
