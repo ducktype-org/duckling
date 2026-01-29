@@ -31,9 +31,9 @@ namespace base {
 	 * @brief Exception intended to replace c++ assert errors for additional functionalities.
 	 */
 	class Panic final: public std::exception {
-		std::string position;
-		std::string reason;
-
+		/**
+		 * @brief Full description of the panic (reason, position, stacktrace, etc).
+		 */
 		std::string what_str;
 
 	public:
