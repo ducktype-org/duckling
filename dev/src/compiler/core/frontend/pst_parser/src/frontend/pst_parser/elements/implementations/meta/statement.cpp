@@ -10,6 +10,7 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {
+		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
 
 		template<class T>
 		struct StmtClassifiers {
@@ -77,15 +78,22 @@ namespace pst {
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			// We skip the first token as its the keyword we already found
-			u64 length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			u64  length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			bool could_implicitly_return
+				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
+			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
 
 			fallbackLen(state, length);
 
 			MBox<T> out = T::parse(state);
 
 			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon())
-				state.parse(opt.value()).one(Special::Semicolon);
+			if (opt && opt.value()->trailingSemicolon()) {
+				if (could_implicitly_return)
+					makeImplicitReturn(out.refMut());
+				else
+					state.parse(opt.value()).one(Special::Semicolon);
+			}
 
 			exitFallback(state);
 
@@ -213,6 +221,7 @@ namespace pst {
 	LangElement::HashAlg& Stmt::addGenericDataToHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, prefixes.attributes.size());
 		addToHash(partial_hash, prefixes.specifiers.size());
+		addToHash(partial_hash, isImplicitReturn());
 		// note: Value of Kind should be strictly implied by elementType, that is added to hash for
 		// each element
 		return partial_hash;
@@ -266,6 +275,7 @@ namespace pst {
 			}
 			out << "],";
 		}
+		if (isImplicitReturn()) out << R"("implicit_return": 1,)";
 	}
 
 	void Stmt::addPrefixes(LangParserState& state, PrefixBoxes&& additions) {
