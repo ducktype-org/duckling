@@ -29,7 +29,7 @@ class ConcurrentTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::setWorkerCount(4);
+		concurrent::worker::setWorkerCount(4);
 
 		TESTER_ADD_TEST(hashMapSingleThreadTest1);
 

@@ -1,12 +1,5 @@
 #pragma once
 
-#include <concurrent/worker/worker_data.hpp>
+#include <concurrent/worker/worker.hpp>
 
-#include <functional>
-
-namespace concurrent::worker {
-	/**
-	 * @brief Represents a task to be executed by a worker.
-	 */
-	using Task = std::function<void(WDRef)>;
-}
+namespace concurrent::worker {}

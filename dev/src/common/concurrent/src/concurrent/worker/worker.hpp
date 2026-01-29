@@ -1,18 +1,30 @@
 #pragma once
 
 #include <concurrent/worker/task.hpp>
-#include <concurrent/worker/worker_data.hpp>
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
+#include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
 #include <condition_variable>
 #include <mutex>
 #include <queue>
+#include <random>
 #include <thread>
 
 namespace concurrent::worker {
-	using NoTasksCallback = std::function<void(WDRef)>;
+	class Worker;
+	using WRef = Ref<Worker>;
+
+	/**
+	 * @brief Callback type invoked when a worker has no tasks to execute.
+	 */
+	using NoTasksCallback = std::function<void(WRef)>;
+
+	/**
+	 * @brief Represents a task to be executed by a worker.
+	 */
+	using Task = std::function<void(WRef)>;
 
 	/**
 	 * @brief Represents a single worker in the WorkerManager.
@@ -23,7 +35,6 @@ namespace concurrent::worker {
 		friend class WorkerManager;
 
 	public:
-		Worker()                         = delete;
 		Worker(const Worker&)            = delete;
 		Worker(Worker&&)                 = delete;
 		Worker& operator=(const Worker&) = delete;
@@ -32,15 +43,10 @@ namespace concurrent::worker {
 		~Worker();
 
 		/**
-		 * @brief Starts the worker's main loop in a separate thread.
-		 */
-		void run();
-
-		/**
 		 * @brief Pushes a task to the worker's task queue.
 		 * @param task The task to be executed.
 		 */
-		void pushTask(Task&& task);
+		void scheduleTask(Task&& task);
 
 		/**
 		 * @brief Checks if a worker is free.
@@ -48,16 +54,6 @@ namespace concurrent::worker {
 		 * and has no tasks in its queue.
 		 */
 		[[nodiscard]] bool isFree() const;
-
-		/**
-		 * @brief Returns the WDRef to the worker's WorkerData.
-		 */
-		[[nodiscard]] WDRef getWorkerData() const;
-
-		/**
-		 * @brief Returns the ID of the worker.
-		 */
-		[[nodiscard]] WorkerID getId() const;
 
 		/**
 		 * @brief Sets the callback to be invoked when there are no tasks.
@@ -70,31 +66,42 @@ namespace concurrent::worker {
 		 */
 		void setNoTasksCallback(NoTasksCallback callback);
 
+		u64 randomU64() const { return u64(rng()); }
+
 	private:
-		Worker(WDRef worker_data);
+		Worker(usize seed);
+
 		/**
-		 * @brief Indicates whether the worker is currently executing a task.
-		 * @note This flag is set to false initially (for isFree to work correctly), or when the
-		 * worker is actually waiting on task_cv.
+		 * @brief Starts the worker's main loop in a separate thread.
 		 */
-		std::atomic_bool is_occupied   = false;
+		void run();
+
+		/**
+		 * @brief The random number generator for the worker.
+		 */
+		mutable std::mt19937_64 rng;
+
+		/**
+		 * @brief Indicates whether the worker is free.
+		 */
+		std::atomic_bool is_free       = true;
 		std::atomic_bool loop_run_flag = true;  /// Controls the main loop of the worker thread.
 
-		NoTasksCallback no_tasks_callback = [](WDRef) {};  /// Callback when there are no tasks.
-
-		const WDRef worker_data;
+		NoTasksCallback no_tasks_callback = [](WRef) {};  /// Callback when there are no tasks.
 
 		std::queue<Task> task_queue;
 
 		mutable std::mutex mut;  /// Internal synchronization mutex.
 		std::condition_variable
-			task_cv;             /// Condition variable to notify the worker thread of new tasks.
+			task_cv;             /// Condition variable to notify the worker thread about new tasks.
 
 		std::jthread real_thread;
-
-		/**
-		 * @brief Checks if a worker is free without locking the mutex.
-		 */
-		[[nodiscard]] bool isFreeNoLock() const;
 	};
 }
+
+template<>
+struct std::hash<concurrent::worker::WRef> {
+	[[nodiscard]] size_t operator()(const concurrent::worker::WRef& worker_ref) const noexcept {
+		return std::hash<usize>{}(reinterpret_cast<usize>(worker_ref.get()));
+	}
+};

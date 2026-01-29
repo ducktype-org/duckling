@@ -17,47 +17,57 @@ namespace concurrent::worker {
 	 * tasks are completed before destroying the WorkerManager.
 	 */
 	class WorkerManager final {
+		friend void setWorkerCount(u64);
+
+		/**
+		 * @brief Constructs a WorkerManager with the specified number of workers.
+		 * @param num_workers The number of workers to create.
+		 * @note This constructor is private. Use `WorkerManager::get()` to obtain the singleton
+		 * instance. It is meant to be called by `setWorkerCount` only.
+		 */
+		static void setWorkers(usize num_workers);
+
 	public:
-		/**
-		 * @brief Constructs a WorkerManager with getWorkerCount() workers.
-		 */
-		WorkerManager();
+		WorkerManager(const WorkerManager&)  = delete;
+		void operator=(const WorkerManager&) = delete;
+
+		static WorkerManager& get();
 
 		/**
-		 * @brief Returns a vector of all worker IDs managed by the WorkerManager.
+		 * @brief Returns a vector of all workers managed by the WorkerManager.
 		 */
-		std::vector<WorkerID> getAllWorkers();
+		[[nodiscard]] std::vector<WRef> getAllWorkers() const;
 
 		/**
-		 * @brief Returns a vector of free worker IDs.
-		 * @param max_count The maximum number of free worker IDs to return.
+		 * @brief Returns a vector of free workers.
+		 * @param max_count The maximum number of free workers to return.
 		 */
-		std::vector<WorkerID> getFreeWorkers(usize max_count);
+		[[nodiscard]] std::vector<WRef> getFreeWorkers(usize max_count) const;
 
 		/**
 		 * @brief Schedules a task on a specific worker.
-		 * @param worker_id The ID of the worker to schedule the task on.
+		 * @param worker The worker to schedule the task on.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTaskOnWorker(WorkerID worker_id, Task task);
+		void scheduleTaskOnWorker(WRef worker, Task task);
 
 		/**
-		 * @brief Schedules a task on any free worker.
+		 * @brief Schedules a task on any worker, while preferring free workers.
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTaskOnAnyFreeWorker(Task&& task);
+		void scheduleTaskOnAnyWorker(Task task);
 
 		/**
 		 * @brief Checks if a worker is free.
 		 * @param worker_id The ID of the worker to check.
 		 * @return True if the worker is free, false otherwise.
 		 */
-		[[nodiscard]] bool isWorkerFree(WorkerID worker_id) const;
+		[[nodiscard]] bool isWorkerFree(WRef worker) const;
 
 		/**
 		 * @brief Sets a callback to be called when the worker has no tasks to execute.
-		 * @param worker_id The ID of the worker.
+		 * @param worker The worker.
 		 * @param callback The callback function to be called.
 		 * @note If a worker is free, it will call the new callback
 		 * immediately. This means, that the callback may be called more than once
@@ -65,13 +75,10 @@ namespace concurrent::worker {
 		 * loop checks for tasks. If the first call adds tasks, then the second call will not
 		 * happen.
 		 */
-		void setNoTasksCallback(WorkerID worker_id, NoTasksCallback callback);
+		void setNoTasksCallback(WRef worker, NoTasksCallback callback);
 
 	private:
-		/**
-		 * @brief The number of workers managed by the WorkerManager.
-		 */
-		const usize num_workers;
+		WorkerManager() = default;
 
 		/**
 		 * @brief Array of workers managed by the WorkerManager.
