@@ -36,6 +36,9 @@ namespace base {
 		 *
 		 * @note Raw pointer is used here, as we want this code to use as little logic as possible,
 		 * to avoid any possible issues during panic the handling itself.
+		 *
+		 * \parallel There is no synchronization here, if multiple threads panic at the same time,
+		 * it will race with UB.
 		 */
 		std::string* firstPanicWhatStr() {
 			static std::string what_str;
@@ -69,7 +72,6 @@ namespace base {
 		what_str += getCurrentStackTrace();
 
 		if (am_i_first_panic) {
-			std::cerr << "SETTING FIRST PANIC\n";
 			// store the first panic what str
 			*firstPanicWhatStr() = what_str;
 		} else {
