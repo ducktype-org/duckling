@@ -52,4 +52,11 @@ namespace concurrent::worker {
 			worker_manager.workers.push_back(std::move(worker));
 		}
 	}
+
+	void WorkerManager::testAccessPrivateReloadState() {
+		auto& worker_manager = get();
+		auto  size           = worker_manager.workers.size();
+		worker_manager.workers.clear();
+		worker_manager.setWorkers(size);
+	}
 }

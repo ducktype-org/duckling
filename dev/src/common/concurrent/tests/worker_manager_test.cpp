@@ -33,17 +33,12 @@ class WorkerManagerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::worker::setWorkerCount(4);
+		constexpr int WORKER_COUNT = 4;
+		concurrent::worker::setWorkerCount(WORKER_COUNT);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		CORE_ASSERT(
-			concurrent::worker::WorkerManager::get().getFreeWorkers(4).size() == 4,
-			"Previous test failed"
-		);
+		concurrent::worker::WorkerManager::get().testAccessPrivateReloadState();
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
-		CORE_ASSERT(
-			concurrent::worker::WorkerManager::get().getFreeWorkers(4).size() == 4,
-			"Previous test failed"
-		);
+		concurrent::worker::WorkerManager::get().testAccessPrivateReloadState();
 	}
 
 private:

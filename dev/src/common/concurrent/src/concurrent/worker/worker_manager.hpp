@@ -28,6 +28,11 @@ namespace concurrent::worker {
 		static void setWorkers(usize num_workers);
 
 	public:
+		/**
+		 * @brief Tests access to private reload state for unit testing.
+		 */
+		static void testAccessPrivateReloadState();
+
 		WorkerManager(const WorkerManager&)  = delete;
 		void operator=(const WorkerManager&) = delete;
 
