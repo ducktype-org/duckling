@@ -318,6 +318,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
 
 	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
 	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
 	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
 
