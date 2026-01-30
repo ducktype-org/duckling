@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    QuackResult, QuackResultContext,
+    QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         Dependency,
         solver::types_common::ExpandedPackage,
@@ -13,6 +13,7 @@ use crate::{
 pub struct DependencyEdge {
     pub parent: ExpandedPackage,
     pub dependency_loc: InternedExpandedLocation,
+    pub manifest_child_name: StrId,
 }
 
 impl DependencyEdge {
@@ -27,6 +28,7 @@ impl DependencyEdge {
             .map(|child_loc| Self {
                 parent,
                 dependency_loc: *child_loc,
+                manifest_child_name: manifest_dependency.desc().manifest_name(),
             })
             .context_internal("Failed to expand a location")
     }

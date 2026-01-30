@@ -42,10 +42,10 @@ impl<'a> SolverEngine<'a> {
     /// Creates an engine and runs it.
     pub fn run_engine(
         input: &GatheredInfo,
-        new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
+        main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
         let engine = SolverEngine::new(input);
-        engine.run(new_dependencies)
+        engine.run(main_pkg)
     }
     /// Creates a new SolverEngine from the given GatheredInfo reference.
     fn new(input: &'a GatheredInfo) -> Self {
@@ -58,7 +58,7 @@ impl<'a> SolverEngine<'a> {
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
     fn run(
         mut self,
-        new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
+        main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         let empty_hashset: HashSet<FeatureName> = HashSet::new();
@@ -75,11 +75,10 @@ impl<'a> SolverEngine<'a> {
             }
         }
 
-        for (new_dep, new_dep_features) in new_dependencies.iter() {
-            self.model.require_package(new_dep)?;
-            for feature in new_dep_features.iter() {
-                self.model.require_package_with_feature(new_dep, feature)?;
-            }
+        self.model.require_package(&main_pkg.0)?;
+        for feature in main_pkg.1.iter() {
+            self.model
+                .require_package_with_feature(&main_pkg.0, feature)?;
         }
         self.model.solve()
     }
@@ -370,8 +369,8 @@ metadata:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
         assert!(output.new_features == HashMap::new());
         assert!(
@@ -380,6 +379,7 @@ metadata:
                     DependencyEdge {
                         parent: exp_pkg_a,
                         dependency_loc: exp_location_b,
+                        manifest_child_name: StrId::new("b"),
                     },
                     Some(Version::new(2, 0, 0))
                 )])
@@ -471,8 +471,8 @@ dependencies:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
-        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
         assert!(
             output.new_features
@@ -485,6 +485,7 @@ dependencies:
                         DependencyEdge {
                             parent: exp_pkg_a,
                             dependency_loc: exp_location_b,
+                            manifest_child_name: StrId::new("b"),
                         },
                         Some(Version::new(2, 0, 0))
                     ),
@@ -492,6 +493,7 @@ dependencies:
                         DependencyEdge {
                             parent: exp_pkg_b,
                             dependency_loc: exp_location_a,
+                            manifest_child_name: StrId::new("a"),
                         },
                         Some(Version::new(1, 0, 0))
                     ),
@@ -588,8 +590,8 @@ features:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
-        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
@@ -684,8 +686,8 @@ features:
             preexisting_dependencies: HashMap::new(),
         };
 
-        let new_dependencies = vec![(exp_pkg_a.clone(), HashSet::new())];
-        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
         assert!(
             output.new_features
@@ -807,6 +809,7 @@ features:
             DependencyEdge {
                 parent: exp_pkg_b,
                 dependency_loc: exp_location_c,
+                manifest_child_name: StrId::new("c"),
             },
             Some(Version::new(3, 0, 0)),
         )]);
@@ -821,8 +824,8 @@ features:
             preexisting_dependencies,
         };
 
-        let new_dependencies = vec![(exp_pkg_a, HashSet::new())];
-        let output = SolverEngine::run_engine(&input, &new_dependencies).unwrap();
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
         assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
