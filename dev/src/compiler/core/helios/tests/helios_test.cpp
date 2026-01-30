@@ -76,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -1507,6 +1508,21 @@ private:
 					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr })
 				          .valueOrThrow();
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
+			}
+		}
+	}
+
+	void testStaticArrays() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/static_arrays")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		ASSERT_EQUAL(1, hout.functions.size());
+
+		for (auto& function: hout.functions) {
+			if (function.declaration->original_name == base::StrID("array_test")) {
+				std::cout << function.debugPrint() << '\n';
+				std::cout << '\n';
 			}
 		}
 	}

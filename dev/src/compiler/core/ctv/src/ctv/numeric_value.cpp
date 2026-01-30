@@ -16,6 +16,17 @@ namespace compiler::numeric_value {
 		return std::visit([&](auto&& value) { return base::toString(value); }, value);
 	}
 
+	bool NumericValue::isIntegral() const {
+		return std::visit(
+			[&](auto&& val) -> bool {
+				using T = std::decay_t<decltype(val)>;
+				if constexpr (std::is_integral_v<T>) return true;
+				return false;
+			},
+			value
+		);
+	}
+
 	tsh::SymbolType<> NumericValue::getTypeOfStoredValue(query::Context& ctx) const {
 		using namespace tsh;
 		return std::visit(

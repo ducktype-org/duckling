@@ -144,5 +144,11 @@ namespace compiler::numeric_value {
 		 */
 		[[nodiscard]] base::Optional<NumericValue> castTo(const tsh::SymbolType<>& target_type
 		) const;
+
+		/**
+		 * @brief Whether the NumericValue stores an integer value.
+		 * @return True if CTV stores an integer, false otherwise.
+		 */
+		[[nodiscard]] bool isIntegral() const;
 	};
 }

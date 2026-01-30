@@ -18,12 +18,14 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -334,18 +336,60 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, hout_expr_result);
 
 			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
-				auto args = call_expr->getArgs().unlock(query_ctx);
-				if (args->size() != 1) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Type cast must have exactly one argument.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
+				std::cout << "CALL EXPR====================\n";
+				call_expr->dprint(std::cout);
+				std::cout << '\n';
+
+				// Static Array type constructor.
+				if (call_expr->getType() == lexer::Token::Square) {
+					// TODOP: This is temporary.
+					auto args = call_expr->getArgs().unlock(query_ctx);
+					if (args->size() != 1) {
+						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Array size must be exactly one expression.",
+							call_expr->getSourcePosition()
+						));
+						return query::Failed();
+					}
+
+					auto arg_access = (*args->begin()).unlock(query_ctx);
+					auto size_expr  = arg_access->getArg().unlock(query_ctx)->getExpr();
+
+					auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_expr });
+					UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
+
+					// Size of the array should be compile time evaluated and integral.
+					auto maybe_size = ctv.get<ctv::NumericValue>();
+					if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
+						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Array size must be a constant integer.", call_expr->getSourcePosition()
+						));
+						return query::Failed();
+					}
+
+					// This should never fail.
+					usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+					tsh::SymbolType<> element_type = literal_type_expr->value_type;
+					auto              static_array_type
+						= query_ctx.query<tsh::QueryStaticArrayType>({ element_type, array_size });
+
+					return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type)
+					);
 				}
-				// Iterating over a single argument list, because the pst arguments
-				// have only iterator accessor.
-				for (auto&& arg: *args) {
+
+				if (call_expr->getType() == lexer::Token::Round) {
+					auto args = call_expr->getArgs().unlock(query_ctx);
+					if (args->size() != 1) {
+						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Type cast must have exactly one argument.",
+							call_expr->getSourcePosition()
+						));
+						return query::Failed();
+					}
+
+					auto arg_access      = (*args->begin()).unlock(query_ctx);
 					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
-						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
+						arg_access->getArg().unlock(query_ctx)->getExpr()
 					);
 					UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_expr_result);
 
@@ -399,8 +443,49 @@ namespace compiler::helios::code {
 		 * Call in situations were we don't have "access expr" then "call expr" in a row,
 		 * for example we have two call expr like a[i]() or b()()
 		 */
-		auto processPSTExpr(Box<Expr>, pst::Access<pst::expr::Call> call_expr)
+		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
+			CORE_PANIC("This function is actually run");
+
+			// TODOP: For handling cases like Record[5];
+			if (current_expr->expression_type.getType().getKind() == tsh::Kind::Meta
+			    && call_expr->getType() == lexer::Token::Square) {
+				auto args = call_expr->getArgs().unlock(query_ctx);
+				if (args->size() != 1) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array size must be exactly one expression.", call_expr->getSourcePosition()
+					));
+					return query::Failed();
+				}
+
+				auto arg_access = (*args->begin()).unlock(query_ctx);
+				auto size_expr  = arg_access->getArg().unlock(query_ctx)->getExpr();
+
+				auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_expr });
+				UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
+
+				// Size of the array should be compile time evaluated and integral.
+				auto maybe_size = ctv.get<ctv::NumericValue>();
+				if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array size must be a constant integer.", call_expr->getSourcePosition()
+					));
+					return query::Failed();
+				}
+
+				// This should never fail.
+				usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+				tsh::SymbolType<> element_type = current_expr->expression_type.getSymbolType();
+				auto              static_array_type
+					= query_ctx.query<tsh::QueryStaticArrayType>({ element_type, array_size });
+
+				return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
+			}
+
+			if (call_expr->getType() == lexer::Token::Square)
+				CORE_PANIC("NOT YET IMPLEMENTED BUT SHOULD BE IN THIS PR");
+
+
 			// @note this function is not run yet.
 
 			// @note: previous mock-implementation of this function

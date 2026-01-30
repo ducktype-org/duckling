@@ -786,6 +786,10 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
+				stmt->dprint(std::cout);
+				std::cout << '\n';
+
+
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 

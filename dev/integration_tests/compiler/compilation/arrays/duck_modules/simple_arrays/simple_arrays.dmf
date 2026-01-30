@@ -1,0 +1,12 @@
+fun array_test() -> i32 = {
+    var arr: i32[5];
+    # let arr: i32[5];
+    # arr[0] = 0;
+    # let x = arr[1];
+    # return arr[0];
+}
+
+# fun main() -> i32 = {
+#     array_test();
+#     return 0;
+# }
