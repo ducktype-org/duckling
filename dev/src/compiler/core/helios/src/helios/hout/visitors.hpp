@@ -18,6 +18,7 @@ namespace compiler::helios::code {
 		LiteralUnitExpr,
 		LiteralNumericExpr,
 		LiteralBoolExpr,
+		LiteralCharExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,
 		IdentifierExpr,

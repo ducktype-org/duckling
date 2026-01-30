@@ -78,6 +78,10 @@ namespace compiler::mir {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}
 
+		void visitLiteralCharExpr(const hc::LiteralCharExpr& expr) override {
+			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
+		}
+
 		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
 			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
 		}

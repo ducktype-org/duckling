@@ -31,7 +31,9 @@ struct str {
 // Here, we declare the entire interface as extern "C" to avoid name mangling.
 // The definitions will be given below.
 extern "C" {
-	// Basic numeric I/O
+	// Basic small I/O
+	int64_t  builtin_output_char(char c);
+	char     builtin_input_char();
 	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
 	int32_t  builtin_output_u64(uint64_t v);
@@ -43,6 +45,14 @@ extern "C" {
 	int64_t builtin_output_string(str s);
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
+}
+
+int64_t builtin_output_char(char c) { return printf("%c\n", c); }
+
+char builtin_input_char() {
+	char c;
+	if (scanf("%c", &c) != 1) exit(1);
+	return c;
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.

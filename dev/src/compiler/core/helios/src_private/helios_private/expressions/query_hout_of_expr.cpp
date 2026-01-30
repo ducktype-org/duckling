@@ -49,11 +49,29 @@ namespace compiler::helios::code {
 			};
 
 		public:
-			UnknownEscapeSequenceError(dia::SourcePosition source_position, std::string sequence):
+			UnknownEscapeSequenceError(
+				const dia::SourcePosition& source_position, std::string sequence
+			):
 				  MessageWithCodeFragmentAndCause(source_position) {
 				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
 			}
+		};
+
+		/**
+		 * brief This error message is used when a character literal contains more than one character.
+		 */
+		class InvalidCharacterLiteralError final: public dia_int::MessageWithCodeFragment {
+			dia_int::Metadata getMetadata() const final {
+				return { .template_type = "message",
+					     .type          = "error",
+					     .family        = "parser",
+					     .name          = "invalid_character_literal" };
+			}
+
+		public:
+			explicit InvalidCharacterLiteralError(const dia::SourcePosition& source_position):
+				  MessageWithCodeFragment(source_position) {}
 		};
 
 		/**
@@ -120,6 +138,28 @@ namespace compiler::helios::code {
 				} else {
 					// Error was logged in fromExprNumericValue.
 					return;
+				}
+			}
+
+			void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> stmt) override {
+				const auto escaped_string  = stmt->getValue().value.strView();
+				const auto unescape_result = base::unescapeString(escaped_string);
+				variant_match(unescape_result) {
+					variant_case(base::UnescapedString, result) {
+						if (result.value.size() == 1) {
+							node = makeBox<LiteralCharExpr>(ctx, result.value.at(0));
+						} else {
+							ctx.logInt(
+								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition())
+							);
+						}
+					}
+					variant_case(base::UnknownEscapeSequence, error) {
+						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+							stmt->getSourcePosition(), error.value
+						));
+					}
+					variant_default CORE_UNREACHABLE();
 				}
 			}
 

@@ -458,6 +458,11 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymbolData> output_symbol_data;
 
+					auto char_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryCharType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
 					auto i32_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>(
 							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
@@ -498,8 +503,16 @@ namespace compiler::helios {
 							tsh::Mutability::Mutable
 						);
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 10> function_data
 						= { {
+							{
+								base::StrID("builtin_input_char"),
+								ctx.query<tsh::QueryFunctionType>({ {}, char_type }),
+							},
+							{
+								base::StrID("builtin_output_char"),
+								ctx.query<tsh::QueryFunctionType>({ { i64_type }, char_type }),
+							},
 							{
 								base::StrID("builtin_input_i64"),
 								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),

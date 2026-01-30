@@ -125,6 +125,21 @@ namespace compiler::helios::code {
 		LiteralBoolExpr(tsh::ExpressionType<> expression_type, bool value);
 	};
 
+	struct LiteralCharExpr final: public Expr {
+		char value;
+
+		LiteralCharExpr(query::Context& ctx, char value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralCharExpr(const tsh::ExpressionType<>& expression_type, char value);
+	};
+
 	/**
 	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
 	 */

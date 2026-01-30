@@ -21,6 +21,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralUnitExpr)
 	EXPR_VISITOR(LiteralNumericExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
+	EXPR_VISITOR(LiteralCharExpr)
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
@@ -98,19 +99,37 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, value);
 	}
 
-	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, const base::StrID value):
-		  Expr(
-
-			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  ctx.query<tsh::QueryStringType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
+	LiteralCharExpr::LiteralCharExpr(query::Context& ctx, char value):
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  ctx.query<tsh::QueryCharType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )),
 		  value(value) {}
+
+	void LiteralCharExpr::debugPrint(std::ostream& out) const { out << "'" << value << "'"; }
+
+	LiteralCharExpr::LiteralCharExpr(const tsh::ExpressionType<>& expression_type, const char value):
+		  Expr(expression_type),
+		  value(value) {}
+
+	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, const base::StrID value):
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  ctx.query<tsh::QueryStringType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		  )),
+		  value(value) {}
+
+	Box<Expr> LiteralCharExpr::clone() const {
+		return makeBox<LiteralCharExpr>(expression_type, value);
+	}
 
 	LiteralStringExpr::LiteralStringExpr(
 		const tsh::ExpressionType<>& expression_type, const base::StrID value
