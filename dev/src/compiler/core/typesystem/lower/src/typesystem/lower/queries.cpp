@@ -1,5 +1,8 @@
 #include "queries.hpp"
 
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/types.hpp"
+
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsl {
@@ -31,6 +34,8 @@ namespace compiler::tsl {
 				return FunctionalTypeLayout(key);
 			case DynamicArray:
 				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
+			case StaticArray:
+				return StaticArrayTypeLayout(tsh::StaticArrayAbstractType(key), ctx);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:

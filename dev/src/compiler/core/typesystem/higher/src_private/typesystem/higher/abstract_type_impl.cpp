@@ -55,6 +55,8 @@ namespace compiler::tsh {
 
 	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
 		const {
+		// StaticArrays are coercible to a pointer pointing to the same type they store (like in C).
+		// TODOP: Decide if static arrays should be implicitly coercible to dynamic arrays?
 		if (target.getKind() == Kind::Pointer) {
 			auto pointer_type = PointerAbstractType(target);
 			return pointer_type.getUnderlyingType() == element_type.getType();
