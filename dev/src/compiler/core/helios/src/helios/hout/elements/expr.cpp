@@ -36,6 +36,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
+	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
@@ -726,6 +727,22 @@ namespace compiler::helios::code {
 
 	Box<Expr> DerefExpr::clone() const {
 		return makeBox<DerefExpr>(expression_type, inner->clone());
+	}
+
+	DefaultValueExpr::DefaultValueExpr(query::Context&, tsh::SymbolType<> type):
+		  Expr(tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Literal))),
+		  type(type) {}
+
+	DefaultValueExpr::DefaultValueExpr(tsh::ExpressionType<> expression_type, tsh::SymbolType<> type):
+		  Expr(expression_type),
+		  type(type) {}
+
+	void DefaultValueExpr::debugPrint(std::ostream& out) const {
+		out << "default_value<" << expression_type.getSymbolType().toString() << ">";
+	}
+
+	Box<Expr> DefaultValueExpr::clone() const {
+		return makeBox<DefaultValueExpr>(expression_type, type);
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, Box<Expr> value_expr):

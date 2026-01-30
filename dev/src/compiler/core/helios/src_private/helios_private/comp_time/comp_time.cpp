@@ -550,6 +550,11 @@ namespace compiler::helios {
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
+			void visitDefaultValueExpr(const code::DefaultValueExpr&) final {
+				// TODOP
+				throw base::NotYetImplemented("Default value in comp time");
+			}
+
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.

@@ -426,6 +426,10 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitDefaultValueExpr(const hc::DefaultValueExpr& expr) override {
+			throw base::NotYetImplemented("DefaultValueExpr in MIR");
+		}
+
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));

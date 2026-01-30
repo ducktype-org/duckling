@@ -577,6 +577,22 @@ namespace compiler::helios::code {
 		DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
+	// TODOP: Docs
+	struct DefaultValueExpr final: public Expr {
+		tsh::SymbolType<> type;
+
+		DefaultValueExpr(query::Context& ctx, tsh::SymbolType<> type);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		DefaultValueExpr(tsh::ExpressionType<> expression_type, tsh::SymbolType<> type);
+	};
+
 	/**
 	 * @brief Represents a compile-time cast of a value to a type.
 	 *

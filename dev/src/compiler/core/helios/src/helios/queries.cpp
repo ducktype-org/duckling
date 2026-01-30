@@ -752,18 +752,20 @@ namespace compiler::helios {
 						return;
 					}
 
-					throw base::NotYetImplemented(
-						"Variable declarations without initial value are not supported in HOUT yet."
-						" We should add default initialization here."
-					);
+					auto initial_value = makeBox<code::DefaultValueExpr>(ctx, symbol_type);
+					output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
+
+					// TODOP:
+					// throw base::NotYetImplemented(
+					// 	"Variable declarations without initial value are not supported in HOUT yet."
+					// 	" We should add default initialization here."
+					// );
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
 							  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
 						)
 					          .valueOrThrow();
-
-
 					output(code::VariableStmt(std::move(initial_value_coerced), symbol_type, symbol)
 					);
 				}
