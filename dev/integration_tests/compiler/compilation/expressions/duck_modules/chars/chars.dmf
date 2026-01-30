@@ -1,0 +1,27 @@
+fun process_character() -> () = {
+    builtin_output_str("Enter a character: ");
+    var c = builtin_input_char();
+
+    if ('a' <= c <= 'z') {
+        builtin_output_str("The provided character is lowercase.\n");
+        builtin_output_str("Its uppercase counterpart is: ");
+        builtin_output_char(c - 'a' + 'A');
+        builtin_output_str("\n");
+    } else if ('A' <= c <= 'Z') {
+        builtin_output_str("The provided character is uppercase.\n");
+        builtin_output_str("Its lowercase counterpart is: ");
+        builtin_output_char(c - 'A' + 'a');
+        builtin_output_str("\n");
+    } else {
+        builtin_output_str("The provided character is not a letter.\n");
+    }
+}
+
+fun main() -> i64 = {
+    var reps = 3;
+    while (reps > 0) {
+        process_character();
+        reps = reps - 1;
+    };
+    return 0;
+}

@@ -150,3 +150,12 @@ Tests:
          String: "Test"
         Output:
           String: "Test\nHello, world!\n"
+
+  chars:
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+          String: "X\nd\n \n"
+        Output:
+          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
