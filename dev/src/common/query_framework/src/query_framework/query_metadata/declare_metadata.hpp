@@ -90,10 +90,10 @@ namespace query {
  * ctx.addMetadata<metadata_SourceLocation>(loc_data);
  * @endcode
  */
-#define DECLARE_METADATA(name, type)                                                               \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {                         \
-		using Self = metadata_##name;                                                              \
-                                                                                                   \
+#define DECLARE_METADATA(name, type) INTERNAL_DECLARE_METADATA(metadata_##name, type)
+
+#define INTERNAL_DECLARE_METADATA(Metadata, type)                                                  \
+	struct Metadata final: public ::query::internal::BaseMetadata {                                \
 		static_assert(                                                                             \
 			::query::HasSerialize<type>,                                                           \
 			"type '" #type "' must implement 'std::vector<std::byte> serialize() const'"           \
@@ -104,16 +104,16 @@ namespace query {
 			" deserialize(std::span<const std::byte>)'"                                            \
 		);                                                                                         \
                                                                                                    \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };               \
+		static inline const base::StrID TYPE_ID{ std::string{ #Metadata } };                       \
                                                                                                    \
 		type value;                                                                                \
                                                                                                    \
-		Self() = delete;                                                                           \
+		Metadata() = delete;                                                                       \
                                                                                                    \
                                                                                                    \
 		template<typename... Args>                                                                 \
 		requires std::constructible_from<type, Args...>                                            \
-		explicit Self(Args&&... args): value(std::forward<Args>(args)...) {}                       \
+		explicit Metadata(Args&&... args): value(std::forward<Args>(args)...) {}                   \
                                                                                                    \
 		[[nodiscard]]                                                                              \
 		std::vector<std::byte> serialize() const override {                                        \
@@ -126,14 +126,14 @@ namespace query {
 		}                                                                                          \
                                                                                                    \
 		[[nodiscard]]                                                                              \
-		static Self deserialize(std::span<const std::byte> data) {                                 \
-			return Self{ type::deserialize(data) };                                                \
+		static Metadata deserialize(std::span<const std::byte> data) {                             \
+			return Metadata{ type::deserialize(data) };                                            \
 		}                                                                                          \
                                                                                                    \
 	private:                                                                                       \
 		static Box<::query::internal::BaseMetadata> boxDeserialize(std::span<const std::byte> data \
 		) {                                                                                        \
-			return makeBox<Self>(Self::deserialize(data));                                         \
+			return makeBox<Metadata>(Metadata::deserialize(data));                                 \
 		}                                                                                          \
 		static bool doRegister() {                                                                 \
 			return ::query::internal::MetadataRegistry::instance().registerType(                   \
@@ -161,9 +161,10 @@ namespace query {
  * ctx.addMetadata<metadata_Counter>(42);
  * @endcode
  */
-#define DECLARE_METADATA_SIMPLE(name, type)                                                        \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {                         \
-		using Self = metadata_##name;                                                              \
+#define DECLARE_METADATA_SIMPLE(name, type) INTERNAL_DECLARE_METADATA_SIMPLE(metadata_##name, type)
+
+#define INTERNAL_DECLARE_METADATA_SIMPLE(Metadata, type)                                           \
+	struct Metadata final: public ::query::internal::BaseMetadata {                                \
 		static_assert(                                                                             \
 			::query::TriviallySerializable<type>,                                                  \
 			"Type '" #type                                                                         \
@@ -171,13 +172,13 @@ namespace query {
 			"Use DECLARE_METADATA for complex types."                                              \
 		);                                                                                         \
                                                                                                    \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };               \
+		static inline const base::StrID TYPE_ID{ std::string{ #Metadata } };                       \
                                                                                                    \
 		type value;                                                                                \
                                                                                                    \
-		Self() = delete;                                                                           \
+		Metadata() = delete;                                                                       \
                                                                                                    \
-		explicit Self(type val): value(std::move(val)) {}                                          \
+		explicit Metadata(type val): value(std::move(val)) {}                                      \
                                                                                                    \
 		[[nodiscard]]                                                                              \
 		std::vector<std::byte> serialize() const override {                                        \
@@ -192,17 +193,17 @@ namespace query {
 		}                                                                                          \
                                                                                                    \
 		[[nodiscard]]                                                                              \
-		static Self deserialize(std::span<const std::byte> data) {                                 \
+		static Metadata deserialize(std::span<const std::byte> data) {                             \
 			CORE_ASSERT(data.size() == sizeof(type), "Bad data size for deserialization");         \
 			alignas(type) std::array<unsigned char, sizeof(type)> buffer{};                        \
 			std::memcpy(buffer.data(), data.data(), sizeof(type));                                 \
-			return Self{ *std::launder(reinterpret_cast<const type*>(buffer.data())) };            \
+			return Metadata{ *std::launder(reinterpret_cast<const type*>(buffer.data())) };        \
 		}                                                                                          \
                                                                                                    \
 	private:                                                                                       \
 		static Box<::query::internal::BaseMetadata> boxDeserialize(std::span<const std::byte> data \
 		) {                                                                                        \
-			return makeBox<Self>(Self::deserialize(data));                                         \
+			return makeBox<Metadata>(Metadata::deserialize(data));                                 \
 		}                                                                                          \
 		static bool doRegister() {                                                                 \
 			return ::query::internal::MetadataRegistry::instance().registerType(                   \
@@ -228,22 +229,22 @@ namespace query {
  * ctx.addMetadata<metadata_SourceFile>(base::StrID{"src/main.duck"});
  * @endcode
  */
-#define DECLARE_METADATA_STRID(name)                                                   \
-	struct metadata_##name final: public ::query::internal::BaseMetadata {             \
-		using Self = metadata_##name;                                                  \
-                                                                                       \
-		static inline const base::StrID TYPE_ID{ std::string{ "metadata_" #name } };   \
+#define DECLARE_METADATA_STRID(name) INTERNAL_DECLARE_METADATA_STRID(metadata_##name)
+
+#define INTERNAL_DECLARE_METADATA_STRID(Metadata)                                      \
+	struct Metadata final: public ::query::internal::BaseMetadata {                    \
+		static inline const base::StrID TYPE_ID{ std::string{ #Metadata } };           \
                                                                                        \
 		base::StrID value;                                                             \
                                                                                        \
-		Self() = delete;                                                               \
+		Metadata() = delete;                                                           \
                                                                                        \
-		explicit Self(base::StrID val): value(std::move(val)) {}                       \
+		explicit Metadata(base::StrID val): value(std::move(val)) {}                   \
                                                                                        \
 		[[nodiscard]]                                                                  \
 		std::vector<std::byte> serialize() const override {                            \
 			CORE_PANIC("StrID metadata should use string table serialization");        \
-			CORE_UNREACHABLE;                                                          \
+			CORE_UNREACHABLE();                                                        \
 		}                                                                              \
                                                                                        \
 		[[nodiscard]]                                                                  \
@@ -263,7 +264,7 @@ namespace query {
                                                                                        \
 	private:                                                                           \
 		static Box<::query::internal::BaseMetadata> fromStrID(base::StrID str_value) { \
-			return makeBox<Self>(str_value);                                           \
+			return makeBox<Metadata>(str_value);                                       \
 		}                                                                              \
 		static bool doRegister() {                                                     \
 			return ::query::internal::MetadataRegistry::instance().registerStrIDType(  \
