@@ -133,6 +133,9 @@ jobs:
       - name: Install Ninja
         run: sudo apt -y install ninja-build
 
+      - name: Install Valgrind 
+        run: sudo apt -y install valgrind
+
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
 
