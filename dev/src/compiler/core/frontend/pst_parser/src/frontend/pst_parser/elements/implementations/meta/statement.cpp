@@ -57,28 +57,116 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief A heuristic to check is a bracket group is 
+		 *
+		 * @note This has to be complicated because of ternary expressions.
+		 */
+		bool isFlowBlockGroup(const TokenStream& stream, i64 fwd) {
+			if (Conditions::isBlockGroup(stream, fwd)) {
+				if (stream[fwd - 2].is(Keyword::For) || stream[fwd - 2].is(Keyword::While)) {
+					return true;
+				}
+				if (stream[fwd - 2].isIdentifier()) {
+					if (stream[fwd - 3].is(Keyword::For) || stream[fwd - 3].is(Keyword::While)) {
+						return true;
+					}
+					if (stream[fwd - 1].isBracketGroup(Token::Round) && stream[fwd - 3].is(Keyword::If)) {
+						return true;
+					}
+				}
+				if (stream[fwd - 1].isBracketGroup(Token::Round) && stream[fwd - 2].is(Keyword::If)) {
+					return true;
+				}
+				if (stream[fwd - 1].is(Keyword::Else)) {
+					if (stream[fwd - 2].is(Special::Semicolon)) {
+						return true;
+					}
+					if (Conditions::isBlockGroup(stream, fwd - 3)) {
+						const i64 rel = fwd - 3;
+						if (stream[rel - 2].isIdentifier()) {
+							if (stream[rel - 3].is(Keyword::For) || stream[rel - 3].is(Keyword::While)) {
+								return true;
+							}
+							if (stream[rel - 1].isBracketGroup(Token::Round) && stream[rel - 3].is(Keyword::If)) {
+								return true;
+							}
+						}
+						if (stream[rel - 1].isBracketGroup(Token::Round) && stream[rel - 2].is(Keyword::If)) {
+							return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
 		template<>
 		struct StmtClassifiers<If> {
 			/**
 			 * @brief Function that checks heuristically for a potential end of an if statement.
 			 *
-			 * This function is a very rough placeholder that should work in most correct cases but
-			 * a proper heuristic handling will be needed.
-			 *
-			 * @TODO: #1761 Add proper handling instead.
+			 * This function has to be very careful because there are a lot of weird cases for ifs.
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel)
-				    || ((state[fwd - 1].is(Special::Semicolon)
-				         || Conditions::isBlockGroup(state, fwd - 1))
-				        && !state[fwd].is(Keyword::Else));
+				if (state[fwd].is(Special::AtSign) || keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsSpecifier))
+					return true;
+				if (!state[fwd].is(Keyword::Else))
+					if (state[fwd - 1].is(Special::Semicolon))
+						return true;
+				if (isFlowBlockGroup(state, fwd - 1))
+					return true;
+				if (state[fwd - 3].is(Keyword::If) || (state[fwd - 4].is(Keyword::If)) || state[fwd - 2].is(Keyword::Else))
+					if (Conditions::isBlockGroup(state, fwd - 1))
+						return true;
+				if (!state[fwd - 2].is(Keyword::If) && !state[fwd - 1].is(Keyword::Else))
+					if (keywordFlags(state[fwd].asKeyword()).contains(lang_def::KeywordFlagsOptions::IsStmtStart))
+						return true;
+				return false;
+			}
+		};
+
+		template<class T> 
+		struct StmtFinder {
+			/**
+		 	* @brief Calculates the heuristic for where a given statement ends. Can be overriden when needed.
+		 	*/
+			static u64 findStatementLength(LangParserState& state) {
+				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			}
+		};
+
+		template<class T> concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
+
+		template<class T> requires FunctionLike<T> 
+		struct StmtFinder<T> {
+		private:
+			static bool isAssignOrEnd(const TokenStream& stream, i64 fwd) {
+				return StmtClassifiers<T>::isStmtEnd(stream, fwd) || stream[fwd].is(NamedOperator::Assign); 
+			}
+
+			static bool isInnerExprEnd(const TokenStream& stream, i64 fwd) {
+				return StmtClassifiers<ExprStmt>::isStmtEnd(stream, fwd); 
+			}
+		public:
+			/**
+		 	* @brief For function like definitions we have to consider code block vs an expression.
+		 	*/
+			static u64 findStatementLength(LangParserState& state) {
+				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(1);
+				if (!state[base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign)) {
+					return initial_length;
+				}
+				initial_length++;
+				if (Conditions::isBlockGroup(state.ctokens(), base::safeIntConv<i64>(initial_length))) return initial_length + 1;
+				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(initial_length);
 			}
 		};
 
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			// We skip the first token as its the keyword we already found
-			u64  length = 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(1);
+			u64  length = StmtFinder<T>::findStatementLength(state);
 			bool could_implicitly_return
 				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
 			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
