@@ -10,6 +10,8 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/str/str_utils.hpp"
+#include "base/types/ints.hpp"
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -495,6 +497,61 @@ namespace compiler::tsh {
 		 * requires to free memory.
 		 */
 		[[nodiscard]] bool hasNoOpDestructor() const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
+	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element_type;
+		usize        size;  // Number of elements in the array.
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::StaticArray;
+
+		StaticArrayAbstractTypeImpl(const SymbolType<> element, const usize size):
+			  element_type(element),
+			  size(size) {
+			representation = base::strConcat(
+				"static_array(", element.toString(), ", ", base::toString(size), ")"
+			);
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element_type;
+		}
+
+		/**
+		 * @brief Gets the compile-time constant size of the array.
+		 * @return The size of the array.
+		 */
+		[[nodiscard]]
+		usize getSize() const {
+			return size;
+		}
+
+		/**
+		 * @brief A static array is implicitly coercible to a pointer to its first element.
+		 * TODOP: Do we want that?
+		 */
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context&) const override;
+
+		/**
+		 * @brief Static arrays have trivial destructors if the inner type has a noOpDestructor.
+		 */
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return element_type.getType().hasNoOpDestructor();
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;

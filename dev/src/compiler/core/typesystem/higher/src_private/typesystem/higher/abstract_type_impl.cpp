@@ -1,5 +1,7 @@
 #include "abstract_type_impl.hpp"
 
+#include "typesystem/higher/types.hpp"
+
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
@@ -49,6 +51,15 @@ namespace compiler::tsh {
 		        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
 					{ pointee, PointerAbstractType(target).getPointee() }
 				));
+	}
+
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
+		const {
+		if (target.getKind() == Kind::Pointer) {
+			auto pointer_type = PointerAbstractType(target);
+			return pointer_type.getUnderlyingType() == element_type.getType();
+		}
+		return false;
 	}
 
 	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
@@ -222,6 +233,10 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getInterface(query::Context&) const {
 		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
+	}
+
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Static array type interface not yet implemented");
 	}
 
 	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {

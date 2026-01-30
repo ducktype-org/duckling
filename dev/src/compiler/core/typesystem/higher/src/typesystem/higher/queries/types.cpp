@@ -1,5 +1,7 @@
 #include "types.hpp"
 
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <typesystem/higher/abstract_type_impl.hpp>
 
@@ -168,6 +170,16 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
+
+	struct IMPLEMENT_QUERY(QueryStaticArrayType, StaticArrayAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return { key.element_type, key.size };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStaticArrayType)
 
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult { return { key.components }; }
