@@ -74,6 +74,11 @@ namespace compiler::helios {
 
 			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
 
+			void visitIndexExpr(const code::IndexExpr&) final {
+				// TODOP
+				throw base::NotYetImplemented("This PR");
+			}
+
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 				// Type Evaluation.
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {

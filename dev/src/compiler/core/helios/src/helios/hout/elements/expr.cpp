@@ -33,6 +33,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
+	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
@@ -568,6 +569,51 @@ namespace compiler::helios::code {
 
 	Box<Expr> AccessExpr::clone() const {
 		return makeBox<AccessExpr>(expression_type, base->clone(), field);
+	}
+
+	IndexExpr::IndexExpr(query::Context&, Box<Expr> base, Box<Expr> index):
+		  // @TODO: #1549 Value category usage is not correct here.
+		  Expr(tsh::ExpressionType(
+			  [&]() -> tsh::SymbolType<> {
+				  auto base_type = base->expression_type.getType();
+				  // Index Expression returns a reference to the element of the array.
+				  switch (base_type.getKind()) {
+				  case tsh::Kind::DynamicArray:
+					  return base_type.as<tsh::DynamicArrayAbstractType>()
+			              .getElementType()
+			              .withReferenceKind(tsh::ReferenceKind::Ref);
+				  case tsh::Kind::StaticArray:
+					  return base_type.as<tsh::StaticArrayAbstractType>()
+			              .getElementType()
+			              .withReferenceKind(tsh::ReferenceKind::Ref);
+				  default:
+					  CORE_PANIC("Cannot index a non-array like type");
+				  }
+			  }(),
+			  base->expression_type.getValueCategory()  // TODOP: Think about that.
+		  )
+
+
+	      ),
+		  base(std::move(base)),
+		  index(std::move(index)) {}
+
+	IndexExpr::IndexExpr(
+		const tsh::ExpressionType<>& expression_type, Box<Expr> base, Box<Expr> index
+	):
+		  Expr(expression_type),
+		  base(std::move(base)),
+		  index(std::move(index)) {}
+
+	void IndexExpr::debugPrint(std::ostream& out) const {
+		base->debugPrint(out);
+		out << "[";
+		index->debugPrint(out);
+		out << "]";
+	}
+
+	Box<Expr> IndexExpr::clone() const {
+		return makeBox<IndexExpr>(expression_type, base->clone(), index->clone());
 	}
 
 	SequenceExpr::SequenceExpr(query::Context&, std::vector<Box<Expr>> expressions):

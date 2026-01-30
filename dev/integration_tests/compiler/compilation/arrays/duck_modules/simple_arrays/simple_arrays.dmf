@@ -1,12 +1,89 @@
-fun array_test() -> i32 = {
+fun simple_array_test() -> i32 = {
     var arr: i32[5];
-    # let arr: i32[5];
-    # arr[0] = 0;
-    # let x = arr[1];
-    # return arr[0];
+    arr[0] = 0;
+    let x = arr[1]; # This returns a ref by default.
+    
+
+    var matrix: i32[3][3];
+    matrix[1][1] = 1;
+    let y = matrix[2][1];
+
+    var matrix_3d: f32[3][3][2];
+    matrix_3d[1][1][1] = 1.0;
+    let y = matrix_3d[2][1][5];
+
+    return arr[0];
 }
 
-# fun main() -> i32 = {
-#     array_test();
-#     return 0;
-# }
+fun sum_elements(a: i32[3]) -> i32 = {
+    return a[0] + a[1] + a[2];
+}
+
+fun fill_array(a: ref i32[3]) -> () = {
+    a[0] = 1;
+    a[1] = 1;
+    a[2] = 1;
+}
+
+fun foo(arr: i32[2][2][2]) -> () = {}
+
+fun get_array_by_val() -> i32[3] = {
+    var tmp: i32[3];
+    tmp[0] = 10;
+    tmp[1] = 20;
+    tmp[2] = 30;
+    return tmp;
+}
+
+const A = 2;
+
+fun fib(n: i64) -> i64 = {
+   if (n < 2) { return n; }
+   return fib(n - 1) + fib(n - 2);
+}
+
+const FIB_10 = fib(10); # 55
+
+fun constant_tester() -> () = {
+    var my_arr: i32[A];
+    
+    var i = 0;
+    while (i < A) {
+        builtin_output_i64(my_arr[i]);
+        i = i + 1; 
+    }
+    
+
+    var fib_arr: i32[FIB_10][FIB_10][FIB_10];
+    
+    var a = 0;
+    while (a < FIB_10) {
+        var b = 0;
+        while (b < FIB_10) {
+            var c = 0;
+            while (c < FIB_10) {
+                builtin_output_i64(my_arr[i]);
+                c = c + 1; 
+            }
+            b = b + 1; 
+        }
+        a = a + 1; 
+    }
+}
+
+fun main() -> i32 = {
+    var my_arr: i32[3];
+
+    fill_array(refof my_arr);
+
+    let s = sum_elements(refof my_arr);
+
+    let val = get_array_by_val()[1];
+
+    var arr1: i32[2][2][2];
+    var arr2: i32[1][2][3];
+    foo(arr1);
+    # foo(arr2); # This should crash and does :)
+
+    return 0;
+}

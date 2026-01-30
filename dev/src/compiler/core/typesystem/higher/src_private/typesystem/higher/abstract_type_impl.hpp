@@ -520,9 +520,7 @@ namespace compiler::tsh {
 		StaticArrayAbstractTypeImpl(const SymbolType<> element, const usize size):
 			  element_type(element),
 			  size(size) {
-			representation = base::strConcat(
-				"static_array(", element.toString(), ", ", base::toString(size), ")"
-			);
+			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
 		}
 
 		[[nodiscard]]

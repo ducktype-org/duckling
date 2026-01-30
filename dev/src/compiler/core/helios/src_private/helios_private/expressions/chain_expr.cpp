@@ -304,6 +304,14 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
+			// TODOP: This is spaghetti code as hell
+			if (call_expr->getType() == lexer::Token::Square) {
+				auto base_res = processPSTExpr(ident);
+				UNPACK_QRESULT_MOVE(auto base =, base_res);
+
+				return processSquareCall(base.getExpr(), call_expr);
+			}
+
 			if (call_expr->getType() != lexer::Token::Round) {
 				throw base::NotYetImplemented(base::strConcat(
 					"HOUT call with invalid bracket type: ", char(call_expr->getType())
@@ -335,48 +343,10 @@ namespace compiler::helios::code {
 			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
 			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, hout_expr_result);
 
+			if (call_expr->getType() == lexer::Token::Square)
+				return processSquareCall(std::move(hout_expr), call_expr);
+
 			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
-				std::cout << "CALL EXPR====================\n";
-				call_expr->dprint(std::cout);
-				std::cout << '\n';
-
-				// Static Array type constructor.
-				if (call_expr->getType() == lexer::Token::Square) {
-					// TODOP: This is temporary.
-					auto args = call_expr->getArgs().unlock(query_ctx);
-					if (args->size() != 1) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Array size must be exactly one expression.",
-							call_expr->getSourcePosition()
-						));
-						return query::Failed();
-					}
-
-					auto arg_access = (*args->begin()).unlock(query_ctx);
-					auto size_expr  = arg_access->getArg().unlock(query_ctx)->getExpr();
-
-					auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_expr });
-					UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
-
-					// Size of the array should be compile time evaluated and integral.
-					auto maybe_size = ctv.get<ctv::NumericValue>();
-					if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Array size must be a constant integer.", call_expr->getSourcePosition()
-						));
-						return query::Failed();
-					}
-
-					// This should never fail.
-					usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-					tsh::SymbolType<> element_type = literal_type_expr->value_type;
-					auto              static_array_type
-						= query_ctx.query<tsh::QueryStaticArrayType>({ element_type, array_size });
-
-					return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type)
-					);
-				}
-
 				if (call_expr->getType() == lexer::Token::Round) {
 					auto args = call_expr->getArgs().unlock(query_ctx);
 					if (args->size() != 1) {
@@ -445,46 +415,8 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(Box<Expr> current_expr, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
-			CORE_PANIC("This function is actually run");
-
-			// TODOP: For handling cases like Record[5];
-			if (current_expr->expression_type.getType().getKind() == tsh::Kind::Meta
-			    && call_expr->getType() == lexer::Token::Square) {
-				auto args = call_expr->getArgs().unlock(query_ctx);
-				if (args->size() != 1) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Array size must be exactly one expression.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-
-				auto arg_access = (*args->begin()).unlock(query_ctx);
-				auto size_expr  = arg_access->getArg().unlock(query_ctx)->getExpr();
-
-				auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_expr });
-				UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
-
-				// Size of the array should be compile time evaluated and integral.
-				auto maybe_size = ctv.get<ctv::NumericValue>();
-				if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Array size must be a constant integer.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-
-				// This should never fail.
-				usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-				tsh::SymbolType<> element_type = current_expr->expression_type.getSymbolType();
-				auto              static_array_type
-					= query_ctx.query<tsh::QueryStaticArrayType>({ element_type, array_size });
-
-				return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
-			}
-
 			if (call_expr->getType() == lexer::Token::Square)
-				CORE_PANIC("NOT YET IMPLEMENTED BUT SHOULD BE IN THIS PR");
-
+				return processSquareCall(std::move(current_expr), call_expr);
 
 			// @note this function is not run yet.
 
@@ -581,6 +513,75 @@ namespace compiler::helios::code {
 				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
 			}
 			CORE_UNREACHABLE();
+		}
+
+		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState> {
+			auto args = call_expr->getArgs().unlock(query_ctx);
+			if (args->size() != 1) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Array index/size must be exactly one expression.",
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+			auto arg_pst
+				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
+
+
+			// Static array type creation.
+			if (base->expression_type.getType().getKind() == tsh::Kind::Meta) {
+				auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ arg_pst });
+				UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
+
+				// Size of the array should be compile time evaluated and integral.
+				auto maybe_size = ctv.get<ctv::NumericValue>();
+				if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array size must be a constant integer.", call_expr->getSourcePosition()
+					));
+					return query::Failed();
+				}
+
+				// This should never fail.
+				usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+
+				auto* literal_type = dynamic_cast<LiteralTypeExpr*>(base.get());
+				auto  static_array_type
+					= query_ctx.query<tsh::QueryStaticArrayType>({ literal_type->value_type,
+				                                                   array_size });
+
+				return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
+			} else {
+				// Index access.
+				auto index_res = query_ctx.query<QueryHoutOfExpr>({ arg_pst });
+				UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
+
+				auto i64_type
+					= tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
+											 { 64, tsh::IntegralAbstractType::Signedness::Signed }
+										 ),
+					                     tsh::ReferenceKind::Direct,
+					                     tsh::Mutability::Immutable };
+
+				auto coercion
+					= canCoerce(query_ctx, index_expr->expression_type.getSymbolType(), i64_type);
+				UNPACK_QRESULT_MOVE(auto coercion_result =, coercion);
+
+				// TODOP: Check if the error is logged in coercions.
+				if (coercion_result.isInvalid()) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array index must be convertible to i64.", call_expr->getSourcePosition()
+					));
+					return query::Failed();
+				}
+
+				auto coerced_index = coercion_result.coerce(query_ctx, std::move(index_expr));
+				return ChainState::ofExpr(
+					makeBox<IndexExpr>(query_ctx, std::move(base), std::move(coerced_index))
+				);
+			}
 		}
 
 		/**

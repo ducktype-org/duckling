@@ -252,6 +252,10 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitIndexExpr(const hc::IndexExpr& expr) override {
+			throw base::NotYetImplemented("This PR");  // TODOP
+		}
+
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
 			throw base::NotYetImplemented("sequence expr lowering");
 		}

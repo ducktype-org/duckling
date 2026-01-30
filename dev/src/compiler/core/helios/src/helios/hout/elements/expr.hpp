@@ -419,6 +419,26 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief TODOP: Docs
+	 */
+	struct IndexExpr final: public Expr {
+		Box<Expr> base;
+		Box<Expr> index;
+
+		IndexExpr(query::Context& ctx, Box<Expr> base, Box<Expr> index);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		IndexExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, Box<Expr> index);
+	};
+
+	/**
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
