@@ -56,6 +56,25 @@ namespace query::internal {
 		}
 	}  // namespace
 
+	base::Optional<ExtractedNodeMetadata> MetadataStorage::extract(NodeID node_id) {
+		auto it = storage.atMaybe(node_id);
+		if (!it.has_value()) return {};
+
+		ExtractedNodeMetadata result(node_id, std::move(*it.value()));
+		storage.erase(node_id);
+		return result;
+	}
+
+	void MetadataStorage::emplace(ExtractedNodeMetadata&& extracted) {
+		storage.put(std::move(extracted).node_id, std::move(extracted.type_map));
+	}
+
+	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
+
+	void MetadataStorage::clear() { storage.clear(); }
+
+	bool MetadataStorage::empty() const { return storage.size() == 0; }
+
 	std::vector<std::byte> MetadataStorage::serialize() const {
 		std::vector<std::byte> result;
 

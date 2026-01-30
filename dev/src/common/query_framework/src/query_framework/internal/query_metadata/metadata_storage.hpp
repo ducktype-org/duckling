@@ -380,44 +380,33 @@ namespace query::internal {
 		 * @return Optional<ExtractedNodeMetadata> The extracted data, or empty if node not found.
 		 */
 		[[nodiscard]]
-		base::Optional<ExtractedNodeMetadata> extract(NodeID node_id) {
-			auto it = storage.atMaybe(node_id);
-			if (!it.has_value()) return {};
-
-			ExtractedNodeMetadata result(node_id, std::move(*it.value()));
-			storage.erase(node_id);
-			return result;
-		}
+		base::Optional<ExtractedNodeMetadata> extract(NodeID node_id);
 
 		/**
 		 * @brief Emplace extracted metadata into storage.
 		 *
 		 * @param extracted The extracted metadata to emplace (must be rvalue).
 		 */
-		void emplace(ExtractedNodeMetadata&& extracted) {
-			storage.put(std::move(extracted).node_id, std::move(extracted.type_map));
-		}
+		void emplace(ExtractedNodeMetadata&& extracted);
 
 		/**
 		 * @brief Clear all metadata for a specific node.
 		 *
 		 * @param node_id The NodeID to clear metadata for
 		 */
-		void clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
+		void clearNodeMetadata(NodeID node_id);
 
 		/**
 		 * @brief Clear all metadata storage.
 		 */
-		void clear() { storage.clear(); }
+		void clear();
 
 		/**
 		 * @brief Check if storage is empty.
 		 * @return true if no metadata is stored
 		 */
 		[[nodiscard]]
-		bool empty() const {
-			return storage.size() == 0;
-		}
+		bool empty() const;
 
 		/**
 		 * @brief Serialize all metadata to a byte vector.
