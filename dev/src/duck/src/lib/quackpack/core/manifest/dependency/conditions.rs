@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
+use crate::QuackError;
 use crate::quackpack::schemas::registry;
-use crate::{QuackError, qp_bail_internal};
 use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
 #[derive(Debug)]
@@ -58,12 +58,8 @@ impl Conditions {
     }
 
     /// Returns root packages mentioned in the manifest
-    pub fn required_root_package_features(&self) -> QuackResult<&Option<Vec<FeatureName>>> {
-        if self.required_root_package_features == Some(vec![]) {
-            qp_bail_internal!("The list of root packages shuold either be None or nonempty")
-        } else {
-            Ok(&self.required_root_package_features)
-        }
+    pub fn required_root_package_features(&self) -> Option<&[FeatureName]> {
+        self.required_root_package_features.as_deref()
     }
 }
 

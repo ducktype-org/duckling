@@ -60,7 +60,7 @@ impl<'a> SolverEngine<'a> {
         mut self,
         new_dependencies: &[(ExpandedPackage, HashSet<FeatureName>)],
     ) -> QuackResult<FoundSolution> {
-        self.create_package_variables()?;
+        self.create_package_variables();
         let empty_hashset: HashSet<FeatureName> = HashSet::new();
         for (package, manifest) in self.input.gathered_manifests.iter() {
             let possible_features = self
@@ -85,7 +85,7 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Creates necesseary varaiables for all the packages.
-    fn create_package_variables(&mut self) -> QuackResult<()> {
+    fn create_package_variables(&mut self) {
         for pkg in self.input.gathered_manifests.keys() {
             self.model.add_package_var(*pkg);
             for feature in self
@@ -99,7 +99,6 @@ impl<'a> SolverEngine<'a> {
                 self.model.add_package_with_feature_var(*pkg, *feature);
             }
         }
-        Ok(())
     }
 
     /// Creates the necesseary constraints for a single dependency.

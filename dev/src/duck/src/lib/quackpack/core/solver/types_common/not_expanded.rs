@@ -1,13 +1,15 @@
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
+    path::PathBuf,
+    str::FromStr,
     sync::{Mutex, OnceLock},
 };
 
 use url::Url;
 
 use crate::{
-    QuackResult, StrId, qp_bail_internal,
+    QuackError, QuackResult, StrId, qp_bail_internal,
     quackpack::core::{
         BranchOrTag, Dependency, Source, Version,
         types_common::{ExpandedPackage, expanded::InternedExpandedLocation},
@@ -75,21 +77,23 @@ pub enum Location {
     Local(LocLocal),
 }
 
-impl From<&Dependency> for Location {
-    fn from(dependency: &Dependency) -> Self {
+impl TryFrom<&Dependency> for Location {
+    type Error = QuackError;
+
+    fn try_from(dependency: &Dependency) -> QuackResult<Self> {
         match &dependency.desc().source().as_ref() {
-            Source::Registry(registry) => Self::Registry(LocRegistry {
+            Source::Registry(registry) => Ok(Self::Registry(LocRegistry {
                 url: registry.url().clone(),
                 real_name: dependency.real_name(),
-            }),
-            Source::Local(local) => Self::Local(LocLocal {
-                path: local.entry_in_manifest(),
-            }),
-            Source::Git(git) => Self::Git(LocGit {
+            })),
+            Source::Local(local) => Ok(Self::Local(LocLocal {
+                path: PathBuf::from_str(local.entry_in_manifest().as_str())?,
+            })),
+            Source::Git(git) => Ok(Self::Git(LocGit {
                 url: git.url().clone(),
                 branch_or_tag: git.branch_or_tag(),
                 rev: git.rev(),
-            }),
+            })),
         }
     }
 }
@@ -109,7 +113,7 @@ pub struct LocGit {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct LocLocal {
-    pub path: StrId,
+    pub path: PathBuf,
 }
 
 impl Location {

@@ -23,15 +23,15 @@ pub fn get_possible_realisations(
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
         let only_package = Package {
-            location: InternedLocation::new(Location::from(dependency_description)),
+            location: InternedLocation::new(Location::try_from(dependency_description)?),
             version: Some(*version),
         }
         .resolve(location_resolver);
         Ok(only_package.iter().cloned().collect())
     } else {
-        let Some(location) = location_resolver.get(&InternedLocation::new(Location::from(
+        let Some(location) = location_resolver.get(&InternedLocation::new(Location::try_from(
             dependency_description,
-        ))) else {
+        )?)) else {
             return Ok(vec![]);
         };
         let baseline_versions = if location.is_local() {

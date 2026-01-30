@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::{
-    Dependency,
-    solver::types_common::ExpandedPackage,
-    types_common::{InternedExpandedLocation, InternedLocation, Location},
+use crate::{
+    QuackResult, QuackResultContext,
+    quackpack::core::{
+        Dependency,
+        solver::types_common::ExpandedPackage,
+        types_common::{InternedExpandedLocation, InternedLocation, Location},
+    },
 };
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -17,13 +20,14 @@ impl DependencyEdge {
         parent: ExpandedPackage,
         manifest_dependency: &Dependency,
         location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
-    ) -> Option<Self> {
-        let child_loc = Location::from(manifest_dependency);
+    ) -> QuackResult<Self> {
+        let child_loc = Location::try_from(manifest_dependency)?;
         location_resolver
             .get(&InternedLocation::new(child_loc))
             .map(|child_loc| Self {
                 parent,
                 dependency_loc: *child_loc,
             })
+            .context_internal("Failed to expand a location")
     }
 }

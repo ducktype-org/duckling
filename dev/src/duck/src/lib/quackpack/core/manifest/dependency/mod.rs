@@ -84,7 +84,7 @@ impl Dependency {
         let Some(conditions) = &self.conditions else {
             return Ok(&[]);
         };
-        let Some(features) = conditions.required_root_package_features()? else {
+        let Some(features) = conditions.required_root_package_features() else {
             return Ok(&[]);
         };
         Ok(features)
