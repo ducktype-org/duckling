@@ -548,9 +548,6 @@ namespace compiler::helios::code {
 				// This should never fail.
 				usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
 
-				base->debugPrint(std::cout);
-				std::cout << '\n';
-
 				auto base_eval_res = query_ctx.query<QueryEvaluateHOUTExpression>({ base.ref() });
 				UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval_res);
 

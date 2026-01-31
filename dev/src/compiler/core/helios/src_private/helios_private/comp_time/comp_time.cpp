@@ -1,7 +1,5 @@
 #include "comp_time.hpp"
 
-#include "typesystem/higher/kind.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -19,10 +17,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/str/str_utils.hpp"
-
-#include "string_id/string_id.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 

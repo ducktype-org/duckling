@@ -1,8 +1,5 @@
 #include "abstract_type_impl.hpp"
 
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 
