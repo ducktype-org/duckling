@@ -263,9 +263,6 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
-				stmt->dprint(std::cout);
-				std::cout << '\n';
-
 				using enum tsh::IntegralAbstractType::Signedness;
 				switch (stmt->getKeyword()) {
 				// true, false:
@@ -545,10 +542,6 @@ namespace compiler::helios {
 		const tsh::SymbolType<>                              expected_type,
 		base::Optional<std::function<void(query::Context&)>> log_error
 	) {
-		std::cout << "PST Expr:\n";
-		pst_expr.element.unlock(ctx)->debugPrint(std::cout);
-		std::cout << '\n';
-
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
 		if (expr_hout_qresult.hasFailed()) return query::Failed();

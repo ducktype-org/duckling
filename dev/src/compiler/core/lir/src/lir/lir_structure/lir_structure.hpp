@@ -9,10 +9,10 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/pointers/shared_box.hpp"
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <query_framework/context/context_fd.hpp>

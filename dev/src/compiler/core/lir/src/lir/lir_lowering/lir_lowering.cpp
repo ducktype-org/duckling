@@ -25,7 +25,6 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>

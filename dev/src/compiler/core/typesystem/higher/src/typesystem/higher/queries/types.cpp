@@ -1,7 +1,5 @@
 #include "types.hpp"
 
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <typesystem/higher/abstract_type_impl.hpp>
 

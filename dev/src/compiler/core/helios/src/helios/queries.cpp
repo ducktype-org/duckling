@@ -754,12 +754,6 @@ namespace compiler::helios {
 
 					auto initial_value = makeBox<code::DefaultValueExpr>(ctx, symbol_type);
 					output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
-
-					// TODOP:
-					// throw base::NotYetImplemented(
-					// 	"Variable declarations without initial value are not supported in HOUT yet."
-					// 	" We should add default initialization here."
-					// );
 				} else {
 					auto initial_value_coerced
 						= getHoutOfExprWithExpectedType(
@@ -788,10 +782,6 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void visitFun(pst::Access<pst::Fun> stmt) final {
-				stmt->dprint(std::cout);
-				std::cout << '\n';
-
-
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 

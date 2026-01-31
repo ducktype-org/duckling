@@ -1,8 +1,5 @@
 #include "queries.hpp"
 
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsl {

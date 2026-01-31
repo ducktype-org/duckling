@@ -35,8 +35,6 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include "lexer/token.hpp"
-#include "query_framework/query_errors.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 #include <token_parser_core/common_elements.hpp>
@@ -267,11 +265,9 @@ namespace compiler::helios::code {
 					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
-					error->addAttachedMessage(
-						makeBox<CallInvalidCallablesError::CandidateNote>(
-							stmt(query_ctx, candidate).value()->getSourcePosition()
-						)
-					);
+					error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
+						stmt(query_ctx, candidate).value()->getSourcePosition()
+					));
 				}
 				query_ctx.logInt(std::move(error));
 				return query::Failed();
@@ -318,11 +314,9 @@ namespace compiler::helios::code {
 			}
 
 			if (call_expr->getType() != lexer::Token::Round) {
-				throw base::NotYetImplemented(
-					base::strConcat(
-						"HOUT call with invalid bracket type: ", char(call_expr->getType())
-					)
-				);
+				throw base::NotYetImplemented(base::strConcat(
+					"HOUT call with invalid bracket type: ", char(call_expr->getType())
+				));
 			}
 			const auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto lookup_result
@@ -357,12 +351,10 @@ namespace compiler::helios::code {
 				if (call_expr->getType() == lexer::Token::Round) {
 					auto args = call_expr->getArgs().unlock(query_ctx);
 					if (args->size() != 1) {
-						query_ctx.logInt(
-							makeBox<dia_int::PlaceholderCodeError>(
-								"Type cast must have exactly one argument.",
-								call_expr->getSourcePosition()
-							)
-						);
+						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Type cast must have exactly one argument.",
+							call_expr->getSourcePosition()
+						));
 						return query::Failed();
 					}
 
@@ -379,11 +371,9 @@ namespace compiler::helios::code {
 				}
 			}
 
-			query_ctx.logInt(
-				makeBox<dia_int::PlaceholderCodeError>(
-					"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
-				)
-			);
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
+			));
 			return query::Failed();
 		}
 
@@ -448,11 +438,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
 			(void) namespace_like_symbol;
-			query_ctx.logInt(
-				makeBox<dia_int::PlaceholderCodeError>(
-					base::strConcat("Namespace is not callable"), call_expr->getSourcePosition()
-				)
-			);
+			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				base::strConcat("Namespace is not callable"), call_expr->getSourcePosition()
+			));
 			return query::Failed();
 		}
 
@@ -495,24 +483,20 @@ namespace compiler::helios::code {
 							"Handling of access to method without a call is not implemented yet"
 						);
 					}
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							base::strConcat(
-								"Unsupported symbol kind in type lookup for symbol: ",
-								prettyDebugPrint(sym, query_ctx)
-							),
-							expr_access->getName().position
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						base::strConcat(
+							"Unsupported symbol kind in type lookup for symbol: ",
+							prettyDebugPrint(sym, query_ctx)
+						),
+						expr_access->getName().position
+					));
 					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Accessed value is ambiguous.", expr_access->getName().position
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Accessed value is ambiguous.", expr_access->getName().position
+					));
 					return query::Failed();
 				}
 				variant_case_novalue(errors::SymbolNotFound) {
@@ -521,11 +505,9 @@ namespace compiler::helios::code {
 					// obj.selectDynamic("a"). See Scala's Dynamic:
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Accessed value not found.", expr_access->getName().position
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Accessed value not found.", expr_access->getName().position
+					));
 					return query::Failed();
 				}
 
@@ -538,12 +520,10 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			auto args = call_expr->getArgs().unlock(query_ctx);
 			if (args->size() != 1) {
-				query_ctx.logInt(
-					makeBox<dia_int::PlaceholderCodeError>(
-						"Array index/size must be exactly one expression.",
-						call_expr->getSourcePosition()
-					)
-				);
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Array index/size must be exactly one expression.",
+					call_expr->getSourcePosition()
+				));
 				return query::Failed();
 			}
 
@@ -559,11 +539,9 @@ namespace compiler::helios::code {
 				// Size of the array should be compile time evaluated and integral.
 				auto maybe_size = ctv.get<ctv::NumericValue>();
 				if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Array size must be a constant integer.", call_expr->getSourcePosition()
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array size must be a constant integer.", call_expr->getSourcePosition()
+					));
 					return query::Failed();
 				}
 
@@ -578,12 +556,10 @@ namespace compiler::helios::code {
 
 				auto maybe_type = base_ctv.get<tsh::SymbolType<>>();
 				if (!maybe_type.has_value()) {
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Expression before [] does not evaluate to a valid type.",
-							call_expr->getSourcePosition()
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expression before [] does not evaluate to a valid type.",
+						call_expr->getSourcePosition()
+					));
 					return query::Failed();
 				}
 
@@ -616,11 +592,9 @@ namespace compiler::helios::code {
 
 				// TODOP: Check if the error is logged in coercions.
 				if (coercion_result.isInvalid()) {
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Array index must be convertible to i64.", call_expr->getSourcePosition()
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Array index must be convertible to i64.", call_expr->getSourcePosition()
+					));
 					return query::Failed();
 				}
 
@@ -729,16 +703,12 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
-				query_ctx.logInt(
-					makeBox<dia_int::PlaceholderCodeError>(
-						base::strConcat(
-							"Unsupported kind of the symbol `",
-							name(symbol),
-							"` in chain expression."
-						),
-						chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
-					)
-				);
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					base::strConcat(
+						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
+					),
+					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+				));
 				return query::Failed();
 			}
 		}
@@ -870,12 +840,10 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.logInt(
-						makeBox<dia_int::PlaceholderCodeError>(
-							"Expected access or call expression in chain expression",
-							currentElem().value()->getSourcePosition()
-						)
-					);
+					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected access or call expression in chain expression",
+						currentElem().value()->getSourcePosition()
+					));
 					return query::Failed();
 				}
 			}
@@ -891,12 +859,10 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.logInt(
-					makeBox<dia_int::PlaceholderCodeError>(
-						"Chain expression resulted in empty expression sequence.",
-						chain_elements[0].unlock(query_ctx)->getSourcePosition()
-					)
-				);
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Chain expression resulted in empty expression sequence.",
+					chain_elements[0].unlock(query_ctx)->getSourcePosition()
+				));
 				return query::Failed();
 			}
 

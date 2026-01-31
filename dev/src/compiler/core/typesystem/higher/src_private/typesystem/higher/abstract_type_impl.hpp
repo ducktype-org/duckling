@@ -10,8 +10,6 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "base/str/str_utils.hpp"
-#include "base/types/ints.hpp"
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
