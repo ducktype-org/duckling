@@ -35,6 +35,7 @@ pub struct Fetcher<'duck> {
 
 impl<'duck> Fetcher<'duck> {
     const DEFAULT_BLOB_FILENAME: &'static str = "source.tar.gz";
+    pub const DEFAULT_REGISTRY_URL: &'static str = "http://localhost:9001";
 
     /// Create a new [`Fetcher`].
     ///
