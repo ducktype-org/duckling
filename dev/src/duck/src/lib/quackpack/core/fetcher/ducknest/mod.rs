@@ -64,7 +64,14 @@ impl DucknestClient {
             .await
             .with_context(|| {
                 format!(
-                    "while getting a metadata of `{}v{}` @ `{}`",
+                    "while getting a metadata of `{}`@{} from `{}`",
+                    package.id, package.version, package.url
+                )
+            })?
+            .error_for_status()
+            .with_context(|| {
+                format!(
+                    "while getting a metadata of `{}`@{} from `{}`",
                     package.id, package.version, package.url
                 )
             })?
@@ -87,6 +94,8 @@ impl DucknestClient {
             .send()
             .await
             .with_context(|| format!("while getting a multi metadata of `{package}` from `{url}`"))?
+            .error_for_status()
+            .with_context(|| format!("while getting a multi metadata of `{package}` from `{url}`"))?
             .json::<types::MultiMetadata>()
             .await
             .context("registry hasn't responded with appropriate JSON schema")
@@ -100,7 +109,7 @@ impl DucknestClient {
         path: &Path,
     ) -> QuackResult<()> {
         debug!(
-            "publishing package `{}@{}` to `{url}`",
+            "publishing package `{}`@{} to `{url}`",
             schema.metadata.name,
             path.display()
         );
@@ -138,7 +147,7 @@ impl DucknestClient {
             .await
             .with_context(|| {
                 format!(
-                    "while sending a source of a package `{}v{}` to the `{}`",
+                    "while sending a source of a package `{}`@{} to the `{}`",
                     schema.metadata.name, schema.metadata.version, url
                 )
             })?
@@ -155,7 +164,7 @@ impl DucknestClient {
         debug!("fetching a blob of `{package:?}` to `{}`", target.display());
         let mut file = tokio::fs::File::create(target).await.with_context(|| {
             format!(
-                "while creating a file at `{}` in order to download a blob of `{}v{}` from `{}`",
+                "while creating a file at `{}` in order to download a blob of `{}`@{} from `{}`",
                 target.display(),
                 package.id,
                 package.version,
@@ -165,20 +174,20 @@ impl DucknestClient {
         let url = package.url.for_blob(&package.into())?;
         let mut response = self.client.get(url).send().await.with_context(|| {
             format!(
-                "while getting a package `{}v{}` blob from `{}`",
+                "while getting a package `{}`@{} blob from `{}`",
                 package.id, package.version, package.url
             )
         })?;
         response.error_for_status_ref()?;
         while let Some(chunk) = response.chunk().await.with_context(|| {
             format!(
-                "while getting a blob chunk of `{}v{}` from `{}`",
+                "while getting a blob chunk of `{}`@{} from `{}`",
                 package.id, package.version, package.url
             )
         })? {
             file.write_all(&chunk).await.with_context(|| {
                 format!(
-                    "while writing a chunk of a `{}v{}` from `{}` to `{}`",
+                    "while writing a chunk of a `{}`@{} from `{}` to `{}`",
                     package.id,
                     package.version,
                     package.url,
@@ -188,7 +197,7 @@ impl DucknestClient {
         }
         file.flush().await.with_context(|| {
             format!(
-                "while flushing contents of a `{}v{}` to `{}`",
+                "while flushing contents of a `{}`@{} to `{}`",
                 package.id,
                 package.version,
                 target.display()
@@ -206,6 +215,8 @@ impl DucknestClient {
             .get(req_url)
             .send()
             .await
+            .with_context(|| format!("while searching `{query}` on `{url}`"))?
+            .error_for_status()
             .with_context(|| format!("while searching `{query}` on `{url}`"))?
             .json::<types::SearchResult>()
             .await
