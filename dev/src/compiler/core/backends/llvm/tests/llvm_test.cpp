@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(globalVariablesTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -216,6 +217,37 @@ private:
 			search_range = matches.suffix();
 		}
 		assertTrue(ptr_loads == 17, "Too few pointer loads");
+	}
+
+	void staticArraysTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/references");
+		std::string ir          = llvm_module.dumpLLVMToString();
+		// Was [10 x i32] type found.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(\[10\s+x\s+i32\])" }),
+			"Expected array type [10 x i32]"
+		);
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+\[10\s+x\s+i32\]\s+zeroinitializer)" }),
+			"Expected zero-initialization"
+		);
+
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i64\s+0,\s+i64\s+3)" }),
+			"Expected GEP instruction for array indexing at index 3"
+		);
+		// Was [2 x [3 x i32]] type found.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(\[2\s+x\s+\[3\s+x\s+i32\]\])" }),
+			"Expected nested array type [2 x [3 x i32]] in LLVM IR"
+		);
+
+		// Check if GEP with three indexes was generated.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i64\s+0,\s+i64\s+1,\s+i64\s+2)" }),
+			"Expected multi-level GEP for nested array access (indices 0, 1, 2)"
+		);
 	}
 
 	void floatingPointTest() {

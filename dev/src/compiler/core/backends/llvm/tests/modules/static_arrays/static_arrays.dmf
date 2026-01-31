@@ -1,0 +1,11 @@
+fun array_test() -> i32 = {
+    var arr: i32[10];
+    arr[3] = 42;
+    return arr[3];
+}
+
+fun nested_test() -> i32 = {
+    var matrix: i32[2][3];
+    matrix[1][2] = 7;
+    return matrix[1][2];
+}
