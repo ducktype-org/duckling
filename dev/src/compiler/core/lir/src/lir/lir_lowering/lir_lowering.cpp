@@ -503,8 +503,14 @@ namespace compiler::lir {
 					}
 					return curr_block;
 				}
+				case mir::Operation::ZeroInitialize: {
+					auto output = getOutput(mir_instruction.output);
+					curr_block->instructions.emplace_back(
+						Operation::ZeroInitialize, output, std::vector<LIRValue>{}
+					);
+					return curr_block;
+				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::ZeroInitialize:  // TODOP: Is that ok?
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:

@@ -576,16 +576,11 @@ namespace compiler::helios::code {
 		  Expr(tsh::ExpressionType(
 			  [&]() -> tsh::SymbolType<> {
 				  auto base_type = base->expression_type.getType();
-				  // Index Expression returns a reference to the element of the array.
 				  switch (base_type.getKind()) {
 				  case tsh::Kind::DynamicArray:
-					  return base_type.as<tsh::DynamicArrayAbstractType>()
-			              .getElementType()
-			              .withReferenceKind(tsh::ReferenceKind::Ref);
+					  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 				  case tsh::Kind::StaticArray:
-					  return base_type.as<tsh::StaticArrayAbstractType>()
-			              .getElementType()
-			              .withReferenceKind(tsh::ReferenceKind::Ref);
+					  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 				  default:
 					  CORE_PANIC("Cannot index a non-array like type");
 				  }

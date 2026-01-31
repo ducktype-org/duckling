@@ -555,6 +555,12 @@ namespace compiler::helios::code {
 
 				return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
 			} else {
+				// Base has to be direct for array access
+				if (base->expression_type.getSymbolType().getRefKind()
+				    != tsh::ReferenceKind::Direct) {
+					base = makeBox<DerefExpr>(query_ctx, std::move(base));
+				}
+
 				// Index access.
 				auto index_res = query_ctx.query<QueryHoutOfExpr>({ arg_pst });
 				UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
@@ -580,9 +586,13 @@ namespace compiler::helios::code {
 				}
 
 				auto coerced_index = coercion_result.coerce(query_ctx, std::move(index_expr));
-				return ChainState::ofExpr(
-					makeBox<IndexExpr>(query_ctx, std::move(base), std::move(coerced_index))
-				);
+
+				auto index_node
+					= makeBox<IndexExpr>(query_ctx, std::move(base), std::move(coerced_index));
+
+				// [] returns a reference to the element.
+				auto ref_expr = makeBox<RefOfExpr>(query_ctx, std::move(index_node));
+				return ChainState::ofExpr(std::move(ref_expr));
 			}
 		}
 
