@@ -342,6 +342,11 @@ namespace compiler::backend_llvm {
 			variant_case(tsl::PointerTypeLayout, pointer_layout) {
 				return llvm::PointerType::getUnqual(llvm_context);
 			}
+			variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+				llvm::Type* element_type
+					= typeFromLayout(module, static_array_layout.getElementLayout());
+				return llvm::ArrayType::get(element_type, static_array_layout.getElementCount());
+			}
 			variant_case(tsl::MetaTypeLayout, meta_layout) {
 				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
 				// using compile time operations on types to compile. This should never be used in
@@ -678,6 +683,22 @@ namespace compiler::backend_llvm {
 						current_layout
 							= current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					}
+					variant_case(lir::LIRPlace::IndexProjection, index) {
+						// First load the index value.
+						llvm::Value* index_value = loadLIRValue(*index.index, builder);
+						// Then add it as the next argument to the GEP.
+						access_indices.push_back(index_value);
+						// Lastly, update the current layout.
+						variant_match(current_layout->getVariant()) {
+							variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+								current_layout = static_array_layout.getElementLayout();
+							}
+							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
+								current_layout = dynamic_array_layout.getElementLayout();
+							}
+							variant_default { CORE_PANIC("Indexing into non-array layout"); }
+						}
+					}
 					variant_case_novalue(lir::LIRPlace::DerefProjection) {
 						// If deref was encountered, we have to create a GEP which includes all the
 						// projections built up to this point and perform a load.
@@ -965,6 +986,14 @@ namespace compiler::backend_llvm {
 					= std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
 				llvm::Value* address = gepPointerFromLIRPlace(src_place, builder);
 				storeOutput(lir_instruction.output.value(), address, builder);
+				break;
+			}
+			case ZeroInitialize: {
+				const auto&  output = lir_instruction.output.value();
+				llvm::Value* ptr    = gepPointerFromLIRPlace(output, builder);
+				llvm::Type*  type   = typeFromLayout(module, output.layout);
+
+				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
 			/// Integer arithmetic ///
