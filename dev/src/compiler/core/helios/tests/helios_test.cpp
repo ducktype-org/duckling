@@ -1513,18 +1513,47 @@ private:
 	}
 
 	void testStaticArrays() {
-		auto [module, scope] = getModule(fs::File(path("test_modules/static_arrays")));
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/static_arrays")));
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
 
-		ASSERT_EQUAL(1, hout.functions.size());
+		auto& statements = function.body->statements;
 
-		for (auto& function: hout.functions) {
-			if (function.declaration->original_name == base::StrID("array_test")) {
-				std::cout << function.debugPrint() << '\n';
-				std::cout << '\n';
-			}
-		}
+		query::utils::withContextDo([&](query::Context& ctx) {
+			using namespace compiler::helios::code;
+
+			// matrix[0][1] = 42
+			auto& assign_matrix = dynamic_cast<const AssignmentStmt&>(*statements.at(1));
+			// matrix[0][1] -> RefOf(IndexExpr(IndexExpr))
+			auto ref_of = dynamic_cast<const RefOfExpr*>(assign_matrix.location_expr.get());
+			ASSERT_TRUE(ref_of != nullptr);
+			auto outer_index = dynamic_cast<const IndexExpr*>(ref_of->inner.get());
+			ASSERT_TRUE(outer_index != nullptr);
+			auto inner_index = dynamic_cast<const IndexExpr*>(outer_index->base.get());
+			ASSERT_TRUE(inner_index != nullptr);
+
+			auto i32_type = ctx.query<compiler::tsh::QueryIntegralType>(
+				{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+			);
+			ASSERT_EQUAL(outer_index->expression_type.getSymbolType().getType(), i32_type);
+
+			// poly.vertices[1].x = 100
+			auto& assign_poly = dynamic_cast<const AssignmentStmt&>(*statements.at(3));
+			// poly.vertices[1].x -> Deref(Access(Deref(Index(RefOf(Access(poly.vertices))))))
+			auto final_deref = dynamic_cast<const DerefExpr*>(assign_poly.location_expr.get());
+			ASSERT_TRUE(final_deref != nullptr);
+			auto field_access_x = dynamic_cast<const AccessExpr*>(final_deref->inner.get());
+			ASSERT_TRUE(field_access_x != nullptr);
+			ASSERT_EQUAL(compiler::helios::name(field_access_x->field), "x");
+
+			// Constants in array sizes.
+			auto& matrix_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
+			auto  matrix_type = matrix_decl.type.getType();
+			ASSERT_EQUAL(matrix_type.getKind(), compiler::tsh::Kind::StaticArray);
+			auto static_arr = matrix_type.as<compiler::tsh::StaticArrayAbstractType>();
+			ASSERT_EQUAL(static_arr.getSize(), 3);
+		});
 	}
 
 	void testBuiltinFunctions() {
