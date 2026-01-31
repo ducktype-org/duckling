@@ -85,6 +85,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
+	
+	ZeroInitialize,
 
 	/** See readme.md for more info about destruct. */
 	Destruct,
@@ -119,6 +121,7 @@ namespace compiler::mir {
 ID_STD_HASH(::compiler::mir::BlockID);
 
 namespace compiler::mir {
+	struct MIRValue;
 
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
@@ -307,18 +310,27 @@ namespace compiler::mir {
 			bool          operator==(const FieldProjection&) const = default;
 		};
 
+		struct IndexProjection {
+			MIRValue index;
+			bool     operator==(const IndexProjection&) const = default;
+		};
+
 		/**
 		 * @brief A single projection which transforms a MIRPlace. This includes dereferencing,
 		 * field access and in the future index access for array elements.
 		 */
 		struct Projection {
-			std::variant<DerefProjection, FieldProjection> storage;
+			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
 
 			static Projection field(helios::SymID field_id) {
 				return Projection(FieldProjection(field_id));
 			}
 
 			static Projection deref() { return Projection(DerefProjection()); }
+
+			static Projection index(MIRValue index) {
+				return Projection(IndexProjection{ std::move(index) });
+			}
 
 			bool operator==(const Projection& other) const = default;
 		};
@@ -385,6 +397,11 @@ namespace compiler::mir {
 		 * @return The extended MIRPlace with a DerefProjection.
 		 */
 		[[nodiscard]] MIRPlace withDeref() const;
+
+		/**
+		 * @brief TODOP: Docs
+		 */
+		[[nodiscard]] MIRPlace withIndex(MIRValue index) const;
 
 		[[nodiscard]]
 		bool isLocal() const {

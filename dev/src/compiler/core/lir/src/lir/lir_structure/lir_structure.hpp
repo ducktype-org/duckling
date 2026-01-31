@@ -88,6 +88,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	BooleanNot,
 
 	Cast,
+	ZeroInitialize,
 
 	Call,
 
@@ -99,6 +100,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 namespace compiler::lir {
 	struct LIRLocal;
+	struct LIRValue;
 	struct Block;
 	struct Function;
 
@@ -239,6 +241,8 @@ namespace compiler::lir {
 	 * - Additionally, if field `b` was a reference type, an additional
 	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
 	 *
+	 * TODOP: Add docs
+	 *
 	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
 	 * chain would be empty.
 	 */
@@ -252,18 +256,27 @@ namespace compiler::lir {
 			bool          operator==(const FieldProjection&) const = default;
 		};
 
+		struct IndexProjection {
+			LIRValue index;
+			bool     operator==(const IndexProjection&) const = default;
+		};
+
 		/**
 		 * @brief A single projection which transforms a LIRPlace. This includes dereferencing,
 		 * field access and in the future index access for array elements.
 		 */
 		struct Projection {
-			std::variant<DerefProjection, FieldProjection> storage;
+			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
 
 			static Projection field(helios::SymID field_id) {
 				return Projection(FieldProjection(field_id));
 			}
 
 			static Projection deref() { return Projection(DerefProjection()); }
+
+			static Projection index(LIRValue index) {
+				return Projection(IndexProjection{ std::move(index) });
+			}
 
 			bool operator==(const Projection& other) const = default;
 		};

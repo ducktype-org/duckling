@@ -253,7 +253,18 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			throw base::NotYetImplemented("This PR");  // TODOP
+			auto lowered_index = lowerSubExpr(*expr.index, continuation);
+			auto index_val     = lowered_index.getResult(function);
+
+			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+			auto base_val     = lowered_base.getResult(function);
+
+			variant_match(std::move(base_val.getVariant())) {
+				variant_case(MIRPlace, place) {
+					valueOutput(lowered_base.begin, place.withIndex(index_val));
+				}
+				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+			}
 		}
 
 		void visitSequenceExpr(const hc::SequenceExpr&) override {
@@ -431,7 +442,13 @@ namespace compiler::mir {
 		}
 
 		void visitDefaultValueExpr(const hc::DefaultValueExpr& expr) override {
-			throw base::NotYetImplemented("DefaultValueExpr in MIR");
+			auto hole = continuation->addHole();
+			noValueOutput(
+				continuation,
+				hole,
+				Instruction(Operation::ZeroInitialize, {}, {}, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {

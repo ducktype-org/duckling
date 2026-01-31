@@ -88,6 +88,8 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
+		case mir::Operation::ZeroInitialize:
+			return Operation::ZeroInitialize;
 
 		// Control Flow
 		case mir::Operation::ReturnValue:
@@ -241,6 +243,12 @@ namespace compiler::lir {
 						variant_case(mir::MIRPlace::FieldProjection, field) {
 							lir_projection_chain.push_back(
 								LIRPlace::Projection::field(field.field_id)
+							);
+						}
+						variant_case(mir::MIRPlace::IndexProjection, index) {
+							auto lir_index = getPlace(index.index);
+							lir_projection_chain.push_back(
+								LIRPlace::Projection::index(std::move(lir_index))
 							);
 						}
 						variant_case_novalue(mir::MIRPlace::DerefProjection) {
@@ -487,6 +495,7 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				case mir::Operation::AddressOf:
+				case mir::Operation::ZeroInitialize:  // TODOP: Is that ok?
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
