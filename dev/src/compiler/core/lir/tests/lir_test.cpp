@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(testLIRGlobal);
 		TESTER_ADD_TEST(testLifetimeFlags);
 		TESTER_ADD_TEST(referencesTest);
+		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -447,6 +448,87 @@ private:
 		ASSERT_TRUE(found_simple_address_of);
 		ASSERT_TRUE(found_address_of_with_deref);
 		ASSERT_TRUE(found_complex_assignment);
+	}
+
+	void staticArrayTest() {
+		auto module   = getLIROfModule(path("modules/static_arrays"));
+		auto lir_func = module.lirFunc("static_array_test");
+
+		using namespace compiler::lir;
+
+		bool found_zero_init_a = false;
+		bool found_zero_init_b = false;
+		bool found_index_proj  = false;
+		bool found_nested_proj = false;
+
+		for (const auto& local: lir_func->local_list) {
+			if (!local.helios_id.has_value()) continue;
+			auto name = helios::name(local.helios_id.value());
+
+			variant_match(local.layout->getVariant()) {
+				variant_case(compiler::tsl::StaticArrayTypeLayout, layout) {
+					if (name == "a") {
+						// i32[10] -> 10 * 32 = 320
+						ASSERT_EQUAL(layout.getSize(), Bits(320));
+						ASSERT_EQUAL(layout.getElementCount(), 10);
+					}
+					if (name == "b") {
+						// Point[2] -> 2 * (64+64) = 256
+						ASSERT_EQUAL(layout.getSize(), Bits(256));
+					}
+				}
+				variant_default {}
+			}
+		}
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation == Operation::ZeroInitialize) {
+					auto& out   = instr.output.value();
+					auto  local = out.getBase<LIRLocalRef>();
+					if (local->helios_id.has_value()) {
+						auto name = helios::name(local->helios_id.value());
+						if (name == "a") found_zero_init_a = true;
+						if (name == "b") found_zero_init_b = true;
+					}
+				}
+
+				if (instr.operation == Operation::Assign && instr.output.has_value()) {
+					auto& out   = instr.output.value();
+					auto  local = out.getBase<LIRLocalRef>();
+					if (!local->helios_id.has_value()) continue;
+					auto name = helios::name(local->helios_id.value());
+
+					// a[5] -> IndexProjection
+					if (name == "a" && out.projection_chain.size() == 1) {
+						if (std::holds_alternative<LIRPlace::IndexProjection>(
+								out.projection_chain[0].storage
+							))
+							found_index_proj = true;
+					}
+
+					// b[1].y -> Index, Deref, Field
+					if (name == "b" && out.projection_chain.size() >= 3) {
+						const auto& chain = out.projection_chain;
+						bool        pattern_ok
+							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
+						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[1].storage)
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[2].storage);
+
+						if (pattern_ok) {
+							auto field = std::get<LIRPlace::FieldProjection>(chain[2].storage);
+							if (helios::name(field.field_id) == base::StrID("y"))
+								found_nested_proj = true;
+						}
+					}
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_zero_init_a);
+		ASSERT_TRUE(found_zero_init_b);
+		ASSERT_TRUE(found_index_proj);
+		ASSERT_TRUE(found_nested_proj);
 	}
 
 	void metaFunctionsTest() {

@@ -1,0 +1,14 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+fun array_lir_test() -> i64 = {
+    var a: i32[10];
+    a[5] = 123i32;
+
+    var b: Point[2];
+    b[1].y = 456;
+
+    return b[0].x;
+}
