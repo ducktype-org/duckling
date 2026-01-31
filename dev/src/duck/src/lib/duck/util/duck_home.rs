@@ -1,7 +1,8 @@
 //! This file represents a layout of global Duck home directory.
 //! <Duck home root>
 //! ├── cache
-//! │   ├── downloads/ <directory for fetcher artifacts>
+//! │   ├── downloads/ <directory for fetcher downloads>
+//! │   ├── artifacts/ <directory for fetcher artifacts used for publishing packages>
 //! │   ├── fetcher.lock <file>
 //! │   └── metadata_db.sqlite <file with fetcher metadata cache>
 //! ├── config.toml <user config file>
@@ -100,6 +101,7 @@ macro_rules! call_on_dirs {
             root, "duck home root directory",
             cache_dir, "cache directory",
             downloads_dir, "fetcher downloads directory",
+            artifacts_dir, "fetcher artifacts directory",
             storage_dir, "storage directory",
             global_venv_dir, "global venv directory",
         }
@@ -113,6 +115,7 @@ pub struct DuckHome {
     root: PathBuf,
     cache_dir: PathBuf,
     downloads_dir: PathBuf,
+    artifacts_dir: PathBuf,
     fetcher_lockfile: PathBuf,
     metadata_db: PathBuf,
     user_config: PathBuf,
@@ -140,6 +143,9 @@ impl DuckHome {
         let downloads_dir = get_key_with_fallback(env, "DUCK_CACHE_DOWNLOADS_DIR", || {
             cache_dir.join("downloads")
         });
+        let artifacts_dir = get_key_with_fallback(env, "DUCK_CACHE_ARTIFACTS_DIR", || {
+            cache_dir.join("artifacts")
+        });
         let fetcher_lockfile = get_key_with_fallback(env, "DUCK_CACHE_FETCHER_LOCKFILE", || {
             cache_dir.join("fetcher.lock")
         });
@@ -156,6 +162,7 @@ impl DuckHome {
             root,
             cache_dir,
             downloads_dir,
+            artifacts_dir,
             fetcher_lockfile,
             metadata_db,
             user_config,
