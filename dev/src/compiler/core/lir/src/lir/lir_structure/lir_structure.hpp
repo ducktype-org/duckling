@@ -9,6 +9,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/pointers/shared_box.hpp"
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
@@ -257,8 +258,11 @@ namespace compiler::lir {
 		};
 
 		struct IndexProjection {
-			LIRValue index;
-			bool     operator==(const IndexProjection&) const = default;
+			// Box is needed because of the cyclic dependency:
+			// IndexProjection -> LIRValue -> LIRPlace -> LIRValue.
+			// We also want MIRPlace to be copyable.
+			SharedBox<LIRValue> index;
+			bool                operator==(const IndexProjection&) const = default;
 		};
 
 		/**
@@ -274,8 +278,8 @@ namespace compiler::lir {
 
 			static Projection deref() { return Projection(DerefProjection()); }
 
-			static Projection index(LIRValue index) {
-				return Projection(IndexProjection{ std::move(index) });
+			static Projection index(const LIRValue& index) {
+				return Projection(IndexProjection{ base::makeSharedBox<LIRValue>(index) });
 			}
 
 			bool operator==(const Projection& other) const = default;

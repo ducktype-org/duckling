@@ -25,6 +25,7 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
@@ -246,9 +247,16 @@ namespace compiler::lir {
 							);
 						}
 						variant_case(mir::MIRPlace::IndexProjection, index) {
-							auto lir_index = getPlace(index.index);
+							auto maybe_lir_index = getLocation(*index.index);
+
+							if (!maybe_lir_index.has_value()) {
+								CORE_PANIC(
+									"Array index must carry information (cannot be Unit/Void)"
+								);
+							}
+
 							lir_projection_chain.push_back(
-								LIRPlace::Projection::index(std::move(lir_index))
+								LIRPlace::Projection::index(maybe_lir_index.value())
 							);
 						}
 						variant_case_novalue(mir::MIRPlace::DerefProjection) {
@@ -287,7 +295,7 @@ namespace compiler::lir {
 			 * @param loc The MIR location.
 			 * @return The optional LIR location, possibly discarded.
 			 */
-			base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) {
+			[[nodiscard]] base::Optional<LIRValue> getLocation(const mir::MIRValue& loc) const {
 				// Discard information-less location.
 				if (!loc.carriesInformation(ctx)) return {};
 
@@ -375,7 +383,8 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
+			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
+			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs)

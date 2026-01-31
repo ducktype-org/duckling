@@ -1,5 +1,8 @@
 #include "lir_structure.hpp"
 
+#include "typesystem/higher/types.hpp"
+#include "typesystem/lower/type_layout.hpp"
+
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -7,6 +10,7 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/lower/queries.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -86,6 +90,22 @@ namespace compiler::lir {
 						  const auto layout_idx
 							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
 						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					  }
+					  variant_case(IndexProjection, index) {
+						  variant_match(current_layout->getVariant()) {
+							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+								  current_layout = static_array_layout.getElementLayout();
+							  }
+							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
+								  current_layout = dynamic_array_layout.getElementLayout();
+							  }
+							  variant_default {
+								  CORE_PANIC(
+									  "Cannot index into non-array type in LIR: Current layout: ",
+									  current_layout->toStringIdentification()
+								  );
+							  }
+						  }
 					  }
 					  variant_case_novalue(DerefProjection) {
 						  const auto& pointer_layout

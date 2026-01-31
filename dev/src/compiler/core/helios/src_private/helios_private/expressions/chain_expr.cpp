@@ -19,6 +19,7 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_code_generation/class_constructors.hpp>
@@ -565,6 +566,7 @@ namespace compiler::helios::code {
 					                     tsh::ReferenceKind::Direct,
 					                     tsh::Mutability::Immutable };
 
+				// TODOP: This is stupid cause it's duplicated in getHoutOfExprWithExpectedType.
 				auto coercion
 					= canCoerce(query_ctx, index_expr->expression_type.getSymbolType(), i64_type);
 				UNPACK_QRESULT_MOVE(auto coercion_result =, coercion);

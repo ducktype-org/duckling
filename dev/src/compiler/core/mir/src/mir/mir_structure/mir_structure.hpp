@@ -6,6 +6,8 @@
 #include <ctv/ctv.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/pointers/box.hpp"
+#include "base/pointers/shared_box.hpp"
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/collections/stable_hashmap.hpp>
@@ -311,8 +313,11 @@ namespace compiler::mir {
 		};
 
 		struct IndexProjection {
-			MIRValue index;
-			bool     operator==(const IndexProjection&) const = default;
+			// SharedBox is needed because of the cyclic dependency:
+			// IndexProjection -> MIRValue -> MIRPlace -> MIRValue.
+			// We also want MIRPlace to be copyable.
+			SharedBox<MIRValue> index;
+			bool                operator==(const IndexProjection&) const = default;
 		};
 
 		/**
@@ -328,8 +333,8 @@ namespace compiler::mir {
 
 			static Projection deref() { return Projection(DerefProjection()); }
 
-			static Projection index(MIRValue index) {
-				return Projection(IndexProjection{ std::move(index) });
+			static Projection index(const MIRValue& index) {
+				return Projection(IndexProjection{ base::makeSharedBox<MIRValue>(index) });
 			}
 
 			bool operator==(const Projection& other) const = default;
@@ -401,7 +406,7 @@ namespace compiler::mir {
 		/**
 		 * @brief TODOP: Docs
 		 */
-		[[nodiscard]] MIRPlace withIndex(MIRValue index) const;
+		[[nodiscard]] MIRPlace withIndex(const MIRValue& index) const;
 
 		[[nodiscard]]
 		bool isLocal() const {
