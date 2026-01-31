@@ -419,7 +419,7 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief TODOP: Docs
+	 * @brief Represents an array indexing operation (both for static and dynamic arrays).
 	 */
 	struct IndexExpr final: public Expr {
 		Box<Expr> base;
@@ -597,7 +597,10 @@ namespace compiler::helios::code {
 		DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
-	// TODOP: Docs
+	/**
+	 * @brief Represents a default (zeroed) value for a given type.
+	 * Used for implicit variable initialization. This gets then mapped to `llvm:getNullValue(type)`.
+	 */
 	struct DefaultValueExpr final: public Expr {
 		tsh::SymbolType<> type;
 

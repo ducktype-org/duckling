@@ -229,22 +229,27 @@ namespace compiler::lir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * It contains of a base variable and a projection chain (either field projections or deref
-	 * projections if eny of the elements was a reference)
+	 * It contains of a base variable and a projection chain - field projections, index projections
+	 * or deref projections(if eny of the elements was a reference))
 	 *
 	 * For example:
 	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
 	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
 	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 *
 	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
 	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
 	 * FieldProjection(`c`)]`).
+	 *
 	 * - Additionally, if field `b` was a reference type, an additional
 	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
 	 *
-	 * TODOP: Add docs
+	 * - In case of `class_array[ix].some_field` the projection chain would contain:
+	 *     - An index projection with the `index` set to the MIRValue representing `ix`
+	 *     - A deref projection since the `[]` returns a reference to the inner element.
+	 *     - An field projection with `field_id` set to `some_field`
 	 *
-	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * - For access to the whole variable with a direct specifier (e.g., just `a`), the projection
 	 * chain would be empty.
 	 */
 	struct LIRPlace final {
@@ -260,7 +265,7 @@ namespace compiler::lir {
 		struct IndexProjection {
 			// Box is needed because of the cyclic dependency:
 			// IndexProjection -> LIRValue -> LIRPlace -> LIRValue.
-			// We also want MIRPlace to be copyable.
+			// We also want MIRPlace to be copyable, thus the Shared.
 			SharedBox<LIRValue> index;
 			bool                operator==(const IndexProjection&) const = default;
 		};

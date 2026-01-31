@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "typesystem/higher/kind.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -17,6 +19,10 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/except/exceptions.hpp"
+#include "base/str/str_utils.hpp"
+
+#include "string_id/string_id.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -72,11 +78,14 @@ namespace compiler::helios {
 
 			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
+			void visitAccessExpr(const code::AccessExpr&) final {
+				// @TODO: #1922 Implement that.
+				throw base::NotYetImplemented("Access expression in comp time");
+			}
 
 			void visitIndexExpr(const code::IndexExpr&) final {
-				// TODOP
-				throw base::NotYetImplemented("This PR");
+				// @TODO: #1922 Implement that.
+				throw base::NotYetImplemented("Index expression in comp time");
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
@@ -555,9 +564,28 @@ namespace compiler::helios {
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitDefaultValueExpr(const code::DefaultValueExpr&) final {
-				// TODOP
-				throw base::NotYetImplemented("Default value in comp time");
+			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) final {
+				switch (expr.type.getType().getKind()) {
+				case tsh::Kind::Integral:
+				case tsh::Kind::Float: {
+					// Creates a 0 initialized numeric by default.
+					auto numeric_result = ctv::NumericValue::createOfType(expr.type);
+					result              = ctv::CompileTimeValue(numeric_result.expect(
+                        base::strConcat("Failed to create 0 of type: ", expr.type.toString())
+                    ));
+					break;
+				}
+				case tsh::Kind::Bool: {
+					result = ctv::CompileTimeValue(false);
+					break;
+				}
+				case tsh::Kind::String: {
+					result = ctv::CompileTimeValue(base::StrID(""));
+					break;
+				}
+				default:
+					throw base::NotYetImplemented("Default value in comp time");
+				}
 			}
 
 			/**

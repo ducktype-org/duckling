@@ -572,7 +572,6 @@ namespace compiler::helios::code {
 	}
 
 	IndexExpr::IndexExpr(query::Context&, Box<Expr> base, Box<Expr> index):
-		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(tsh::ExpressionType(
 			  [&]() -> tsh::SymbolType<> {
 				  auto base_type = base->expression_type.getType();
@@ -585,7 +584,9 @@ namespace compiler::helios::code {
 					  CORE_PANIC("Cannot index a non-array like type");
 				  }
 			  }(),
-			  base->expression_type.getValueCategory()  // TODOP: Think about that.
+			  base->expression_type.getValueCategory(
+			  )  // Propagate the base category. Is the array is a
+	             // Local/Global, then the indexed element is as well.
 		  )
 
 

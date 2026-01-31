@@ -243,8 +243,7 @@ namespace compiler::mir {
 		}();
 
 		result.projection_chain.push_back(Projection::index(index));
-		// TODOP: This is stupid. Maybe getElementType() should return a ref so it's safer?
-		// Add doc, that [] returns a ref.
+		// `[]` operator returns a reference to the inner object.
 		result.type = element_type.withReferenceKind(tsh::ReferenceKind::Ref);
 		return result;
 	}
