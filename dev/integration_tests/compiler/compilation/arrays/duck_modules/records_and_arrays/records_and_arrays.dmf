@@ -1,0 +1,67 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+class Polygon {
+    vertices: Point[3];
+    id: i64 = 0;
+}
+
+fun print_sep() -> () = { builtin_output_i64(8888888888); }
+
+fun test_array_of_records() -> () = {
+    var points: Point[2];
+    
+    points[0] = Point(10, 20);
+    points[1] = Point(30, 40);
+
+    builtin_output_i64(points[0].x); # 10
+    builtin_output_i64(points[1].y); # 40
+    
+    points[0].x = 15;
+    builtin_output_i64(points[0].x); # 15
+}
+
+fun test_record_with_array() -> () = {
+    var poly: Polygon;
+    poly.id = 7;
+    
+    poly.vertices[0] = Point(1, 2);
+    poly.vertices[1] = Point(3, 4);
+    poly.vertices[2] = Point(5, 6);
+    
+    builtin_output_i64(poly.id);            # 7
+    builtin_output_i64(poly.vertices[1].x); # 3
+    builtin_output_i64(poly.vertices[2].y); # 6
+}
+
+fun test_nested_complex() -> () = {
+    var mesh: Polygon[2];
+    
+    mesh[0].id = 100;
+    mesh[0].vertices[2].x = 555;
+    
+    mesh[1].id = 200;
+    mesh[1].vertices[0].y = 777;
+    
+    builtin_output_i64(mesh[0].id);             # 100
+    builtin_output_i64(mesh[0].vertices[2].x);  # 555
+    builtin_output_i64(mesh[1].id);             # 200
+    builtin_output_i64(mesh[1].vertices[0].y);  # 777
+}
+
+fun main() -> i64 = {
+    print_sep();
+
+    test_array_of_records();
+    print_sep();
+
+    test_record_with_array();
+    print_sep();
+
+    test_nested_complex();
+    print_sep();
+    
+    return 0i64;
+}
