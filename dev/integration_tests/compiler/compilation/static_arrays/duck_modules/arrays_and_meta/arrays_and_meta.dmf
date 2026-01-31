@@ -21,8 +21,8 @@ fun main() -> i32 = {
     
     var arr: FIB_ARRAY;
     var i = 0;
-    while(i < 5) { # If wrong size was picked this should cause a segmentation fault
-        arr[i] = 1i64; # If wrong type was picked, then this should crash in type check.
+    while(i < 5) {      # If wrong size was picked this should cause a segmentation fault
+        arr[i] = 1i64;  # If wrong type was picked, then this should crash in type check.
         i = i + 1;
     }
 

@@ -8,7 +8,6 @@ fun bubble_sort(size: i64, arr: ref i64[10]) -> () = {
     var i = 0;
     while (i < size) {
         var j = 0;
-        # size - i - 1
         let limit = size - i - 1;
         while (j < limit) {
             if (arr[j] > arr[j + 1]) {
