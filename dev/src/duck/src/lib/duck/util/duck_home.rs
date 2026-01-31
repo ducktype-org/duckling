@@ -48,8 +48,11 @@ macro_rules! ensure_file {
                 #[doc = $desc]
                 /// exists on a disk
                 pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
+                    use $crate::QuackResultContext;
                     let file = self.$name();
-                    let _ = file.touch()?;
+                    let _ = file.touch().with_context(|| {
+                        format!("failed to create file `{}`", file.display())
+                    })?;
                     Ok(file)
                 }
             )*
@@ -69,8 +72,11 @@ macro_rules! ensure_dir {
                 #[doc = $desc]
                 /// exists on a disk
                 pub fn [<ensure_ $name>](&self) -> QuackResult<&Path> {
+                    use $crate::QuackResultContext;
                     let file = self.$name();
-                    let _ = file.mkdir(MkdirOptions::WithParents)?;
+                    let _ = file.mkdir(MkdirOptions::WithParents).with_context(|| {
+                        format!("failed to create directory `{}`", file.display())
+                    })?;
                     Ok(file)
                 }
             )*
