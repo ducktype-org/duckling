@@ -12,7 +12,7 @@ int main() {
 		CORE_PANIC("Fresh, crispy panic for my dudes <3");
 	} catch (const base::Panic& p) { p.printToCerr(); }
 
-	// Test multi-threaded panics
+	// For hand-testing multi-threaded panics (comment out the lines above to run it):
 	std::jthread t1([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
 	std::jthread t2([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
 	std::jthread t3([] { CORE_PANIC("Fresh, crispy panic for my dudes <3"); });
