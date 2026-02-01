@@ -160,8 +160,8 @@ namespace concurrent::tester {
 			// Get the next sequential state by executing the operation of the given thread.
 			auto current_op     = state->next_ops.at(thread_id);
 			auto next_seq_state = state->sequential_state;  // copy the state for modification.
-			auto result = std::get<typename _History::Call>(history->at(current_op.begin).event)
-			                  .operation(Ref(&next_seq_state));
+			auto op     = std::get<typename _History::Call>(history->at(current_op.begin).event);
+			auto result = op.operation(Ref(&next_seq_state));
 
 			// Find the next operation for the given thread.
 			auto next_op           = nextOpForThread(thread_id, current_op);
