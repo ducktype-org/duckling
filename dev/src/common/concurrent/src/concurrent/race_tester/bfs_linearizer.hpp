@@ -89,11 +89,9 @@ namespace concurrent::tester {
 					auto [next_state, result] = advance(current_state, thread_id);
 
 					// Check if the operation's result matches the recorded one.
-					const auto& recorded_result
-						= std::get<typename _History::Return>(
-							  history->at(current_state->next_ops.at(thread_id).end).event
-						)
-					          .result;
+					const auto& event
+						= history->at(current_state->next_ops.at(thread_id).end).event;
+					const auto& recorded_result = std::get<typename _History::Return>(event).result;
 					if (result != recorded_result) continue; /* Mismatch, discard this branch. */
 
 					// If the results match, update max_earliest_end and add the state to the queue.
@@ -160,8 +158,8 @@ namespace concurrent::tester {
 			// Get the next sequential state by executing the operation of the given thread.
 			auto current_op     = state->next_ops.at(thread_id);
 			auto next_seq_state = state->sequential_state;  // copy the state for modification.
-			auto op     = std::get<typename _History::Call>(history->at(current_op.begin).event);
-			auto result = op.operation(Ref(&next_seq_state));
+			auto result = std::get<typename _History::Call>(history->at(current_op.begin).event)
+			                  .operation(Ref(&next_seq_state));
 
 			// Find the next operation for the given thread.
 			auto next_op           = nextOpForThread(thread_id, current_op);
