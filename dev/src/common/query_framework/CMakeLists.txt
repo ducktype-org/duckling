@@ -1,5 +1,6 @@
 add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_graph.cpp
+	src/query_framework/internal/query_graph/active_graph.cpp
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp

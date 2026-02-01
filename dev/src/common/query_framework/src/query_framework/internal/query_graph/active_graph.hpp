@@ -34,22 +34,12 @@ namespace query::internal {
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id) {
-			active_nodes.put(node_id, {});
-			active_node_count++;
-		}
+		void putNode(NodeID node_id);
 
 		/**
 		 * Removes a node from the active query graph.
 		 */
-		void removeNode(NodeID node_id) {
-			auto was_removed = active_nodes.erase(node_id);
-
-			if (was_removed)
-				active_node_count--;
-			else
-				CORE_PANIC("Removing non-existing node from active graph");
-		}
+		void removeNode(NodeID node_id);
 
 		/**
 		 * @return Current size of the active graph.
@@ -58,35 +48,17 @@ namespace query::internal {
 		 * It should be treated as a good-enough approximation, or in assertions
 		 * such as "size() == 0" to check for emptiness.
 		 */
-		u64 size() const { return active_node_count.load(); }
+		u64 size() const;
 
 		/**
 		 * Removes active edge of a given node.
 		 */
-		void removeEdge(NodeID node_id) {
-			// Note that there might be some concurrent operations
-			// between following assertion and update,
-			// but the assertion must always pass anyway (when the active graph is used correctly).
-			CORE_ASSERT(
-				!active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
-				"Removing edge for node that does not have an active edge"
-			);
-			active_nodes.update(node_id, {});
-		}
+		void removeEdge(NodeID node_id);
 
 		/**
 		 * Sets new active edge of a given node.
 		 */
-		void setEdge(NodeID node_id, NodeID edge) {
-			// Note that there might be some concurrent operations
-			// between following assertion and update,
-			// but the assertion must always pass anyway (when the active graph is used correctly).
-			CORE_ASSERT(
-				active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
-				"Setting edge for node that already has an active edge"
-			);
-			active_nodes.update(node_id, { edge });
-		}
+		void setEdge(NodeID node_id, NodeID edge);
 
 		/**
 		 * Performs the following:
@@ -94,11 +66,7 @@ namespace query::internal {
 		 * * if node_id does not currently have an active edge, return empty optional,
 		 * * otherwise return the node the the active edge of provided node points to.
 		 */
-		base::Optional<NodeID> walk(NodeID node_id) const {
-			auto edge = active_nodes.atMaybeCopy(node_id);
-			if (edge.empty()) return {};
-			return edge.value().active_edge;
-		}
+		base::Optional<NodeID> walk(NodeID node_id) const;
 
 		/**
 		 * Helper struct representing a found query cycle.
@@ -117,50 +85,6 @@ namespace query::internal {
 		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
-		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const {
-			auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
-				auto walk_one = walk(walk_zero);
-				if (walk_one.empty()) return {};
-				return walk(walk_one.value());
-			};
-
-			base::Optional<NodeID> current_node_slow = node_id;
-			base::Optional<NodeID> current_node_fast = node_id;
-
-			while (true) {
-				current_node_slow = walk(current_node_slow.value());
-				if (current_node_slow.empty()) return {};
-
-				current_node_fast = double_walk(current_node_fast.value());
-				if (current_node_fast.empty()) return {};
-
-				if (current_node_slow.value() == current_node_fast.value()) break;
-			}
-
-			// We are here, so the cycle was found.
-			// Now we need to reconstruct the cycle nodes.
-			// Note that due to the assumptions on the active graph usage,
-			// the found cycle cannot change while we reconstruct it,
-			// as no nodes can be removed from the graph until their active edges
-			// are "computed" and removed.
-
-			std::vector<NodeID> cycle_nodes;
-			bool                is_the_initial_node_on_the_cycle = false;
-
-			NodeID cycle_start = current_node_slow.value();
-			cycle_nodes.push_back(cycle_start);
-			if (cycle_start == node_id) is_the_initial_node_on_the_cycle = true;
-
-			NodeID walker = walk(cycle_start).value();
-			while (walker != cycle_start) {
-				cycle_nodes.push_back(walker);
-				if (walker == node_id) is_the_initial_node_on_the_cycle = true;
-				walker = walk(walker).value();
-			}
-
-			if (!is_the_initial_node_on_the_cycle) return {};
-
-			return QueryCycle{ .cycle_nodes = std::move(cycle_nodes) };
-		}
+		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const;
 	};
 }
