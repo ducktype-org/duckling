@@ -20,9 +20,9 @@ namespace concurrent::tester {
 	template<class TestedInterface, typename... PossibleResults>
 	requires base::strConcatable<PossibleResults...> class Coordinator {
 	public:
-		using _Executor       = Executor<TestedInterface, PossibleResults...>;
-		using _History        = History<TestedInterface, PossibleResults...>;
-		using _ResultsVariant = typename _History::_ResultsVariant;
+		using Executor_       = Executor<TestedInterface, PossibleResults...>;
+		using History_        = History<TestedInterface, PossibleResults...>;
+		using ResultsVariant_ = typename History_::ResultsVariant_;
 
 		/**
 		 * @brief Run multiple worker threads to perform operations on the tested instance.
@@ -42,17 +42,17 @@ namespace concurrent::tester {
 		 * @param worker_count How many workers are to be spawned.
 		 * @param worker The implementation of a worker.
 		 */
-		void runWorkers(const u32 worker_count, std::function<void(u32, _Executor)> worker) {
+		void runWorkers(const u32 worker_count, std::function<void(u32, Executor_)> worker) {
 			std::vector<std::jthread> threads;
 			threads.reserve(worker_count);
 
 			for (u32 i = 0; i < worker_count; ++i) {
-				_Executor executor(tested_instance, i, history);
+				Executor_ executor(tested_instance, i, history);
 				threads.emplace_back([i, &worker, executor] { worker(i, executor); });
 			}
 		}
 
-		Coordinator(Ref<TestedInterface> tested_instance, Ref<_History> history):
+		Coordinator(Ref<TestedInterface> tested_instance, Ref<History_> history):
 			  tested_instance(tested_instance),
 			  history(history) {}
 
@@ -65,6 +65,6 @@ namespace concurrent::tester {
 		/**
 		 * @brief A reference to the history in which executed operations will be recorded.
 		 */
-		Ref<_History> history;
+		Ref<History_> history;
 	};
 }

@@ -23,8 +23,8 @@ namespace concurrent::tester {
 	requires base::strConcatable<PossibleResults...>
 	      && std::is_copy_constructible_v<SequentialImplementation> class BFSLinearizer {
 	public:
-		using _History        = History<TestedInterface, PossibleResults...>;
-		using _ResultsVariant = typename _History::_ResultsVariant;
+		using History_        = History<TestedInterface, PossibleResults...>;
+		using ResultsVariant_ = typename History_::ResultsVariant_;
 
 		/**
 		 * @brief The beginning and end indices of a single operation in the history.
@@ -90,7 +90,7 @@ namespace concurrent::tester {
 
 					// Check if the operation's result matches the recorded one.
 					const auto& recorded_result
-						= std::get<typename _History::Return>(
+						= std::get<typename History_::Return>(
 							  history->atRef(current_state->next_ops.at(thread_id).end).event
 						)
 					          .result;
@@ -110,7 +110,7 @@ namespace concurrent::tester {
 			return {};
 		}
 
-		BFSLinearizer(CRef<_History> history, SequentialImplementation sequential_implementation):
+		BFSLinearizer(CRef<History_> history, SequentialImplementation sequential_implementation):
 			  history(history),
 			  history_size(history->size()),
 			  num_threads(history->getNumThreads()),
@@ -156,11 +156,11 @@ namespace concurrent::tester {
 		 * @param thread_id The thread ID whose next operation to advance.
 		 * @return The next state, and the result of the operation.
 		 */
-		std::pair<State, _ResultsVariant> advance(Ref<State> state, u32 thread_id) {
+		std::pair<State, ResultsVariant_> advance(Ref<State> state, u32 thread_id) {
 			// Get the next sequential state by executing the operation of the given thread.
 			auto current_op     = state->next_ops.at(thread_id);
 			auto next_seq_state = state->sequential_state;  // copy the state for modification.
-			auto result = std::get<typename _History::Call>(history->at(current_op.begin).event)
+			auto result = std::get<typename History_::Call>(history->at(current_op.begin).event)
 			                  .operation(Ref(&next_seq_state));
 
 			// Find the next operation for the given thread.
@@ -174,7 +174,7 @@ namespace concurrent::tester {
 		/**
 		 * @brief The history to linearize.
 		 */
-		CRef<_History> history;
+		CRef<History_> history;
 
 		/**
 		 * @brief The size of the history, cached for performance.

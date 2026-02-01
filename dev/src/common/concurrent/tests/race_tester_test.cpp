@@ -59,7 +59,7 @@ private:
 		// 0: |—————+300—————|___300___|————500————|
 		// 1: |__100_|———+300———|——————500——————|
 		// 2: |____200___|———+300———|——+200——|
-		auto worker = [](const u32 thread_id, RaceTester::_Executor executor) {
+		auto worker = [](const u32 thread_id, RaceTester::Executor_ executor) {
 			switch (thread_id) {
 			case 0:
 				executor.execute("wait(30)", [](Ref<Waiter> waiter) { return waiter->wait(30); });
@@ -145,8 +145,8 @@ private:
 				SequentialConcurrentCounter,
 				usize>;
 
-			const std::function<void(u32, _RaceTesterGood::_Executor)> worker
-				= [](u32, _RaceTesterGood::_Executor executor) {
+			const std::function<void(u32, _RaceTesterGood::Executor_)> worker
+				= [](u32, _RaceTesterGood::Executor_ executor) {
 					  for (usize i = 0; i < 1'000; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();
@@ -180,8 +180,8 @@ private:
 				SequentialConcurrentCounter,
 				usize>;
 
-			const std::function<void(u32, _RaceTesterBad::_Executor)> worker
-				= [](u32, _RaceTesterBad::_Executor executor) {
+			const std::function<void(u32, _RaceTesterBad::Executor_)> worker
+				= [](u32, _RaceTesterBad::Executor_ executor) {
 					  for (usize i = 0; i < 1'000; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();

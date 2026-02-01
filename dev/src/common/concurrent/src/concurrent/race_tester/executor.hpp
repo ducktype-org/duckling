@@ -19,8 +19,8 @@ namespace concurrent::tester {
 	template<class TestedInterface, typename... PossibleResults>
 	requires base::strConcatable<PossibleResults...> class Executor {
 	public:
-		using _History        = History<TestedInterface, PossibleResults...>;
-		using _ResultsVariant = typename _History::_ResultsVariant;
+		using History_        = History<TestedInterface, PossibleResults...>;
+		using ResultsVariant_ = typename History_::ResultsVariant_;
 
 		/**
 		 * @brief Execute an operation on the tested instance; log the call and return events.
@@ -30,11 +30,11 @@ namespace concurrent::tester {
 		 */
 		void execute(
 			const std::string&                                   description,
-			std::function<_ResultsVariant(Ref<TestedInterface>)> operation
+			std::function<ResultsVariant_(Ref<TestedInterface>)> operation
 		) {
-			history->pushBack(typename _History::Record{
+			history->pushBack(typename History_::Record{
 				thread_id,
-				typename _History::Call{
+				typename History_::Call{
 					.operation   = operation,
 					.description = description,
 				},
@@ -42,13 +42,13 @@ namespace concurrent::tester {
 
 			auto result = operation(tested_instance);
 
-			history->pushBack(typename _History::Record{
+			history->pushBack(typename History_::Record{
 				thread_id,
-				typename _History::Return{ std::move(result) },
+				typename History_::Return{ std::move(result) },
 			});
 		}
 
-		Executor(Ref<TestedInterface> tested_instance, const u32 thread_id, Ref<_History> history):
+		Executor(Ref<TestedInterface> tested_instance, const u32 thread_id, Ref<History_> history):
 			  tested_instance(tested_instance),
 			  thread_id(thread_id),
 			  history(history) {}
@@ -67,6 +67,6 @@ namespace concurrent::tester {
 		/**
 		 * @brief A reference to the history in which executed operations will be recorded.
 		 */
-		Ref<_History> history;
+		Ref<History_> history;
 	};
 }

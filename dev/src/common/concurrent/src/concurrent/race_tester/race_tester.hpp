@@ -34,9 +34,9 @@ namespace concurrent::tester {
 	requires base::strConcatable<PossibleResults...>
 	      && std::is_copy_constructible_v<SequentialImplementation> class RaceTester {
 	public:
-		using _History     = History<TestedInterface, PossibleResults...>;
-		using _Executor    = Executor<TestedInterface, PossibleResults...>;
-		using _Coordinator = Coordinator<TestedInterface, PossibleResults...>;
+		using History_     = History<TestedInterface, PossibleResults...>;
+		using Executor_    = Executor<TestedInterface, PossibleResults...>;
+		using Coordinator_ = Coordinator<TestedInterface, PossibleResults...>;
 
 		RaceTester(
 			Ref<TestedImplementation>      tested_instance,
@@ -44,7 +44,7 @@ namespace concurrent::tester {
 		):
 			  tested_instance(tested_instance),
 			  sequential_instance(sequential_instance),
-			  history(makeBox<_History>()) {}
+			  history(makeBox<History_>()) {}
 
 		/**
 		 * Run multiple worker threads to record their race history.
@@ -56,12 +56,12 @@ namespace concurrent::tester {
 		 * @param worker_count The number of workers to run (they're indexed starting from 0).
 		 * @param worker The implementation of the workers.
 		 */
-		void run(const u32 worker_count, std::function<void(u32, _Executor)> worker) {
-			_Coordinator coordinator(tested_instance, history.refMut());
+		void run(const u32 worker_count, std::function<void(u32, Executor_)> worker) {
+			Coordinator_ coordinator(tested_instance, history.refMut());
 			coordinator.runWorkers(worker_count, worker);
 		}
 
-		CRef<_History> getHistory() const { return history.ref(); }
+		CRef<History_> getHistory() const { return history.ref(); }
 
 		/**
 		 * Check whether the history recorded by `run` is linearizable. Print it if it isn't.
@@ -85,7 +85,7 @@ namespace concurrent::tester {
 		 * @param worker The implementation of the workers.
 		 * @return True if and only if the recorded history was linearizable.
 		 */
-		bool runAndCheck(const u32 worker_count, std::function<void(u32, _Executor)> worker) {
+		bool runAndCheck(const u32 worker_count, std::function<void(u32, Executor_)> worker) {
 			run(worker_count, worker);
 			return check();
 		}
@@ -104,6 +104,6 @@ namespace concurrent::tester {
 		/**
 		 * @brief The history of operations.
 		 */
-		Box<_History> history;
+		Box<History_> history;
 	};
 }

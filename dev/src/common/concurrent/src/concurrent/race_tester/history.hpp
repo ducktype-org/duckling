@@ -17,7 +17,7 @@ namespace concurrent::tester {
 	template<class TestedInterface, typename... PossibleResults>
 	requires base::strConcatable<PossibleResults...> class History {
 	public:
-		using _ResultsVariant = std::variant<PossibleResults...>;
+		using ResultsVariant_ = std::variant<PossibleResults...>;
 
 		/**
 		 * @brief A recorded call event.
@@ -26,7 +26,7 @@ namespace concurrent::tester {
 		 * @param description A human-readable description of the operation.
 		 */
 		struct Call {
-			std::function<_ResultsVariant(Ref<TestedInterface>)> operation;
+			std::function<ResultsVariant_(Ref<TestedInterface>)> operation;
 			std::string                                          description;
 
 			[[nodiscard]]
@@ -40,7 +40,7 @@ namespace concurrent::tester {
 		 * @param result The result of the operation, stored as a variant of possible result types.
 		 */
 		struct Return {
-			_ResultsVariant result;
+			ResultsVariant_ result;
 
 			[[nodiscard]]
 			std::string toString() const {
