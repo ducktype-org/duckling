@@ -1,3 +1,6 @@
+#include "helios/hout/elements/expr.hpp"
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -1523,36 +1526,67 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using namespace compiler::helios::code;
 
-			// matrix[0][1] = 42
-			auto& assign_matrix = dynamic_cast<const AssignmentStmt&>(*statements.at(1));
-			// matrix[0][1] -> RefOf(IndexExpr(IndexExpr))
-			auto ref_of = dynamic_cast<const RefOfExpr*>(assign_matrix.location_expr.get());
-			ASSERT_TRUE(ref_of != nullptr);
-			auto outer_index = dynamic_cast<const IndexExpr*>(ref_of->inner.get());
-			ASSERT_TRUE(outer_index != nullptr);
-			auto inner_index = dynamic_cast<const IndexExpr*>(outer_index->base.get());
-			ASSERT_TRUE(inner_index != nullptr);
+			{
+				// matrix[0][1] = 42
+				auto& assign_matrix = dynamic_cast<const AssignmentStmt&>(*statements.at(1));
+				// TODOP: This is kinda stupid.
+				// matrix[0][1] -> Deref(RefOf(IndexExpr(Deref(RefOf(IndexExpr)))))
+				auto deref = dynamic_cast<const DerefExpr*>(assign_matrix.location_expr.get());
+				ASSERT_TRUE(deref != nullptr);
+				auto ref_of = dynamic_cast<const RefOfExpr*>(deref->inner.get());
+				ASSERT_TRUE(ref_of != nullptr);
+				auto outer_index = dynamic_cast<const IndexExpr*>(ref_of->inner.get());
+				ASSERT_TRUE(outer_index != nullptr);
+				auto deref2 = dynamic_cast<const DerefExpr*>(assign_matrix.location_expr.get());
+				ASSERT_TRUE(deref != nullptr);
+				auto ref_of2 = dynamic_cast<const RefOfExpr*>(deref2->inner.get());
+				ASSERT_TRUE(ref_of != nullptr);
+				auto inner_index = dynamic_cast<const IndexExpr*>(ref_of2->inner.get());
+				ASSERT_TRUE(inner_index != nullptr);
 
-			auto i32_type = ctx.query<compiler::tsh::QueryIntegralType>(
-				{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
-			);
-			ASSERT_EQUAL(outer_index->expression_type.getSymbolType().getType(), i32_type);
+				auto i32_type = ctx.query<compiler::tsh::QueryIntegralType>(
+					{ 32, compiler::tsh::IntegralAbstractType::Signedness::Signed }
+				);
+				ASSERT_EQUAL(outer_index->expression_type.getSymbolType().getType(), i32_type);
+			}
+			{
+				// poly.vertices[1].x = 100
+				auto& assign_poly = dynamic_cast<const AssignmentStmt&>(*statements.at(3));
+				// poly.vertices[1].x -> Access(Deref(RefOf(Index(Access(poly)))))
 
-			// poly.vertices[1].x = 100
-			auto& assign_poly = dynamic_cast<const AssignmentStmt&>(*statements.at(3));
-			// poly.vertices[1].x -> Deref(Access(Deref(Index(RefOf(Access(poly.vertices))))))
-			auto final_deref = dynamic_cast<const DerefExpr*>(assign_poly.location_expr.get());
-			ASSERT_TRUE(final_deref != nullptr);
-			auto field_access_x = dynamic_cast<const AccessExpr*>(final_deref->inner.get());
-			ASSERT_TRUE(field_access_x != nullptr);
-			ASSERT_EQUAL(compiler::helios::name(field_access_x->field), "x");
+				auto field_access_x
+					= dynamic_cast<const AccessExpr*>(assign_poly.location_expr.get());
+				ASSERT_TRUE(field_access_x != nullptr);
+				ASSERT_EQUAL(compiler::helios::name(field_access_x->field), "x");
 
-			// Constants in array sizes.
-			auto& matrix_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
-			auto  matrix_type = matrix_decl.type.getType();
-			ASSERT_EQUAL(matrix_type.getKind(), compiler::tsh::Kind::StaticArray);
-			auto static_arr = matrix_type.as<compiler::tsh::StaticArrayAbstractType>();
-			ASSERT_EQUAL(static_arr.getSize(), 3);
+				auto deref = dynamic_cast<const DerefExpr*>(field_access_x->base.get());
+				ASSERT_TRUE(deref != nullptr);
+				auto ref_of = dynamic_cast<const RefOfExpr*>(deref->inner.get());
+				ASSERT_TRUE(ref_of != nullptr);
+				auto index_access = dynamic_cast<const IndexExpr*>(ref_of->inner.get());
+				ASSERT_TRUE(index_access != nullptr);
+
+				auto field_access_vertices
+					= dynamic_cast<const AccessExpr*>(index_access->base.get());
+				ASSERT_TRUE(field_access_vertices != nullptr);
+				ASSERT_EQUAL(compiler::helios::name(field_access_vertices->field), "vertices");
+			}
+
+			{
+				// Constants in array sizes.
+				auto& matrix_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
+				auto  matrix_type = matrix_decl.type.getType();
+				ASSERT_EQUAL(matrix_type.getKind(), compiler::tsh::Kind::StaticArray);
+				auto static_arr = matrix_type.as<compiler::tsh::StaticArrayAbstractType>();
+				ASSERT_EQUAL(static_arr.getSize(), 2);
+				ASSERT_EQUAL(
+					static_arr.getElementType().getType().getKind(), compiler::tsh::Kind::StaticArray
+				);
+				auto static_arr_inner = static_arr.getElementType()
+				                            .getType()
+				                            .as<compiler::tsh::StaticArrayAbstractType>();
+				ASSERT_EQUAL(static_arr_inner.getSize(), 3);
+			}
 		});
 	}
 

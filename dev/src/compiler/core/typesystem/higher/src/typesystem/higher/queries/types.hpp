@@ -148,7 +148,13 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return element_type.queryUnstablePerfectHash() + size;
+			static base::Map<KeyFor_QueryStaticArrayType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
 		}
 	};
 
