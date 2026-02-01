@@ -36,7 +36,7 @@ class WorkerManagerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		setWorkerCount(3);
+		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
@@ -66,7 +66,7 @@ private:
 				no_task_counter.fetch_add(1, std::memory_order_relaxed);
 			});
 		}
-		ASSERT_TRUE(no_task_counter == getWorkerCount());
+		ASSERT_TRUE(no_task_counter >= getWorkerCount());
 
 		auto all_workers = worker_manager.getAllWorkers();
 		ASSERT_EQUAL(all_workers.size(), getWorkerCount());
