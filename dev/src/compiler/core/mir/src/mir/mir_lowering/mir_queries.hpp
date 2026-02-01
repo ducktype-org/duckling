@@ -11,7 +11,7 @@ namespace compiler::mir {
 
 	struct KeyOf_LowerToMIRFunction {
 		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
-		helios::HOUTFunction function;
+		CRef<helios::HOUTFunction> function;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;

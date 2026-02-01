@@ -26,7 +26,7 @@ namespace compiler::mir {
 	namespace hc = helios::code;
 
 	u64 KeyOf_LowerToMIRFunction::queryUnstablePerfectHash() const {
-		return function.queryUnstablePerfectHash();
+		return function->queryUnstablePerfectHash();
 	}
 
 	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
@@ -273,7 +273,7 @@ namespace compiler::mir {
 	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
+			auto function_no_lifetime = lowerToPreMIRFunction(ctx, *key.function);
 
 			// second step: lifetime stuff
 			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));

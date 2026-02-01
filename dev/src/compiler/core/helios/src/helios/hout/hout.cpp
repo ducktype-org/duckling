@@ -27,7 +27,7 @@ namespace compiler::helios {
 
 		out += "\nFunctions:\n";
 		for (auto& func: functions) {
-			out += func.debugPrint();
+			out += func->debugPrint();
 			out += "\n";
 		}
 

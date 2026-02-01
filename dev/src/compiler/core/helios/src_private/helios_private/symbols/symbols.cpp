@@ -983,7 +983,7 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key).valueOrThrow();
+			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 			const auto& function_body   = fun_hout_result.body;
 
 			HoutFunctionCallCollector visitor;
