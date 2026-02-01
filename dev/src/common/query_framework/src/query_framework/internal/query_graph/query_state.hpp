@@ -97,10 +97,12 @@ namespace query::internal {
 		| Active query state interface:   |
 		\*********************************/
 
-		Ref<ActiveGraph> getActiveGraph() { return &active_graph; }
+		Ref<ActiveGraph> getActiveGraph() noexcept;
 
 		/**
 		 * @brief Returns the amount of currently active queries.
+		 * @TODO: #1933 go over usages and remove/changes them. Probably we can remove this
+		 * functionality after that alltogether.
 		 */
 		[[nodiscard]]
 		u64 activeQueryCount() const;

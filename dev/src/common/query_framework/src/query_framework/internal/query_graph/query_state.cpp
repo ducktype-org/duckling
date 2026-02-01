@@ -114,6 +114,8 @@ namespace query::internal {
 		return &previous.value().graph;
 	}
 
+	Ref<ActiveGraph> QueryState::getActiveGraph() noexcept { return &active_graph; }
+
 	u64 QueryState::activeQueryCount() const { return active_graph.size(); }
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {

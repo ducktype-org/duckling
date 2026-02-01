@@ -1,3 +1,3 @@
 Simple component related to query statistics collection.
-Not a part of code query components.
+Not a part of core query components.
 

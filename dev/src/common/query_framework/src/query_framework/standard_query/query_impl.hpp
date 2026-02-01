@@ -114,26 +114,21 @@ namespace query::internal {
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
 
-			// EPILOG
-			// Use of defer here makes it also called when an exception is thrown.
-			// it is before setEntry, because setEntry can throw on cycle
-			defer({
-				ContextAccess::getState()->getActiveGraph()->removeNode(node_id
-				);  // node is calculated, we are all done
-			});
-
 			// PROLOG:
 			// we put the node, it does not have any deps yet,
 			// actual cycle checks are done in ctx.query
 			// @TODO: #1887 might want to put it under one more layer of abstraction:
 			ContextAccess::getState()->addGraphNode(node_id);
 			ContextAccess::getState()->getActiveGraph()->putNode(node_id);
-
-
 			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
-			// EPILOG pt2:
-			defer(CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
+			// EPILOG
+			// Use of defer here makes it also called when an exception is thrown.
+			defer({
+				// This happens after node is calculated, and we are all done
+				CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n");
+				ContextAccess::getState()->getActiveGraph()->removeNode(node_id);
+			});
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
