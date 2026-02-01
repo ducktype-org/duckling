@@ -63,7 +63,16 @@ namespace query::internal {
 		/**
 		 * Removes active edge of a given node.
 		 */
-		void removeEdge(NodeID node_id) { active_nodes.update(node_id, {}); }
+		void removeEdge(NodeID node_id) {
+			// Note that there might be some concurrent operations
+			// between following assertion and update,
+			// but the assertion must always pass anyway (when the active graph is used correctly).
+			CORE_ASSERT(
+				!active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
+				"Removing edge for node that does not have an active edge"
+			);
+			active_nodes.update(node_id, {});
+		}
 
 		/**
 		 * Sets new active edge of a given node.
