@@ -55,21 +55,17 @@ namespace tester {
 		  config(std::move(config)) {}
 
 	void TestSuite::assertTrue(bool v, std::string_view err, bool critical) {
-		if (!v) {
-			curr_global_res->success = false;
-			message(err);
-			if (critical) throw CritTestError();
-		}
+		if (!v) fail(err, critical);
 	}
 
 	void TestSuite::assertFalse(bool v, std::string_view err, bool critical) {
 		assertTrue(!v, err, critical);
 	}
 
-	void TestSuite::fail(std::string_view err) {
+	void TestSuite::fail(std::string_view err, bool critical) {
 		curr_global_res->success = false;
 		message(err);
-		throw CritTestError();
+		if (critical) throw CritTestError();
 	}
 
 	void TestSuite::message(std::string_view mess) {

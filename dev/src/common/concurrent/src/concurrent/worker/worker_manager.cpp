@@ -53,7 +53,7 @@ namespace concurrent::worker {
 		}
 	}
 
-	void WorkerManager::testAccessPrivateReloadState() {
+	void WorkerManager::testPrivateAccessReloadState() {
 		auto& worker_manager = get();
 		auto  size           = worker_manager.workers.size();
 		worker_manager.workers.clear();

@@ -31,7 +31,7 @@ namespace concurrent::worker {
 		/**
 		 * @brief Tests access to private reload state for unit testing.
 		 */
-		static void testAccessPrivateReloadState();
+		static void testPrivateAccessReloadState();
 
 		WorkerManager(const WorkerManager&)  = delete;
 		void operator=(const WorkerManager&) = delete;

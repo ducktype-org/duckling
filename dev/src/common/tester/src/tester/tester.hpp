@@ -128,10 +128,10 @@ namespace tester {
 		TestSuite(TestConfig&& config, std::string_view name);
 		void addTest(TestType test, std::string_view test_name, bool should_fail);
 
-		void assertTrue(bool v, std::string_view err, bool critical = true);
-		void assertFalse(bool v, std::string_view err, bool critical = true);
-		void fail(std::string_view err);
-		void message(std::string_view mess);
+		void         assertTrue(bool v, std::string_view err, bool critical = true);
+		void         assertFalse(bool v, std::string_view err, bool critical = true);
+		virtual void fail(std::string_view err, bool critical = true);
+		void         message(std::string_view mess);
 
 		template<typename Exception, typename FuncType>
 		void assertThrows(const FuncType& func, std::string_view error) {

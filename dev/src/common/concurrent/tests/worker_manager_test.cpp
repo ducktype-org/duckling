@@ -4,6 +4,7 @@
 
 #include <tester/tester.hpp>
 
+#include <stdexcept>
 #include <thread>
 
 template<class F>
@@ -26,6 +27,8 @@ void runOrTimeout(F func, usize timeout_ms = 5'000) {
 	}
 }
 
+using namespace concurrent::worker;
+
 class WorkerManagerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS WorkerManagerTest
@@ -33,12 +36,23 @@ class WorkerManagerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		constexpr int WORKER_COUNT = 4;
-		concurrent::worker::setWorkerCount(WORKER_COUNT);
+		setWorkerCount(3);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		concurrent::worker::WorkerManager::get().testAccessPrivateReloadState();
 		TESTER_ADD_TEST(taskPoolFibonacciTest);
-		concurrent::worker::WorkerManager::get().testAccessPrivateReloadState();
+	}
+
+protected:
+	void fail(std::string_view err, bool critical = true) override {
+		try {
+			runOrTimeout(WorkerManager::get().testPrivateAccessReloadState);
+		} catch (const std::runtime_error& e) {
+			message(base::strConcat(
+				"WorkerManager reload state timed out during fail(). "
+				"Possible deadlock detected. Error: ",
+				e.what()
+			));
+		}
+		tester::TestSuite::fail(err, critical);
 	}
 
 private:
@@ -46,25 +60,24 @@ private:
 		std::atomic<usize> no_task_counter = 0;
 		auto               now             = std::chrono::steady_clock::now();
 
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
+		auto& worker_manager = WorkerManager::get();
 		for (const auto& id: worker_manager.getAllWorkers()) {
-			worker_manager.setNoTasksCallback(id, [&no_task_counter](concurrent::worker::WRef) {
+			worker_manager.setNoTasksCallback(id, [&no_task_counter](WRef) {
 				no_task_counter.fetch_add(1, std::memory_order_relaxed);
 			});
 		}
-		ASSERT_TRUE(no_task_counter == concurrent::worker::getWorkerCount());
+		ASSERT_TRUE(no_task_counter == getWorkerCount());
 
 		auto all_workers = worker_manager.getAllWorkers();
-		ASSERT_EQUAL(all_workers.size(), concurrent::worker::getWorkerCount());
+		ASSERT_EQUAL(all_workers.size(), getWorkerCount());
 
-		auto free_workers = worker_manager.getFreeWorkers(concurrent::worker::getWorkerCount());
-		ASSERT_EQUAL(free_workers.size(), concurrent::worker::getWorkerCount());
+		auto free_workers = worker_manager.getFreeWorkers(getWorkerCount());
+		ASSERT_EQUAL(free_workers.size(), getWorkerCount());
 
 		std::atomic<usize> task_finished_counter = 0;
 		constexpr usize    TASK_WAIT_TIME_MS     = 100;
 		for (const auto& worker: worker_manager.getAllWorkers()) {
-			worker->scheduleTask([&task_finished_counter,
-			                      TASK_WAIT_TIME_MS](concurrent::worker::WRef) {
+			worker->scheduleTask([&task_finished_counter, TASK_WAIT_TIME_MS](WRef) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(TASK_WAIT_TIME_MS));
 				task_finished_counter.fetch_add(1, std::memory_order_relaxed);
 			});
@@ -74,10 +87,8 @@ private:
 		// We also expect that during this time the no_tasks_callback
 		// has been called at least once per worker.
 		runOrTimeout([&] {
-			while (task_finished_counter.load(std::memory_order_relaxed)
-			           < concurrent::worker::getWorkerCount()
-			       || no_task_counter.load(std::memory_order_relaxed)
-			              < concurrent::worker::getWorkerCount() * 2)
+			while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
+			       || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
 				std::cerr << "Waiting... Finished tasks: "
 						  << task_finished_counter.load(std::memory_order_relaxed)
 						  << ", No task callbacks: "
@@ -89,10 +100,7 @@ private:
 		std::cerr << "No task callback called " << val << " times.\n";
 		// The no_tasks_callback should have been called at least once per worker,
 		// but no more than **three** times per worker.
-		ASSERT_TRUE(
-			concurrent::worker::getWorkerCount() <= val
-			&& val <= concurrent::worker::getWorkerCount() * 3
-		);
+		ASSERT_TRUE(getWorkerCount() <= val && val <= getWorkerCount() * 3);
 
 		auto elapsed    = std::chrono::steady_clock::now() - now;
 		auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
@@ -104,10 +112,7 @@ private:
 			base::strConcat("Elapsed time: ", elapsed_ms, " ms")
 		);
 
-		ASSERT_EQUAL(
-			task_finished_counter.load(std::memory_order_relaxed),
-			concurrent::worker::getWorkerCount()
-		);
+		ASSERT_EQUAL(task_finished_counter.load(std::memory_order_relaxed), getWorkerCount());
 	}
 
 	void taskPoolFibonacciTest() {
@@ -125,12 +130,12 @@ private:
 			return a;
 		};
 
-		std::queue<concurrent::worker::Task> tasks;
-		std::mutex                           task_mutex;
+		std::queue<Task> tasks;
+		std::mutex       task_mutex;
 
-		std::atomic<usize>                                    total_completed_tasks = 0;
-		concurrent::ConHashMap<u64, u64>                      results;
-		concurrent::ConHashMap<concurrent::worker::WRef, u64> worker_task_counts;
+		std::atomic<usize>                total_completed_tasks = 0;
+		concurrent::ConHashMap<u64, u64>  results;
+		concurrent::ConHashMap<WRef, u64> worker_task_counts;
 
 		const usize task_count      = 50'000;
 		const usize start           = 10'000;
@@ -139,44 +144,41 @@ private:
 		// from [start, start + task_count] (modulo MOD).
 		// Complexity is hard to estimate here, but each task should take a few milliseconds.
 		for (u64 i = 0; i < task_count; i++)
-			tasks.emplace([&fib, i, &results, &worker_task_counts, &total_completed_tasks](
-							  concurrent::worker::WRef worker
-						  ) {
-				u64 result = fib(start + i);
+			tasks.emplace(
+				[&fib, i, &results, &worker_task_counts, &total_completed_tasks](WRef worker) {
+					u64 result = fib(start + i);
 
-				// Update the total completed tasks
-				total_completed_tasks.fetch_add(1, std::memory_order_relaxed);
+					// Update the total completed tasks
+					total_completed_tasks.fetch_add(1, std::memory_order_relaxed);
 
-				// Store the result
-				results.put(i, result);
+					// Store the result
+					results.put(i, result);
 
-				// Update the task count for this worker
-				worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](u64& count_ref) {
-					count_ref++;
-				});
-			});
-
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-
-		for (const auto& id: worker_manager.getAllWorkers()) {
-			worker_manager.setNoTasksCallback(
-				id,
-				[&tasks, &task_mutex](concurrent::worker::WRef worker) {
-					// This callback is invoked when a worker has no tasks.
-				    // We can use it to assign new tasks to the worker.
-					std::scoped_lock lock(task_mutex);
-
-					for (usize i = 0; i < task_batch_size; i++) {
-						if (!tasks.empty()) {
-							auto task = tasks.front();
-							tasks.pop();
-							worker->scheduleTask(task);
-						} else {
-							break;
-						}
-					}
+					// Update the task count for this worker
+					worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](u64& count_ref) {
+						count_ref++;
+					});
 				}
 			);
+
+		auto& worker_manager = WorkerManager::get();
+
+		for (const auto& id: worker_manager.getAllWorkers()) {
+			worker_manager.setNoTasksCallback(id, [&tasks, &task_mutex](WRef worker) {
+				// This callback is invoked when a worker has no tasks.
+				// We can use it to assign new tasks to the worker.
+				std::scoped_lock lock(task_mutex);
+
+				for (usize i = 0; i < task_batch_size; i++) {
+					if (!tasks.empty()) {
+						auto task = tasks.front();
+						tasks.pop();
+						worker->scheduleTask(task);
+					} else {
+						break;
+					}
+				}
+			});
 		}
 
 
