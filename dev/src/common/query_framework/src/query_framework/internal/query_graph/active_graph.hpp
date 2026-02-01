@@ -29,6 +29,14 @@ namespace query::internal {
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
+		/**
+		 * Performs the following:
+		 * * if node_id is not present in the graph, return empty optional,
+		 * * if node_id does not currently have an active edge, return empty optional,
+		 * * otherwise return the node the active edge of provided node points to.
+		 */
+		base::Optional<NodeID> walk(NodeID node_id) const;
+
 	public:
 		/**
 		 * Adds a node to the active query graph.
@@ -59,14 +67,6 @@ namespace query::internal {
 		 * Sets new active edge of a given node.
 		 */
 		void setEdge(NodeID node_id, NodeID edge);
-
-		/**
-		 * Performs the following:
-		 * * if node_id is not present in the graph, return empty optional,
-		 * * if node_id does not currently have an active edge, return empty optional,
-		 * * otherwise return the node the active edge of provided node points to.
-		 */
-		base::Optional<NodeID> walk(NodeID node_id) const;
 
 		/**
 		 * Helper struct representing a found query cycle.
