@@ -34,10 +34,30 @@ namespace base {
 
 		/**
 		 * @brief Atomic pointer to allocated memory that stores what() string of the first panic.
-		 * @note When this is used, the memory is never deallocated and we just leak. This is ok,
-		 * since the program panicked anyway.
 		 */
 		constinit std::atomic<char*> first_panic_what_str_copy = nullptr;
+
+		// Checks ensuring trivial destruction of the above variables.
+		// This way we avoid static destruction order fiasco issues.
+		static_assert(std::is_trivially_destructible_v<decltype(was_first_panic)>);
+		static_assert(std::is_trivially_destructible_v<decltype(first_panic_what_str_copy)>);
+
+		/**
+		 * This class exist only to provide proper destruction of the allocated memory
+		 * pointed to by first_panic_what_str_copy when the program exits.
+		 */
+		struct PanicWhatStrDeleter final {
+			~PanicWhatStrDeleter() {
+				char* ptr = first_panic_what_str_copy.load();
+				first_panic_what_str_copy.store(nullptr);
+				delete[] ptr;
+			}
+		};
+
+		/**
+		 * @brief Dummy object used to ensure proper cleanup of first panic what() string.
+		 */
+		constinit PanicWhatStrDeleter panic_what_str_deleter;
 	}
 
 	Panic::Panic(std::string_view position, std::string_view reason) {
@@ -86,7 +106,9 @@ namespace base {
 				what_str += first_panic_what_str_pointer;
 			} else {
 				what_str += "No details about the first panic are available.\n";
-				what_str += "This is most likely due two multiple panics happening in different threads. In such case, the first panic might have been to slow to store its details before another panic happened.\n";
+				what_str += "This is most likely due one of two cases:\n";
+				what_str += " - The first panic happened in a different thread, and due to the timing of threads its details were not stored before another panic happened.\n";
+				what_str += " - This panic happened after main() ended, and the first-panic details were already destroyed.\n";
 			}
 		}
 	}
