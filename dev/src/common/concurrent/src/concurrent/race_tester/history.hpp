@@ -91,6 +91,12 @@ namespace concurrent::tester {
 			return records.at(i);
 		}
 
+		[[nodiscard]]
+		const Record& atRef(usize i) const {
+			std::lock_guard guard(mutex);
+			return records.at(i);
+		}
+
 		/**
 		 * @param upto The index of the instruction up to which to print (inclusive).
 		 * @return The stringified history.
@@ -109,6 +115,6 @@ namespace concurrent::tester {
 	private:
 		u32                 num_threads{ 0 };
 		std::vector<Record> records{};
-		std::mutex          mutex;
+		mutable std::mutex  mutex;
 	};
 }
