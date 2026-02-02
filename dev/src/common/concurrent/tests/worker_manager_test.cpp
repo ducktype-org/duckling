@@ -9,7 +9,7 @@
 #include <thread>
 
 template<class F>
-void runOrTimeout(F func, [[maybe_unused]] usize timeout_ms = 5'000) {
+void runOrTimeout(F func, usize timeout_ms = 10'000) {
 	std::atomic<bool> finished = false;
 
 	std::jthread worker_thread([&func, &finished]() {
@@ -17,13 +17,13 @@ void runOrTimeout(F func, [[maybe_unused]] usize timeout_ms = 5'000) {
 		finished.store(true, std::memory_order_relaxed);
 	});
 
-	// auto start = std::chrono::steady_clock::now();
+	auto start = std::chrono::steady_clock::now();
 	while (!finished.load(std::memory_order_relaxed)) {
-		// auto now = std::chrono::steady_clock::now();
-		// auto elapsed_ms
-		// 	= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		// if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed))
-		// 	throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+		auto now = std::chrono::steady_clock::now();
+		auto elapsed_ms
+			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed))
+			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
@@ -90,11 +90,11 @@ private:
 		runOrTimeout([&] {
 			while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
 			       || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
-				// std::cerr << "Waiting... Finished tasks: "
-				// 		  << task_finished_counter.load(std::memory_order_relaxed)
-				// 		  << ", No task callbacks: "
-				// 		  << no_task_counter.load(std::memory_order_relaxed) << "\n",
-				std::this_thread::yield();
+				std::cerr << "Waiting... Finished tasks: "
+						  << task_finished_counter.load(std::memory_order_relaxed)
+						  << ", No task callbacks: "
+						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
+					std::this_thread::yield();
 		});
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
