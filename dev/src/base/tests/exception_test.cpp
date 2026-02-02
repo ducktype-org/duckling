@@ -28,7 +28,7 @@ public:
 		TESTER_ADD_TEST(testPanicStacktrace);
 	}
 
-	void throwPanic1() { throw base::Panic("throwPanic", "panic test"); }
+	void throwPanic1() { throw base::Panic("POSITION: throwPanic1", "panic test"); }
 
 	void throwPanic2() { CORE_PANIC("panic test 2"); }
 
@@ -40,8 +40,8 @@ public:
 		try {
 			throwPanic1();
 		} catch (base::Panic& panic) {
-			assertTrue(panic.getPosition() == "throwPanic", "Bad panic position");
 			assertTrue(containsCstr(panic.what(), "panic test"), "Bad panic reason");
+			assertTrue(containsCstr(panic.what(), "POSITION: throwPanic1"), "Bad panic position");
 			return;
 		}
 		fail("Panic what not caught");
