@@ -52,7 +52,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		class InvaidCallableReferenceDocs final: public dia_int::MessageBase {
+		class InvalidCallableReferenceDocs final: public dia_int::MessageBase {
 			dia_int::Metadata getMetadata() const final {
 				return { .template_type = "message",
 					     .type          = "docs",
@@ -61,7 +61,7 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			InvaidCallableReferenceDocs(): MessageBase() {}
+			InvalidCallableReferenceDocs(): MessageBase() {}
 		};
 
 		class CandidateNote final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -79,7 +79,7 @@ namespace compiler::helios::code {
 
 		CallInvalidCallablesError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
-			addAttachedMessage(makeBox<InvaidCallableReferenceDocs>());
+			addAttachedMessage(makeBox<InvalidCallableReferenceDocs>());
 		}
 	};
 
@@ -303,7 +303,6 @@ namespace compiler::helios::code {
 		auto processPSTExpr(
 			pst::Access<pst::expr::IdentifierLiteral> ident, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
-			// TODOP: This is spaghetti code as hell
 			if (call_expr->getType() == lexer::Token::Square) {
 				auto base_res = processPSTExpr(ident);
 				UNPACK_QRESULT_MOVE(auto base =, base_res);
@@ -514,96 +513,6 @@ namespace compiler::helios::code {
 			CORE_UNREACHABLE();
 		}
 
-		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			auto args = call_expr->getArgs().unlock(query_ctx);
-			if (args->size() != 1) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Array index/size must be exactly one expression.",
-					call_expr->getSourcePosition()
-				));
-				return query::Failed();
-			}
-
-			auto arg_pst
-				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
-
-
-			// Static array type creation.
-			if (base->expression_type.getType().getKind() == tsh::Kind::Meta) {
-				auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ arg_pst });
-				UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
-
-				// Size of the array should be compile time evaluated and integral.
-				auto maybe_size = ctv.get<ctv::NumericValue>();
-				if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Array size must be a constant integer.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-
-				// This should never fail.
-				usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-
-				auto base_eval_res = query_ctx.query<QueryEvaluateHOUTExpression>({ base.ref() });
-				UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval_res);
-
-				auto maybe_type = base_ctv.get<tsh::SymbolType<>>();
-				if (!maybe_type.has_value()) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Expression before [] does not evaluate to a valid type.",
-						call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-
-				auto static_array_type
-					= query_ctx.query<tsh::QueryStaticArrayType>({ *maybe_type, array_size });
-
-				return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
-			} else {
-				// Base has to be direct for array access
-				if (base->expression_type.getSymbolType().getRefKind()
-				    != tsh::ReferenceKind::Direct) {
-					base = makeBox<DerefExpr>(query_ctx, std::move(base));
-				}
-
-				// Index access.
-				auto index_res = query_ctx.query<QueryHoutOfExpr>({ arg_pst });
-				UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
-
-				auto i64_type
-					= tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
-											 { 64, tsh::IntegralAbstractType::Signedness::Signed }
-										 ),
-					                     tsh::ReferenceKind::Direct,
-					                     tsh::Mutability::Immutable };
-
-				// TODOP: This is stupid cause it's duplicated in getHoutOfExprWithExpectedType.
-				auto coercion
-					= canCoerce(query_ctx, index_expr->expression_type.getSymbolType(), i64_type);
-				UNPACK_QRESULT_MOVE(auto coercion_result =, coercion);
-
-				// TODOP: Check if the error is logged in coercions.
-				if (coercion_result.isInvalid()) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Array index must be convertible to i64.", call_expr->getSourcePosition()
-					));
-					return query::Failed();
-				}
-
-				auto coerced_index = coercion_result.coerce(query_ctx, std::move(index_expr));
-
-				auto index_node
-					= makeBox<IndexExpr>(query_ctx, std::move(base), std::move(coerced_index));
-
-				// [] returns a reference to the element.
-				auto ref_expr = makeBox<RefOfExpr>(query_ctx, std::move(index_node));
-				return ChainState::ofExpr(std::move(ref_expr));
-			}
-		}
-
 		/**
 		 * When we have an access expression not followed by a call expression,
 		 * for example "NS.value" or "NS.value.y" amd the current state is a namespace.
@@ -706,6 +615,111 @@ namespace compiler::helios::code {
 				));
 				return query::Failed();
 			}
+		}
+
+		/**
+		 * @brief Process a square bracket call on an meta expression.
+		 *
+		 * - The `[size]' operator on meta, must be a compile time evaluated integer
+		 */
+		auto processStaticArrayTypeCreation(
+			Box<Expr> expr, pst::AccessLocked<pst::ExprElement> size_pst
+		) -> query::QResult<ChainState> {
+			auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_pst });
+			UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
+
+			// Size of the array should be compile time evaluated and integral.
+			auto maybe_size = ctv.get<ctv::NumericValue>();
+			if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Array size must be a constant integer.",
+					size_pst.unlock(query_ctx)->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+			// This should never fail.
+			usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+
+			auto base_eval_res = query_ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
+			UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval_res);
+
+			auto maybe_type = base_ctv.get<tsh::SymbolType<>>();
+			CORE_ASSERT(
+				maybe_type.has_value(), "Coerced meta expression must evaluate to a valid type"
+			);
+
+			auto static_array_type
+				= query_ctx.query<tsh::QueryStaticArrayType>({ *maybe_type, array_size });
+
+			return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
+		}
+
+		/**
+		 * @brief Process a square bracket call on an expression. Panics if the base expression
+		 * can't be indexed (is not an array).
+		 *
+		 * - The `[ix]` expects the base to be a direct type (inserts DerefExpr if needed).
+		 * - The argument for the operator has to be implicitly coercible to `i64`.
+		 * - The `[ix]` returns a reference to the inner array type.
+		 */
+		auto processStaticArrayIndexing(Box<Expr> expr, pst::AccessLocked<pst::ExprElement> index_pst)
+			-> query::QResult<ChainState> {
+			// Base has to be direct for array access.
+			if (expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
+				expr = makeBox<DerefExpr>(query_ctx, std::move(expr));
+
+			// Index access. We assume [] takes in an i64 value.
+			auto i64_type
+				= tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
+										 { 64, tsh::IntegralAbstractType::Signedness::Signed }
+									 ),
+				                     tsh::ReferenceKind::Direct,
+				                     tsh::Mutability::Immutable };
+			auto index_res = getHoutOfExprWithExpectedType(query_ctx, index_pst, i64_type);
+			UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
+
+			auto index_node = makeBox<IndexExpr>(query_ctx, std::move(expr), std::move(index_expr));
+
+			// [] returns a reference to the element.
+			auto ref_expr = makeBox<RefOfExpr>(query_ctx, std::move(index_node));
+			return ChainState::ofExpr(std::move(ref_expr));
+		}
+
+		/**
+		 * @brief Helper function of @p processPSTExpr that processes a square bracket call. This ca
+		 * either mean a StaticArray type creation or an index operator.
+		 */
+		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
+			-> query::QResult<ChainState> {
+			CORE_ASSERT(
+				call_expr->getType() == lexer::Token::Square,
+				"processSquareCall called on a different call type: ",
+				char(call_expr->getType())
+			);
+
+			auto args = call_expr->getArgs().unlock(query_ctx);
+			if (args->size() != 1) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Array index/size must be exactly one expression.",
+					call_expr->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+			auto arg_pst
+				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
+
+			auto meta_res = canCoerceToMeta(query_ctx, base->expression_type.getSymbolType());
+			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
+
+			// If base is coercible to meta, this is a static array type creation.
+			if (meta_coercion_res.isValid())
+				return processStaticArrayTypeCreation(
+					meta_coercion_res.coerce(query_ctx, std::move(base)), arg_pst
+				);
+			// Index operator.
+			return processStaticArrayIndexing(std::move(base), arg_pst);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================
