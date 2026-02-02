@@ -34,6 +34,9 @@ namespace base {
 
 		/**
 		 * @brief Atomic pointer to allocated memory that stores what() string of the first panic.
+		 * @future We might want to extend this to store per-thread first panic details or simply
+		 * store a lot of them (say 128 in static array), to avoid losing information about the
+		 * first panic in multithreaded scenarios.
 		 */
 		constinit std::atomic<char*> first_panic_what_str_copy = nullptr;
 
