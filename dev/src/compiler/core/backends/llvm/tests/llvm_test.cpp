@@ -188,13 +188,13 @@ private:
 	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
 
 	void unitsTest() {
-		// runTestForModule("modules/units/unit1", 2, 2);
-		// runTestForModule("modules/units/unit2", 2, 2);
-		// runTestForModule("modules/units/unit3", 1, 1);
-		// runTestForModule("modules/units/unit4", 1, 2);
-		// runTestForModule("modules/units/unit_simple", 2, 3);
+		runTestForModule("modules/units/unit1", 2, 2);
+		runTestForModule("modules/units/unit2", 2, 2);
+		runTestForModule("modules/units/unit3", 1, 1);
+		runTestForModule("modules/units/unit4", 1, 2);
+		runTestForModule("modules/units/unit_simple", 2, 3);
 		runTestForModule("modules/units/unit_class", 3, 4);
-		// runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
+		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
 	void classTest() { runTestForModule("modules/classes/records", 8, 9); }

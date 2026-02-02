@@ -752,6 +752,8 @@ namespace compiler::helios {
 						return;
 					}
 
+					// @TODO: #1921 This is not a proper way to handle default initialization. Make
+					// it better.
 					auto initial_value = makeBox<code::DefaultValueExpr>(ctx, symbol_type);
 					output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
 				} else {
