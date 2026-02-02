@@ -136,9 +136,7 @@ namespace tester {
 		} catch (const CritTestError& e) {
 		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;
-			message("Unexpected Panic occurred in:");
-			message(panic.getPosition());
-			message("Error:");
+			message("Unexpected Panic:");
 			message(panic.what());
 		} catch (const base::LogicError& logic_error) {
 			curr_global_res->success = false;
