@@ -704,21 +704,18 @@ private:
 							if (is_index) found_index_projection = true;
 						}
 
-						if (out_place.projection_chain.size() >= 3) {
+						if (out_place.projection_chain.size() == 2) {
 							const auto& chain = out_place.projection_chain;
 
 							bool is_idx
 								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
 							    );
-							bool is_der
-								= std::holds_alternative<MIRPlace::DerefProjection>(chain[1].storage
-							    );
 							bool is_fld
-								= std::holds_alternative<MIRPlace::FieldProjection>(chain[2].storage
+								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
 							    );
 
-							if (is_idx && is_der && is_fld) {
-								auto field = std::get<MIRPlace::FieldProjection>(chain[2].storage);
+							if (is_idx && is_fld) {
+								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);
 								if (compiler::helios::name(field.field_id) == base::StrID("x"))
 									found_complex_pts_projection = true;
 							}
@@ -729,9 +726,8 @@ private:
 
 			ASSERT_TRUE(found_zero_init_arr);
 			ASSERT_TRUE(found_zero_init_pts);
-			// TODOP: Fix that.
-			// ASSERT_TRUE(found_index_projection);
-			// ASSERT_TRUE(found_complex_pts_projection);
+			ASSERT_TRUE(found_index_projection);
+			ASSERT_TRUE(found_complex_pts_projection);
 		});
 	}
 

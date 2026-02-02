@@ -243,8 +243,7 @@ namespace compiler::mir {
 		}();
 
 		result.projection_chain.push_back(Projection::index(index));
-		// `[]` operator returns a reference to the inner object.
-		result.type = element_type.withReferenceKind(tsh::ReferenceKind::Ref);
+		result.type = element_type;
 		return result;
 	}
 

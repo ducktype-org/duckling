@@ -618,6 +618,33 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * @brief Recursively nests a new static array dimension as the innermost element type.
+		 *
+		 * If not for that sinking `int[2][3]` would be interpreted as a array with three elements,
+		 * each of them being a 2 element array. After this function runs, the type is correctly
+		 * interpreted as a 2 element array, with each of it's element being a 3 element array.
+		 *
+		 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
+		 */
+		tsh::SymbolType<> sinkArrayDimension(
+			query::Context& ctx, tsh::SymbolType<> base, usize size
+		) {
+			if (base.getType().getKind() == tsh::Kind::StaticArray) {
+				auto static_arr = base.getType().as<tsh::StaticArrayAbstractType>();
+				auto inner_type = sinkArrayDimension(ctx, static_arr.getElementType(), size);
+
+				return tsh::SymbolType<>{
+					ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
+					base.getRefKind(),
+					base.getMutability()
+				};
+			}
+			return tsh::SymbolType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
+				                      base.getRefKind(),
+				                      base.getMutability() };
+		}
+
+		/**
 		 * @brief Process a square bracket call on an meta expression.
 		 *
 		 * - The `[size]' operator on meta, must be a compile time evaluated integer
@@ -649,10 +676,11 @@ namespace compiler::helios::code {
 				maybe_type.has_value(), "Coerced meta expression must evaluate to a valid type"
 			);
 
-			auto static_array_type
-				= query_ctx.query<tsh::QueryStaticArrayType>({ *maybe_type, array_size });
+			auto static_array_type = sinkArrayDimension(query_ctx, *maybe_type, array_size);
 
-			return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, static_array_type));
+			return ChainState::ofExpr(
+				makeBox<LiteralTypeExpr>(query_ctx, static_array_type.getType())
+			);
 		}
 
 		/**
@@ -662,7 +690,6 @@ namespace compiler::helios::code {
 		 * - The `[ix]` expects the base to be an array-like type and a direct type (inserts
 		 * DerefExpr if needed).
 		 * - The argument for the operator has to be implicitly coercible to `i64`.
-		 * - The `[ix]` returns a reference to the inner array type.
 		 */
 		auto processStaticArrayIndexing(Box<Expr> expr, pst::AccessLocked<pst::ExprElement> index_pst)
 			-> query::QResult<ChainState> {
@@ -692,11 +719,9 @@ namespace compiler::helios::code {
 			auto index_res = getHoutOfExprWithExpectedType(query_ctx, index_pst, i64_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> index_expr =, index_res);
 
-			auto index_node = makeBox<IndexExpr>(query_ctx, std::move(expr), std::move(index_expr));
-
-			// [] returns a reference to the element.
-			auto ref_expr = makeBox<RefOfExpr>(query_ctx, std::move(index_node));
-			return ChainState::ofExpr(std::move(ref_expr));
+			return ChainState::ofExpr(
+				makeBox<IndexExpr>(query_ctx, std::move(expr), std::move(index_expr))
+			);
 		}
 
 		/**

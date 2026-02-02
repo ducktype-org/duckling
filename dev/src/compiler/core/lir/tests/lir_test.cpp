@@ -473,8 +473,8 @@ private:
 						ASSERT_EQUAL(layout.getElementCount(), 10);
 					}
 					if (name == "b") {
-						// Point[2] -> 2 * (64+64) = 256
-						ASSERT_EQUAL(layout.getSize(), Bits(256));
+						// Point[2] -> 2 * (32+32) = 128
+						ASSERT_EQUAL(layout.getSize(), Bits(128));
 					}
 				}
 				variant_default {}
@@ -507,16 +507,15 @@ private:
 							found_index_proj = true;
 					}
 
-					// b[1].y -> Index, Deref, Field
-					if (name == "b" && out.projection_chain.size() >= 3) {
+					// b[1].y -> Index, Field
+					if (name == "b" && out.projection_chain.size() == 2) {
 						const auto& chain = out.projection_chain;
 						bool        pattern_ok
 							= std::holds_alternative<LIRPlace::IndexProjection>(chain[0].storage)
-						   && std::holds_alternative<LIRPlace::DerefProjection>(chain[1].storage)
-						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[2].storage);
+						   && std::holds_alternative<LIRPlace::FieldProjection>(chain[1].storage);
 
 						if (pattern_ok) {
-							auto field = std::get<LIRPlace::FieldProjection>(chain[2].storage);
+							auto field = std::get<LIRPlace::FieldProjection>(chain[1].storage);
 							if (helios::name(field.field_id) == base::StrID("y"))
 								found_nested_proj = true;
 						}

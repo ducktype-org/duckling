@@ -504,9 +504,12 @@ namespace compiler::lir {
 				}
 				case mir::Operation::ZeroInitialize: {
 					auto output = getOutput(mir_instruction.output);
-					curr_block->instructions.emplace_back(
-						Operation::ZeroInitialize, output, std::vector<LIRValue>{}
-					);
+
+					if (output.has_value()) {
+						curr_block->instructions.emplace_back(
+							Operation::ZeroInitialize, output, std::vector<LIRValue>{}
+						);
+					}
 					return curr_block;
 				}
 				case mir::Operation::AddressOf:
