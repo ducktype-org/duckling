@@ -31,9 +31,7 @@ private:
 				return counter;
 			}
 
-			std::monostate noop() {
-				return {};
-			}
+			std::monostate noop() { return {}; }
 		};
 
 		// Prepare the instances (the sequential instance is not really used in this test).
@@ -49,10 +47,12 @@ private:
 		 * @brief Helper struct to force the desired race.
 		 */
 		struct Sequencer {
-			std::atomic<int> stage{0};
+			std::atomic<int> stage{ 0 };
+
 			void waitFor(const int s) const {
 				while (stage.load(std::memory_order_acquire) < s) std::this_thread::yield();
 			}
+
 			void next() { stage.fetch_add(1, std::memory_order_release); }
 		};
 
@@ -201,8 +201,8 @@ private:
 			const usize worker_count = 4;
 
 			for (usize rep = 0; rep < reps; ++rep) {
-				auto            tested     = makeBox<GoodConcurrentCounter>();
-				auto            sequential = makeBox<SequentialCounter>();
+				auto           tested     = makeBox<GoodConcurrentCounter>();
+				auto           sequential = makeBox<SequentialCounter>();
 				RaceTesterGood race_tester{ tested.refMut(), sequential.ref() };
 				assertTrue(
 					race_tester.runAndCheck(worker_count, worker),
@@ -235,8 +235,8 @@ private:
 			bool failed = false;
 			for (usize rep = 0; rep < reps and not failed; ++rep) {
 				std::cerr << "\rRep " << rep + 1 << "/" << reps << ": ";
-				auto           tested     = makeBox<BadConcurrentCounter>();
-				auto           sequential = makeBox<SequentialCounter>();
+				auto          tested     = makeBox<BadConcurrentCounter>();
+				auto          sequential = makeBox<SequentialCounter>();
 				RaceTesterBad race_tester{ tested.refMut(), sequential.ref() };
 				failed = not race_tester.runAndCheck(worker_count, worker);
 			}
