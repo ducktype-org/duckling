@@ -11,8 +11,8 @@ fun fib(n: i64) -> i64 = {
    return fib(n - 1) + fib(n - 2);
 }
 
-const FIB_10 = fib(5); # 5
-const FIB_ARRAY = (if fib(4) == 3 then i64 else i32)[fib(5)];
+const FIB_ARRAY = (if fib(4) ==3 then i64 else i32)[fib(5)]; # i64[5]
+const SOME_CONSTANT = 1;
 
 fun main() -> i32 = {
     builtin_output_i64(WORKS_1);
@@ -25,6 +25,9 @@ fun main() -> i32 = {
         arr[i] = 1i64;  # If wrong type was picked, then this should crash in type check.
         i = i + 1;
     }
+    
+    arr[SOME_CONSTANT] = 123;
+    builtin_output_i64(arr[SOME_CONSTANT]);
 
     return 0;
 }

@@ -41,5 +41,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n0\n0\n"
+          String: "1\n0\n0\n123\n"
         ExitCode: 0
