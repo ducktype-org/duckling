@@ -659,12 +659,25 @@ namespace compiler::helios::code {
 		 * @brief Process a square bracket call on an expression. Panics if the base expression
 		 * can't be indexed (is not an array).
 		 *
-		 * - The `[ix]` expects the base to be a direct type (inserts DerefExpr if needed).
+		 * - The `[ix]` expects the base to be an array-like type and a direct type (inserts
+		 * DerefExpr if needed).
 		 * - The argument for the operator has to be implicitly coercible to `i64`.
 		 * - The `[ix]` returns a reference to the inner array type.
 		 */
 		auto processStaticArrayIndexing(Box<Expr> expr, pst::AccessLocked<pst::ExprElement> index_pst)
 			-> query::QResult<ChainState> {
+			if (expr->expression_type.getSymbolType().getType().getKind() != tsh::Kind::StaticArray
+			    && expr->expression_type.getSymbolType().getType().getKind()
+			           != tsh::Kind::DynamicArray) {
+				// @TODO: #1620 This error currently links to the index expression, but should link
+				// to the `base` HOUT expression. Change that once SourcePositions are available in HOUT.
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Index operator base must be indexable.",
+					index_pst.unlock(query_ctx)->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
 			// Base has to be direct for array access.
 			if (expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
 				expr = makeBox<DerefExpr>(query_ctx, std::move(expr));

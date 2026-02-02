@@ -599,7 +599,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a default (zeroed) value for a given type.
-	 * Used for implicit variable initialization. This gets then mapped to `llvm:getNullValue(type)`.
+	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
 		tsh::SymbolType<> type;

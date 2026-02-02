@@ -230,7 +230,7 @@ namespace compiler::lir {
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
 	 * It contains of a base variable and a projection chain - field projections, index projections
-	 * or deref projections(if eny of the elements was a reference))
+	 * or deref projections (if any of the elements was a reference))
 	 *
 	 * For example:
 	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
