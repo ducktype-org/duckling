@@ -89,11 +89,9 @@ namespace concurrent::tester {
 					auto [next_state, result] = advance(current_state, thread_id);
 
 					// Check if the operation's result matches the recorded one.
-					const auto& recorded_result
-						= std::get<typename History_::Return>(
-							  history->atRef(current_state->next_ops.at(thread_id).end).event
-						)
-					          .result;
+					const auto& event
+						= history->at(current_state->next_ops.at(thread_id).end).event;
+					const auto& recorded_result = std::get<typename History_::Return>(event).result;
 					if (result != recorded_result) continue; /* Mismatch, discard this branch. */
 
 					// If the results match, update max_earliest_end and add the state to the queue.

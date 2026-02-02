@@ -22,59 +22,102 @@ private:
 		 * "heavy computation" in the form of sleeping for a controlled amount of time.
 		 * The `wait10` method takes an returns a value to test History's ability to record values.
 		 */
-		class Waiter {
+		class Counter {
 			u32 counter = 0;
 
 		public:
-			u32 wait(const u32 millis) {
-				counter += millis;
-				const u32 result = counter;
-				std::this_thread::sleep_for(std::chrono::milliseconds(millis));
-				return result;
+			u32 add(const u32 x) {
+				counter += x;
+				return counter;
 			}
 
-			std::monostate wait50() {
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			std::monostate noop() {
 				return {};
 			}
 		};
 
 		// Prepare the instances (the sequential instance is not really used in this test).
-		Waiter tested_instance{};
-		Waiter sequential_instance{};
+		Counter tested_instance{};
+		Counter sequential_instance{};
 
 		// Instantiate the race tester with the instances.
 		using RaceTester
-			= concurrent::tester::RaceTester<Waiter, Waiter, Waiter, u32, std::monostate>;
+			= concurrent::tester::RaceTester<Counter, Counter, Counter, u32, std::monostate>;
 		RaceTester race_tester{ &tested_instance, &sequential_instance };
+
+		/**
+		 * @brief Helper struct to force the desired race.
+		 */
+		struct Sequencer {
+			std::atomic<int> stage{0};
+			void waitFor(const int s) const {
+				while (stage.load(std::memory_order_acquire) < s) std::this_thread::yield();
+			}
+			void next() { stage.fetch_add(1, std::memory_order_release); }
+		};
+
+		Sequencer seq{};
 
 		// Prepare the worker function. It should act on the tested instance by providing the
 		// executor with function objects and their descriptions, where the function objects
 		// perform operations on a reference to the tested instance.
 		//
 		// Cases:
-		//   em-dash lines mean waiting using the waiter, numbers with pluses mean using wait(),
-		//   underscore lines mean waiting using std::this_thread::sleep_for().
 		//
-		// 0: |—————+300—————|___300___|————500————|
-		// 1: |__100_|———+300———|——————500——————|
-		// 2: |____200___|———+300———|——+200——|
-		auto worker = [](const u32 thread_id, RaceTester::Executor_ executor) {
+		// 0: |—————+30—————|________|———noop———|
+		// 1: |_____|———+30————|—————noop————|
+		// 2: |_________|———+30———|——+20——|
+		auto worker = [&seq](const u32 thread_id, RaceTester::Executor_ executor) {
 			switch (thread_id) {
 			case 0:
-				executor.execute("wait(30)", [](Ref<Waiter> waiter) { return waiter->wait(30); });
-				std::this_thread::sleep_for(std::chrono::milliseconds(30));
-				executor.execute("wait50()", [](Ref<Waiter> waiter) { return waiter->wait50(); });
+				seq.waitFor(0);
+				executor.execute("add(30)", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->add(30);
+					seq.next();
+					seq.waitFor(3);
+					return res;
+				});
+				seq.next();
+				seq.waitFor(6);
+				executor.execute("noop()", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->noop();
+					seq.next();
+					seq.waitFor(9);
+					return res;
+				});
+				seq.next();
 				break;
 			case 1:
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-				executor.execute("wait(30)", [](Ref<Waiter> waiter) { return waiter->wait(30); });
-				executor.execute("wait50()", [](Ref<Waiter> waiter) { return waiter->wait50(); });
+				seq.waitFor(1);
+				executor.execute("add(30)", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->add(30);
+					seq.next();
+					seq.waitFor(4);
+					return res;
+				});
+				executor.execute("noop()", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->noop();
+					seq.next();
+					seq.waitFor(8);
+					return res;
+				});
+				seq.next();
 				break;
 			case 2:
-				std::this_thread::sleep_for(std::chrono::milliseconds(20));
-				executor.execute("wait(30)", [](Ref<Waiter> waiter) { return waiter->wait(30); });
-				executor.execute("wait(20)", [](Ref<Waiter> waiter) { return waiter->wait(20); });
+				seq.waitFor(2);
+				executor.execute("add(30)", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->add(30);
+					seq.next();
+					seq.waitFor(5);
+					return res;
+				});
+				executor.execute("add(20)", [&seq](const Ref<Counter> counter) {
+					const auto res = counter->add(20);
+					seq.next();
+					seq.waitFor(7);
+					return res;
+				});
+				seq.next();
 				break;
 			default:
 				CORE_UNREACHABLE();
@@ -88,15 +131,15 @@ private:
 		assertEqual(
 			race_tester.getHistory()->toString(),
 			"History:\n"
-			"0: Thread 0 calls wait(30)\n"
-			"1: Thread 1 calls wait(30)\n"
-			"2: Thread 2 calls wait(30)\n"
+			"0: Thread 0 calls add(30)\n"
+			"1: Thread 1 calls add(30)\n"
+			"2: Thread 2 calls add(30)\n"
 			"3: Thread 0 returns 30\n"
 			"4: Thread 1 returns 60\n"
-			"5: Thread 1 calls wait50()\n"
+			"5: Thread 1 calls noop()\n"
 			"6: Thread 2 returns 90\n"
-			"7: Thread 2 calls wait(20)\n"
-			"8: Thread 0 calls wait50()\n"
+			"7: Thread 2 calls add(20)\n"
+			"8: Thread 0 calls noop()\n"
 			"9: Thread 2 returns 110\n"
 			"10: Thread 1 returns <monostate>\n"
 			"11: Thread 0 returns <monostate>",
@@ -130,7 +173,7 @@ private:
 		};
 
 		/// A correct sequential counter, coincidentally identical to BadConcurrentCounter.
-		class SequentialConcurrentCounter: public CounterInterface {
+		class SequentialCounter: public CounterInterface {
 			usize counter{};
 
 			usize increment() override { return counter++; }
@@ -139,14 +182,14 @@ private:
 		// Run for the good counter.
 		{
 			// Prepare the worker function.
-			using _RaceTesterGood = concurrent::tester::RaceTester<
+			using RaceTesterGood = concurrent::tester::RaceTester<
 				CounterInterface,
 				GoodConcurrentCounter,
-				SequentialConcurrentCounter,
+				SequentialCounter,
 				usize>;
 
-			const std::function<void(u32, _RaceTesterGood::Executor_)> worker
-				= [](u32, _RaceTesterGood::Executor_ executor) {
+			const std::function<void(u32, RaceTesterGood::Executor_)> worker
+				= [](u32, RaceTesterGood::Executor_ executor) {
 					  for (usize i = 0; i < 1'000; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();
@@ -159,11 +202,8 @@ private:
 
 			for (usize rep = 0; rep < reps; ++rep) {
 				auto            tested     = makeBox<GoodConcurrentCounter>();
-				auto            sequential = makeBox<SequentialConcurrentCounter>();
-				_RaceTesterGood race_tester{ tested.refMut(), sequential.ref() };
-				race_tester.run(worker_count, worker);
-				// std::cerr << race_tester.getHistory()->toString() << std::endl;
-				// assertTrue(race_tester.check(), "Good counter should be linearizable.");
+				auto            sequential = makeBox<SequentialCounter>();
+				RaceTesterGood race_tester{ tested.refMut(), sequential.ref() };
 				assertTrue(
 					race_tester.runAndCheck(worker_count, worker),
 					"Good counter should be linearizable."
@@ -174,14 +214,14 @@ private:
 		// Run for the bad counter.
 		{
 			// Prepare the worker function.
-			using _RaceTesterBad = concurrent::tester::RaceTester<
+			using RaceTesterBad = concurrent::tester::RaceTester<
 				CounterInterface,
 				BadConcurrentCounter,
-				SequentialConcurrentCounter,
+				SequentialCounter,
 				usize>;
 
-			const std::function<void(u32, _RaceTesterBad::Executor_)> worker
-				= [](u32, _RaceTesterBad::Executor_ executor) {
+			const std::function<void(u32, RaceTesterBad::Executor_)> worker
+				= [](u32, RaceTesterBad::Executor_ executor) {
 					  for (usize i = 0; i < 1'000; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();
@@ -196,8 +236,8 @@ private:
 			for (usize rep = 0; rep < reps and not failed; ++rep) {
 				std::cerr << "\rRep " << rep + 1 << "/" << reps << ": ";
 				auto           tested     = makeBox<BadConcurrentCounter>();
-				auto           sequential = makeBox<SequentialConcurrentCounter>();
-				_RaceTesterBad race_tester{ tested.refMut(), sequential.ref() };
+				auto           sequential = makeBox<SequentialCounter>();
+				RaceTesterBad race_tester{ tested.refMut(), sequential.ref() };
 				failed = not race_tester.runAndCheck(worker_count, worker);
 			}
 			assertTrue(failed, "Bad counter should not be linearizable.");
