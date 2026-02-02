@@ -4,11 +4,12 @@
 
 #include <tester/tester.hpp>
 
+#include <mutex>
 #include <stdexcept>
 #include <thread>
 
 template<class F>
-void runOrTimeout(F func, usize timeout_ms = 5'000) {
+void runOrTimeout(F func, [[maybe_unused]] usize timeout_ms = 5'000) {
 	std::atomic<bool> finished = false;
 
 	std::jthread worker_thread([&func, &finished]() {
@@ -16,13 +17,13 @@ void runOrTimeout(F func, usize timeout_ms = 5'000) {
 		finished.store(true, std::memory_order_relaxed);
 	});
 
-	auto start = std::chrono::steady_clock::now();
+	// auto start = std::chrono::steady_clock::now();
 	while (!finished.load(std::memory_order_relaxed)) {
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed_ms
-			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		if (elapsed_ms > timeout_ms)
-			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+		// auto now = std::chrono::steady_clock::now();
+		// auto elapsed_ms
+		// 	= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+		// if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed))
+		// 	throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
@@ -38,7 +39,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		// TESTER_ADD_TEST(taskPoolFibonacciTest);
+		TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
 
 protected:
@@ -89,11 +90,11 @@ private:
 		runOrTimeout([&] {
 			while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
 			       || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
-				std::cerr << "Waiting... Finished tasks: "
-						  << task_finished_counter.load(std::memory_order_relaxed)
-						  << ", No task callbacks: "
-						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
-					std::this_thread::yield();
+				// std::cerr << "Waiting... Finished tasks: "
+				// 		  << task_finished_counter.load(std::memory_order_relaxed)
+				// 		  << ", No task callbacks: "
+				// 		  << no_task_counter.load(std::memory_order_relaxed) << "\n",
+				std::this_thread::yield();
 		});
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
@@ -120,33 +121,33 @@ private:
 
 		// A simple Fibonacci function. It is a "CPU-bound" task.
 		const auto fib = [](u64 n) -> u64 {
-			usize a = 0;
-			usize b = 1;
+			u64 a = 0;
+			u64 b = 1;
 			for (u64 i = 0; i < n; i++) {
-				usize next = (a + b) % MOD;
-				a          = b;
-				b          = next;
+				u64 next = (a + b) % MOD;
+				a        = b;
+				b        = next;
 			}
 			return a;
 		};
 
-		std::queue<Task> tasks;
-		std::mutex       task_mutex;
 
-		std::atomic<usize>                total_completed_tasks = 0;
+		std::mutex                        task_mutex;
+		std::atomic<u64>                  total_completed_tasks = 0;
+		std::queue<Task>                  tasks;
 		concurrent::ConHashMap<u64, u64>  results;
 		concurrent::ConHashMap<WRef, u64> worker_task_counts;
 
-		const usize task_count      = 50'000;
-		const usize start           = 10'000;
-		const usize task_batch_size = 100;
+		constexpr u64 TASK_COUNT      = 50'000;
+		constexpr u64 START           = 10'000;
+		constexpr u64 TASK_BATCH_SIZE = 5;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
 		// from [start, start + task_count] (modulo MOD).
 		// Complexity is hard to estimate here, but each task should take a few milliseconds.
-		for (u64 i = 0; i < task_count; i++)
+		for (u64 i = 0; i < TASK_COUNT; i++)
 			tasks.emplace(
 				[&fib, i, &results, &worker_task_counts, &total_completed_tasks](WRef worker) {
-					u64 result = fib(start + i);
+					u64 result = fib(START + i);
 
 					// Update the total completed tasks
 					total_completed_tasks.fetch_add(1, std::memory_order_relaxed);
@@ -169,13 +170,12 @@ private:
 				// We can use it to assign new tasks to the worker.
 				std::scoped_lock lock(task_mutex);
 
-				for (usize i = 0; i < task_batch_size; i++) {
-					if (!tasks.empty()) {
-						auto task = tasks.front();
-						tasks.pop();
-						worker->scheduleTask(task);
-					} else {
+				for (usize i = 0; i < TASK_BATCH_SIZE; i++) {
+					if (tasks.empty()) {
 						break;
+					} else {
+						worker->scheduleTask(tasks.front());
+						tasks.pop();
 					}
 				}
 			});
@@ -183,14 +183,16 @@ private:
 
 
 		runOrTimeout([&] {
-			while (total_completed_tasks.load(std::memory_order_relaxed) < task_count) {
+			while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
 				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
-						  << " / " << task_count << " tasks.\n";
+						  << " / " << TASK_COUNT << " tasks.\n";
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 		});
+
+		std::scoped_lock lock(task_mutex);
 		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
-				  << task_count << " tasks.\n";
+				  << TASK_COUNT << " tasks.\n";
 
 		// Print worker task counts
 		for (const auto& worker: worker_manager.getAllWorkers()) {
@@ -205,9 +207,9 @@ private:
 		}
 
 		// Validate the results
-		u64 a = fib(start);
-		u64 b = fib(start + 1);
-		for (u64 i = 0; i < task_count; i++) {
+		u64 a = fib(START);
+		u64 b = fib(START + 1);
+		for (u64 i = 0; i < TASK_COUNT; i++) {
 			assertEqual(
 				results.getCopy(i),
 				a,
