@@ -1,4 +1,4 @@
-//! Module containing a wrapper over [`Model`]`, with utilities related to dependency resolving.
+//! Module containing a wrapper over [`Model`], with utilities related to dependency resolving.
 //! By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::{
     collections::{HashMap, HashSet},
@@ -58,7 +58,7 @@ type ChildVersionsToVars = HashMap<Option<Version>, Rc<Variable>>;
 type ChildFeaturesToVars = HashMap<FeatureName, Rc<Variable>>;
 
 #[derive(Debug)]
-/// Wrapper of [`Model`]`, adding mappings from appropriate variable identifiers to their variables.
+/// Wrapper of [`Model`], adding mappings from appropriate variable identifiers to their variables.
 pub struct SolverModel<'a, State> {
     model: Model<State>,
 

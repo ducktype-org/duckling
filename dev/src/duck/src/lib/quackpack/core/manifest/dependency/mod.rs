@@ -80,14 +80,14 @@ impl Dependency {
             .is_none_or(|conditions| conditions.is_enabled_for(enabled_features))
     }
 
-    pub fn enableing_features(&self) -> QuackResult<&[FeatureName]> {
+    pub fn enableing_features(&self) -> &[FeatureName] {
         let Some(conditions) = &self.conditions else {
-            return Ok(&[]);
+            return &[];
         };
         let Some(features) = conditions.required_root_package_features() else {
-            return Ok(&[]);
+            return &[];
         };
-        Ok(features)
+        features
     }
 
     /// Get an iterator over features that are enabled for the given features.

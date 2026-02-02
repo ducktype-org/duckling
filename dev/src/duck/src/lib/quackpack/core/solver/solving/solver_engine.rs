@@ -47,7 +47,7 @@ impl<'a> SolverEngine<'a> {
         let engine = SolverEngine::new(input);
         engine.run(main_pkg)
     }
-    /// Creates a new SolverEngine from the given GatheredInfo reference.
+    /// Creates a new [`SolverEngine`] from the given [`GatheredInfo`] reference.
     fn new(input: &'a GatheredInfo) -> Self {
         Self {
             input,
@@ -205,7 +205,7 @@ impl<'a> SolverEngine<'a> {
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
-            for dep_forcing_feature in manifest_dependency.enableing_features()? {
+            for dep_forcing_feature in manifest_dependency.enableing_features() {
                 self.model
                     .require_satisfying_dep_version(edge, Some(dep_forcing_feature))?;
             }
