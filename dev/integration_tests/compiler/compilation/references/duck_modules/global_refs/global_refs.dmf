@@ -22,15 +22,15 @@ fun ret_val(a: ref i64) -> i64 = {
 
 
 fun main() -> i64 = {
-    var r_blob = refof blob;
-    foo(refof blob, 999);
+    var r_blob = &blob;
+    foo(&blob, 999);
     builtin_output_i64(r_blob); # 999
     foo(r_blob, 888);
     builtin_output_i64(r_blob); # 888
 
-    let a: i64 = ret_ref(refof blob);
+    let a: i64 = ret_ref(&blob);
     builtin_output_i64(blob); # 999
-    let b: i64 = ret_val(refof blob);
+    let b: i64 = ret_val(&blob);
     builtin_output_i64(blob); # 888
 
     return 0;
