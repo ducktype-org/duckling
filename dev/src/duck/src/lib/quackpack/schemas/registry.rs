@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub type Dependencies = HashMap<String, Dependency>;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Manifest {
     pub metadata: Metadata,
@@ -15,7 +15,7 @@ pub struct Manifest {
     pub profiles: HashMap<String, CompilerOptions>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Metadata {
     pub version: Version,
@@ -25,7 +25,7 @@ pub struct Metadata {
     pub description: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Dependency {
     pub version: Vec<Version>,
@@ -36,13 +36,13 @@ pub struct Dependency {
     pub is_alias_for: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencySource {
     pub inner: SourceInner,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
@@ -62,7 +62,7 @@ pub enum SourceInner {
     },
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[serde(untagged)]
 pub enum DependencyFeature {
@@ -70,13 +70,13 @@ pub enum DependencyFeature {
     Detailed(OneEntryMap<String, DependencyCondition>),
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct CompilerOptions {
     pub compiler_flags: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,

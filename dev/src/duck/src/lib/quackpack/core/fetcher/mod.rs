@@ -1,15 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use rustvil::fs::{MkdirOptions, PathExt};
+use tempfile::TempDir;
 use tracing::{Level, debug, span};
 use url::Url;
 
 use crate::{
     DuckCtx, QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::{
-        core::{self, Git},
-        schemas::registry,
-    },
+    quackpack::{core::Git, schemas::registry},
 };
 
 pub mod cache;
@@ -141,7 +139,7 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
-    pub async fn clone_from_git(
+    pub async fn clone_from_git_to_directory(
         &self,
         source: &Git,
         destination_directory: &std::path::Path,
@@ -151,11 +149,17 @@ impl<'duck> Fetcher<'duck> {
         git::GitClient::clone_async(source, destination_directory, &QpCtx::new(self.ctx)).await
     }
 
-    /// Same as [`clone_from_git`](Self::clone_from_git), but target directory is a temporary
-    /// directory, and only a [`Package`](core::Package) is returned.
-    pub async fn get_git_metadata(&self, source: &Git) -> QuackResult<core::Package> {
+    /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
+    /// directory.
+    ///
+    /// This is needed because storage paths depend on a commit, which we can only get after
+    /// cloning a repository.
+    pub async fn clone_from_git(
+        &self,
+        source: &Git,
+    ) -> QuackResult<(types::GitCloneResponse, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
-        let result = self.clone_from_git(source, dir.path()).await?;
-        Ok(result.package)
+        let result = self.clone_from_git_to_directory(source, dir.path()).await?;
+        Ok((result, dir))
     }
 }

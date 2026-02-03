@@ -239,7 +239,8 @@ async fn not_found_in_response() {
     assert_eq!(
         err.to_string(),
         format!(
-            "while getting a metadata of `foo`@2137.6.7 from `{}/`\nHTTP status client error (404 Not Found) for url ({}/packages/foo/2137.6.7)",
+            "while getting a metadata of `foo` version `2137.6.7` from `{}/`
+HTTP status client error (404 Not Found) for url ({}/packages/foo/2137.6.7)",
             server.uri(),
             server.uri()
         )

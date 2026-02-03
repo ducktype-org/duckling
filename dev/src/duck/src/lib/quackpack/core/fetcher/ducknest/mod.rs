@@ -64,14 +64,14 @@ impl DucknestClient {
             .await
             .with_context(|| {
                 format!(
-                    "while getting a metadata of `{}`@{} from `{}`",
+                    "while getting a metadata of `{}` version `{}` from `{}`",
                     package.id, package.version, package.url
                 )
             })?
             .error_for_status()
             .with_context(|| {
                 format!(
-                    "while getting a metadata of `{}`@{} from `{}`",
+                    "while getting a metadata of `{}` version `{}` from `{}`",
                     package.id, package.version, package.url
                 )
             })?
@@ -93,9 +93,17 @@ impl DucknestClient {
             .get(req_url)
             .send()
             .await
-            .with_context(|| format!("while getting a multi metadata of `{package}` from `{url}`"))?
+            .with_context(|| {
+                format!(
+                    "while getting metadata of `{package}` in all possible versions from `{url}`"
+                )
+            })?
             .error_for_status()
-            .with_context(|| format!("while getting a multi metadata of `{package}` from `{url}`"))?
+            .with_context(|| {
+                format!(
+                    "while getting metadata of `{package}` in all possible versions from `{url}`"
+                )
+            })?
             .json::<types::MultiMetadata>()
             .await
             .context("registry hasn't responded with appropriate JSON schema")
@@ -109,7 +117,7 @@ impl DucknestClient {
         path: &Path,
     ) -> QuackResult<()> {
         debug!(
-            "publishing package `{}`@{} to `{url}`",
+            "publishing package `{}` version `{}` to `{url}`",
             schema.metadata.name,
             path.display()
         );
@@ -147,7 +155,7 @@ impl DucknestClient {
             .await
             .with_context(|| {
                 format!(
-                    "while sending a source of a package `{}`@{} to the `{}`",
+                    "while sending a source of a package `{}` version `{}` to the `{}`",
                     schema.metadata.name, schema.metadata.version, url
                 )
             })?
@@ -164,7 +172,7 @@ impl DucknestClient {
         debug!("fetching a blob of `{package:?}` to `{}`", target.display());
         let mut file = tokio::fs::File::create(target).await.with_context(|| {
             format!(
-                "while creating a file at `{}` in order to download a blob of `{}`@{} from `{}`",
+                "while creating a file at `{}` in order to download a blob of `{}` version `{}` from `{}`",
                 target.display(),
                 package.id,
                 package.version,
@@ -174,20 +182,20 @@ impl DucknestClient {
         let url = package.url.for_blob(&package.into())?;
         let mut response = self.client.get(url).send().await.with_context(|| {
             format!(
-                "while getting a package `{}`@{} blob from `{}`",
+                "while getting a package `{}` version `{}` blob from `{}`",
                 package.id, package.version, package.url
             )
         })?;
         response.error_for_status_ref()?;
         while let Some(chunk) = response.chunk().await.with_context(|| {
             format!(
-                "while getting a blob chunk of `{}`@{} from `{}`",
+                "while getting a blob chunk of `{}` version `{}` from `{}`",
                 package.id, package.version, package.url
             )
         })? {
             file.write_all(&chunk).await.with_context(|| {
                 format!(
-                    "while writing a chunk of a `{}`@{} from `{}` to `{}`",
+                    "while writing a chunk of a `{}` version `{}` from `{}` to `{}`",
                     package.id,
                     package.version,
                     package.url,
@@ -197,7 +205,7 @@ impl DucknestClient {
         }
         file.flush().await.with_context(|| {
             format!(
-                "while flushing contents of a `{}`@{} to `{}`",
+                "while flushing contents of a `{}` version `{}` to `{}`",
                 package.id,
                 package.version,
                 target.display()
