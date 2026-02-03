@@ -10,7 +10,7 @@ pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.
 pub struct Dependency {
     /// The dependency description.
