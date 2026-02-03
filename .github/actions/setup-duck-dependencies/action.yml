@@ -16,3 +16,8 @@ runs:
     - name: Download libsqlite3-dev
       shell: bash
       run: sudo apt -y install libsqlite3-dev
+
+    # Russcip needs this
+    - name: Download libgfortran5
+      shell: bash
+      run: sudo apt -y install libgfortran5
