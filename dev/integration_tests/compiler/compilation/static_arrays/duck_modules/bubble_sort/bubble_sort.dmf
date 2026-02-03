@@ -11,7 +11,7 @@ fun bubble_sort(size: i64, arr: ref i64[10]) -> () = {
         let limit = size - i - 1;
         while (j < limit) {
             if (arr[j] > arr[j + 1]) {
-                swap(refof arr[j], refof arr[j + 1]);
+                swap(&arr[j], &arr[j + 1]);
             }
             j = j + 1;
         }
@@ -30,7 +30,7 @@ fun main() -> i32 = {
         k = k + 1;
     }
 
-    bubble_sort(n, refof data);
+    bubble_sort(n, &data);
 
     k = 0;
     while (k < n) {

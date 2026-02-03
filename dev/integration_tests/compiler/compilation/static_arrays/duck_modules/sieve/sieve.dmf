@@ -32,9 +32,9 @@ fun main() -> i32 = {
 
     var is_prime: i64[100];
     
-    init_array(100, refof is_prime);
+    init_array(100, &is_prime);
 
-    sieve(limit, refof is_prime);
+    sieve(limit, &is_prime);
 
     builtin_output_i64(88888888);
     var k = 0;

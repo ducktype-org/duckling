@@ -39,7 +39,7 @@ fun get_array_by_val() -> i32[3] = {
 
 fun main() -> i32 = {
     var my_arr: i32[3];
-    fill_array(refof my_arr);
+    fill_array(&my_arr);
     builtin_output_i64(my_arr[0]); # 100
     builtin_output_i64(my_arr[1]); # 200
     builtin_output_i64(my_arr[2]); # 300
