@@ -73,8 +73,8 @@ private:
 		// which should fail the test.
 
 		constexpr u64 TEST_NODE_COUNT = 100;
-        constexpr u64 THREAD_COUNT = 4;
-        
+		constexpr u64 THREAD_COUNT    = 4;
+
 		static_assert(
 			TEST_NODE_COUNT % THREAD_COUNT == 0,
 			"TEST_NODE_COUNT must be divisible by THREAD_COUNT, we rely on that later."
@@ -114,7 +114,7 @@ private:
 		// join threads:
 		for (auto& th: threads) th.join();
 
-        const auto found_cycles = cycle_detection_count.load();
+		const auto found_cycles = cycle_detection_count.load();
 		ASSERT_TRUE(found_cycles >= 1 and found_cycles <= THREAD_COUNT);
 		ASSERT_TRUE(active_graph.size() == TEST_NODE_COUNT);
 		message(base::strConcat("Found cycles: ", found_cycles));
