@@ -30,7 +30,10 @@ class ActiveGraph: public tester::TestSuite {
 #define TESTER_CLASS ActiveGraph
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testActiveGraph); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+        TESTER_ADD_TEST(testActiveGraph);
+        TESTER_ADD_TEST(testActiveGraphPanics);
+    }
 
 private:
 	/**
@@ -141,6 +144,45 @@ private:
 		// message is here to make sure that if something strange with threads happens,
 		// and we exit before reaching this point, we will see it in the test logs.
 		message("ActiveGraph test passed.");
+	}
+
+	void testActiveGraphPanics() {
+		query::internal::ActiveGraph active_graph;
+		auto                         node_ids = generateNodeIDs(4);
+
+		assertThrows<base::Panic>(
+			[&]() { active_graph.removeNode(node_ids.at(0)); },
+			"Removing non-existing node did not panic."
+		);
+
+		assertThrows<base::Panic>(
+			[&]() {
+				active_graph.putNode(node_ids.at(1));
+				active_graph.putNode(node_ids.at(1));
+			},
+			"Adding node twice did not panic."
+		);
+
+		active_graph.removeNode(node_ids.at(1));  // this should work now
+
+		assertThrows<base::Panic>(
+			[&]() { active_graph.setEdge(node_ids.at(2), node_ids.at(3)); },
+			"Setting edge for non-existing node did not panic."
+		);
+
+		assertThrows<base::Panic>(
+			[&]() { active_graph.removeEdge(node_ids.at(2)); },
+			"Removing edge for non-existing node did not panic."
+		);
+
+		assertThrows<base::Panic>(
+			[&]() {
+				active_graph.putNode(node_ids.at(2));
+				active_graph.setEdge(node_ids.at(2), node_ids.at(3));
+				active_graph.setEdge(node_ids.at(2), node_ids.at(3));
+			},
+			"Setting node edge twice did not panic."
+		);
 	}
 };
 
