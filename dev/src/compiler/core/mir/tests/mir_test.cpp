@@ -603,13 +603,13 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					//  var r = refof x;
+					//  var r = &x;
 					if (instr.operation == Operation::AddressOf) {
 						auto& arg = instr.arguments[0].get<MIRPlace>();
 						if (arg.projection_chain.empty()) {
 							found_simple_address_of = true;
 						}
-						// var r = refof p.x;
+						// var r = &p.x;
 						else if (arg.projection_chain.size() == 2) {
 							bool has_deref = std::holds_alternative<MIRPlace::DerefProjection>(
 								arg.projection_chain[0].storage
