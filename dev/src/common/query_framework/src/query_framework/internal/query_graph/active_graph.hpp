@@ -1,3 +1,5 @@
+#pragma once
+
 #include "node_id.hpp"
 
 #include <concurrent/collections/hash_map.hpp>
