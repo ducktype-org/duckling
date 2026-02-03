@@ -284,7 +284,8 @@ namespace compiler::lir {
 			static Projection deref() { return Projection(DerefProjection()); }
 
 			static Projection index(const LIRValue& index) {
-				return Projection(IndexProjection{ base::makeSharedBox<LIRValue>(index) });
+				auto index_shared = base::makeSharedBox<LIRValue>(index);
+				return Projection(IndexProjection{ std::move(index_shared) });
 			}
 
 			bool operator==(const Projection& other) const = default;

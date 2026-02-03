@@ -340,7 +340,8 @@ namespace compiler::mir {
 			static Projection deref() { return Projection(DerefProjection()); }
 
 			static Projection index(const MIRValue& index) {
-				return Projection(IndexProjection{ base::makeSharedBox<MIRValue>(index) });
+				auto shared_index = base::makeSharedBox<MIRValue>(index);
+				return Projection(IndexProjection{ std::move(shared_index) });
 			}
 
 			bool operator==(const Projection& other) const = default;
