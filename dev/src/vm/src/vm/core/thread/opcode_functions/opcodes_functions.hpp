@@ -239,9 +239,14 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			setVariantType(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id, TypeID variant_type_id) {
+			setVariantType(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
 
-			auto wanted_type = thread.executing_program->getTypes().at(wanted_type_id);
+			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
@@ -289,8 +294,13 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			Pointer
-			getVariantPtr(VMThread& thread, Pointer variant_pointer, TypeID wanted_type_id, TypeID variant_type_id) {
-			auto variant_type  = thread.executing_program->getTypes().at(variant_type_id);
+			getVariantPtr(
+				VMThread& thread,
+				Pointer   variant_pointer,
+				TypeID    wanted_type_id,
+				TypeID    variant_type_id
+			) {
+			auto variant_type = thread.executing_program->getTypes().at(variant_type_id);
 			auto wanted_type  = thread.executing_program->getTypes().at(wanted_type_id);
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
