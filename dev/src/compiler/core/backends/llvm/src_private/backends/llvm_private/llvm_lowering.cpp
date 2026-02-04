@@ -978,7 +978,7 @@ namespace compiler::backend_llvm {
 
 				// Get or insert the allocator.
 				llvm::FunctionCallee alloc_func = module->getOrInsertFunction(
-					"__duck_alloc",
+					"builtin_alloc",
 					llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false)
 				);
 
@@ -1000,7 +1000,7 @@ namespace compiler::backend_llvm {
 
 				// Get or insert the free.
 				llvm::FunctionCallee free_func = module->getOrInsertFunction(
-					"__duck_dealloc",
+					"builtin_dealloc",
 					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
 				);
 

@@ -236,17 +236,17 @@ private:
 			return count;
 		};
 
-		std::regex alloc_re(R"(call ptr @__duck_alloc\(i64 4\))");
+		std::regex alloc_re(R"(call ptr @builtin_alloc\(i64 4\))");
 		assertTrue(
-			std::regex_search(ir, alloc_re), "Expected @__duck_alloc with size 4 for 'box i32'"
+			std::regex_search(ir, alloc_re), "Expected @builtin_alloc with size 4 for 'box i32'"
 		);
 		std::regex store_re(R"(store i32 42, ptr)");
 		assertTrue(std::regex_search(ir, store_re), "Expected 'store i32 42' for box init");
-		std::regex dealloc_re(R"(call void @__duck_dealloc\(ptr)");
-		assertTrue(std::regex_search(ir, dealloc_re), "Expected @__duck_dealloc");
+		std::regex dealloc_re(R"(call void @builtin_dealloc\(ptr)");
+		assertTrue(std::regex_search(ir, dealloc_re), "Expected @builtin_dealloc");
 
-		int alloc_count   = count_matches(R"(call ptr @__duck_alloc)");
-		int dealloc_count = count_matches(R"(call void @__duck_dealloc)");
+		int alloc_count   = count_matches(R"(call ptr @builtin_alloc)");
+		int dealloc_count = count_matches(R"(call void @builtin_dealloc)");
 		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
 		ASSERT_EQUAL_PRINT(alloc_count, 1);
 	}
