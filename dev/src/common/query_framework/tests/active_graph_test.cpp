@@ -38,6 +38,8 @@ private:
 	 * @note Those nodes will not correspond to any of actual query operations.
 	 */
 	std::vector<query::internal::NodeID> generateNodeIDs(u64 node_count) {
+		CORE_ASSERT(node_count % 2 == 0, "We rely on that later");
+
 		const auto q_id_1 = DummyQuery1::getID();
 		const auto q_id_2 = DummyQuery2::getID();
 
