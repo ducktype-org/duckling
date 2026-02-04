@@ -40,11 +40,17 @@ namespace compiler::tsh {
 			const auto from_ref_kind = key.source.getRefKind();
 			const auto to_ref_kind   = key.target.getRefKind();
 
-			// Direct types cannot be coerced into non direct types.
-			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind != ReferenceKind::Direct)
+			/*
+			 * The current coercion logic regarding reference kinds is:
+			 * 						  FROM
+			 * 			    | Direct | Ref | Box
+			 *	 	Direct 	|  Yes	 | Yes | Yes
+			 * TO 	Ref		|   No   | Yes | No
+			 *	 	Box		|  Yes   | Yes | Yes
+			 */
+			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind == ReferenceKind::Ref)
 				return false;
 
-			// Box types cannot be coerced into ref types.
 			if (from_ref_kind == ReferenceKind::Box && to_ref_kind == ReferenceKind::Ref)
 				return false;
 
