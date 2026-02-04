@@ -1,8 +1,10 @@
 #include "query_hout_of_expr.hpp"
 
 #include "coercions.hpp"
+#include "diagnostic_interactive/placeholder.hpp"
 #include "errors.hpp"
 #include "numeric_literals.hpp"
+#include "typesystem/higher/value_category.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -413,6 +415,16 @@ namespace compiler::helios::code {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
+
+					auto primary_category = inner->expression_type.getValueCategory().getCategory();
+					if (primary_category == tsh::PrimaryCategory::Literal
+					    || primary_category == tsh::PrimaryCategory::Temporary) {
+						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							"Tried to reference a temporary", stmt->getSourcePosition()
+						));
+						return;
+					}
+
 					node = makeBox<RefOfExpr>(ctx, std::move(inner));
 					return;
 				}
