@@ -76,6 +76,9 @@ namespace query {
 
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
+			// Important note #1945:
+			// Current cycle detection algorithm works only when we use wait-on-await strategy.
+			// For other strategies we will have to additionally register special "working-on" edges.
 			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
 			auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(my_node);
 

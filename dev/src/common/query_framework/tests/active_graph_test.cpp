@@ -30,7 +30,10 @@ class ActiveGraph: public tester::TestSuite {
 #define TESTER_CLASS ActiveGraph
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testActiveGraph); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testActiveGraph);
+		TESTER_ADD_TEST(testEdgeCases);
+	}
 
 private:
 	/**
@@ -143,6 +146,29 @@ private:
 		// message is here to make sure that if something strange with threads happens,
 		// and we exit before reaching this point, we will see it in the test logs.
 		message("ActiveGraph test passed.");
+	}
+
+	void testEdgeCases() {
+		query::internal::ActiveGraph active_graph;
+
+		auto node_ids_fixtures = generateNodeIDs(2);
+
+		// empty graph sanity checks:
+		auto was_cycle_empty = active_graph.cycleCheck(node_ids_fixtures.at(0));
+		ASSERT_TRUE(was_cycle_empty.empty());
+
+		// edge to itself:
+		active_graph.putNode(node_ids_fixtures.at(0));
+		active_graph.setEdge(node_ids_fixtures.at(0), node_ids_fixtures.at(0));
+		auto was_cycle_loop = active_graph.cycleCheck(node_ids_fixtures.at(0));
+		ASSERT_TRUE(was_cycle_loop.has_value());
+		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.size() == 1);
+		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.at(0) == node_ids_fixtures.at(0));
+
+		active_graph.putNode(node_ids_fixtures.at(1));
+		active_graph.setEdge(node_ids_fixtures.at(1), node_ids_fixtures.at(0));
+		auto was_cycle_loop_indirect = active_graph.cycleCheck(node_ids_fixtures.at(1));
+		ASSERT_TRUE(was_cycle_loop_indirect.empty());
 	}
 };
 
