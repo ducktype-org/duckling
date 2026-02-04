@@ -13,7 +13,6 @@
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/internal/acd.hpp>
 #include <query_framework/internal/context_access.hpp>
@@ -40,7 +39,7 @@ namespace query::internal {
 	 * @return QueryImplType::QResult
 	 */
 	template<typename QueryImplType>
-	auto standardQueryEntry(const typename QueryImplType::QKey& key, NodeID from) ->
+	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
 		typename QueryImplType::QResult {
 		using QueryIntType = QueryImplType::QueryType;
 
@@ -53,6 +52,14 @@ namespace query::internal {
 
 
 		if (auto v = QueryImplType::load(perfect_hash)) {
+			/****************************************************\
+			| Query result was cached, we return it directly.    |
+			\****************************************************/
+
+			// @TODO: #1889 we might want to detect if a query should be loaded based on its state?
+			// Or is cache entry effectively a state?
+			// Maybe this is what ACD is for?
+
 			// @FUTURE: Add ACD check here...
 			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
 
@@ -97,21 +104,31 @@ namespace query::internal {
 				}
 			}
 
+			/*******************************************************************\
+			| Now we enter a section, in which we actually compute the query    |
+			| result by calling provide().                                      |
+			\*******************************************************************/
 
-			// Use of defer here makes it also called when an exception is thrown.
-			// it is before setEntry, because setEntry can throw on cycle
+
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(ContextAccess::getState()->setExit(node_id));
 
-			// prolog:
-			ContextAccess::getState()->setEntry(node_id, from);
-
+			// PROLOG:
+			// we put the node, it does not have any deps yet,
+			// actual cycle checks are done in ctx.query
+			// @TODO: #1887 might want to put it under one more layer of abstraction:
+			ContextAccess::getState()->addGraphNode(node_id);
+			ContextAccess::getState()->getActiveGraph()->putNode(node_id);
 			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
-			// epilog:
-			defer(CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n"));
+			// EPILOG
+			// Use of defer here makes it also called when an exception is thrown.
+			defer({
+				// This happens after node is calculated, and we are all done
+				CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Done.\n");
+				ContextAccess::getState()->getActiveGraph()->removeNode(node_id);
+			});
 
 			if constexpr (USE_STATS) stat_object.was_provide_call = true;
 
@@ -212,9 +229,8 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                \
-	auto type::QueryType::internal_query(const type::QKey& key, ::query::internal::NodeID from)                                        \
-		-> type::QResult {                                                                                                             \
-		return ::query::internal::standardQueryEntry<type>(key, from);                                                                 \
+	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
+		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \
