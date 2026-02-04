@@ -204,7 +204,7 @@ namespace lang_def {
 		{ NamedOperator::DoubleArrow, "=>" },
 
 		{ NamedOperator::Pipe, "|" },
-		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
 
 		{ NamedOperator::LeftShift, "<<" },

@@ -131,7 +131,7 @@ impl ManifestCache {
     /// `package` in a cache, while `Err` indicates, most likely, internal SQL error.
     pub async fn get_manifest(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
     ) -> QuackResult<Option<registry::Manifest>> {
         // We have to clone a package, to make `.call()` on `.connection` `'static`.
         let package = package.clone();
@@ -161,7 +161,7 @@ impl ManifestCache {
     /// have `package` in a cache.
     pub async fn get_all_manifests(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
     ) -> QuackResult<Vec<registry::Manifest>> {
         // We have to clone a package, to make `.call()` on `.connection` `'static`.
         let package = package.clone();
@@ -186,7 +186,7 @@ impl ManifestCache {
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
     pub async fn add_or_replace_manifest(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
         manifest: registry::Manifest,
     ) -> QuackResult<()> {
         let json = serde_json::to_string(&manifest)
@@ -221,7 +221,7 @@ impl ManifestCache {
             .map(|manifest| {
                 let json = serde_json::to_string(&manifest)
                     .context_internal("failed to serialize registry schema to JSON")?;
-                let package = types::Package {
+                let package = types::PackageWithUrl {
                     id: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
                     url: registry_url.clone(),
@@ -259,11 +259,14 @@ trait ConnectionExt {
     /// Helper for extracting JSON manifest of a `package`.
     fn get_single_manifest_json(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
     ) -> rusqlite::Result<Option<String>>;
 
     /// Helper for extracting all JSON manifests of a `package`.
-    fn get_all_manifests_json(&self, package: &types::Package) -> rusqlite::Result<Vec<String>>;
+    fn get_all_manifests_json(
+        &self,
+        package: &types::PackageWithUrl,
+    ) -> rusqlite::Result<Vec<String>>;
 
     /// Helper for creating internal cache table.
     fn create_table(&self) -> rusqlite::Result<()>;
@@ -271,14 +274,14 @@ trait ConnectionExt {
     /// Helper for adding or replacing JSON manifest of a `package`.
     fn add_or_replace_manifest_json(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
         manifest_json: String,
     ) -> rusqlite::Result<()>;
 
     /// Helper for adding or replacing multiple JSON manifests of packages.
     fn add_or_replace_mutliple_manifests_jsons(
         &mut self,
-        multi_manifests: Vec<(types::Package, String)>,
+        multi_manifests: Vec<(types::PackageWithUrl, String)>,
     ) -> rusqlite::Result<()>;
 }
 
@@ -294,7 +297,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn get_single_manifest_json(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
     ) -> rusqlite::Result<Option<String>> {
         self.query_maybe_one(
             &format!(
@@ -339,7 +342,10 @@ impl ConnectionExt for rusqlite::Connection {
         Ok(())
     }
 
-    fn get_all_manifests_json(&self, package: &types::Package) -> rusqlite::Result<Vec<String>> {
+    fn get_all_manifests_json(
+        &self,
+        package: &types::PackageWithUrl,
+    ) -> rusqlite::Result<Vec<String>> {
         let mut stmt = self.prepare(&format!(
             "SELECT {manifest} FROM {table} WHERE {name} = :package_name AND {url} = :package_url;",
             manifest = Columns::ManifestJson.name(),
@@ -359,7 +365,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn add_or_replace_manifest_json(
         &self,
-        package: &types::Package,
+        package: &types::PackageWithUrl,
         manifest_json: String,
     ) -> rusqlite::Result<()> {
         self.execute(
@@ -384,7 +390,7 @@ impl ConnectionExt for rusqlite::Connection {
 
     fn add_or_replace_mutliple_manifests_jsons(
         &mut self,
-        multi_manifests: Vec<(types::Package, String)>,
+        multi_manifests: Vec<(types::PackageWithUrl, String)>,
     ) -> rusqlite::Result<()> {
         let tx = self.transaction()?;
         let mut stmt = tx.prepare(&format!(

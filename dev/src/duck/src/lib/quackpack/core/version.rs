@@ -32,16 +32,6 @@ impl Version {
         self.patch
     }
 
-    pub fn can_be_upgraded_to(&self, other: &Version) -> bool {
-        if self.major != other.major {
-            return false;
-        }
-        if self.major == 0 {
-            return self.minor == other.minor && self.patch <= other.patch;
-        }
-        self <= other
-    }
-
     pub fn to_string_without_trailing_zeros(&self) -> String {
         if self.patch == 0 && self.minor == 0 {
             format!("{}", self.major)
@@ -74,6 +64,32 @@ impl Version {
 
     pub fn bump_major(&self) -> Self {
         Self::from(self.major + 1)
+    }
+}
+
+pub trait CompatibilityCheck {
+    fn can_be_upgraded_to(&self, other: &Self) -> bool;
+}
+
+impl CompatibilityCheck for Version {
+    fn can_be_upgraded_to(&self, other: &Version) -> bool {
+        if self.major != other.major {
+            return false;
+        }
+        if self.major == 0 {
+            return self.minor == other.minor && self.patch <= other.patch;
+        }
+        self <= other
+    }
+}
+
+impl CompatibilityCheck for Option<Version> {
+    fn can_be_upgraded_to(&self, other: &Option<Version>) -> bool {
+        match (self, other) {
+            (None, None) => true,
+            (Some(v1), Some(v2)) => v1.can_be_upgraded_to(v2),
+            _ => false,
+        }
     }
 }
 
