@@ -54,5 +54,5 @@ namespace compiler::mir {
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
 	 * @note Exposed in the interface mostly for tests
 	 */
-	Function lowerToPreMIRFunction(query::Context&, const helios::HOUTFunction& function);
+	Function lowerToPreMIRFunction(query::Context&, CRef<helios::HOUTFunction> function);
 }
