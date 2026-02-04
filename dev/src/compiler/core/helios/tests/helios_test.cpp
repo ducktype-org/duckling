@@ -63,6 +63,7 @@ public:
 		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
+		TESTER_ADD_TEST(testBoxes);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
 		TESTER_ADD_TEST(testSimpleHOUT);
@@ -1262,6 +1263,117 @@ private:
 			auto deref_expr
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());
 			ASSERT_TRUE(deref_expr != nullptr);
+		}
+	}
+
+	void testBoxes() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/boxes")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(4);
+		auto& body     = *function.body;
+		using namespace compiler::helios::code;
+
+		{
+			// var b_int: box i32 = 42;
+			ASSERT_TRUE(body.statements.size() > 0);
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
+			ASSERT_TRUE(var_stmt != nullptr);
+
+			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value->get());
+			ASSERT_TRUE(make_box_expr != nullptr);
+
+			auto* literal_expr
+				= dynamic_cast<const LiteralNumericExpr*>(make_box_expr->inner.get());
+			ASSERT_TRUE(literal_expr != nullptr);
+
+			auto var_type = var_stmt->type;
+			ASSERT_EQUAL(var_type.getRefKind(), compiler::tsh::ReferenceKind::Box);
+			ASSERT_EQUAL(var_type.getType().getKind(), compiler::tsh::Kind::Integral);
+		}
+		{
+			// double_coerce(b_int);
+			// `box i32` -> `ref i32` -> `ref i64`
+			ASSERT_TRUE(body.statements.size() > 2);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* cast_expr = dynamic_cast<const CastExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(cast_expr != nullptr);
+			ASSERT_EQUAL(cast_expr->target_type.getRefKind(), compiler::tsh::ReferenceKind::Ref);
+		}
+		{
+			// var x: i32 = b_point.x;
+			ASSERT_TRUE(body.statements.size() > 5);
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[4].get());
+			ASSERT_TRUE(var_stmt != nullptr);
+
+			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value->get());
+			ASSERT_TRUE(access_expr != nullptr);
+			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "x");
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// b_point.y = 99;
+			ASSERT_TRUE(body.statements.size() > 7);
+			auto* assign_stmt = dynamic_cast<const AssignmentStmt*>(body.statements[6].get());
+			ASSERT_TRUE(assign_stmt != nullptr);
+
+			auto* access_expr = dynamic_cast<const AccessExpr*>(assign_stmt->location_expr.get());
+			ASSERT_TRUE(access_expr != nullptr);
+			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "y");
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// by_val(b_point);
+			// `box T -> T`
+			ASSERT_TRUE(body.statements.size() > 8);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[7].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(deref_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
+			// by_ref(b_point);
+			// `box T -> ref T`
+			ASSERT_TRUE(body.statements.size() > 9);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[8].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* refof_expr = dynamic_cast<const RefOfExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(refof_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(refof_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
+			// `box i32 -> i32` in return.
+			auto* return_stmt = dynamic_cast<const ReturnStmt*>(body.statements.back().get());
+			ASSERT_TRUE(return_stmt != nullptr);
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(return_stmt->value.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
 		}
 	}
 

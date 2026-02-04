@@ -35,6 +35,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
+	EXPR_VISITOR(BoxOfExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
@@ -747,6 +748,27 @@ namespace compiler::helios::code {
 
 	Box<Expr> RefOfExpr::clone() const {
 		return makeBox<RefOfExpr>(expression_type, inner->clone());
+	}
+
+	BoxOfExpr::BoxOfExpr(query::Context&, Box<Expr> inner):
+		  Expr(tsh::ExpressionType<>(
+			  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  inner(std::move(inner)) {}
+
+	BoxOfExpr::BoxOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner):
+		  Expr(expression_type),
+		  inner(std::move(inner)) {}
+
+	void BoxOfExpr::debugPrint(std::ostream& out) const {
+		out << "boxof(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> BoxOfExpr::clone() const {
+		return makeBox<BoxOfExpr>(expression_type, inner->clone());
 	}
 
 	DerefExpr::DerefExpr(query::Context&, Box<Expr> inner):

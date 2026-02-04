@@ -32,6 +32,7 @@ namespace compiler::helios::code {
 		AccessExpr,
 		IndexExpr,
 		SequenceExpr,
+		BoxOfExpr,
 		RefOfExpr,
 		DerefExpr,
 		DefaultValueExpr,

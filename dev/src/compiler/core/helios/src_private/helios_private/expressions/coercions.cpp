@@ -33,6 +33,14 @@ namespace compiler::helios {
 			// If underlying types differ, proceed with the standard coercion.
 		}
 
+		// If `from` is direct and `to` is a box, create a BoxOfExpression.
+		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
+		    && to.getRefKind() == tsh::ReferenceKind::Box) {
+			current_expr       = makeBox<code::BoxOfExpr>(ctx, std::move(current_expr));
+			source_symbol_type = current_expr->expression_type.getSymbolType();
+			// If underlying types differ, proceed with the standard coercion.
+		}
+
 		auto source_type = source_symbol_type.getType();
 
 		bool is_source_numeric = source_type.getKind() == tsh::Kind::Integral

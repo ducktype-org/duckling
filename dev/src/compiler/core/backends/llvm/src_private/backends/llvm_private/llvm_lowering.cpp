@@ -996,7 +996,48 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			/// Integer arithmetic ///
+			case AllocBox: {
+				// First, get the value to box.
+				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				llvm::Type* pointee_type = value_to_box->getType();
+
+				// Calculate the layout size for malloc.
+				const llvm::DataLayout& data_layout = module->getDataLayout();
+				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
+
+				// Get or insert the allocator.
+				llvm::FunctionCallee alloc_func = module->getOrInsertFunction(
+					"builtin_alloc",
+					llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false)
+				);
+
+				// Actually call the allocator.
+				llvm::Value* size_val = builder.getInt64(size);
+				llvm::Value* allocated_ptr
+					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
+
+				// Store the value in the allocated memory.
+				// @TODO: #1895 This is suboptimal. In the future class constructors should take the
+				// allocated memory pointer as a parameter and construct it in-place.
+				builder.CreateStore(value_to_box, allocated_ptr);
+				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
+				break;
+			}
+			case FreeBox: {
+				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				// @TODO: #1894 This may change based on the way we handle destructors.
+
+				// Get or insert the free.
+				llvm::FunctionCallee free_func = module->getOrInsertFunction(
+					"builtin_dealloc",
+					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
+				);
+
+				// Actually free the memory.
+				builder.CreateCall(free_func, { ptr_to_free });
+				break;
+			}
+			/// Integer arithmetic ///I
 			case IntegerAdd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:
