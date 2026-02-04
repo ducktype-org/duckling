@@ -62,7 +62,7 @@ impl AsRef<Source> for InternedSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// General dependency source.
 pub enum Source {
     /// A package from a registry.
@@ -108,7 +108,7 @@ impl From<Git> for Source {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
     url: Url,
@@ -126,7 +126,7 @@ impl Registry {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// Represents a source of a local dependency, which lives on a disk.
 pub struct Local {
     absolute: PathBuf,
@@ -164,7 +164,7 @@ impl Local {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// Represents a source a dependency cloned from git.
 pub struct Git {
     url: Url,
@@ -220,7 +220,7 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 /// A type-safe approach for specifying a git tag or a branch.
 pub enum BranchOrTag {
     /// The default branch.
