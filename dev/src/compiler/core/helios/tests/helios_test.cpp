@@ -1270,7 +1270,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function = hout.functions.at(4);
-		auto& body     = *function.body;
+		auto& body     = *function->body;
 		using namespace compiler::helios::code;
 
 		{
