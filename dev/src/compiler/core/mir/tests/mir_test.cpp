@@ -638,8 +638,7 @@ private:
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
 							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(
-									  chain[4].storage
+							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
 							   );
 
 							if (pattern_ok) {
@@ -649,8 +648,9 @@ private:
 								if (compiler::helios::name(f_p.field_id) == base::StrID("p")
 								    && compiler::helios::name(f_x.field_id) == base::StrID("x")) {
 									auto constant = instr.arguments[0].get<MIRConstant>();
-									auto num      = constant.value
-									               .get<compiler::numeric_value::NumericValue>();
+									auto num
+										= constant.value.get<compiler::numeric_value::NumericValue>(
+										);
 									if (num->get<i32>() == 999) found_complex_assignment = true;
 								}
 							}
@@ -804,12 +804,12 @@ private:
 						if (out_place.projection_chain.size() == 2) {
 							const auto& chain = out_place.projection_chain;
 
-							bool is_idx = std::holds_alternative<MIRPlace::IndexProjection>(
-								chain[0].storage
-							);
-							bool is_fld = std::holds_alternative<MIRPlace::FieldProjection>(
-								chain[1].storage
-							);
+							bool is_idx
+								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
+							    );
+							bool is_fld
+								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
+							    );
 
 							if (is_idx && is_fld) {
 								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);

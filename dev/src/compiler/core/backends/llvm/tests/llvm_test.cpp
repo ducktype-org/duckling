@@ -219,7 +219,7 @@ private:
 		}
 		assertTrue(ptr_loads == 17, "Too few pointer loads");
 	}
-	
+
 	void boxesTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/boxes");
 		std::string ir          = llvm_module.dumpLLVMToString();
