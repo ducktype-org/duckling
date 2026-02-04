@@ -1037,7 +1037,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed
 
 		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
+			query::Context::getState().activeQueryCount() == 0,
 			"getAllHeliosSymbols called from within query!"
 		);
 

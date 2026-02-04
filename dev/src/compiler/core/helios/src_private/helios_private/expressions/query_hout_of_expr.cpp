@@ -405,7 +405,6 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
@@ -419,7 +418,6 @@ namespace compiler::helios::code {
 				}
 
 				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner));
-
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
