@@ -27,7 +27,7 @@ fun by_box(p: box Point) -> i32 = {
 fun test_boxes() -> i32 = {
     var b_int: box i32 = 42;    # Coercion from direct to `box i32`. `BoxOfExpr` should be inserted.
 
-    double_coerce(refof b_int);
+    double_coerce(&b_int);
     
     var b_point: box Point = Point(10, 20);
     var b2_point: box InitializedPoint = InitializedPoint();
@@ -38,7 +38,7 @@ fun test_boxes() -> i32 = {
     b_point.y = 99;             # Deref on the lhs.
 
     by_val(b_point);            # Box -> Direct coercion. Should copy
-    by_ref(refof b_point);      # Box -> Ref coercion.
+    by_ref(&b_point);      # Box -> Ref coercion.
 
     return b_int;               # Box i32 -> i32 coercion;
 }

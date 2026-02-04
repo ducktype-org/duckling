@@ -22,7 +22,7 @@ fun main() -> i32 = {
     builtin_output_i64(b_point.x);
     builtin_output_i64(b_point.y);
     
-    by_ref(refof b_point);
+    by_ref(&b_point);
     
     # Original box should be affected.
     builtin_output_i64(b_point.x);

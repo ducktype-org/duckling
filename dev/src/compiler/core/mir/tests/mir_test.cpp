@@ -637,7 +637,8 @@ private:
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage)
 							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[2].storage)
 							   && std::holds_alternative<MIRPlace::FieldProjection>(chain[3].storage)
-							   && std::holds_alternative<MIRPlace::DerefProjection>(chain[4].storage
+							   && std::holds_alternative<MIRPlace::DerefProjection>(
+									  chain[4].storage
 							   );
 
 							if (pattern_ok) {
@@ -647,9 +648,8 @@ private:
 								if (compiler::helios::name(f_p.field_id) == base::StrID("p")
 								    && compiler::helios::name(f_x.field_id) == base::StrID("x")) {
 									auto constant = instr.arguments[0].get<MIRConstant>();
-									auto num
-										= constant.value.get<compiler::numeric_value::NumericValue>(
-										);
+									auto num      = constant.value
+									               .get<compiler::numeric_value::NumericValue>();
 									if (num->get<i32>() == 999) found_complex_assignment = true;
 								}
 							}
@@ -723,7 +723,7 @@ private:
 						}
 					} else if (instr.operation == Operation::Call) {
 						// by_val(b_point);
-						// by_ref(refof b_point);
+						// by_ref(&b_point);
 						const auto& callee      = instr.arguments[0].get<MIRFunctionLiteral>();
 						const auto  callee_name = compiler::helios::name(callee.helios_id);
 						if (callee_name == "by_val") {
