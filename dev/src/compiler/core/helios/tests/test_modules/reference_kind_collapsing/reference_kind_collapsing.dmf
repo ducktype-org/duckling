@@ -1,4 +1,4 @@
-fun test() -> () = {
+fun foo() -> () = {
     var a = 123;
     var box_a: box i32 = a;
     var ref_a: ref i32 = &a;
