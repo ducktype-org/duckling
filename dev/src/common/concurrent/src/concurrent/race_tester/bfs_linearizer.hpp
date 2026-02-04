@@ -175,12 +175,12 @@ namespace concurrent::tester {
 		CRef<History_> history;
 
 		/**
-		 * @brief The size of the history, cached for performance.
+		 * @brief The size of the history, cached for readability.
 		 */
 		usize history_size;
 
 		/**
-		 * @brief The number of threads in the history, cached for performance.
+		 * @brief The number of threads in the history, cached for readability.
 		 */
 		u32 num_threads;
 

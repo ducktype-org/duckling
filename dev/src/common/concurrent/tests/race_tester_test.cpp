@@ -190,7 +190,7 @@ private:
 
 			const std::function<void(u32, RaceTesterGood::Executor_)> worker
 				= [](u32, RaceTesterGood::Executor_ executor) {
-					  for (usize i = 0; i < 1'000; ++i)
+					  for (usize i = 0; i < 20; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();
 						  });
@@ -222,7 +222,7 @@ private:
 
 			const std::function<void(u32, RaceTesterBad::Executor_)> worker
 				= [](u32, RaceTesterBad::Executor_ executor) {
-					  for (usize i = 0; i < 1'000; ++i)
+					  for (usize i = 0; i < 20; ++i)
 						  executor.execute("inc", [](const Ref<CounterInterface> counter) {
 							  return counter->increment();
 						  });

@@ -10,16 +10,16 @@ The Race Tester validates concurrent data structures by:
 
 This is based on the formal concept of **linearizability** (probably explained during your favourite undergraduate concurrent programming course), which means that concurrent operations **appear to execute atomically at some point between their invocation and completion**.
 
-See [](#architecture) to understand roughly what the hell is going on, and [](#usage) for practical usage instructions.
+See [Architecture](#architecture) to understand roughly what the hell is going on, and [Usage](#usage) for practical usage instructions.
 
 ## Architecture
 
 The module consists of five key components that work together. The main API is provided by the `RaceTester` class. However, understanding the other components may help in understanding why the API is somewhat… inconvenient.
 
 Before reading further, note that it is important to distinguish between several concepts which are used precisely in this README:
-- **Tested Implementation:** The concurrent data structure implementation under test (e.g., a lock-free stack that you are not sure is correct)
+- **Tested Implementation:** The concurrent data structure implementation under test (e.g. a lock-free stack that you are not sure is correct)
 - **Sequential Implementation:** A known-correct (reference), sequential version of the data structure (e.g. std::stack)
-- **Tested Interface:** The common interface that both implementations satisfy (e.g., `StackInterface` with `push()` and `pop()` methods). It may be necessary for you to create thin adapter classes to adapt existing implementations to the common interface.
+- **Tested Interface:** The common interface that both implementations satisfy (e.g. `StackInterface` with `push()` and `pop()` methods). It may be necessary for you to create thin adapter classes to adapt existing implementations to the common interface.
 
 ### 1. `RaceTester` (Main API)
 This is the top-level orchestrator that ties all components together. It:
@@ -76,7 +76,7 @@ It uses the operation function objects recorded in the History to replay those o
 4. Validates that the operation's result matches the recorded history
 5. Continues until all operations are linearized or no valid ordering exists
 
-By trying all possible orderings of concurrent operations, the BFS explores the entire space of valid sequential executions. If any ordering produces results matching the recorded history, the concurrent execution is linearizable (correct). Note that the search space might grow exponentially with the number of concurrent operations, so the tests should be kept reasonably small, and designed to aid the framework in rejecting search paths early. See [](#usage).
+By trying all possible orderings of concurrent operations, the BFS explores the entire space of valid sequential executions. If any ordering produces results matching the recorded history, the concurrent execution is linearizable (correct). Note that the search space might grow exponentially with the number of concurrent operations, so the tests should be kept reasonably small, and designed to aid the framework in rejecting search paths early. See [Usage](#usage).
 
 The BFS approach finds the shortest counterexample if the implementation is incorrect, which aids debugging.
 
@@ -140,9 +140,10 @@ Remember that the worker takes:
 - `Tester::Executor_ executor` — The executor instance for this thread, used to actually perform and record operations
 
 **Hint:** Keep in mind that it is preferable to:
-- keep the total number of operations small to avoid search space blow-up
 - return meaningful results that can help the linearizer prune invalid paths early
 - keep the size of the sequential implementation small for efficient copying (for example have 60% of the operations be dequeues, and 40% enqueues)
+- keep the total number of operations small to avoid search space blow-up
+    - to raise confidence in a "linearizable" result, prefer running a small test many (many) times instead of a large test a few times (but use common sense).
 
 ```cpp
 auto worker = [](u32 thread_id, Tester::Executor_ executor) {
@@ -181,7 +182,7 @@ if (is_correct) {
 
 If the test fails, the history with the counterexample is printed to `stderr` automatically by `runAndCheck`.
 
-**Hint:** The test is inherently non-deterministic. To gain confidence in correctness, consider running the test multiple times (e.g., 10-100 repetitions).
+**Hint:** The test is inherently non-deterministic. To gain confidence in correctness, consider running the test multiple times (e.g. 10-100 repetitions).
 
 ### Advanced Usage: Separate Run and Check
 
@@ -214,7 +215,7 @@ The design of the tester module enforces (via appropriate types) that a worker c
 BFS naturally finds the shortest counterexample, which is easier to understand and debug. It also provides an intuitive (as can be) non-recursive implementation, which should be preferred in search problems such as this one.
 
 **Why require copy-constructible sequential implementation?**
-The BFS explores multiple states simultaneously. Each state requires an independent copy of the sequential implementation. Another alternative would be to implement a **reversible** sequential implementation that can undo operations, but this would complicate the design significantly (both the in terms of implementation and usage).
+The BFS explores multiple states simultaneously. Each state requires an independent copy of the sequential implementation. Another alternative would be to implement a **reversible** sequential implementation that can undo operations, but this would complicate the design significantly (both in terms of implementation and usage).
 
 ## Credits
 

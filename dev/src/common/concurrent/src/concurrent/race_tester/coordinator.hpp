@@ -3,11 +3,10 @@
 #include "executor.hpp"
 #include "history.hpp"
 
-#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <mutex>
+#include <barrier>
 #include <thread>
 
 namespace concurrent::tester {
@@ -43,12 +42,16 @@ namespace concurrent::tester {
 		 * @param worker The implementation of a worker.
 		 */
 		void runWorkers(const u32 worker_count, std::function<void(u32, Executor_)> worker) {
+			std::barrier              start_barrier(worker_count);
 			std::vector<std::jthread> threads;
 			threads.reserve(worker_count);
 
 			for (u32 i = 0; i < worker_count; ++i) {
 				Executor_ executor(tested_instance, i, history);
-				threads.emplace_back([i, &worker, executor] { worker(i, executor); });
+				threads.emplace_back([i, &worker, executor, &start_barrier] {
+					start_barrier.arrive_and_wait();
+					worker(i, executor);
+				});
 			}
 		}
 
