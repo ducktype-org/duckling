@@ -35,7 +35,7 @@ public:
 private:
 	/**
 	 * Helper to generate a set of dummy NodeIDs for testing.
-	 * @note Those nodes will not correspond to any of actual query operations.
+	 * @note These nodes will not correspond to any actual query operations.
 	 */
 	std::vector<query::internal::NodeID> generateNodeIDs(u64 node_count) {
 		CORE_ASSERT(node_count % 2 == 0, "We rely on that later");
@@ -84,7 +84,7 @@ private:
 
 		auto node_ids_fixtures = generateNodeIDs(TEST_NODE_COUNT);
 
-		// We spawn THREAD_COUNT threads that will concurrently create a full cycle:
+		// We spawn THREAD_COUNT threads that will concurrently create a full cycle
 
 		std::vector<std::jthread> threads;
 		threads.reserve(THREAD_COUNT);
