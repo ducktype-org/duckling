@@ -1,14 +1,16 @@
 use rustvil::fs::{PathExt, ShouldBlock};
 use tracing::debug;
 
-use super::IdOrPackage;
-use super::paths::StoragePaths;
-use super::{files, locks, paths};
+use crate::quackpack::core::storage;
+
 use crate::{DuckCtx, QuackResult, QuackResultContext, StrId};
 use std::collections::HashSet;
 use std::fs::DirEntry;
 use std::time::{Duration, SystemTime};
 use std::{io, path::PathBuf};
+use storage::IdOrPackage;
+use storage::paths::StoragePaths;
+use storage::{files, locks, paths};
 
 #[derive(Debug)]
 pub struct CleanOutput {

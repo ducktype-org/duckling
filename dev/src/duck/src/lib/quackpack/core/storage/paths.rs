@@ -22,7 +22,7 @@
 //!         └── ...
 
 use std::{
-    fs::{DirEntry, ReadDir},
+    fs::DirEntry,
     io,
     path::{Path, PathBuf},
 };
@@ -43,7 +43,7 @@ const METADATA_FILENAME: &str = "metadata";
 const BACKUP_METADATA_FILENAME: &str = "metadata.old";
 const PKG_DIR_NAME: &str = "pkg";
 
-const CHECKSUM_FILENAME: &str = "checksum.txt";
+const OK_FILENAME: &str = ".ok";
 
 #[derive(Debug)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
@@ -172,15 +172,15 @@ impl StoragePaths {
             return false;
         }
         let dir = self.pkg_dir(id);
-        dir.is_dir() && dir.join(CHECKSUM_FILENAME).exists()
+        dir.is_dir() && dir.join(OK_FILENAME).exists()
     }
 
-    pub fn add_checksum(&self, id: &PackageId) -> QuackResult<()> {
+    pub fn mark_as_stored(&self, id: &PackageId) -> QuackResult<()> {
         if id.is_local() {
-            qp_bail_internal!("attempting to add a checksum for a local package")
+            qp_bail_internal!("attempting to stpre a local package")
         }
         let dir = self.pkg_dir(id);
-        dir.join(CHECKSUM_FILENAME).touch()?;
+        dir.join(OK_FILENAME).touch()?;
         Ok(())
     }
 }

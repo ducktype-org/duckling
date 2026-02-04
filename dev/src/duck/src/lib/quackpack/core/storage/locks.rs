@@ -76,7 +76,7 @@
 use rustvil::fs::FileLockGuard;
 use rustvil::fs::PathExt as _;
 use rustvil::fs::ShouldBlock;
-use std::fs;
+use std::fs::DirEntry;
 use std::io;
 use std::path::Path;
 
@@ -152,9 +152,9 @@ pub fn cleanup_locks(storage: &StoragePaths) -> QuackResult<()> {
 
 fn cleanup_locks_impl(
     storage: &StoragePaths,
-    dir_iterator: Option<fs::ReadDir>,
+    dir_iterator: impl Iterator<Item = io::Result<DirEntry>>,
 ) -> QuackResult<()> {
-    for lockfile in dir_iterator.into_iter().flatten() {
+    for lockfile in dir_iterator {
         let lockfile = lockfile?;
         let name = lockfile.file_name().to_string_lossy().into_owned().into();
         // @TODO: #1353 EnableInterrupts

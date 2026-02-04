@@ -2,12 +2,14 @@ use std::collections::HashMap;
 
 use rustvil::fs::{PathExt, ShouldBlock};
 
-use super::IdOrPackage;
-use super::files::StorageVenv;
-use super::files::fix_and_load_venv;
-use super::paths;
+use crate::quackpack::core::storage;
+
 use crate::StrId;
 use crate::{DuckCtx, QuackResult};
+use storage::IdOrPackage;
+use storage::files::StorageVenv;
+use storage::files::fix_and_load_venv;
+use storage::paths;
 
 /// Get a snapshot of all virtual environments' states.
 ///
