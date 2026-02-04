@@ -1,12 +1,11 @@
 #include "query_hout_of_expr.hpp"
 
 #include "coercions.hpp"
-#include "diagnostic_interactive/placeholder.hpp"
 #include "errors.hpp"
 #include "numeric_literals.hpp"
-#include "typesystem/higher/value_category.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>

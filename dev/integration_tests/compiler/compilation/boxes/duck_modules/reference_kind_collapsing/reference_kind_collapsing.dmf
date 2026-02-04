@@ -33,16 +33,3 @@ fun main() -> i32 = {
 
     return 0;
 }
-
-
-fun foo() -> () = {
-    var a: i32 = 1;
-    var ref_a: ref i32 = &a;
-    var box_a: box i32 = a;
-    var ref_ref_a = &ref_a;
-    var ref_ref_a_2: ref ref i32 = ref_a;
-    var box_box_a: box box i32 = a;
-    var box_ref_from_ref: box ref i32 = ref_a;
-    var box_ref_from_direct: box ref i32 = a;
-    var ref_box_from_ref: ref box i32 = &box_a;
-}
