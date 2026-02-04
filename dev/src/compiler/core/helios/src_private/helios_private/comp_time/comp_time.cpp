@@ -548,6 +548,8 @@ namespace compiler::helios {
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
+			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
 			/**
