@@ -8,7 +8,7 @@ fun foo(a: i64) -> () = {
 
 fun main() -> i64 = {
     let a: i64 = 123;
-    let ref_a: ref i64 = refof a;
+    let ref_a: ref i64 = &a;
 
     # @TODO: #1823 Reconsider that.
     foo(a);
