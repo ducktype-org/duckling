@@ -1,7 +1,7 @@
 # Tests for box types
 Tests:
   simple_boxes:
-    Cases: 
+    Cases:
       llvm:
         backend: llvm
         Output:
@@ -14,7 +14,7 @@ Tests:
           String: "42\n123\n1\n2\n99\n100\n"
         ExitCode: 0
   box_coercions:
-    Cases: 
+    Cases:
       llvm:
         backend: llvm
         Output:
@@ -25,4 +25,17 @@ Tests:
         valgrind: "true"
         Output:
           String: "2\n1\n2\n777\n2\n"
+        ExitCode: 0
+  reference_kind_collapsing:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n"
+        ExitCode: 0
+      llvm_valgrind:
+        backend: llvm
+        valgrind: "true"
+        Output:
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n"
         ExitCode: 0

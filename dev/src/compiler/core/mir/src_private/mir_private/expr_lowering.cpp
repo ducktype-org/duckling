@@ -400,10 +400,7 @@ namespace compiler::mir {
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
 			const auto& inner_type = expr.inner->expression_type.getSymbolType();
 
-			// If a reference of box is taken, no `AddressOf` instruction is inserted.
-			if (inner_type.getRefKind() == tsh::ReferenceKind::Box) {
-				output(lowerSubExpr(*expr.inner, continuation));
-			} else {
+			if (inner_type.getRefKind() == tsh::ReferenceKind::Direct) {
 				auto       hole          = continuation->addHole();
 				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 				const auto res_inner     = lowered_inner.getResult(function);
@@ -415,10 +412,19 @@ namespace compiler::mir {
 					Instruction(Operation::AddressOf, {}, { res_inner }, {}, expr_scope),
 					result_type
 				);
+			} else {
+				// If a reference of box or ref is taken, no `AddressOf` instruction is inserted.
+				output(lowerSubExpr(*expr.inner, continuation));
 			}
 		}
 
 		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
+			CORE_ASSERT(
+				expr.inner->expression_type.getSymbolType().getRefKind()
+					== tsh::ReferenceKind::Direct,
+				"BoxOfExpr on a non direct type"
+			);
+
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);
