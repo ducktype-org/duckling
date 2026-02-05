@@ -6,6 +6,7 @@ More detailed descriptions of various parts of duck and/or quackpack can be foun
 
 ## Required external dependencies
 
+- `libgfortran5`,
 - `libgit2`,
 - `libssh2`,
 - `libssl2`,

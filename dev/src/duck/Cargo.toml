@@ -28,6 +28,7 @@ ordered-float = "5.1.0" # We have to add it, because saphyr (YAML library) expos
 paste = "1.0.15"
 reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipart", "stream"] }
 rusqlite = "0.37.0"
+russcip = { version = "0.9.1", features = ["bundled"]}
 rustvil = { version = "0.9", features = ["full"] }
 saphyr = "0.0.6"
 serde = { version = "1.0.228", features = ["derive"] }

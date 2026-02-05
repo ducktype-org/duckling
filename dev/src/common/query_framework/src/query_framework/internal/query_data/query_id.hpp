@@ -76,13 +76,6 @@ namespace query::internal {
 	 * @param query_data data of given query. Framework will keep a copy of the data for easy access.
 	 */
 	QueryID registerQuery(QueryData query_data);
-
-	/**
-	 * @brief Provides query id of "outside world" query.
-	 * This function should never be used outside the framework.
-	 */
-	QueryID outsideWorldQueryID();
-
 }
 
 template<>
