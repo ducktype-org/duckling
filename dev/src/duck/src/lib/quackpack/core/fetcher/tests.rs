@@ -1,14 +1,43 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::fetcher::types;
+use tempfile::{TempDir, tempdir};
+use wiremock::{
+    Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
+};
+
+use crate::quackpack::core::Version;
 
 use super::*;
-use crate::quackpack::core::Version;
-use crate::quackpack::schemas::registry;
-use rustvil::fs::PathExt;
-use tempfile::tempdir;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+
+fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+    // We set cache directory to a temporary directory, so we can use `Fetcher` without
+    // worrying about leaving traces of tests in FS.
+    let dir = tempdir().unwrap();
+    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+    unsafe {
+        std::env::set_var("DUCK_CACHE_DIR", dir.path());
+    }
+    let ctx = DuckCtx::default();
+    // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+    unsafe {
+        std::env::remove_var("DUCK_CACHE_DIR");
+    }
+    (ctx, dir)
+}
+
+fn run_tokio_test<F, R>(f: F)
+where
+    F: FnOnce(DuckCtx) -> R,
+    R: Future<Output = ()>,
+{
+    let (ctx, _dir) = setup_duck_ctx();
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(f(ctx));
+}
 
 async fn create_mock_server() -> MockServer {
     let pkg1 = registry::Dependency {
@@ -100,29 +129,24 @@ async fn create_mock_server() -> MockServer {
 
     let server = MockServer::start().await;
 
-    Mock::given(method("GET"))
-        .and(path("/packages/bar/2.5.6"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&bar_256))
-        .mount(&server)
-        .await;
-
+    // We explicitly disable those, so we can ensure, that we fetch them from a cache.
+    // Mock::given(method("GET"))
+    //     .and(path("/packages/bar/2.5.6"))
+    //     .respond_with(ResponseTemplate::new(200).set_body_json(&bar_256))
+    //     .mount(&server)
+    //     .await;
+    //
     Mock::given(method("GET"))
         .and(path("/packages/foo/1.2.5"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&foo_125))
-        .mount(&server)
-        .await;
-
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/1.2.3"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(&foo_123))
-        .mount(&server)
-        .await;
-
-    Mock::given(method("GET"))
-        .and(path("/packages/foo/2137.6.7"))
         .respond_with(ResponseTemplate::new(404))
         .mount(&server)
         .await;
+    //
+    // Mock::given(method("GET"))
+    //     .and(path("/packages/foo/1.2.3"))
+    //     .respond_with(ResponseTemplate::new(200).set_body_json(&foo_123))
+    //     .mount(&server)
+    //     .await;
 
     Mock::given(method("GET"))
         .and(path("/packages/foo"))
@@ -165,84 +189,53 @@ async fn create_mock_server() -> MockServer {
     server
 }
 
-#[tokio::test]
-async fn single_metadata() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
-    let response = client
-        .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
-            version: Version::new(1, 2, 3),
-            url: server.uri().parse().unwrap(),
-        })
-        .await
-        .unwrap();
-    assert_eq!(response.metadata.name, "foo");
-    assert_eq!(response.metadata.version, Version::new(1, 2, 3));
-    assert_eq!(response.dependencies.len(), 2);
+#[test]
+fn all_metadata_adds_to_cache() {
+    run_tokio_test(private::all_metadata_adds_to_cache);
+    run_tokio_test(private::without_cache_fetch_fails);
+}
 
-    assert!(
-        client
-            .get_exact_metadata(&types::PackageWithUrl {
+mod private {
+    use super::*;
+    pub async fn all_metadata_adds_to_cache(ctx: DuckCtx) {
+        let server = create_mock_server().await;
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let response = fetcher
+            .get_package_all_metadata(&server.uri().parse().unwrap(), "foo".into())
+            .await
+            .unwrap();
+        assert_eq!(response.packages_metadata.len(), 2);
+        let fetched_from_cache = fetcher
+            .get_package_metadata(&types::PackageWithUrl {
                 id: "foo".into(),
-                version: Version::new(1, 2, 4),
+                version: Version::new(1, 2, 5),
                 url: server.uri().parse().unwrap(),
             })
             .await
-            .is_err()
-    );
-}
+            .unwrap();
+        assert_eq!(fetched_from_cache.metadata.name, "foo");
+        assert_eq!(fetched_from_cache.metadata.version, Version::new(1, 2, 5));
+    }
 
-#[tokio::test]
-async fn multi_metadata() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
-    let response = client
-        .get_multi_metadata(&(server.uri().parse().unwrap()), "foo".into())
-        .await
-        .unwrap();
-    assert_eq!(response.packages_metadata.len(), 2);
-}
-
-#[tokio::test]
-async fn download_blob() {
-    let dir = tempdir().unwrap();
-    let path = dir.path().join("target");
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
-    client
-        .fetch_blob(
-            &types::PackageWithUrl {
+    pub async fn without_cache_fetch_fails(ctx: DuckCtx) {
+        let server = create_mock_server().await;
+        let fetcher = Fetcher::new(&ctx).unwrap();
+        let err = fetcher
+            .get_package_metadata(&types::PackageWithUrl {
                 id: "foo".into(),
-                version: Version::new(1, 2, 3),
+                version: Version::new(1, 2, 5),
                 url: server.uri().parse().unwrap(),
-            },
-            &path,
-        )
-        .await
-        .unwrap();
-    assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
-}
-
-#[tokio::test]
-async fn not_found_in_response() {
-    let server = create_mock_server().await;
-    let client = DucknestClient::new().unwrap();
-    let err = client
-        .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
-            version: Version::new(2137, 6, 7),
-            url: server.uri().parse().unwrap(),
-        })
-        .await
-        .unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
-            "while getting a metadata of `foo` version `2137.6.7` from `{}/`
-HTTP status client error (404 Not Found) for url ({}/packages/foo/2137.6.7)",
-            server.uri(),
-            server.uri()
-        )
-    );
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "while getting a metadata of `foo` version `1.2.5` from `{}/`
+HTTP status client error (404 Not Found) for url ({}/packages/foo/1.2.5)",
+                server.uri(),
+                server.uri()
+            )
+        );
+    }
 }

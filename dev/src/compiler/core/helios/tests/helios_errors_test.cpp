@@ -57,7 +57,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			ctx.int_logger.clear();
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
-			assertTrue(result.hasFailed(), "Expected HOUT query to fail for module content.");
+			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged.");
 
 			std::stringstream logged_messages;

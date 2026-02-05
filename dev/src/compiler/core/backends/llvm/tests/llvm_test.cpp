@@ -57,7 +57,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
-			auto module_hout = ctx.query<helios::QueryModuleHOUT>(module).valueOrPanic();
+			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
 				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
