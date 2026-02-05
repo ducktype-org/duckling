@@ -1,0 +1,108 @@
+# The implementation is very hacky and meant only for early experimentation.
+
+# The generall rule is very simple:
+# * new line acts as a semicolon unless:
+#   * inner-most enclosing brackets exist and are not `{ }`
+#   * the next line starts with `\`
+# And thats it!
+# Any comments should be treated as if they are not there,
+# this implementation does not handle that well,
+# as it is only meant for early experimentation.
+
+# Note about warnings:
+# duplicated/redundant semicolons warnings ware disabled, and they would appear everywhere.
+# This can be very easily fixed by providing warnings only for manually added semicolons, and not for implicit ones.
+# It would however require more changes and was not the main point of this experiment.
+
+
+#; added :
+fun foo(x: i64) = x + 1
+
+
+# You can do that as well:
+fun bar(x: i64) = 
+    \ 123
+
+# Or even better:
+fun baz(x: i64) = (
+    x + 123
+)
+
+# This works well:
+fun a_lot_of_parameters(
+    a: i64,
+    b: i64,
+    c: i64,
+    d: i64,
+    e: i64,
+    f: i64,
+    g: i64,
+    h: i64,
+    i: i64,
+    j: i64
+) = a + b + c + d + e + f + g + h + i + j
+
+fun main() = {
+
+    # \ on a new line prevent semicolon insertion.
+    # Unlike in Python/C++ macros the \ must be placed on the new line, not before the newline!
+    # This way it is much more formatting-friendly.
+    # We can also add nice LSP support for this,
+    # for example setting folding-ranges to fold the whole statement, including all of the lines joined by `\`.
+
+    var a = 2
+    \       + 1
+    \       * 123
+
+    # This also works very well with method chains:
+    #{
+        let a = object
+            \.method1()
+            \.method2()
+            \.method3()
+    #}
+
+    # semicolons are not inserted inside brackets other then `{ }`
+    let b = (
+        1+2
+    )
+
+    # This does not work in Duckling yet, but only the inner-most brackets are considered:
+    #{
+        let my_lambda = x => {
+            var a = 2 # semicolon is inserted here
+            return a
+        } # semicolon is also inserted here
+    #}
+
+    # semicolons can always be added manually:
+    let c = 123; let d = 123
+    let f = c + d
+
+    while (a < 10) {
+        a = a + 1
+    }
+
+    let very_long_variable_name = 123
+
+    # This also works well:
+    if (
+        very_long_variable_name > very_long_variable_name
+    ) {
+        # some code!
+    }
+
+    builtin_output_i64(foo(123))
+    builtin_output_i64(a_lot_of_parameters(1,2,3,4,5,6,7,8,9,10))
+
+    # Generally going for Pythonic style of code and encouraging the use of (),
+    # we can pretty much avoid semicolons at all apart from few useful patterns,
+    # like for example method chains.
+    #
+    # We can always add some kind of `pragma no_implicit_semicolons`
+    # if someone really wants to have semicolons everywhere in a given file,
+    # for example in competetive programming.
+
+    return a
+}
+
