@@ -283,6 +283,38 @@ namespace compiler::backend_llvm {
 
 				return string_type;
 			}
+			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
+				const auto list_type_name = base::strConcat(
+					"list.", list_layout.getElementLayout()->toStringIdentification()
+				);
+
+				// Get the list type from the context, if it has been previously defined.
+				if (llvm::StructType* list_type
+				    = llvm::StructType::getTypeByName(llvm_context, list_type_name);
+				    list_type) {
+					return list_type;
+				}
+
+				// Otherwise, define the string type in LLVM, in line with the TSL definition.
+				llvm::StructType* list_type
+					= llvm::StructType::create(llvm_context, list_type_name);
+				list_type->setBody(
+					{
+						llvm::PointerType::getUnqual(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+					},
+					/*is_packed=*/false
+				);
+
+				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
+				// - the TSL type layout, and
+				// - the struct defined in the built-ins module.
+				// TODOP: This is probably still valid.
+
+				return list_type;
+			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
@@ -705,8 +737,9 @@ namespace compiler::backend_llvm {
 								// a field projection.
 								// TODOP: Maybe this should be reconsidered and a deref projection
 								// should be inserted?
+								// TODOP: Add an explanation on why StructGEP is this here.
 								llvm::Value* list_data_ptr
-									= builder.CreateGEP(current_type, current_ptr, 0);
+									= builder.CreateStructGEP(current_type, current_ptr, 0);
 
 								// Load the actual data of the list.
 								current_ptr = builder.CreateLoad(builder.getPtrTy(), list_data_ptr);
@@ -715,6 +748,7 @@ namespace compiler::backend_llvm {
 
 								// Now push the actual index from the IndexProjection.
 								// Node that first argument is 0, and was inserted by the flush_gep();
+								access_indices.clear();
 								access_indices.push_back(index_value);
 							}
 							variant_default { CORE_PANIC("Indexing into non-array layout"); }

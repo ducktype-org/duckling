@@ -62,8 +62,8 @@ extern "C" {
 	// List
 	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
 	// Pops from the list. Returns by pointer.
-	void     builtin_list_pop(list* list, void* element_ptr, uint64_t element_size);
-	uint64_t builtin_list_len(list list);
+	void     builtin_list_pop(list* list, uint64_t element_size);
+	uint64_t builtin_list_len(list* list);
 	void     builtin_list_free(list* list);
 }
 
