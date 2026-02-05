@@ -1630,7 +1630,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function = hout.functions.at(0);
 
-		auto& statements = function.body->statements;
+		auto& statements = function->body->statements;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using namespace compiler::helios::code;
