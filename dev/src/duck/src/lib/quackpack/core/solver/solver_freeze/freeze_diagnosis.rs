@@ -12,11 +12,11 @@ use crate::{
 impl VenvFreeze {
     /// Finds the maximal subset of the freeze which is a correct dependency resolution,
     /// with a relaxation that main package dependencies may not be realised.
-    /// 
+    ///
     /// This is done by firstly finding which freeze entries are not immediately flawed
     /// (manifest match the package and each realization from the freeze really realizes its manifest counterpart).
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
-    /// 
+    ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
     pub fn find_maximal_correct_dep_solution(
         mut self,
