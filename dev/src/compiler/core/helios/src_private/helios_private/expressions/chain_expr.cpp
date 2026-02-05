@@ -333,6 +333,7 @@ namespace compiler::helios::code {
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
 		 * Currently used only for type casts.
+		 * TODOP: Update comment
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -683,6 +684,26 @@ namespace compiler::helios::code {
 			);
 		}
 
+		// TODOP: Comment.
+		auto processDynamicArrayTypeCreation(pst::AccessLocked<pst::ExprElement> type_arg_pst)
+			-> query::QResult<ChainState> {
+			auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ type_arg_pst });
+			UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
+
+			auto maybe_type = ctv.get<tsh::SymbolType<>>();
+			if (!maybe_type.has_value()) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"List[] argument must evaluate to meta.",
+					type_arg_pst.unlock(query_ctx)->getSourcePosition()
+				));
+				return query::Failed();
+			}
+
+			auto dynamic_array_type = query_ctx.query<tsh::QueryDynamicArrayType>(*maybe_type);
+
+			return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, dynamic_array_type));
+		}
+
 		/**
 		 * @brief Process a square bracket call on an expression. Panics if the base expression
 		 * can't be indexed (is not an array).
@@ -745,6 +766,7 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 
+
 			auto arg_pst
 				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
 
@@ -752,10 +774,19 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
 			// If base is coercible to meta, this is a static array type creation.
-			if (meta_coercion_res.isValid())
+			if (meta_coercion_res.isValid()) {
+				if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
+					if (literal_type_expr->value_type.getType().getKind()
+					    == tsh::Kind::DynamicArray) {
+						return processDynamicArrayTypeCreation(arg_pst);
+					}
+				}
+
 				return processStaticArrayTypeCreation(
 					meta_coercion_res.coerce(query_ctx, std::move(base)), arg_pst
 				);
+			}
+
 			// Index operator.
 			return processStaticArrayIndexing(std::move(base), arg_pst);
 		}

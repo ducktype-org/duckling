@@ -686,15 +686,36 @@ namespace compiler::backend_llvm {
 					variant_case(lir::LIRPlace::IndexProjection, index) {
 						// First load the index value.
 						llvm::Value* index_value = loadLIRValue(*index.index, builder);
-						// Then add it as the next argument to the GEP.
-						access_indices.push_back(index_value);
-						// Lastly, update the current layout.
+
 						variant_match(current_layout->getVariant()) {
 							variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+								// Then add it as the next argument to the GEP.
+								access_indices.push_back(index_value);
+								// Lastly, update the current layout.
 								current_layout = static_array_layout.getElementLayout();
 							}
 							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
+								flush_gep();
+								// When access through a dynamic list is generated, we have to
+								// retrieve the pointer to the dynamic array it self, and the
+								// retrieve a data pointer and pass it to the next GEP.
+
+								// 0 is the index of the data pointer in the dynamic array layout.
+								// TODOP: Once generated fields are figured out, we could make this
+								// a field projection.
+								// TODOP: Maybe this should be reconsidered and a deref projection
+								// should be inserted?
+								llvm::Value* list_data_ptr
+									= builder.CreateGEP(current_type, current_ptr, 0);
+
+								// Load the actual data of the list.
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), list_data_ptr);
 								current_layout = dynamic_array_layout.getElementLayout();
+								current_type   = typeFromLayout(module, current_layout);
+
+								// Now push the actual index from the IndexProjection.
+								// Node that first argument is 0, and was inserted by the flush_gep();
+								access_indices.push_back(index_value);
 							}
 							variant_default { CORE_PANIC("Indexing into non-array layout"); }
 						}

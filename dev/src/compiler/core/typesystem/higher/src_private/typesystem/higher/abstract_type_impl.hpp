@@ -477,7 +477,7 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
 
 		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
-			representation = base::strConcat("dynamic_array(", element.toString(), ")");
+			representation = base::strConcat("List[", element.toString(), "]");
 		}
 
 		[[nodiscard]]

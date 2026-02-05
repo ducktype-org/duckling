@@ -28,6 +28,21 @@ struct str {
 	uint64_t memory_end_offset;
 };
 
+struct list {
+	// TODOP: Comment
+	// Pointer to the data of the string proper.
+	void* data;
+	// The length of the vector.
+	uint64_t length;
+	// The difference between the pointer to the data and
+	// the beginning of the allocated memory (always non-negative).
+	uint64_t memory_begin_offset;
+	// The difference between the past-the-end implicit sentinel of the allocated
+	// memory and the pointer to the data (always non-negative). The total size
+	// of the allocated buffer is thus memory_begin_offset + memory_end_offset.
+	uint64_t memory_end_offset;
+};
+
 // Here, we declare the entire interface as extern "C" to avoid name mangling.
 // The definitions will be given below.
 extern "C" {
@@ -44,9 +59,12 @@ extern "C" {
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
 
-	// Runtime Allocators
-	void* builtin_alloc(uint64_t size);
-	void  builtin_dealloc(void* ptr);
+	// List
+	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
+	// Pops from the list. Returns by pointer.
+	void     builtin_list_pop(list* list, void* element_ptr, uint64_t element_size);
+	uint64_t builtin_list_len(list list);
+	void     builtin_list_free(list* list);
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.
@@ -126,14 +144,39 @@ void builtin_free_string(str s) {
 	}
 }
 
-// This is an intended abstraction over the allocation. In the future, different allocators for
-// different architectures will be supported here. For now we just malloc.
-void* builtin_alloc(uint64_t size) {
-	void* ptr = malloc(size);
-	if (ptr == nullptr) exit(1);
-	return ptr;
+// append(vec: ref list[T], value: T, sizeof(T)) -> ()
+void builtin_list_push(list* list, void* element_ptr, uint64_t element_size) {
+	if (list->length >= list->memory_end_offset) {
+		uint64_t new_cap        = list->memory_end_offset == 0 ? 4 : list->memory_end_offset * 2;
+		list->data              = realloc(list->data, new_cap * element_size);
+		list->memory_end_offset = new_cap;
+	}
+
+	char* dest = (char*) list->data + (list->length * element_size);
+	memcpy(dest, element_ptr, element_size);
+	list->length++;
 }
 
-void builtin_dealloc(void* ptr) { free(ptr); }
+// pop(vec: ref list[T], sizeof(T)) -> ()
+void builtin_list_pop(list* list, uint64_t element_size) {
+	// TODOP: Rethink if we want to crash.
+	if (list->length == 0) exit(1);
+
+	list->length--;
+	list->memory_end_offset += element_size;
+	// TODOP: Rethink if we wanna realloc if the list is almost empty.
+}
+
+// len(vec: list[T]) -> i64
+uint64_t builtin_list_len(list* list) { return list->length; }
+
+void builtin_list_free(list* list) {
+	if (list->data) {
+		free(list->data);
+		list->data = nullptr;
+	}
+	list->length            = 0;
+	list->memory_end_offset = 0;
+}
 
 // NOLINTEND

@@ -1,0 +1,15 @@
+fun main() -> i32 = {
+    var arr: List[i64];
+    
+    builtin_list_push(&arr, 1, 8);
+    builtin_list_pop(&arr, 8);
+    builtin_list_len(&arr);
+    
+    var arr_ref: ref List[i64] = &arr;
+    var a = arr[0];
+
+    arr[1] = 1;
+
+
+    return 0;
+}
