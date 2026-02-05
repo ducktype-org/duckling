@@ -73,7 +73,6 @@ namespace concurrent::tester {
 		void pushBack(Record record) {
 			std::lock_guard guard(mutex);
 			records.push_back(std::move(record));
-			num_threads = std::max(num_threads, record.thread_id + 1);
 		}
 
 		[[nodiscard]]
@@ -106,8 +105,10 @@ namespace concurrent::tester {
 			return out;
 		}
 
+		explicit History(const u32 num_threads): num_threads(num_threads) {}
+
 	private:
-		u32                 num_threads{ 0 };
+		u32                 num_threads;
 		std::vector<Record> records{};
 		mutable std::mutex  mutex;
 	};

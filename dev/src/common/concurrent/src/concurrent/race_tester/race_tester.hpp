@@ -42,8 +42,7 @@ namespace concurrent::tester {
 			CRef<SequentialImplementation> sequential_instance
 		):
 			  tested_instance(tested_instance),
-			  sequential_instance(sequential_instance),
-			  history(makeBox<History_>()) {}
+			  sequential_instance(sequential_instance) {}
 
 		/**
 		 * Run multiple worker threads to record their race history.
@@ -56,11 +55,12 @@ namespace concurrent::tester {
 		 * @param worker The implementation of the workers.
 		 */
 		void run(const u32 worker_count, std::function<void(u32, Executor_)> worker) {
-			Coordinator_ coordinator(tested_instance, history.refMut());
+			history = makeBox<History_>(worker_count);
+			Coordinator_ coordinator(tested_instance, history.refMut().toOpt().value());
 			coordinator.runWorkers(worker_count, worker);
 		}
 
-		CRef<History_> getHistory() const { return history.ref(); }
+		CRef<History_> getHistory() const { return history.ref().toOpt().value(); }
 
 		/**
 		 * Check whether the history recorded by `run` is linearizable. Print it if it isn't.
@@ -68,7 +68,7 @@ namespace concurrent::tester {
 		 */
 		bool check() {
 			BFSLinearizer<TestedInterface, SequentialImplementation, PossibleResults...> linearizer{
-				history.ref(), *sequential_instance
+				history.ref().toOpt().value(), *sequential_instance
 			};
 			base::Optional<usize> linearization_result = linearizer.linearize();
 			if (linearization_result.has_value()) {
@@ -103,6 +103,6 @@ namespace concurrent::tester {
 		/**
 		 * @brief The history of operations.
 		 */
-		Box<History_> history;
+		MBox<History_> history{};
 	};
 }
