@@ -229,6 +229,17 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					arr["index"] = 1;
+				}
+			)",
+			{ "Type `string` cannot be converted to type `const i64`." },
+			1
+		);
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
@@ -267,6 +278,46 @@ private:
 				}
 			)",
 			{ "Immutable variables must have an initial value." },
+			1
+		);
+
+		// ============================ Static Arrays ============================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main(n: i64) = {
+					var arr: i32[n];
+				}
+			)",
+			{ "Identifier 'n' cannot be evaluated at compile-time." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const ARR_TYPE = i32[10.5];
+			)",
+			{ "Array size must be a constant integer" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var arr: i32[5];
+					var x = arr[1, 2];
+				}
+			)",
+			{ "Array index/size must be exactly one expression" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const NOT_A_TYPE = 10;
+				const ARR = NOT_A_TYPE[5];
+			)",
+			{ "Index operator base must be indexable." },
 			1
 		);
 	}

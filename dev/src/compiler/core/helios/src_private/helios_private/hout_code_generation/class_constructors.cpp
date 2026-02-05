@@ -51,9 +51,11 @@ namespace compiler::helios::houtgen {
 					 .generated_symbol_data
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::VariableStmt(std::nullopt, result_symbol_type, result_symbol)
-			));
+			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
+				makeBox<code::DefaultValueExpr>(ctx, result_symbol_type),
+				result_symbol_type,
+				result_symbol
+			)));
 
 			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {

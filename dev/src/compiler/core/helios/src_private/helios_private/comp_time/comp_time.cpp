@@ -72,7 +72,15 @@ namespace compiler::helios {
 
 			void visitCallExpr(const code::CallExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitAccessExpr(const code::AccessExpr&) final { result = CouldNotShortPath{}; }
+			void visitAccessExpr(const code::AccessExpr&) final {
+				// @TODO: #1922 Implement that.
+				throw base::NotYetImplemented("Access expression in comp time");
+			}
+
+			void visitIndexExpr(const code::IndexExpr&) final {
+				// @TODO: #1922 Implement that.
+				throw base::NotYetImplemented("Index expression in comp time");
+			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 				// Type Evaluation.
@@ -551,6 +559,30 @@ namespace compiler::helios {
 			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) final {
+				switch (expr.type.getType().getKind()) {
+				case tsh::Kind::Integral:
+				case tsh::Kind::Float: {
+					// Creates a 0 initialized numeric by default.
+					auto numeric_result = ctv::NumericValue::createOfType(expr.type);
+					result              = ctv::CompileTimeValue(numeric_result.expect(
+                        base::strConcat("Failed to create 0 of type: ", expr.type.toString())
+                    ));
+					break;
+				}
+				case tsh::Kind::Bool: {
+					result = ctv::CompileTimeValue(false);
+					break;
+				}
+				case tsh::Kind::String: {
+					result = ctv::CompileTimeValue(base::StrID(""));
+					break;
+				}
+				default:
+					throw base::NotYetImplemented("Default value in comp time");
+				}
+			}
 
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,

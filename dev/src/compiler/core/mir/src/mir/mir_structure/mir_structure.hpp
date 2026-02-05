@@ -12,6 +12,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -92,6 +93,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
+	
+	ZeroInitialize,
 
 	/** See readme.md for more info about destruct. */
 	Destruct,
@@ -126,6 +129,7 @@ namespace compiler::mir {
 ID_STD_HASH(::compiler::mir::BlockID);
 
 namespace compiler::mir {
+	struct MIRValue;
 
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
@@ -288,20 +292,27 @@ namespace compiler::mir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * It contains of a base variable and a projection chain (either field projections or deref
-	 * projections if eny of the elements was a reference)
+	 * It contains of a base variable and a projection chain - field projections, index projections
+	 * or deref projections (if any of the elements was a reference))
 	 *
 	 * For example:
 	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
 	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
 	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 *
 	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
 	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
 	 * FieldProjection(`c`)]`).
+	 *
 	 * - Additionally, if field `b` was a reference type, an additional
 	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
 	 *
-	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * - In case of `class_array[ix].some_field` the projection chain would contain:
+	 *     - An index projection with the `index` set to the MIRValue representing `ix`
+	 *     - A deref projection since the `[]` returns a reference to the inner element.
+	 *     - An field projection with `field_id` set to `some_field`
+	 *
+	 * - For access to the whole variable with a direct specifier (e.g., just `a`), the projection
 	 * chain would be empty.
 	 */
 	struct MIRPlace final {
@@ -314,18 +325,31 @@ namespace compiler::mir {
 			bool          operator==(const FieldProjection&) const = default;
 		};
 
+		struct IndexProjection {
+			// SharedBox is needed because of the cyclic dependency:
+			// IndexProjection -> MIRValue -> MIRPlace -> MIRValue.
+			// We also want MIRPlace to be copyable, thus the Shared.
+			SharedBox<MIRValue> index;
+			bool                operator==(const IndexProjection&) const = default;
+		};
+
 		/**
 		 * @brief A single projection which transforms a MIRPlace. This includes dereferencing,
 		 * field access and in the future index access for array elements.
 		 */
 		struct Projection {
-			std::variant<DerefProjection, FieldProjection> storage;
+			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
 
 			static Projection field(helios::SymID field_id) {
 				return Projection(FieldProjection(field_id));
 			}
 
 			static Projection deref() { return Projection(DerefProjection()); }
+
+			static Projection index(const MIRValue& index) {
+				auto shared_index = base::makeSharedBox<MIRValue>(index);
+				return Projection(IndexProjection{ std::move(shared_index) });
+			}
 
 			bool operator==(const Projection& other) const = default;
 		};
@@ -392,6 +416,16 @@ namespace compiler::mir {
 		 * @return The extended MIRPlace with a DerefProjection.
 		 */
 		[[nodiscard]] MIRPlace withDeref() const;
+
+		/**
+		 * @brief Adds an IndexProjection to the projection chain. Panics if trying to index into a
+		 * non-array type.
+		 * @note Since `[]` operator returns a reference to the inner array element, the result type
+		 * of the MIRPlace after adding an IndexProjection is the inner array element type with the
+		 * Ref specifier.
+		 * @return The extended MIRPlace with a IndexProjection.
+		 */
+		[[nodiscard]] MIRPlace withIndex(const MIRValue& index) const;
 
 		[[nodiscard]]
 		bool isLocal() const {

@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
+		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
@@ -249,6 +250,51 @@ private:
 		int dealloc_count = count_matches(R"(call void @builtin_dealloc)");
 		ASSERT_EQUAL_PRINT(alloc_count, dealloc_count);
 		ASSERT_EQUAL_PRINT(alloc_count, 1);
+	}
+
+	void staticArraysTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/static_arrays");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Was [10 x i32] type found.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(\[10\s+x\s+i32\])" }),
+			"Expected array type [10 x i32]"
+		);
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(store\s+\[10\s+x\s+i32\]\s+zeroinitializer)" }),
+			"Expected zero-initialization of i32[10]"
+		);
+
+		// arr[3]
+		assertTrue(
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+3)" }
+			),
+			"Expected GEP instruction for array indexing arr[3]"
+		);
+
+		// Was [2 x [3 x i32]] type found.
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(\[2\s+x\s+\[3\s+x\s+i32\]\])" }),
+			"Expected nested array type [2 x [3 x i32]]"
+		);
+		// Check if GEP with three indexes was generated.
+		assertTrue(
+			std::regex_search(
+				ir,
+				std::regex{
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+1,\s+i64\s+2)" }
+			),
+			"Expected big GEP for nested array access matrix[1][2]"
+		);
+
+		// points[1].y
+		// GEP: 0 (ptr), 1 (array index), 1 (field index)
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
+			"Expected GEP for struct field access in array: points[1].y"
+		);
 	}
 
 	void floatingPointTest() {

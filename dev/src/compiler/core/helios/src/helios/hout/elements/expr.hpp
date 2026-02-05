@@ -419,6 +419,26 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents an array indexing operation (both for static and dynamic arrays).
+	 */
+	struct IndexExpr final: public Expr {
+		Box<Expr> base;
+		Box<Expr> index;
+
+		IndexExpr(query::Context& ctx, Box<Expr> base, Box<Expr> index);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		IndexExpr(const tsh::ExpressionType<>& expression_type, Box<Expr> base, Box<Expr> index);
+	};
+
+	/**
 	 * @brief Represents a call in an expression.
 	 */
 	struct CallExpr final: public Expr {
@@ -596,6 +616,25 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DerefExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a default (zeroed) value for a given type.
+	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
+	 */
+	struct DefaultValueExpr final: public Expr {
+		tsh::SymbolType<> type;
+
+		DefaultValueExpr(query::Context& ctx, tsh::SymbolType<> type);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		DefaultValueExpr(tsh::ExpressionType<> expression_type, tsh::SymbolType<> type);
 	};
 
 	/**

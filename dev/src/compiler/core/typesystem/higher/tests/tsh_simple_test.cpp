@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(simplePointer);
 		TESTER_ADD_TEST(simpleString);
 		TESTER_ADD_TEST(simpleDynamicArray);
+		TESTER_ADD_TEST(simpleStaticArray);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
@@ -302,6 +303,69 @@ private:
 		assertFalse(
 			arr_1.hasNoOpDestructor() && arr_4.hasNoOpDestructor(),
 			"DynamicArrays should not have no op destructors."
+		);
+	}
+
+	/**
+	 * Test that static arrays with different properties are treated as different types
+	 * and that they are correctly cast and handled.
+	 */
+	void simpleStaticArray() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto arr_1 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+
+		assertTrue(arr_1.getKind() == StaticArray, "StaticArray should have kind StaticArray.");
+		assertTrue(arr_1.getElementType() == st(int_16), "Element type should be as constructed.");
+		assertTrue(arr_1.getSize() == 10, "Size should be as constructed.");
+
+		const AbstractType            type_arr = arr_1;
+		const StaticArrayAbstractType arr_2    = type_arr;
+		assertTrue(arr_2.getKind() == StaticArray, "StaticArray should survive casting.");
+		assertTrue(arr_2.getSize() == 10, "Size should survive casting.");
+
+		const auto arr_3 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+		assertTrue(
+			arr_1 == arr_3, "StaticArrays with the same element type and size should be equal."
+		);
+
+		const auto arr_4_diff_type = query::entryPoint<QueryStaticArrayType>({ st(int_32), 10 });
+		assertTrue(
+			arr_1 != arr_4_diff_type,
+			"StaticArrays with different element types should be different."
+		);
+
+		const auto arr_5_diff_size = query::entryPoint<QueryStaticArrayType>({ st(int_16), 20 });
+		assertTrue(
+			arr_1 != arr_5_diff_size, "StaticArrays with different sizes should be different."
+		);
+
+		const auto arr_6_diff_mut
+			= query::entryPoint<QueryStaticArrayType>({ st(int_16, true), 10 });
+		assertTrue(
+			arr_1 != arr_6_diff_mut,
+			"StaticArrays with element with different mutability should be different."
+		);
+
+		assertTrue(arr_1.hasNoOpDestructor(), "StaticArray of Ints should have a no-op destructor.");
+
+		const auto str_type = query::entryPoint<QueryStringType>({});
+		const auto arr_str  = query::entryPoint<QueryStaticArrayType>({ st(str_type), 5 });
+		assertFalse(
+			arr_str.hasNoOpDestructor(), "StaticArray of Strings should not have a no-op destructor."
+		);
+
+		const auto ptr_to_int16 = query::entryPoint<QueryPointerType>({ st(int_16) });
+		assertTrue(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_1, ptr_to_int16 }),
+			"Static array should be coercible to a pointer of its element type."
+		);
+
+		const auto ptr_to_int32 = query::entryPoint<QueryPointerType>({ st(int_32) });
+		assertFalse(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_1, ptr_to_int32 }),
+			"Static array should not be coercible to a pointer of a different type."
 		);
 	}
 
