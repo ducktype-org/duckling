@@ -3,11 +3,15 @@
 #include <diagnostic_interactive/message.hpp>
 
 #include <logger/logger.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <unicode_classification/classifications.hpp>
 
 namespace lexer {
 
 	using Class = unicode::Classifications;
+
+	// this is just some hack:
+	bool add_implicit_statement_separators = true;
 
 	class TokenStartError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -251,7 +255,7 @@ namespace lexer {
 			blockCommentHandler(output);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
-		} else if (peek().is(Class::operator_start)) {
+		} else if (peek().is(Class::operator_start) and peek().rawStr() != "\\") { // we need some assertions to ensure consitetcy between those ifs and the implementation
 			operatorHandler(output);
 		} else if (peek().is(Class::name_start)) {
 			nameHandler(output);
@@ -264,6 +268,47 @@ namespace lexer {
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
 		} else {
+			if (peek().is(Class::whitespace) and peek().rawStr() == "\n") {
+
+				// Hacky implicit semicolon insertion:
+				if (add_implicit_statement_separators) {
+					static constexpr std::string_view IMPLICIT_SEMICOLON_TEXT = ";\0";
+					
+					// check if next no-newline character is a `\`:
+					bool prevent_insertion = false;
+					usize lookahead = 1;
+					while (true) {
+						if (peek(lookahead).rawStr() == "\\") {
+							prevent_insertion = true;
+							break;
+						}
+						else if (peek(lookahead).is(Class::whitespace)) {
+							lookahead++;
+							continue;
+						}
+						else {
+							break;
+						}
+					}
+
+					if (prevent_insertion) {
+						skip(lookahead + 1); // jump to after the backslash
+						return;
+					}
+
+					addTokenMsg(where, where, "implicit_semicolon");
+					dia::SourcePosition semicolon_pos = currentPosition();
+					output.push_back(
+						Token::makeSpecial(
+							IMPLICIT_SEMICOLON_TEXT.data(), semicolon_pos
+						)
+					);
+
+					next(); // skip the newline
+					return;
+				}
+			} 
+
 			if (not peek().is(Class::whitespace))
 				logger->log(makeBox<TokenStartError>(source_start));
 			next();
@@ -324,7 +369,8 @@ namespace lexer {
 		usize end{};
 		auto  source_start = currentPosition();
 
-		while (peek().is(Class::operator_continue)) next();
+		// we disable `\` here:
+		while (peek().is(Class::operator_continue) and peek().rawStr() != "\\") next();
 		end = where - 1;
 
 		dia::SourcePosition source_position(source_start, end);
@@ -554,6 +600,18 @@ namespace lexer {
 		auto  source_start = currentPosition();
 
 		Token::BracketType bracket_type{ peek().value };
+		
+		// this maybe works:
+		auto prev_value = add_implicit_statement_separators;
+		defer (add_implicit_statement_separators = prev_value);
+		
+		if (bracket_type == Token::BracketType::Curly) {
+			add_implicit_statement_separators = true;
+		}
+		else {
+			add_implicit_statement_separators = false;
+		}
+
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
@@ -563,10 +621,10 @@ namespace lexer {
 
 		Tokens inner_tokens;
 		next();  // par open
-		constexpr auto is_group_end = [](const Lexer& lexer) {
+		constexpr auto IS_GROUP_END = [](const Lexer& lexer) {
 			return lexer.isEOF() || lexer.peek().is(Class::close_bracket);
 		};
-		parseUntil(inner_tokens, is_group_end);
+		parseUntil(inner_tokens, IS_GROUP_END);
 
 		end = where;
 

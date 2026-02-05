@@ -35,7 +35,8 @@ namespace pst {
 			}
 
 			PST_WHILE(state[0].is(Special::Semicolon)) {
-				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				// state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				// turning it off for now
 				state.tokens().skip();
 			}
 		}

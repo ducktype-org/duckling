@@ -13,7 +13,8 @@ namespace pst {
 				state.parse(out).assign(&out->statements.back(), std::move(stmt));
 			}
 			PST_WHILE(state[0].is(Special::Semicolon)) {
-				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				// state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
+				// turning it of for now
 				state.tokens().skip();
 			}
 		}
