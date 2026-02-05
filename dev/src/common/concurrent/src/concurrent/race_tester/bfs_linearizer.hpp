@@ -75,7 +75,7 @@ namespace concurrent::tester {
 			std::queue<State> q{};
 			q.push(getFirstState());
 			// Tracks the earliest-ending operation which has not yet been linearized.
-			usize max_earliest_end = 0;
+			usize max_earliest_end = q.front().earliest_end;
 
 			// BFS loop, until we linearize all operations or exhaust the queue.
 			while (max_earliest_end != -1 && not q.empty()) {
