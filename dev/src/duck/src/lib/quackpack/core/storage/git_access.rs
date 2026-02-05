@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::{
     QuackResult, StrId,
-    quackpack::core::{Git, solver::types::GitAccess},
+    quackpack::core::{Git, git_access::GitAccess},
 };
 
 use super::package_id::{GitId, PackageId};
