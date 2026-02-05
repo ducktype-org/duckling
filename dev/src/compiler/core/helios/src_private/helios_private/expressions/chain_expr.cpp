@@ -350,7 +350,7 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
-						query_ctx, std::move(arg_expr), literal_type_expr->value_type
+						query_ctx,  std::move(arg_expr), literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}

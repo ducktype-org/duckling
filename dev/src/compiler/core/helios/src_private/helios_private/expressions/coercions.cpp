@@ -6,6 +6,7 @@
 #include <typesystem/higher/queries/types.hpp>
 
 #include <query_framework/context/context.hpp>
+#include "helios/hout/origin.hpp"
 
 namespace compiler::helios {
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -65,6 +66,7 @@ namespace compiler::helios {
 				std::move(current_expr),
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
+					code::generatedOrigin(),
 					numeric_value::NumericValue::createOfType(
 						current_expr->expression_type.getSymbolType()
 					)

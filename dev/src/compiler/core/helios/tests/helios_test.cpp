@@ -44,6 +44,7 @@
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
+#include "helios/hout/origin.hpp"
 
 using namespace compiler::helios::test_utils;
 
@@ -603,6 +604,8 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
+		using namespace compiler::helios::code;
+
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
@@ -614,20 +617,20 @@ private:
 
 
 			// Build chain comparison expressions vector
-			std::vector<base::Box<compiler::helios::code::Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 3));
+			std::vector<base::Box<Expr>> chain_exprs;
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
 
-			std::vector<compiler::helios::code::BuiltinBinary> chain_ops{
-				compiler::helios::code::BuiltinBinary::IntegerLt,
-				compiler::helios::code::BuiltinBinary::IntegerLteq
+			std::vector<BuiltinBinary> chain_ops{
+				BuiltinBinary::IntegerLt,
+				BuiltinBinary::IntegerLteq
 			};
 
 			// Build tuple elements
-			std::vector<base::Box<compiler::helios::code::Expr>> tuple_elements;
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
+			std::vector<base::Box<Expr>> tuple_elements;
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
 
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
@@ -638,55 +641,61 @@ private:
 			          ->getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
-			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
+			std::vector<base::Box<Expr>> call_args;
+			call_args.emplace_back(makeBox<AccessExpr>(
+				ctx, generatedOrigin(), makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_obj), a_field
 			));
 
 			// Build sequence expressions
-			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
+			std::vector<base::Box<Expr>> sequence_exprs;
 			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+				makeBox<TupleExpr>(ctx, generatedOrigin(), std::move(tuple_elements))
 			);
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<BinaryOperatorExpr>(
 				ctx,
-				compiler::helios::code::BuiltinBinary::IntegerAdd,
-				makeBox<compiler::helios::code::ParenthesisExpr>(
+				generatedOrigin(),
+				BuiltinBinary::IntegerAdd,
+				makeBox<ParenthesisExpr>(
 					ctx,
-					makeBox<compiler::helios::code::UnaryOperatorExpr>(
-						compiler::helios::code::BuiltinUnary::IntegerNegation,
-						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
+					generatedOrigin(),
+					makeBox<UnaryOperatorExpr>(
+						ctx,
+						generatedOrigin(),
+						BuiltinUnary::IntegerNegation,
+						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 					)
 				),
-				makeBox<compiler::helios::code::CallExpr>(
+				makeBox<CallExpr>(
 					ctx,
-					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					generatedOrigin(),
+					makeBox<IdentifierExpr>(ctx, generatedOrigin(), square_sym),
 					std::move(call_args)
 				)
 			));
 
 			// Build variant subtypes
-			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
+			std::vector<base::Box<Expr>> variant_subtypes;
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
+				makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
 			);
-			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
+			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true)
 			);
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
+				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
-			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
+			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
+				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<compiler::helios::code::ChainComparisonExpr>(
-					ctx, std::move(chain_exprs), std::move(chain_ops)
+				makeBox<ChainComparisonExpr>(
+					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
 				),
 				// If true: SequenceExpr with nested expressions including CallExpr
-				makeBox<compiler::helios::code::SequenceExpr>(ctx, std::move(sequence_exprs)),
+				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<compiler::helios::code::VariantTypeConstructorExpr>(
-					ctx, std::move(variant_subtypes)
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
 				)
 			);
 
