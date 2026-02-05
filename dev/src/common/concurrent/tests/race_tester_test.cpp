@@ -167,9 +167,13 @@ private:
 
 		/// An incorrect concurrent counter which assumes increment is atomic.
 		class BadConcurrentCounter: public CounterInterface {
-			usize counter{};
+			std::atomic<usize> counter{};
 
-			usize increment() override { return counter++; }
+			usize increment() override {
+				auto i = counter.load(std::memory_order_relaxed);
+				counter.store(i + 1, std::memory_order_relaxed);
+				return i;
+			}
 		};
 
 		/// A correct sequential counter, coincidentally identical to BadConcurrentCounter.
