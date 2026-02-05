@@ -103,6 +103,8 @@ fun main() = {
     # if someone really wants to have semicolons everywhere in a given file,
     # for example in competitive programming.
 
+    builtin_output_i64(bar(123))
+
     return a
 }
 
