@@ -1,4 +1,5 @@
 pub mod git_access;
+pub mod solver_freeze;
 pub mod solving;
 pub mod types_common;
 pub mod util;
@@ -7,11 +8,10 @@ use std::{cell::OnceCell, marker::PhantomData};
 
 use crate::{
     QpCtx, QuackResult,
-    quackpack::core::{PackageCtx, solver::git_access::GitAccess},
+    quackpack::core::{PackageCtx, solver::git_access::GitAccess, solver_freeze::VenvFreeze},
 };
 
 pub enum ToImplement {}
-pub type VenvFreeze = ToImplement;
 
 pub trait SolverState {}
 
