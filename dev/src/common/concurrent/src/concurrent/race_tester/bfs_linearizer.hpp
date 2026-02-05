@@ -20,8 +20,7 @@ namespace concurrent::tester {
 		class TestedInterface,
 		std::derived_from<TestedInterface> SequentialImplementation,
 		typename... PossibleResults>
-	requires base::strConcatable<PossibleResults...>
-	      && std::is_copy_constructible_v<SequentialImplementation> class BFSLinearizer {
+	requires std::is_copy_constructible_v<SequentialImplementation> class BFSLinearizer {
 	public:
 		using History_        = History<TestedInterface, PossibleResults...>;
 		using ResultsVariant_ = typename History_::ResultsVariant_;

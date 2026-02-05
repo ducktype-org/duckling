@@ -17,7 +17,7 @@ namespace concurrent::tester {
 	 * Use std::monostate instead of void.
 	 */
 	template<class TestedInterface, typename... PossibleResults>
-	requires base::strConcatable<PossibleResults...> class Coordinator {
+	class Coordinator {
 	public:
 		using Executor_       = Executor<TestedInterface, PossibleResults...>;
 		using History_        = History<TestedInterface, PossibleResults...>;

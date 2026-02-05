@@ -123,14 +123,6 @@ namespace base {
 	}
 
 	/**
-	 * @brief Concept that checks whether the given types can be processed by strConcat.
-	 */
-	template<typename... T>
-	concept strConcatable = requires(T&&... elements) {
-		{ strConcat(std::forward<T>(elements)...) } -> std::convertible_to<std::string>;
-	};
-
-	/**
 	 * @brief Converts a single value to std::string using strConcat infrastructure.
 	 *
 	 * This function provides a user-extensible alternative to std::to_string that:

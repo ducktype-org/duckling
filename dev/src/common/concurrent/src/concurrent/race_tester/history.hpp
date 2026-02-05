@@ -15,7 +15,7 @@ namespace concurrent::tester {
 	 * Use std::monostate instead of void.
 	 */
 	template<class TestedInterface, typename... PossibleResults>
-	requires base::strConcatable<PossibleResults...> class History {
+	class History {
 	public:
 		using ResultsVariant_ = std::variant<PossibleResults...>;
 

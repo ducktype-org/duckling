@@ -31,8 +31,7 @@ namespace concurrent::tester {
 		std::derived_from<TestedInterface> TestedImplementation,
 		std::derived_from<TestedInterface> SequentialImplementation,
 		typename... PossibleResults>
-	requires base::strConcatable<PossibleResults...>
-	      && std::is_copy_constructible_v<SequentialImplementation> class RaceTester {
+	requires std::is_copy_constructible_v<SequentialImplementation> class RaceTester {
 	public:
 		using History_     = History<TestedInterface, PossibleResults...>;
 		using Executor_    = Executor<TestedInterface, PossibleResults...>;
