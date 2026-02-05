@@ -8,13 +8,13 @@ use crate::{
     quackpack::core::{FeatureName, types_common::ExpandedPackage},
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VenvFreeze {
     pub package_freezes: HashMap<ExpandedPackage, PackageFreeze>,
     pub main_pkg: ExpandedPackage,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackageFreeze {
     pub dependencies_realization: HashMap<StrId, ExpandedPackage>,
     pub features: HashSet<FeatureName>,
