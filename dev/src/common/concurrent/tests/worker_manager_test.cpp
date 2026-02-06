@@ -4,6 +4,7 @@
 
 #include <tester/tester.hpp>
 
+#include <iostream>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -22,15 +23,18 @@ void runOrTimeout(F func, usize timeout_ms = 10'000) {
 		auto now = std::chrono::steady_clock::now();
 		auto elapsed_ms
 			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed))
+		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
+			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
+			std::cerr << "Possible deadlock detected. Worker thread stack trace:\n";
 			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
 using namespace concurrent::worker;
 
-class WorkerManagerTest: public tester::TestSuite {
+class WorkerManagerTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS WorkerManagerTest
 
@@ -49,9 +53,10 @@ protected:
 		} catch (const std::runtime_error& e) {
 			message(base::strConcat(
 				"WorkerManager reload state timed out during fail(). "
-				"Possible deadlock detected. Error: ",
+				"Possible deadlock detected. Terminating. Error: ",
 				e.what()
 			));
+			std::terminate();
 		}
 		tester::TestSuite::fail(err, critical);
 	}

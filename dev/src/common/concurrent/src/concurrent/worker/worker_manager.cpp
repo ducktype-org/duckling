@@ -2,9 +2,15 @@
 
 #include <concurrent/worker/worker.hpp>
 
+#include <mutex>
 #include <ranges>
 
 namespace concurrent::worker {
+
+	namespace {
+		std::mt19937_64 rng;
+		std::mutex      mut;
+	}
 
 	std::vector<WRef> WorkerManager::getAllWorkers() const {
 		return workers
@@ -25,10 +31,9 @@ namespace concurrent::worker {
 		for (auto& worker: workers)
 			if (worker->scheduleTaskIfFree(task)) return;
 
-		// NOLINTBEGIN(concurrency-mt-unsafe)
 		// If no free worker is found, push to a random worker
-		workers[static_cast<usize>(std::rand()) % (workers.size())]->scheduleTask(task);
-		// NOLINTEND(concurrency-mt-unsafe)
+		std::scoped_lock lock(mut);
+		workers[static_cast<usize>(rng()) % (workers.size())]->scheduleTask(task);
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
@@ -43,7 +48,7 @@ namespace concurrent::worker {
 	}
 
 	void WorkerManager::setWorkers(usize num_workers) {
-		auto&& worker_manager = get();
+		auto& worker_manager = get();
 		worker_manager.workers.clear();
 		worker_manager.workers.reserve(num_workers);
 		for (usize i = 0; i < num_workers; i++) {
@@ -51,6 +56,8 @@ namespace concurrent::worker {
 			worker->run();
 			worker_manager.workers.push_back(std::move(worker));
 		}
+		// Set the seed for the random number generator to ensure different random sequences across runs.
+		rng.seed(num_workers);
 	}
 
 	void WorkerManager::testPrivateAccessReloadState() {

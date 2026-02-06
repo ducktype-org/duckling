@@ -35,6 +35,8 @@ namespace concurrent::worker {
 
 		WorkerManager(const WorkerManager&)  = delete;
 		void operator=(const WorkerManager&) = delete;
+		WorkerManager(WorkerManager&&)       = delete;
+		void operator=(WorkerManager&&)      = delete;
 
 		static WorkerManager& get();
 

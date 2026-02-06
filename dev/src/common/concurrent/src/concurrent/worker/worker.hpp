@@ -72,8 +72,6 @@ namespace concurrent::worker {
 		 */
 		void setNoTasksCallback(const NoTasksCallback& callback);
 
-		u64 randomU64() const { return u64(rng()); }
-
 	private:
 		Worker(usize seed);
 
@@ -81,6 +79,14 @@ namespace concurrent::worker {
 		 * @brief Starts the worker's main loop in a separate thread.
 		 */
 		void run();
+
+		/**
+		 * @brief Generates a random u64 using the worker's RNG.
+		 * @note This is NOT thread-safe, as std::mt19937_64 is not thread-safe. It should only be
+		 * called from the worker's main loop or with external synchronization. The randomness is
+		 * not guaranteed to be high-quality, but it is sufficient for load balancing tasks.
+		 */
+		u64 randomU64() const { return u64(rng()); }
 
 		/**
 		 * @brief The random number generator for the worker.
