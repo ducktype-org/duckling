@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::quackpack::core;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
 /// `version` from repository at `url`.
 pub struct PackageWithUrl {
@@ -18,7 +18,7 @@ pub struct PackageWithUrl {
     pub url: Url,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// This is a helper struct, used mainly for two things:
 /// 1. [`SearchResult`], so we don't copy `url`s around,
 /// 2. for [`UrlExt`](super::ducknest::endpoints::UrlExt) internal trait: when creating an endpoint,
