@@ -2,9 +2,9 @@
 
 #include <frontend/pst_parser/access.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 
 #include <variant>
 
@@ -22,15 +22,27 @@ namespace compiler::helios::code {
 	public:
 		ElementOrigin(ValueType value): value(std::move(value)) {}
 
+		/**
+		 * @brief Get the source position of the origin, if it is based on a PST element. If the
+		 * origin is generated, it returns std::nullopt.
+		 *
+		 * If the origin is based on multiple elements, they are merged into a single source
+		 * position covering all of them. (or throws panic if they are from different sources).
+		 */
 		[[nodiscard]] base::Optional<dia::SourcePosition> getSourcePosition(query::Context& ctx
 		) const;
 
 
 		/**
 		 * @brief Helper function that appends a PST element to an existing origin, creating a new
-		 * origin with the updated PST element(s). If the current element is generated, then throws
-		 * an error. If the current element is a single PST element, it creates a vector origin with
-		 * the existing and the new element. If the current element is already a vector of PST
+		 * origin with the updated PST element(s).
+		 *
+		 * If the current element is generated, then throws an error.
+		 *
+		 * If the current element is a single PST element, it creates a vector origin with
+		 * the existing and the new element.
+		 *
+		 * If the current element is already a vector of PST
 		 * elements, it appends the new value.
 		 */
 		static ElementOrigin appendToOrigin(
@@ -44,10 +56,19 @@ namespace compiler::helios::code {
 		[[nodiscard]] std::vector<pst::AccessLocked<pst::LangElement>> getPstElements() const;
 	};
 
+	/**
+	 * @brief Creates an ElementOrigin for a HOUT-generated element.
+	 */
 	ElementOrigin generatedOrigin();
 
+	/**
+	 * @brief Creates an ElementOrigin from a single PST element.
+	 */
 	ElementOrigin pstOrigin(pst::AccessLocked<pst::LangElement> pst_element);
 
+	/**
+	 * @brief Creates an ElementOrigin from multiple PST elements.
+	 */
 	ElementOrigin multiplePstOrigin(
 		const std::vector<pst::AccessLocked<pst::LangElement>>& pst_elements
 	);

@@ -2,10 +2,10 @@
 
 #include <frontend/pst_parser/lang_parser_element.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {

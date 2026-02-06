@@ -1,10 +1,8 @@
-#include "frontend/pst_parser/elements/hierarchy/declarations/function.hpp"
-#include "frontend/pst_parser/elements/hierarchy/declarations/variable.hpp"
-#include "helios/hout/origin.hpp"
-
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -40,7 +38,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
-#include "diagnostic/source_position.hpp"
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
