@@ -721,6 +721,10 @@ public:
 
 private:
 	void simpleTest() {
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0, "Active graph not empty at start"
+		);
+
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assertTrue(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
@@ -729,6 +733,11 @@ private:
 		assertTrue(
 			*query::entryPoint<VectorReferenceQuery>({ 6 }) == std::vector<u64>{ 1, 2, 6 },
 			"Bad query output (6)"
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some computations"
 		);
 	}
 
@@ -795,22 +804,29 @@ private:
 
 	void entryPointSanityTest() {
 #if defined(BUILD_TYPE_DEV)
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
+
 		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CallingEntryPoint>({ 1 }); },
 			"Calling entry point from query did not panicked."
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some panics"
 		);
 #endif
 	}
 
 	template<class Query>
 	void resultLifetimeTest() {
-		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<Query>({ 0 });
-			ASSERT_TRUE(res1.validate());
-
-			auto res2 = ctx.query<Query>({ 0 });
-			ASSERT_TRUE(res2.validate());
-		});
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
 
 		withContextDo([&](query::Context& ctx) {
 			auto res1 = ctx.query<Query>({ 0 });
@@ -819,6 +835,24 @@ private:
 			auto res2 = ctx.query<Query>({ 0 });
 			ASSERT_TRUE(res2.validate());
 		});
+
+		withContextDo([&](query::Context& ctx) {
+			assertTrue(
+				query::Context::getState().activeQueryCount() == 1,
+				"Active graph should have one node here"
+			);
+
+			auto res1 = ctx.query<Query>({ 0 });
+			ASSERT_TRUE(res1.validate());
+
+			auto res2 = ctx.query<Query>({ 0 });
+			ASSERT_TRUE(res2.validate());
+		});
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after some computations"
+		);
 	}
 
 	void withContextDoCompute() {
@@ -856,10 +890,20 @@ private:
 	}
 
 	void cycleDetectionTest() {
-		// note: this test will change when proper cycle handling will
+		// @TODO: #1888 this test will change when proper cycle handling will
 		// be introduced.
-		assertThrows<base::NotYetImplemented>(
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty before some computations"
+		);
+
+		assertThrows<base::Panic>(
 			[&]() { query::entryPoint<CyclicQuery1>({ 1 }); }, "Cycle detection did not throw."
+		);
+
+		assertTrue(
+			query::Context::getState().activeQueryCount() == 0,
+			"Active graph not empty after cycle detection"
 		);
 	}
 

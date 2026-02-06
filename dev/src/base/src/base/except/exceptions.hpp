@@ -31,22 +31,17 @@ namespace base {
 	 * @brief Exception intended to replace c++ assert errors for additional functionalities.
 	 */
 	class Panic final: public std::exception {
-		std::string position;
-		std::string reason;
-
+		/**
+		 * @brief Full description of the panic (reason, position, stacktrace, etc).
+		 */
 		std::string what_str;
-		void        makeWhatStr();
 
 	public:
 		Panic(std::string_view position, std::string_view reason);
 
 		[[nodiscard]]
-		const std::string& getPosition() const;
-		[[nodiscard]]
 		const char* what() const noexcept final;
 
-		// @TODO: use Printer
-		void print(std::ostream& out) const;
 		void printToCerr() const;
 	};
 
@@ -71,7 +66,7 @@ namespace base {
 	/**
 	 * @brief Exception to throw in unimplemented segments.
 	 */
-	class NotYetImplemented: public Exception {
+	class NotYetImplemented final: public Exception {
 		std::string message;
 
 	public:
@@ -140,10 +135,12 @@ namespace base {
  * When possible use CORE_ASSERT instead alongside RELEASE_NOEXCEPT if needed.
  * @note If this assertion fails the program will be terminated.
  */
-#define CORE_ASSERT_NOEXCEPT(cond, what, ...)               \
-	try {                                                   \
-		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__); \
-	} catch (const base::Panic& e) {                        \
-		e.printToCerr();                                    \
-		std::terminate();                                   \
-	}
+#define CORE_ASSERT_NOEXCEPT(cond, what, ...)                         \
+	bool CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = false; \
+	try {                                                             \
+		CORE_ASSERT(cond, what __VA_OPT__(, ) __VA_ARGS__);           \
+	} catch (const base::Panic& e) {                                  \
+		e.printToCerr();                                              \
+		CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = true;   \
+	}                                                                 \
+	if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); }

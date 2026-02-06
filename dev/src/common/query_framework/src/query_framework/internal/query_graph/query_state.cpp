@@ -15,7 +15,6 @@
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -105,36 +104,9 @@ namespace {
 }
 
 namespace query::internal {
-	void QueryState::setEntry(NodeID node, NodeID from) {
-		query_stack_size++;
-
-		if (node_data.contains(node)) {
-			if (node_data.at(node).color == Color::Visiting) {
-				// Detect and print the cycle
-				std::cerr << "Cycle detected in dependency graph: \n";
-				NodeID              current = from;
-				std::vector<NodeID> cycle;
-
-				cycle.push_back(node);
-				while (current != node && node_data.contains(current)) {
-					cycle.push_back(current);
-					current = node_data.at(current).parent;
-				}
-				cycle.push_back(node);
-
-				query_graph.debugPrintNodes(cycle, std::cerr);
-				throw base::NotYetImplemented("Query Cycle!");
-			}
-		}
-		node_data.insert_or_assign(node, NodeData(Color::Visiting, from));
-		query_graph.node_deps.insert_or_assign(node, std::vector<NodeID>{});
-	}
-
-	void QueryState::setExit(NodeID node) {
-		CORE_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
-		query_stack_size--;
-
-		node_data.at(node).color = Color::Done;
+	void QueryState::addGraphNode(NodeID node_id) {
+		node_data.insert_or_assign(node_id, NodeData());
+		query_graph.node_deps.insert_or_assign(node_id, std::vector<NodeID>{});
 	}
 
 	base::Optional<base::CRef<QueryGraph>> QueryState::getPreviousGraph() const {
@@ -142,7 +114,9 @@ namespace query::internal {
 		return &previous.value().graph;
 	}
 
-	u64 QueryState::queryStackSize() const { return query_stack_size; }
+	Ref<ActiveGraph> QueryState::getActiveGraph() noexcept { return &active_graph; }
+
+	u64 QueryState::activeQueryCount() const { return active_graph.size(); }
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
 		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");
