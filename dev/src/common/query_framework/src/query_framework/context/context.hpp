@@ -96,14 +96,6 @@ namespace query {
 		void addMetadata(Args&&... args) {
 			assertActive();
 
-			// Check that the query has preserve_in_graph = true
-			CORE_ASSERT(
-				my_node.q_id.getData().tags.preserve_in_graph,
-				"Cannot add metadata to query without preserve_in_graph = true. "
-				"Query: "
-					+ std::string(my_node.q_id.getData().name)
-			);
-
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 

@@ -28,6 +28,7 @@
  */
 #pragma once
 
+#include <query_framework/internal/query_metadata/metadata_registry.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
 #include <concepts>

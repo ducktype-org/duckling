@@ -14,7 +14,7 @@ namespace query::external {
 	struct InputData;
 }
 
-namespace query {
+namespace query::internal {
 	class MetadataStorage;  // Forward declaration for friend access
 }
 

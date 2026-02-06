@@ -164,6 +164,7 @@ namespace query::internal {
 
 	void QueryState::setPreviousMetadata(MetadataStorage&& metadata) {
 		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
+		CORE_ASSERT(previous->metadata.empty(), "Previous metadata is already set!");
 		previous->metadata.emplace(std::move(metadata));
 	}
 
@@ -339,6 +340,12 @@ namespace query::internal {
 			CORE_ASSERT(
 				previous->node_colors.contains(node),
 				"Node to merge should have color assigned in previous graph"
+			);
+
+			// Check if color is green
+			CORE_ASSERT(
+				*previous->node_colors.atMaybe(node).value() == PrevColor::Green,
+				"Node to merge should be green"
 			);
 
 			// Retrieve dependencies from previous graph; if none -> keep empty deps in current graph

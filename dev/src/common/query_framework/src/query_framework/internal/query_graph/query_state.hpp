@@ -241,6 +241,7 @@ namespace query::internal {
 
 		/**
 		 * @brief Check if a node has any metadata of a specific type.
+		 * @note This function is used for tests
 		 *
 		 * @tparam MetadataT The metadata type to check for
 		 * @param node_id The NodeID to check
@@ -289,6 +290,14 @@ namespace query::internal {
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
 		void addMetadataInternal(NodeID node_id, Args&&... args) {
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				node_id.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(node_id.q_id.getData().name)
+			);
+
 			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
 		}
 	};

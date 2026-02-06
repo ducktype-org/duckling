@@ -1,21 +1,25 @@
 /**
  * @file metadata_storage.cpp
  * @brief Implementation of metadata storage serialization/deserialization.
+ * @TODO: #1942 - Move/Refactor this
  */
 
 #include "metadata_storage.hpp"
 
+#include "metadata_registry.hpp"
+
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <cstring>
+#include <span>
 
 namespace query::internal {
 
 	namespace {
 		// Helper to write a u64 to a byte vector
 		void writeU64(std::vector<std::byte>& out, u64 value) {
-			auto* ptr = reinterpret_cast<const std::byte*>(&value);
-			out.insert(out.end(), ptr, ptr + sizeof(u64));
+			auto bytes = std::as_bytes(std::span<const u64>(&value, 1));
+			out.insert(out.end(), bytes.begin(), bytes.end());
 		}
 
 		// Helper to read a u64 from a byte span, advancing the offset
@@ -29,8 +33,8 @@ namespace query::internal {
 		// Helper to write a string to a byte vector (length-prefixed)
 		void writeString(std::vector<std::byte>& out, std::string_view str) {
 			writeU64(out, str.size());
-			auto* ptr = reinterpret_cast<const std::byte*>(str.data());
-			out.insert(out.end(), ptr, ptr + str.size());
+			auto bytes = std::as_bytes(std::span(str.data(), str.size()));
+			out.insert(out.end(), bytes.begin(), bytes.end());
 		}
 
 		// Helper to read a string from a byte span, advancing the offset
@@ -79,12 +83,12 @@ namespace query::internal {
 		std::vector<std::byte> result;
 
 		// First pass: collect all unique type names and assign IDs
-		std::vector<base::StrID>        type_table;  // ID -> StrID
-		base::HashMap<base::StrID, u64> type_to_id;  // StrID -> ID
+		std::vector<base::StrID>              type_table;  // ID -> StrID
+		base::StableHashMap<base::StrID, u64> type_to_id;  // StrID -> ID
 
 		// Also collect all unique StrID values from StrID-type metadata
-		std::vector<base::StrID>        strid_table;  // ID -> StrID value
-		base::HashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
+		std::vector<base::StrID>              strid_table;  // ID -> StrID value
+		base::StableHashMap<base::StrID, u64> strid_to_id;  // StrID value -> ID
 
 		for (const auto& [node_id, type_map]: storage) {
 			for (const auto& [type_id, metadata_vec]: type_map) {
@@ -125,15 +129,15 @@ namespace query::internal {
 			writeU64(result, node_id.q_id.asInt());
 
 			// Write Bit256 (4 x u64)
-			auto* hash_ptr = reinterpret_cast<const std::byte*>(&node_id.hash.val);
-			result.insert(result.end(), hash_ptr, hash_ptr + sizeof(base::Bit256));
+			auto hash_bytes = std::as_bytes(std::span<const base::Bit256>(&node_id.hash.val, 1));
+			result.insert(result.end(), hash_bytes.begin(), hash_bytes.end());
 
 			// Write type count
 			writeU64(result, type_map.size());
 
 			for (const auto& [type_id, metadata_vec]: type_map) {
 				// Write type ID (index in type table)
-				writeU64(result, type_to_id.at(type_id));
+				writeU64(result, *type_to_id.atMaybe(type_id).value());
 
 				// Write metadata count
 				writeU64(result, metadata_vec.size());
@@ -142,7 +146,7 @@ namespace query::internal {
 					if (metadata->usesStrIDTable()) {
 						// For StrID types, write only the index in StrID table
 						base::StrID str_value = metadata->getStrIDValue();
-						writeU64(result, strid_to_id.at(str_value));
+						writeU64(result, *strid_to_id.atMaybe(str_value).value());
 					} else {
 						// For regular types, serialize and write bytes
 						auto serialized = metadata->serialize();
@@ -212,13 +216,7 @@ namespace query::internal {
 				base::StrID type_id = type_table[type_idx];
 
 				// Get deserializer variant
-				auto deserializer_opt = MetadataRegistry::instance().getDeserializer(type_id);
-				CORE_ASSERT(
-					deserializer_opt.has_value(),
-					"Unknown metadata type_id: {} (not registered)",
-					type_id.strView()
-				);
-				const auto& deserializer = deserializer_opt.value();
+				const auto& deserializer = MetadataRegistry::instance().getDeserializer(type_id);
 
 				// Read metadata count
 				u64 metadata_count = readU64(data, offset);
