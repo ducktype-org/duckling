@@ -29,7 +29,7 @@
 //!
 //! The format of the virtual environment file is:
 //!
-//! - JSON_DATA representing [`StorageVenv`] object,
+//! - JSON_DATA representing [`Venv`] object,
 //! - a sha256 hash of the preceding data in a new line, for content validity checking.
 //!
 //! Some considerations:
@@ -40,7 +40,7 @@
 //! `os.fsync` for files is supported on most platforms, while `os.fsync`
 //! for directories does not work for example on Windows, which makes it hard
 //! to guarantee, which files will exist and where after system failure.
-//! Instead we build higher level operations using [`transfer_file`] function,
+//! Instead we build higher level operations using [`transfer_file_to`](PathExt::transfer_file_to) function,
 //! which copies contents of a file and executes [`fsync`] on it.
 //!
 //! Note that when creating a new virtual environment, operating system might
@@ -51,7 +51,6 @@
 //! however only relatively new virtual environments.
 
 use std::{
-    collections::HashMap,
     fs::OpenOptions,
     io::{self, Read, Write},
     path::{Path, PathBuf},
@@ -65,13 +64,11 @@ use tracing::debug;
 use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::{
-        core::{FeatureName, Git, storage::paths::StoragePaths},
+        core::storage::{freeze, paths::StoragePaths},
         schemas::registry,
     },
     util_common::hash,
 };
-
-use super::package_id::{GitId, PackageId};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -124,56 +121,45 @@ impl PathExt for Path {
 #[derive(Debug)]
 pub struct CorruptedFileError {}
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-/// Information required to build a package in a given dependencies realization.
-pub struct PackageFreeze {
-    pub dependencies: HashMap<StrId, PackageId>,
-    pub used_flags: Vec<FeatureName>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Dependency {
-    id: PackageId,
-    data: PackageFreeze,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct GitFetchCacheEntry {
-    source: Git,
-    result: GitId,
-}
-
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-/// Realization of requirements stored in virtual environment manifest.
-/// Contains all the information required to build and run code using the given virtual environment.
-pub struct VenvFreeze {
-    pub direct_dependencies: HashMap<StrId, PackageId>,
-    pub dependencies: HashMap<PackageId, PackageFreeze>,
-    pub git_fetch_cache: HashMap<Git, GitId>,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
-pub struct StorageVenv {
-    pub freeze: VenvFreeze,
-    pub original_schema: registry::Manifest,
-    pub is_ephemeral: bool,
-    pub last_location: PathBuf,
-    pub last_modification: SystemTime,
-    pub last_access: SystemTime,
+pub struct Venv {
+    freeze: freeze::VenvFreeze,
+    original_schema: registry::Manifest,
+    is_ephemeral: bool,
+    last_location: PathBuf,
+    last_modification: SystemTime,
+    last_access: SystemTime,
 }
 
-impl StorageVenv {
+impl Venv {
+    pub fn new(
+        freeze: freeze::VenvFreeze,
+        original_schema: registry::Manifest,
+        is_ephemeral: bool,
+        last_location: PathBuf,
+        last_modification: SystemTime,
+        last_access: SystemTime,
+    ) -> Self {
+        Self {
+            freeze,
+            original_schema,
+            is_ephemeral,
+            last_location,
+            last_modification,
+            last_access,
+        }
+    }
+
     pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
-        // @TODO: #1353 EnableInterrupts
         let content = path.read_to_string()?;
         let Some((data, checksum)) = content.rsplit_once("\n") else {
             return Ok(Err(CorruptedFileError {}));
         };
-        let current_hash = hash::sha256_string(data);
-        if current_hash != checksum {
+        let current_hash = hash::sha256_bytes(data);
+        if current_hash != checksum.as_bytes() {
             return Ok(Err(CorruptedFileError {}));
         }
         Ok(serde_json::from_str(data).map_err(|_| CorruptedFileError {}))
@@ -183,21 +169,77 @@ impl StorageVenv {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
-        // @TODO: #1353 EnableInterrupts
         file.write_all(format!("{data}\n{checksum}").as_ref())?;
         file.flush()?;
         file.sync_all()?;
         Ok(())
+    }
+
+    pub fn freeze(&self) -> &freeze::VenvFreeze {
+        &self.freeze
+    }
+
+    pub fn freeze_mut(&mut self) -> &mut freeze::VenvFreeze {
+        &mut self.freeze
+    }
+
+    pub fn set_freeze(&mut self, freeze: freeze::VenvFreeze) {
+        self.freeze = freeze;
+    }
+
+    pub fn original_schema(&self) -> &registry::Manifest {
+        &self.original_schema
+    }
+
+    pub fn original_schema_mut(&mut self) -> &mut registry::Manifest {
+        &mut self.original_schema
+    }
+
+    pub fn set_original_schema(&mut self, original_schema: registry::Manifest) {
+        self.original_schema = original_schema;
+    }
+
+    pub fn is_ephemeral(&self) -> bool {
+        self.is_ephemeral
+    }
+
+    pub fn set_is_ephemeral(&mut self, is_ephemeral: bool) {
+        self.is_ephemeral = is_ephemeral;
+    }
+
+    pub fn last_location(&self) -> &PathBuf {
+        &self.last_location
+    }
+
+    pub fn last_location_mut(&mut self) -> &mut PathBuf {
+        &mut self.last_location
+    }
+
+    pub fn set_last_location(&mut self, last_location: PathBuf) {
+        self.last_location = last_location;
+    }
+
+    pub fn last_modification(&self) -> SystemTime {
+        self.last_modification
+    }
+
+    pub fn set_last_modification(&mut self, last_modification: SystemTime) {
+        self.last_modification = last_modification;
+    }
+
+    pub fn last_access(&self) -> SystemTime {
+        self.last_access
+    }
+
+    pub fn set_last_access(&mut self, last_access: SystemTime) {
+        self.last_access = last_access;
     }
 }
 
 /// Convert the state of a virtual environment into canonical form and return its state.
 ///
 /// If neither the main nor backup file is valid, the environment directory is removed.
-pub fn fix_and_load_venv(
-    storage: &StoragePaths,
-    venv_id: StrId,
-) -> QuackResult<Option<StorageVenv>> {
+pub fn fix_and_load_venv(storage: &StoragePaths, venv_id: StrId) -> QuackResult<Option<Venv>> {
     // NOTE: when external entity changes the storage disregarding the rules, we have
     // toctou here and an exception might be thrown later. We ignore that to keep sanity.
     if !storage.venv_dir(venv_id).is_dir() {
@@ -210,7 +252,7 @@ pub fn fix_and_load_venv(
     let backup_existed = backup_path.exists();
     // if main file is valid, return state held in it
     if existed {
-        let data = StorageVenv::load(&path)?;
+        let data = Venv::load(&path)?;
         if let Ok(venv) = data {
             return Ok(Some(venv));
         }
@@ -219,12 +261,10 @@ pub fn fix_and_load_venv(
     // otherwise, the state is not canonical, and current state, if it exists,
     // is held in the backup file
     if backup_existed {
-        let data = StorageVenv::load(&path)?;
+        let data = Venv::load(&path)?;
         if let Ok(venv) = data {
-            // @TODO: #1353 EnableInterrupts
             backup_path.transfer_file_to(&path)?;
             if !existed {
-                // @TODO: #1353 EnableInterrupts
                 storage.venv_dir(venv_id).try_fsync_dir()?;
             }
             return Ok(Some(venv));
@@ -232,7 +272,6 @@ pub fn fix_and_load_venv(
     }
     // both files are not valid, so the venv does not exist,
     // put it in the canonical form by deleting its directory
-    // @TODO: #1353 EnableInterrupts
     storage.venv_dir(venv_id).rmtree()?;
     Ok(None)
 }
@@ -241,7 +280,7 @@ pub fn fix_and_load_venv(
 ///
 /// Assumes that the current ``metadata`` file is valid. This is typically ensured
 /// by calling :func:`fix_and_load_venv` before.
-pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &StorageVenv) -> QuackResult<()> {
+pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &Venv) -> QuackResult<()> {
     let path = storage.vevn_metadata(venv_id);
     let backup_path = storage.vevn_backup_metadata(venv_id);
     let existed = path.exists();
@@ -250,17 +289,14 @@ pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &StorageVenv) -> 
         .parent()
         .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
     if !parent.exists() {
-        // @TODO: #1353 EnableInterrupts
         parent.mkdir(MkdirOptions::WithParents)?;
     }
     if existed {
         // move old current state to backup file, as when error occurs during
         // overwriting the main file, the invariants will be upkept.
         // (the backup file will be valid)
-        // @TODO: #1353 EnableInterrupts
         path.transfer_file_to(&backup_path)?;
         if !backup_existed {
-            // @TODO: #1353 EnableInterrupts
             storage.venv_dir(venv_id).try_fsync_dir()?;
         }
     }
@@ -268,7 +304,6 @@ pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &StorageVenv) -> 
     if !existed {
         // also initialize the `.old` file, such that issues
         // relating to unavailable directory `fsync` are minimized
-        // @TODO: #1353 EnableInterrupts
         path.transfer_file_to(&backup_path)?;
         storage.venv_dir(venv_id).try_fsync_dir()?;
     }

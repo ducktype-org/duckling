@@ -41,7 +41,6 @@ pub fn delete_venv(ctx: &DuckCtx, venv: IdOrPackage<'_>) -> QuackResult<()> {
             })?
     };
     let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
-    // @TODO: #1353 EnableInterrupt
     let _ = storage.venv_dir(venv_id).rmtree();
     Ok(())
 }
@@ -110,11 +109,11 @@ fn clean_venv_from_storage(
     // clean it. Choosing to truncate the last_access to the present time may instead
     // cause premature cleanups (when measured in real time), but that should
     // not be problem for ephemeral venv.
-    if data.last_access > now {
-        data.last_access = now;
+    if data.last_access() > now {
+        data.set_last_access(now);
         requires_save = true;
     }
-    if data.is_ephemeral && data.last_access + temporary_lifetime < now {
+    if data.is_ephemeral() && data.last_access() + temporary_lifetime < now {
         debug!("removing venv `{venv_id}` from the shared storage");
         removed_vevns.push(venv_id);
         venv.path().rmtree().with_context(|| {
@@ -128,11 +127,11 @@ fn clean_venv_from_storage(
     if requires_save {
         files::save_venv(storage, venv_id, &data)?;
     }
-    all_deps.extend(data.freeze.dependencies.keys().filter_map(|dep| {
-        if dep.is_local() {
+    all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {
+        if dep.source().is_local() {
             None
         } else {
-            Some(dep.storage_name())
+            Some(dep.to_package_id().storage_name())
         }
     }));
     Ok(())

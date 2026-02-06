@@ -7,7 +7,7 @@ use crate::quackpack::core::storage;
 use crate::StrId;
 use crate::{DuckCtx, QuackResult};
 use storage::IdOrPackage;
-use storage::files::StorageVenv;
+use storage::files::Venv;
 use storage::files::fix_and_load_venv;
 use storage::paths;
 
@@ -16,7 +16,7 @@ use storage::paths;
 /// The combined state may never have existed in storage as a consistent whole; this function locks each
 /// virtual environment separately. Equivalent to calling [`venv_info`] on all virtual environments present
 /// in the storage.
-pub fn list_venvs(ctx: &DuckCtx) -> QuackResult<HashMap<StrId, StorageVenv>> {
+pub fn list_venvs(ctx: &DuckCtx) -> QuackResult<HashMap<StrId, Venv>> {
     let storage = paths::StoragePaths::new(ctx.duck_home());
     let mut metadata = HashMap::new();
     let vevns = storage.iter_vens()?.collect::<Result<Vec<_>, _>>()?;
@@ -35,7 +35,7 @@ pub fn list_venvs(ctx: &DuckCtx) -> QuackResult<HashMap<StrId, StorageVenv>> {
 }
 
 /// Retrieve the storage state of a specific virtual environment.
-pub fn venv_info(ctx: &DuckCtx, id: IdOrPackage<'_>) -> QuackResult<Option<StorageVenv>> {
+pub fn venv_info(ctx: &DuckCtx, id: IdOrPackage<'_>) -> QuackResult<Option<Venv>> {
     let storage = paths::StoragePaths::new(ctx.duck_home());
     let id = id.venv_id();
     let _lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;

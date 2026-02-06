@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -36,12 +36,16 @@ impl PackageId {
 
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct RegistryId {
-    pub id: StrId,
-    pub version: Version,
-    pub url: Url,
+    id: StrId,
+    version: Version,
+    url: Url,
 }
 
 impl RegistryId {
+    pub fn new(id: StrId, version: Version, url: Url) -> Self {
+        Self { id, version, url }
+    }
+
     pub const TYPE: &str = "registry";
     pub fn storage_name(&self) -> StrId {
         format!(
@@ -53,15 +57,51 @@ impl RegistryId {
         )
         .into()
     }
+
+    pub fn id(&self) -> StrId {
+        self.id
+    }
+
+    pub fn set_id(&mut self, id: StrId) {
+        self.id = id;
+    }
+
+    pub fn version(&self) -> Version {
+        self.version
+    }
+
+    pub fn version_mut(&mut self) -> &mut Version {
+        &mut self.version
+    }
+
+    pub fn set_version(&mut self, version: Version) {
+        self.version = version;
+    }
+
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    pub fn url_mut(&mut self) -> &mut Url {
+        &mut self.url
+    }
+
+    pub fn set_url(&mut self, url: Url) {
+        self.url = url;
+    }
 }
 
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct GitId {
-    pub url: Url,
-    pub commit: StrId,
+    url: Url,
+    commit: StrId,
 }
 
 impl GitId {
+    pub fn new(url: Url, commit: StrId) -> Self {
+        Self { url, commit }
+    }
+
     pub const TYPE: &str = "git";
 
     pub fn storage_name(&self) -> StrId {
@@ -73,14 +113,38 @@ impl GitId {
         )
         .into()
     }
+
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    pub fn url_mut(&mut self) -> &mut Url {
+        &mut self.url
+    }
+
+    pub fn set_url(&mut self, url: Url) {
+        self.url = url;
+    }
+
+    pub fn commit(&self) -> StrId {
+        self.commit
+    }
+
+    pub fn set_commit(&mut self, commit: StrId) {
+        self.commit = commit;
+    }
 }
 
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct LocalId {
-    pub path: PathBuf,
+    path: PathBuf,
 }
 
 impl LocalId {
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
     pub const TYPE: &str = "local";
 
     pub fn storage_name(&self) -> StrId {
@@ -90,5 +154,17 @@ impl LocalId {
             sha256_string(self.path.as_os_str().as_encoded_bytes())
         )
         .into()
+    }
+
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
+    }
+
+    pub fn set_path(&mut self, path: PathBuf) {
+        self.path = path;
+    }
+
+    pub fn path_mut(&mut self) -> &mut PathBuf {
+        &mut self.path
     }
 }

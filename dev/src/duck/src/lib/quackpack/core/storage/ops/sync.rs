@@ -51,16 +51,16 @@ pub fn sync(ctx: &DuckCtx, pkg_ctx: &PackageCtx, options: SyncOptions) -> QuackR
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
 
     let data = storage::files::fix_and_load_venv(&storage, id)?;
-    let freeze: storage::files::VenvFreeze = panic!("run solver");
+    let freeze: storage::freeze::VenvFreeze = panic!("run solver");
     debug!("solver returned freeze `{freeze:?}`");
     drop(data_lock);
     panic!("install dependencies");
     if !options.overwrite
         && let Some(data) = data
-        && pkg_ctx.package().manifest_path() != data.last_location
-        && data.last_location.exists()
+        && pkg_ctx.package().manifest_path() != data.last_location()
+        && data.last_location().exists()
     {
-        let replaces = PackageLoader::find_at_exact_directory(&data.last_location, pkg_ctx.ctx())
+        let replaces = PackageLoader::find_at_exact_directory(data.last_location(), pkg_ctx.ctx())
             .map(|pkg| pkg.package().manifest().root_description().name() == id)
             .unwrap_or(false);
         if replaces {
@@ -71,18 +71,15 @@ pub fn sync(ctx: &DuckCtx, pkg_ctx: &PackageCtx, options: SyncOptions) -> QuackR
     }
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
     let now = SystemTime::now();
-    storage::files::save_venv(
-        &storage,
-        id,
-        &storage::files::StorageVenv {
-            freeze,
-            original_schema: registry::Manifest::try_from(manifest.clone())?,
-            is_ephemeral: venv_config.is_ephemeral()?,
-            last_location: pkg_ctx.package().manifest_path().to_path_buf(),
-            last_modification: now,
-            last_access: now,
-        },
-    )?;
+    let venv = storage::files::Venv::new(
+        freeze,
+        registry::Manifest::try_from(manifest.clone())?,
+        venv_config.is_ephemeral()?,
+        pkg_ctx.package().manifest_path().to_path_buf(),
+        now,
+        now,
+    );
+    storage::files::save_venv(&storage, id, &venv)?;
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(&freeze)?;
         freeze_name(pkg_ctx.package()).write(json)?;
@@ -97,7 +94,7 @@ fn freeze_name(package: &Package) -> PathBuf {
 fn load_external_freezefile(
     ctx: &PackageCtx,
     is_exposed: bool,
-) -> QuackResult<Option<storage::files::VenvFreeze>> {
+) -> QuackResult<Option<storage::freeze::VenvFreeze>> {
     if !is_exposed {
         return Ok(None);
     }

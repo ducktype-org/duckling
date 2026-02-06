@@ -96,13 +96,13 @@ use crate::quackpack::core::storage::paths::StoragePaths;
 /// On platforms lacking shared lock support, it also waits for all sync locks
 /// present at the time of acquisition to be released.
 pub struct CleanLock {
-    lock: FileLockGuard,
+    _lock: FileLockGuard,
 }
 
 impl CleanLock {
     pub fn new(storage: &StoragePaths) -> io::Result<Self> {
         let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
-        Ok(Self { lock })
+        Ok(Self { _lock: lock })
     }
 }
 
@@ -113,8 +113,8 @@ impl CleanLock {
 /// other concurrent synchronization tasks. If it cannot acquire the required
 /// locks, it returns [`WoudlBloc`](io::ErrorKind::WouldBlock).
 pub struct TrySyncLock {
-    clean_lock: FileLockGuard,
-    sync_lock: FileLockGuard,
+    _clean_lock: FileLockGuard,
+    _sync_lock: FileLockGuard,
 }
 
 impl TrySyncLock {
@@ -122,8 +122,8 @@ impl TrySyncLock {
         let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
         let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
         Ok(Self {
-            clean_lock,
-            sync_lock,
+            _clean_lock: clean_lock,
+            _sync_lock: sync_lock,
         })
     }
 }
@@ -132,13 +132,13 @@ impl TrySyncLock {
 /// A lock granting safe read-only access to a virtual environment's dependency configuration.
 /// Holding this lock guarantees the dependencies remain unchanged for the duration.
 pub struct RunLock {
-    lock: FileLockGuard,
+    _lock: FileLockGuard,
 }
 
 impl RunLock {
     pub fn new(storage: &StoragePaths, venv_id: StrId) -> io::Result<Self> {
         let lock = storage.sync_lock(venv_id).lock_shared(ShouldBlock::Yes)?;
-        Ok(Self { lock })
+        Ok(Self { _lock: lock })
     }
 }
 
@@ -157,7 +157,6 @@ fn cleanup_locks_impl(
     for lockfile in dir_iterator {
         let lockfile = lockfile?;
         let name = lockfile.file_name().to_string_lossy().into_owned().into();
-        // @TODO: #1353 EnableInterrupts
         if !storage.venv_dir(name).is_dir() {
             try_delete_lock(&lockfile.path())?;
         }

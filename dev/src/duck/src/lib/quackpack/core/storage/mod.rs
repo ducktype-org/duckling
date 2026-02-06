@@ -2,10 +2,11 @@
 //! module. Operations for state modification, which preserve coherency, are
 //! provided by [`files`] module.
 
-mod files;
-mod git_access;
-mod locks;
-mod ops;
-mod package_id;
-mod paths;
+pub mod files;
+pub mod freeze;
+pub mod git_access;
+pub mod locks;
+pub mod ops;
+pub mod package_id;
+pub mod paths;
 pub use ops::*;
