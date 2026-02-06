@@ -20,7 +20,7 @@ fun foo(x: i64) = x + 1
 
 
 # You can do that as well:
-fun bar(x: i64) = 
+fun bar(x: i64) =
     \ 123
 
 # Or even better:
@@ -60,6 +60,12 @@ fun main() = {
             \.method1()
             \.method2()
             \.method3()
+
+        let a = (object
+            .method1()
+            .method2()
+            .method3()
+        )
     #}
 
     # semicolons are not inserted inside brackets other then `{ }`
@@ -69,10 +75,10 @@ fun main() = {
 
     # This does not work in Duckling yet, but only the inner-most brackets are considered:
     #{
-        let my_lambda = x => {
+        let my_lambda = (x => {
             var a = 2 # semicolon is inserted here
             return a
-        } # semicolon is also inserted here
+        }) # semicolon is also inserted here
     #}
 
     # semicolons can always be added manually:
