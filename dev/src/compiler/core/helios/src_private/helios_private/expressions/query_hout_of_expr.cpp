@@ -218,9 +218,11 @@ namespace compiler::helios::code {
 							// Error has occurred.
 							return;
 						}
-					node = makeBox<VariantTypeConstructorExpr>(ctx, pstOrigin(stmt), std::move(all_subtypes));
-					return;
-				}node = makeBox<VariantTypeConstructorExpr>(ctx, std::move(all_subtypes));
+						all_subtypes.emplace_back(std::move(sub_expr_hout).valueOrThrow());
+					}
+					node = makeBox<VariantTypeConstructorExpr>(
+						ctx, pstOrigin(stmt), std::move(all_subtypes)
+					);
 					return;
 				}
 
@@ -412,8 +414,8 @@ namespace compiler::helios::code {
 						return;
 					}
 					expressions.emplace_back(std::move(res).valueOrThrow());
-				} // @TODO: check this
-				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt),  std::move(expressions) );
+				}
+				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
@@ -545,8 +547,9 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
+		ExprConstructionResult fromPST(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		) {
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 

@@ -242,10 +242,12 @@ namespace compiler::helios::code {
 	 * @param ctx Query context
 	 * @param fun The function symbol being called
 	 * @param callee_expr The PST expression representing the callee being invoked.
-	 * @param call_parentheris_expr The PST call expression representing the function call. (the `(...)` part and not the callee)
+	 * @param call_parentheris_expr The PST call expression representing the function call. (the
+	 * `(...)` part and not the callee)
 	 * @param positional_arguments Vector of positional argument of the call
 	 * @param named_arguments Vector of named argument expressions (name, expression) of the call
-	 * @param argument_origin The origin of each argument in the call (e.x. first argument is positional, second is named, third is default, etc.)
+	 * @param argument_origin The origin of each argument in the call (e.x. first argument is
+	 * positional, second is named, third is default, etc.)
 	 * @param coercions Optional vector of coercions to apply to each argument
 	 *
 	 * @return Box<CallExpr> representing the function call

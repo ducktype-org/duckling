@@ -19,12 +19,13 @@ namespace compiler::helios::code {
 	 *
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param callable_expr The PST expression representing the callee being invoked.
-	 * @param call_expr The PST call expression representing the function call. (the `(...)` part and not the callee)
+	 * @param call_expr The PST call expression representing the function call. (the `(...)` part
+	 * and not the callee)
 	 */
 	query::QResult<Box<CallExpr>> processFunctionCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
+		query::Context&               ctx,
+		const std::vector<SymID>&     candidates,
 		pst::Access<pst::ExprElement> callee_expr,
-		pst::Access<pst::expr::Call> call_expr
+		pst::Access<pst::expr::Call>  call_expr
 	);
 }

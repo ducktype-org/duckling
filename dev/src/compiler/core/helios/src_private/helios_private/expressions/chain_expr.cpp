@@ -402,12 +402,8 @@ namespace compiler::helios::code {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, expr);
 			auto symbol = getIdentifierExprSymID(hout_expr.ref());
-			if (symbol.has_value()) {
-				auto whole_expr_origin = ElementOrigin::appendToOrigin(
-					current_state.getNamespaceLikePstOrigin(), pst_expr
-				);
-				return processNamespaceOrValue(symbol.value(), std::move(whole_expr_origin));
-			}
+			if (symbol.has_value())
+				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr));
 			return ChainState::ofExpr(std::move(hout_expr));
 		}
 

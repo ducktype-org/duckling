@@ -27,10 +27,11 @@ namespace compiler::helios::code {
 
 
 		/**
-		 * @brief Helper function that appends a PST element to an existing origin, creating a new origin with the updated PST element(s).
-		 * If the current element is generated, then throws an error.
-		 * If the current element is a single PST element, it creates a vector origin with the existing and the new element.
-		 * If the current element is already a vector of PST elements, it appends the new value.
+		 * @brief Helper function that appends a PST element to an existing origin, creating a new
+		 * origin with the updated PST element(s). If the current element is generated, then throws
+		 * an error. If the current element is a single PST element, it creates a vector origin with
+		 * the existing and the new element. If the current element is already a vector of PST
+		 * elements, it appends the new value.
 		 */
 		static ElementOrigin appendToOrigin(
 			ElementOrigin origin, pst::AccessLocked<pst::LangElement> pst_element

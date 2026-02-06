@@ -1,5 +1,7 @@
 #include "class_constructors.hpp"
 
+#include "helios/hout/origin.hpp"
+
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -11,7 +13,6 @@
 #include <base/collections/stable_container.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
-#include "helios/hout/origin.hpp"
 
 namespace compiler::helios::houtgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
@@ -65,13 +66,15 @@ namespace compiler::helios::houtgen {
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
 						fields.at(i).getSymbol()
 					),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol)
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol
+					)
 				));
 			}
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol))
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+			));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction{

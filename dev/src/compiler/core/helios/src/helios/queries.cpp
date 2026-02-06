@@ -639,7 +639,9 @@ namespace compiler::helios {
 				// the value in the memory pointed by the ref/box.
 				auto location_type = location_expr->expression_type.getSymbolType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
-					location_expr = makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(location_expr));
+					location_expr = makeBox<code::DerefExpr>(
+						ctx, code::generatedOrigin(), std::move(location_expr)
+					);
 
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now coerce

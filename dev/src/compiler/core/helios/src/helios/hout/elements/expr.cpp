@@ -13,6 +13,8 @@
 
 #include <query_framework/context/context.hpp>
 
+#include <utility>
+
 namespace compiler::helios::code {
 
 #define EXPR_VISITOR(type) \
@@ -41,30 +43,44 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiftToTypeExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx, ElementOrigin origin):
-		  Expr(tsh::ExpressionType<>(
-			  tsh::SymbolType{
-				  ctx.query<tsh::QueryUnitType>({}),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
-			  },
-			  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		  ), origin) {}
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryUnitType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  std::move(origin)
+		  ) {}
 
 	LiteralUnitExpr::LiteralUnitExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin):
-		  Expr(expression_type, origin) {}
+		  Expr(expression_type, std::move(origin)) {}
 
-	Box<Expr> LiteralUnitExpr::clone() const { return makeBox<LiteralUnitExpr>(expression_type, origin); }
+	void LiteralUnitExpr::debugPrint(std::ostream& out) const { out << "()"; }
 
-	LiteralNumericExpr::LiteralNumericExpr(query::Context& ctx, ElementOrigin origin, numeric_value::NumericValue value):
-		  Expr(tsh::ExpressionType<>(
-			  value.getTypeOfStoredValue(ctx), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		  ), origin),
+	Box<Expr> LiteralUnitExpr::clone() const {
+		return makeBox<LiteralUnitExpr>(expression_type, origin);
+	}
+
+	LiteralNumericExpr::LiteralNumericExpr(
+		query::Context& ctx, ElementOrigin origin, numeric_value::NumericValue value
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  value.getTypeOfStoredValue(ctx), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  std::move(origin)
+		  ),
 		  value(value) {}
 
 	LiteralNumericExpr::LiteralNumericExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, numeric_value::NumericValue value
+		tsh::ExpressionType<>       expression_type,
+		ElementOrigin               origin,
+		numeric_value::NumericValue value
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  value(value) {}
 
 	void LiteralNumericExpr::debugPrint(std::ostream& out) const { out << value.toString(); }
@@ -83,12 +99,15 @@ namespace compiler::helios::code {
 					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  ), origin
+			  ),
+			  std::move(origin)
 		  ),
 		  value(value) {}
 
-	LiteralBoolExpr::LiteralBoolExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, bool value):
-		  Expr(expression_type, origin),
+	LiteralBoolExpr::LiteralBoolExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, bool value
+	):
+		  Expr(expression_type, std::move(origin)),
 		  value(value) {}
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
@@ -97,7 +116,9 @@ namespace compiler::helios::code {
 		return makeBox<LiteralBoolExpr>(expression_type, origin, value);
 	}
 
-	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, ElementOrigin origin, const base::StrID value):
+	LiteralStringExpr::LiteralStringExpr(
+		query::Context& ctx, ElementOrigin origin, const base::StrID value
+	):
 		  Expr(
 
 			  tsh::ExpressionType<>(
@@ -107,14 +128,15 @@ namespace compiler::helios::code {
 					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  ), origin
+			  ),
+			  std::move(origin)
 		  ),
 		  value(value) {}
 
 	LiteralStringExpr::LiteralStringExpr(
 		const tsh::ExpressionType<>& expression_type, ElementOrigin origin, const base::StrID value
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  value(value) {}
 
 	void LiteralStringExpr::debugPrint(std::ostream& out) const { out << value.str(); }
@@ -123,7 +145,9 @@ namespace compiler::helios::code {
 		return makeBox<LiteralStringExpr>(expression_type, origin, value);
 	}
 
-	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type):
+	LiteralTypeExpr::LiteralTypeExpr(
+		query::Context& ctx, ElementOrigin origin, tsh::AbstractType type
+	):
 		  Expr(
 
 			  tsh::ExpressionType<>(
@@ -133,7 +157,8 @@ namespace compiler::helios::code {
 					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  ), origin
+			  ),
+			  std::move(origin)
 		  ),
 		  value_type(tsh::SymbolType{
 			  type,
@@ -144,7 +169,7 @@ namespace compiler::helios::code {
 	LiteralTypeExpr::LiteralTypeExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> value_type
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  value_type(value_type) {}
 
 	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
@@ -159,12 +184,15 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
-			  ), origin
+			  ),
+			  std::move(origin)
 		  ),
 		  symbol(symbol) {}
 
-	IdentifierExpr::IdentifierExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID symbol):
-		  Expr(expression_type, origin),
+	IdentifierExpr::IdentifierExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, SymID symbol
+	):
+		  Expr(expression_type, std::move(origin)),
 		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
@@ -217,7 +245,11 @@ namespace compiler::helios::code {
 	}
 
 	BinaryOperatorExpr::BinaryOperatorExpr(
-		query::Context& ctx, ElementOrigin origin, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
+		query::Context& ctx,
+		ElementOrigin   origin,
+		BuiltinBinary   operation,
+		Box<Expr>       lhs,
+		Box<Expr>       rhs
 	):
 		  Expr(
 
@@ -229,7 +261,8 @@ namespace compiler::helios::code {
 					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ), origin
+			  ),
+			  std::move(origin)
 		  ),
 		  operation(operation),
 		  lhs(std::move(lhs)),
@@ -242,7 +275,7 @@ namespace compiler::helios::code {
 		base::Box<Expr>       lhs,
 		base::Box<Expr>       rhs
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  operation(operation),
 		  lhs(std::move(lhs)),
 		  rhs(std::move(rhs)) {}
@@ -308,15 +341,19 @@ namespace compiler::helios::code {
 	}
 
 	Box<Expr> BinaryOperatorExpr::clone() const {
-		return makeBox<BinaryOperatorExpr>(expression_type, origin, operation, lhs->clone(), rhs->clone());
+		return makeBox<BinaryOperatorExpr>(
+			expression_type, origin, operation, lhs->clone(), rhs->clone()
+		);
 	}
 
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(inner->expression_type, origin),
+		  Expr(inner->expression_type, std::move(origin)),
 		  inner(std::move(inner)) {}
 
-	ParenthesisExpr::ParenthesisExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner):
-		  Expr(expression_type, origin),
+	ParenthesisExpr::ParenthesisExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> inner
+	):
+		  Expr(expression_type, std::move(origin)),
 		  inner(std::move(inner)) {}
 
 	void ParenthesisExpr::debugPrint(std::ostream& out) const {
@@ -330,9 +367,13 @@ namespace compiler::helios::code {
 	}
 
 	TernaryOperatorExpr::TernaryOperatorExpr(
-		query::Context&, ElementOrigin origin, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
+		query::Context&,
+		ElementOrigin origin,
+		Box<Expr>     condition,
+		Box<Expr>     if_true,
+		Box<Expr>     if_false
 	):
-		  Expr(if_true->expression_type, origin),
+		  Expr(if_true->expression_type, std::move(origin)),
 		  condition(std::move(condition)),
 		  if_true(std::move(if_true)),
 		  if_false(std::move(if_false)) {}
@@ -344,7 +385,7 @@ namespace compiler::helios::code {
 		Box<Expr>             if_true,
 		Box<Expr>             if_false
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  condition(std::move(condition)),
 		  if_true(std::move(if_true)),
 		  if_false(std::move(if_false)) {}
@@ -375,20 +416,25 @@ namespace compiler::helios::code {
 	}
 
 	TupleExpr::TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> elements):
-		  Expr(tsh::ExpressionType{
-			  tsh::SymbolType<>{
-				  ctx.query<tsh::QueryTupleType>({ extractTypesFromExprs(elements) }),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType<>{
+					  ctx.query<tsh::QueryTupleType>({ extractTypesFromExprs(elements) }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  },
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
-		  }, origin),
+			  std::move(origin)
+		  ),
 		  elements(std::move(elements)) {}
 
 	TupleExpr::TupleExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, std::vector<base::Box<Expr>> elements
+		tsh::ExpressionType<>        expression_type,
+		ElementOrigin                origin,
+		std::vector<base::Box<Expr>> elements
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  elements(std::move(elements)) {}
 
 	void TupleExpr::debugPrint(std::ostream& out) const {
@@ -420,14 +466,17 @@ namespace compiler::helios::code {
 					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
-			  }, origin
+			  },
+			  std::move(origin)
 		  ),
 		  subtypes(std::move(subtypes)) {}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, std::vector<base::Box<Expr>> subtypes
+		tsh::ExpressionType<>        expression_type,
+		ElementOrigin                origin,
+		std::vector<base::Box<Expr>> subtypes
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  subtypes(std::move(subtypes)) {}
 
 	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
@@ -444,18 +493,25 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> cloned_subtypes;
 		cloned_subtypes.reserve(subtypes.size());
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
-		return makeBox<VariantTypeConstructorExpr>(expression_type, origin, std::move(cloned_subtypes));
+		return makeBox<VariantTypeConstructorExpr>(
+			expression_type, origin, std::move(cloned_subtypes)
+		);
 	}
 
-	UnaryOperatorExpr::UnaryOperatorExpr(ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr):
-		  Expr(expr->expression_type, origin),
+	UnaryOperatorExpr::UnaryOperatorExpr(
+		ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
+	):
+		  Expr(expr->expression_type, std::move(origin)),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
 	UnaryOperatorExpr::UnaryOperatorExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, BuiltinUnary operation, base::Box<Expr> expr
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		BuiltinUnary          operation,
+		base::Box<Expr>       expr
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -505,11 +561,19 @@ namespace compiler::helios::code {
 		}
 	}
 
-	CallExpr::CallExpr(query::Context&, ElementOrigin origin, base::Box<Expr> callee, std::vector<Box<Expr>> arguments):
-		  Expr(tsh::ExpressionType(
-			  getCallResultType(callee->expression_type.getType()),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+	CallExpr::CallExpr(
+		query::Context&,
+		ElementOrigin          origin,
+		base::Box<Expr>        callee,
+		std::vector<Box<Expr>> arguments
+	):
+		  Expr(
+			  tsh::ExpressionType(
+				  getCallResultType(callee->expression_type.getType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
@@ -519,7 +583,7 @@ namespace compiler::helios::code {
 		base::Box<Expr>              callee,
 		std::vector<base::Box<Expr>> arguments
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  callee(std::move(callee)),
 		  arguments(std::move(arguments)) {}
 
@@ -539,24 +603,34 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> arguments_cloned;
 		arguments_cloned.reserve(arguments.size());
 		for (const auto& arg: arguments) arguments_cloned.push_back(arg->clone());
-		return makeBox<CallExpr>(expression_type, origin, callee->clone(), std::move(arguments_cloned));
+		return makeBox<CallExpr>(
+			expression_type, origin, callee->clone(), std::move(arguments_cloned)
+		);
 	}
 
-	AccessExpr::AccessExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field):
+	AccessExpr::AccessExpr(
+		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
+	):
 		  // @TODO: #1549 Value category usage is not correct here.
-		  Expr(tsh::ExpressionType(
-			  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Local)
-		  ), origin),
+		  Expr(
+			  tsh::ExpressionType(
+				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+			  ),
+			  std::move(origin)
+		  ),
 		  base(std::move(base)),
 		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
 	}
 
 	AccessExpr::AccessExpr(
-		const tsh::ExpressionType<>& expression_type, ElementOrigin origin, Box<Expr> base, const SymID field
+		const tsh::ExpressionType<>& expression_type,
+		ElementOrigin                origin,
+		Box<Expr>                    base,
+		const SymID                  field
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  base(std::move(base)),
 		  field(field) {
 		CORE_ASSERT(kind(field) == SymbolKind::Field, "Field in AccessExpr must be a field symbol");
@@ -571,14 +645,18 @@ namespace compiler::helios::code {
 		return makeBox<AccessExpr>(expression_type, origin, base->clone(), field);
 	}
 
-	SequenceExpr::SequenceExpr(query::Context&, ElementOrigin origin, std::vector<Box<Expr>> expressions):
-		  Expr(expressions.back()->expression_type, origin),
+	SequenceExpr::SequenceExpr(
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> expressions
+	):
+		  Expr(expressions.back()->expression_type, std::move(origin)),
 		  expressions(std::move(expressions)) {}
 
 	SequenceExpr::SequenceExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, std::vector<base::Box<Expr>> expressions
+		tsh::ExpressionType<>        expression_type,
+		ElementOrigin                origin,
+		std::vector<base::Box<Expr>> expressions
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  expressions(std::move(expressions)) {}
 
 	void SequenceExpr::debugPrint(std::ostream& out) const {
@@ -597,16 +675,22 @@ namespace compiler::helios::code {
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> expressions, std::vector<BuiltinBinary> operators
+		query::Context&            ctx,
+		ElementOrigin              origin,
+		std::vector<Box<Expr>>     expressions,
+		std::vector<BuiltinBinary> operators
 	):
-		  Expr(tsh::ExpressionType<>(
-			  tsh::SymbolType{
-				  ctx.query<tsh::QueryBoolType>({}),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable,
-			  },
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  expressions{ std::move(expressions) },
 		  operators{ std::move(operators) } {}
 
@@ -616,7 +700,7 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> expressions,
 		std::vector<BuiltinBinary>   operators
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  expressions{ std::move(expressions) },
 		  operators{ std::move(operators) } {}
 
@@ -661,20 +745,30 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> expressions;
 		expressions.reserve(this->expressions.size());
 		for (const auto& expr: this->expressions) expressions.push_back(expr->clone());
-		return makeBox<ChainComparisonExpr>(expression_type, origin, std::move(expressions), operators);
+		return makeBox<ChainComparisonExpr>(
+			expression_type, origin, std::move(expressions), operators
+		);
 	}
 
-	CastExpr::CastExpr(query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type):
-		  Expr(tsh::ExpressionType<>(
-			  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+	CastExpr::CastExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  target_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  source_expr(std::move(source_expr)),
 		  target_type(target_type) {}
 
 	CastExpr::CastExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> source_expr, tsh::SymbolType<> target_type
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             source_expr,
+		tsh::SymbolType<>     target_type
 	):
-		  Expr(expression_type, origin),
+		  Expr(expression_type, std::move(origin)),
 		  source_expr(std::move(source_expr)),
 		  target_type(target_type) {}
 
@@ -689,14 +783,19 @@ namespace compiler::helios::code {
 	}
 
 	RefOfExpr::RefOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(tsh::ExpressionType<>(
-			  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Ref),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  inner(std::move(inner)) {}
 
-	RefOfExpr::RefOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
-		  Expr(expression_type, origin),
+	RefOfExpr::RefOfExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
+	):
+		  Expr(expression_type, std::move(origin)),
 		  inner(std::move(inner)) {}
 
 	void RefOfExpr::debugPrint(std::ostream& out) const {
@@ -710,14 +809,19 @@ namespace compiler::helios::code {
 	}
 
 	BoxOfExpr::BoxOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(tsh::ExpressionType<>(
-			  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  inner(std::move(inner)) {}
 
-	BoxOfExpr::BoxOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
-		  Expr(expression_type, origin),
+	BoxOfExpr::BoxOfExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
+	):
+		  Expr(expression_type, std::move(origin)),
 		  inner(std::move(inner)) {}
 
 	void BoxOfExpr::debugPrint(std::ostream& out) const {
@@ -731,15 +835,20 @@ namespace compiler::helios::code {
 	}
 
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(tsh::ExpressionType<>(
-			  inner->expression_type.getSymbolType().getPointeeSymbolType(
-			  ),  // Remove the ref / box specifier.
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType().getPointeeSymbolType(
+				  ),  // Remove the ref / box specifier.
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  std::move(origin)
+		  ),
 		  inner(std::move(inner)) {}
 
-	DerefExpr::DerefExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
-		  Expr(expression_type, origin),
+	DerefExpr::DerefExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
+	):
+		  Expr(expression_type, std::move(origin)),
 		  inner(std::move(inner)) {}
 
 	void DerefExpr::debugPrint(std::ostream& out) const {
@@ -753,18 +862,23 @@ namespace compiler::helios::code {
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> value_expr):
-		  Expr(tsh::ExpressionType(
-			  tsh::SymbolType<>(
-				  ctx.query<tsh::QueryMetaType>({}),
-				  tsh::ReferenceKind::Direct,
-				  tsh::Mutability::Mutable
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>(
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable
+				  ),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
-			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-		  ), origin),
+			  std::move(origin)
+		  ),
 		  value_expr(std::move(value_expr)) {}
 
-	LiftToTypeExpr::LiftToTypeExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr):
-		  Expr(expression_type, origin),
+	LiftToTypeExpr::LiftToTypeExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
+	):
+		  Expr(expression_type, std::move(origin)),
 		  value_expr(std::move(value_expr)) {}
 
 	void LiftToTypeExpr::debugPrint(std::ostream& out) const {

@@ -1,3 +1,5 @@
+#include "helios/hout/origin.hpp"
+
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -44,7 +46,6 @@
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
-#include "helios/hout/origin.hpp"
 
 using namespace compiler::helios::test_utils;
 
@@ -622,10 +623,8 @@ private:
 			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
 			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
 
-			std::vector<BuiltinBinary> chain_ops{
-				BuiltinBinary::IntegerLt,
-				BuiltinBinary::IntegerLteq
-			};
+			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
+				                                  BuiltinBinary::IntegerLteq };
 
 			// Build tuple elements
 			std::vector<base::Box<Expr>> tuple_elements;
@@ -659,7 +658,6 @@ private:
 					ctx,
 					generatedOrigin(),
 					makeBox<UnaryOperatorExpr>(
-						ctx,
 						generatedOrigin(),
 						BuiltinUnary::IntegerNegation,
 						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
@@ -675,11 +673,9 @@ private:
 
 			// Build variant subtypes
 			std::vector<base::Box<Expr>> variant_subtypes;
-			variant_subtypes.emplace_back(
-				makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
+			variant_subtypes.emplace_back(makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
 			);
-			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true)
-			);
+			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true));
 			variant_subtypes.emplace_back(
 				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
