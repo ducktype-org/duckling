@@ -80,7 +80,7 @@ Declaring the query is very simple and requires the programmer to provide three 
 - Query Name -- just a name of the declaration that will represent the query in the program
 - Query Key Type (`QKey`) -- a type of value that the query takes as a parameter
 - Query Result Type (`QResult`) -- a type of value that the query outputs
-- Set of query tags (see query tags section bellow) 
+- Set of query tags (see query tags section below) 
 
 @attention 
 Query keys need to have two critical functionalities: they need to be copyable,
@@ -96,7 +96,7 @@ Query Implementation
 
 Query implementation is where we will write actual query code.
 
-Full example is included bellow, here is a step by step guide:
+Full example is included below, here is a step by step guide:
 
 ### Including dependencies
 
