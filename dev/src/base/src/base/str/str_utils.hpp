@@ -92,6 +92,10 @@ namespace base {
 
 		constexpr void strConcat(std::string& out, Bits bits);
 		constexpr void strConcat(std::string& out, Bytes bytes);
+
+		constexpr void strConcat(std::string& out, std::monostate) {
+			strConcat(out, "<monostate>");
+		}
 	}
 
 	/**

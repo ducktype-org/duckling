@@ -43,4 +43,17 @@ namespace query::external {
 	 */
 	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
 
+	/**
+	 * @brief Set the previous compilation metadata from serialized bytes.
+	 * Must be called after setPreviousGraphFromRawBytes.
+	 * @param metadata_raw_bytes Raw bytes of serialized metadata storage.
+	 */
+	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes);
+
+	/**
+	 * @brief Serialize the current metadata storage for persistence on disk.
+	 * @return Serialized metadata as raw bytes.
+	 */
+	[[nodiscard]] std::vector<byte> serializeMetadata();
+
 }  // namespace query::external

@@ -1,5 +1,6 @@
 add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_graph.cpp
+	src/query_framework/internal/query_graph/active_graph.cpp
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp
@@ -15,6 +16,9 @@ add_library(QueryFramework
 	src/query_framework/query_errors.cpp
 
 	src/query_framework/query_result.hpp
+
+	src/query_framework/internal/query_metadata/metadata_storage.cpp
+	src/query_framework/internal/query_metadata/metadata_registry.cpp
 )
 
 make_module(QueryFramework USES Base Diagnostic DiagnosticInteractive Timer Logger CompilerTimeStats Concurrent)
@@ -22,3 +26,4 @@ make_module(QueryFramework USES Base Diagnostic DiagnosticInteractive Timer Logg
 add_example(query_example examples/example.cpp USES QueryFramework)
 
 duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFramework)
+duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)

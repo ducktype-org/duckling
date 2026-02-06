@@ -56,6 +56,11 @@ impl Conditions {
         //  but only if creating temporary HashSets becomes a bottleneck. Also connected with !TODO above, in `is_enabled_for`.
         !enabled_features.is_disjoint(&required_features)
     }
+
+    /// Returns root packages mentioned in the manifest
+    pub fn required_root_package_features(&self) -> Option<&[FeatureName]> {
+        self.required_root_package_features.as_deref()
+    }
 }
 
 impl TryFrom<registry::DependencyCondition> for Conditions {
