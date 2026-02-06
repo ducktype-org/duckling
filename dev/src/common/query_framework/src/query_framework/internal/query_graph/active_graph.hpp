@@ -2,7 +2,7 @@
 
 #include "node_id.hpp"
 
-#include <concurrent/collections/hash_map.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/collections/optional.hpp>
 
