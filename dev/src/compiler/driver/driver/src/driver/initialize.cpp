@@ -79,13 +79,24 @@ namespace compiler::driver {
 			auto maybe_query_col = root->subCollectionAtMaybe(base::StrID("query"));
 
 			if (maybe_query_col.has_value()) {
-				auto query_col  = maybe_query_col.value();
+				auto query_col = maybe_query_col.value();
+
+				// Load previous query graph
 				auto maybe_blob = query_col->blobArtifactAtMaybe(base::StrID("query_graph"));
 				if (maybe_blob.has_value()) {
 					auto                  view = maybe_blob.value()->getDataView();
 					std::span<const byte> span(view.getBegin(), view.size());
 					auto                  inputs = collectAllPstElementHashesFromGlobalPackages();
 					query::external::setPreviousGraphFromRawBytes(span, std::move(inputs));
+				}
+
+				// Load previous metadata (must be after graph)
+				auto maybe_metadata_blob
+					= query_col->blobArtifactAtMaybe(base::StrID("query_metadata"));
+				if (maybe_metadata_blob.has_value()) {
+					auto                  view = maybe_metadata_blob.value()->getDataView();
+					std::span<const byte> span(view.getBegin(), view.size());
+					query::external::setPreviousMetadataFromRawBytes(span);
 				}
 			}
 		}
