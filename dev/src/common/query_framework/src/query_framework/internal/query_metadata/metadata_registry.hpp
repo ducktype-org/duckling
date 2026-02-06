@@ -1,5 +1,6 @@
 #pragma once
 #include "metadata_storage.hpp"
+
 #include <variant>
 
 namespace query::internal {
