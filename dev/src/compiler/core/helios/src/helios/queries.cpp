@@ -391,33 +391,34 @@ namespace compiler::helios {
 				// Get the initial value for the field from the PST.
 				const auto field_pst_data
 					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
-				auto init_expr_opt = field_pst_data->getInit().map(
-					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
-						return ctx
-					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
-					        .valueOrThrow();
+				auto init_expr_opt         = field_pst_data->getInit();
+				auto init_expr_coerced_opt = init_expr_opt.map(
+					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) -> Box<code::Expr> {
+						auto expr = ctx.query<QueryHoutOfExpr>(
+										   expr_holder.unlock(ctx)->getExpr().unlock(ctx)
+						)
+					                    .valueOrThrow();
+						const auto init_expr_type = expr->expression_type.getSymbolType();
+						const auto field_type     = field.getType(ctx);
+						const auto coercion
+							= canCoerce(ctx, init_expr_type, field_type).valueOrThrow();
+
+						if (coercion.isInvalid()) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								base::strConcat(
+									"Cannot coerce default field value of type ",
+									init_expr_type.toString(),
+									" to the field's expected type ",
+									field_type.toString()
+								),
+								expr_holder.unlock(ctx)->getSourcePosition()
+							));
+							query::throwFailed();
+						}
+
+						return coercion.coerce(ctx, std::move(expr));
 					}
 				);
-				auto init_expr_coerced_opt
-					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) -> Box<code::Expr> {
-						  const auto init_expr_type = expr->expression_type.getSymbolType();
-						  const auto field_type     = field.getType(ctx);
-						  const auto coercion
-							  = canCoerce(ctx, init_expr_type, field_type).valueOrThrow();
-
-						  if (coercion.isInvalid()) {
-							  // @TODO: #1620 report error with position here when HOUT exposes position.
-							  ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-								  "Cannot coerce default field value of type ",
-								  init_expr_type.toString(),
-								  " to the field's expected type ",
-								  field_type.toString()
-							  )));
-							  query::throwFailed();
-						  }
-
-						  return coercion.coerce(ctx, std::move(expr));
-					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
@@ -831,6 +832,10 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
+			);
+			CORE_ASSERT(
+				getSymRef(key)->getPSTDataOpt().has_value(),
+				"Query code of function does not support generated functions"
 			);
 
 			HOUTFunctionMaker func_maker(ctx, key);
