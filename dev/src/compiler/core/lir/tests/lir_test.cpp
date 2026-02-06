@@ -103,8 +103,8 @@ private:
 					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
 				);
 				result.funcs.put(
-					hout_func.declaration->original_name,
-					std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+					hout_func->declaration->original_name,
+					std::make_tuple(hout_func, mir_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
@@ -351,8 +351,8 @@ private:
 
 	void simpleConstant() {
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		auto hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+		const auto& hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 

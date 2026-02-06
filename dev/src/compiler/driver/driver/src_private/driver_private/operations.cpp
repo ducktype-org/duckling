@@ -91,7 +91,7 @@ namespace compiler::driver {
 		QUERY_AUTO_NO_CACHE
 
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
-			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
+			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 
 			auto module_name
