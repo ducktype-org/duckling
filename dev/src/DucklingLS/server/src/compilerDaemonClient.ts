@@ -94,7 +94,6 @@ export class CompilerDaemonClient {
 		
 		this.process = this.startProcess();
 		await this.waitForReady(connection);
-		await this.putWorkspace(connection);
 	}
 
 	// This function is called when the server is closed

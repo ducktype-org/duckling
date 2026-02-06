@@ -126,6 +126,8 @@ connection.onRequest("duckling/restart", async () => {
     connection.window.showInformationMessage("Restarting Duckling Daemon...");
     await compilerDaemonClient.restart(connection);
     connection.window.showInformationMessage("Duckling Daemon Restarted");
+	await compilerDaemonClient.putWorkspace(connection);
+	documents.all().forEach(document => validateDuckling(document, connection, compilerDaemonClient));
 });
 
 connection.onDefinition(
