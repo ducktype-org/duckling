@@ -199,7 +199,6 @@ namespace query::internal {
 		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
 		) const;
 
-
 		/***************************\
 		|    Metadata interface:    |
 		\***************************/
