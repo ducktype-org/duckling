@@ -1,6 +1,8 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 
+#include <frontend/module_tree/module_tree.hpp>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -60,4 +62,13 @@ namespace lsp {
 	 * @param content The content to write to the vfs.
 	 */
 	void putFile(const fs::File& virtual_root, const std::string& path, const std::string& content);
+
+
+	bool isModuleTreeParsedSuccessfully(base::CRef<compiler::frontend::ModuleTree> module);
+	
+	base::CRef<compiler::frontend::ModuleTree> getRootModule(compiler::frontend::ModuleID module_id);
+
+	bool isPackageParsedSuccessfully(compiler::frontend::ModuleID module_id);
+
+
 }

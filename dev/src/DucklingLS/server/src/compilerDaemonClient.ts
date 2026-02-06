@@ -1,5 +1,5 @@
 import { spawn, ChildProcess } from "child_process";
-import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic } from "vscode-languageserver";
+import { Connection, CompletionItem, TextDocumentPositionParams, Diagnostic, InlayHint } from "vscode-languageserver";
 import { Location } from "vscode-languageserver/node";
 import { getWorkspaceFiles, filterDucklingFiles } from './getWorkspaceFiles';
 import { initPromise, initComplete } from './server';
@@ -265,6 +265,33 @@ export class CompilerDaemonClient {
 		} catch (error) {
 			console.error(error);
 			return {};
+		}
+	}
+
+		// This function is called to get the errors from the daemon for a file
+	public async getInlayHints(filePath: string, connection: Connection): Promise<InlayHint[]> {
+		await this.waitForReady(connection);
+
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+
+		try {
+			const response = await fetch(`${DAEMON_ADRESS}/get_inlay_hints/${base64FilePath}`);
+
+			if (!response.ok) {
+				console.log("getErrors response not ok");
+				console.log(`Response status: ${response.status}`);
+				const text = await response.text();
+				console.log(`Response text: ${text}`);
+				
+				throw new Error(`Error: ${response.status} ${response.statusText}`);
+			}
+
+			const jsonResponse = await response.json();
+			
+			return jsonResponse as InlayHint[];
+		} catch (error) {
+			console.error(error);
+			return [];
 		}
 	}
 

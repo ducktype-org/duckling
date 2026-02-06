@@ -9,11 +9,14 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include "frontend/module_tree/functors.hpp"
 
 #define ext_is_ok(ext) \
 	ext == ".dmf" || ext == ".duckling" || ext == ".dl" || ext == ".rift" || ext == ".ds"
 
 namespace lsp {
+	using namespace compiler;
+	
 	std::string jsonList(const std::vector<std::string>& list) {
 		std::string result = "[";
 		for (const std::string& str: list) result += str + ",";
@@ -119,5 +122,41 @@ namespace lsp {
 		auto file = fs::File(virtual_root.getFilePath().join(path));
 		file.writeToFile(content);
 		compiler::frontend::ModuleTreeModifier::fileModified(file);
+	}
+
+	bool isModuleTreeParsedSuccessfully(base::CRef<frontend::ModuleTree> module) {
+		auto main_file
+			= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				module->getMainSourceFile().illegalAccess().getID()
+			);
+
+		if (main_file->getPST()->getLogger()->hasErrors()) return false;
+
+		for (const auto& file_ref: module->getSourceFiles()) {
+			auto file
+				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					file_ref.illegalAccess().getID()
+				);
+			if (file->getPST()->getLogger()->hasErrors()) return false;
+		}
+
+		bool all_submodules_parsed_successfully = true;
+		// Recurse into submodules
+		for (const auto& submodule_id_locked: module->getSubmodules()) {
+			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
+			all_submodules_parsed_successfully &= isModuleTreeParsedSuccessfully(submodule);
+		}
+		return all_submodules_parsed_successfully;
+	}
+
+	base::CRef<frontend::ModuleTree> getRootModule(frontend::ModuleID module_id) {
+		base::CRef<frontend::ModuleTree> module = frontend::getModuleRef(module_id);
+		while (auto parent = module->getParentModule())
+			module = getModuleRef(parent.value().illegalAccess().getID());
+		return module;
+	}
+
+	bool isPackageParsedSuccessfully(frontend::ModuleID module_id) {
+		return isModuleTreeParsedSuccessfully(getRootModule(module_id));
 	}
 }

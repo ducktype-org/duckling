@@ -20,6 +20,7 @@ POP_DIAGNOSTIC;
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 #include "validation.hpp"
+#include "inlay_hints.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -156,6 +157,26 @@ void server(i32 port) {
 			const auto file_vector = compiler::frontend::SourceFile::getSourceFilesfromFile(file);
 
 			return crow::response(200, lsp::getSemanticTokens(file_vector));
+		} catch (const std::exception& e) { return crow::response(400, e.what()); }
+	});
+
+	/**
+	 * @brief 
+	 */
+	CROW_ROUTE(app, "/get_inlay_hints/<string>")
+	([&virtual_root](const std::string& base64_path) {
+		try {
+			const auto relative_path = base64::decode_into<std::string>(base64_path);
+			const auto path          = virtual_root.getFilePath().join(relative_path);
+
+			if (!path.exists()) return crow::response(404, "File not found");
+
+			const auto file        = fs::File(path);
+			auto json_str = lsp::getInlayHintsJson(file);
+			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
+			crow::response res(200, json_str);
+			res.set_header("Content-Type", "application/json");
+			return res;
 		} catch (const std::exception& e) { return crow::response(400, e.what()); }
 	});
 

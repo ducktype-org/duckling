@@ -14,7 +14,9 @@ import {
 	CompletionItem,
 	Location,
 	_,
-	_Connection
+	_Connection,
+	InlayHint,
+	InlayHintKind
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -77,6 +79,7 @@ connection.onInitialize((params: InitializeParams) => {
 			},
 			foldingRangeProvider: true,
 			definitionProvider: true,
+			inlayHintProvider: true
 		}
 	};
 
@@ -197,6 +200,7 @@ connection.onCompletion(
     }
 );
 
+
 // This handler resolves additional information for the item selected in the completion list.
 // connection.onCompletionResolve(onCompletionResolve);
 
@@ -204,6 +208,16 @@ connection.onCompletion(
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
 	return handleFoldingRanges(params, documents);
 });
+
+connection.languages.inlayHint.on(
+	async (params): Promise<InlayHint[]> => {
+		const document = documents.get(params.textDocument.uri);
+		if (!document) return [];
+
+		return await compilerDaemonClient.getInlayHints(document.uri, connection)
+	}
+);
+
 
 // Make the compiler daemon client exit when the connection exits
 connection.onExit(() => {
