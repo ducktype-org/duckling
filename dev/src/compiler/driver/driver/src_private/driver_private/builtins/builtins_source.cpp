@@ -59,8 +59,12 @@ extern "C" {
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
 
+	// Runtime Allocators
+	void* builtin_alloc(uint64_t size);
+	void  builtin_dealloc(void* ptr);
+
 	// List
-	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
+	void builtin_list_push(list* list, int64_t element, uint64_t element_size);
 	// Pops from the list. Returns by pointer.
 	void     builtin_list_pop(list* list, uint64_t element_size);
 	uint64_t builtin_list_len(list* list);
@@ -144,16 +148,26 @@ void builtin_free_string(str s) {
 	}
 }
 
+// This is an intended abstraction over the allocation. In the future, different allocators for
+// different architectures will be supported here. For now we just malloc.
+void* builtin_alloc(uint64_t size) {
+	void* ptr = malloc(size);
+	if (ptr == nullptr) exit(1);
+	return ptr;
+}
+
+void builtin_dealloc(void* ptr) { free(ptr); }
+
 // append(vec: ref list[T], value: T, sizeof(T)) -> ()
-void builtin_list_push(list* list, void* element_ptr, uint64_t element_size) {
+void builtin_list_push(list* list, int64_t element, uint64_t element_size) {
 	if (list->length >= list->memory_end_offset) {
-		uint64_t new_cap        = list->memory_end_offset == 0 ? 4 : list->memory_end_offset * 2;
+		uint64_t new_cap = list->memory_end_offset == 0 ? 4 : list->memory_end_offset * 2;
 		list->data              = realloc(list->data, new_cap * element_size);
 		list->memory_end_offset = new_cap;
 	}
 
 	char* dest = (char*) list->data + (list->length * element_size);
-	memcpy(dest, element_ptr, element_size);
+	memcpy(dest, &element, element_size);
 	list->length++;
 }
 
@@ -168,7 +182,9 @@ void builtin_list_pop(list* list, uint64_t element_size) {
 }
 
 // len(vec: list[T]) -> i64
-uint64_t builtin_list_len(list* list) { return list->length; }
+uint64_t builtin_list_len(list* list) {
+	return list->length;
+}
 
 void builtin_list_free(list* list) {
 	if (list->data) {

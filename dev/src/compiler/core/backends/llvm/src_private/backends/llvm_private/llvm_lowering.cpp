@@ -688,15 +688,19 @@ namespace compiler::backend_llvm {
 			// A GEP constructor invoked when encountering a deref projection of when we went
 			// through all projections. Creates a GEP from all projection indicies up to this point
 			// so `load` can be performed on the address calculated up to this point.
-			auto flush_gep = [&]() {
-				if (access_indices.size() > 1) {
+			auto flush_gep = [&](bool insert_zero = true) {
+				if (access_indices.size() > 0) {
 					// Create a GEP if needed.
 					current_ptr  = builder.CreateGEP(current_type, current_ptr, access_indices);
 					current_type = typeFromLayout(module, current_layout);
 				}
 				access_indices.clear();
-				// Reset the new base, since GEP assumes we work on arrays.
-				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+				if (insert_zero) {
+					// Reset the new base, since GEP assumes we work on arrays.
+					access_indices.push_back(
+						llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0)
+					);
+				}
 			};
 
 
@@ -718,7 +722,6 @@ namespace compiler::backend_llvm {
 					variant_case(lir::LIRPlace::IndexProjection, index) {
 						// First load the index value.
 						llvm::Value* index_value = loadLIRValue(*index.index, builder);
-
 						variant_match(current_layout->getVariant()) {
 							variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								// Then add it as the next argument to the GEP.
@@ -727,7 +730,8 @@ namespace compiler::backend_llvm {
 								current_layout = static_array_layout.getElementLayout();
 							}
 							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								flush_gep();
+								// TODOP: Ehh this is stupid.
+								flush_gep(false);
 								// When access through a dynamic list is generated, we have to
 								// retrieve the pointer to the dynamic array it self, and the
 								// retrieve a data pointer and pass it to the next GEP.
@@ -740,15 +744,18 @@ namespace compiler::backend_llvm {
 								// TODOP: Add an explanation on why StructGEP is this here.
 								llvm::Value* list_data_ptr
 									= builder.CreateStructGEP(current_type, current_ptr, 0);
-
 								// Load the actual data of the list.
 								current_ptr = builder.CreateLoad(builder.getPtrTy(), list_data_ptr);
+
 								current_layout = dynamic_array_layout.getElementLayout();
 								current_type   = typeFromLayout(module, current_layout);
 
+								// current_ptr = builder.CreateGEP(current_type, data_ptr,
+								// index_value, "element_ptr");
+
 								// Now push the actual index from the IndexProjection.
-								// Node that first argument is 0, and was inserted by the flush_gep();
-								access_indices.clear();
+								// Note that first argument is 0, and was inserted by the
+								// flush_gep(); //Get rid off the pointer.
 								access_indices.push_back(index_value);
 							}
 							variant_default { CORE_PANIC("Indexing into non-array layout"); }

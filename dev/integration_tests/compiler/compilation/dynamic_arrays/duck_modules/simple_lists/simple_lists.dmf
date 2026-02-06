@@ -1,15 +1,58 @@
+fun printList(list: ref List[i64]) -> () = {
+    builtin_output_i64(8888888888888888888);
+    var i = 0;
+    while (i < builtin_list_len(list)) {
+        builtin_output_i64(list[i]);
+        i = i + 1;
+    }
+    builtin_output_i64(8888888888888888888);
+}
+
+fun listByRef(list: ref List[i64]) -> () = {
+    printList(list);
+
+    var i = 0;
+    while (i < builtin_list_len(list)) {
+        list[i] = list[i] + 1; 
+        i = i + 1;
+    }
+}
+
+fun elementByRef(element: ref i64) -> () = {
+    element = element + 1;
+}
+
+
 fun main() -> i32 = {
+    # Simple usage.
     var arr: List[i64];
-    
-    builtin_list_push(&arr, 1, 8);
+    builtin_list_push(&arr, 111, 8);
+    builtin_list_push(&arr, 222, 8);
+    builtin_list_push(&arr, 333, 8);
+    builtin_list_push(&arr, 444, 8);
+    builtin_list_push(&arr, 555, 8);
+
+    printList(&arr);
+
     builtin_list_pop(&arr, 8);
-    builtin_list_len(&arr);
-    
-    var arr_ref: ref List[i64] = &arr;
-    var a = arr[0];
+    builtin_list_pop(&arr, 8);
+    builtin_list_pop(&arr, 8);
+    builtin_output_i64(i64(builtin_list_len(&arr)));
+    printList(&arr);
+
+    builtin_list_push(&arr, 999, 8);
+    printList(&arr);
 
     arr[1] = 1;
+    printList(&arr);
 
+    listByRef(&arr);
+    printList(&arr);
+
+    elementByRef(&arr[1]);
+    printList(&arr);
+
+    builtin_list_free(&arr);
 
     return 0;
 }
