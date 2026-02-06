@@ -14,6 +14,7 @@ namespace compiler::linker {
 		 * Paths to external static libraries to link against.
 		 */
 		std::vector<fs::FilePath> external_static_libraries;
+		std::string 			  additional_link_options;
 
 		/**
 		 * @brief Whether to link the C standard library.

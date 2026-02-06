@@ -29,6 +29,8 @@ namespace compiler::linker {
 		for (const auto& link_path: options.external_static_libraries)
 			command.addArg(link_path.native());
 
+		command.addArg(options.additional_link_options);
+
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");

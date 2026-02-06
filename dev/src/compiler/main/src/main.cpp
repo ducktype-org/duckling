@@ -99,8 +99,8 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 ) {
 	compiler::linker::LinkingOptions linking_options;
 
-	if (auto lib_path = parsing_result.getValue<fs::FilePath>("external-static-library"))
-		linking_options.external_static_libraries.push_back(lib_path.value());
+	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
+		linking_options.additional_link_options = lib_path.value();
 
 	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
@@ -325,9 +325,9 @@ clah::Clah getClahForMain() {
 	                     .addLongName("print-graph")
 	                     .addShortDesc("Print the query graph after the compilation.")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("library"))
-	                     .addLongName("external-static-library")
-	                     .addShortDesc("Path to a static library to link against.")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("link-options"))
+	                     .addLongName("additional-link-options")
+	                     .addShortDesc("Additional link options.")
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
