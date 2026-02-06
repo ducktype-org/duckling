@@ -5,7 +5,15 @@
 #include "query_graph.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
+
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
+
+namespace query {
+	// Forward declaration
+	struct Context;
+}
 
 namespace query::internal {
 	/**
@@ -45,13 +53,20 @@ namespace query::internal {
 			QueryGraph                       graph;
 			base::HashMap<NodeID, PrevColor> node_colors;
 
+			/**
+			 * Metadata from previous compilation.
+			 * Metadata for green nodes will be moved into current metadata_storage during merge.
+			 */
+			base::Optional<MetadataStorage> metadata;
+
 			PreviousCompilation() = delete;
 
 			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
 				  graph(std::move(g)),
-				  node_colors(std::move(colors)) {}
+				  node_colors(std::move(colors)),
+				  metadata() {}
 
-			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
+			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors(), metadata() {}
 		};
 
 	public:
@@ -131,6 +146,12 @@ namespace query::internal {
 		void setPreviousGraph(QueryGraph&& graph);
 
 		/**
+		 * @brief Sets the previous compilation metadata storage.
+		 * Must be called after setPreviousGraph.
+		 */
+		void setPreviousMetadata(MetadataStorage&& metadata);
+
+		/**
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
 		 * registering dummy queries for unregistered and unstable IDs and reusing stable ones.
 		 * @note This is for internal use in QueryFramework only. It is used to map nodes when
@@ -178,7 +199,86 @@ namespace query::internal {
 		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
 		) const;
 
+		/***************************\
+		|    Metadata interface:    |
+		\***************************/
+
+		/**
+		 * @brief Get all metadata of a specific type for a node.
+		 *
+		 * @tparam MetadataT The metadata type to retrieve (must derive from BaseMetadata)
+		 * @param node_id The NodeID to get metadata for
+		 * @return std::vector<CRef<MetadataT>> References to all metadata of the given type.
+		 *         Returns empty vector if no metadata of this type exists.
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		std::vector<CRef<MetadataT>> getMetadata(NodeID node_id) const {
+			return metadata_storage.getMetadata<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Check if a node has any metadata of a specific type.
+		 * @note This function is used for tests
+		 *
+		 * @tparam MetadataT The metadata type to check for
+		 * @param node_id The NodeID to check
+		 * @return true if the node has at least one metadata of this type
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		bool hasMetadata(NodeID node_id) const {
+			return metadata_storage.hasMetadata<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Get count of metadata of a specific type for a node.
+		 *
+		 * @tparam MetadataT The metadata type to count
+		 * @param node_id The NodeID to check
+		 * @return usize Number of metadata instances of this type
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		usize getMetadataCount(NodeID node_id) const {
+			return metadata_storage.getMetadataCount<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Get the metadata storage for direct access.
+		 * @note Prefer using the typed getMetadata<T>() method.
+		 * @return const reference to the metadata storage.
+		 */
+		[[nodiscard]]
+		const MetadataStorage& getMetadataStorage() const {
+			return metadata_storage;
+		}
+
 	private:
+		friend struct ::query::Context;
+
+		/**
+		 * @brief Add metadata to a node. Only accessible via Context.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param node_id The NodeID to attach metadata to
+		 * @param args Arguments forwarded to MetadataT constructor
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata>
+		void addMetadataInternal(NodeID node_id, Args&&... args) {
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				node_id.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(node_id.q_id.getData().name)
+			);
+
+			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
+		}
+
 		/***************************\
 		| All of the actual state:  |
 		\***************************/
@@ -205,5 +305,10 @@ namespace query::internal {
 		 * The previous compilation data if any.
 		 */
 		base::Optional<PreviousCompilation> previous;
+
+		/**
+		 * @brief Storage for metadata attached to query nodes.
+		 */
+		MetadataStorage metadata_storage;
 	};
 }
