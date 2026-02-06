@@ -17,7 +17,7 @@ namespace compiler::helios::code {
 			variant_case(std::vector<pst::AccessLocked<pst::LangElement>>, elems) {
 				dia::SourcePosition first_position
 					= elems[0].unlock(ctx)->getSourcePosition();
-				for (int i{ 1 }; i < elems.size(); ++i) {
+				for (usize i{ 1 }; i < elems.size(); ++i) {
 					auto pos       = elems[i].unlock(ctx)->getSourcePosition();
 					first_position = dia::SourcePosition::merge(first_position, pos);
 				}
@@ -39,4 +39,24 @@ namespace compiler::helios::code {
 
 	ElementOrigin generatedOrigin() { return { GeneratedElement{} }; }
 
+	ElementOrigin ElementOrigin::appendToOrigin(
+		ElementOrigin origin, pst::AccessLocked<pst::LangElement> pst_element
+	) {
+		variant_match(origin.value) {
+			variant_case_novalue(GeneratedElement) {
+				CORE_PANIC(
+					"Cannot append PST origin to generated origin."
+				);
+			}
+			variant_case(pst::AccessLocked<pst::LangElement>, elem) {
+				return multiplePstOrigin({ elem, pst_element });
+			}
+			variant_case(std::vector<pst::AccessLocked<pst::LangElement>>, elems) {
+				std::vector<pst::AccessLocked<pst::LangElement>> new_elems = elems;
+				new_elems.push_back(pst_element);
+				return multiplePstOrigin(new_elems);
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 }

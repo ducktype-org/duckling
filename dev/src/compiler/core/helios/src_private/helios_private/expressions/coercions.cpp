@@ -29,7 +29,7 @@ namespace compiler::helios {
 		// type (`U`), we must first dereference the source expression.
 		if (source_symbol_type.getRefKind() != tsh::ReferenceKind::Direct
 		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
-			current_expr       = makeBox<code::DerefExpr>(ctx, std::move(current_expr));
+			current_expr       = makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
 			// If underlying types differ, proceed with the standard coercion.
 		}
@@ -37,7 +37,7 @@ namespace compiler::helios {
 		// If `from` is direct and `to` is a box, create a BoxOfExpression.
 		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && to.getRefKind() == tsh::ReferenceKind::Box) {
-			current_expr       = makeBox<code::BoxOfExpr>(ctx, std::move(current_expr));
+			current_expr       = makeBox<code::BoxOfExpr>(ctx, code::generatedOrigin(), std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
 			// If underlying types differ, proceed with the standard coercion.
 		}
@@ -57,7 +57,7 @@ namespace compiler::helios {
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion
-			return makeBox<code::CastExpr>(ctx, std::move(current_expr), to);
+			return makeBox<code::CastExpr>(ctx, code::generatedOrigin(), std::move(current_expr), to);
 		} else if (is_source_numeric and is_target_bool) {
 			// Numeric zero-check to bool
 			auto comparison = makeBox<code::BinaryOperatorExpr>(
@@ -79,7 +79,7 @@ namespace compiler::helios {
 		            or source_type.getKind() == tsh::Kind::Tuple)
 		           and to.getType().getKind() == tsh::Kind::Meta) {
 			// Lift value to type
-			return makeBox<code::LiftToTypeExpr>(ctx, std::move(current_expr));
+			return makeBox<code::LiftToTypeExpr>(ctx, code::generatedOrigin(), std::move(current_expr));
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}

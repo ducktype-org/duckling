@@ -136,7 +136,9 @@ namespace compiler::helios::code {
 				const auto unescape_result = base::unescapeString(escaped_string);
 				variant_match(unescape_result) {
 					variant_case(base::UnescapedString, result) {
-						node = makeBox<LiteralStringExpr>(ctx, pstOrigin(stmt), base::StrID(result.value));
+						node = makeBox<LiteralStringExpr>(
+							ctx, pstOrigin(stmt), base::StrID(result.value)
+						);
 					}
 					variant_case(base::UnknownEscapeSequence, error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
@@ -164,7 +166,11 @@ namespace compiler::helios::code {
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
 
 						return makeBox<BinaryOperatorExpr>(
-							ctx, pstOrigin(expr), operation, std::move(coerced_lhs), std::move(coerced_rhs)
+							ctx,
+							pstOrigin(expr),
+							operation,
+							std::move(coerced_lhs),
+							std::move(coerced_rhs)
 						);
 					}
 					opt_none { return {}; }
@@ -258,7 +264,8 @@ namespace compiler::helios::code {
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
 				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, pstOrigin(stmt), std::move(*vis.node));
+				if (vis.node)
+					node = makeBox<ParenthesisExpr>(ctx, pstOrigin(stmt), std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
@@ -269,7 +276,8 @@ namespace compiler::helios::code {
 					stmt->getName().position, ctx, stmt->getName().value
 				);
 
-				node = makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
+				node
+					= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), sym_list.valueOrThrow().back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
@@ -404,15 +412,15 @@ namespace compiler::helios::code {
 						return;
 					}
 					expressions.emplace_back(std::move(res).valueOrThrow());
-				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
-			}
-				node = makeBox<TupleExpr>(ctx, std::move(expressions), pstOrigin(stmt));
+				} // @TODO: check this
+				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt),  std::move(expressions) );
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				throw base::NotYetImplemented(
-					"Suffix operators are not yet implemented in HOUT, since there are any for now"
+					"Suffix operators are not yet implemented in HOUT, since there are any for "
+					"now"
 				);
 			}
 
@@ -434,8 +442,8 @@ namespace compiler::helios::code {
 				if (stmt->getOperator()
 				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
+					// This should change to take value category into consideration as well as
+					// the `unique`/`leaking` specifiers.
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
@@ -467,7 +475,11 @@ namespace compiler::helios::code {
 				auto if_false  = std::move(if_false_res).valueOrThrow();
 
 				node = makeBox<TernaryOperatorExpr>(
-					ctx, pstOrigin(stmt), std::move(condition), std::move(if_true), std::move(if_false)
+					ctx,
+					pstOrigin(stmt),
+					std::move(condition),
+					std::move(if_true),
+					std::move(if_false)
 				);
 			}
 
@@ -533,9 +545,8 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult fromPST(
-			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
-		) {
+		ExprConstructionResult
+			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
 			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
