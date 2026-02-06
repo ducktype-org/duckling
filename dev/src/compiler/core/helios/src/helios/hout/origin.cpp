@@ -56,4 +56,15 @@ namespace compiler::helios::code {
 		}
 		CORE_UNREACHABLE();
 	}
+
+	std::vector<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPstElements() const {
+		variant_match(value) {
+			variant_case_novalue(GeneratedElement) {
+				return std::vector<pst::AccessLocked<pst::LangElement>>{};
+			}
+			variant_case(pst::AccessLocked<pst::LangElement>, elem) { return std::vector{ elem }; }
+			variant_case(std::vector<pst::AccessLocked<pst::LangElement>>, elems) { return elems; }
+		}
+		CORE_UNREACHABLE();
+	}
 }

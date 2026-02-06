@@ -53,13 +53,14 @@ namespace compiler::helios::houtgen {
 					 .generated_symbol_data
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::VariableStmt(std::nullopt, result_symbol_type, result_symbol)
-			));
+			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
+				code::generatedOrigin(), std::nullopt, result_symbol_type, result_symbol
+			)));
 
 			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {
 				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
 					makeBox<code::AccessExpr>(
 						ctx,
 						code::generatedOrigin(),
@@ -73,16 +74,18 @@ namespace compiler::helios::houtgen {
 			}
 
 			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
 				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
 			));
 
 			// Finally, create the HOUTFunction object.
-			return HOUTFunction{
+			return HOUTFunction(
+				code::generatedOrigin(),
 				&ctor_decl,
 				std::make_shared<const code::CodeBlock>(code::CodeBlock{
 					.statements = std::move(body),
-				}),
-			};
+				})
+			);
 		}
 
 		QUERY_AUTO_CACHE_CREF

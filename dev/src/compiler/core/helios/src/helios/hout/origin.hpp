@@ -36,6 +36,12 @@ namespace compiler::helios::code {
 		static ElementOrigin appendToOrigin(
 			ElementOrigin origin, pst::AccessLocked<pst::LangElement> pst_element
 		);
+
+		/**
+		 * @brief Get the PST elements that this origin is based on.
+		 * In case of a GeneratedElement origin, it returns an empty vector.
+		 */
+		[[nodiscard]] std::vector<pst::AccessLocked<pst::LangElement>> getPstElements() const;
 	};
 
 	ElementOrigin generatedOrigin();

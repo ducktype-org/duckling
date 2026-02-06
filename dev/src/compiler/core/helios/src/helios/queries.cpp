@@ -58,9 +58,9 @@ namespace compiler::helios {
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
-						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
+						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
 						// we "catch" failure here to continue gathering other functions:
@@ -147,9 +147,9 @@ namespace compiler::helios {
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
 				if (kind(sym) == SymbolKind::Const)
-					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 				if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
+					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.emplace_back(&ctx.query<QueryCodeOfFun>(sym)->valueOrThrow());
@@ -564,7 +564,9 @@ namespace compiler::helios {
 					)
 				          .valueOrThrow();
 
-				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
+				block.statements.emplace_back(makeBox<code::ReturnStmt>(
+					helios::code::generatedOrigin(), std::move(expr_coerced)
+				));
 				return block;
 			} else {
 				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
@@ -614,9 +616,9 @@ namespace compiler::helios {
 											ctx, val.value().unlock(ctx)->getExpr(), return_type
 					)
 					                        .valueOrThrow();
-					output(code::ReturnStmt(std::move(expr_coerced)));
+					output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
 				} else {
-					output(code::VoidReturnStmt());
+					output(code::VoidReturnStmt(code::generatedOrigin()));
 				}
 			}
 
@@ -676,7 +678,9 @@ namespace compiler::helios {
 				}
 
 				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_expr_coerced)
+					code::pstOrigin(assignment),
+					std::move(location_expr),
+					std::move(new_value_expr_coerced)
 				));
 			}
 
@@ -694,7 +698,7 @@ namespace compiler::helios {
 				// else just create an expression statement:
 
 				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr }).valueOrThrow();
-				output(code::ExprStmt(std::move(expr)));
+				output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
@@ -715,12 +719,17 @@ namespace compiler::helios {
 				match_optional(stmt->getElseBody()) {
 					opt_some(else_body) {
 						output(code::IfStmt(
+							code::pstOrigin(stmt),
 							std::move(condition),
 							std::move(then_body),
 							queryCodeOfCodeBlock(ctx, else_body, return_type)
 						));
 					}
-					opt_none { output(code::IfStmt(std::move(condition), std::move(then_body))); }
+					opt_none {
+						output(code::IfStmt(
+							code::pstOrigin(stmt), std::move(condition), std::move(then_body)
+						));
+					}
 				}
 			}
 
@@ -737,7 +746,8 @@ namespace compiler::helios {
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody(), return_type);
 
-				output(code::WhileStmt(std::move(condition), std::move(body)));
+				output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body))
+				);
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -766,8 +776,9 @@ namespace compiler::helios {
 					          .valueOrThrow();
 
 
-					output(code::VariableStmt(std::move(initial_value_coerced), symbol_type, symbol)
-					);
+					output(code::VariableStmt(
+						code::pstOrigin(stmt), std::move(initial_value_coerced), symbol_type, symbol
+					));
 				}
 			}
 
@@ -813,7 +824,7 @@ namespace compiler::helios {
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-				this->out.emplace(HOUTFunction{ &decl, output_body });
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 		};
 

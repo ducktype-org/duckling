@@ -1,0 +1,21 @@
+namespace NS1 {
+    namespace NS2 {
+        const A: i64 = 7;
+    }
+}
+
+var var1: i64 = (NS1).NS2.A;
+var var2: i64 = ((NS1).NS2).A;
+var var3: u32 = u32(((NS1).NS2).A);
+var var4: i64 = ((NS1).NS2).A + 2;
+
+fun a() -> i64 = {
+    return (NS1).NS2.A;
+}
+
+fun b() = (NS1).NS2.A;
+
+
+class C {
+    x: i64;
+}

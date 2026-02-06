@@ -1,3 +1,5 @@
+#include "frontend/pst_parser/elements/hierarchy/declarations/function.hpp"
+#include "frontend/pst_parser/elements/hierarchy/declarations/variable.hpp"
 #include "helios/hout/origin.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
@@ -38,6 +40,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
+#include "diagnostic/source_position.hpp"
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
@@ -91,6 +94,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testHoutElementsOrigin);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -2401,6 +2405,111 @@ private:
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
+	}
+
+	void testHoutElementsOrigin() {
+		auto [module, _] = getModule(fs::File(path("test_modules/helios_pst_origin_tests")));
+
+		auto& hout = query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+
+		auto get_global_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
+			for (const auto& glob: hout.glob_data)
+				if (glob.original_name == name) return &glob;
+			return {};
+		};
+
+		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
+		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
+		auto all_variables
+			= pst::viewAllSubTreeElementsFillter<pst::Variable>(pst->getRootElement());
+
+		auto get_pst_variable_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
+			for (const auto& var: all_variables)
+				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+			return {};
+		};
+
+		auto check_same_origin = [&](base::StrID name) {
+			auto glob_opt = get_global_by_name(name);
+			auto var_opt  = get_pst_variable_by_name(name);
+			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
+			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			auto glob = glob_opt.value();
+			assertTrue(
+				glob->origin.getPstElements().size() == 1,
+				base::strConcat("Global ", name.strView(), " has no PST origin elements")
+			);
+			auto glob_pst_origin = glob->origin.getPstElements().back().illegalAccess().value();
+			auto var_pst         = var_opt.value();
+			assertEqual(
+				glob_pst_origin->getHash(),
+				var_pst->getHash(),
+				base::strConcat("The variable origin is not the PST of the variable", name.strView())
+			);
+
+			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
+			auto initial_value_expr
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+
+			dia::SourcePosition expr_pos_from_origin = dia::SourcePosition::fakePosition();
+			query::utils::withContextDo([&](query::Context& ctx) {
+				expr_pos_from_origin = initial_value_expr->origin.getSourcePosition(ctx).value();
+			});
+			assertEqual(
+				expr_pos_from_origin,
+				initial_value_pst->getSourcePosition(),
+				base::strConcat(
+					"The initial value expression PST node does not match for variable ",
+					name.strView()
+				)
+			);
+		};
+		check_same_origin(base::StrID("var1"));
+		check_same_origin(base::StrID("var2"));
+		check_same_origin(base::StrID("var3"));
+		check_same_origin(base::StrID("var4"));
+
+		auto get_hout_function_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name == name) return fun;
+			return {};
+		};
+		auto all_pst_functions
+			= pst::viewAllSubTreeElementsFillter<pst::Fun>(pst->getRootElement());
+		auto get_pst_function_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
+			for (const auto& fun: all_pst_functions)
+				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+			return {};
+		};
+		auto check_function_origin = [&](base::StrID name) {
+			auto fun_opt     = get_hout_function_by_name(name);
+			auto pst_fun_opt = get_pst_function_by_name(name);
+			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
+			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			auto fun = fun_opt.value();
+
+			assertTrue(
+				fun->origin.getPstElements().size() == 1,
+				base::strConcat("Function ", name.strView(), " has no PST origin elements")
+			);
+
+			auto fun_pst_origin = fun->origin.getPstElements().back().illegalAccess().value();
+			auto pst_fun        = pst_fun_opt.value();
+			assertEqual(
+				fun_pst_origin->getHash(),
+				pst_fun->getHash(),
+				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+		};
+
+		check_function_origin(base::StrID("a"));
+		check_function_origin(base::StrID("b"));
+
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testScopeParentsAndDepth() {
