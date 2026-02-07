@@ -41,6 +41,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(DefaultValueExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
+	EXPR_VISITOR(ListPushExpr)
+	EXPR_VISITOR(ListPopExpr)
 
 	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx):
 		  Expr(tsh::ExpressionType<>(
@@ -832,5 +834,65 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiftToTypeExpr::clone() const {
 		return makeBox<LiftToTypeExpr>(expression_type, value_expr->clone());
+	}
+
+	ListPushExpr::ListPushExpr(query::Context& ctx, Box<Expr> list, Box<Expr> element):
+		  Expr(tsh::ExpressionType(
+			  tsh::SymbolType<>(
+				  ctx.query<tsh::QueryUnitType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable
+			  ),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	ListPushExpr::ListPushExpr(
+		tsh::ExpressionType<> expression_type, Box<Expr> list, Box<Expr> element
+	):
+		  Expr(expression_type),
+		  list(std::move(list)),
+		  element(std::move(element)) {}
+
+	void ListPushExpr::debugPrint(std::ostream& out) const {
+		out << "list_push(";
+		list->debugPrint(out);
+		out << ", ";
+		element->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPushExpr::clone() const {
+		return makeBox<ListPushExpr>(expression_type, list->clone(), element->clone());
+	}
+
+	ListPopExpr::ListPopExpr(query::Context& ctx, Box<Expr> list, Box<Expr> count):
+		  Expr(tsh::ExpressionType(
+			  tsh::SymbolType<>(
+				  ctx.query<tsh::QueryUnitType>({}),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable
+			  ),
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	ListPopExpr::ListPopExpr(tsh::ExpressionType<> expression_type, Box<Expr> list, Box<Expr> count):
+		  Expr(expression_type),
+		  list(std::move(list)),
+		  count(std::move(count)) {}
+
+	void ListPopExpr::debugPrint(std::ostream& out) const {
+		out << "list_pop(";
+		list->debugPrint(out);
+		out << ", ";
+		count->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> ListPopExpr::clone() const {
+		return makeBox<ListPopExpr>(expression_type, list->clone(), count->clone());
 	}
 }

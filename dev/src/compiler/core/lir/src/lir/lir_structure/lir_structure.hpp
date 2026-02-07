@@ -31,6 +31,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	AllocBox,
 	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
 	FreeBox,
+	ListPush,
+	ListPop,
 
 	/**
 		@brief Placeholder.
@@ -93,6 +95,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	Cast,
 	ZeroInitialize,
+
 
 	Call,
 
@@ -425,10 +428,18 @@ namespace compiler::lir {
 		CRef<tsl::TypeLayout> target_layout;
 	};
 
+	struct ListOperationParameters final {
+		/**
+		 * @brief The source type layout of the cast operation.
+		 */
+		CRef<tsl::TypeLayout> element_layout;
+	};
+
 	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	/**
 	 * @brief Single instruction of LIR code.

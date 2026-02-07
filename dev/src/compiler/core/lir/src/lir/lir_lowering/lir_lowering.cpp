@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "typesystem/higher/types.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/hout.hpp>
@@ -90,6 +91,10 @@ namespace compiler::lir {
 			return Operation::AddressOf;
 		case mir::Operation::AllocBox:
 			return Operation::AllocBox;
+		case mir::Operation::ListPush:
+			return Operation::ListPush;
+		case mir::Operation::ListPop:
+			return Operation::ListPop;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -512,6 +517,26 @@ namespace compiler::lir {
 							Operation::ZeroInitialize, output, std::vector<LIRValue>{}
 						);
 					}
+					return curr_block;
+				}
+				case mir::Operation::ListPush:
+				case mir::Operation::ListPop: {
+					auto output = getOutput(mir_instruction.output);
+					auto args   = getLocations(mir_instruction.arguments);
+
+					const auto& list_place = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+
+					auto dynamic_array_type
+						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
+					auto element_layout
+						= ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType());
+
+					curr_block->instructions.emplace_back(
+						Operation::ListPush,
+						output,
+						std::move(args),
+						ListOperationParameters{ .element_layout = element_layout }
+					);
 					return curr_block;
 				}
 				case mir::Operation::AddressOf:

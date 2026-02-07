@@ -658,4 +658,38 @@ namespace compiler::helios::code {
 
 		LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr);
 	};
+
+	struct ListPushExpr final: public Expr {
+		Box<Expr> list;
+		Box<Expr> element;
+
+		ListPushExpr(query::Context& ctx, Box<Expr> list, Box<Expr> element);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ListPushExpr(tsh::ExpressionType<> expression_type, Box<Expr> list, Box<Expr> element);
+	};
+
+	struct ListPopExpr final: public Expr {
+		Box<Expr> list;
+		Box<Expr> count;
+
+		ListPopExpr(query::Context& ctx, Box<Expr> list, Box<Expr> count);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ListPopExpr(tsh::ExpressionType<> expression_type, Box<Expr> list, Box<Expr> count);
+	};
 }

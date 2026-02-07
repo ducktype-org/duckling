@@ -477,6 +477,37 @@ namespace compiler::mir {
 			valueOutput(result.begin, result.getResult(function));
 		}
 
+		void visitListPushExpr(const hc::ListPushExpr& expr) override {
+			auto hole         = continuation->addHole();
+			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
+			auto elem_val     = lowered_elem.getResult(function);
+			auto lowered_list = lowerSubExpr(*expr.list, continuation);
+			auto list_val     = lowered_list.getResult(function);
+
+			noValueOutput(
+				lowered_list.begin,
+				hole,
+				Instruction(Operation::ListPush, {}, { list_val, elem_val }, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		// TODOP: Maybe remove that completely.
+		void visitListPopExpr(const hc::ListPopExpr& expr) override {
+			auto hole          = continuation->addHole();
+			auto lowered_count = lowerSubExpr(*expr.count, continuation);
+			auto count_val     = lowered_count.getResult(function);
+			auto lowered_list  = lowerSubExpr(*expr.list, continuation);
+			auto list_val      = lowered_list.getResult(function);
+
+			noValueOutput(
+				lowered_list.begin,
+				hole,
+				Instruction(Operation::ListPop, {}, { list_val, count_val }, {}, expr_scope),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
 
 	private:
 		/**

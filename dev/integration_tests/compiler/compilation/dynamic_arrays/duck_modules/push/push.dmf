@@ -1,0 +1,22 @@
+fun printList(list: ref List[i64]) -> () = {
+    builtin_output_i64(8888888888888888888);
+    var i = 0;
+    while (i < builtin_list_len(list)) {
+        builtin_output_i64(list[i]);
+        i = i + 1;
+    }
+    builtin_output_i64(8888888888888888888);
+}
+
+fun main() -> i32 = {
+    # Simple usage.
+    var arr: List[i64];
+
+    arr += 111;
+    arr += 222;
+    arr += 333;
+
+    printList(&arr);
+
+    return 0;
+}

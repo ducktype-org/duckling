@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "helios/hout/elements/expr.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -627,6 +629,14 @@ namespace compiler::helios {
 				// This is fine, because we assume that this has been checked beforehand by HOUT.
 				result
 					= CompileTimeValue(liftCTVToTypeRecursively(ctx, ctv_to_lift.valueOrThrow()));
+			}
+
+			void visitListPushExpr(const code::ListPushExpr&) final {
+				throw base::NotYetImplemented("List Push expr in comp time");
+			}
+
+			void visitListPopExpr(const code::ListPopExpr&) final {
+				throw base::NotYetImplemented("List Pop expr in comp time");
 			}
 		};
 

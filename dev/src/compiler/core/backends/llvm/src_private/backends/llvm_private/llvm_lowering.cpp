@@ -1099,7 +1099,91 @@ namespace compiler::backend_llvm {
 				builder.CreateCall(free_func, { ptr_to_free });
 				break;
 			}
-			/// Integer arithmetic ///I
+			case ListPush: {
+				variant_match(lir_instruction.extra_params) {
+					variant_case(lir::ListOperationParameters, list_params) {
+						// TODOP: This is stupid, would be nice if there was a ref inserted for this
+						// operation. Get the list pointer.
+						const auto&  list_arg = lir_instruction.arguments.at(0);
+						llvm::Value* list_ptr = nullptr;
+						if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
+							list_ptr = gepPointerFromLIRPlace(*place, builder);
+						else
+							list_ptr = loadLIRValue(list_arg, builder);
+
+						// Get the element pointer
+						const auto&  elem_arg      = lir_instruction.arguments.at(1);
+						llvm::Value* elem_data_ptr = nullptr;
+
+						if (const auto* place = std::get_if<lir::LIRPlace>(&elem_arg.getVariant())) {
+							elem_data_ptr = gepPointerFromLIRPlace(*place, builder);
+						} else {
+							llvm::Value* elem_val = loadLIRValue(elem_arg, builder);
+							elem_data_ptr         = builder.CreateAlloca(
+                                elem_val->getType(), nullptr, "list_push_tmp"
+                            );
+							builder.CreateStore(elem_val, elem_data_ptr);
+						}
+
+						// Get the element layout
+						u64 size_bytes = static_cast<u64>(list_params.element_layout->getSize());
+						llvm::Value* size_val = builder.getInt64(size_bytes);
+
+						// Actually call the builtin.
+						llvm::FunctionCallee push_func = module->getOrInsertFunction(
+							"builtin_list_push",
+							llvm::FunctionType::get(
+								builder.getVoidTy(),
+								{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() },
+								false
+							)
+						);
+
+						builder.CreateCall(push_func, { list_ptr, elem_data_ptr, size_val });
+						break;
+					}
+					variant_default { CORE_UNREACHABLE(); }
+				}
+				break;
+			}
+			case ListPop: {
+				variant_match(lir_instruction.extra_params) {
+					variant_case(lir::ListOperationParameters, list_params) {
+						// TODOP: This is stupid, would be nice if there was a ref inserted for this
+						// operation. Get the list pointer.
+						const auto&  list_arg = lir_instruction.arguments.at(0);
+						llvm::Value* list_ptr = nullptr;
+						if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
+							list_ptr = gepPointerFromLIRPlace(*place, builder);
+						else
+							list_ptr = loadLIRValue(list_arg, builder);
+
+						// Get the element pointer
+						const auto&  count_arg = lir_instruction.arguments.at(1);
+						llvm::Value* count_val = loadLIRValue(count_arg, builder);
+
+						// Get the element layout
+						u64 size_bytes = static_cast<u64>(list_params.element_layout->getSize());
+						llvm::Value* size_val = builder.getInt64(size_bytes);
+
+						// Actually call the builtin.
+						llvm::FunctionCallee push_func = module->getOrInsertFunction(
+							"builtin_list_push",
+							llvm::FunctionType::get(
+								builder.getVoidTy(),
+								{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() },
+								false
+							)
+						);
+
+						builder.CreateCall(push_func, { list_ptr, count_val, size_val });
+						break;
+					}
+					variant_default { CORE_UNREACHABLE(); }
+				}
+				break;
+			}
+			/// Integer arithmetic ///
 			case IntegerAdd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:

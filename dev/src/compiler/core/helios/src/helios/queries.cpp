@@ -625,14 +625,13 @@ namespace compiler::helios {
 			void visitUsing(pst::Access<pst::Using>) override {}
 
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
+				auto op = assignment->getAssignmentType();
 				CORE_ASSERT(
-					assignment->getAssignmentType() == base::StrID("="),
-					"Unsupported assignment type"
+					op == base::StrID("=") || op == base::StrID("+="), "Unsupported assignment type"
 				);
 
-				auto var = assignment->getVariables();
-				auto val = assignment->getValue();
-
+				auto var           = assignment->getVariables();
+				auto val           = assignment->getValue();
 				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).valueOrThrow();
 
 				// If left side of the assignment is a ref/box, we have to dereference it and store
@@ -640,15 +639,6 @@ namespace compiler::helios {
 				auto location_type = location_expr->expression_type.getSymbolType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 					location_expr = makeBox<code::DerefExpr>(ctx, std::move(location_expr));
-
-				// The new `SymbolType` of `location_expr` is the location symbol without the
-				// ref/box specifier (as it was removed in the DerefExpr constructor). We now coerce
-				// the value expr to the type without the ref/box specifier.
-				auto new_value_expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx, val, location_expr->expression_type.getSymbolType()
-					)
-				          .valueOrThrow();
 
 				auto location_value_category
 					= location_expr->expression_type.getValueCategory().getCategory();
@@ -673,9 +663,53 @@ namespace compiler::helios {
 					return;
 				}
 
-				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_expr_coerced)
-				));
+				if (op == base::StrID("=")) {
+					// The new `SymbolType` of `location_expr` is the location symbol without the
+					// ref/box specifier (as it was removed in the DerefExpr constructor). We now
+					// coerce the value expr to the type without the ref/box specifier.
+					auto new_value_expr_coerced
+						= getHoutOfExprWithExpectedType(
+							  ctx, val, location_expr->expression_type.getSymbolType()
+						)
+					          .valueOrThrow();
+
+					output(code::AssignmentStmt(
+						std::move(location_expr), std::move(new_value_expr_coerced)
+					));
+					return;
+				} else if (op == base::StrID("+=")) {
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto dyn_array
+							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
+						auto element_type = dyn_array.getElementType();
+						auto value_expr_coerced
+							= getHoutOfExprWithExpectedType(ctx, val, element_type).valueOrThrow();
+
+						output(code::ExprStmt(makeBox<code::ListPushExpr>(
+							ctx, std::move(location_expr), std::move(value_expr_coerced)
+						)));
+						return;
+					}
+				} else if (op == base::StrID("-=")) {
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto u64_type = tsh::SymbolType<>{
+							ctx.query<tsh::QueryIntegralType>(
+								{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+							),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						};
+
+						auto value_expr_coerced
+							= getHoutOfExprWithExpectedType(ctx, val, u64_type).valueOrThrow();
+
+						output(code::ExprStmt(makeBox<code::ListPopExpr>(
+							ctx, std::move(location_expr), std::move(value_expr_coerced)
+						)));
+						return;
+					}
+				}
+				CORE_UNREACHABLE();
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {

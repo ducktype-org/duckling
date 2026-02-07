@@ -35,6 +35,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** Simple byte by byte assignment */
 	Assign,
 	AddressOf,
+	ListPush,
+	ListPop,
 
 	/** 
 		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
