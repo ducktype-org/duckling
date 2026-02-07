@@ -99,7 +99,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Cast,
 	ZeroInitialize,
 
-
 	Call,
 
 	ReturnVoid,

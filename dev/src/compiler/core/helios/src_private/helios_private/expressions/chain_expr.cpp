@@ -766,7 +766,6 @@ namespace compiler::helios::code {
 				return query::Failed();
 			}
 
-
 			auto arg_pst
 				= (*args->begin()).unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr();
 
