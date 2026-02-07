@@ -62,6 +62,10 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value };
 			}
 
+			void visitLiteralCharExpr(const code::LiteralCharExpr& expr) final {
+				result = CompileTimeValue{ expr.value };
+			}
+
 			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
 				result = CompileTimeValue{ expr.value };
 			}

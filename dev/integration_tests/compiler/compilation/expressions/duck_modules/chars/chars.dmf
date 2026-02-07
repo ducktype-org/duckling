@@ -1,3 +1,62 @@
+// Basic character arithmetic tests
+
+fun test_char_comparisons() {
+    const a: char = 'a';
+    const b: char = 'b';
+
+    const lt: bool = a < b;
+    const le: bool = a <= b;
+    const gt: bool = a > b;
+    const ge: bool = a >= b;
+    const eq: bool = a == a;
+    const neq: bool = a != b;
+
+    if (not lt or not le or gt or ge or eq or not neq) {
+        builtin_output_str("bad");
+    }
+}
+
+fun test_char_difference() {
+    const a: char = 'a';
+    const d: char = 'd';
+
+    const diff: u8 = d - a;  // Should be 3
+    if (diff != 3) {
+        builtin_output_str("bad");
+    }
+}
+
+fun test_char_int_addition() {
+    const a: char = 'a';
+
+    // Character + integer should return char
+    const d1: char = a + 3;        // Should be 'd'
+    const d2: char = 3 + a;        // Should be 'd' (commutative)
+
+    if (d1 != 'd' or d2 != 'd') {
+        builtin_output_str("bad");
+    }
+
+    // Test with different integer types
+    const b1: char = a + 1i8;
+    const b2: char = a + 1u8;
+    const b3: char = a + 1i16;
+    const b4: char = a + 1u16;
+    const b5: char = a + 1i32;
+    const b6: char = a + 1u32;
+    const b7: char = a + 1i64;
+    const b8: char = a + 1u64;
+    const b9: char = a + 1i128;
+    const b10: char = a + 1u128;
+
+    if (b1 != 'b' or b2 != 'b' or b3 != 'b' or b4 != 'b' or
+        b5 != 'b' or b6 != 'b' or b7 != 'b' or b8 != 'b') {
+        builtin_output_str("bad");
+    }
+}
+
+// Something more fun.
+
 fun process_character() -> () = {
     builtin_output_str("Enter a character: ");
     var c = builtin_input_char();
@@ -18,6 +77,12 @@ fun process_character() -> () = {
 }
 
 fun main() -> i64 = {
+    // Start with the basic tests
+    test_char_comparisons();
+    test_char_difference();
+    test_char_int_addition();
+
+    // Now do something interesting.
     var reps = 3;
     while (reps > 0) {
         process_character();
