@@ -66,7 +66,7 @@ extern "C" {
 	// List
 	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
 	// Pops from the list. Returns by pointer.
-	void     builtin_list_pop(list* list, uint64_t element_size);
+	void     builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
 	uint64_t builtin_list_len(list* list);
 	void     builtin_list_free(list* list);
 }
@@ -172,13 +172,12 @@ void builtin_list_push(list* list, void* element_ptr, uint64_t element_size) {
 }
 
 // pop(vec: ref list[T], sizeof(T)) -> ()
-void builtin_list_pop(list* list, uint64_t element_size) {
-	// TODOP: Rethink if we want to crash.
-	if (list->length == 0) exit(1);
+void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
+	uint64_t to_remove = count < list->length ? count : list->length;
+	if (list->length == 0) return;
 
-	list->length--;
-	list->memory_end_offset += element_size;
-	// TODOP: Rethink if we wanna realloc if the list is almost empty.
+	list->length -= to_remove;
+	list->memory_end_offset += to_remove * element_size;
 }
 
 // len(vec: list[T]) -> i64

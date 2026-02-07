@@ -17,6 +17,8 @@ STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 
 namespace base {
 	constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
+
+	constexpr Bytes bits2bytes(Bits bits) { return Bytes(usize(bits) / 8); }
 }
 
 namespace base::internal {

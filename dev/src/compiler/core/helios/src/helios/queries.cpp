@@ -627,7 +627,8 @@ namespace compiler::helios {
 			void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 				auto op = assignment->getAssignmentType();
 				CORE_ASSERT(
-					op == base::StrID("=") || op == base::StrID("+="), "Unsupported assignment type"
+					op == base::StrID("=") || op == base::StrID("+=") || op == base::StrID("-="),
+					"Unsupported assignment type"
 				);
 
 				auto var           = assignment->getVariables();

@@ -532,7 +532,7 @@ namespace compiler::lir {
 						= ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType());
 
 					curr_block->instructions.emplace_back(
-						Operation::ListPush,
+						mir2lirOperation(mir_instruction.operation, false),
 						output,
 						std::move(args),
 						ListOperationParameters{ .element_layout = element_layout }

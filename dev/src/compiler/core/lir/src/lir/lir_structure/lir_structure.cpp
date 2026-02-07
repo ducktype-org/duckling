@@ -249,6 +249,10 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
+				variant_case(ListOperationParameters, params) {
+					output << "{ element_layout:" << params.element_layout->toStringIdentification()
+						   << " }";
+				}
 			}
 			output << " ";
 		}

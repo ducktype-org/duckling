@@ -16,6 +16,8 @@ fun main() -> i32 = {
     arr += 222;
     arr += 333;
 
+    arr -= 1;
+
     printList(&arr);
 
     return 0;

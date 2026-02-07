@@ -1126,7 +1126,9 @@ namespace compiler::backend_llvm {
 						}
 
 						// Get the element layout
-						u64 size_bytes = static_cast<u64>(list_params.element_layout->getSize());
+						u64 size_bytes = static_cast<u64>(
+							base::bits2bytes(list_params.element_layout->getSize())
+						);
 						llvm::Value* size_val = builder.getInt64(size_bytes);
 
 						// Actually call the builtin.
@@ -1163,15 +1165,17 @@ namespace compiler::backend_llvm {
 						llvm::Value* count_val = loadLIRValue(count_arg, builder);
 
 						// Get the element layout
-						u64 size_bytes = static_cast<u64>(list_params.element_layout->getSize());
+						u64 size_bytes = static_cast<u64>(
+							base::bits2bytes(list_params.element_layout->getSize())
+						);
 						llvm::Value* size_val = builder.getInt64(size_bytes);
 
 						// Actually call the builtin.
 						llvm::FunctionCallee push_func = module->getOrInsertFunction(
-							"builtin_list_push",
+							"builtin_list_pop",
 							llvm::FunctionType::get(
 								builder.getVoidTy(),
-								{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() },
+								{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() },
 								false
 							)
 						);
