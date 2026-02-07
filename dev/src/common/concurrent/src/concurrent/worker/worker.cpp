@@ -89,8 +89,6 @@ namespace concurrent::worker {
 
 	Worker::Worker(usize seed): rng(seed) {}
 
-
-
 	WRef Worker::getCurrentWorker() {
 		if (!current_worker.has_value())
 			CORE_PANIC("Accessing the thread-local current worker reference that is empty");

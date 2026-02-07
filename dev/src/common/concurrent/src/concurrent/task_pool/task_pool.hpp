@@ -35,8 +35,8 @@ namespace concurrent::pool {
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task {
-		TaskID id;
-		worker::Task   work;
+		TaskID       id;
+		worker::Task work;
 
 		Task(TaskID id, worker::Task work): id(id), work(std::move(work)) {}
 	};
@@ -105,7 +105,7 @@ namespace concurrent::pool {
 		 */
 		void execute();
 
-        void waitExecutionCompletion();
+		void waitExecutionCompletion();
 
 		/**
 		 * @brief Query (execute) a task immediately.
@@ -119,7 +119,7 @@ namespace concurrent::pool {
 		 *
 		 * @note Must be called from a worker thread.
 		 */
-		void query(const Task &task);
+		void query(const Task& task);
 
 		/**
 		 * @brief Schedule a task for later execution.
@@ -157,6 +157,7 @@ namespace concurrent::pool {
 		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
 		 */
 		void onWorkerNoTasks();
+
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
@@ -166,7 +167,7 @@ namespace concurrent::pool {
 
 		/**
 		 * @brief Try to steal a task from another worker's pool.
-         * @param worker_ref The ID of the worker to steal from.
+		 * @param worker_ref The ID of the worker to steal from.
 		 * @return Optional Task if one was available.
 		 */
 		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref);
@@ -175,10 +176,10 @@ namespace concurrent::pool {
 
 		/**
 		 * @brief Tries to execute the given task.
-         * If the task is already in progress or done, does nothing.
-         * If the task is not started, executes it.
+		 * If the task is already in progress or done, does nothing.
+		 * If the task is not started, executes it.
 		 * @param task The task to execute.
-		 * @return True if the task has been completed by us or was already 
+		 * @return True if the task has been completed by us or was already
 		 * done at some moment in the middle of the function.
 		 * Otherwise returns false.
 		 */
@@ -189,13 +190,13 @@ namespace concurrent::pool {
 		 * @param worker_ref The worker ID.
 		 * @param task The task to add.
 		 */
-		void addToWorkerPoolUnlocked(worker::WRef worker_ref, Task &&task);
+		void addToWorkerPoolUnlocked(worker::WRef worker_ref, Task&& task);
 
 		/**
 		 * @brief Add a task to the global pool.
 		 * @param task The task to add.
 		 */
-		void addToGlobalPoolUnlocked(Task &&task);
+		void addToGlobalPoolUnlocked(Task&& task);
 
 
 		/// Reference to the WorkerManager.

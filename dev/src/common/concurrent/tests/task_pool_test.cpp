@@ -7,29 +7,24 @@
 
 #include <tester/tester.hpp>
 
-
 void flushWorkers(concurrent::worker::WorkerManager& manager) {
-	auto workers = manager.getAllWorkers();
+	auto                                           workers = manager.getAllWorkers();
 	std::vector<std::shared_ptr<std::atomic_bool>> flags;
 
-	for (auto& w : workers) {
+	for (auto& w: workers) {
 		auto flag = std::make_shared<std::atomic_bool>(false);
 		flags.push_back(flag);
-		manager.setNoTasksCallback(w, [flag](concurrent::worker::WRef) {
-			flag->store(true);
-		});
+		manager.setNoTasksCallback(w, [flag](concurrent::worker::WRef) { flag->store(true); });
 	}
 
-	for (auto wref : workers) {
+	for (auto wref: workers) {
 		wref->scheduleTask([](concurrent::worker::WRef) {
 			// empty task
 		});
 	}
 
-	for (auto& flag : flags) {
-		while (!flag->load())
-			std::this_thread::yield();
-	}
+	for (auto& flag: flags)
+		while (!flag->load()) std::this_thread::yield();
 }
 
 class TaskPoolTest: public tester::TestSuite {
@@ -49,13 +44,14 @@ public:
 	}
 
 private:
-
 	void basicFunctionalityTest() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
-		constexpr usize  TASK_COUNT      = 10;
-		std::atomic_int  completed_tasks = 0;
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
+		constexpr usize          TASK_COUNT      = 10;
+		std::atomic_int          completed_tasks = 0;
 		concurrent::worker::Task task            = [&completed_tasks](concurrent::worker::WRef) {
             completed_tasks.fetch_add(1, std::memory_order_relaxed);
 		};
@@ -73,12 +69,14 @@ private:
 	}
 
 	void testFibbonaciSchedule() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
-		std::function<u64(u64)> fib_task_gen;
+		std::function<u64(u64)>          fib_task_gen;
 		fib_task_gen = [&task_pool, &fib_cache, &fib_task_gen](u64 n) -> u64 {
 			if (n <= 1) {
 				fib_cache.put(n, n);
@@ -122,12 +120,14 @@ private:
 	}
 
 	void testFibbonaciScheduleReversed() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
-		std::function<u64(u64)> fib_task_gen;
+		std::function<u64(u64)>          fib_task_gen;
 		fib_task_gen = [&task_pool, &fib_cache, &fib_task_gen](u64 n) -> u64 {
 			if (n <= 1) {
 				fib_cache.put(n, n);
@@ -171,12 +171,14 @@ private:
 	}
 
 	void testFibbonaciQuery() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
-		std::function<u64(u64)> fib_task_gen;
+		std::function<u64(u64)>          fib_task_gen;
 		fib_task_gen = [&task_pool, &fib_cache, &fib_task_gen](u64 n) -> u64 {
 			if (n <= 1) {
 				fib_cache.put(n, n);
@@ -216,12 +218,14 @@ private:
 	}
 
 	void testFibbonaciScheduleAndQuery() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
-		std::function<u64(u64)> fib_task_gen;
+		std::function<u64(u64)>          fib_task_gen;
 		fib_task_gen = [&task_pool, &fib_cache, &fib_task_gen](u64 n) -> u64 {
 			if (n <= 1) {
 				fib_cache.put(n, n);
@@ -262,12 +266,14 @@ private:
 	}
 
 	void testGibbonaci() {
-		auto& worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool      task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable { task_pool.onWorkerNoTasks(); });
+		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
+		concurrent::pool::TaskPool task_pool(worker_manager);
+		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
+			task_pool.onWorkerNoTasks();
+		});
 
 		concurrent::ConHashMap<u64, u64> gib_cache;
-		std::function<u64(u64)> gib_task_gen;
+		std::function<u64(u64)>          gib_task_gen;
 		gib_task_gen = [&task_pool, &gib_cache, &gib_task_gen](u64 n) -> u64 {
 			if (n <= 3) {
 				gib_cache.put(n, n);

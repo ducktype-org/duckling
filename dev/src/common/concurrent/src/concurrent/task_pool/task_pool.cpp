@@ -43,7 +43,7 @@ namespace concurrent::pool {
 		is_executing.store(true);
 		std::unique_lock lock(pool_mutex);
 
-		auto              worker_refs            = worker_manager.getAllWorkers();
+		auto              worker_refs           = worker_manager.getAllWorkers();
 		usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
 		std::vector<Task> tasks_to_distribute;
 
@@ -96,7 +96,8 @@ namespace concurrent::pool {
 		// This line, although mabye counter intuitive on the first sight, is correct.
 		// It's because we don't count task completion here, but rather the number of added tasks
 		// to the pool. Some tasks may be added multiple times, (but only one execution will
-		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of the pool.
+		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
+		// the pool.
 		{
 			std::lock_guard lock(pool_mutex);
 			completed_tasks.fetch_add(1);
@@ -108,12 +109,10 @@ namespace concurrent::pool {
 	TaskHandle TaskPool::schedule(Task&& task) {
 		// This function is the most problematic in terms of using independent queues,
 		worker::WRef current_worker = worker::Worker::getCurrentWorker();
-		const auto task_id        = task.id;
+		const auto   task_id        = task.id;
 
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
-		if (task_status_map.contains(task_id)) {
-			return TaskHandle(*this, task_id);
-		}
+		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
 
 		// Now becasue we are adding a new task to the pool, we increment the added tasks counter.
 		added_tasks.fetch_add(1);
@@ -129,7 +128,7 @@ namespace concurrent::pool {
 			if (not free_workers.empty()) {
 				// Schedule on a free worker
 				free_workers.front()->scheduleTask([this, pt = std::move(task)](worker::WRef
-				                                       ) mutable { tryExecuteTask(pt); });
+				                                   ) mutable { tryExecuteTask(pt); });
 				return TaskHandle(*this, task_id);
 
 				// We don't add it to the pool, as it is scheduled directly
@@ -178,7 +177,9 @@ namespace concurrent::pool {
 		return std::nullopt;
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(worker::WRef worker_ref, TaskID task_id) {
+	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(
+		worker::WRef worker_ref, TaskID task_id
+	) {
 		auto& worker_pool = worker_pools[worker_ref];
 		for (auto it = worker_pool.begin(); it != worker_pool.end(); ++it) {
 			if (it->id == task_id) {
@@ -203,9 +204,8 @@ namespace concurrent::pool {
 		base::Optional<Task> task_opt;
 		std::lock_guard      lock(pool_mutex);
 
-		if (auto global_task_opt = tryStealFromGlobalUnlocked()) {
+		if (auto global_task_opt = tryStealFromGlobalUnlocked())
 			task_opt = std::move(global_task_opt);
-		}
 
 		if (task_opt.empty()) {
 			for (auto worker_ref: worker_manager.getAllWorkers()) {
@@ -218,11 +218,8 @@ namespace concurrent::pool {
 
 		if (task_opt.has_value()) {
 			auto current_worker = worker::Worker::getCurrentWorker();
-			current_worker->scheduleTask(
-				[this, pt = std::move(task_opt).value()](worker::WRef) mutable {
-					tryExecuteTask(pt);
-				}
-			);
+			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](worker::WRef
+			                             ) mutable { tryExecuteTask(pt); });
 		}
 	}
 
