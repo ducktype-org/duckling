@@ -115,8 +115,11 @@ namespace compiler::helios::code {
 			{ { base::StrID("=="), tsh::Kind::Meta }, BuiltinBinary::MetaEq },
 			{ { base::StrID("!="), tsh::Kind::Meta }, BuiltinBinary::MetaNeq },
 
+			/// Boolean operations ///
 			{ { keywordToStr(lang_def::Keyword::And), tsh::Kind::Bool }, BuiltinBinary::BooleanAnd },
 			{ { keywordToStr(lang_def::Keyword::Or), tsh::Kind::Bool }, BuiltinBinary::BooleanOr },
+			{ { base::StrID("=="), tsh::Kind::Bool }, BuiltinBinary::IntegerEq },
+			{ { base::StrID("!="), tsh::Kind::Bool }, BuiltinBinary::IntegerNeq },
 		};
 
 		if (operators.contains({ op, operation_kind }))
