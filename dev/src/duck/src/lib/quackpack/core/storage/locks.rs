@@ -106,6 +106,14 @@ impl CleanLock {
     }
 }
 
+/// Counterpart to [`CleanLock`], which blocks latter from being acquired.
+/// In practice this is shared form of [`CleanLock`].
+///
+/// Can be constructed from [`TrySyncLock::to_disallow_clean_lock`].
+pub struct DisallowCleanLock {
+    _lock: FileLockGuard,
+}
+
 #[derive(Debug)]
 /// A non-blocking lock for mutable access to a virtual environment's dependencies.
 ///
@@ -113,7 +121,7 @@ impl CleanLock {
 /// other concurrent synchronization tasks. If it cannot acquire the required
 /// locks, it returns [`WoudlBloc`](io::ErrorKind::WouldBlock).
 pub struct TrySyncLock {
-    _clean_lock: FileLockGuard,
+    clean_lock: FileLockGuard,
     _sync_lock: FileLockGuard,
 }
 
@@ -122,9 +130,15 @@ impl TrySyncLock {
         let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
         let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
         Ok(Self {
-            _clean_lock: clean_lock,
+            clean_lock,
             _sync_lock: sync_lock,
         })
+    }
+
+    pub fn to_disallow_clean_lock(self) -> DisallowCleanLock {
+        DisallowCleanLock {
+            _lock: self.clean_lock,
+        }
     }
 }
 
