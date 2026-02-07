@@ -9,13 +9,31 @@
 #include <variant>
 
 namespace compiler::helios::code {
+	/**
+	 * @brief This struct represents the generated origin of the HOUT element.
+	 */
 	struct GeneratedElement {};
 
+	/**
+	 * @brief This struct represents the PST origin of the HOUT element.
+	 *
+	 * @note It stores the Bit256 hash of the original PST element instead of the reference to it,
+	 * to enable working in the Language Server setting, where the PST can be re-parsed and nodes
+	 * can reside in the new memory but the hash of elements can remain unchanged.
+	 *
+	 * For the single-forward-pipeline compiler mode this is invisible and does not affect anything.
+	 */
+	struct PstOrigin {
+		base::Bit256 hash;
+
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getElement() const;
+
+		static PstOrigin fromElement(pst::Access<pst::LangElement> element);
+	};
+
 	class ElementOrigin {
-		using ValueType = std::variant<
-			GeneratedElement,
-			pst::AccessLocked<pst::LangElement>,
-			std::vector<pst::AccessLocked<pst::LangElement>>>;
+		// In the future maybe template-generated?
+		using ValueType = std::variant<GeneratedElement, PstOrigin, std::vector<PstOrigin>>;
 
 		ValueType value;
 
@@ -46,7 +64,7 @@ namespace compiler::helios::code {
 		 * elements, it appends the new value.
 		 */
 		static ElementOrigin appendToOrigin(
-			ElementOrigin origin, pst::AccessLocked<pst::LangElement> pst_element
+			ElementOrigin origin, pst::Access<pst::LangElement> pst_element
 		);
 
 		/**
@@ -64,12 +82,10 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Creates an ElementOrigin from a single PST element.
 	 */
-	ElementOrigin pstOrigin(pst::AccessLocked<pst::LangElement> pst_element);
+	ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
 
 	/**
 	 * @brief Creates an ElementOrigin from multiple PST elements.
 	 */
-	ElementOrigin multiplePstOrigin(
-		const std::vector<pst::AccessLocked<pst::LangElement>>& pst_elements
-	);
+	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements);
 }
