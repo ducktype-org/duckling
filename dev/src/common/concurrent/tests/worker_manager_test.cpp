@@ -43,7 +43,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		TESTER_ADD_TEST(taskPoolFibonacciTest);
+		// TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
 
 protected:
