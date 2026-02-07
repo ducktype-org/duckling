@@ -85,13 +85,19 @@ namespace lsp {
 		std::vector<InlayHint>&       hints
 	) {
 		if (pst_lang_element.dynamicCast<pst::Variable>().empty()
-		    or pst_lang_element.dynamicCast<pst::Const>())
+		    and pst_lang_element.dynamicCast<pst::Const>().empty())
 			return;
 
-		bool has_initial_value
-			= pst_lang_element.dynamicCast<pst::Variable>().value()->getValue().has_value()
-		   or pst_lang_element.dynamicCast<pst::Const>().value()->getValue().has_value();
+		bool has_initial_value = false;
+		
+		if_opt_some(pst_lang_element.dynamicCast<pst::Variable>(), var) {
+			has_initial_value = var->getValue().has_value();
+		}
+		if_opt_some(pst_lang_element.dynamicCast<pst::Const>(), constant) {
+			has_initial_value = constant->getValue().has_value();
+		}
 		if (not has_initial_value) return;
+
 		tpc::Identifier variable_name = [](pst::Access<pst::LangElement> elem) {
 			if_opt_some(elem.dynamicCast<pst::Variable>(), var) return var->getIdent();
 			if_opt_some(elem.dynamicCast<pst::Const>(), constant) return constant->getIdent();

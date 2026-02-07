@@ -173,7 +173,7 @@ void server(i32 port) {
 
 			const auto file        = fs::File(path);
 			auto json_str = lsp::getInlayHintsJson(file);
-			CROW_LOG_INFO << "Diagnostics:\n" << json_str;
+			CROW_LOG_INFO << "Inlay-hints:\n" << json_str;
 			crow::response res(200, json_str);
 			res.set_header("Content-Type", "application/json");
 			return res;
