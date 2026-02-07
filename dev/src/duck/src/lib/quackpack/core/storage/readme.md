@@ -4,7 +4,7 @@ file is to explain how they work).
 
 # Overview
 
-Virtual environments in quackpack do not store their downloaded dependencies
+Virtual environments in QuackPack do not store their downloaded dependencies
 in the project directory, instead all dependencies are stored in a *storage*.
 There can be many storages on the system, and many virtual environments may
 correspond to one storage.

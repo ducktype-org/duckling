@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime};
 use std::{io, path::PathBuf};
 use storage::IdOrPackage;
 use storage::paths::StoragePaths;
-use storage::{files, locks, paths};
+use storage::{locks, paths, venv};
 
 #[derive(Debug)]
 pub struct CleanOutput {
@@ -99,7 +99,7 @@ fn clean_venv_from_storage(
 ) -> QuackResult<()> {
     let venv_id = venv.file_name().to_string_lossy().into_owned().into();
     let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
-    let data = files::fix_and_load_venv(storage, venv_id)?;
+    let data = venv::fix_and_load_venv(storage, venv_id)?;
     let Some(mut data) = data else {
         return Ok(());
     };
@@ -125,7 +125,7 @@ fn clean_venv_from_storage(
         return Ok(());
     }
     if requires_save {
-        files::save_venv(storage, venv_id, &data)?;
+        venv::save_venv(storage, venv_id, &data)?;
     }
     all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {
         if dep.source().is_local() {

@@ -7,9 +7,9 @@ use crate::quackpack::core::storage;
 use crate::StrId;
 use crate::{DuckCtx, QuackResult};
 use storage::IdOrPackage;
-use storage::files::Venv;
-use storage::files::fix_and_load_venv;
 use storage::paths;
+use storage::venv::Venv;
+use storage::venv::fix_and_load_venv;
 
 /// Get a snapshot of all virtual environments' states.
 ///
