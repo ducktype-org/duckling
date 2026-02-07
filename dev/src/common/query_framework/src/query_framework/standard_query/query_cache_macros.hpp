@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concurrent/collections/hash_map.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 /**
  * @brief Macro defining typical hash based cache.
