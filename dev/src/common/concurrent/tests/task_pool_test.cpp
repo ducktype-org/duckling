@@ -1,8 +1,7 @@
-#include "concurrent/task_pool/task_pool.hpp"
-#include "concurrent/worker/worker.hpp"
-
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
+#include <concurrent/task_pool/task_pool.hpp>
+#include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
 #include <tester/tester.hpp>
