@@ -58,25 +58,6 @@ namespace concurrent::pool {
 	};
 
 	/**
-	 * @brief A group of task handles that can be awaited together.
-	 */
-	class TaskGroup {
-	public:
-		TaskGroup() = default;
-
-		void add(TaskHandle handle) { handles.push_back(handle); }
-
-		[[nodiscard]] const std::vector<TaskHandle>& getHandles() const { return handles; }
-
-		[[nodiscard]] bool empty() const { return handles.empty(); }
-
-		[[nodiscard]] usize size() const { return handles.size(); }
-
-	private:
-		std::vector<TaskHandle> handles;
-	};
-
-	/**
 	 * @brief Task pool scheduler that manages task distribution across workers.
 	 * @note All public methods are thread-safe.
 	 */
@@ -198,6 +179,11 @@ namespace concurrent::pool {
 		 */
 		void addToGlobalPoolUnlocked(Task&& task);
 
+		base::Optional<worker::WRef> getFreeWorkerUnlocked() const;
+
+
+		void flushWorkers();
+
 
 		/// Reference to the WorkerManager.
 		worker::WorkerManager& worker_manager;
@@ -224,6 +210,9 @@ namespace concurrent::pool {
 
 		/// Total number of tasks (used in execute()).
 		std::atomic<usize> added_tasks{ 0 };
+
+		/// Our own worker free 
+		base::HashMap<worker::WRef, std::atomic<bool>> is_worker_free_map;
 
 		/// Flag indicating if execution is in progress.
 		std::atomic<bool> is_executing{ false };

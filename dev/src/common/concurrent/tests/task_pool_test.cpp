@@ -6,25 +6,6 @@
 
 #include <tester/tester.hpp>
 
-void flushWorkers(concurrent::worker::WorkerManager& manager) {
-	auto                                           workers = manager.getAllWorkers();
-	std::vector<std::shared_ptr<std::atomic_bool>> flags;
-
-	for (auto& w: workers) {
-		auto flag = std::make_shared<std::atomic_bool>(false);
-		flags.push_back(flag);
-		manager.setNoTasksCallback(w, [flag](concurrent::worker::WRef) { flag->store(true); });
-	}
-
-	for (auto wref: workers) {
-		wref->scheduleTask([](concurrent::worker::WRef) {
-			// empty task
-		});
-	}
-
-	for (auto& flag: flags)
-		while (!flag->load()) std::this_thread::yield();
-}
 
 class TaskPoolTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -46,9 +27,6 @@ private:
 	void basicFunctionalityTest() {
 		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
 		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
 		constexpr usize          TASK_COUNT      = 10;
 		std::atomic_int          completed_tasks = 0;
 		concurrent::worker::Task task            = [&completed_tasks](concurrent::worker::WRef) {
@@ -62,9 +40,7 @@ private:
 		task_pool.execute();
 		task_pool.waitExecutionCompletion();
 		std::cout << "Execution completed.\n";
-		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);
-
-		flushWorkers(worker_manager);
+		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);		
 	}
 
 	void testFibbonaciSchedule() {
@@ -115,7 +91,7 @@ private:
 
 		std::cout << "Execution completed.\n";
 
-		flushWorkers(worker_manager);
+		
 	}
 
 	void testFibbonaciScheduleReversed() {
@@ -166,7 +142,7 @@ private:
 
 		std::cout << "Execution completed.\n";
 
-		flushWorkers(worker_manager);
+		
 	}
 
 	void testFibbonaciQuery() {
@@ -213,7 +189,7 @@ private:
 
 		std::cout << "Execution completed.\n";
 
-		flushWorkers(worker_manager);
+		
 	}
 
 	void testFibbonaciScheduleAndQuery() {
@@ -261,7 +237,7 @@ private:
 
 		std::cout << "Execution completed.\n";
 
-		flushWorkers(worker_manager);
+		
 	}
 
 	void testGibbonaci() {
@@ -323,7 +299,7 @@ private:
 
 		std::cout << "Execution completed.\n";
 
-		flushWorkers(worker_manager);
+		
 	}
 };
 

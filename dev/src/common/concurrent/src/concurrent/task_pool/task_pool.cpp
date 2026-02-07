@@ -5,7 +5,6 @@
 #include <base/str/str_utils.hpp>
 
 #include <atomic>
-#include <iostream>
 #include <mutex>
 
 namespace concurrent::pool {
@@ -16,12 +15,18 @@ namespace concurrent::pool {
 		// Initialize per-worker pools
 		for (auto worker: worker_manager.getAllWorkers())
 			worker_pools.emplace(worker, std::deque<Task>());
+		
+		for (auto worker : worker_manager.getAllWorkers())
+			is_worker_free_map.emplace(worker, true);
+
+		worker_manager.setNoTasksCallback([this](concurrent::worker::WRef) mutable {
+			onWorkerNoTasks();
+		});
 	}
 
 	TaskPool::~TaskPool() {
-		// Ensure all tasks are completed before destruction
-		// wait on completion_cv if needed
 		waitExecutionCompletion();
+		flushWorkers();
 	}
 
 	void TaskPool::addInitialTasks(std::vector<Task> tasks) {
@@ -33,7 +38,8 @@ namespace concurrent::pool {
 	void TaskPool::waitExecutionCompletion() {
 		std::unique_lock lock(pool_mutex);
 		task_completed_cv.wait(lock, [this] {
-			return added_tasks.load() <= completed_tasks.load();
+			CORE_ASSERT(added_tasks.load() >= completed_tasks.load(), "Completed tasks cannot exceed added tasks");
+			return added_tasks.load() == completed_tasks.load();
 		});
 		is_executing.store(false);
 	}
@@ -56,6 +62,7 @@ namespace concurrent::pool {
 			worker_refs[i]->scheduleTask([this, pt = std::move(task)](worker::WRef) mutable {
 				tryExecuteTask(pt);
 			});
+			is_worker_free_map[worker_refs[i]] = false;
 		}
 	}
 
@@ -118,16 +125,17 @@ namespace concurrent::pool {
 
 		{
 			std::lock_guard lock(pool_mutex);
-			auto            free_workers = worker_manager.getFreeWorkers(1);
+			auto            free_worker_opt = getFreeWorkerUnlocked();
 
 			// @note It is possible that the free worker would not be free by the time we will
 			// schedule a task on it. This would be unfortunate, but not a problem, as the worker
 			// manager will just queue the task for later execution.
 
-			if (not free_workers.empty()) {
+			if (free_worker_opt.has_value()) {
 				// Schedule on a free worker
-				free_workers.front()->scheduleTask([this, pt = std::move(task)](worker::WRef
+				free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](worker::WRef
 				                                   ) mutable { tryExecuteTask(pt); });
+				is_worker_free_map[free_worker_opt.value()] = false;
 				return TaskHandle(*this, task_id);
 
 				// We don't add it to the pool, as it is scheduled directly
@@ -202,6 +210,7 @@ namespace concurrent::pool {
 
 		base::Optional<Task> task_opt;
 		std::lock_guard      lock(pool_mutex);
+		auto current_worker = worker::Worker::getCurrentWorker();
 
 		if (auto global_task_opt = tryStealFromGlobalUnlocked())
 			task_opt = std::move(global_task_opt);
@@ -216,11 +225,43 @@ namespace concurrent::pool {
 		}
 
 		if (task_opt.has_value()) {
-			auto current_worker = worker::Worker::getCurrentWorker();
 			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](worker::WRef
 			                             ) mutable { tryExecuteTask(pt); });
+			is_worker_free_map[current_worker] = false;
+		}
+		else {
+			is_worker_free_map[current_worker] = true;
 		}
 	}
 
 	void TaskHandle::await() { pool.await(task_id); }
+
+	base::Optional<worker::WRef> TaskPool::getFreeWorkerUnlocked() const {
+		for (const auto& [worker_ref, is_free]: is_worker_free_map) {
+			if (is_free.load()) {
+				return worker_ref;
+			}
+		}
+		return std::nullopt;
+	}
+
+	void TaskPool::flushWorkers() {
+		auto                                           workers = worker_manager.getAllWorkers();
+		std::vector<std::shared_ptr<std::atomic_bool>> flags;
+
+		for (auto& w: workers) {
+			auto flag = std::make_shared<std::atomic_bool>(false);
+			flags.push_back(flag);
+			worker_manager.setNoTasksCallback(w, [flag](concurrent::worker::WRef) { flag->store(true); });
+		}
+
+		for (auto wref: workers) {
+			wref->scheduleTask([](concurrent::worker::WRef) {
+				// empty task
+			});
+		}
+
+		for (auto& flag: flags)
+			while (!flag->load()) std::this_thread::yield();
+	}
 }  // namespace concurrent::pool

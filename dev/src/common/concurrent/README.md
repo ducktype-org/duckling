@@ -15,3 +15,9 @@ Additionally there are few important rules about workers:
 This allows implementation of some concurrent algorithm to be much simpler or more efficient. This is mainly due to the limited concurrency expressed in the maximum number of workers and the worker indexes and per-worker rng provided by *Worker*'s API.
 
 It is allowed to use the idea of the *Worker* outside of this module (intended mostly for purposes of query concurrent execution).
+
+
+# Notatki
+
+2 mechanizmy synchr.
+1. `ConHashMap<TaskID, TaskStatus> task_status_map` - decyduje o tym kto może wykonać zadanie
