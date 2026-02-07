@@ -27,6 +27,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
+	AllocBox,
+	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
+	FreeBox,
 
 	/**
 		@brief Placeholder.

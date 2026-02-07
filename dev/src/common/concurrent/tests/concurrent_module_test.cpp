@@ -1,4 +1,4 @@
-#include <concurrent/collections/hash_map.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 #include <tester/tester.hpp>
 
@@ -29,7 +29,7 @@ class ConcurrentTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		concurrent::setWorkerCount(4);
+		concurrent::worker::setWorkerCount(4);
 
 		TESTER_ADD_TEST(hashMapSingleThreadTest1);
 
@@ -51,6 +51,10 @@ public:
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<1>);
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<2>);
 		TESTER_ADD_TEST(multiThreadedSimpleTest3<4>);
+
+		TESTER_ADD_TEST(multiThreadedEraseTest<1>);
+		TESTER_ADD_TEST(multiThreadedEraseTest<2>);
+		TESTER_ADD_TEST(multiThreadedEraseTest<4>);
 	}
 
 private:
@@ -67,6 +71,10 @@ private:
 		ASSERT_TRUE(map.getCopy(2) == 20);
 		ASSERT_TRUE(map.getCopy(3) == 30);
 
+		ASSERT_TRUE(map.atMaybeCopy(1).value() == 10);
+		ASSERT_TRUE(map.atMaybeCopy(2).value() == 20);
+		ASSERT_TRUE(map.atMaybeCopy(3).value() == 30);
+
 		ASSERT_TRUE(map.contains(1));
 		ASSERT_TRUE(map.contains(2));
 		ASSERT_TRUE(map.contains(3));
@@ -76,6 +84,9 @@ private:
 		ASSERT_TRUE(map.atMaybe(4).empty());
 		ASSERT_TRUE(map.atMaybe(5).empty());
 
+		ASSERT_TRUE(map.atMaybeCopy(2).has_value());
+		ASSERT_TRUE(map.atMaybeCopy(4).empty());
+		ASSERT_TRUE(map.atMaybeCopy(5).empty());
 
 		map.update(2, 25);
 		ASSERT_TRUE(map.getCopy(2) == 25);
@@ -95,6 +106,18 @@ private:
 		ASSERT_TRUE(map.getCopy(5) == 50);
 		map.maybePut(5, 500);
 		ASSERT_TRUE(map.getCopy(5) == 50);
+
+		auto erased = map.erase(2);
+		ASSERT_TRUE(erased);
+		ASSERT_TRUE(!map.contains(2));
+
+		erased = map.erase(2);
+		ASSERT_TRUE(!erased);
+
+		ASSERT_TRUE(map.contains(1));
+		ASSERT_TRUE(!map.contains(2));
+		ASSERT_TRUE(map.contains(3));
+		ASSERT_TRUE(map.contains(4));
 	}
 
 	/**
@@ -204,7 +227,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1, 0, [](u64& v) { v += 10; });
+					map.maybePutAndUpdate(1ULL, 0ULL, [](u64& v) { v += 10; });
 			});
 		}
 
@@ -239,6 +262,48 @@ private:
 
 		// we should have the last update from one of the threads:
 		ASSERT_TRUE(map.getCopy(1) >= (OPS_PER_THREAD - 1) * thread_count);
+	}
+
+	/**
+	 * Tests multi-threaded erases to the concurrent::ConHashMap on random keys.
+	 */
+	template<u64 thread_count>
+	void multiThreadedEraseTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 ELEMENTS_COUNT = thread_count * OPS_PER_THREAD;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// prepopulate the map
+		for (u64 i = 0; i < ELEMENTS_COUNT; i++) map.put(i, i * 10);
+
+		std::vector<std::jthread> threads;
+		std::atomic<u64>          erase_count = 0;
+
+		threads.reserve(thread_count);
+		for (u64 i = 0; i < thread_count; i++) {
+			std::minstd_rand rng(42 * i);
+
+			threads.emplace_back([&map, &erase_count, rng]() mutable {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64 key = rng() % ELEMENTS_COUNT;
+
+					auto was_erased = map.erase(key);
+					if (was_erased) erase_count++;
+				}
+			});
+		}
+
+		for (u64 i = 0; i < thread_count; i++) threads.at(i).join();
+
+		u64 element_count_after_erase = 0;
+		for (u64 i = 0; i < ELEMENTS_COUNT; i++)
+			if (map.contains(i)) element_count_after_erase++;
+
+		message(base::strConcat("Erased elements: ", erase_count.load(), " / ", ELEMENTS_COUNT, "\n")
+		);
+
+		ASSERT_TRUE(ELEMENTS_COUNT - erase_count == element_count_after_erase);
 	}
 };
 

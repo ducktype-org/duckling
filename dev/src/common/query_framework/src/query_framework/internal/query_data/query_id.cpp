@@ -23,14 +23,9 @@ namespace query::internal {
 	namespace {
 
 		/**
-		 * Query ID used in entry point. See also: outsideWorldQueryID, query::entryPoint.
-		 */
-		constexpr QueryID OUTSIDE_WORLD_QUERY = QueryIDMaker::make(0);
-
-		/**
 		 * @note It will be used before main, constinit is important.
 		 */
-		constinit QueryID next = QueryIDMaker::make(1);
+		constinit QueryID next = QueryIDMaker::make(0);
 
 		using DataMap = base::VectorMap<QueryID, QueryData>;
 
@@ -68,7 +63,4 @@ namespace query::internal {
 		dataMap().put(ret_id, query_data);
 		return ret_id;
 	}
-
-	QueryID outsideWorldQueryID() { return OUTSIDE_WORLD_QUERY; }
-
 }
