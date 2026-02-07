@@ -6,10 +6,18 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "typesystem/higher/expression_type.hpp"
+#include "typesystem/higher/mutability.hpp"
+#include "typesystem/higher/queries/types.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+#include "typesystem/higher/types.hpp"
+#include "typesystem/higher/value_category.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include "base/extend_cpp/defer.hpp"
 
 #include <query_framework/context/context.hpp>
 
@@ -451,8 +459,28 @@ namespace compiler::helios::code {
 		return makeBox<VariantTypeConstructorExpr>(expression_type, std::move(cloned_subtypes));
 	}
 
-	UnaryOperatorExpr::UnaryOperatorExpr(BuiltinUnary operation, Box<Expr> expr):
-		  Expr(expr->expression_type),
+	UnaryOperatorExpr::UnaryOperatorExpr(query::Context& ctx, BuiltinUnary operation, Box<Expr> expr):
+		  Expr([&]() -> tsh::ExpressionType<> {
+			  // TODOP: Comment.
+			  switch (operation) {
+			  case BuiltinUnary::Len: {
+				  auto u64_type = tsh::SymbolType<>{
+					  ctx.query<tsh::QueryIntegralType>(
+						  { 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+					  ),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable
+				  };
+				  return tsh::ExpressionType<>{
+					  u64_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  };
+			  }
+			  default: {
+				  return expr->expression_type;
+			  }
+			  }
+		  }()),
+
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -484,6 +512,10 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Len:
+			out << "len ";
 			expr->debugPrint(out);
 			break;
 		default:

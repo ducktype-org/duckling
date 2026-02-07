@@ -7,6 +7,7 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include "query_framework/context/context.hpp"
 #include <token_parser_core/common_elements.hpp>
 
 #include <vector>
@@ -302,6 +303,7 @@ namespace compiler::helios::code {
 		Ref,
 		Box,
 		Const,
+		Len,  // Temporary
 	};
 
 	/**
@@ -312,7 +314,7 @@ namespace compiler::helios::code {
 
 		base::Box<Expr> expr;
 
-		UnaryOperatorExpr(BuiltinUnary operation, base::Box<Expr> expr);
+		UnaryOperatorExpr(query::Context& ctx, BuiltinUnary operation, base::Box<Expr> expr);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

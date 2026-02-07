@@ -134,6 +134,7 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
+		Len,  // TODOP: Temporary
 		Ref,
 		Box,
 		Copy,

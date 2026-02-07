@@ -1171,7 +1171,7 @@ namespace compiler::backend_llvm {
 						llvm::Value* size_val = builder.getInt64(size_bytes);
 
 						// Actually call the builtin.
-						llvm::FunctionCallee push_func = module->getOrInsertFunction(
+						llvm::FunctionCallee pop_func = module->getOrInsertFunction(
 							"builtin_list_pop",
 							llvm::FunctionType::get(
 								builder.getVoidTy(),
@@ -1180,11 +1180,46 @@ namespace compiler::backend_llvm {
 							)
 						);
 
-						builder.CreateCall(push_func, { list_ptr, count_val, size_val });
+						builder.CreateCall(pop_func, { list_ptr, count_val, size_val });
 						break;
 					}
 					variant_default { CORE_UNREACHABLE(); }
 				}
+				break;
+			}
+			case ListLen: {
+				const auto&  list_arg = lir_instruction.arguments.at(0);
+				llvm::Value* list_ptr = nullptr;
+				if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
+					list_ptr = gepPointerFromLIRPlace(*place, builder);
+				else
+					list_ptr = loadLIRValue(list_arg, builder);
+
+				// Actually call the builtin.
+				llvm::FunctionCallee len_func = module->getOrInsertFunction(
+					"builtin_list_len",
+					llvm::FunctionType::get(builder.getInt64Ty(), { builder.getPtrTy() }, false)
+				);
+
+				llvm::Value* result = builder.CreateCall(len_func, { list_ptr });
+				storeOutput(lir_instruction.output.value(), result, builder);
+				break;
+			}
+			case ListFree: {
+				const auto&  list_arg = lir_instruction.arguments.at(0);
+				llvm::Value* list_ptr = nullptr;
+				if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
+					list_ptr = gepPointerFromLIRPlace(*place, builder);
+				else
+					list_ptr = loadLIRValue(list_arg, builder);
+
+				// Actually call the builtin.
+				llvm::FunctionCallee free_func = module->getOrInsertFunction(
+					"builtin_list_free",
+					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
+				);
+
+				builder.CreateCall(free_func, { list_ptr });
 				break;
 			}
 			/// Integer arithmetic ///

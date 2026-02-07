@@ -1,7 +1,7 @@
 fun printList(list: ref List[i64]) -> () = {
     builtin_output_i64(8888888888888888888);
     var i = 0;
-    while (i < builtin_list_len(list)) {
+    while (i < len list) {
         builtin_output_i64(list[i]);
         i = i + 1;
     }
@@ -26,21 +26,21 @@ fun elementByRef(element: ref i64) -> () = {
 fun main() -> i32 = {
     # Simple usage.
     var arr: List[i64];
-    builtin_list_push(&arr, 111, 8);
-    builtin_list_push(&arr, 222, 8);
-    builtin_list_push(&arr, 333, 8);
-    builtin_list_push(&arr, 444, 8);
-    builtin_list_push(&arr, 555, 8);
+    arr += 111; 
+    arr += 222; 
+    arr += 333; 
+    arr += 444; 
+    arr += 555; 
+    
+    builtin_output_i64(i64(len arr));
 
     printList(&arr);
-
-    builtin_list_pop(&arr, 8);
-    builtin_list_pop(&arr, 8);
-    builtin_list_pop(&arr, 8);
-    builtin_output_i64(i64(builtin_list_len(&arr)));
+    
+    arr -= 3;
+    builtin_output_i64(i64(len arr));
     printList(&arr);
 
-    builtin_list_push(&arr, 999, 8);
+    arr += 999;
     printList(&arr);
 
     arr[1] = 1;
@@ -52,7 +52,6 @@ fun main() -> i32 = {
     elementByRef(&arr[1]);
     printList(&arr);
 
-    builtin_list_free(&arr);
 
     return 0;
 }

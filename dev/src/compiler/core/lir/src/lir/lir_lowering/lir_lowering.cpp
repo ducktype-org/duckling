@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 #include "typesystem/higher/types.hpp"
 
 #include <ctv/numeric_value.hpp>
@@ -95,6 +96,8 @@ namespace compiler::lir {
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
 			return Operation::ListPop;
+		case mir::Operation::ListLen:
+			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -540,6 +543,7 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				case mir::Operation::AddressOf:
+				case mir::Operation::ListLen:
 				case mir::Operation::AllocBox:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
@@ -600,6 +604,21 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
+					// TODO: Temporary approach.
+					if (type.getRefKind() == tsh::ReferenceKind::Direct
+					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto lir_place = getLocation(to_destruct);
+
+						if (lir_place.has_value()) {
+							curr_block->instructions.emplace_back(
+								Operation::ListFree,
+								base::Optional<LIRPlace>{},
+								std::vector{ lir_place.value() }
+							);
+							return curr_block;
+						}
+					}
+
 					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
@@ -618,6 +637,7 @@ namespace compiler::lir {
 							return curr_block;
 						}
 					}
+
 
 					// @TODO: #929 Implement it, once we know how to call destructors
 					CORE_DEV_LOG(

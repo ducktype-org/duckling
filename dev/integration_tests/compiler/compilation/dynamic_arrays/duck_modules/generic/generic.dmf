@@ -9,7 +9,7 @@ fun printSeparator() -> () = {
 
 fun printMatrix(list: ref List[i32[3]]) -> () = {
     var i = 0;
-    while(i < builtin_list_len(list)) {
+    while(i < len list) {
         var j = 0;
         while (j < 3) {
             builtin_output_i64(list[i][j]);
@@ -19,90 +19,103 @@ fun printMatrix(list: ref List[i32[3]]) -> () = {
     }
 }
 
-
-fun main() -> i32 = {
-    # ============= Integers ================
+fun integersTest() -> () = {
     var integers: List[i32];
     integers += 111;
     integers += 222;
     integers += 333;
     
-    builtin_output_f64(integers[0]);
-    builtin_output_f64(integers[1]);
-    builtin_output_f64(integers[2]);
+    builtin_output_i64(integers[0]); # 111
+    builtin_output_i64(integers[1]); # 222
+    builtin_output_i64(integers[2]); # 333
+    builtin_output_i64(i64(len integers)); # 3
     printSeparator();
+}
 
-    # ============= Floats ================
-    # var floats: List[f64];
-    # floats += 1.1;
-    # floats += 1.2;
-    # floats += 1.3;
+fun floatsTest() -> () = {
+    var floats: List[f64];
+    floats += 1.1;
+    floats += 1.2;
+    floats += 1.3;
     
-    # builtin_output_f64(floats[0]);
-    # builtin_output_f64(floats[1]);
-    # builtin_output_f64(floats[2]);
-    # printSeparator();
+    builtin_output_f64(floats[0]);
+    builtin_output_f64(floats[1]);
+    builtin_output_f64(floats[2]);
+    builtin_output_i64(i64(len floats)); # 3
+    printSeparator();
+}
 
-    # ============= Classes ================
-    # var points: List[Point];
-    # points += Point(10, 20);
-    # points += Point(30, 40);
+fun classesTest() -> () = {
+    var points: List[Point];
+    points += Point(10, 20);
+    points += Point(30, 40);
     
-    # var p = points[0];
-    # builtin_output_i64(p.x); # 10
-    # builtin_output_i64(p.y); # 20
-    # builtin_output_i64(points[1].x); # 10
-    # builtin_output_i64(points[1].y); # 20
-    # printSeparator();
+    var p = points[0];
+    builtin_output_i64(p.x); # 10
+    builtin_output_i64(p.y); # 20
+    builtin_output_i64(points[1].x); # 30
+    builtin_output_i64(points[1].y); # 40
+    printSeparator();
+}
 
-    # ============= Static arrays ================
-    # var matrix: List[i32[3]];
+fun staticArraysTest() -> () = {
+    var matrix: List[i32[3]];
 
-    # var row1: i32[3];
-    # row1[0] = 100; row1[1] = 200; row1[2] = 300;
-    # var row2: i32[3];
-    # row2[0] = 101; row2[1] = 201; row2[2] = 301;
+    var row1: i32[3];
+    row1[0] = 100; row1[1] = 200; row1[2] = 300;
+    var row2: i32[3];
+    row2[0] = 101; row2[1] = 201; row2[2] = 301;
     
-    # matrix += row1;
-    # matrix += row2;
-    # matrix += row2;
+    matrix += row1;
+    matrix += row2;
+    matrix += row2;
     
-    # printMatrix(&matrix);
-    # printSeparator();
+    printMatrix(&matrix);
+    printSeparator();
+}
 
-    # ============= Dynamic arrays ================
-    # var matrix: List[List[i32]];
+fun dynamicArraysTest() -> () = {
+    var nested: List[List[i32]];
 
-    # var inner1: List[i32];
-    # inner1 += 1;
-    # inner1 += 2;
+    var inner1: List[i32];
+    inner1 += 1;
+    inner1 += 2;
 
-    # var inner2: List[i32];
-    # inner1 += 3;
+    var inner2: List[i32];
+    inner2 += 3;
     
-    # nested += inner1;
-    # nested += inner2;
+    nested += inner1;
+    nested += inner2;
     
-    # builtin_output_i64(&nested[0]); # 2
-    # builtin_output_i64(&nested[1]); # 1
+    builtin_output_i64(i64(len nested[0])); # 2
+    builtin_output_i64(i64(len nested[1])); # 1
     
-    # builtin_output_i64(nested[0][0]); # 1
-    # builtin_output_i64(nested[0][1]); # 2
-    # builtin_output_i64(nested[1][0]); # 3
+    builtin_output_i64(nested[0][0]); # 1
+    builtin_output_i64(nested[0][1]); # 2
+    builtin_output_i64(nested[1][0]); # 3
     
-    # nested[1] += 4;
+    nested[1] += 4;
 
-    # builtin_output_i64(&nested[1]); # 2
-    # builtin_output_i64(nested[0][0]); # 1
-    # builtin_output_i64(nested[0][1]); # 2
-    # builtin_output_i64(nested[1][0]); # 3
-    # builtin_output_i64(nested[1][1]); # 4
+    builtin_output_i64(i64(len nested[1])); # 2
+    builtin_output_i64(nested[0][0]); # 1
+    builtin_output_i64(nested[0][1]); # 2
+    builtin_output_i64(nested[1][0]); # 3
+    builtin_output_i64(nested[1][1]); # 4
     
-    # inner2 += 123; # Should this modify the matrix?
+    inner2 += 123; # TODOP: Should this modify the matrix?
 
-    # builtin_output_i64(&nested[1]); # 2
+    builtin_output_i64(i64(len nested[1])); # 2
 
-    # printSeparator();
+    printSeparator();
+}
+
+
+fun main() -> i32 = {
+    integersTest();
+    floatsTest();
+    classesTest();
+    staticArraysTest();
+    dynamicArraysTest();
 
     return 0;
 }
