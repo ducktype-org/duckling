@@ -13,8 +13,6 @@ use crate::{
 
 use crate::quackpack::core::storage;
 
-const MAX_BLOC_RETRY_COUNT: usize = 3;
-
 #[derive(Debug)]
 pub enum IdOrPackage<'a> {
     Id(StrId),
@@ -51,10 +49,10 @@ pub fn sync(ctx: &DuckCtx, pkg_ctx: &PackageCtx, options: SyncOptions) -> QuackR
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
 
     let data = storage::venv::fix_and_load_venv(&storage, id)?;
-    let freeze: storage::freeze::VenvFreeze = panic!("run solver");
+    let freeze: storage::freeze::VenvFreeze = panic!("@TODO: #1962 Unmock solver");
     debug!("solver returned freeze `{freeze:?}`");
     drop(data_lock);
-    panic!("install dependencies");
+    panic!("@TODO: #1962 download dependencies");
     if !options.overwrite
         && let Some(data) = data
         && pkg_ctx.package().manifest_path() != data.last_location()
