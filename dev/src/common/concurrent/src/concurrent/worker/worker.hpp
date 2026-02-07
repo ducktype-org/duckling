@@ -72,6 +72,8 @@ namespace concurrent::worker {
 		 */
 		void setNoTasksCallback(const NoTasksCallback& callback);
 
+		static WRef getCurrentWorker();
+
 	private:
 		Worker(usize seed);
 

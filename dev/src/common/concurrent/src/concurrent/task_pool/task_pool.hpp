@@ -1,8 +1,7 @@
 #pragma once
 
 #include <concurrent/base/collections/hash_map.hpp>
-#include <concurrent/worker/task.hpp>
-#include <concurrent/worker/worker_data.hpp>
+#include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
 #include <base/collections/optional.hpp>
@@ -15,7 +14,7 @@
 #include <mutex>
 #include <vector>
 
-namespace concurrent {
+namespace concurrent::pool {
 	class TaskPool;
 
 	/**
@@ -35,11 +34,11 @@ namespace concurrent {
 	/**
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
-	struct PoolTask {
+	struct Task {
 		TaskID id;
-		Task   work;
+		worker::Task   work;
 
-		PoolTask(TaskID id, Task work): id(id), work(std::move(work)) {}
+		Task(TaskID id, worker::Task work): id(id), work(std::move(work)) {}
 	};
 
 	/**
@@ -87,7 +86,7 @@ namespace concurrent {
 		 * @brief Constructs a TaskPool with the given WorkerManager.
 		 * @param worker_manager Reference to the WorkerManager that provides workers.
 		 */
-		explicit TaskPool(WorkerManager& worker_manager);
+		explicit TaskPool(worker::WorkerManager& worker_manager);
 
 		~TaskPool();
 
@@ -97,7 +96,7 @@ namespace concurrent {
 		TaskPool& operator=(TaskPool&&)      = delete;
 
 
-		void addInitialTasks(std::vector<PoolTask> tasks);
+		void addInitialTasks(std::vector<Task> tasks);
 
 		/**
 		 * @brief Start execution of all tasks in the pool.
@@ -120,7 +119,7 @@ namespace concurrent {
 		 *
 		 * @note Must be called from a worker thread.
 		 */
-		void query(const PoolTask &task);
+		void query(const Task &task);
 
 		/**
 		 * @brief Schedule a task for later execution.
@@ -133,7 +132,7 @@ namespace concurrent {
 		 *
 		 * @note Must be called from a worker thread.
 		 */
-		TaskHandle schedule(PoolTask&& task);
+		TaskHandle schedule(Task&& task);
 
 		/**
 		 * @brief Wait for a task to complete.
@@ -158,23 +157,21 @@ namespace concurrent {
 		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
 		 */
 		void onWorkerNoTasks();
-
-		void printQueuesDebugInfo();
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
-		 * @return Optional PoolTask if one was available.
+		 * @return Optional Task if one was available.
 		 */
-		base::Optional<PoolTask> tryStealFromGlobalUnlocked();
+		base::Optional<Task> tryStealFromGlobalUnlocked();
 
 		/**
 		 * @brief Try to steal a task from another worker's pool.
-         * @param worker_id The ID of the worker to steal from.
-		 * @return Optional PoolTask if one was available.
+         * @param worker_ref The ID of the worker to steal from.
+		 * @return Optional Task if one was available.
 		 */
-		base::Optional<PoolTask> tryStealFromWorkerUnlocked(WorkerID worker_id);
+		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref);
 
-		base::Optional<PoolTask> tryStealFromWorkerUnlocked(WorkerID worker_id, TaskID task_id);
+		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref, TaskID task_id);
 
 		/**
 		 * @brief Tries to execute the given task.
@@ -185,24 +182,24 @@ namespace concurrent {
 		 * done at some moment in the middle of the function.
 		 * Otherwise returns false.
 		 */
-		bool tryExecuteTask(const PoolTask& task);
+		bool tryExecuteTask(const Task& task);
 
 		/**
 		 * @brief Add a task to a worker's local pool.
-		 * @param worker_id The worker ID.
+		 * @param worker_ref The worker ID.
 		 * @param task The task to add.
 		 */
-		void addToWorkerPoolUnlocked(WorkerID worker_id, PoolTask &&task);
+		void addToWorkerPoolUnlocked(worker::WRef worker_ref, Task &&task);
 
 		/**
 		 * @brief Add a task to the global pool.
 		 * @param task The task to add.
 		 */
-		void addToGlobalPoolUnlocked(PoolTask &&task);
+		void addToGlobalPoolUnlocked(Task &&task);
 
 
 		/// Reference to the WorkerManager.
-		WorkerManager& worker_manager;
+		worker::WorkerManager& worker_manager;
 
 		/// Number of workers.
 		usize num_workers;
@@ -210,19 +207,16 @@ namespace concurrent {
 		/// Main mutex protecting pool queues (global_pool, worker_pools, pending_tasks).
 		mutable std::mutex pool_mutex;
 		/// Global task pool (shared among all workers).
-		std::deque<PoolTask> global_pool;
-		/// Per-worker task pools.
-		std::vector<std::deque<PoolTask>> worker_pools;
+		std::deque<Task> global_pool;
 
+		/// Per-worker task pools.
+		base::HashMap<worker::WRef, std::deque<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		ConHashMap<TaskID, TaskStatus> task_status_map;
 
 		/// Condition variable for signaling task completion.
 		std::condition_variable task_completed_cv;
-
-		/// Condition variable for signaling execution completion.
-		std::condition_variable execution_completed_cv;
 
 		/// Counter for completed tasks (used in execute()).
 		std::atomic<usize> completed_tasks{ 0 };
