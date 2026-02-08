@@ -5,32 +5,14 @@ use rustvil::fs::{PathExt, ShouldBlock};
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId, qp_bail,
-    quackpack::{
-        core::{
-            Package, PackageCtx, PackageLoader,
-            storage::{locks::DisallowCleanLock, paths::StoragePaths, venv::Venv},
-        },
-        schemas::registry,
+    DuckCtx, QuackResult, QuackResultContext, qp_bail,
+    quackpack::core::{
+        Package, PackageCtx, PackageLoader,
+        storage::{locks::DisallowCleanLock, paths::Storage, venv::Venv, venv_id::ToVenvId},
     },
 };
 
 use crate::quackpack::core::storage;
-
-#[derive(Debug)]
-pub enum IdOrPackage<'a> {
-    Id(StrId),
-    Package(&'a PackageCtx<'a>),
-}
-
-impl IdOrPackage<'_> {
-    pub fn venv_id(&self) -> StrId {
-        match self {
-            Self::Id(id) => *id,
-            Self::Package(ctx) => ctx.package().manifest().root_description().name(),
-        }
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SyncOptions {
@@ -50,18 +32,17 @@ pub fn sync(
     ctx: &DuckCtx,
     pkg_ctx: &PackageCtx,
     _options: SyncOptions,
-) -> QuackResult<(DisallowCleanLock, Venv, StoragePaths)> {
-    let storage = StoragePaths::new(ctx.duck_home());
-    let manifest = pkg_ctx.package().manifest();
+) -> QuackResult<(DisallowCleanLock, Venv, Storage)> {
+    let storage = Storage::new(ctx.duck_home());
     let venv_config = pkg_ctx.venv_config();
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
     let _input_freeze = load_external_freezefile(pkg_ctx, expose_freezefile)?;
-    let id = manifest.root_description().name();
+    let id = pkg_ctx.to_venv_id();
 
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)?;
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
 
-    let _data = storage::venv::fix_and_load_venv(&storage, id)?;
+    let _data = Venv::fix_and_load(&storage, id)?;
     drop(data_lock);
     #[allow(clippy::diverging_sub_expression)] // @TODO: #1962 Remove this
     let _freeze: storage::freeze::VenvFreeze = panic!("@TODO: #1962 Unmock solver");
@@ -87,13 +68,12 @@ pub fn sync(
     // Maybe we should bump `access_time` only in that case?
     let venv = Venv::new(
         _freeze,
-        registry::Manifest::try_from(manifest.clone())?,
         venv_config.is_ephemeral()?,
         pkg_ctx.package().manifest_path().to_path_buf(),
         now,
         now,
     );
-    storage::venv::save_venv(&storage, id, &venv)?;
+    venv.save_to(&storage, id)?;
     drop(data_lock);
     if expose_freezefile && !_options.frozen {
         let json = serde_json::to_string_pretty(&_freeze)?;

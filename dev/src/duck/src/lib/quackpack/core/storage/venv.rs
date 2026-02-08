@@ -21,10 +21,10 @@
 //!
 //! There are two operations:
 //!
-//! - [`fix_and_load_venv`]: transforms state of a venv into the canonical form. Loads the state
+//! - [`fix_and_load`](Venv::fix_and_load): transforms state of a venv into the canonical form. Loads the state
 //!   in the process (we do not provide separate fix and load, as checking validity
 //!   of a state requires reading the state, so we just return that result)
-//! - [`save_venv`]: requires that the state is in canonical form, transforms the state
+//! - [`save_to`](Venv::save_to): requires that the state is in canonical form, transforms the state
 //!   into a new canonical form with a new current state set to the provided.
 //!
 //! The format of the virtual environment file is:
@@ -40,7 +40,7 @@
 //! `os.fsync` for files is supported on most platforms, while `os.fsync`
 //! for directories does not work for example on Windows, which makes it hard
 //! to guarantee, which files will exist and where after system failure.
-//! Instead we build higher level operations using [`transfer_file_to`](PathExt::transfer_file_to) function,
+//! Instead we build higher level operations using [`copy_file_to`](PathOpsExt::copy_file_to) function,
 //! which copies contents of a file and executes `fsync` on it.
 //!
 //! Note that when creating a new virtual environment, operating system might
@@ -51,72 +51,20 @@
 //! however only relatively new virtual environments.
 
 use std::{
-    fs::OpenOptions,
-    io::{self, Read, Write},
+    io::Write,
     path::{Path, PathBuf},
     time::SystemTime,
 };
 
-use rustvil::fs::{MkdirOptions, PathExt as _};
+use rustvil::fs::{MkdirOptions, PathExt};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::{
-        core::storage::{freeze, paths::StoragePaths},
-        schemas::registry,
-    },
-    util_common::hash,
+    QuackResult, QuackResultContext,
+    quackpack::core::storage::{freeze, paths::Storage, venv_id::VenvId},
+    util_common::{atomic_path_ops_ext::PathOpsExt, hash},
 };
-
-const BUFFER_SIZE: usize = 4096;
-
-pub trait PathExt {
-    /// Copy the contents of one file into another and synchronize the result to disk.
-    fn transfer_file_to<P: AsRef<Path>>(&self, to: P) -> QuackResult<()>;
-
-    /// Ensure that directory-level changes (creation, deletion, renaming) are persisted to disk.
-    ///
-    /// This is a best-effort operation. If unsupported, it will be silently skipped.
-    fn try_fsync_dir(&self) -> QuackResult<()>;
-}
-
-impl PathExt for Path {
-    fn transfer_file_to<P: AsRef<Path>>(&self, to: P) -> QuackResult<()> {
-        let mut source = {
-            let mut opts = OpenOptions::new();
-            opts.read(true).open(self)
-        }?;
-        let mut target = {
-            let mut opts = OpenOptions::new();
-            opts.write(true).create(true).open(to)
-        }?;
-        let mut buffer = [0; BUFFER_SIZE];
-        loop {
-            let n = source.read(&mut buffer)?;
-            if n == 0 {
-                break;
-            }
-            target.write_all(&buffer[..n])?;
-        }
-        target.flush()?;
-        target.sync_all()?;
-        Ok(())
-    }
-
-    fn try_fsync_dir(&self) -> QuackResult<()> {
-        let dir = {
-            let mut opts = OpenOptions::new();
-            opts.read(true).open(self)
-        }?;
-        match dir.sync_all() {
-            Ok(_) => Ok(()),
-            Err(e) if matches!(e.kind(), io::ErrorKind::Unsupported) => Ok(()),
-            Err(e) => Err(e.into()),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct CorruptedFileError {}
@@ -127,7 +75,6 @@ pub struct CorruptedFileError {}
 /// required for storage functioning: last location and access info.
 pub struct Venv {
     freeze: freeze::VenvFreeze,
-    original_schema: registry::Manifest,
     is_ephemeral: bool,
     last_location: PathBuf,
     last_modification: SystemTime,
@@ -137,7 +84,6 @@ pub struct Venv {
 impl Venv {
     pub fn new(
         freeze: freeze::VenvFreeze,
-        original_schema: registry::Manifest,
         is_ephemeral: bool,
         last_location: PathBuf,
         last_modification: SystemTime,
@@ -145,7 +91,6 @@ impl Venv {
     ) -> Self {
         Self {
             freeze,
-            original_schema,
             is_ephemeral,
             last_location,
             last_modification,
@@ -165,7 +110,81 @@ impl Venv {
         Ok(serde_json::from_str(data).map_err(|_| CorruptedFileError {}))
     }
 
-    pub fn save(&self, path: &Path) -> QuackResult<()> {
+    /// Convert the state of a virtual environment into canonical form and return its state.
+    ///
+    /// If neither the main nor backup file is valid, the environment directory is removed.
+    pub fn fix_and_load(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
+        // NOTE: when external entity changes the storage disregarding the rules, we have
+        // toctou here and an exception might be thrown later. We ignore that to keep sanity.
+        if !storage.venv_dir(venv_id).is_dir() {
+            debug!("storage for venv `{venv_id}` is not a directory");
+            return Ok(None);
+        }
+        let path = storage.vevn_metadata(venv_id);
+        let backup_path = storage.vevn_backup_metadata(venv_id);
+        let existed = path.exists();
+        let backup_existed = backup_path.exists();
+        // if main file is valid, return state held in it
+        if existed {
+            let data = Venv::load(&path)?;
+            if let Ok(venv) = data {
+                return Ok(Some(venv));
+            }
+        }
+
+        // otherwise, the state is not canonical, and current state, if it exists,
+        // is held in the backup file
+        if backup_existed {
+            let data = Venv::load(&path)?;
+            if let Ok(venv) = data {
+                backup_path.copy_file_to(&path)?;
+                if !existed {
+                    storage.venv_dir(venv_id).try_fsync_dir()?;
+                }
+                return Ok(Some(venv));
+            }
+        }
+        // both files are not valid, so the venv does not exist,
+        // put it in the canonical form by deleting its directory
+        storage.venv_dir(venv_id).rmtree()?;
+        Ok(None)
+    }
+
+    /// Save a new canonical state of the virtual environment to storage.
+    ///
+    /// Assumes that the current ``metadata`` file is valid. This is typically ensured
+    /// by calling :func:`fix_and_load_venv` before.
+    pub fn save_to(&self, storage: &Storage, venv_id: VenvId) -> QuackResult<()> {
+        let path = storage.vevn_metadata(venv_id);
+        let backup_path = storage.vevn_backup_metadata(venv_id);
+        let existed = path.exists();
+        let backup_existed = backup_path.exists();
+        let parent = path
+            .parent()
+            .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
+        if !parent.exists() {
+            parent.mkdir(MkdirOptions::WithParents)?;
+        }
+        if existed {
+            // move old current state to backup file, as when error occurs during
+            // overwriting the main file, the invariants will be upkept.
+            // (the backup file will be valid)
+            path.copy_file_to(&backup_path)?;
+            if !backup_existed {
+                storage.venv_dir(venv_id).try_fsync_dir()?;
+            }
+        }
+        self.save_(&path)?;
+        if !existed {
+            // also initialize the `.old` file, such that issues
+            // relating to unavailable directory `fsync` are minimized
+            path.copy_file_to(&backup_path)?;
+            storage.venv_dir(venv_id).try_fsync_dir()?;
+        }
+        Ok(())
+    }
+
+    fn save_(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
@@ -185,18 +204,6 @@ impl Venv {
 
     pub fn set_freeze(&mut self, freeze: freeze::VenvFreeze) {
         self.freeze = freeze;
-    }
-
-    pub fn original_schema(&self) -> &registry::Manifest {
-        &self.original_schema
-    }
-
-    pub fn original_schema_mut(&mut self) -> &mut registry::Manifest {
-        &mut self.original_schema
-    }
-
-    pub fn set_original_schema(&mut self, original_schema: registry::Manifest) {
-        self.original_schema = original_schema;
     }
 
     pub fn is_ephemeral(&self) -> bool {
@@ -234,78 +241,4 @@ impl Venv {
     pub fn set_last_access(&mut self, last_access: SystemTime) {
         self.last_access = last_access;
     }
-}
-
-/// Convert the state of a virtual environment into canonical form and return its state.
-///
-/// If neither the main nor backup file is valid, the environment directory is removed.
-pub fn fix_and_load_venv(storage: &StoragePaths, venv_id: StrId) -> QuackResult<Option<Venv>> {
-    // NOTE: when external entity changes the storage disregarding the rules, we have
-    // toctou here and an exception might be thrown later. We ignore that to keep sanity.
-    if !storage.venv_dir(venv_id).is_dir() {
-        debug!("storage for venv `{venv_id}` is not a directory");
-        return Ok(None);
-    }
-    let path = storage.vevn_metadata(venv_id);
-    let backup_path = storage.vevn_backup_metadata(venv_id);
-    let existed = path.exists();
-    let backup_existed = backup_path.exists();
-    // if main file is valid, return state held in it
-    if existed {
-        let data = Venv::load(&path)?;
-        if let Ok(venv) = data {
-            return Ok(Some(venv));
-        }
-    }
-
-    // otherwise, the state is not canonical, and current state, if it exists,
-    // is held in the backup file
-    if backup_existed {
-        let data = Venv::load(&path)?;
-        if let Ok(venv) = data {
-            backup_path.transfer_file_to(&path)?;
-            if !existed {
-                storage.venv_dir(venv_id).try_fsync_dir()?;
-            }
-            return Ok(Some(venv));
-        }
-    }
-    // both files are not valid, so the venv does not exist,
-    // put it in the canonical form by deleting its directory
-    storage.venv_dir(venv_id).rmtree()?;
-    Ok(None)
-}
-
-/// Save a new canonical state of the virtual environment to storage.
-///
-/// Assumes that the current ``metadata`` file is valid. This is typically ensured
-/// by calling :func:`fix_and_load_venv` before.
-pub fn save_venv(storage: &StoragePaths, venv_id: StrId, venv: &Venv) -> QuackResult<()> {
-    let path = storage.vevn_metadata(venv_id);
-    let backup_path = storage.vevn_backup_metadata(venv_id);
-    let existed = path.exists();
-    let backup_existed = backup_path.exists();
-    let parent = path
-        .parent()
-        .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
-    if !parent.exists() {
-        parent.mkdir(MkdirOptions::WithParents)?;
-    }
-    if existed {
-        // move old current state to backup file, as when error occurs during
-        // overwriting the main file, the invariants will be upkept.
-        // (the backup file will be valid)
-        path.transfer_file_to(&backup_path)?;
-        if !backup_existed {
-            storage.venv_dir(venv_id).try_fsync_dir()?;
-        }
-    }
-    venv.save(&path)?;
-    if !existed {
-        // also initialize the `.old` file, such that issues
-        // relating to unavailable directory `fsync` are minimized
-        path.transfer_file_to(&backup_path)?;
-        storage.venv_dir(venv_id).try_fsync_dir()?;
-    }
-    Ok(())
 }

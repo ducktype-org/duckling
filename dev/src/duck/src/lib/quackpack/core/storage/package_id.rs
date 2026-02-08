@@ -51,7 +51,7 @@ impl RegistryId {
         format!(
             "{}-{}-{}-{}",
             Self::TYPE,
-            self.url.host_str().unwrap_or_default(),
+            sha256_string(self.url.host_str().unwrap_or_default()),
             self.id,
             self.version
         )

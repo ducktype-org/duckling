@@ -19,7 +19,7 @@
 //!   (be deleted), the data lock must be held.
 //! - [`TrySyncLock`]: grants mutable access to the storage-stored virtual environment
 //!   configuration. Respects all of the conditions given in the descriptions of the
-//!   previous two locks. If the operation would block, [`WoudlBlock`](io::ErrorKind::WouldBlock) is
+//!   previous two locks. If the operation would block, [`WouldBlock`](io::ErrorKind::WouldBlock) is
 //!   returned instead. As we do not assume any fair queueing of lock operations,
 //!   this prevents error-prone situation, in which two concurrent synchronization
 //!   operations would execute out of the order in which the user started them.
@@ -76,14 +76,14 @@
 use rustvil::fs::FileLockGuard;
 use rustvil::fs::PathExt as _;
 use rustvil::fs::ShouldBlock;
-use std::fs::DirEntry;
+use std::fs::ReadDir;
 use std::io;
 use std::path::Path;
 
 use crate::QuackResult;
 use crate::QuackResultContext;
-use crate::StrId;
-use crate::quackpack::core::storage::paths::StoragePaths;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv_id::VenvId;
 
 #[derive(Debug)]
 /// A lock that guarantees no virtual environment data mutations are in progress.
@@ -101,7 +101,7 @@ pub struct CleanLock {
 }
 
 impl CleanLock {
-    pub fn new(storage: &StoragePaths) -> QuackResult<Self> {
+    pub fn new(storage: &Storage) -> QuackResult<Self> {
         let lock = storage
             .clean_lock()
             .lock(ShouldBlock::Yes)
@@ -123,14 +123,14 @@ pub struct DisallowCleanLock {
 ///
 /// Ensures the operation does not interfere with global clean operations or
 /// other concurrent synchronization tasks. If it cannot acquire the required
-/// locks, it returns [`WoudlBlock`](io::ErrorKind::WouldBlock).
+/// locks, it returns [`WouldBlock`](io::ErrorKind::WouldBlock).
 pub struct TrySyncLock {
     clean_lock: FileLockGuard,
     _sync_lock: FileLockGuard,
 }
 
 impl TrySyncLock {
-    pub fn new(storage: &StoragePaths, venv_id: StrId) -> io::Result<Self> {
+    pub fn new(storage: &Storage, venv_id: VenvId) -> io::Result<Self> {
         let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
         let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
         Ok(Self {
@@ -154,7 +154,7 @@ pub struct RunLock {
 }
 
 impl RunLock {
-    pub fn new(storage: &StoragePaths, venv_id: StrId) -> QuackResult<Self> {
+    pub fn new(storage: &Storage, venv_id: VenvId) -> QuackResult<Self> {
         let lock = storage
             .sync_lock(venv_id)
             .lock_shared(ShouldBlock::Yes)
@@ -167,16 +167,13 @@ impl RunLock {
 
 /// Cleans up leftover lock files from previously aborted or crashed processes.
 /// Deletes lock files only if the corresponding virtual environment directories no longer exist.
-pub fn cleanup_locks(storage: &StoragePaths) -> QuackResult<()> {
+pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
     cleanup_locks_impl(storage, storage.iter_sync_locks()?)?;
     cleanup_locks_impl(storage, storage.iter_data_locks()?)?;
     Ok(())
 }
 
-fn cleanup_locks_impl(
-    storage: &StoragePaths,
-    dir_iterator: impl Iterator<Item = io::Result<DirEntry>>,
-) -> QuackResult<()> {
+fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;
         let name = lockfile.file_name().to_string_lossy().into_owned().into();

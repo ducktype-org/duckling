@@ -1,3 +1,4 @@
+pub mod atomic_path_ops_ext;
 pub mod error;
 pub mod hash;
 pub mod toml_config;

@@ -1,7 +1,7 @@
 mod clean;
-mod miscellaneous;
+mod info;
 mod sync;
 
 pub use clean::*;
-pub use miscellaneous::*;
+pub use info::*;
 pub use sync::*;

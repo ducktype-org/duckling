@@ -13,15 +13,15 @@ use crate::{
 
 use super::package_id::{GitId, PackageId};
 
-use super::paths::StoragePaths;
+use super::paths::Storage;
 #[derive(Debug)]
 pub struct StorageGitAccess<'paths> {
-    paths: &'paths StoragePaths,
+    paths: &'paths Storage,
     _cached: HashMap<Git, GitId>,
 }
 
 impl<'paths> StorageGitAccess<'paths> {
-    pub fn new(paths: &'paths StoragePaths, cached: HashMap<Git, GitId>) -> Self {
+    pub fn new(paths: &'paths Storage, cached: HashMap<Git, GitId>) -> Self {
         Self {
             paths,
             _cached: cached,
