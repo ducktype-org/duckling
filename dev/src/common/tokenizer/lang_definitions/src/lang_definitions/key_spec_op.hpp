@@ -199,6 +199,7 @@ namespace lang_def {
 		NotAnOperator,
 
 		Period,
+		Range,
 		PeriodQuestion,
 		PeriodStar,
 		Colon,
