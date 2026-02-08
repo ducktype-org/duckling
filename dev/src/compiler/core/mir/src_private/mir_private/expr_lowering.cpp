@@ -497,7 +497,6 @@ namespace compiler::mir {
 			);
 		}
 
-		// TODOP: Maybe remove that completely.
 		void visitListPopExpr(const hc::ListPopExpr& expr) override {
 			auto hole          = continuation->addHole();
 			auto lowered_count = lowerSubExpr(*expr.count, continuation);

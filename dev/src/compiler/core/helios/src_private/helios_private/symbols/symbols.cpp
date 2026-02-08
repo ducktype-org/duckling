@@ -489,19 +489,15 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
-					auto unit_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryUnitType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
+					[[maybe_unused]]
+					auto unit_type
+						= tsh::SymbolType<>(
+							ctx.query<tsh::QueryUnitType>({}),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						);
 
-					// TODOP: How to make this generic.
-					auto list_i64_type
-						= tsh::SymbolType<>{ ctx.query<tsh::QueryDynamicArrayType>({ i64_type }),
-						                     tsh::ReferenceKind::Ref,
-						                     tsh::Mutability::Mutable };
-
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 12> function_data
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
 						= { {
 							{
 								base::StrID("builtin_input_i64"),
@@ -534,25 +530,6 @@ namespace compiler::helios {
 							{
 								base::StrID("builtin_output_string"),
 								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type }),
-							},
-							{
-								base::StrID("builtin_list_push"),
-								ctx.query<tsh::QueryFunctionType>(
-									{ { list_i64_type, i64_type, u64_type }, unit_type }
-								),
-							},
-							{
-								base::StrID("builtin_list_pop"),
-								ctx.query<tsh::QueryFunctionType>({ { list_i64_type, u64_type },
-						                                            unit_type }),
-							},
-							{
-								base::StrID("builtin_list_len"),
-								ctx.query<tsh::QueryFunctionType>({ { list_i64_type }, u64_type }),
-							},
-							{
-								base::StrID("builtin_list_free"),
-								ctx.query<tsh::QueryFunctionType>({ { list_i64_type }, unit_type }),
 							},
 						} };
 

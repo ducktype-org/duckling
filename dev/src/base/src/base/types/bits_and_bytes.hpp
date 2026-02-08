@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
 
@@ -18,7 +19,13 @@ STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 namespace base {
 	constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
 
-	constexpr Bytes bits2bytes(Bits bits) { return Bytes(usize(bits) / 8); }
+	constexpr Bytes bits2bytes(Bits bits) {
+		CORE_ASSERT(
+			usize(bits) % 8 == 0,
+			"Bits must be divisible by 8 to be converted to bytes without a loss of precision"
+		);
+		return Bytes(usize(bits) / 8);
+	}
 }
 
 namespace base::internal {

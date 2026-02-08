@@ -6,8 +6,6 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "typesystem/higher/expression_type.hpp"
-#include "typesystem/higher/mutability.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/symbol_type.hpp"
 #include "typesystem/higher/types.hpp"
@@ -187,7 +185,7 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, symbol);
 	}
 
-	tsh::AbstractType builtinOperationToReturnType(
+	tsh::AbstractType builtinBinaryOperationToReturnType(
 		query::Context& ctx, BuiltinBinary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinBinary;
@@ -231,18 +229,14 @@ namespace compiler::helios::code {
 	BinaryOperatorExpr::BinaryOperatorExpr(
 		query::Context& ctx, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
 	):
-		  Expr(
-
-			  tsh::ExpressionType<>(
-				  // @TODO: Select type of expression based on result type of the operation.
-				  tsh::SymbolType{
-					  builtinOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
-				  },
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  )
-		  ),
+		  Expr(tsh::ExpressionType<>(
+			  tsh::SymbolType{
+				  builtinBinaryOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable,
+			  },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+		  )),
 		  operation(operation),
 		  lhs(std::move(lhs)),
 		  rhs(std::move(rhs)) {}
@@ -281,6 +275,7 @@ namespace compiler::helios::code {
 		case FloatDiv:
 			out << "/";
 			break;
+		case FloatMod:
 		case IntegerMod:
 			out << "%";
 			break;
@@ -288,21 +283,29 @@ namespace compiler::helios::code {
 		case FloatPow:
 			out << "**";
 			break;
+		case FloatLt:
 		case IntegerLt:
 			out << " < ";
 			break;
+		case FloatLteq:
 		case IntegerLteq:
 			out << " <= ";
 			break;
+		case FloatGt:
 		case IntegerGt:
 			out << " > ";
 			break;
+		case FloatGteq:
 		case IntegerGteq:
 			out << " >= ";
 			break;
+		case MetaEq:
+		case FloatEq:
 		case IntegerEq:
 			out << " == ";
 			break;
+		case MetaNeq:
+		case FloatNeq:
 		case IntegerNeq:
 			out << " != ";
 			break;
@@ -457,28 +460,37 @@ namespace compiler::helios::code {
 		return makeBox<VariantTypeConstructorExpr>(expression_type, std::move(cloned_subtypes));
 	}
 
-	UnaryOperatorExpr::UnaryOperatorExpr(query::Context& ctx, BuiltinUnary operation, Box<Expr> expr):
-		  Expr([&]() -> tsh::ExpressionType<> {
-			  // TODOP: Comment.
-			  switch (operation) {
-			  case BuiltinUnary::Len: {
-				  auto u64_type = tsh::SymbolType<>{
-					  ctx.query<tsh::QueryIntegralType>(
-						  { 64, tsh::IntegralAbstractType::Signedness::Unsigned }
-					  ),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable
-				  };
-				  return tsh::ExpressionType<>{
-					  u64_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-				  };
-			  }
-			  default: {
-				  return expr->expression_type;
-			  }
-			  }
-		  }()),
+	tsh::AbstractType builtinUnaryOperationToReturnType(
+		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+	) {
+		using enum BuiltinUnary;
+		switch (operation) {
+		case BuiltinUnary::IntegerNegation:
+		case BuiltinUnary::FloatNegation:
+		case BuiltinUnary::BooleanNot:
+		case BuiltinUnary::Ref:
+		case BuiltinUnary::Box:
+		case BuiltinUnary::Const:
+			// For most of the unary operators the result is the same as their argument type:
+			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
+			return argument_type;
+		case BuiltinUnary::Len: {
+			return ctx.query<tsh::QueryIntegralType>(
+				{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+			);
+		}
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
 
+	UnaryOperatorExpr::UnaryOperatorExpr(query::Context& ctx, BuiltinUnary operation, Box<Expr> expr):
+		  Expr(tsh::ExpressionType<>{
+			  tsh::SymbolType<>{
+				  builtinUnaryOperationToReturnType(ctx, operation, expr->expression_type.getType()),
+				  tsh::ReferenceKind::Direct,
+				  tsh::Mutability::Mutable },
+			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary) }),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -901,6 +913,7 @@ namespace compiler::helios::code {
 		return makeBox<ListPushExpr>(expression_type, list->clone(), element->clone());
 	}
 
+	// TODOP: Should this be a statement?
 	ListPopExpr::ListPopExpr(query::Context& ctx, Box<Expr> list, Box<Expr> count):
 		  Expr(tsh::ExpressionType(
 			  tsh::SymbolType<>(

@@ -167,7 +167,7 @@ namespace compiler::helios::code {
 			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
 			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
 			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
-			// List. TODOP: Temporary
+			// List.
 			{ { keywordToStr(lang_def::Keyword::Len), tsh::Kind::DynamicArray }, BuiltinUnary::Len },
 		};
 

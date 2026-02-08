@@ -7,7 +7,6 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/context/context.hpp"
 #include <token_parser_core/common_elements.hpp>
 
 #include <vector>
@@ -303,7 +302,7 @@ namespace compiler::helios::code {
 		Ref,
 		Box,
 		Const,
-		Len,  // Temporary
+		Len,  // @TODO: #1970 Probably remove that in the future.
 	};
 
 	/**
@@ -667,6 +666,12 @@ namespace compiler::helios::code {
 		LiftToTypeExpr(tsh::ExpressionType<> expression_type, Box<Expr> value_expr);
 	};
 
+	/**
+	 * @brief Represents a push operation to a dynamic array.
+	 *
+	 * Assumes the `list` argument is a dynamic array and `element` argument is the same as the
+	 * lists element type.
+	 */
 	struct ListPushExpr final: public Expr {
 		Box<Expr> list;
 		Box<Expr> element;
@@ -684,6 +689,11 @@ namespace compiler::helios::code {
 		ListPushExpr(tsh::ExpressionType<> expression_type, Box<Expr> list, Box<Expr> element);
 	};
 
+	/**
+	 * @brief Represents a pop operation from the dynamic array.
+	 *
+	 * Assumes the `list` argument is a dynamic array and `count` argument is an integer.
+	 */
 	struct ListPopExpr final: public Expr {
 		Box<Expr> list;
 		Box<Expr> count;

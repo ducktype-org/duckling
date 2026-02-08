@@ -1058,7 +1058,7 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			case AllocBox: {
+			case BoxAlloc: {
 				// First, get the value to box.
 				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				llvm::Type* pointee_type = value_to_box->getType();
@@ -1085,7 +1085,7 @@ namespace compiler::backend_llvm {
 				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
 				break;
 			}
-			case FreeBox: {
+			case BoxFree: {
 				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				// @TODO: #1894 This may change based on the way we handle destructors.
 

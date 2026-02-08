@@ -5,11 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "typesystem/higher/kind.hpp"
-#include "typesystem/higher/mutability.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -336,9 +331,10 @@ namespace compiler::helios::code {
 		/**
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
-		 * It is when we have keyword literal followed by a call expression, like "i64(42)".
-		 * Currently used only for type casts.
-		 * TODOP: Update comment
+		 * It is when we have keyword literal followed by a call expression. This includes:
+		 * - `i64(42)` - for type casts.
+		 * - `i64[3]` - for static array type creation.
+		 * - `List[i64]` - for dynamic array type creation.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -665,16 +661,16 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Helper function of @p processPSTExpr that processes a square bracket call. This
-		 * can either mean a array type creation or an index operator.
+		 * @brief Helper function of @p processPSTExpr that processes a square bracket call.
+		 * This can mean:
+		 * - static array type creation - if `[]` with an `u64` argument is called on `meta`.
+		 * - dynamic array type creation - if `[]` with an `meta` argument is called on the untyped
+		 * DynamicArray expression
+		 * - index operator - if `[]` with an `i64` argument is called on
+		 * `StaticArray`/`DynamicArray`.
 		 */
 		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
-			base->debugPrint(std::cout);
-			std::cout << '\n';
-			call_expr->dprint(std::cout);
-			std::cout << '\n';
-
 			CORE_ASSERT(
 				call_expr->getType() == lexer::Token::Square,
 				"processSquareCall called on a different call type: ",
@@ -697,17 +693,16 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
 			// If base is coercible to meta, this is an array type creation.
+			// TODOP: Move that to a function.
 			if (meta_coercion_res.isValid()) {
-				std::cout << "Meta coercion valid\n";
-
-
 				auto coerced_base = meta_coercion_res.coerce(query_ctx, std::move(base));
 
 				auto base_eval
 					= query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_base.ref() });
 				UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval);
 
-				// If the base is a meta type
+				// If the base is an untyped DynamicArray, then we expect meta for dynamic array
+				// type creation. Otherwise we expect an integer for StaticArray type creation.
 				auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
 					if (base_ctv.has<tsh::SymbolType<>>()) {
 						auto dyn_array = base_ctv.get<tsh::SymbolType<>>();
@@ -716,14 +711,12 @@ namespace compiler::helios::code {
 							                      .as<tsh::DynamicArrayAbstractType>()
 							                      .getElementType();
 							if (inner_type.getType().getKind() == tsh::Kind::Unit) {
-								std::cout << "List type creation\n";
 								return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
 									                      tsh::ReferenceKind::Direct,
 									                      tsh::Mutability::Immutable };
 							}
 						}
 					}
-					std::cout << "List type fail\n";
 					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
 												  { 64,
 						                            tsh::IntegralAbstractType::Signedness::Signed }
@@ -732,14 +725,9 @@ namespace compiler::helios::code {
 						                      tsh::Mutability::Immutable };
 				}();
 
-				std::cout << "Expected type for index: " << expected_index_arg_type.toString()
-						  << '\n';
-
 				auto arg_res
 					= getHoutOfExprWithExpectedType(query_ctx, arg_pst, expected_index_arg_type);
-				std::cout << "1\n";
 				UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
-				std::cout << "2\n";
 
 				return ChainState::ofExpr(
 					makeBox<IndexExpr>(query_ctx, std::move(coerced_base), std::move(arg_expr))

@@ -14,8 +14,6 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/types.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/hout.hpp>
@@ -91,7 +89,7 @@ namespace compiler::lir {
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
 		case mir::Operation::AllocBox:
-			return Operation::AllocBox;
+			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
@@ -604,7 +602,9 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// TODO: Temporary approach.
+					// @TODO: #929 The whole DestructIf is a stub. Implement it once we know how to
+					// call destructors.
+
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
 					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
 						auto lir_place = getLocation(to_destruct);
@@ -630,7 +630,7 @@ namespace compiler::lir {
 						// FreeBox is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
 							curr_block->instructions.emplace_back(
-								Operation::FreeBox,
+								Operation::BoxFree,
 								base::Optional<LIRPlace>{},
 								std::vector{ lir_place.value() }
 							);
@@ -638,15 +638,12 @@ namespace compiler::lir {
 						}
 					}
 
-
-					// @TODO: #929 Implement it, once we know how to call destructors
 					CORE_DEV_LOG(
 						Compiler,
 						"DestructIf not implemented for types with non-trivial "
 						"destructors, skipping",
 						"\n"
 					);
-
 
 					return curr_block;
 				}
