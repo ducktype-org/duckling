@@ -339,7 +339,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief A single projection which transforms a MIRPlace. This includes dereferencing,
-		 * field access and in the future index access for array elements.
+		 * field access and index access for array elements.
 		 */
 		struct Projection {
 			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
@@ -424,9 +424,6 @@ namespace compiler::mir {
 		/**
 		 * @brief Adds an IndexProjection to the projection chain. Panics if trying to index into a
 		 * non-array type.
-		 * @note Since `[]` operator returns a reference to the inner array element, the result type
-		 * of the MIRPlace after adding an IndexProjection is the inner array element type with the
-		 * Ref specifier.
 		 * @return The extended MIRPlace with a IndexProjection.
 		 */
 		[[nodiscard]] MIRPlace withIndex(const MIRValue& index) const;

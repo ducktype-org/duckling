@@ -5,6 +5,11 @@
 
 #include "chain_expr.hpp"
 
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/mutability.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -619,92 +624,6 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Recursively nests a new static array dimension as the innermost element type.
-		 *
-		 * If not for that sinking `int[2][3]` would be interpreted as a array with three elements,
-		 * each of them being a 2 element array. After this function runs, the type is correctly
-		 * interpreted as a 2 element array, with each of it's element being a 3 element array.
-		 *
-		 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
-		 */
-		tsh::SymbolType<> sinkArrayDimension(
-			query::Context& ctx, tsh::SymbolType<> base, usize size
-		) {
-			if (base.getType().getKind() == tsh::Kind::StaticArray) {
-				auto static_arr = base.getType().as<tsh::StaticArrayAbstractType>();
-				auto inner_type = sinkArrayDimension(ctx, static_arr.getElementType(), size);
-
-				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
-					base.getRefKind(),
-					base.getMutability()
-				};
-			}
-			return tsh::SymbolType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
-				                      base.getRefKind(),
-				                      base.getMutability() };
-		}
-
-		/**
-		 * @brief Process a square bracket call on an meta expression.
-		 *
-		 * - The `[size]' operator on meta, must be a compile time evaluated integer
-		 */
-		auto processStaticArrayTypeCreation(
-			Box<Expr> expr, pst::AccessLocked<pst::ExprElement> size_pst
-		) -> query::QResult<ChainState> {
-			auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ size_pst });
-			UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
-
-			// Size of the array should be compile time evaluated and integral.
-			auto maybe_size = ctv.get<ctv::NumericValue>();
-			if (!maybe_size.has_value() || !maybe_size->isIntegral()) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Array size must be a constant integer.",
-					size_pst.unlock(query_ctx)->getSourcePosition()
-				));
-				return query::Failed();
-			}
-
-			// This should never fail.
-			usize array_size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-
-			auto base_eval_res = query_ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
-			UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval_res);
-
-			auto maybe_type = base_ctv.get<tsh::SymbolType<>>();
-			CORE_ASSERT(
-				maybe_type.has_value(), "Coerced meta expression must evaluate to a valid type"
-			);
-
-			auto static_array_type = sinkArrayDimension(query_ctx, *maybe_type, array_size);
-
-			return ChainState::ofExpr(
-				makeBox<LiteralTypeExpr>(query_ctx, static_array_type.getType())
-			);
-		}
-
-		// TODOP: Comment.
-		auto processDynamicArrayTypeCreation(pst::AccessLocked<pst::ExprElement> type_arg_pst)
-			-> query::QResult<ChainState> {
-			auto eval_result = query_ctx.query<QueryEvaluatePSTExpression>({ type_arg_pst });
-			UNPACK_QRESULT_MOVE(auto ctv =, eval_result);
-
-			auto maybe_type = ctv.get<tsh::SymbolType<>>();
-			if (!maybe_type.has_value()) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"List[] argument must evaluate to meta.",
-					type_arg_pst.unlock(query_ctx)->getSourcePosition()
-				));
-				return query::Failed();
-			}
-
-			auto dynamic_array_type = query_ctx.query<tsh::QueryDynamicArrayType>(*maybe_type);
-
-			return ChainState::ofExpr(makeBox<LiteralTypeExpr>(query_ctx, dynamic_array_type));
-		}
-
-		/**
 		 * @brief Process a square bracket call on an expression. Panics if the base expression
 		 * can't be indexed (is not an array).
 		 *
@@ -712,7 +631,7 @@ namespace compiler::helios::code {
 		 * DerefExpr if needed).
 		 * - The argument for the operator has to be implicitly coercible to `i64`.
 		 */
-		auto processStaticArrayIndexing(Box<Expr> expr, pst::AccessLocked<pst::ExprElement> index_pst)
+		auto processArrayIndexing(Box<Expr> expr, pst::AccessLocked<pst::ExprElement> index_pst)
 			-> query::QResult<ChainState> {
 			if (expr->expression_type.getSymbolType().getType().getKind() != tsh::Kind::StaticArray
 			    && expr->expression_type.getSymbolType().getType().getKind()
@@ -746,11 +665,16 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @brief Helper function of @p processPSTExpr that processes a square bracket call. This ca
-		 * either mean a StaticArray type creation or an index operator.
+		 * @brief Helper function of @p processPSTExpr that processes a square bracket call. This
+		 * can either mean a array type creation or an index operator.
 		 */
 		auto processSquareCall(Box<Expr> base, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
+			base->debugPrint(std::cout);
+			std::cout << '\n';
+			call_expr->dprint(std::cout);
+			std::cout << '\n';
+
 			CORE_ASSERT(
 				call_expr->getType() == lexer::Token::Square,
 				"processSquareCall called on a different call type: ",
@@ -772,22 +696,58 @@ namespace compiler::helios::code {
 			auto meta_res = canCoerceToMeta(query_ctx, base->expression_type.getSymbolType());
 			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
-			// If base is coercible to meta, this is a static array type creation.
+			// If base is coercible to meta, this is an array type creation.
 			if (meta_coercion_res.isValid()) {
-				if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
-					if (literal_type_expr->value_type.getType().getKind()
-					    == tsh::Kind::DynamicArray) {
-						return processDynamicArrayTypeCreation(arg_pst);
-					}
-				}
+				std::cout << "Meta coercion valid\n";
 
-				return processStaticArrayTypeCreation(
-					meta_coercion_res.coerce(query_ctx, std::move(base)), arg_pst
+
+				auto coerced_base = meta_coercion_res.coerce(query_ctx, std::move(base));
+
+				auto base_eval
+					= query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_base.ref() });
+				UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval);
+
+				// If the base is a meta type
+				auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
+					if (base_ctv.has<tsh::SymbolType<>>()) {
+						auto dyn_array = base_ctv.get<tsh::SymbolType<>>();
+						if (dyn_array->getType().getKind() == tsh::Kind::DynamicArray) {
+							auto inner_type = dyn_array->getType()
+							                      .as<tsh::DynamicArrayAbstractType>()
+							                      .getElementType();
+							if (inner_type.getType().getKind() == tsh::Kind::Unit) {
+								std::cout << "List type creation\n";
+								return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
+									                      tsh::ReferenceKind::Direct,
+									                      tsh::Mutability::Immutable };
+							}
+						}
+					}
+					std::cout << "List type fail\n";
+					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
+												  { 64,
+						                            tsh::IntegralAbstractType::Signedness::Signed }
+											  ),
+						                      tsh::ReferenceKind::Direct,
+						                      tsh::Mutability::Immutable };
+				}();
+
+				std::cout << "Expected type for index: " << expected_index_arg_type.toString()
+						  << '\n';
+
+				auto arg_res
+					= getHoutOfExprWithExpectedType(query_ctx, arg_pst, expected_index_arg_type);
+				std::cout << "1\n";
+				UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
+				std::cout << "2\n";
+
+				return ChainState::ofExpr(
+					makeBox<IndexExpr>(query_ctx, std::move(coerced_base), std::move(arg_expr))
 				);
 			}
 
 			// Index operator.
-			return processStaticArrayIndexing(std::move(base), arg_pst);
+			return processArrayIndexing(std::move(base), arg_pst);
 		}
 
 		// =============================== MAIN PROCESSING LOOP ===============================

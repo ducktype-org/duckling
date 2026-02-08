@@ -280,7 +280,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief A single projection which transforms a LIRPlace. This includes dereferencing,
-		 * field access and in the future index access for array elements.
+		 * field access and index access for array elements.
 		 */
 		struct Projection {
 			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;

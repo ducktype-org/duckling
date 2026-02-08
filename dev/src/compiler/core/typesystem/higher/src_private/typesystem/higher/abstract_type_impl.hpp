@@ -558,6 +558,11 @@ namespace compiler::tsh {
 			return element_type.getType().hasNoOpDestructor();
 		}
 
+		[[nodiscard]] bool carriesInformation(query::Context&) const override {
+			// Static Arrays don't carry information if they don't contain any elements.
+			return size > 0;
+		}
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};

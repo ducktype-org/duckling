@@ -79,8 +79,92 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Access expression in comp time");
 			}
 
-			void visitIndexExpr(const code::IndexExpr&) final {
-				// @TODO: #1922 Implement that.
+			/**
+			 * @brief Recursively nests a new static array dimension as the innermost element type.
+			 *
+			 * If not for that sinking `int[2][3]` would be interpreted as a array with three
+			 * elements, each of them being a 2 element array. After this function runs, the type is
+			 * correctly interpreted as a 2 element array, with each of it's element being a 3
+			 * element array.
+			 *
+			 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
+			 */
+			tsh::SymbolType<> sinkStaticArrayDimension(
+				query::Context& ctx, tsh::SymbolType<> base, usize size
+			) {
+				if (base.getType().getKind() == tsh::Kind::StaticArray) {
+					auto static_arr = base.getType().as<tsh::StaticArrayAbstractType>();
+					auto inner_type
+						= sinkStaticArrayDimension(ctx, static_arr.getElementType(), size);
+
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
+						base.getRefKind(),
+						base.getMutability()
+					};
+				}
+				return tsh::SymbolType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
+					                      base.getRefKind(),
+					                      base.getMutability() };
+			}
+
+			void visitIndexExpr(const code::IndexExpr& expr) final {
+				auto base_res = evalHoutExpr(ctx, expr.base.ref());
+				if (base_res.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				const auto& base_ctv = base_res.valueOrThrow();
+
+				// Index expr on meta is evaluated to a static array type or a list type.
+				if (auto maybe_type = base_ctv.get<tsh::SymbolType<>>()) {
+					auto index_res = evalHoutExpr(ctx, expr.index.ref());
+					if (index_res.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+
+					const auto& index_ctv = index_res.valueOrThrow();
+
+					// Check is the base type is the placeholder untyped dynamic array type. If so,
+					// we create a properly typed DynamicArray. Index expr should be a meta type.
+					if (maybe_type->getType().getKind() == tsh::Kind::DynamicArray) {
+						auto dyn_array_abs
+							= maybe_type->getType().as<tsh::DynamicArrayAbstractType>();
+						if (dyn_array_abs.getElementType().getType().getKind() == tsh::Kind::Unit) {
+							if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
+								auto typed_dynamic_array = ctx.query<tsh::QueryDynamicArrayType>(
+									{ maybe_elem_type.value() }
+								);
+								result = CompileTimeValue{ tsh::SymbolType<>{
+									typed_dynamic_array,
+									maybe_type->getRefKind(),
+									maybe_type->getMutability() } };
+								return;
+							}
+						}
+					}
+
+					// If base is meta and not a untyped dynamic list. Then the should be a
+					// comp-time evaluated integral constant. Then this expression creates a new
+					// static array type.
+					if (auto maybe_size = index_ctv.get<NumericValue>()) {
+						if (maybe_size->isIntegral()) {
+							usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+							result     = CompileTimeValue{
+                                sinkStaticArrayDimension(ctx, *maybe_type, size)
+							};
+							return;
+						}
+					}
+
+					// If none of the patterns matched, this is an error.
+					result = query::Failed();
+					return;
+				}
+
+				// @TODO: #1922 If base is not meta, this is a normal index expression. Implement that.
 				throw base::NotYetImplemented("Index expression in comp time");
 			}
 

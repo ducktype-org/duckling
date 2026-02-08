@@ -296,10 +296,9 @@ private:
 			R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-			{ "Array size must be a constant integer" },
+			{ "Type `f32` cannot be converted to type `const i64`." },
 			1
 		);
-
 
 		checkForErrorOnCompileModule(
 			R"(
