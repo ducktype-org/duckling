@@ -1,3 +1,4 @@
+pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
 pub mod solving;
