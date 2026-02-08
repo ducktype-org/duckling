@@ -1383,7 +1383,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function = hout.functions.at(0);
-		auto& body     = *function.body;
+		auto& body     = *function->body;
 		using namespace compiler::helios::code;
 
 		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
