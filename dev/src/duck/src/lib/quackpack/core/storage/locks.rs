@@ -19,7 +19,7 @@
 //!   (be deleted), the data lock must be held.
 //! - [`TrySyncLock`]: grants mutable access to the storage-stored virtual environment
 //!   configuration. Respects all of the conditions given in the descriptions of the
-//!   previous two locks. If the operation would block, [`WoudlBloc`](io::ErrorKind::WouldBlock) is
+//!   previous two locks. If the operation would block, [`WoudlBlock`](io::ErrorKind::WouldBlock) is
 //!   returned instead. As we do not assume any fair queueing of lock operations,
 //!   this prevents error-prone situation, in which two concurrent synchronization
 //!   operations would execute out of the order in which the user started them.
@@ -123,7 +123,7 @@ pub struct DisallowCleanLock {
 ///
 /// Ensures the operation does not interfere with global clean operations or
 /// other concurrent synchronization tasks. If it cannot acquire the required
-/// locks, it returns [`WoudlBloc`](io::ErrorKind::WouldBlock).
+/// locks, it returns [`WoudlBlock`](io::ErrorKind::WouldBlock).
 pub struct TrySyncLock {
     clean_lock: FileLockGuard,
     _sync_lock: FileLockGuard,

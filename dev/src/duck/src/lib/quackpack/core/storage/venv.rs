@@ -21,10 +21,10 @@
 //!
 //! There are two operations:
 //!
-//! - [`fix_and_load`]: transforms state of a venv into the canonical form. Loads the state
+//! - [`fix_and_load_venv`]: transforms state of a venv into the canonical form. Loads the state
 //!   in the process (we do not provide separate fix and load, as checking validity
 //!   of a state requires reading the state, so we just return that result)
-//! - [`save`]: requires that the state is in canonical form, transforms the state
+//! - [`save_venv`]: requires that the state is in canonical form, transforms the state
 //!   into a new canonical form with a new current state set to the provided.
 //!
 //! The format of the virtual environment file is:
@@ -41,11 +41,11 @@
 //! for directories does not work for example on Windows, which makes it hard
 //! to guarantee, which files will exist and where after system failure.
 //! Instead we build higher level operations using [`transfer_file_to`](PathExt::transfer_file_to) function,
-//! which copies contents of a file and executes [`fsync`] on it.
+//! which copies contents of a file and executes `fsync` on it.
 //!
 //! Note that when creating a new virtual environment, operating system might
 //! break some invariants, by not flushing directory entries to the disk.
-//! If directory [`fsync`] is supported, we use that, but in general, if system
+//! If directory `fsync` is supported, we use that, but in general, if system
 //! failure happens during that window, we cannot guarantee the virtual environment
 //! to exist after reboot even if it has been used before. The problem affects
 //! however only relatively new virtual environments.
