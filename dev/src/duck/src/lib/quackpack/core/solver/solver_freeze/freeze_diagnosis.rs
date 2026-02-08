@@ -4,12 +4,12 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, FeatureName, Manifest,
-        solver_freeze::{PackageFreeze, VenvFreeze},
+        solver_freeze::{SolverFreeze, SolverPackageFreeze},
         types_common::ExpandedPackage,
     },
 };
 
-impl VenvFreeze {
+impl SolverFreeze {
     /// Finds the maximal subset of the freeze which is a correct dependency resolution,
     /// with a relaxation that main package dependencies may not be realised.
     ///
@@ -112,8 +112,8 @@ impl VenvFreeze {
     /// Helper for [`Self::still_satisfied_pkgs`].
     /// Checks if a particular dependency is satisifed.
     fn check_if_dep_is_satisfied(
-        freeze: &PackageFreeze,
-        realization_freeze: &PackageFreeze,
+        freeze: &SolverPackageFreeze,
+        realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
     ) -> QuackResult<bool> {
         let Some(realisation) = freeze
@@ -183,7 +183,7 @@ mod test {
         DuckCtx, QpCtx, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
-            solver_freeze::{PackageFreeze, VenvFreeze},
+            solver_freeze::{SolverFreeze, SolverPackageFreeze},
             types_common::{
                 ExpandedLocRegistry, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
             },
@@ -254,15 +254,15 @@ features:
             (exp_pkg_a, manifest_a.manifest()),
             (exp_pkg_b, manifest_b.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
             features: HashSet::from([FeatureName::new("foo")]),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::from([FeatureName::new("xd")]),
         };
-        let prev_freeze = VenvFreeze {
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
@@ -329,15 +329,15 @@ metadata:
             (exp_pkg_a, manifest_a.manifest()),
             (exp_pkg_b, manifest_b.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
             features: HashSet::from([FeatureName::new("foo")]),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::from([FeatureName::new("xd")]),
         };
-        let prev_freeze = VenvFreeze {
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
@@ -422,16 +422,16 @@ metadata:
             (exp_pkg_b, manifest_b.manifest()),
             (exp_pkg_c, manifest_c.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
             features: HashSet::new(),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
             features: HashSet::new(),
         };
-        let prev_c_freeze = PackageFreeze::default();
-        let prev_freeze = VenvFreeze {
+        let prev_c_freeze = SolverPackageFreeze::default();
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
@@ -539,20 +539,20 @@ metadata:
             (exp_pkg_c, manifest_c.manifest()),
             (exp_pkg_d, manifest_d.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
             features: HashSet::new(),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
             features: HashSet::new(),
         };
-        let prev_c_freeze = PackageFreeze {
+        let prev_c_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
             features: HashSet::new(),
         };
-        let prev_d_freeze = PackageFreeze::default();
-        let prev_freeze = VenvFreeze {
+        let prev_d_freeze = SolverPackageFreeze::default();
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),

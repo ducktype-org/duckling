@@ -9,18 +9,18 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct VenvFreeze {
-    pub package_freezes: HashMap<ExpandedPackage, PackageFreeze>,
+pub struct SolverFreeze {
+    pub package_freezes: HashMap<ExpandedPackage, SolverPackageFreeze>,
     pub main_pkg: ExpandedPackage,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PackageFreeze {
+pub struct SolverPackageFreeze {
     pub dependencies_realization: HashMap<StrId, ExpandedPackage>,
     pub features: HashSet<FeatureName>,
 }
 
-impl PackageFreeze {
+impl SolverPackageFreeze {
     pub fn new() -> Self {
         Self {
             dependencies_realization: HashMap::new(),
@@ -29,7 +29,7 @@ impl PackageFreeze {
     }
 }
 
-impl Default for PackageFreeze {
+impl Default for SolverPackageFreeze {
     fn default() -> Self {
         Self::new()
     }

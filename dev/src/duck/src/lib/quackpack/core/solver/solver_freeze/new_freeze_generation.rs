@@ -4,13 +4,13 @@ use crate::{
     QuackResult, QuackResultContext, StrId,
     quackpack::core::{
         FeatureName, Manifest,
-        solver_freeze::{PackageFreeze, VenvFreeze},
+        solver_freeze::{SolverFreeze, SolverPackageFreeze},
         solving::FoundSolution,
         types_common::ExpandedPackage,
     },
 };
 
-impl VenvFreeze {
+impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
     /// Trims the resulting freeze to contain only the necessary packages and features.
     /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
@@ -33,10 +33,10 @@ impl VenvFreeze {
     }
 
     /// Adds the solver output to the freeze.
-    fn add_solver_output(self: &mut VenvFreeze, solver_output: FoundSolution) -> QuackResult<()> {
+    fn add_solver_output(self: &mut SolverFreeze, solver_output: FoundSolution) -> QuackResult<()> {
         for new_pkg in solver_output.new_packages {
             self.package_freezes
-                .insert(new_pkg, PackageFreeze::default());
+                .insert(new_pkg, SolverPackageFreeze::default());
         }
         for (pkg, new_features) in solver_output.new_features {
             self.package_freezes.get_mut(&pkg)
@@ -68,7 +68,7 @@ impl VenvFreeze {
     ) -> QuackResult<Self> {
         let mut new_package_freezes = HashMap::from([(
             self.main_pkg,
-            PackageFreeze {
+            SolverPackageFreeze {
                 dependencies_realization: HashMap::new(),
                 features: main_pkg_features,
             },
@@ -82,7 +82,7 @@ impl VenvFreeze {
         })
     }
 
-    /// Recursive DFS-like helper for [`VenvFreeze::find_minimal_dep_solution`], to construct trimmed package to [`PackageFreeze`] map.
+    /// Recursive DFS-like helper for [`SolverFreeze::find_minimal_dep_solution`], to construct trimmed package to [`SolverPackageFreeze`] map.
     /// For a given package, it iterates over its dependencies and,
     /// for each realization, determines what features of the child are forced.
     /// If some new feature of the child is forced, the function calls itself, with that package as the base.
@@ -90,7 +90,7 @@ impl VenvFreeze {
         &self,
         base_pkg: ExpandedPackage,
         manifests: &HashMap<ExpandedPackage, &Manifest>,
-        new_pkg_freezes: &mut HashMap<ExpandedPackage, PackageFreeze>,
+        new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,
     ) -> QuackResult<()> {
         let base_manifest = manifests
             .get(&base_pkg)
@@ -118,11 +118,11 @@ impl VenvFreeze {
         Ok(())
     }
 
-    /// Helper for [`VenvFreeze::mark_children_as_necessary`].
+    /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds with what features the package is currectly listed in the new package freezes map.
     fn current_pkg_features(
         &self,
-        new_pkg_freezes: &mut HashMap<ExpandedPackage, PackageFreeze>,
+        new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,
         pkg: &ExpandedPackage,
     ) -> QuackResult<Vec<FeatureName>> {
         Ok(new_pkg_freezes
@@ -134,7 +134,7 @@ impl VenvFreeze {
             .collect())
     }
 
-    /// Helper for [`VenvFreeze::mark_children_as_necessary`].
+    /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds how a dependency is realized.
     fn get_realization(
         &self,
@@ -149,10 +149,10 @@ impl VenvFreeze {
             .context_internal("No realisation for package")
     }
 
-    /// Helper for [`VenvFreeze::mark_children_as_necessary`].
+    /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Adds the realization of the dependency to the package's freeze.
     fn add_realization(
-        new_pkg_freezes: &mut HashMap<ExpandedPackage, PackageFreeze>,
+        new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,
         pkg: &ExpandedPackage,
         dep_name: &StrId,
         realization: &ExpandedPackage,
@@ -182,7 +182,7 @@ mod test {
         DuckCtx, QpCtx, StrId,
         quackpack::core::{
             FeatureName, Version, parse_manifest,
-            solver_freeze::{PackageFreeze, VenvFreeze},
+            solver_freeze::{SolverFreeze, SolverPackageFreeze},
             solving::FoundSolution,
             types_common::{
                 DependencyEdge, ExpandedLocRegistry, ExpandedLocation, ExpandedPackage,
@@ -267,15 +267,15 @@ metadata:
             (exp_pkg_b, manifest_b.manifest()),
             (exp_pkg_c, manifest_c.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
             features: HashSet::new(),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::new(),
         };
-        let prev_freeze = VenvFreeze {
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
@@ -377,22 +377,22 @@ metadata:
             (exp_pkg_b, manifest_b.manifest()),
             (exp_pkg_c, manifest_c.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
                 (StrId::new("b"), exp_pkg_b),
                 (StrId::new("c"), exp_pkg_c),
             ]),
             features: HashSet::new(),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::new(),
         };
-        let prev_c_freeze = PackageFreeze {
+        let prev_c_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::new(),
         };
-        let prev_freeze = VenvFreeze {
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
@@ -484,22 +484,22 @@ metadata:
             (exp_pkg_b, manifest_b.manifest()),
             (exp_pkg_c, manifest_c.manifest()),
         ]);
-        let prev_a_freeze = PackageFreeze {
+        let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([
                 (StrId::new("b"), exp_pkg_b),
                 (StrId::new("c"), exp_pkg_c),
             ]),
             features: HashSet::new(),
         };
-        let prev_b_freeze = PackageFreeze {
+        let prev_b_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::new(),
         };
-        let prev_c_freeze = PackageFreeze {
+        let prev_c_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::new(),
             features: HashSet::from([FeatureName::new("xdd")]),
         };
-        let prev_freeze = VenvFreeze {
+        let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
                 (exp_pkg_a, prev_a_freeze),
                 (exp_pkg_b, prev_b_freeze),
