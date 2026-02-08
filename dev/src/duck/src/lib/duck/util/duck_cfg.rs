@@ -12,7 +12,8 @@ pub struct DuckCfg {
     inner: TomlConfig,
 }
 
-const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_hours(24);
+// !TODO: Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
+const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_secs(24 * 60 * 60);
 
 impl DuckCfg {
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
