@@ -77,8 +77,71 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Access expression in comp time");
 			}
 
-			void visitIndexExpr(const code::IndexExpr&) final {
-				// @TODO: #1922 Implement that.
+			/**
+			 * @brief Recursively nests a new static array dimension as the innermost element type.
+			 *
+			 * If not for that sinking `int[2][3]` would be interpreted as a array with three
+			 * elements, each of them being a 2 element array. After this function runs, the type is
+			 * correctly interpreted as a 2 element array, with each of it's element being a 3
+			 * element array.
+			 *
+			 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
+			 */
+			tsh::SymbolType<> sinkStaticArrayDimension(
+				query::Context& ctx, tsh::SymbolType<> base, usize size
+			) {
+				if (base.getType().getKind() == tsh::Kind::StaticArray) {
+					auto static_arr = base.getType().as<tsh::StaticArrayAbstractType>();
+					auto inner_type
+						= sinkStaticArrayDimension(ctx, static_arr.getElementType(), size);
+
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
+						base.getRefKind(),
+						base.getMutability()
+					};
+				}
+				return tsh::SymbolType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
+					                      base.getRefKind(),
+					                      base.getMutability() };
+			}
+
+			void visitIndexExpr(const code::IndexExpr& expr) final {
+				auto base_res = evalHoutExpr(ctx, expr.base.ref());
+				if (base_res.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				const auto& base_ctv = base_res.valueOrThrow();
+
+				// Index expr on meta is evaluated to a static array.
+				if (auto maybe_type = base_ctv.get<tsh::SymbolType<>>()) {
+					auto index_res = evalHoutExpr(ctx, expr.index.ref());
+					if (index_res.hasFailed()) {
+						result = query::Failed();
+						return;
+					}
+
+					const auto& index_ctv  = index_res.valueOrThrow();
+					auto        maybe_size = index_ctv.get<NumericValue>();
+
+					// Index has to be a comp-time evaluated integral constant.
+					if (maybe_size && maybe_size->isIntegral()) {
+						usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+						result
+							= CompileTimeValue{ sinkStaticArrayDimension(ctx, *maybe_type, size) };
+						return;
+					}
+
+					// Base is meta, but index isn't integral. This is an error.
+					// @TODO: #1919 In the future meta index expression on meta will create a List[T].
+
+					result = query::Failed();
+					return;
+				}
+
+				// @TODO: #1922 If base is not meta, this is a normal index expression. Implement that.
 				throw base::NotYetImplemented("Index expression in comp time");
 			}
 

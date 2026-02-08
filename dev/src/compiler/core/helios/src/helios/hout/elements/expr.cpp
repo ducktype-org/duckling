@@ -577,6 +577,10 @@ namespace compiler::helios::code {
 			  [&]() -> tsh::SymbolType<> {
 				  auto base_type = base->expression_type.getType();
 				  switch (base_type.getKind()) {
+				  case tsh::Kind::Meta: {  // Array type creation. The result of the index
+			                               // expression on meta is meta as well.
+					  return base->expression_type.getSymbolType();
+				  }
 				  case tsh::Kind::DynamicArray:
 					  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 				  case tsh::Kind::StaticArray:

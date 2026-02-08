@@ -253,17 +253,22 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			auto lowered_index = lowerSubExpr(*expr.index, continuation);
-			auto index_val     = lowered_index.getResult(function);
+			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+				// @TODO: #1918 Implement that.
+				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
+			} else {
+				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto index_val     = lowered_index.getResult(function);
 
-			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-			auto base_val     = lowered_base.getResult(function);
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
 
-			variant_match(std::move(base_val.getVariant())) {
-				variant_case(MIRPlace, place) {
-					valueOutput(lowered_base.begin, place.withIndex(index_val));
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						valueOutput(lowered_base.begin, place.withIndex(index_val));
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 				}
-				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 			}
 		}
 

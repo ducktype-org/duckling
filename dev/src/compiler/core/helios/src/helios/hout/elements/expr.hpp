@@ -419,7 +419,13 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an array indexing operation (both for static and dynamic arrays).
+	 * @brief Represents an array indexing operation.
+	 *
+	 * This expression is used in two cases:
+	 * - When the base is a list or a static array, the index is expected to be an i64 integer. This
+	 * then represents an index access (array[0]).
+	 * - When the base is a meta type, the index is expected to be an i64 integer. This then
+	 * represents a static array type creation.
 	 */
 	struct IndexExpr final: public Expr {
 		Box<Expr> base;
