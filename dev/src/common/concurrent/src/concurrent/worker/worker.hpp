@@ -61,6 +61,8 @@ namespace concurrent::worker {
 		 */
 		[[nodiscard]] bool isFree() const;
 
+		[[nodiscard]] bool internalHasTasks() const;
+
 		/**
 		 * @brief Sets the callback to be invoked when there are no tasks.
 		 * @param callback The callback function.

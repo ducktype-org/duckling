@@ -67,7 +67,7 @@ namespace concurrent::pool {
 		 * @brief Constructs a TaskPool with the given WorkerManager.
 		 * @param worker_manager Reference to the WorkerManager that provides workers.
 		 */
-		explicit TaskPool(worker::WorkerManager& worker_manager);
+		explicit TaskPool();
 
 		~TaskPool();
 
@@ -77,15 +77,24 @@ namespace concurrent::pool {
 		TaskPool& operator=(TaskPool&&)      = delete;
 
 
+		/**
+		 * @brief Add the initial set of tasks to the pool.
+		 * These tasks will be distributed to workers when execute() is called.
+		 */
 		void addInitialTasks(std::vector<Task> tasks);
 
 		/**
 		 * @brief Start execution of all tasks in the pool.
-		 * Distributes initial tasks: one to each worker, rest to global pool.
-		 * Blocks until all tasks are completed.
+		 * Distributes initial tasks: one to each worker and the rest to the global pool.
+		 * Is non-blocking, returns immediately after scheduling the initial tasks.
+		 * @note execute() must be called after addInitialTasks()
 		 */
 		void execute();
 
+		/**
+		 * @brief Wait for all tasks in the pool to complete.
+		 * Should be called after execute().
+		 */
 		void waitExecutionCompletion();
 
 		/**
@@ -137,7 +146,7 @@ namespace concurrent::pool {
 		 * @brief Callback invoked when a worker has no tasks.
 		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
 		 */
-		void onWorkerNoTasks();
+		void onWorkerNoTasks(worker::WRef current_worker);
 
 	private:
 		/**
@@ -179,6 +188,12 @@ namespace concurrent::pool {
 		 */
 		void addToGlobalPoolUnlocked(Task&& task);
 
+		/**
+		 * @brief Gets the ID of a free worker if available.
+		 * There is a similiar function in WorkerManager, but here we
+		 * set the availability of the worker under our mutex
+		 * avoiding the missed wake up problem (missed schedule problem in this case).
+		 */
 		base::Optional<worker::WRef> getFreeWorkerUnlocked() const;
 
 
@@ -211,11 +226,13 @@ namespace concurrent::pool {
 		/// Total number of tasks (used in execute()).
 		std::atomic<usize> added_tasks{ 0 };
 
-		/// Our own worker free 
+		/// Our own worker free
 		base::HashMap<worker::WRef, std::atomic<bool>> is_worker_free_map;
 
 		/// Flag indicating if execution is in progress.
 		std::atomic<bool> is_executing{ false };
+
+		bool is_used = false;
 	};
 
 }  // namespace concurrent

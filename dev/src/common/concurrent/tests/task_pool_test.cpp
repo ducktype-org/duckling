@@ -6,7 +6,6 @@
 
 #include <tester/tester.hpp>
 
-
 class TaskPoolTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS TaskPoolTest
@@ -25,11 +24,10 @@ public:
 
 private:
 	void basicFunctionalityTest() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		constexpr usize          TASK_COUNT      = 10;
-		std::atomic_int          completed_tasks = 0;
-		concurrent::worker::Task task            = [&completed_tasks](concurrent::worker::WRef) {
+		concurrent::pool::TaskPool task_pool;
+		constexpr usize            TASK_COUNT      = 10;
+		std::atomic_int            completed_tasks = 0;
+		concurrent::worker::Task   task            = [&completed_tasks](concurrent::worker::WRef) {
             completed_tasks.fetch_add(1, std::memory_order_relaxed);
 		};
 		std::vector<concurrent::pool::Task> tasks;
@@ -40,15 +38,11 @@ private:
 		task_pool.execute();
 		task_pool.waitExecutionCompletion();
 		std::cout << "Execution completed.\n";
-		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);		
+		ASSERT_EQUAL(completed_tasks.load(std::memory_order_relaxed), TASK_COUNT);
 	}
 
 	void testFibbonaciSchedule() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
+		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -90,16 +84,10 @@ private:
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
-
-		
 	}
 
 	void testFibbonaciScheduleReversed() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
+		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -141,16 +129,10 @@ private:
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
-
-		
 	}
 
 	void testFibbonaciQuery() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
+		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -188,16 +170,10 @@ private:
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
-
-		
 	}
 
 	void testFibbonaciScheduleAndQuery() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
+		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> fib_cache;
 		std::function<u64(u64)>          fib_task_gen;
@@ -236,16 +212,10 @@ private:
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
-
-		
 	}
 
 	void testGibbonaci() {
-		auto&                      worker_manager = concurrent::worker::WorkerManager::get();
-		concurrent::pool::TaskPool task_pool(worker_manager);
-		worker_manager.setNoTasksCallback([&task_pool](concurrent::worker::WRef) mutable {
-			task_pool.onWorkerNoTasks();
-		});
+		concurrent::pool::TaskPool task_pool;
 
 		concurrent::ConHashMap<u64, u64> gib_cache;
 		std::function<u64(u64)>          gib_task_gen;
@@ -298,8 +268,6 @@ private:
 		task_pool.waitExecutionCompletion();
 
 		std::cout << "Execution completed.\n";
-
-		
 	}
 };
 

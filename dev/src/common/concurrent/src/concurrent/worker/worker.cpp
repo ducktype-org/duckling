@@ -32,6 +32,11 @@ namespace concurrent::worker {
 
 	bool Worker::isFree() const { return is_free; }
 
+	bool Worker::internalHasTasks() const {
+		std::scoped_lock lock(mut);
+		return !task_queue.empty();
+	}
+
 	Worker::~Worker() {
 		{
 			std::scoped_lock lock(mut);
