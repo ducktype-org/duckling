@@ -31,11 +31,11 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n"
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
         ExitCode: 0
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
         Output:
-          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n"
+          String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
         ExitCode: 0

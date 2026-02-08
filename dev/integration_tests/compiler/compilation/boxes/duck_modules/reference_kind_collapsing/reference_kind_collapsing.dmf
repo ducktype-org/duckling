@@ -1,3 +1,6 @@
+fun foo(a: ref i64) = { a = a+1; }
+fun bar(a: ref i64) = foo(&a);
+
 fun main() -> i32 = {
     var a: i32 = 1;
     builtin_output_i64(a);
@@ -31,5 +34,11 @@ fun main() -> i32 = {
     var ref_box_from_ref: ref box i32 = &box_a;
     builtin_output_i64(ref_box_from_ref);
 
+    var x: i64 = 2;
+    bar(&x);
+    builtin_output_i64(x);
+
     return 0;
 }
+
+
