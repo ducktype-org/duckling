@@ -201,7 +201,7 @@ impl FreezePackage {
                 registry.url.clone(),
             )),
             ExpandedLocation::Git(ref git) => {
-                PackageId::Git(GitId::new(git.url.parse().expect("#1954"), git.commit))
+                PackageId::Git(GitId::new(git.url.clone(), git.commit))
             }
             ExpandedLocation::Local(ref local) => {
                 PackageId::Local(LocalId::new(local.absolute_path.clone()))
