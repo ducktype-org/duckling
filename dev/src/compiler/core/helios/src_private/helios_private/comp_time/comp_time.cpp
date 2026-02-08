@@ -135,7 +135,7 @@ namespace compiler::helios {
 					}
 
 					// Base is meta, but index isn't integral. This is an error.
-					// @TODO: #1919 In the future meta index expression on meta will create a List[T].
+					// @TODO: #1919 In the future meta index expression on meta could create a List[T].
 
 					result = query::Failed();
 					return;

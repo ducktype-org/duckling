@@ -616,7 +616,7 @@ namespace compiler::backend_llvm {
 		 * The overview of what this does is:
 		 * - For a given LIRValue take a pointer to it.
 		 * - Iterate through the projection chain which can store `FieldProjection`,
-		 * `DerefProjection`(and in the near future `IndexProjection` for accessing array elements)
+		 * `DerefProjection`, `IndexProjection`.
 		 * and add subsequent arguments to the currently built GEP instruction.
 		 * - If a `DerefProjection` is encountered, we have to emit the GEP built up to this point,
 		 * perform a load on the address it returned and start building a new GEP.
