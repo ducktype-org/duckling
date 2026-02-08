@@ -14,7 +14,7 @@ impl VenvFreeze {
     /// with a relaxation that main package dependencies may not be realised.
     ///
     /// This is done by firstly finding which freeze entries are not immediately flawed
-    /// (manifest match the package and each realization from the freeze really realizes its manifest counterpart).
+    /// (manifest matches the package and each realization from the freeze really realizes its manifest counterpart).
     /// Then the information about being flawed is propagated upwards (if child is flawed then so is parent who depends on it).
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.

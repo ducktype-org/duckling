@@ -59,8 +59,8 @@ impl VenvFreeze {
     /// Trims the freeze to contain the minimal sufficient set of packages and features.
     /// Assumes that the freeze is correct, but potentially unnecessary large.
     /// This can be used to either generate:
-    ///     * the new freeze (main_pkg_features equal to all manifest-specified main package features).
-    ///     * from the new freeze a compilation graph (main_pkg_features equal to features provided by the build command).
+    ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
+    ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
     pub fn find_minimal_dep_solution(
         self,
         manifests: &HashMap<ExpandedPackage, &Manifest>,
