@@ -175,7 +175,7 @@ impl StoragePaths {
 
     pub fn mark_as_stored(&self, id: &PackageId) -> QuackResult<()> {
         if id.is_local() {
-            qp_bail_internal!("attempting to stpre a local package")
+            qp_bail_internal!("attempting to store a local package")
         }
         let dir = self.pkg_dir(id);
         dir.join(OK_FILENAME).touch()?;

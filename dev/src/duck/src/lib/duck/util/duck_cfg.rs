@@ -67,7 +67,7 @@ impl DuckCfg {
         let config_seconds = self
             .inner
             .get_int("storage.temporary_lifetime")
-            .context("when trying to get a storage temporary lifetime")?;
+            .context("when trying to get the storage temporary lifetime")?;
         let Some(secs) = config_seconds else {
             return Ok(DEFAULT_STORAGE_LIFETIME);
         };
