@@ -8,8 +8,8 @@ use std::{
 use url::Url;
 
 use crate::{
-    QuackResult, StrId, qp_bail_internal,
-    quackpack::core::{Version, version::CompatibilityCheck},
+    QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    quackpack::core::{Dependency, Registry, Source, Version, version::CompatibilityCheck},
 };
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
@@ -81,7 +81,7 @@ pub struct ExpandedLocRegistry {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ExpandedLocGit {
-    pub url: StrId,
+    pub url: Url,
     pub commit: StrId,
 }
 
@@ -133,6 +133,64 @@ impl ExpandedPackage {
             Ok(version_other.can_be_upgraded_to(&version_self))
         } else {
             Ok(self.version == other.version)
+        }
+    }
+
+    /// Assuming that [`self`] was a realization of some dependency, checks whether we can be certain it is still true.
+    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+        match (self.location.as_ref(), dependency.desc().source().as_ref()) {
+            (ExpandedLocation::Local(local_loc), Source::Local(local_source)) => {
+                Ok(local_loc.absolute_path == local_source.absolute())
+            }
+            (ExpandedLocation::Git(git_loc), Source::Git(git_source)) => {
+                // If the git dependency specifies tag, branch or nothing (default branch),
+                // some new commits may have appeared.
+                if let Some(required_commit) = git_source.rev()
+                    && git_loc.commit == required_commit
+                    && git_loc.url == *git_source.url()
+                {
+                    if let Some(required_version) = dependency.desc().versions().first() {
+                        Ok(self.version == Some(*required_version))
+                    } else {
+                        Ok(true)
+                    }
+                } else {
+                    Ok(false)
+                }
+            }
+            (ExpandedLocation::Registry(registry_loc), Source::Registry(registry_source)) => {
+                self.check_satisfaction_for_registry(registry_loc, registry_source, dependency)
+            }
+            _ => Ok(false),
+        }
+    }
+
+    /// Helper for [`Self::still_satisfies_dep`].
+    fn check_satisfaction_for_registry(
+        &self,
+        registry_loc: &ExpandedLocRegistry,
+        registry_source: &Registry,
+        dependency: &Dependency,
+    ) -> QuackResult<bool> {
+        let location_agreement = (registry_loc.url == *registry_source.url())
+            && (dependency.real_name() == registry_loc.real_name);
+        let self_version = self
+            .version
+            .context_internal("Registry package with no version")?;
+        if dependency.is_pinned() {
+            let required_version = dependency
+                .desc()
+                .versions()
+                .first()
+                .context_internal("Pinned dependency without specified version")?;
+            Ok(location_agreement && self_version == *required_version)
+        } else {
+            Ok(location_agreement
+                && dependency
+                    .desc()
+                    .versions()
+                    .iter()
+                    .any(|required| required.can_be_upgraded_to(&self_version)))
         }
     }
 }
