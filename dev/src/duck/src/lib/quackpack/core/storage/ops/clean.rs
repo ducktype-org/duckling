@@ -34,13 +34,21 @@ pub fn delete_venv(ctx: &DuckCtx, venv: IdOrPackage<'_>) -> QuackResult<()> {
             })
             .with_context(|| {
                 if would_block {
-                    format!("another syncrhonization operation is ongoin in venv `{venv_id}`")
+                    format!("another synchronization operation is ongoing in venv `{venv_id}`")
                 } else {
                     format!("failed to acquire a lock for venv `{venv_id}`")
                 }
             })?
     };
-    let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
+    let _lock = storage
+        .data_lock(venv_id)
+        .lock(ShouldBlock::Yes)
+        .with_context(|| {
+            format!(
+                "failed to acquire exclusive data lock for venv `{}`",
+                venv_id
+            )
+        })?;
     let _ = storage.venv_dir(venv_id).rmtree();
     Ok(())
 }

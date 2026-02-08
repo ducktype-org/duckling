@@ -81,6 +81,7 @@ use std::io;
 use std::path::Path;
 
 use crate::QuackResult;
+use crate::QuackResultContext;
 use crate::StrId;
 use crate::quackpack::core::storage::paths::StoragePaths;
 
@@ -100,8 +101,11 @@ pub struct CleanLock {
 }
 
 impl CleanLock {
-    pub fn new(storage: &StoragePaths) -> io::Result<Self> {
-        let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
+    pub fn new(storage: &StoragePaths) -> QuackResult<Self> {
+        let lock = storage
+            .clean_lock()
+            .lock(ShouldBlock::Yes)
+            .context("failed to acquire exclusive storage clean lock")?;
         Ok(Self { _lock: lock })
     }
 }
@@ -150,8 +154,13 @@ pub struct RunLock {
 }
 
 impl RunLock {
-    pub fn new(storage: &StoragePaths, venv_id: StrId) -> io::Result<Self> {
-        let lock = storage.sync_lock(venv_id).lock_shared(ShouldBlock::Yes)?;
+    pub fn new(storage: &StoragePaths, venv_id: StrId) -> QuackResult<Self> {
+        let lock = storage
+            .sync_lock(venv_id)
+            .lock_shared(ShouldBlock::Yes)
+            .with_context(|| {
+                format!("failed to acquire shared sync lock for venv `{}`", venv_id)
+            })?;
         Ok(Self { _lock: lock })
     }
 }
@@ -169,10 +178,12 @@ fn cleanup_locks_impl(
     dir_iterator: impl Iterator<Item = io::Result<DirEntry>>,
 ) -> QuackResult<()> {
     for lockfile in dir_iterator {
-        let lockfile = lockfile?;
+        let lockfile = lockfile.context("failed to read entry from dir iterator")?;
         let name = lockfile.file_name().to_string_lossy().into_owned().into();
+        let path = lockfile.path();
         if !storage.venv_dir(name).is_dir() {
-            try_delete_lock(&lockfile.path())?;
+            try_delete_lock(&path)
+                .with_context(|| format!("failed to delete lock `{}`", path.display()))?;
         }
     }
     Ok(())

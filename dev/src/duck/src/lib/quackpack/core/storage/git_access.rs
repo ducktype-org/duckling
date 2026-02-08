@@ -7,7 +7,7 @@ use rustvil::fs::{MkdirOptions, PathExt};
 use url::Url;
 
 use crate::{
-    QuackResult, StrId,
+    QuackResult, QuackResultContext, StrId,
     quackpack::core::{Git, git_access::GitAccess},
 };
 
@@ -43,12 +43,21 @@ impl<'paths> GitAccess for StorageGitAccess<'paths> {
         let id = PackageId::Git(GitId::new(url, commit));
         let dir = self.paths.pkg_dir(&id);
         if dir.exists() {
-            dir.rmtree()?;
+            dir.rmtree()
+                .with_context(|| format!("failed to remove directory `{}`", dir.display()))?;
         }
         if let Some(parent) = dir.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
+            parent
+                .mkdir(MkdirOptions::WithParents)
+                .with_context(|| format!("failed to create directory `{}`", parent.display()))?;
         }
-        source_path.rename_to(dir)?;
+        source_path.rename_to(&dir).with_context(|| {
+            format!(
+                "failed to rename `{}` to `{}`",
+                source_path.display(),
+                dir.display()
+            )
+        })?;
         Ok(())
     }
 }
