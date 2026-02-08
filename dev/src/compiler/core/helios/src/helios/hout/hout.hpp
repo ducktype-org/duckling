@@ -175,9 +175,15 @@ namespace compiler::helios {
 
 		std::vector<HOUTGlobalData> glob_data;
 
-		std::vector<HOUTFunction> functions;
+		std::vector<CRef<HOUTFunction>> functions;
 
 		[[nodiscard]]
 		std::string debugPrint(query::Context& ctx) const;
+
+		HOUTUnit()                          = default;
+		HOUTUnit(const HOUTUnit&)           = delete;
+		HOUTUnit operator=(const HOUTUnit&) = delete;
+		HOUTUnit(HOUTUnit&&)                = default;
+		HOUTUnit& operator=(HOUTUnit&&)     = default;
 	};
 }

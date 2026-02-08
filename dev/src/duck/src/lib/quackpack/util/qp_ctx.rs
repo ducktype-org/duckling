@@ -3,9 +3,9 @@ use std::path::Path;
 use url::Url;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId,
+    DuckCtx, QuackResult, QuackResultContext,
     duck::util::{duck_home::DuckHome, terminal::Terminal},
-    static_str_id,
+    quackpack::core::fetcher,
 };
 
 #[derive(Debug)]
@@ -36,10 +36,8 @@ impl<'duck> QpCtx<'duck> {
             .duck_cfg()
             .toml_config()
             .get_str("registry.url")?
-            .map(StrId::from)
-            // @TODO: #1548 Move this to the fetcher module
-            .unwrap_or_else(|| static_str_id!("http://localhost:9001"));
-        Url::parse(&url).with_context(|| format!("`{url}` is not a valid URL"))
+            .unwrap_or(fetcher::Fetcher::DEFAULT_REGISTRY_URL);
+        Url::parse(url).with_context(|| format!("`{url}` is not a valid URL"))
     }
 
     pub fn cwd(&self) -> &Path {

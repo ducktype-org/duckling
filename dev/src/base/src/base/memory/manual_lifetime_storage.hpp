@@ -43,7 +43,7 @@ namespace base {
 		}
 
 	public:
-		ManualLifetimeStorage() = default;
+		ManualLifetimeStorage() noexcept = default;
 
 		ManualLifetimeStorage(const ManualLifetimeStorage&)            = delete;
 		ManualLifetimeStorage(ManualLifetimeStorage&&)                 = delete;
@@ -51,8 +51,8 @@ namespace base {
 		ManualLifetimeStorage& operator=(ManualLifetimeStorage&&)      = delete;
 
 		// We set it explicitly, to make sure that in release builds destructor is trivial:
-		IF_BUILD_TYPE_RELEASE(~ManualLifetimeStorage() noexcept = default;)
-		IF_BUILD_TYPE_DEV(~ManualLifetimeStorage() {
+		IF_BUILD_TYPE_RELEASE(constexpr ~ManualLifetimeStorage() noexcept = default;)
+		IF_BUILD_TYPE_DEV(constexpr ~ManualLifetimeStorage() {
 			CORE_ASSERT_NOEXCEPT(
 				state == State::Empty,
 				"Object is still constructed during destruction of ManualLifetimeStorage"
@@ -60,7 +60,8 @@ namespace base {
 		})
 
 		template<class... Args>
-		void construct(Args&&... args) {
+		constexpr void construct(Args&&... args)
+			IF_BUILD_TYPE_RELEASE(noexcept(std::is_nothrow_constructible_v<T, Args...>)) {
 			// we use it here, to make sure the static_assert will be always evaluated:
 			// (it is assumed that this method will be always used when using ManualLifetimeStorage)
 			deferredIsStandardLayoutCheck();
@@ -69,10 +70,11 @@ namespace base {
 				CORE_ASSERT(state == State::Empty, "Object is already constructed");
 				state = State::Constructed;
 			})
-			new (data) T(std::forward<Args>(args)...);
+			::new (static_cast<void*>(data)) T(std::forward<Args>(args)...);
 		}
 
-		void destroy() {
+		constexpr void destroy()
+			IF_BUILD_TYPE_RELEASE(noexcept(std::is_nothrow_destructible_v<T>)) {
 			IF_BUILD_TYPE_DEV({
 				CORE_ASSERT(state == State::Constructed, "Object is not constructed (destroy)");
 			})
@@ -81,7 +83,8 @@ namespace base {
 			IF_BUILD_TYPE_DEV({ state = State::Empty; })
 		}
 
-		T* get() {
+		[[nodiscard]]
+		constexpr T* get() IF_BUILD_TYPE_RELEASE(noexcept) {
 			IF_BUILD_TYPE_DEV({
 				CORE_ASSERT(state == State::Constructed, "Object is not constructed (get)");
 			})
@@ -98,7 +101,9 @@ namespace base {
 		 *
 		 * @note I'm not 100% sure the function is well defined here.
 		 */
-		static Ref<ManualLifetimeStorage> getSelf(Ref<T> obj_ref) {
+		[[nodiscard]]
+		static constexpr Ref<ManualLifetimeStorage> getSelf(Ref<T> obj_ref)
+			IF_BUILD_TYPE_RELEASE(noexcept) {
 			constexpr auto OFFSET = offsetof(ManualLifetimeStorage, data);
 			static_assert(
 				OFFSET == 0,

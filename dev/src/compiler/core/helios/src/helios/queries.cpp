@@ -65,11 +65,11 @@ namespace compiler::helios {
 					if (kind(sym) == SymbolKind::Function) {
 						// we "catch" failure here to continue gathering other functions:
 						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function.hasFailed()) {
+						if (hout_function->hasFailed()) {
 							is_failed = true;
 							continue;
 						} else {
-							out.functions.push_back(hout_function.valueOrPanic());
+							out.functions.emplace_back(&hout_function->valueOrPanic());
 						}
 					}
 					if (kind(sym) == SymbolKind::Class)
@@ -89,7 +89,7 @@ namespace compiler::helios {
 		 * @param ctx The query context.
 		 */
 		static void appendClassConstructors(
-			std::vector<HOUTFunction>& out_functions, const SymID class_sym, Context& ctx
+			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
@@ -105,17 +105,17 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
-			out_functions.push_back(implicit_ctor);
+			out_functions.emplace_back(&implicit_ctor);
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
 
-	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<HOUTUnit>>) {
+	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<CRef<HOUTUnit>>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key).valueOrThrow() };
+			std::vector<CRef<HOUTUnit>> out = { &ctx.query<QueryModuleHOUT>(key)->valueOrThrow() };
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
 			for (auto submodule: *submodules) {
@@ -152,7 +152,7 @@ namespace compiler::helios {
 					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
-					out.functions.push_back(ctx.query<QueryCodeOfFun>(sym).valueOrThrow());
+					out.functions.emplace_back(&ctx.query<QueryCodeOfFun>(sym)->valueOrThrow());
 			}
 
 			return out;
@@ -826,7 +826,7 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOfFun);

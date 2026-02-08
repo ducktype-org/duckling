@@ -15,12 +15,23 @@ namespace compiler::driver {
 
 		auto query_collection = root->subCollectionAtOrNew(base::StrID("query"));
 
+		// Save query graph
 		auto query_graph_blob = query_collection->blobArtifactAtOrNew(base::StrID("query_graph"));
 
 		std::vector<byte> serialized = query::external::optAndSerializeQueryGraph();
 
 		if (!serialized.empty())
 			query_collection->setBlobData(query_graph_blob, serialized.data(), serialized.size());
+
+		// Save metadata
+		auto metadata_blob = query_collection->blobArtifactAtOrNew(base::StrID("query_metadata"));
+
+		std::vector<byte> metadata_serialized = query::external::serializeMetadata();
+
+		if (!metadata_serialized.empty())
+			query_collection->setBlobData(
+				metadata_blob, metadata_serialized.data(), metadata_serialized.size()
+			);
 
 		// Flush all artifacts to disk.
 		root->flush();

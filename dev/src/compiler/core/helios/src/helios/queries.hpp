@@ -22,7 +22,7 @@ namespace compiler::helios {
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, query::QResult<HOUTUnit>, ({}))
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
@@ -30,7 +30,10 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryModuleHOUTRecursively, frontend::ModuleID, query::QResult<std::vector<HOUTUnit>>, ({})
+		QueryModuleHOUTRecursively,
+		frontend::ModuleID,
+		query::QResult<std::vector<CRef<HOUTUnit>>>,
+		({})
 	)
 
 	/**
@@ -56,5 +59,5 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryCodeOfFun, SymID, query::QResult<HOUTFunction>, ({}));
+	DECLARE_QUERY(QueryCodeOfFun, SymID, CRef<query::QResult<HOUTFunction>>, ({}));
 }
