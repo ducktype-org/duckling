@@ -589,6 +589,10 @@ namespace vm {
 		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_type not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
@@ -711,9 +715,11 @@ namespace vm {
 		{
 			auto variant_block_index = frame->local_offset_to_block_idx[instr->arg0];
 			auto variant_block       = frame->block_stack[variant_block_index];
-			OpFuns::setVariantType(thread, Pointer(variant_block, 0), TypeID(instr->arg1));
+			auto alt_type_id         = TypeID(instr->arg1);
+			auto variant_type_id     = TypeID(instr[1].arg0);
+			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type_id, variant_type_id);
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
@@ -721,9 +727,14 @@ namespace vm {
 			const auto dst                 = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
 			auto       variant_block       = frame->block_stack[variant_block_index];
+			auto       alt_type_id         = TypeID(instr[1].arg0);
+			auto       variant_type_id     = TypeID(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), TypeID(instr[1].arg0))
+				dst,
+				OpFuns::getVariantPtr(
+					thread, Pointer(variant_block, 0), alt_type_id, variant_type_id
+				)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
@@ -733,18 +744,22 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			OpFuns::setVariantType(thread, variant_pointer, TypeID(instr->arg1));
+			auto alt_type_id     = TypeID(instr->arg1);
+			auto variant_type_id = TypeID(instr[1].arg0);
+			OpFuns::setVariantType(thread, variant_pointer, alt_type_id, variant_type_id);
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
 			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto       alt_type_id     = TypeID(instr[1].arg0);
+			auto       variant_type_id = TypeID(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
-				dst, OpFuns::getVariantPtr(thread, variant_pointer, TypeID(instr[1].arg0))
+				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type_id, variant_type_id)
 			);
 			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
 		}
