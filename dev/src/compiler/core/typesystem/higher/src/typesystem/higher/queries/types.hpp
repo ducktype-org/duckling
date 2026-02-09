@@ -324,4 +324,39 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportAbstractType, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief Key for QueryTypeTemplateType.
+	 */
+	struct KeyFor_QueryTypeTemplateType final {
+		TypeTemplateAbstractType::Source source;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryTypeTemplateType&) const
+			= default;
+
+		[[nodiscard]]
+		u64 queryUnstablePerfectHash() const {
+			static base::Map<KeyFor_QueryTypeTemplateType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+
+	/**
+	 * @brief Query to get the TypeTemplate.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryTypeTemplateType,
+		KeyFor_QueryTypeTemplateType,
+		TypeTemplateAbstractType,
+		({ .uses_qresult = false })
+	)
 }

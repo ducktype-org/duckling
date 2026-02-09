@@ -10,6 +10,7 @@
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -832,5 +833,43 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+	};
+
+	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
+		using Source      = TypeTemplateAbstractType::Source;
+		using BuiltinKind = TypeTemplateAbstractType::BuiltinKind;
+
+		Source source;
+
+	public:
+		static constexpr Kind STATIC_KIND = Kind::TypeTemplate;
+
+		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
+
+		TypeTemplateAbstractTypeImpl(Source source): source(source) {
+			variant_match(source) {
+				variant_case(BuiltinKind, builtin) {
+					switch (builtin) {
+					case BuiltinKind::List: {
+						representation = "List";
+						break;
+					}
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(helios::SymID, sym) {
+					representation = base::strConcat("Type template: ", name(sym).str());
+				}
+			}
+		}
+
+		[[nodiscard]] Source getSource() const { return source; }
+
+		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		CRef<TypeInterface> getInterface(query::Context&) const override;
 	};
 }

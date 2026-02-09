@@ -256,6 +256,10 @@ namespace compiler::tsh {
 		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
 	}
 
+	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getInterface(query::Context&) const {
+		throw base::NotYetImplemented("Type template interface not yet implemented");
+	}
+
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;

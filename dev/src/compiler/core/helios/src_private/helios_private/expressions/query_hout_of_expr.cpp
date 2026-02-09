@@ -363,15 +363,12 @@ namespace compiler::helios::code {
 				case pst::Keyword::f16:
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>({ 16 }));
 					break;
-
-				// TODOP: This is stupid as hell.
 				case pst::Keyword::List: {
-					auto placeholder_unit_symbol_type
-						= tsh::SymbolType<>{ ctx.query<tsh::QueryUnitType>({}),
-						                     tsh::ReferenceKind::Direct,
-						                     tsh::Mutability::Mutable };
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryDynamicArrayType>({ placeholder_unit_symbol_type })
+						ctx,
+						ctx.query<tsh::QueryTypeTemplateType>(
+							{ tsh::TypeTemplateAbstractType::BuiltinKind::List }
+						)
 					);
 					break;
 				}

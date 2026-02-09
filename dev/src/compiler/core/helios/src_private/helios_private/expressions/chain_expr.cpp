@@ -660,27 +660,24 @@ namespace compiler::helios::code {
 			);
 		}
 
+		/**
+		 * @brief Processes the creation of array-related types. This includes:
+		 * - Type template baking - if the base is a 'TypeTemplate' (e.g., bare 'List' keyword),
+		 * the index argument is expected to be Meta.
+		 * - Static Array Type Creation - if the base is a concrete type (e.g., 'i32'), the index
+		 * argument is expected to be an integral constant representing the array size. This results
+		 * in a 'StaticArray' type.
+		 *
+		 * @param base The base expression being indexed.
+		 * @param arg_pst The PST element inside the square brackets.
+		 * @return A ChainState containing an IndexExpr representing the type construction.
+		 */
 		auto processArrayTypeCreation(Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst)
 			-> query::QResult<ChainState> {
-			// Evaluate the base to see if we are creating a static or a dynamic array.
-			auto base_eval = query_ctx.query<QueryEvaluateHOUTExpression>({ base.ref() });
-			UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval);
-
-			auto is_untyped_dynamic_array = [](const ctv::CompileTimeValue& ctv) -> bool {
-				if (!ctv.has<tsh::SymbolType<>>()) return false;
-				auto type = ctv.get<tsh::SymbolType<>>()->getType();
-				if (type.getKind() != tsh::Kind::DynamicArray) return false;
-
-				auto element_type = type.as<tsh::DynamicArrayAbstractType>().getElementType();
-				return element_type.getType().getKind() == tsh::Kind::Unit;
-			};
-
-
-			// If the base is an untyped DynamicArray, then we expect meta in the index arguments
-			// for dynamic array type creation. Otherwise we expect an integer for StaticArray type
-			// creation.
+			// If base is a type template, we expect meta in the index arguments. For saturating the
+			// template. Otherwise we expect an integer for StaticArray type creation.
 			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
-				if (is_untyped_dynamic_array(base_ctv)) {
+				if (base->expression_type.getType().getKind() == tsh::Kind::TypeTemplate) {
 					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
 						                      tsh::ReferenceKind::Direct,
 						                      tsh::Mutability::Immutable };

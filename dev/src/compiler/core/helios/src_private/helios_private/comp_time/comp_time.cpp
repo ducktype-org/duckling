@@ -122,30 +122,25 @@ namespace compiler::helios {
 			auto evaluateTypeIndexing(
 				const tsh::SymbolType<>& base_type, const ctv::CompileTimeValue& index_ctv
 			) -> query::QResult<ctv::CompileTimeValue> {
-				auto is_untyped_dynamic_array = [](const tsh::SymbolType<>& type) -> bool {
-					auto abs_type = type.getType();
-					if (abs_type.getKind() != tsh::Kind::DynamicArray) return false;
-					auto element_type
-						= abs_type.as<tsh::DynamicArrayAbstractType>().getElementType();
-					return element_type.getType().getKind() == tsh::Kind::Unit;
-				};
+				auto base_abs = base_type.getType();
 
-				// Check is the base type is the placeholder untyped dynamic array type. If so,
-				// we create a properly typed DynamicArray. Index expr should be a meta type.
-				if (is_untyped_dynamic_array(base_type)) {
-					if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
-						auto typed_dynamic_array
-							= ctx.query<tsh::QueryDynamicArrayType>({ maybe_elem_type.value() });
-						return CompileTimeValue{ tsh::SymbolType<>{ typed_dynamic_array,
-							                                        base_type.getRefKind(),
-							                                        base_type.getMutability() } };
+				if (base_abs.getKind() == tsh::Kind::TypeTemplate) {
+					auto template_type = base_abs.as<tsh::TypeTemplateAbstractType>();
+					if (template_type.isBuiltin(tsh::TypeTemplateAbstractType::BuiltinKind::List)) {
+						if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
+							auto typed_dynamic_array
+								= ctx.query<tsh::QueryDynamicArrayType>({ maybe_elem_type.value() });
+							return CompileTimeValue{ tsh::SymbolType<>{
+								typed_dynamic_array,
+								base_type.getRefKind(),
+								base_type.getMutability() } };
+						}
 					}
 					return query::Failed();
 				}
 
-				// If base is meta and not a untyped dynamic list. Then the should be a
-				// comp-time evaluated integral constant. Then this expression creates a new
-				// static array type.
+				// If base is meta and not a untyped dynamic list. Then the index should be an
+				// integral constant. Then this expression creates a new static array type.
 				if (auto maybe_size = index_ctv.get<NumericValue>()) {
 					if (maybe_size->isIntegral()) {
 						usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());

@@ -110,6 +110,18 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
+	TypeTemplateAbstractType::Source TypeTemplateAbstractType::getSource() const {
+		return toCPimpl(pimpl)->getSource();
+	}
+
+	bool TypeTemplateAbstractType::isBuiltin(BuiltinKind kind) const {
+		variant_match(getSource()) {
+			variant_case(BuiltinKind, builtin_kind) return builtin_kind == kind;
+			variant_default return false;
+		}
+		CORE_UNREACHABLE();
+	}
+
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	/*****************\
@@ -193,4 +205,5 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)
 	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)
 	INSTANTIATE_CHECKED_CAST(MetaAbstractType)
+	INSTANTIATE_CHECKED_CAST(TypeTemplateAbstractType)
 }
