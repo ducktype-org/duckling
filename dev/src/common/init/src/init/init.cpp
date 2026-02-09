@@ -14,7 +14,7 @@ namespace init {
 		 * InitState::was_init, but defined in a way
 		 * that should make it safe to call after main,
 		 * and more precisely, during static deinitialization
-		 * of init_verifier static object defined bellow.
+		 * of init_verifier static object defined below.
 		 *
 		 * It is used for sanity check that init was used
 		 * when it was linked.
