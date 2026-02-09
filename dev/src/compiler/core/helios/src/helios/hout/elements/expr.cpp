@@ -909,7 +909,6 @@ namespace compiler::helios::code {
 		return makeBox<ListPushExpr>(expression_type, list->clone(), element->clone());
 	}
 
-	// TODOP: Should this be a statement?
 	ListPopExpr::ListPopExpr(query::Context& ctx, Box<Expr> list, Box<Expr> count):
 		  Expr(tsh::ExpressionType(
 			  tsh::SymbolType<>(

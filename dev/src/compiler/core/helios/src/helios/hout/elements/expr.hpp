@@ -671,6 +671,7 @@ namespace compiler::helios::code {
 	 *
 	 * Assumes the `list` argument is a dynamic array and `element` argument is the same as the
 	 * lists element type.
+	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
 	 */
 	struct ListPushExpr final: public Expr {
 		Box<Expr> list;
@@ -693,6 +694,7 @@ namespace compiler::helios::code {
 	 * @brief Represents a pop operation from the dynamic array.
 	 *
 	 * Assumes the `list` argument is a dynamic array and `count` argument is an integer.
+	 * @TODO: #1959 This should probably be unified with '+=', '*=' etc.
 	 */
 	struct ListPopExpr final: public Expr {
 		Box<Expr> list;

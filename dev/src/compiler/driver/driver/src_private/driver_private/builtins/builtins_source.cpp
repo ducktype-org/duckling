@@ -179,7 +179,7 @@ void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
 	list->memory_end_offset += to_remove * element_size;
 }
 
-// len(vec: List[T]) -> i64
+// len(vec: List[T]) -> u64
 uint64_t builtin_list_len(list* list) { return list->length; }
 
 void builtin_list_free(list* list) {

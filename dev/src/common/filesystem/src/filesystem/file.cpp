@@ -262,7 +262,6 @@ namespace fs {
 			file.seekg(0, std::ios::beg);
 
 			// should read full file:
-			// TODOP: Fix this bug when a folder is passed.
 			auto r_array = new byte[file_size];
 			file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
 
