@@ -5,6 +5,8 @@
 
 #include "chain_expr.hpp"
 
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -674,21 +676,22 @@ namespace compiler::helios::code {
 		 */
 		auto processArrayTypeCreation(Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst)
 			-> query::QResult<ChainState> {
-			// If base is a type template, we expect meta in the index arguments. For saturating the
-			// template. Otherwise we expect an integer for StaticArray type creation.
+			// If base is a type template, we expect meta in the index arguments for baking the
+			// template type. Otherwise we expect an integer for StaticArray type creation.
 			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
-				if (base->expression_type.getType().getKind() == tsh::Kind::TypeTemplate) {
-					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
-						                      tsh::ReferenceKind::Direct,
-						                      tsh::Mutability::Immutable };
-				} else {
-					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
-												  { 64,
-						                            tsh::IntegralAbstractType::Signedness::Signed }
-											  ),
-						                      tsh::ReferenceKind::Direct,
-						                      tsh::Mutability::Immutable };
+				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
+					if (literal_type_expr->value_type.getType().getKind()
+					    == tsh::Kind::TypeTemplate) {
+						return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
+							                      tsh::ReferenceKind::Direct,
+							                      tsh::Mutability::Immutable };
+					}
 				}
+				return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
+											  { 64, tsh::IntegralAbstractType::Signedness::Signed }
+										  ),
+					                      tsh::ReferenceKind::Direct,
+					                      tsh::Mutability::Immutable };
 			}();
 
 			auto arg_res
