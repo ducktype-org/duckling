@@ -1,5 +1,7 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include "base/types/bits_and_bytes.hpp"
+
 #include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
@@ -417,6 +419,7 @@ namespace compiler::backend_llvm {
 
 		// Prepare parameter types.
 		for (const auto& param: parameters)
+			// TODOP: Look here.
 			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
 				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
 			else
@@ -822,6 +825,43 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
+		 * @brief Gets a LLVM pointer to the given LIRValue.
+		 *
+		 * This is used when a pointer to data is required (e.g., `builtin_list_push(list*, void*,
+		 * uint64_t)`, requires a pointer to the inserted value for the implementation to work for
+		 * generic list).
+		 *
+		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace`.
+		 * - For `LIRConstant`, it loads the constant value into a created temporary and returns the
+		 * address of the temporary.
+		 * - Panics for other LIRValue variants (like BlockRef or FunctionLiteral).
+		 *
+		 * @param lir_location The LIRValue to obtain a pointer for.
+		 * @param builder The LLVM IRBuilder to use for generating instructions.
+		 * @return `llvm::Value*` with the pointer to the data.
+		 */
+		auto loadLIRValueToPointer(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
+			variant_match(lir_location.getVariant()) {
+				variant_case(lir::LIRPlace, place) {
+					return gepPointerFromLIRPlace(place, builder);
+				}
+				variant_case(lir::LIRConstant, constant) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
+				}
+				variant_default {
+					CORE_PANIC(
+						"Cannot get pointer to LIRValue: variant is BlockRef or FunctionLiteral"
+					);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
 		 * @brief Maps a collection of LIRValues to a LLVM Values.
 		 *
 		 * This function may generate new LLVM instructions if necessary, see `loadLIRValue`.
@@ -999,6 +1039,17 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Retrieves or inserts a built-in function prototype in the LLVM module.
+		 */
+		auto loadBuiltin(
+			const std::string_view             name,
+			llvm::Type*                        ret_type,
+			std::initializer_list<llvm::Type*> args
+		) -> llvm::FunctionCallee {
+			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
+		}
+
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                       \
 	{                                                                              \
 		const auto lhs   = loadLIRValue(lir_instruction.arguments.at(0), builder); \
@@ -1071,10 +1122,8 @@ namespace compiler::backend_llvm {
 				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
 
 				// Get or insert the allocator.
-				llvm::FunctionCallee alloc_func = module->getOrInsertFunction(
-					"builtin_alloc",
-					llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false)
-				);
+				auto alloc_func
+					= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
 
 				// Actually call the allocator.
 				llvm::Value* size_val = builder.getInt64(size);
@@ -1089,140 +1138,80 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case BoxFree: {
-				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				// @TODO: #1894 This may change based on the way we handle destructors.
+				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-				// Get or insert the free.
-				llvm::FunctionCallee free_func = module->getOrInsertFunction(
-					"builtin_dealloc",
-					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
-				);
+				// Get or insert the free function.
+				auto free_func
+					= loadBuiltin("builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() });
 
 				// Actually free the memory.
 				builder.CreateCall(free_func, { ptr_to_free });
 				break;
 			}
-			case ListPush: {
-				variant_match(lir_instruction.extra_params) {
-					variant_case(lir::ListOperationParameters, list_params) {
-						// TODOP: This is stupid, would be nice if there was a ref inserted for this
-						// operation. Get the list pointer.
-						const auto&  list_arg = lir_instruction.arguments.at(0);
-						llvm::Value* list_ptr = nullptr;
-						if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
-							list_ptr = gepPointerFromLIRPlace(*place, builder);
-						else
-							list_ptr = loadLIRValue(list_arg, builder);
-
-						// Get the element pointer
-						const auto&  elem_arg      = lir_instruction.arguments.at(1);
-						llvm::Value* elem_data_ptr = nullptr;
-
-						if (const auto* place = std::get_if<lir::LIRPlace>(&elem_arg.getVariant())) {
-							elem_data_ptr = gepPointerFromLIRPlace(*place, builder);
-						} else {
-							llvm::Value* elem_val = loadLIRValue(elem_arg, builder);
-							elem_data_ptr         = builder.CreateAlloca(
-                                elem_val->getType(), nullptr, "list_push_tmp"
-                            );
-							builder.CreateStore(elem_val, elem_data_ptr);
-						}
-
-						// Get the element layout
-						u64 size_bytes = static_cast<u64>(
-							base::bits2bytes(list_params.element_layout->getSize())
-						);
-						llvm::Value* size_val = builder.getInt64(size_bytes);
-
-						// Actually call the builtin.
-						llvm::FunctionCallee push_func = module->getOrInsertFunction(
-							"builtin_list_push",
-							llvm::FunctionType::get(
-								builder.getVoidTy(),
-								{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() },
-								false
-							)
-						);
-
-						builder.CreateCall(push_func, { list_ptr, elem_data_ptr, size_val });
-						break;
-					}
-					variant_default { CORE_UNREACHABLE(); }
-				}
-				break;
-			}
-			case ListPop: {
-				variant_match(lir_instruction.extra_params) {
-					variant_case(lir::ListOperationParameters, list_params) {
-						// TODOP: This is stupid, would be nice if there was a ref inserted for this
-						// operation. Get the list pointer.
-						const auto&  list_arg = lir_instruction.arguments.at(0);
-						llvm::Value* list_ptr = nullptr;
-						if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
-							list_ptr = gepPointerFromLIRPlace(*place, builder);
-						else
-							list_ptr = loadLIRValue(list_arg, builder);
-
-						// Get the element pointer
-						const auto&  count_arg = lir_instruction.arguments.at(1);
-						llvm::Value* count_val = loadLIRValue(count_arg, builder);
-
-						// Get the element layout
-						u64 size_bytes = static_cast<u64>(
-							base::bits2bytes(list_params.element_layout->getSize())
-						);
-						llvm::Value* size_val = builder.getInt64(size_bytes);
-
-						// Actually call the builtin.
-						llvm::FunctionCallee pop_func = module->getOrInsertFunction(
-							"builtin_list_pop",
-							llvm::FunctionType::get(
-								builder.getVoidTy(),
-								{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() },
-								false
-							)
-						);
-
-						builder.CreateCall(pop_func, { list_ptr, count_val, size_val });
-						break;
-					}
-					variant_default { CORE_UNREACHABLE(); }
-				}
-				break;
-			}
-			case ListLen: {
-				const auto&  list_arg = lir_instruction.arguments.at(0);
-				llvm::Value* list_ptr = nullptr;
-				if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
-					list_ptr = gepPointerFromLIRPlace(*place, builder);
-				else
-					list_ptr = loadLIRValue(list_arg, builder);
-
-				// Actually call the builtin.
-				llvm::FunctionCallee len_func = module->getOrInsertFunction(
-					"builtin_list_len",
-					llvm::FunctionType::get(builder.getInt64Ty(), { builder.getPtrTy() }, false)
-				);
-
-				llvm::Value* result = builder.CreateCall(len_func, { list_ptr });
-				storeOutput(lir_instruction.output.value(), result, builder);
-				break;
-			}
+			case ListPush:
+			case ListPop:
+			case ListLen:
 			case ListFree: {
-				const auto&  list_arg = lir_instruction.arguments.at(0);
-				llvm::Value* list_ptr = nullptr;
-				if (const auto* place = std::get_if<lir::LIRPlace>(&list_arg.getVariant()))
-					list_ptr = gepPointerFromLIRPlace(*place, builder);
-				else
-					list_ptr = loadLIRValue(list_arg, builder);
+				llvm::Value* list_ptr
+					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
 
-				// Actually call the builtin.
-				llvm::FunctionCallee free_func = module->getOrInsertFunction(
-					"builtin_list_free",
-					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
-				);
+				// Get the size if the List element. Needed to pass to the generic
+				// `builtin_list_push`/'builtin_list_pop' builtins.
+				auto get_elem_size = [&]() {
+					const auto& params
+						= std::get<lir::ListOperationParameters>(lir_instruction.extra_params);
+					return builder.getInt64(
+						static_cast<u64>(base::bits2bytes(params.element_layout->getSize()))
+					);
+				};
 
-				builder.CreateCall(free_func, { list_ptr });
+				switch (lir_instruction.operation) {
+				case ListPush: {
+					llvm::Value* element_ptr
+						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
+
+					auto push_func = loadBuiltin(
+						"builtin_list_push",
+						builder.getVoidTy(),
+						{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() }
+					);
+
+					builder.CreateCall(push_func, { list_ptr, element_ptr, get_elem_size() });
+					break;
+				}
+				case ListPop: {
+					llvm::Value* count_val = loadLIRValue(lir_instruction.arguments.at(1), builder);
+
+					auto pop_func = loadBuiltin(
+						"builtin_list_pop",
+						builder.getVoidTy(),
+						{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() }
+					);
+
+					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
+					break;
+				}
+				case ListLen: {
+					auto len_func = loadBuiltin(
+						"builtin_list_len", builder.getInt64Ty(), { builder.getPtrTy() }
+					);
+
+					llvm::Value* result = builder.CreateCall(len_func, { list_ptr });
+					storeOutput(lir_instruction.output.value(), result, builder);
+					break;
+				}
+				case ListFree: {
+					auto free_func = loadBuiltin(
+						"builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
+					);
+
+					builder.CreateCall(free_func, { list_ptr });
+					break;
+				}
+				default:
+					CORE_UNREACHABLE();
+				}
 				break;
 			}
 			/// Integer arithmetic ///
@@ -1383,9 +1372,9 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			default:
-				std::cerr << "unknown lir operation (skip): "
+				// TODOP: Dev log
+				std::cerr << "Unknown lir operation (skip): "
 						  << base::enumToStr(lir_instruction.operation) << "\n";
-				// throw base::NotYetImplemented("some lir operation in llvm backend");
 			}
 		}
 
