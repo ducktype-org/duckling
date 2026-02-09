@@ -1,8 +1,5 @@
 #include "comp_time.hpp"
 
-#include "typesystem/higher/symbol_type.hpp"
-
-#include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -19,10 +16,6 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include "base/except/exceptions.hpp"
-
-#include "query_framework/query_errors.hpp"
-#include "query_framework/query_result.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -159,7 +152,7 @@ namespace compiler::helios {
 						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 					}
 				}
-				
+
 				// If none of the patterns matched, this is an error.
 				return query::Failed();
 			}
