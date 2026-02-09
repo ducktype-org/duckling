@@ -295,7 +295,7 @@ namespace compiler::backend_llvm {
 					return list_type;
 				}
 
-				// Otherwise, define the string type in LLVM, in line with the TSL definition.
+				// Otherwise, define the dynamic list type in LLVM, in line with the TSL definition.
 				llvm::StructType* list_type
 					= llvm::StructType::create(llvm_context, list_type_name);
 				list_type->setBody(
@@ -311,7 +311,6 @@ namespace compiler::backend_llvm {
 				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
 				// - the TSL type layout, and
 				// - the struct defined in the built-ins module.
-				// TODOP: This is probably still valid.
 
 				return list_type;
 			}
@@ -648,8 +647,8 @@ namespace compiler::backend_llvm {
 		 * The overview of what this does is:
 		 * - For a given LIRValue take a pointer to it.
 		 * - Iterate through the projection chain which can store `FieldProjection`,
-		 * `DerefProjection`, `IndexProjection`.
-		 * and add subsequent arguments to the currently built GEP instruction.
+		 * `DerefProjection`, `IndexProjection` and add subsequent arguments to the currently built
+		 * GEP instruction.
 		 * - If a `DerefProjection` is encountered, we have to emit the GEP built up to this point,
 		 * perform a load on the address it returned and start building a new GEP.
 		 *
@@ -682,38 +681,39 @@ namespace compiler::backend_llvm {
 			// Otherwise, we need to get the layout indices of the accessed fields.
 			// - First, collect the subsequent layout indices.
 			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
-			std::vector<llvm::Value*> access_indices;
-			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			std::vector<llvm::Value*> gep_indices;
+			gep_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 
-			// A GEP constructor invoked when encountering a deref projection of when we went
+			// A GEP constructor invoked when encountering a deref projection or when we went
 			// through all projections. Creates a GEP from all projection indicies up to this point
-			// so `load` can be performed on the address calculated up to this point.
-			auto flush_gep = [&](bool insert_zero = true) {
-				if (access_indices.size() > 0) {
-					// Create a GEP if needed.
-					current_ptr  = builder.CreateGEP(current_type, current_ptr, access_indices);
-					current_type = typeFromLayout(module, current_layout);
-				}
-				access_indices.clear();
-				if (insert_zero) {
-					// Reset the new base, since GEP assumes we work on arrays.
-					access_indices.push_back(
-						llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0)
+			// so `load` can be performed on calculated address.
+			auto flush_gep = [&](bool reinitialize_base_index) {
+				// Skip if GEP has no arguments.
+				if (gep_indices.empty()) return;
+
+				// Create a GEP if needed.
+				current_ptr  = builder.CreateGEP(current_type, current_ptr, gep_indices);
+				current_type = typeFromLayout(module, current_layout);
+				gep_indices.clear();
+
+				if (reinitialize_base_index) {
+					// After a load, the new `current_ptr` is a pointer to a new base type.
+					// The first GEP index on a pointer is used to step through an "array of that
+					// pointer type". We almost always want to start at index 0 of that "array".
+					gep_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0)
 					);
 				}
 			};
-
 
 			for (const auto& projection: place.projection_chain) {
 				variant_match(projection.storage) {
 					variant_case(lir::LIRPlace::FieldProjection, field) {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-
 						const auto layout_idx
 							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
 
-						access_indices.push_back(
+						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
 						);
 						current_layout
@@ -725,46 +725,51 @@ namespace compiler::backend_llvm {
 						variant_match(current_layout->getVariant()) {
 							variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								// Then add it as the next argument to the GEP.
-								access_indices.push_back(index_value);
+								gep_indices.push_back(index_value);
 								// Lastly, update the current layout.
 								current_layout = static_array_layout.getElementLayout();
 							}
 							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								// TODOP: Ehh this is stupid.
+								// @TODO: #1970 This branch currently performs an access to a 'data'
+								// field of the list, dereferences it and performs an index
+								// projection on the pointer to the heap data. If `List[T]` had a
+								// proper type interface (including a 'data' field which returns a
+								// `ref T` or `T*`), an index access could be represented by
+								// `Field(Data), Deref, IndexProjection`. Then the whole
+								// implementation of this case for the DynamicArrayTypeLayout, would
+								// be the same as for static arrays. For now, this programmatically
+								// implements the thing described above.
+
+								// gep_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context),
+								// 0));
+
+								// Emit the current GEP to get pointer to the list.
 								flush_gep(false);
-								// When access through a dynamic list is generated, we have to
-								// retrieve the pointer to the dynamic array it self, and the
-								// retrieve a data pointer and pass it to the next GEP.
 
-								// 0 is the index of the data pointer in the dynamic array layout.
-								// TODOP: Once generated fields are figured out, we could make this
-								// a field projection.
-								// TODOP: Maybe this should be reconsidered and a deref projection
-								// should be inserted?
-								// TODOP: Add an explanation on why StructGEP is this here.
-								llvm::Value* list_data_ptr
+								// GEP into the 'list' struct to get the pointer to its `data`
+								// field. Note that data is at 0 index.
+								llvm::Value* data_ptr_addr
 									= builder.CreateStructGEP(current_type, current_ptr, 0);
-								// Load the actual data of the list.
-								current_ptr = builder.CreateLoad(builder.getPtrTy(), list_data_ptr);
 
+								// Now load the actual data of the list. This now points to the data
+								// on the heap.
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), data_ptr_addr);
+
+								// Now push the actual index from the IndexProjection. This GEP now
+								// operates on the heap memory.
+								gep_indices.push_back(index_value);
+
+								// Lastly, update the types and layouts.
 								current_layout = dynamic_array_layout.getElementLayout();
 								current_type   = typeFromLayout(module, current_layout);
-
-								// current_ptr = builder.CreateGEP(current_type, data_ptr,
-								// index_value, "element_ptr");
-
-								// Now push the actual index from the IndexProjection.
-								// Note that first argument is 0, and was inserted by the
-								// flush_gep(); //Get rid off the pointer.
-								access_indices.push_back(index_value);
 							}
-							variant_default { CORE_PANIC("Indexing into non-array layout"); }
+							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
 						}
 					}
 					variant_case_novalue(lir::LIRPlace::DerefProjection) {
 						// If deref was encountered, we have to create a GEP which includes all the
 						// projections built up to this point and perform a load.
-						flush_gep();
+						flush_gep(true);
 
 						current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
 
@@ -778,7 +783,7 @@ namespace compiler::backend_llvm {
 
 			// After no more projections exist, we create a GEP instruction with all projections up
 			// to this point. `current_ptr` stores a value which is the result of GEP.
-			flush_gep();
+			flush_gep(true);
 			return current_ptr;
 		}
 
