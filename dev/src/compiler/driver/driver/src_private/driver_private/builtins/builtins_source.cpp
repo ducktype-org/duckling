@@ -28,11 +28,11 @@ struct str {
 	uint64_t memory_end_offset;
 };
 
+// Definition of the Duckling dynamic list representation.
 struct list {
-	// TODOP: Comment
 	// Pointer to the data of the list.
-	void* data;
-	// The length of the vector.
+	char* data;
+	// The length of the list.
 	uint64_t length;
 	// The difference between the pointer to the data and
 	// the beginning of the allocated memory (always non-negative).
@@ -159,36 +159,48 @@ void builtin_dealloc(void* ptr) { free(ptr); }
 
 // push(vec: ref List[T], value: T, sizeof(T)) -> ()
 void builtin_list_push(list* list, void* element_ptr, uint64_t element_size) {
-	if (list->length >= list->memory_end_offset) {
-		uint64_t new_cap        = list->memory_end_offset == 0 ? 4 : list->memory_end_offset * 2;
-		list->data              = realloc(list->data, new_cap * element_size);
-		list->memory_end_offset = new_cap;
+	uint64_t required_space = (list->length + 1) * element_size;
+
+	// Reallocate if needed.
+	if (required_space > list->memory_end_offset) {
+		uint64_t old_total_size = list->memory_begin_offset + list->memory_end_offset;
+		uint64_t new_total_size = old_total_size == 0 ? 4 * element_size : old_total_size * 2;
+
+		char* real_start = list->data - list->memory_begin_offset;
+		char* new_start  = (char*) realloc(real_start, new_total_size);
+		if (!new_start) exit(1);
+
+		list->data              = new_start + list->memory_begin_offset;
+		list->memory_end_offset = new_total_size - list->memory_begin_offset;
 	}
 
-	char* dest = (char*) list->data + (list->length * element_size);
+	// Insert the new element.
+	char* dest = list->data + (list->length * element_size);
 	memcpy(dest, element_ptr, element_size);
 	list->length++;
 }
 
-// pop(vec: ref List[T], sizeof(T)) -> ()
+// pop(vec: ref List[T], count: u64, sizeof(T)) -> ()
 void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
-	uint64_t to_remove = count < list->length ? count : list->length;
 	if (list->length == 0) return;
-
+	// Calculate the maximum size of elements to remove if the count is bigger then the length.
+	uint64_t to_remove = count < list->length ? count : list->length;
 	list->length -= to_remove;
-	list->memory_end_offset += to_remove * element_size;
 }
 
 // len(vec: List[T]) -> u64
 uint64_t builtin_list_len(list* list) { return list->length; }
 
 void builtin_list_free(list* list) {
-	if (list->data) {
-		free(list->data);
-		list->data = nullptr;
+	if (list->data != NULL) {
+		// The data pointer might not be the start of the allocation.
+		// Adjust back by the offset to get the real start.
+		free(list->data - list->memory_begin_offset);
+		list->data                = NULL;
+		list->length              = 0;
+		list->memory_begin_offset = 0;
+		list->memory_end_offset   = 0;
 	}
-	list->length            = 0;
-	list->memory_end_offset = 0;
 }
 
 // NOLINTEND
