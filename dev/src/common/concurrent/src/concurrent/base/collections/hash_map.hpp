@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concurrent/locks/atomic_flag_spinlock.hpp>
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -133,6 +133,16 @@ namespace concurrent {
 		}
 
 		/**
+		 * Atomically retrieves a copy of the value associated with the given key.
+		 * Return empty optional, if the key is not present in the map.
+		 */
+		[[nodiscard]]
+		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].atMaybeCopy(key);
+		}
+
+		/**
 		 * Atomically retrieves a reference to the value associated with the given key.
 		 *
 		 * @important Usage of the reference must be synchronized externally.
@@ -144,6 +154,9 @@ namespace concurrent {
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
+		/**
+		 * Atomically updates the value associated with the given key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void update(const KEY_T& key, const DATA_T& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
@@ -154,6 +167,14 @@ namespace concurrent {
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
+		}
+
+		/**
+		 * Atomically erases the given key->value pair from the map.
+		 */
+		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].erase(key);
 		}
 
 	private:

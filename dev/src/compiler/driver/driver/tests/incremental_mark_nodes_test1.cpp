@@ -1,3 +1,5 @@
+#include "incremental_metadata_test_common.hpp"
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
@@ -59,6 +61,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+
+			// Add metadata for persistence test
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
 
 		// Save artifacts (writes previous graph blob to artifacts)

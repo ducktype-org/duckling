@@ -57,9 +57,10 @@ namespace pst::expr {
 		i64 fwd            = 0;
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
-		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) fwd++;
-		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
-		reduced_length--;
+		PST_WHILE(fwd < length && state[fwd].isPrefixOperator()) { fwd++; }
+		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol()) {
+			reduced_length--;
+		}
 		if (fwd == reduced_length) state.logInt(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
