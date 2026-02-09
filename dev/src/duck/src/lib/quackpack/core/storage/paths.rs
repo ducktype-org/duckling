@@ -157,6 +157,14 @@ impl Storage {
         dir.join(OK_FILENAME).touch()?;
         Ok(())
     }
+
+    pub fn packages_base_dir(&self) -> &Path {
+        &self.packages_dir
+    }
+
+    pub fn venvs_base_dir(&self) -> &Path {
+        &self.venvs_dir
+    }
 }
 
 fn create_dir_iterator(path: &Path) -> QuackResult<ReadDir> {

@@ -37,7 +37,7 @@ impl PathOpsExt for Path {
             target.write_all(&buffer[..n])?;
         }
         target.flush()?;
-        target.sync_all()?;
+        target.sync_data()?;
         Ok(())
     }
 
@@ -46,7 +46,7 @@ impl PathOpsExt for Path {
             let mut opts = OpenOptions::new();
             opts.read(true).open(self)
         }?;
-        match dir.sync_all() {
+        match dir.sync_data() {
             Ok(_) => Ok(()),
             Err(e) if matches!(e.kind(), io::ErrorKind::Unsupported) => Ok(()),
             Err(e) => Err(e.into()),

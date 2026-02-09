@@ -63,7 +63,7 @@ use tracing::debug;
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::storage::{freeze, paths::Storage, venv_id::VenvId},
-    util_common::{atomic_path_ops_ext::PathOpsExt, hash},
+    util_common::{hash, path_ops_ext::PathOpsExt},
 };
 
 #[derive(Debug)]
@@ -77,7 +77,6 @@ pub struct Venv {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
     last_location: PathBuf,
-    last_modification: SystemTime,
     last_access: SystemTime,
 }
 
@@ -86,14 +85,12 @@ impl Venv {
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
         last_location: PathBuf,
-        last_modification: SystemTime,
         last_access: SystemTime,
     ) -> Self {
         Self {
             freeze,
             is_ephemeral,
             last_location,
-            last_modification,
             last_access,
         }
     }
@@ -147,6 +144,7 @@ impl Venv {
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
         storage.venv_dir(venv_id).rmtree()?;
+        storage.venvs_base_dir().try_fsync_dir()?;
         Ok(None)
     }
 
@@ -190,7 +188,7 @@ impl Venv {
         let mut file = path.touch()?;
         file.write_all(format!("{data}\n{checksum}").as_ref())?;
         file.flush()?;
-        file.sync_all()?;
+        file.sync_data()?;
         Ok(())
     }
 
@@ -224,14 +222,6 @@ impl Venv {
 
     pub fn set_last_location(&mut self, last_location: PathBuf) {
         self.last_location = last_location;
-    }
-
-    pub fn last_modification(&self) -> SystemTime {
-        self.last_modification
-    }
-
-    pub fn set_last_modification(&mut self, last_modification: SystemTime) {
-        self.last_modification = last_modification;
     }
 
     pub fn last_access(&self) -> SystemTime {

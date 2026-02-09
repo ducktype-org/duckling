@@ -5,7 +5,7 @@ use rustvil::fs::{PathExt, ShouldBlock};
 use tracing::debug;
 
 use crate::{
-    DuckCtx, QuackResult, QuackResultContext, qp_bail,
+    DuckCtx, QuackResult, QuackResultContext, qp_err,
     quackpack::core::{
         Package, PackageCtx, PackageLoader,
         storage::{locks::DisallowCleanLock, paths::Storage, venv::Venv, venv_id::ToVenvId},
@@ -36,20 +36,23 @@ pub fn sync(
     let storage = Storage::new(ctx.duck_home());
     let venv_config = pkg_ctx.venv_config();
     let expose_freezefile = venv_config.is_freezefile_exposed()?;
-    let _input_freeze = load_external_freezefile(pkg_ctx, expose_freezefile)?;
+    let user_exposed_freeze = load_external_freezefile(pkg_ctx, expose_freezefile)?;
     let id = pkg_ctx.to_venv_id();
 
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)?;
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
 
-    let _data = Venv::fix_and_load(&storage, id)?;
+    let data = Venv::fix_and_load(&storage, id)?;
     drop(data_lock);
+    let _input_freeze = user_exposed_freeze
+        .as_ref()
+        .or_else(|| data.as_ref().map(|data| data.freeze()));
     #[allow(clippy::diverging_sub_expression)] // @TODO: #1962 Remove this
     let _freeze: storage::freeze::VenvFreeze = panic!("@TODO: #1962 Unmock solver");
     debug!("solver returned freeze `{_freeze:?}`");
     panic!("@TODO: #1962 download dependencies");
     if !_options.overwrite
-        && let Some(data) = _data
+        && let Some(data) = data
         && pkg_ctx.package().manifest_path() != data.last_location()
         && data.last_location().exists()
     {
@@ -57,9 +60,10 @@ pub fn sync(
             .map(|pkg| pkg.package().manifest().root_description().name() == id)
             .unwrap_or(false);
         if replaces {
-            qp_bail!(
-                "tried to overwrite an existing virtual environment from another location. Use `--overwrite` to force an overwrite"
+            return Err(qp_err!(
+                "tried to overwrite an existing virtual environment from another location"
             )
+            .add_hint("use `--overwrite` to force an overwrite"));
         }
     }
     let data_lock = storage.data_lock(id).lock(ShouldBlock::Yes)?;
@@ -70,7 +74,6 @@ pub fn sync(
         _freeze,
         venv_config.is_ephemeral()?,
         pkg_ctx.package().manifest_path().to_path_buf(),
-        now,
         now,
     );
     venv.save_to(&storage, id)?;
