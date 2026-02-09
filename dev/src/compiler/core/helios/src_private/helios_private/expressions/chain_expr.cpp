@@ -321,9 +321,7 @@ namespace compiler::helios::code {
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto res = processFunctionCall(
-				query_ctx, callees, ident.upCast<pst::ExprElement>(), call_expr
-			);
+			auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -423,9 +421,8 @@ namespace compiler::helios::code {
 
 			// This is only a temporary thing for error handling, note the incorrect callee PST
 			// expression.
-			auto expr_result = processFunctionCall(
-				query_ctx, /* provide */ {}, call_expr.upCast<pst::ExprElement>(), call_expr
-			);
+			auto expr_result
+				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -470,11 +467,16 @@ namespace compiler::helios::code {
 						if (current_expr->expression_type.getSymbolType().getRefKind()
 						    != tsh::ReferenceKind::Direct) {
 							current_expr = makeBox<DerefExpr>(
-								query_ctx, generatedOrigin(), std::move(current_expr)
+								query_ctx,
+								current_expr->origin.generatedFrom(),
+								std::move(current_expr)
 							);
 						}
 						auto node = makeBox<AccessExpr>(
-							query_ctx, pstOrigin(expr_access), std::move(current_expr), sym
+							query_ctx,
+							current_expr->origin.extended(expr_access),
+							std::move(current_expr),
+							sym
 						);
 						return ChainState::ofExpr(std::move(node));
 					} else if (kind(sym) == SymbolKind::Namespace) {
@@ -531,9 +533,8 @@ namespace compiler::helios::code {
 					  );
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			auto whole_expr_origin = ElementOrigin::appendToOrigin(
-				current_state.getNamespaceLikePstOrigin(), expr_access
-			);
+			auto whole_expr_origin
+				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
 			return processNamespaceOrValue(sym_list.back(), std::move(whole_expr_origin));
 		}
 
@@ -568,9 +569,7 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(
-				query_ctx, callees, expr_access.upCast<pst::ExprElement>(), call_expr
-			);
+			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}

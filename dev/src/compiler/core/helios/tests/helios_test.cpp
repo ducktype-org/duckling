@@ -2428,7 +2428,7 @@ private:
 			return {};
 		};
 
-		auto check_same_origin = [&](base::StrID name) {
+		auto check_same_origin = [&](base::StrID name, bool is_generated) {
 			auto glob_opt = get_global_by_name(name);
 			auto var_opt  = get_pst_variable_by_name(name);
 			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
@@ -2462,11 +2462,21 @@ private:
 					name.strView()
 				)
 			);
+
+			assertEqual(
+				initial_value_expr->origin.isGenerated(),
+				is_generated,
+				"Generated origin does not match for variable "
+			);
 		};
-		check_same_origin(base::StrID("var1"));
-		check_same_origin(base::StrID("var2"));
-		check_same_origin(base::StrID("var3"));
-		check_same_origin(base::StrID("var4"));
+		check_same_origin(base::StrID("var1"), false);
+		check_same_origin(base::StrID("var2"), false);
+		check_same_origin(base::StrID("var3"), false);
+		check_same_origin(base::StrID("var4"), false);
+		check_same_origin(base::StrID("var5"), false);
+		check_same_origin(base::StrID("var6"), false);
+		check_same_origin(base::StrID("var7_generated"), true);
+		check_same_origin(base::StrID("var8_generated"), true);
 
 		auto get_hout_function_by_name
 			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {

@@ -84,23 +84,25 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					if_opt_some(expr.origin.getSourcePosition(ctx), pos) {
-						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Expression cannot be evaluated at compile-time.", pos
-						));
-					}
-					if_opt_none(expr.origin.getSourcePosition(ctx)) {
-						ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-							"Expression cannot be evaluated at compile-time.",
-							base::strConcat(
-								"The code is unavailable because the expression is at least "
-								"partially "
-								"compiler generated.",
-								"The failure happened for the symbol `",
-								name(expr.symbol),
-								"`."
-							)
-						));
+					match_optional(expr.origin.getSourcePosition(ctx)) {
+						opt_some(pos) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Expression cannot be evaluated at compile-time.", pos
+							));
+						}
+						opt_none {
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+								"Expression cannot be evaluated at compile-time.",
+								base::strConcat(
+									"The code is unavailable because the expression is at least "
+									"partially "
+									"compiler generated.",
+									"The failure happened for the symbol `",
+									name(expr.symbol),
+									"`."
+								)
+							));
+						}
 					}
 					result = query::Failed();
 					return;

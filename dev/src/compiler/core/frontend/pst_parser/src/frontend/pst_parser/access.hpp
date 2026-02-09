@@ -60,11 +60,6 @@ namespace pst {
 				return {};
 		}
 
-		template<typename T>
-		Access<T> upCast() const {
-			return { ref };
-		}
-
 		EXPOSE_REF_INTERFACE(ref)
 	};
 

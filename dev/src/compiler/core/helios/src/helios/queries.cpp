@@ -393,30 +393,14 @@ namespace compiler::helios {
 					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) -> Box<code::Expr> {
-						auto expr = ctx.query<QueryHoutOfExpr>(
-										   expr_holder.unlock(ctx)->getExpr().unlock(ctx)
-						)
-					                    .valueOrThrow();
-						const auto init_expr_type = expr->expression_type.getSymbolType();
-						const auto field_type     = field.getType(ctx);
-						const auto coercion
-							= canCoerce(ctx, init_expr_type, field_type).valueOrThrow();
-
-						if (coercion.isInvalid()) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-								base::strConcat(
-									"Cannot coerce default field value of type ",
-									init_expr_type.toString(),
-									" to the field's expected type ",
-									field_type.toString()
-								),
-								expr_holder.unlock(ctx)->getSourcePosition()
-							));
-							query::throwFailed();
-						}
-
-						return coercion.coerce(ctx, std::move(expr));
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+						const auto field_type = field.getType(ctx);
+						auto       expr
+							= getHoutOfExprWithExpectedType(
+								  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
+							)
+					              .valueOrThrow();
+						return expr;
 					}
 				);
 
@@ -566,7 +550,7 @@ namespace compiler::helios {
 				          .valueOrThrow();
 
 				block.statements.emplace_back(makeBox<code::ReturnStmt>(
-					helios::code::generatedOrigin(), std::move(expr_coerced)
+					expr_coerced->origin.generatedFrom(), std::move(expr_coerced)
 				));
 				return block;
 			} else {
@@ -619,7 +603,7 @@ namespace compiler::helios {
 					                        .valueOrThrow();
 					output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
 				} else {
-					output(code::VoidReturnStmt(code::generatedOrigin()));
+					output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 				}
 			}
 
@@ -643,7 +627,7 @@ namespace compiler::helios {
 				auto location_type = location_expr->expression_type.getSymbolType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 					location_expr = makeBox<code::DerefExpr>(
-						ctx, code::generatedOrigin(), std::move(location_expr)
+						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
 					);
 
 				// The new `SymbolType` of `location_expr` is the location symbol without the

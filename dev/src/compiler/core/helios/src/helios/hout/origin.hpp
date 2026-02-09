@@ -9,10 +9,6 @@
 #include <variant>
 
 namespace compiler::helios::code {
-	/**
-	 * @brief This struct represents the generated origin of the HOUT element.
-	 */
-	struct GeneratedElement {};
 
 	/**
 	 * @brief This struct represents the PST origin of the HOUT element.
@@ -32,13 +28,13 @@ namespace compiler::helios::code {
 	};
 
 	class ElementOrigin {
-		// In the future maybe template-generated?
-		using ValueType = std::variant<GeneratedElement, PstOrigin, std::vector<PstOrigin>>;
-
-		ValueType value;
+		std::vector<PstOrigin> pst_origins;
+		bool                   is_generated;
 
 	public:
-		ElementOrigin(ValueType value): value(std::move(value)) {}
+		ElementOrigin(std::vector<PstOrigin> pst_origins, bool is_generated):
+			  pst_origins(std::move(pst_origins)),
+			  is_generated(is_generated) {}
 
 		/**
 		 * @brief Get the source position of the origin, if it is based on a PST element. If the
@@ -52,20 +48,21 @@ namespace compiler::helios::code {
 
 
 		/**
-		 * @brief Helper function that appends a PST element to an existing origin, creating a new
-		 * origin with the updated PST element(s).
+		 * @brief Helper function that creates a new origin based on the current one
+		 * but with an additional PST element.
 		 *
 		 * If the current element is generated, then throws an error.
-		 *
-		 * If the current element is a single PST element, it creates a vector origin with
-		 * the existing and the new element.
-		 *
-		 * If the current element is already a vector of PST
-		 * elements, it appends the new value.
 		 */
-		static ElementOrigin appendToOrigin(
-			ElementOrigin origin, pst::Access<pst::LangElement> pst_element
-		);
+		ElementOrigin extended(pst::Access<pst::LangElement> pst_element);
+
+		/**
+		 * @brief Helper function that creates a new origin based on the current one but marked as
+		 * generated. Used for example when the `deref expr` or `cast expr` is generated based on an
+		 * existing expression.
+		 */
+		ElementOrigin generatedFrom();
+
+		[[nodiscard]] bool isGenerated() const { return is_generated; }
 
 		/**
 		 * @brief Get the PST elements that this origin is based on.
