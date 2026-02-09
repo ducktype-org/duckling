@@ -12,12 +12,15 @@ namespace query::internal {
 
 	class QueryState;
 
+	constexpr bool TRACK_REVERSE_GRAPH = true;
+
 	/**
 	 * @brief Core dependency graph powering evaluation across the compiler.
 	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
 	 */
 	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
+		base::HashMap<NodeID, std::vector<NodeID>> node_reverse_deps;  // Only used if TRACK_REVERSE_GRAPH is true
 
 		/*
 		 * for direct access to node_deps

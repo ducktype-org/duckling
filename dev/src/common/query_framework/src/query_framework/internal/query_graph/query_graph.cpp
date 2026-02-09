@@ -22,6 +22,11 @@ namespace query::internal {
 		);
 		node_deps.at(from).emplace_back(to);
 
+		if (TRACK_REVERSE_GRAPH) {
+			if (!node_reverse_deps.contains(to)) node_reverse_deps.insert_or_assign(to, std::vector<NodeID>{});
+			node_reverse_deps.at(to).emplace_back(from);
+		}
+
 		// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
 		return DependencyStatus::OK;
 	}

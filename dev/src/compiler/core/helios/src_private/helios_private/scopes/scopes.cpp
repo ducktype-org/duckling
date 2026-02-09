@@ -651,6 +651,10 @@ namespace compiler::helios {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
+
+		static auto erase(KHash key) -> bool {
+			return cache.erase(key);
+		}
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);

@@ -1,6 +1,12 @@
 #pragma once
 
+#include <base/collections/optional.hpp>
+
 #include <string_view>
+
+namespace base {
+	struct Bit256;
+}
 
 namespace query {
 
@@ -70,6 +76,12 @@ namespace query {
 			bool catch_exceptions_if_using_qresult = true;
 		};
 
+		struct QueryImplData {
+			using EraseFunctionUnstableType = bool (*)(base::Bit256);
+			using EraseFunctionStableType  = bool (*)(u64);
+			std::variant<EraseFunctionUnstableType, EraseFunctionStableType> erase_function;
+		};
+
 		/**
 		 * Struct holding universal, comp-time meta data of each query type.
 		 * It is set per query, and stored in the query-interface struct, so it can be accessed
@@ -86,9 +98,10 @@ namespace query {
 		 * some indirect access to it, e.g. via QueryID or query interface struct.
 		 */
 		struct QueryData final {
-			QueryKind        kind;
-			std::string_view name;
-			QueryTags        tags;
+			QueryKind                     kind;
+			std::string_view              name;
+			QueryTags                     tags;
+			base::Optional<QueryImplData> impl_data{};
 
 			constexpr QueryData(QueryKind kind, std::string_view name, QueryTags tags):
 				  kind(kind),
@@ -96,6 +109,12 @@ namespace query {
 				  tags(tags) {}
 
 			constexpr QueryData(const QueryData&) = default;
+
+			[[nodiscard]] constexpr QueryData withImplData(QueryImplData impl_data) const {
+				QueryData copy = *this;
+				copy.impl_data.emplace(impl_data);
+				return copy;
+			}
 
 			[[nodiscard]]
 			constexpr bool isInputQuery() const {

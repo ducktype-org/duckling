@@ -18,6 +18,7 @@
 		cache.put(key_hash, { std::move(res), acd });                           \
 		return cache.at(key_hash).data;                                         \
 	}                                                                           \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); } \
 	static_assert(                                                              \
 		std::is_same_v<PResult, QResult>,                                       \
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"         \
@@ -44,6 +45,7 @@
 		cache.put(key_hash, { std::move(res), acd });                                   \
 		return QResult(cache.at(key_hash).data);                                        \
 	}                                                                                   \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }         \
 	static_assert(                                                                      \
 		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
 		"QResult should be constructible from (but not equal to) PResult for "          \
@@ -87,6 +89,7 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
 		return QResult(CRef<PResult>(&ref->value.data));                                   \
 	}                                                                                      \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }            \
 	static_assert(                                                                         \
 		!std::is_same_v<QResult, CRef<PResult>>,                                           \
 		"QResult should not be equal to CRef<PResult> for "                                \
@@ -111,6 +114,7 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
 		return CRef<PResult>(&ref->value.data);                                            \
 	}                                                                                      \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }            \
 	static_assert(                                                                         \
 		std::is_same_v<CRef<PResult>, QResult>,                                            \
 		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                     \
@@ -142,6 +146,7 @@
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });         \
 		return construct_lambda(&ref->value.data);                                                 \
 	}                                                                                              \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }                    \
 	static_assert(                                                                                 \
 		not std::is_same_v<QResult, CRef<PResult>>,                                                \
 		"QResult should not be equal to CRef<PResult> for "                                        \
@@ -157,5 +162,6 @@
 	static auto store(KHash, PResult res, const query::ACD&) -> QResult { \
 		return QResult{ std::move(res) };                                 \
 	}                                                                     \
+	static auto erase(KHash) -> bool { return false; }                    \
                                                                           \
 	static auto load(KHash) -> LoadResult { return {}; }
