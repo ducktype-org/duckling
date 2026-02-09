@@ -489,6 +489,7 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
+
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(

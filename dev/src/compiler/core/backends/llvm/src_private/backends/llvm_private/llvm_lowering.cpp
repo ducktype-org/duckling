@@ -1,7 +1,5 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include "base/types/bits_and_bytes.hpp"
-
 #include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
@@ -37,8 +35,7 @@ LLVM_INCLUDE_END()
 #include <base/pointers/ref.hpp>
 
 #include <init/init.hpp>
-
-#include <iostream>
+#include <logger/logger.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
 namespace {
@@ -738,15 +735,15 @@ namespace compiler::backend_llvm {
 								// field of the list, dereferences it and performs an index
 								// projection on the pointer to the heap data. If `List[T]` had a
 								// proper type interface (including a 'data' field which returns a
-								// `ref T` or `T*`), an index access could be represented by
-								// `Field(Data), Deref, IndexProjection`. Then the whole
-								// implementation of this case for the DynamicArrayTypeLayout, would
-								// be the same as for static arrays. For now, this programmatically
-								// implements the thing described above.
+								// `ref T` or `T*`), a dynamic array index access could be
+								// represented by `Field(Data), Deref, IndexProjection`. Then the
+								// whole implementation of this case for the DynamicArrayTypeLayout,
+								// would be the same as for static arrays. For now, this
+								// programmatically implements the thing described above.
 								ensure_structural_base();
 
 								// Add an additional FieldProjection('data') so we access the data
-								// field with one GEP. Note that data is at 0 index.
+								// field with one GEP. Note that data is at 0 index in the struct.
 								gep_indices.push_back(llvm_i32(0));
 
 								// Emit the current GEP to get pointer to the heap data.
@@ -1372,9 +1369,12 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			default:
-				// TODOP: Dev log
-				std::cerr << "Unknown lir operation (skip): "
-						  << base::enumToStr(lir_instruction.operation) << "\n";
+				CORE_DEV_LOG(
+					Backend,
+					"Unknown LIR operation in LLVM backend, skipping: ",
+					base::enumToStr(lir_instruction.operation),
+					"\n"
+				);
 			}
 		}
 

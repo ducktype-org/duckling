@@ -5,6 +5,7 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 
+#include "base/str/str_utils.hpp"
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -85,7 +86,7 @@ namespace compiler::tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return source_type.toString();
+			return source_type.toString() + ":" + base::toString(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;

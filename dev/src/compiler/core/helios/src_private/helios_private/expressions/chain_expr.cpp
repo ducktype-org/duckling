@@ -5,6 +5,11 @@
 
 #include "chain_expr.hpp"
 
+#include "ctv/ctv.hpp"
+#include "typesystem/higher/kind.hpp"
+#include "typesystem/higher/symbol_type.hpp"
+#include "typesystem/higher/types.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -660,6 +665,49 @@ namespace compiler::helios::code {
 			);
 		}
 
+		auto processArrayTypeCreation(Box<Expr> base, pst::AccessLocked<pst::ExprElement> arg_pst)
+			-> query::QResult<ChainState> {
+			// Evaluate the base to see if we are creating a static or a dynamic array.
+			auto base_eval = query_ctx.query<QueryEvaluateHOUTExpression>({ base.ref() });
+			UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval);
+
+			auto is_untyped_dynamic_array = [](const ctv::CompileTimeValue& ctv) -> bool {
+				if (!ctv.has<tsh::SymbolType<>>()) return false;
+				auto type = ctv.get<tsh::SymbolType<>>()->getType();
+				if (type.getKind() != tsh::Kind::DynamicArray) return false;
+
+				auto element_type = type.as<tsh::DynamicArrayAbstractType>().getElementType();
+				return element_type.getType().getKind() == tsh::Kind::Unit;
+			};
+
+
+			// If the base is an untyped DynamicArray, then we expect meta in the index arguments
+			// for dynamic array type creation. Otherwise we expect an integer for StaticArray type
+			// creation.
+			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
+				if (is_untyped_dynamic_array(base_ctv)) {
+					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
+						                      tsh::ReferenceKind::Direct,
+						                      tsh::Mutability::Immutable };
+				} else {
+					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
+												  { 64,
+						                            tsh::IntegralAbstractType::Signedness::Signed }
+											  ),
+						                      tsh::ReferenceKind::Direct,
+						                      tsh::Mutability::Immutable };
+				}
+			}();
+
+			auto arg_res
+				= getHoutOfExprWithExpectedType(query_ctx, arg_pst, expected_index_arg_type);
+			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
+
+			return ChainState::ofExpr(
+				makeBox<IndexExpr>(query_ctx, std::move(base), std::move(arg_expr))
+			);
+		}
+
 		/**
 		 * @brief Helper function of @p processPSTExpr that processes a square bracket call.
 		 * This can mean:
@@ -693,45 +741,9 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
 			// If base is coercible to meta, this is an array type creation.
-			// TODOP: Move that to a function.
 			if (meta_coercion_res.isValid()) {
 				auto coerced_base = meta_coercion_res.coerce(query_ctx, std::move(base));
-
-				auto base_eval
-					= query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_base.ref() });
-				UNPACK_QRESULT_MOVE(auto base_ctv =, base_eval);
-
-				// If the base is an untyped DynamicArray, then we expect meta for dynamic array
-				// type creation. Otherwise we expect an integer for StaticArray type creation.
-				auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
-					if (base_ctv.has<tsh::SymbolType<>>()) {
-						auto dyn_array = base_ctv.get<tsh::SymbolType<>>();
-						if (dyn_array->getType().getKind() == tsh::Kind::DynamicArray) {
-							auto inner_type = dyn_array->getType()
-							                      .as<tsh::DynamicArrayAbstractType>()
-							                      .getElementType();
-							if (inner_type.getType().getKind() == tsh::Kind::Unit) {
-								return tsh::SymbolType<>{ query_ctx.query<tsh::QueryMetaType>({}),
-									                      tsh::ReferenceKind::Direct,
-									                      tsh::Mutability::Immutable };
-							}
-						}
-					}
-					return tsh::SymbolType<>{ query_ctx.query<tsh::QueryIntegralType>(
-												  { 64,
-						                            tsh::IntegralAbstractType::Signedness::Signed }
-											  ),
-						                      tsh::ReferenceKind::Direct,
-						                      tsh::Mutability::Immutable };
-				}();
-
-				auto arg_res
-					= getHoutOfExprWithExpectedType(query_ctx, arg_pst, expected_index_arg_type);
-				UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
-
-				return ChainState::ofExpr(
-					makeBox<IndexExpr>(query_ctx, std::move(coerced_base), std::move(arg_expr))
-				);
+				return processArrayTypeCreation(std::move(coerced_base), arg_pst);
 			}
 
 			// Index operator.

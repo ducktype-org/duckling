@@ -6,10 +6,6 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/symbol_type.hpp"
-#include "typesystem/higher/types.hpp"
-#include "typesystem/higher/value_category.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>

@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "typesystem/higher/symbol_type.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
@@ -17,6 +19,10 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include "base/except/exceptions.hpp"
+
+#include "query_framework/query_errors.hpp"
+#include "query_framework/query_result.hpp"
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -106,6 +112,58 @@ namespace compiler::helios {
 					                      base.getMutability() };
 			}
 
+			/**
+			 * @brief Evaluates indexing operations performed on meta types
+			 *
+			 * This includes:
+			 * - For dynamic arrays: converting an untyped dynamic array placeholder `List[Unit]`
+			 * into a typed array (e.g., `List[T]`) when the index provided is a meta type.
+			 * - For static arrays: constructs a static array type with a fixed size `Int[10]` when
+			 * the index is a integral constant.
+			 *
+			 * @param base_type The meta-type being indexed.
+			 * @param index_ctv The evaluated CTV used as the index.
+			 * @return A QResult containing the newly constructed SymbolType wrapped in a
+			 * CTV.
+			 */
+			auto evaluateTypeIndexing(
+				const tsh::SymbolType<>& base_type, const ctv::CompileTimeValue& index_ctv
+			) -> query::QResult<ctv::CompileTimeValue> {
+				auto is_untyped_dynamic_array = [](const tsh::SymbolType<>& type) -> bool {
+					auto abs_type = type.getType();
+					if (abs_type.getKind() != tsh::Kind::DynamicArray) return false;
+					auto element_type
+						= abs_type.as<tsh::DynamicArrayAbstractType>().getElementType();
+					return element_type.getType().getKind() == tsh::Kind::Unit;
+				};
+
+				// Check is the base type is the placeholder untyped dynamic array type. If so,
+				// we create a properly typed DynamicArray. Index expr should be a meta type.
+				if (is_untyped_dynamic_array(base_type)) {
+					if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
+						auto typed_dynamic_array
+							= ctx.query<tsh::QueryDynamicArrayType>({ maybe_elem_type.value() });
+						return CompileTimeValue{ tsh::SymbolType<>{ typed_dynamic_array,
+							                                        base_type.getRefKind(),
+							                                        base_type.getMutability() } };
+					}
+					return query::Failed();
+				}
+
+				// If base is meta and not a untyped dynamic list. Then the should be a
+				// comp-time evaluated integral constant. Then this expression creates a new
+				// static array type.
+				if (auto maybe_size = index_ctv.get<NumericValue>()) {
+					if (maybe_size->isIntegral()) {
+						usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
+						return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
+					}
+				}
+				
+				// If none of the patterns matched, this is an error.
+				return query::Failed();
+			}
+
 			void visitIndexExpr(const code::IndexExpr& expr) final {
 				auto base_res = evalHoutExpr(ctx, expr.base.ref());
 				if (base_res.hasFailed()) {
@@ -123,42 +181,8 @@ namespace compiler::helios {
 						return;
 					}
 
-					const auto& index_ctv = index_res.valueOrThrow();
-
-					// Check is the base type is the placeholder untyped dynamic array type. If so,
-					// we create a properly typed DynamicArray. Index expr should be a meta type.
-					if (maybe_type->getType().getKind() == tsh::Kind::DynamicArray) {
-						auto dyn_array_abs
-							= maybe_type->getType().as<tsh::DynamicArrayAbstractType>();
-						if (dyn_array_abs.getElementType().getType().getKind() == tsh::Kind::Unit) {
-							if (auto maybe_elem_type = index_ctv.get<tsh::SymbolType<>>()) {
-								auto typed_dynamic_array = ctx.query<tsh::QueryDynamicArrayType>(
-									{ maybe_elem_type.value() }
-								);
-								result = CompileTimeValue{ tsh::SymbolType<>{
-									typed_dynamic_array,
-									maybe_type->getRefKind(),
-									maybe_type->getMutability() } };
-								return;
-							}
-						}
-					}
-
-					// If base is meta and not a untyped dynamic list. Then the should be a
-					// comp-time evaluated integral constant. Then this expression creates a new
-					// static array type.
-					if (auto maybe_size = index_ctv.get<NumericValue>()) {
-						if (maybe_size->isIntegral()) {
-							usize size = static_cast<usize>(maybe_size->coerceTo<u64>().value());
-							result     = CompileTimeValue{
-                                sinkStaticArrayDimension(ctx, *maybe_type, size)
-							};
-							return;
-						}
-					}
-
-					// If none of the patterns matched, this is an error.
-					result = query::Failed();
+					auto indexing_res = evaluateTypeIndexing(*maybe_type, index_res.valueOrThrow());
+					result            = indexing_res.valueOrThrow();
 					return;
 				}
 
