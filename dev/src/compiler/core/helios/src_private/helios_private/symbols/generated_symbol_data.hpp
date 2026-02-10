@@ -26,6 +26,14 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		struct BuiltinOperator final {
+			// The type of the builtin operator this symbol represents.
+			tsh::FunctionAbstractType operator_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		/**
 		 * Represents a compiler-generated parameter of a function. This function may itself be
 		 * compiler-generated, such as the `ImplicitConstructor`.
@@ -65,10 +73,10 @@ namespace compiler::helios::houtgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
-		std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper> data;
+		std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper> data;
 
 		explicit GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
+			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper>& data
 		);
 
 		[[nodiscard]]

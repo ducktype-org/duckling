@@ -10,6 +10,10 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
+			return { operator_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
 		}
@@ -25,7 +29,7 @@ namespace compiler::helios {
 		}
 
 		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, Parameter, Variable, ReplExpressionWrapper>& data
+			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper>& data
 		):
 			  data(data) {}
 
