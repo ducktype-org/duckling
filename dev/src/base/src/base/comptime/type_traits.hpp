@@ -180,7 +180,8 @@ namespace base {
 
 	/**
 	 * @brief Returns the name of the passed type `T`.
-	 * @note The type name may not be pretty, and may depend on the compiler and the library implementation.
+	 * @note The type name may not be pretty, and may depend on the compiler and the library
+	 * implementation.
 	 *
 	 * @tparam T The type to get the name of
 	 * @note From https://stackoverflow.com/a/56766138
