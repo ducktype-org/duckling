@@ -60,14 +60,14 @@ namespace vm {
 
 		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
 		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
-		std::cout << "Started thread with id: " << id << "\n";
+		// std::cout << "Started thread with id: " << id << "\n";
 
 		return api::Response(api::response::ThreadID{ id });
 	}
 
 	std::expected<api::Response, api::ApiError> VMProcess::join(i64 thread_id) {
 		// @TODO: check status
-		std::cout << "Joining thread with id: " << thread_id << "\n";
+		// std::cout << "Joining thread with id: " << thread_id << "\n";
 		auto& thread = thread_id == 0 ? getMainVMThread() : getVMThreadByID(thread_id);
 
 		auto& opt_exec_thread = thread.exec_thread;
@@ -235,7 +235,6 @@ namespace vm {
 			variant_case_novalue(api::request::Output) { return output(); }
 
 			variant_case(api::request::Attach, attach_request) {
-				getMainVMThread().notifyPaused();
 				return attach(attach_request.istream, attach_request.ostream);
 			}
 
@@ -330,8 +329,9 @@ namespace vm {
 
 	VMThread& VMProcess::getVMThreadByID(i64 thread_id) {
 		for (auto& thread: vm_threads) {
-			if (thread.exec_thread) {	
-				i64 id = static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
+			if (thread.exec_thread) {
+				i64 id
+					= static_cast<i64>(std::hash<std::thread::id>{}(thread.exec_thread->get_id()));
 				if (id == thread_id) return thread;
 			}
 		}
@@ -397,14 +397,14 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-    void VMProcess::acquireGil(i64 id){
-        std::cout << "Thread " << id << " tries acquiring GIL\n";
-        gil.lock();
-        std::cout << "Thread " << id << " succeeded acquiring GIL\n";
+	void VMProcess::acquireGil(i64 id) {
+		// std::cout << "Thread " << id << " tries acquiring GIL\n";
+		gil.lock();
+		// std::cout << "Thread " << id << " succeeded acquiring GIL\n";
+	}
 
-    }
-    void VMProcess::releaseGil(i64 id){
-        std::cout << "Thread " << id << " releaseing GIL\n";
-        gil.unlock();
-    }
+	void VMProcess::releaseGil(i64 id) {
+		// std::cout << "Thread " << id << " releaseing GIL\n";
+		gil.unlock();
+	}
 }
