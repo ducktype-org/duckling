@@ -11,6 +11,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -26,7 +27,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
 #include <functional>
@@ -51,6 +52,8 @@ namespace compiler::helios {
 	 *
 	 * @note For HELIOS internal use only
 	 * @note It is a partial-Query. It won't work for all symbol
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID, ({ .uses_qresult = false }));
 
@@ -60,36 +63,46 @@ namespace compiler::helios {
 
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
+	bool isGlobalFun(SymID id) {
+		CORE_ASSERT(
+			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
+				|| getSymRef(id)->common.kind == SymbolKind::Function,
+			"Not a function."
+		);
+
+		return scopeDepth(scope(id)) == 1;
+	}
+
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		std::function<bool(const pst::Access<pst::LangElement>&)> global_variable_pst_context
-			= [&](const pst::Access<pst::LangElement>& el) -> bool {
-			switch (el->getElementKind()) {
-			case pst::ElementKind::TopLevel:
-			case pst::ElementKind::Namespace:
-				return true;
+		return std::invoke(
+			[&ctx](this auto self, const pst::Access<pst::LangElement>& el) -> bool {
+				switch (el->getElementKind()) {
+				case pst::ElementKind::TopLevel:
+				case pst::ElementKind::Namespace:
+					return true;
 
-			case pst::ElementKind::Class:
-			case pst::ElementKind::Fun:
-			case pst::ElementKind::If:
-			case pst::ElementKind::While:
-			case pst::ElementKind::For:
-				return false;
+				case pst::ElementKind::Class:
+				case pst::ElementKind::Fun:
+				case pst::ElementKind::If:
+				case pst::ElementKind::While:
+				case pst::ElementKind::For:
+					return false;
 
-			case pst::ElementKind::CodeBlock:
-			case pst::ElementKind::CodeBlockOrStmt:
-			case pst::ElementKind::Variable:
-			case pst::ElementKind::StmtSpecifier:
-				// we panic if there is no parent:
-				return global_variable_pst_context(el->getParent().value().unlock(ctx));
+				case pst::ElementKind::CodeBlock:
+				case pst::ElementKind::CodeBlockOrStmt:
+				case pst::ElementKind::Variable:
+				case pst::ElementKind::StmtSpecifier:
+					// we panic if there is no parent:
+					return self(el->getParent().value().unlock(ctx));
 
-			default:
-				CORE_PANIC("Unexpected pst path of variable");
-			}
-		};
-
-		return global_variable_pst_context(getSymRef(id)->getPSTData()->pst_element.unlock(ctx));
+				default:
+					CORE_PANIC("Unexpected pst path of variable");
+				}
+			},
+			getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
+		);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
@@ -403,6 +416,8 @@ namespace compiler::helios {
 		namespace {
 			/**
 			 * Query all builtin symbols.
+			 *
+			 * \query_thread_safe_if_cache_and_struct
 			 */
 			DECLARE_QUERY(
 				QueryGlobalBuiltinSymbols,
@@ -791,32 +806,34 @@ namespace compiler::helios {
 
 			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
 
-			// StmtSpecifier only has a "CodeBlockOrStmt" child, which can have a "CodeBlock" child
-			// or "Stmt" child.
+			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//
-			// So single statement can have a specifier when it is wrapped in
-			// "CodeBlockOrStmt" and "StmtSpecifier" or in the "CodeBlock", "CodeBlockOrStmt" and
-			// "StmtSpecifier".
+			// The Class situation is a bit more complicated
+			// @TODO: #1535 Fix/figure out class handling
 			while (true) {
+				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
+					// Can swap to append range when g++ 15 is more commonly available
+					auto to_add = as_stmt.value()->getSpecifiers();
+					specifiers.insert(
+						specifiers.end(),
+						std::make_move_iterator(to_add.begin()),
+						std::make_move_iterator(to_add.end())
+					);
+				}
 				if (auto result_stmt = getAncestor(
-						ctx,
-						pst_element,
-						pst::ElementKind::CodeBlockOrStmt,
-						pst::ElementKind::StmtSpecifier
+						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
 					)) {
 					pst_element = *std::move(result_stmt);
 				} else if (auto result_block = getAncestor(
 							   ctx,
 							   pst_element,
-							   pst::ElementKind::CodeBlock,
-							   pst::ElementKind::CodeBlockOrStmt,
-							   pst::ElementKind::StmtSpecifier
+							   pst::ElementKind::ClassBlock,
+							   pst::ElementKind::ClassSpecifierBlock
 						   )) {
 					pst_element = *std::move(result_block);
 				} else {
 					break;
 				}
-				specifiers.emplace_back(pst_element.dynamicCast<pst::StmtSpecifier>().value());
 			}
 
 			return specifiers;
@@ -966,7 +983,7 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto        fun_hout_result = ctx.query<QueryCodeOfFun>(key).valueOrThrow();
+			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 			const auto& function_body   = fun_hout_result.body;
 
 			HoutFunctionCallCollector visitor;
@@ -1020,7 +1037,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed
 
 		CORE_ASSERT(
-			query::Context::getState().queryStackSize() == 0,
+			query::Context::getState().activeQueryCount() == 0,
 			"getAllHeliosSymbols called from within query!"
 		);
 

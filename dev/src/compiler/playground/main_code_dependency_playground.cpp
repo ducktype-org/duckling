@@ -8,15 +8,15 @@
 #include <clah/clah.hpp>
 #include <diagnostic/highlight_positions.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 
 #include <iostream>
 
 void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
+	if (query::Context::int_logger.messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
+		query::Context::int_logger.dumpLog(true, std::cerr);
 	}
 }
 
@@ -60,9 +60,9 @@ int notMain(int argc, const char* const* argv) {
 	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 
 	for (auto& i: top_level.functions) {
-		if (i.declaration->original_name == base::StrID("main")) {
+		if (i->declaration->original_name == base::StrID("main")) {
 			auto positions = pst::queryPositionDependencies<helios::QueryCodeOfFun>(
-				i.declaration->original_symbol
+				i->declaration->original_symbol
 			);
 
 			printer::PrinterOStream str;

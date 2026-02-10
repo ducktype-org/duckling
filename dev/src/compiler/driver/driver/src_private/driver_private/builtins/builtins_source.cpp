@@ -43,6 +43,10 @@ extern "C" {
 	int64_t builtin_output_string(str s);
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
+
+	// Runtime Allocators
+	void* builtin_alloc(uint64_t size);
+	void  builtin_dealloc(void* ptr);
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.
@@ -121,5 +125,15 @@ void builtin_free_string(str s) {
 		s.memory_end_offset   = 0;
 	}
 }
+
+// This is an intended abstraction over the allocation. In the future, different allocators for
+// different architectures will be supported here. For now we just malloc.
+void* builtin_alloc(uint64_t size) {
+	void* ptr = malloc(size);
+	if (ptr == nullptr) exit(1);
+	return ptr;
+}
+
+void builtin_dealloc(void* ptr) { free(ptr); }
 
 // NOLINTEND

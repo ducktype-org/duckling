@@ -1,6 +1,11 @@
 #include "lir_structure.hpp"
 
-#include <helios/symbols/simple.hpp>
+#include <helios/hout/hout.hpp>
+#include <helios/mangler/mangler.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
+#include <typesystem/higher/queries/types.hpp>
+#include <typesystem/lower/queries.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -9,6 +14,89 @@
 #include <set>
 
 namespace compiler::lir {
+	/**
+	 * @brief Creates LIR local data from MIR local data.
+	 * @important remember that LIRLocal should only be stored in a LIR function.
+	 *
+	 * @param ctx
+	 * @param mir_local
+	 * @return LIRLocal
+	 */
+	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+
+		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+	}
+
+	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
+		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
+		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
+
+		return LIRLocal{ bool_layout };
+	}
+
+	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
+
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+
+		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
+	}
+
+	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
+
+		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
+
+		variant_match(hout_global.value) {
+			variant_case(helios::HOUTGlobalConst, name) {
+				return LIRGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name,
+					LIRGlobalType::Constant,   name.value,
+				};
+			}
+			variant_case(helios::HOUTGlobalVariable, name) {
+				return LIRGlobal{
+					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
+				};
+			}
+			variant_default {
+				CORE_PANIC(
+					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
+					hout_global.original_name.strView()
+				);
+			}
+		}
+
+		CORE_UNREACHABLE();
+	}
+
+	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
+		  base(std::move(base)),
+		  layout([&]() -> CRef<tsl::TypeLayout> {
+			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
+		      // projections.
+			  CRef<tsl::TypeLayout> current_layout = getBaseLayout();
+
+			  for (const auto& proj: projection_chain) {
+				  variant_match(proj.storage) {
+					  variant_case(FieldProjection, field) {
+						  const auto& class_layout
+							  = std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+						  const auto layout_idx
+							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					  }
+					  variant_case_novalue(DerefProjection) {
+						  const auto& pointer_layout
+							  = std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+						  current_layout = pointer_layout.getPointee();
+					  }
+				  }
+			  }
+			  return current_layout;
+		  }()),
+		  projection_chain(std::move(projection_chain)) {}
 
 	base::Map<BlockRef, u64> Function::getBlockIDs() const {
 		CORE_ASSERT(this->validateBlockOrder().isOk(), "Invalid block order");
@@ -99,12 +187,23 @@ namespace compiler::lir {
 			loc_output << "Global(" << global.mangled_name.strView() << ")";
 		}
 
+		void printChain(const std::vector<LIRPlace::Projection>& chain, std::ostream& loc_output) {
+			for (const auto& proj: chain) {
+				variant_match(proj.storage) {
+					variant_case(LIRPlace::FieldProjection, field) {
+						loc_output << "." << name(field.field_id).strView();
+					}
+					variant_case_novalue(LIRPlace::DerefProjection) { loc_output << ".*"; }
+				}
+			}
+		}
+
 		void printOutput(const LIRPlace& output, std::ostream& loc_output) {
 			variant_match(output.base) {
 				variant_case(LIRLocalRef, local) { printLocal(local, loc_output); }
 				variant_case(LIRGlobal, global) { printGlobal(global, loc_output); }
 			}
-			for (const auto& arg: output.access_chain) loc_output << "." << name(arg).strView();
+			printChain(output.projection_chain, loc_output);
 		}
 
 		void printValue(const LIRValue& location) {
@@ -115,7 +214,8 @@ namespace compiler::lir {
 						variant_case(LIRLocalRef, local) { printLocal(local, output); }
 						variant_case(LIRGlobal, global) { printGlobal(global, output); }
 					}
-					for (const auto& arg: place.access_chain) output << "." << name(arg).strView();
+
+					printChain(place.projection_chain, output);
 				}
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {

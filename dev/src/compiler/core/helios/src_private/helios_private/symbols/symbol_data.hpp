@@ -6,11 +6,11 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <query_framework/context.hpp>  // @TODO: #404 relax to fd
+#include <query_framework/context/context.hpp>  // @TODO: #404 relax to fd
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
@@ -83,9 +83,23 @@ namespace compiler::helios {
 			return &std::get<T>(other);
 		}
 
+		template<class T>
+		[[nodiscard]]
+		base::Optional<CRef<T>> getDataOpt() const {
+			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
+			return std::nullopt;
+		}
+
 		[[nodiscard]]
 		CRef<PstSymbolData> getPSTData() const {
 			return getData<PstSymbolData>();
+		}
+
+		[[nodiscard]]
+		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
+			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr)
+				return CRef<PstSymbolData>(ptr);
+			return std::nullopt;
 		}
 
 		/**

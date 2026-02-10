@@ -24,7 +24,7 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -605,7 +605,16 @@ namespace compiler::backend_llvm {
 		 * @brief Maps LIRPlace to an LLVM pointer Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
-		 * it may need to generate a GEP instruction to access a field of a struct.
+		 * it may need to generate a GEP instruction to access a field of a struct or a load
+		 * if LIRPlace has to be dereferenced.
+		 *
+		 * The overview of what this does is:
+		 * - For a given LIRValue take a pointer to it.
+		 * - Iterate through the projection chain which can store `FieldProjection`,
+		 * `DerefProjection`(and in the near future `IndexProjection` for accessing array elements)
+		 * and add subsequent arguments to the currently built GEP instruction.
+		 * - If a `DerefProjection` is encountered, we have to emit the GEP built up to this point,
+		 * perform a load on the address it returned and start building a new GEP.
 		 *
 		 * @param place The LIRPlace to convert into an LLVM pointer Value.
 		 * @param builder The LLVM IRBuilder to use for generating the pointer, if necessary.
@@ -614,7 +623,7 @@ namespace compiler::backend_llvm {
 		auto gepPointerFromLIRPlace(const lir::LIRPlace& place, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			// First, get the pointer and type of the base value.
-			const auto base_ptr = [&] -> llvm::Value* {
+			auto current_ptr = [&] -> llvm::Value* {
 				variant_match(place.base) {
 					variant_case(lir::LIRLocalRef, lir_local) {
 						return local_register_map[lir_local].get();
@@ -626,30 +635,68 @@ namespace compiler::backend_llvm {
 				CORE_UNREACHABLE();
 			}();
 
-			// Then, perform appropriate pointer modification based on the access chain.
-			// If there is no access chain, we can return the base pointer directly.
-			if (not place.hasAccess()) return base_ptr;
+			// Then, perform appropriate pointer modification based on the projection chain.
+			// If the projection chain is empty, we can return the base pointer directly.
+			if (not place.hasProjections()) return current_ptr;
+
+			llvm::Type*           current_type   = typeFromLayout(module, place.getBaseLayout());
+			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
 
 			// Otherwise, we need to get the layout indices of the accessed fields.
 			// - First, collect the subsequent layout indices.
 			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
 			std::vector<llvm::Value*> access_indices;
-			access_indices.reserve(place.access_chain.size() + 1);
-			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
 			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
-			for (const auto& field_sym: place.access_chain) {
-				const auto& current_class_layout
-					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-				const auto layout_idx = current_class_layout.getLayoutIndexOfFieldSymbol(field_sym);
-				access_indices.push_back(
-					llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
-				);
-				current_layout = current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+
+			// A GEP constructor invoked when encountering a deref projection of when we went
+			// through all projections. Creates a GEP from all projection indicies up to this point
+			// so `load` can be performed on the address calculated up to this point.
+			auto flush_gep = [&]() {
+				if (access_indices.size() > 1) {
+					// Create a GEP if needed.
+					current_ptr  = builder.CreateGEP(current_type, current_ptr, access_indices);
+					current_type = typeFromLayout(module, current_layout);
+				}
+				access_indices.clear();
+				// Reset the new base, since GEP assumes we work on arrays.
+				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			};
+
+
+			for (const auto& projection: place.projection_chain) {
+				variant_match(projection.storage) {
+					variant_case(lir::LIRPlace::FieldProjection, field) {
+						const auto& current_class_layout
+							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
+
+						const auto layout_idx
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+
+						access_indices.push_back(
+							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
+						);
+						current_layout
+							= current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+					}
+					variant_case_novalue(lir::LIRPlace::DerefProjection) {
+						// If deref was encountered, we have to create a GEP which includes all the
+						// projections built up to this point and perform a load.
+						flush_gep();
+
+						current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+						const auto& current_pointer_layout
+							= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+						current_layout = current_pointer_layout.getPointee();
+						current_type   = typeFromLayout(module, current_layout);
+					}
+				}
 			}
 
-			// - Then, create the GEP instruction to get the final pointer.
-			const auto base_llvm_type = typeFromLayout(module, place.getBaseLayout());
-			return builder.CreateGEP(base_llvm_type, base_ptr, access_indices);
+			// After no more projections exist, we create a GEP instruction with all projections up
+			// to this point. `current_ptr` stores a value which is the result of GEP.
+			flush_gep();
+			return current_ptr;
 		}
 
 		/**
@@ -913,7 +960,55 @@ namespace compiler::backend_llvm {
 				storeOutput(lir_instruction.output.value(), value, builder);
 				break;
 			}
-			/// Integer arithmetic ///
+			case AddressOf: {
+				const auto& src_place
+					= std::get<lir::LIRPlace>(lir_instruction.arguments.at(0).getVariant());
+				llvm::Value* address = gepPointerFromLIRPlace(src_place, builder);
+				storeOutput(lir_instruction.output.value(), address, builder);
+				break;
+			}
+			case AllocBox: {
+				// First, get the value to box.
+				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				llvm::Type* pointee_type = value_to_box->getType();
+
+				// Calculate the layout size for malloc.
+				const llvm::DataLayout& data_layout = module->getDataLayout();
+				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
+
+				// Get or insert the allocator.
+				llvm::FunctionCallee alloc_func = module->getOrInsertFunction(
+					"builtin_alloc",
+					llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false)
+				);
+
+				// Actually call the allocator.
+				llvm::Value* size_val = builder.getInt64(size);
+				llvm::Value* allocated_ptr
+					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
+
+				// Store the value in the allocated memory.
+				// @TODO: #1895 This is suboptimal. In the future class constructors should take the
+				// allocated memory pointer as a parameter and construct it in-place.
+				builder.CreateStore(value_to_box, allocated_ptr);
+				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
+				break;
+			}
+			case FreeBox: {
+				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
+				// @TODO: #1894 This may change based on the way we handle destructors.
+
+				// Get or insert the free.
+				llvm::FunctionCallee free_func = module->getOrInsertFunction(
+					"builtin_dealloc",
+					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
+				);
+
+				// Actually free the memory.
+				builder.CreateCall(free_func, { ptr_to_free });
+				break;
+			}
+			/// Integer arithmetic ///I
 			case IntegerAdd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:

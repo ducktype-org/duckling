@@ -10,9 +10,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_cache_macros.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::driver {
 
@@ -91,7 +91,7 @@ namespace compiler::driver {
 		QUERY_AUTO_NO_CACHE
 
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
-			auto hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id).valueOrThrow();
+			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 
 			auto module_name

@@ -7,11 +7,6 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
-/**
- * @brief Main query for compile time evaluation of any type.
- * Tries evaluating with Tree Evaluation (Short Path) and if the expression is to complicated it
- * evaluates it on DVM.
- */
 namespace compiler::helios {
 	using CompTimeEvalResult = query::QResult<ctv::CompileTimeValue>;
 
@@ -25,7 +20,11 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Evaluate a HOUT expression in compile time.
+	 * @brief Main query for compile time evaluation of any type.
+	 * Tries evaluating with Tree Evaluation (Short Path) and if the expression is to complicated it
+	 * evaluates it on DVM.
+	 *
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryEvaluateHOUTExpression, KeyFor_QueryEvaluateHOUTExpression, CompTimeEvalResult, ({})
@@ -35,14 +34,14 @@ namespace compiler::helios {
 	 * @brief Evaluate a PST expression in compile time.
 	 * @note Effectively generates the HOUT of a PST expression and
 	 * evaluates it using QueryEvaluateHOUTExpression.
+	 *
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(
 		QueryEvaluatePSTExpression,
 		pst::GenericPSTQueryKey<pst::ExprElement>,
 		CompTimeEvalResult,
-		({
-			.used_hashes = query::UsedHashes::StableHash,
-		})
+		({})
 	)
 
 	/**

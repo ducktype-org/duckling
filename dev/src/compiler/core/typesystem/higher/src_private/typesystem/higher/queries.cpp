@@ -5,7 +5,7 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {

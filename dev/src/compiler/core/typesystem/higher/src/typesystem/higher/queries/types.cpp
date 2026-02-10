@@ -1,8 +1,9 @@
 #include "types.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <typesystem/higher/abstract_type_impl.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
@@ -61,39 +62,7 @@ namespace compiler::tsh {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
 
 	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralAbstractType::Pimpl) {
-		class ErrorBadIntegralSize final: public dia::Error {
-			usize requested_size;
-
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				std::stringstream ss;
-				ss << "Invalid size of integral type: " << requested_size;
-				return ss.str();
-			}
-
-			[[nodiscard]]
-			std::string toStringDetailed() const override {
-				std::stringstream ss;
-				ss << toStringBrief() << "\n"
-				   << "The only allowed sizes are 8, 16, 32, 64, and 128.";
-				return ss.str();
-			}
-
-		public:
-			[[nodiscard]]
-			Domain getDomain() const override {
-				return Domain::TypeCheck;
-			}
-
-			explicit ErrorBadIntegralSize(
-				const dia::SourcePosition& source_position, const usize requested_size
-			):
-				  Error(source_position),
-				  requested_size(requested_size) {}
-		};
-
-		static auto provide(Context& context, const QKey key) -> PResult {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
 			using Impl = IntegralAbstractType::Impl;
 			using enum IntegralAbstractType::Signedness;
 
@@ -113,9 +82,10 @@ namespace compiler::tsh {
 			const auto [size, signedness] = key;
 
 			if (!cache.contains({ size, signedness })) {
-				// @FIXME: provide proper SourcePosition.
-				context.log(makeBox<ErrorBadIntegralSize>(dia::SourcePosition::fakePosition(), size)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+					base::strConcat("Invalid size of integral type: ", size, "."),
+					"The only allowed sizes are 16, 32, 64, 80, and 128."
+				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at({ 128, signedness });
 			}
@@ -129,39 +99,7 @@ namespace compiler::tsh {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
 
 	struct IMPLEMENT_QUERY(QueryFloatType, FloatAbstractType::Pimpl) {
-		class ErrorBadFloatSize final: public dia::Error {
-			usize requested_size;
-
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				std::stringstream ss;
-				ss << "Invalid size of float type: " << requested_size;
-				return ss.str();
-			}
-
-			[[nodiscard]]
-			std::string toStringDetailed() const override {
-				std::stringstream ss;
-				ss << toStringBrief() << "\n"
-				   << "The only allowed sizes are 16, 32, 64, 80, and 128.";
-				return ss.str();
-			}
-
-		public:
-			[[nodiscard]]
-			Domain getDomain() const override {
-				return Domain::TypeCheck;
-			}
-
-			explicit ErrorBadFloatSize(
-				const dia::SourcePosition& source_position, const usize requested_size
-			):
-				  Error(source_position),
-				  requested_size(requested_size) {}
-		};
-
-		static auto provide(Context& context, const QKey size) -> PResult {
+		static auto provide(Context& ctx, const QKey size) -> PResult {
 			using Impl = FloatAbstractType::Impl;
 
 			static std::map<usize, Impl> cache = {
@@ -173,10 +111,10 @@ namespace compiler::tsh {
 			};
 
 			if (!cache.contains(size.value)) {
-				// @FIXME: provide proper SourcePosition.
-				context.log(
-					makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size.value)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+					base::strConcat("Invalid size of float type: ", size.value, "."),
+					"The only allowed sizes are 16, 32, 64, 80, and 128."
+				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}

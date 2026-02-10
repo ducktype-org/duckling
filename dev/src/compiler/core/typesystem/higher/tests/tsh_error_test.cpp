@@ -1,8 +1,8 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
@@ -21,15 +21,16 @@ public:
 
 private:
 	void integralSizeErrorTest() {
-		query::Context::logger.clear();
-		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
+		query::Context::int_logger.clear();
+		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
 		query::entryPoint<QueryIntegralType>({ 42 });
 
 		std::stringstream dumped_logs;
 		assertTrue(
-			query::Context::logger.bad(), "Requesting bad integral size should result in an error."
+			query::Context::int_logger.bad(),
+			"Requesting bad integral size should result in an error."
 		);
-		query::Context::logger.dumpLog(false, dumped_logs);
+		query::Context::int_logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assertTrue(
 			dumped_logs_str.find("Invalid size of integral type") != decltype(dumped_logs_str)::npos,
@@ -38,15 +39,15 @@ private:
 	}
 
 	void floatSizeErrorTest() {
-		query::Context::logger.clear();
-		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
+		query::Context::int_logger.clear();
+		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
 		query::entryPoint<QueryFloatType>({ 42 });
 
 		std::stringstream dumped_logs;
 		assertTrue(
-			query::Context::logger.bad(), "Requesting bad float size should result in an error."
+			query::Context::int_logger.bad(), "Requesting bad float size should result in an error."
 		);
-		query::Context::logger.dumpLog(false, dumped_logs);
+		query::Context::int_logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assertTrue(
 			dumped_logs_str.find("Invalid size of float type") != decltype(dumped_logs_str)::npos,

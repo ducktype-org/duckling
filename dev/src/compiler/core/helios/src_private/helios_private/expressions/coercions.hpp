@@ -2,10 +2,10 @@
 
 #include <diagnostic_interactive/message.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
@@ -69,9 +69,7 @@ namespace compiler::helios {
 			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 		);
 
-		[[nodiscard]] bool isEmptyCoercion() const noexcept {
-			return validated_from.getType() == to.getType();
-		}
+		[[nodiscard]] bool isEmptyCoercion() const noexcept { return validated_from == to; }
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
 			return { from_and_to, from_and_to };

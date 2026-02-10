@@ -28,7 +28,11 @@ namespace pst {
 	}
 
 	base::Optional<base::StrID> Using::getDeclSymbolName() const {
-		return names.internal().toOpt().map([](const auto& x) { return x->getNames().back().value; }
-		);
+		if (auto child = names.internal()) {
+			if (child->getNames().empty()) return {};
+			return child->getNames().back().value;
+		} else {
+			return {};
+		}
 	}
 }

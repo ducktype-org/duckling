@@ -12,6 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
@@ -31,16 +32,11 @@
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
-
-/**
- * Simple function for showing compilation errors.
- */
-void printContextErrors() { query::Context::logger.dumpLog(true, std::cerr); }
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -52,7 +48,7 @@ clah::Clah getStandardDucklingOptions() {
 	    // Note that dev-logs options are not handled in pre-handler below,
 	    // they should be handled in each command by getDebugOptionsFromClap and passed to
 	    // initializeTheCompiler.
-	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("List of categories."))
+	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("categories"))
 	             .addLongName("dev-logs")
 	             .addShortDesc("Enable developer logs for given categories.")
 	             .build())
@@ -62,6 +58,38 @@ clah::Clah getStandardDucklingOptions() {
 				throw clah::exceptions::SuccessExitException(options);
 			}
 		});
+}
+
+/**
+ * Helper function for setting optimisation level in relevant subcommands.
+ */
+clah::Parameter getLlvmOptLevelParam() {
+	return clah::ParamBuilder::ofValue(clah::StringParser::make("level"))
+	    .addLongName("llvm-opt")
+	    .addShortName('O')
+	    .addShortDesc("Set optimization level.")
+	    .addLongDesc(
+			"Possible values are: 0, 1, 2, 3, s, z.\n"
+			"See https://llvm.org/doxygen/classllvm_1_1OptimizationLevel.html"
+		)
+	    .build();
+}
+
+global_state::BackendOptions getBackendOptionsFromClap(const clah::ParsingResult& parsing_result) {
+	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
+	using enum LLVMOptimizationLevel;
+	static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
+		{ "0", O0 }, { "1", O1 }, { "2", O2 }, { "3", O3 }, { "s", Os }, { "z", Oz },
+	};
+	const auto llvm_optimization_level
+		= str_to_llvm_opt_level.at(parsing_result.getValue<std::string>("llvm-opt").copyValueOr("0")
+	    );
+
+	return global_state::BackendOptions{
+		.llvm_backend = global_state::BackendOptions::LLVMBackend{
+			.llvm_optimization_level = llvm_optimization_level,
+		},
+	};
 }
 
 /**
@@ -155,7 +183,8 @@ clah::Clah getClahForMain() {
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
-					auto pst = pst::PST(file_to_parse);
+					// @TODO: #1879 Currently defaults to program
+					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 
@@ -195,7 +224,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit.debugPrint(ctx);
+									   std::cout << hout_unit->debugPrint(ctx);
 							   });
 
 							   return exit_code;
@@ -203,6 +232,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
 				.addPositional(clah::FileParser::make("module"))
+				.add(getLlvmOptLevelParam())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
@@ -244,10 +274,9 @@ clah::Clah getClahForMain() {
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
+							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-																? false
-																: true },
+							.incremental   = { .enabled = !options.isFlag("no-incremental") },
 						}
 					);
 
@@ -259,7 +288,6 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					defer(printContextErrors());
 					auto output_artifact
 						= query::entryPoint<driver::CompileModule>({ root, backend_type });
 
@@ -272,6 +300,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
+				.add(getLlvmOptLevelParam())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
@@ -328,10 +357,9 @@ clah::Clah getClahForMain() {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
+							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = options.isFlag("no-incremental")
-																	 ? false
-																	 : true },
+							.incremental   = { .enabled = !options.isFlag("no-incremental") },
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -344,8 +372,6 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend")
 		                                  ? compiler::driver::BackendType::DVM
 		                                  : compiler::driver::BackendType::LLVM;
-
-					defer(printContextErrors());
 
 					base::OkBad result = compiler::driver::compileEntirePackage(
 						global_state::getMainPackage(), backend_type, linking_options
@@ -406,10 +432,9 @@ clah::Clah getClahForMain() {
 									.compilation_artifacts = {
 										.artifacts_path = fs::FilePath("./duck_build/"),
 									},
+									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
-									.incremental = {.enabled = options.isFlag("no-incremental")
-																			? false
-																			: true },
+									.incremental = {.enabled = !options.isFlag("no-incremental") },
 						}
 					);
 

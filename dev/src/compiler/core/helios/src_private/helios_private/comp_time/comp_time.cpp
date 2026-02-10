@@ -8,6 +8,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
@@ -16,8 +17,8 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>
 #include <ranges>
@@ -78,10 +79,17 @@ namespace compiler::helios {
 				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
 					result    = type->valueOrThrow();
-				} else {
+				} else if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else {
+					// @TODO: #1620 make this error reporting better.
+					ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
+						"Identifier '", name(expr.symbol), "' cannot be evaluated at compile-time."
+					)));
+					result = query::Failed();
+					return;
 				}
 			}
 
@@ -538,6 +546,12 @@ namespace compiler::helios {
 				result = sub_result.valueOrThrow();
 			}
 
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+
+			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
+
 			/**
 			 * @brief Recursively lifts a CompileTimeValue representing a type, a tuple of types,
 			 * or a unit to a type.
@@ -621,8 +635,8 @@ namespace compiler::helios {
 
 			for (const SymID& func_id: *dependencies) {
 				// @TODO: #826 Change this code to a single query once it gets implemented.
-				auto  hout_func = ctx.query<QueryCodeOfFun>(func_id).valueOrThrow();
-				auto& mir_func  = ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrThrow();
+				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
+				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
 
 				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
 

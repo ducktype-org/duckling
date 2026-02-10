@@ -4,8 +4,8 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/hout/hout_fd.hpp>
-#include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -14,7 +14,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <memory>
 #include <utility>
@@ -26,6 +26,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
+	AddressOf, 
+	AllocBox,
+	// @TODO: #1894 This approach may be temporary and depends on how we handle destructors in the future.
+	FreeBox,
 
 	/**
 		@brief Placeholder.
@@ -225,13 +229,48 @@ namespace compiler::lir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
-	 * and `b` and `c` are fields within that variable, this structure would contain
-	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 * It contains of a base variable and a projection chain (either field projections or deref
+	 * projections if eny of the elements was a reference)
 	 *
-	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
+	 * For example:
+	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
+	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
+	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
+	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
+	 * FieldProjection(`c`)]`).
+	 * - Additionally, if field `b` was a reference type, an additional
+	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
+	 *
+	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * chain would be empty.
 	 */
 	struct LIRPlace final {
+		struct DerefProjection {
+			bool operator==(const DerefProjection&) const = default;
+		};
+
+		struct FieldProjection {
+			helios::SymID field_id;
+			bool          operator==(const FieldProjection&) const = default;
+		};
+
+		/**
+		 * @brief A single projection which transforms a LIRPlace. This includes dereferencing,
+		 * field access and in the future index access for array elements.
+		 */
+		struct Projection {
+			std::variant<DerefProjection, FieldProjection> storage;
+
+			static Projection field(helios::SymID field_id) {
+				return Projection(FieldProjection(field_id));
+			}
+
+			static Projection deref() { return Projection(DerefProjection()); }
+
+			bool operator==(const Projection& other) const = default;
+		};
+
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
@@ -256,20 +295,19 @@ namespace compiler::lir {
 		}
 
 		/**
-		 * @brief The symbols of the fields accessed within the variable.
-		 */
-		std::vector<helios::SymID> access_chain;
-
-		/**
-		 * @brief The type layout of the final accessed field.
-		 * @note This type layout may be different from the layout of the base variable,
-		 * especially when the access chain is not empty.
+		 * @brief The type layout of the final accessed field after applying all projections.
+		 * @note If the projection chain is empty, this layout will be equal to the `base` type
+		 * layout. It may differ from the base layout if the projection chain is not empty.
 		 */
 		CRef<tsl::TypeLayout> layout;
 
-		LIRPlace(
-			query::Context& ctx, const BaseVariant& base, std::vector<helios::SymID> access_chain
-		);
+		/**
+		 * @brief Sequence of operations applied to the `base` to reach the target memory.
+		 */
+		std::vector<Projection> projection_chain;
+
+
+		LIRPlace(BaseVariant base, std::vector<Projection> access_chain);
 
 		[[nodiscard]]
 		bool isLocal() const {
@@ -282,8 +320,8 @@ namespace compiler::lir {
 		}
 
 		[[nodiscard]]
-		bool hasAccess() const {
-			return !access_chain.empty();
+		bool hasProjections() const {
+			return !projection_chain.empty();
 		}
 	};
 

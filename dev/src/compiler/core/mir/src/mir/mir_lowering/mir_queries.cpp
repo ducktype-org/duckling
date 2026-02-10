@@ -15,9 +15,9 @@
 
 #include <base/str/str_utils.hpp>
 
-#include <query_framework/query_impl.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <stack>
 #include <unordered_set>
@@ -26,7 +26,7 @@ namespace compiler::mir {
 	namespace hc = helios::code;
 
 	u64 KeyOf_LowerToMIRFunction::queryUnstablePerfectHash() const {
-		return function.queryUnstablePerfectHash();
+		return function->queryUnstablePerfectHash();
 	}
 
 	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
@@ -56,12 +56,12 @@ namespace compiler::mir {
 		 * @brief Collects all local variables in the function and adds them directly to the
 		 * FunctionBuilder.
 		 */
-		void collect(const helios::HOUTFunction& hout_function) {
+		void collect(CRef<helios::HOUTFunction> hout_function) {
 			auto function_helios_symbol = function.getHeliosSymbol();
 			variant_match(function_helios_symbol) {
 				variant_case(FunctionSymID, function_sym) {
 					CORE_ASSERT(
-						function_sym.id == hout_function.declaration->original_symbol,
+						function_sym.id == hout_function->declaration->original_symbol,
 						"Bad function passed to LocalVarCollectionVisitor"
 					);
 				}
@@ -75,12 +75,12 @@ namespace compiler::mir {
 			}
 
 			u64 parameter_index = 0;
-			for (const auto& parameter: hout_function.declaration->parameters) {
+			for (const auto& parameter: hout_function->declaration->parameters) {
 				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
 				local->setLifetimeScope(function.getTopLevelScope());
 				parameter_index++;
 			}
-			goOverCodeBlock(*hout_function.body);
+			goOverCodeBlock(*hout_function->body);
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
@@ -105,12 +105,12 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
 	};
 
-	Function lowerToPreMIRFunction(query::Context& ctx, const helios::HOUTFunction& function) {
+	Function lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
 		FunctionBuilder function_builder{
 			ctx,
-			FunctionSymID{ function.declaration->original_symbol },
+			FunctionSymID{ function->declaration->original_symbol },
 		};
-		function_builder.setName(function.declaration->original_name);
+		function_builder.setName(function->declaration->original_name);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);
@@ -122,7 +122,7 @@ namespace compiler::mir {
 
 		// build cfg+quad step by step:
 		auto first_block = lowerCodeBlock(
-			*function.body, last_block, function_builder, function_builder.getTopLevelScope()
+			*function->body, last_block, function_builder, function_builder.getTopLevelScope()
 		);
 
 		function_builder.setEntry(first_block.begin);

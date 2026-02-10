@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
-#include <helios_private/errors/interactive_errors.hpp>
+#include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -20,7 +20,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -72,7 +72,8 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator().str() == "|") {
+				if (bin_op->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -88,7 +89,11 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
-			CORE_ASSERT(expr.unlock(ctx)->getOperator().str() == "|", "Not a variant operator");
+			CORE_ASSERT(
+				expr.unlock(ctx)->getOperator()
+					== lang_def::operatorToStr(lang_def::NamedOperator::Pipe),
+				"Not a variant operator"
+			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
@@ -169,17 +174,21 @@ namespace compiler::helios::code {
 			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> unaryBuiltin(lexer::Operator op, Box<Expr> expr) {
-				auto operation = findUnaryBuiltin(op, expr.ref());
-
-				if (operation)
-					return makeBox<UnaryOperatorExpr>(operation.value(), std::move(expr));
-				else
-					return {};
+				auto result = findUnaryBuiltin(ctx, op, expr.ref());
+				match_optional(result) {
+					opt_some_move(value) {
+						auto [operation, coercion] = value;
+						auto coerced               = coercion.coerce(ctx, std::move(expr));
+						return makeBox<UnaryOperatorExpr>(operation, std::move(coerced));
+					}
+					opt_none { return {}; }
+				}
+				CORE_UNREACHABLE();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator().str() == "|") {
+				if (stmt->getOperator() == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -213,26 +222,25 @@ namespace compiler::helios::code {
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
+				auto lhs_type = lhs->expression_type.getSymbolType();
+				auto rhs_type = rhs->expression_type.getSymbolType();
+
 				// @todo here we should:
 				// * lookup for user defined operators
 				// * type check
 				// * make function call
 				// For now we support just builtins
 
-				// if no function call is found, we try to use builtin operators:
-				auto lhs_type = lhs->expression_type.getType();
-				auto rhs_type = rhs->expression_type.getType();
-
 				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<code::UndefinedBinaryOperator>(
+					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 						stmt->getSourcePosition(),
 						stmt->getOperator().str(),
-						lhs_type.toString(),
-						rhs_type.toString()
+						makeBox<InteractiveType>(ctx, lhs_type),
+						makeBox<InteractiveType>(ctx, rhs_type)
 					));
 					// failed
 				}
@@ -387,8 +395,8 @@ namespace compiler::helios::code {
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt->getExpr());
-				if (inner.hasFailed()) return;  // failed
+				auto inner_res = fromPST(ctx, stmt->getExpr());
+				if (inner_res.hasFailed()) return;  // failed
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -397,16 +405,27 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
+				auto inner      = std::move(inner_res).valueOrThrow();
+				auto inner_type = inner->expression_type.getSymbolType();
 
-				auto expr_type = inner.valueOrThrow()->expression_type.getType();
-				auto builtin   = unaryBuiltin(stmt->getOperator(), std::move(inner.valueOrThrow()));
+				if (stmt->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
+					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
+					// This should change to take value category into consideration as well as the
+					// `unique`/`leaking` specifiers.
+					node = makeBox<RefOfExpr>(ctx, std::move(inner));
+					return;
+				}
 
+				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(makeBox<UndefinedUnaryOperator>(
-						stmt->getSourcePosition(), stmt->getOperator().str(), expr_type.toString()
+					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
+						stmt->getSourcePosition(),
+						stmt->getOperator().str(),
+						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
 				}
@@ -457,8 +476,8 @@ namespace compiler::helios::code {
 				std::vector<BuiltinBinary> operators;
 				operators.reserve(operator_count);
 				for (size_t i = 0; i < operator_count; ++i) {
-					auto lhs_type = result_exprs.at(i)->expression_type.getType();
-					auto rhs_type = result_exprs.at(i + 1)->expression_type.getType();
+					auto lhs_type = result_exprs.at(i)->expression_type.getSymbolType();
+					auto rhs_type = result_exprs.at(i + 1)->expression_type.getSymbolType();
 
 					auto result = findBinaryBuiltin(
 						ctx,
@@ -474,11 +493,11 @@ namespace compiler::helios::code {
 							= rhs_coercion.coerce(ctx, std::move(result_exprs[i + 1]));
 						operators.push_back(op);
 					} else {
-						ctx.log(makeBox<code::UndefinedBinaryOperator>(
+						ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
 							stmt->getSourcePosition(),
 							pst_operators.at(i).str(),
-							lhs_type.toString(),
-							rhs_type.toString()
+							makeBox<InteractiveType>(ctx, lhs_type),
+							makeBox<InteractiveType>(ctx, rhs_type)
 						));
 
 						return;

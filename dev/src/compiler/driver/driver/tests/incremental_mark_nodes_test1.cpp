@@ -1,14 +1,16 @@
+#include "incremental_metadata_test_common.hpp"
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <global_state/packages.hpp>
+#include <global_state/backend_options.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
@@ -44,6 +46,9 @@ private:
                     .package_path = fs::FilePath(path("modules/functions_1")),
                 },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
+            	.backend_options = {
+					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
+				},
 				.debug_options         = {},
 				.incremental           = { .enabled = true }
             }
@@ -56,6 +61,10 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+
+			// Add metadata for persistence test
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
 
 		// Save artifacts (writes previous graph blob to artifacts)

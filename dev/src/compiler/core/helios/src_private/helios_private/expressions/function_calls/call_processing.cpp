@@ -7,7 +7,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
@@ -23,7 +23,7 @@
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <utility>
@@ -441,6 +441,11 @@ namespace compiler::helios::code {
 
 		if (verify_result.hasFailed()) return query::Failed();
 
+		if (candidates.empty()) {
+			ctx.logInt(makeBox<NoCandidatesFoundError>(call_expr->getSourcePosition()));
+			return query::Failed();
+		}
+
 		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
 			return query::Failed{};
@@ -465,7 +470,7 @@ namespace compiler::helios::code {
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
 					no_match.push_back(data);
-					// For now ignore it, it is handled by the logic bellow.
+					// For now ignore it, it is handled by the logic below.
 				}
 			}
 		}

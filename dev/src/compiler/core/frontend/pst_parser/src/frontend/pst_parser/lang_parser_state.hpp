@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lang_parser_context.hpp"
 #include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
 #include "pst_state_forward.hpp"  // IWYU pragma: keep
@@ -14,7 +15,6 @@
 #include <utility>
 
 namespace pst {
-
 	/**
 	 * @brief State used for parsing Duckling to PST
 	 */
@@ -29,11 +29,16 @@ namespace pst {
 
 		void checkAllParsed();
 
+		void copyOwnContext();
+
 	public:
 		LangParserState(
-			tpc::TokenStream&& tokens, Ref<dia::Logger> err, Ref<dia_int::Logger> int_err
+			tpc::TokenStream&&       tokens,
+			Box<LangParserContext>&& ctx,
+			Ref<dia::Logger>         err,
+			Ref<dia_int::Logger>     int_err
 		):
-			  tpc::ParserState(std::move(tokens), err, int_err) {}
+			  tpc::ParserState(std::move(tokens), std::move(ctx), err, int_err) {}
 
 		/**
 		 * @brief Informs whether new errors and some parsing should be skipped till fallback is
@@ -95,6 +100,12 @@ namespace pst {
 		 */
 		void finalize();
 
+		[[nodiscard]]
+		CRef<LangParserContext> getContext() const;
+
+		void setContextClassName(base::StrID);
+		void setConstextBlockOrdering(BlockOrderType);
+
 		/**
 		 * @brief Adds to the balance of skipped_entries
 		 */
@@ -128,13 +139,13 @@ namespace pst {
 			CORE_PANIC("old fail is unsupported for language parsing");
 		}
 
-		/**
-		 * @brief Logs an error relatively to the current token.
-		 */
 		void log(Box<dia::Message>) override {
 			CORE_PANIC("old logger is unsupported for language parsing");
 		}
 
+		/**
+		 * @brief Logs an error.
+		 */
 		void logInt(Box<dia_int::MessageBase> message) override {
 			if (isSkipping()) {
 				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
@@ -143,6 +154,20 @@ namespace pst {
 			if (message->isError()) {
 				skip_till_fallback    = true;
 				skipped_entries_depth = 1;
+			}
+			int_err->log(std::move(message));
+		}
+
+		/**
+		 * @brief Logs an error that doesn't require skipping to a fallback.
+		 *
+		 * @note This is for very specific usecases where behaviour is reliable.
+		 * Care needs to be taken so that each element has all the data needed for hashing.
+		 */
+		void logSafeError(Box<dia_int::MessageBase> message) {
+			if (isSkipping()) {
+				CORE_DEV_LOG(Parser, "Skipped parsing message `", message->debugString(), "`");
+				return;
 			}
 			int_err->log(std::move(message));
 		}

@@ -9,7 +9,7 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 
-#include <query_framework/query_input.hpp>
+#include <query_framework/input_query/query_input.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::frontend {
@@ -20,16 +20,22 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query main source file of a module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query sources files of a module (without main source file).
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
 
@@ -38,12 +44,18 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
+	 *
+	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({ .uses_qresult = false }))
 
 
 	/**
 	 * @brief Query PST of given file.
+	 *
+	 * \parallel reads file content and creates PST; PST creation must be thread-safe; also uses
+	 * \ref root_element_file_back_map (no cache)
+	 * \query_not_thread_safe
 	 */
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>, ({ .uses_qresult = false }))
 

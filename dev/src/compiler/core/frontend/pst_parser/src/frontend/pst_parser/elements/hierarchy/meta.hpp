@@ -11,8 +11,6 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 
-#include <set>
-
 namespace pst {
 
 	using TokenStreamCondition = bool(const tpc::TokenStream&, i64);
@@ -60,7 +58,7 @@ namespace pst {
 		Pattern,
 		Namespace,
 		CodeDecl,
-		StmtSpecifier,
+		SpecifierBlock,
 		Action,
 		ExprStmt,
 		Class,
@@ -74,9 +72,13 @@ namespace pst {
 		Constructor,
 		CopyConstructor,
 		Destructor,
-		AccessBlock,
+		ClassSpecifierBlock,
 		NonClassStmt
 	};
+
+	namespace internal {
+		void makeImplicitReturn(MRef<Stmt>);
+	}
 
 	/**
 	 * @brief A general element that is a common ancestor of all statements.
@@ -84,28 +86,49 @@ namespace pst {
 	class Stmt: public LangElement {
 		StmtKind kind;
 
+		friend void internal::makeImplicitReturn(MRef<Stmt>);
+
 	protected:
 		using AttrList    = std::vector<AccessInternalAnonymous<Attribute>>;
 		using AttrBoxList = std::vector<Box<Attribute>>;
 
-		AttrList attributes;
+		using SpecList    = std::vector<AccessInternalAnonymous<StmtSpecifier>>;
+		using SpecBoxList = std::vector<Box<StmtSpecifier>>;
+
+		struct Prefixes {
+			AttrList attributes;
+			SpecList specifiers;
+		};
+
+		struct PrefixBoxes {
+			AttrBoxList attributes;
+			SpecBoxList specifiers;
+		};
+
+		Prefixes prefixes;
+		bool     implicit_return{};
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrBoxList collectAttributes(LangParserState& state);
+		static PrefixBoxes collectPrefixes(LangParserState& state);
 
 		/**
-		 * @brief Prepends attributes after parsing handling sub elements and position.
+		 * @brief Prepends prefixes after parsing handling sub elements and position.
 		 */
-		void addAttributes(LangParserState& state, AttrBoxList&& additions);
+		void addPrefixes(LangParserState& state, PrefixBoxes&& additions);
 
-		void dprintAttributes(std::ostream& out) const;
+		/**
+		 * @brief Prints prefixes(attributes and specifiers)
+		 */
+		void dprintPrefixes(std::ostream& out) const;
 
 		void dprintPrefix(std::ostream& out) const override;
 
 		void calcElementPathHashRecursive() override;
+
+		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
 		[[nodiscard]]
@@ -119,17 +142,32 @@ namespace pst {
 
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
+		[[nodiscard]]
+		auto getAttributes() const {
+			std::vector<AccessLocked<Attribute>> attributes;
+			for (auto& attr: prefixes.attributes) attributes.push_back(attr.give());
+			return attributes;
+		}
+
 		/**
-		 * @note This might need to return a vector of borrow pointers instead
+		 * @brief Returns a list of specifiers from last to first.
 		 */
 		[[nodiscard]]
-		auto& getAttributes() const {
-			return attributes;
+		auto getSpecifiers() const {
+			std::vector<AccessLocked<StmtSpecifier>> specifiers;
+			for (auto& spec: prefixes.specifiers) specifiers.push_back(spec.give());
+			std::ranges::reverse(specifiers);
+			return specifiers;
 		}
 
 		[[nodiscard]]
 		bool isStatement() const final {
 			return true;
+		}
+
+		[[nodiscard]]
+		bool isImplicitReturn() const {
+			return implicit_return;
 		}
 
 		[[nodiscard]]
@@ -179,11 +217,9 @@ namespace pst {
 	 *
 	 * includes:
 	 *  - name - class name
-	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                     name;
-		std::vector<CRef<lexer::Token>> specifiers;
+		base::StrID name;
 	};
 
 	/**
@@ -191,27 +227,11 @@ namespace pst {
 	 */
 	class ClassStmt: public Stmt {
 	protected:
-		inline static const std::set<lang_def::Keyword> class_specs = {
-			lang_def::Keyword::Public,
-			lang_def::Keyword::Private,
-			lang_def::Keyword::Protected,
-			lang_def::Keyword::Static,
-		};
 		ClassContext context;
-
-		void parseSpecifiers(LangParserState& state);
-
-		[[nodiscard]]
-		static i64 countSpecifiers(LangParserState& state);
-
-		void dprintPrefix(std::ostream& out) const override;
 
 		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
 			  Stmt(kind, pos),
 			  context(std::move(ctx)) {}
-
-	private:
-		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
 	protected:
 		HashAlg& addGenericDataToHash(HashAlg&) const override;

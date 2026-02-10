@@ -4,9 +4,6 @@
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/scope_symbol_id.hpp>
-
-#include <base/collections/optional.hpp>
 
 #include <query_framework/query_int.hpp>
 

@@ -14,7 +14,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <utility>
@@ -33,6 +33,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	/** Simple byte by byte assignment */
 	Assign,
+	AddressOf,
+
+	/** 
+		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
+		@TODO: #1894 This approach may be temporary and depends on how we handle 
+		destructors in the future. Remove the comment if the approach changes.
+	 */
+	AllocBox,
 
 	/**
 		@brief Placeholder.
@@ -280,13 +288,48 @@ namespace compiler::mir {
 	/**
 	 * @brief Represents access into a variable (local or global), or its component.
 	 *
-	 * For example, for an access like `a.b.c`, where `a` is a local or global variable,
-	 * and `b` and `c` are fields within that variable, this structure would contain
-	 * the base variable (`a`) and the access chain (`[b, c]`).
+	 * It contains of a base variable and a projection chain (either field projections or deref
+	 * projections if eny of the elements was a reference)
 	 *
-	 * For access to the whole variable (e.g., just `a`), the access chain would be empty.
+	 * For example:
+	 * - For an access like `a.b.c`, where `a` is a local or global variable, and `b` and
+	 * `c` are fields within that variable, this structure would contain the base variable (`a`) and
+	 * the projection chain (`[FieldProjection(`b`), FieldProjection(`c`)]`).
+	 * - If `a` was a reference type, the access expression `a.b.c` would contain the base variable
+	 * (`a`) and the projection chain (`[DerefProjection, FieldProjection(`b`),
+	 * FieldProjection(`c`)]`).
+	 * - Additionally, if field `b` was a reference type, an additional
+	 * `DerefProjection` would be inserted right after `FieldProjection(`b`).
+	 *
+	 * For access to the whole variable with a direct specifier (e.g., just `a`), the projection
+	 * chain would be empty.
 	 */
 	struct MIRPlace final {
+		struct DerefProjection {
+			bool operator==(const DerefProjection&) const = default;
+		};
+
+		struct FieldProjection {
+			helios::SymID field_id;
+			bool          operator==(const FieldProjection&) const = default;
+		};
+
+		/**
+		 * @brief A single projection which transforms a MIRPlace. This includes dereferencing,
+		 * field access and in the future index access for array elements.
+		 */
+		struct Projection {
+			std::variant<DerefProjection, FieldProjection> storage;
+
+			static Projection field(helios::SymID field_id) {
+				return Projection(FieldProjection(field_id));
+			}
+
+			static Projection deref() { return Projection(DerefProjection()); }
+
+			bool operator==(const Projection& other) const = default;
+		};
+
 		// MIR Locals are stored indirectly through MIRLocalRef because
 		// they are owned by MIR Function, unlike MIR Globals.
 		using BaseVariant = std::variant<MIRLocalRef, MIRGlobal>;
@@ -313,14 +356,14 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief The symbols of the fields accessed within the variable.
+		 * @brief Sequence of operations applied to the `base` to reach the target memory.
 		 */
-		std::vector<helios::SymID> access_chain;
+		std::vector<Projection> projection_chain;
 
 		/**
-		 * @brief The type of the final accessed field.
-		 * @note This type may be different from the type of the base variable,
-		 * especially when the access chain is not empty.
+		 * @brief The type of the final accessed field after applying all projections.
+		 * @note If the projection chain is empty, this type will be equal to the base type. It
+		 * may differ from the base type if the projection chain is not empty.
 		 */
 		tsh::SymbolType<> type;
 
@@ -331,12 +374,24 @@ namespace compiler::mir {
 		explicit MIRPlace(BaseVariant base): base(base), type(getBaseType()) {}
 
 		/**
-		 * Extend the MIRPlace structure by adding a new field to the access chain.
+		 * @brief Extend the MIRPlace structure by adding a new FieldProjection to the projection
+		 * chain. Panics is a FieldProjection is added on a non direct type.
+		 * @note This projection requires the type of the whole projection chain to be a direct
+		 * type. Which means a deref should be inserted in HOUT whenever a field is accessed through
+		 * a reference.
+		 *
 		 * @param ctx The query context for type resolution.
 		 * @param field The next field to access.
 		 * @return The extended MIRPlace structure.
 		 */
 		MIRPlace withField(query::Context& ctx, helios::SymID field) const;
+
+		/**
+		 * @brief Adds a DerefProjection to the projection chain. Panics if dereferencing a direct
+		 * type.
+		 * @return The extended MIRPlace with a DerefProjection.
+		 */
+		[[nodiscard]] MIRPlace withDeref() const;
 
 		[[nodiscard]]
 		bool isLocal() const {
@@ -349,8 +404,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		bool hasAccess() const {
-			return !access_chain.empty();
+		bool hasProjections() const {
+			return !projection_chain.empty();
 		}
 
 		/**
@@ -415,6 +470,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool isGlobal() const {
 			return std::holds_alternative<MIRPlace>(value) && std::get<MIRPlace>(value).isGlobal();
+		}
+
+		[[nodiscard]]
+		bool isConstant() const {
+			return std::holds_alternative<MIRConstant>(value);
 		}
 
 		/**

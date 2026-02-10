@@ -2,7 +2,7 @@
 
 #include "../lir_module_data.hpp"
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
