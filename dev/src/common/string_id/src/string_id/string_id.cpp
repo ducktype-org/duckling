@@ -76,6 +76,15 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
+		// Fast path: check if string already exists under shared lock
+		{
+			std::shared_lock lock(mutex);
+			if (auto id = getToIDMap()->atMaybe(data)) {
+				this->id = **id;
+				return;
+			}
+		}
+
 		std::unique_lock lock(mutex);
 
 		if (auto id = getToIDMap()->atMaybe(data)) {
