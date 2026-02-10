@@ -6,6 +6,29 @@
 
 #include <tester/tester.hpp>
 
+template<class F>
+void runOrTimeout(F func, usize timeout_ms = 10'000) {
+	std::atomic<bool> finished = false;
+
+	std::jthread worker_thread([&func, &finished]() {
+		func();
+		finished.store(true, std::memory_order_relaxed);
+	});
+
+	auto start = std::chrono::steady_clock::now();
+	while (!finished.load(std::memory_order_relaxed)) {
+		auto now = std::chrono::steady_clock::now();
+		auto elapsed_ms
+			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
+			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
+			std::cerr << "Possible deadlock detected. Worker thread stack trace:\n";
+			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+}
+
 class TaskPoolTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS TaskPoolTest
@@ -20,6 +43,21 @@ public:
 		TESTER_ADD_TEST(testFibbonaciQuery);
 		TESTER_ADD_TEST(testFibbonaciScheduleAndQuery);
 		TESTER_ADD_TEST(testGibbonaci);
+	}
+
+protected:
+	void fail(std::string_view err, bool critical = true) override {
+		try {
+			runOrTimeout(concurrent::worker::WorkerManager::get().testPrivateAccessReloadState);
+		} catch (const std::runtime_error& e) {
+			message(base::strConcat(
+				"WorkerManager reload state timed out during fail(). "
+				"Possible deadlock detected. Terminating. Error: ",
+				e.what()
+			));
+			std::terminate();
+		}
+		tester::TestSuite::fail(err, critical);
 	}
 
 private:
@@ -78,11 +116,11 @@ private:
 			return fib_task_gen(250);
 		});
 
-		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.execute();
-
-		task_pool.waitExecutionCompletion();
-
+		runOrTimeout([&]() {
+			task_pool.addInitialTasks({ std::move(initial_task) });
+			task_pool.execute();
+			task_pool.waitExecutionCompletion();
+		});
 		std::cout << "Execution completed.\n";
 	}
 
@@ -123,10 +161,11 @@ private:
 			return fib_task_gen(250);
 		});
 
-		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.execute();
-
-		task_pool.waitExecutionCompletion();
+		runOrTimeout([&]() {
+			task_pool.addInitialTasks({ std::move(initial_task) });
+			task_pool.execute();
+			task_pool.waitExecutionCompletion();
+		});
 
 		std::cout << "Execution completed.\n";
 	}
@@ -165,9 +204,11 @@ private:
 			return fib_task_gen(250);
 		});
 
-		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.execute();
-		task_pool.waitExecutionCompletion();
+		runOrTimeout([&]() {
+			task_pool.addInitialTasks({ std::move(initial_task) });
+			task_pool.execute();
+			task_pool.waitExecutionCompletion();
+		});
 
 		std::cout << "Execution completed.\n";
 	}
@@ -207,9 +248,11 @@ private:
 			return fib_task_gen(250);
 		});
 
-		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.execute();
-		task_pool.waitExecutionCompletion();
+		runOrTimeout([&]() {
+			task_pool.addInitialTasks({ std::move(initial_task) });
+			task_pool.execute();
+			task_pool.waitExecutionCompletion();
+		});
 
 		std::cout << "Execution completed.\n";
 	}
@@ -263,9 +306,11 @@ private:
 			return gib_task_gen(250);
 		});
 
-		task_pool.addInitialTasks({ std::move(initial_task) });
-		task_pool.execute();
-		task_pool.waitExecutionCompletion();
+		runOrTimeout([&]() {
+			task_pool.addInitialTasks({ std::move(initial_task) });
+			task_pool.execute();
+			task_pool.waitExecutionCompletion();
+		});
 
 		std::cout << "Execution completed.\n";
 	}
