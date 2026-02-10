@@ -26,13 +26,14 @@ namespace time_stats {
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
 		  category(category),
 		  ended(false) {
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
+
 		CORE_ASSERT(
-			not is_category_active.at(std::to_underlying(category)),
+			not was_active,
 			"Overlapping time tracking of category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = true;
 		measurement.startMeasurement();
 	}
 
@@ -42,13 +43,15 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+
 		CORE_ASSERT(
-			is_category_active.at(std::to_underlying(category)),
+			was_active,
 			"Ending time tracking of inactive category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = false;
+
 		ended                                               = true;
 
 		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
@@ -60,13 +63,13 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
 		CORE_ASSERT_NOEXCEPT(
-			is_category_active.at(std::to_underlying(category)),
+			was_active,
 			"Ending time tracking of inactive category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = false;
 
 		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
