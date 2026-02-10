@@ -36,6 +36,9 @@ namespace timer {
 
 	/**
 	 * Atomic variant of Duration, for use in concurrent scenarios.
+	 *
+	 * All operations on AtomicDuration are thread-safe. 
+	 * They use relaxed memory order, as we don't require strong ordering guarantees for time statistics collection. 
 	 */
 	class AtomicDuration final {
 		std::atomic<i64> nanoseconds{ 0 };
