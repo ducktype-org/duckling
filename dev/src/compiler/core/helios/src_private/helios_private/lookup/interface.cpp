@@ -7,8 +7,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <query_framework/context.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -29,6 +29,8 @@ namespace compiler::helios {
 	 *
 	 * See https://docs.duckling.pl/duckling/lookup/name_lookup.html
 	 * for more info on type-instance lookups.
+	 *
+	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryLookupInTypeInstance,

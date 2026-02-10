@@ -6,13 +6,13 @@ fun references(p: ref Point) -> () = {
     var x: i32 = 123;
     var y: i32 = 456;
 
-    var r = refof x;
-    var r = refof p.x; # AddressOf from [Deref, FieldProjection].
+    var r = &x;
+    var r = &p.x; # AddressOf from [Deref, FieldProjection].
 
-    var point = RefPoint(refof x, refof y);
-    var ref_point = refof point;
-    var wrapper = RefWrapper(refof point);
-    var ref_wrapper = refof wrapper;
+    var point = RefPoint(&x, &y);
+    var ref_point = &point;
+    var wrapper = RefWrapper(&point);
+    var ref_wrapper = &wrapper;
     
     ref_wrapper.p.x = 999; # [Deref, Field, Deref, Field, Deref]
 }

@@ -20,7 +20,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -72,7 +72,8 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator().str() == "|") {
+				if (bin_op->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -88,7 +89,11 @@ namespace compiler::helios::code {
 		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
-			CORE_ASSERT(expr.unlock(ctx)->getOperator().str() == "|", "Not a variant operator");
+			CORE_ASSERT(
+				expr.unlock(ctx)->getOperator()
+					== lang_def::operatorToStr(lang_def::NamedOperator::Pipe),
+				"Not a variant operator"
+			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
@@ -183,7 +188,7 @@ namespace compiler::helios::code {
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt->getOperator().str() == "|") {
+				if (stmt->getOperator() == lang_def::operatorToStr(lang_def::NamedOperator::Pipe)) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -400,11 +405,11 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator().value == lang_def::keywordToStr(lang_def::Keyword::Refof)) {
+				if (stmt->getOperator()
+				    == lang_def::operatorToStr(lang_def::NamedOperator::Ampersand)) {
 					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
@@ -413,7 +418,6 @@ namespace compiler::helios::code {
 				}
 
 				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner));
-
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;

@@ -194,6 +194,7 @@ namespace lang_def {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
 		{ NamedOperator::Period, "." },
+		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
@@ -204,7 +205,7 @@ namespace lang_def {
 		{ NamedOperator::DoubleArrow, "=>" },
 
 		{ NamedOperator::Pipe, "|" },
-		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::Ampersand, "&" },
 		{ NamedOperator::BitXor, "^" },
 
 		{ NamedOperator::LeftShift, "<<" },

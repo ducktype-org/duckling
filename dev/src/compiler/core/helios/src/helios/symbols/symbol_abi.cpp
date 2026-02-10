@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <typesystem/higher/queries/types.hpp>
@@ -18,8 +19,8 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/query_impl.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -96,9 +97,16 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto sym_ref = getSymRef(key);
+
 			// Builtin functions are implemented in C/C++ and use the C ABI.
-			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other))
+			if (std::holds_alternative<builtin::BuiltinFunctionData>(sym_ref->other)) return CAbi{};
+
+			// @TODO: #895 fix it when we add script based package targets
+			if (name(key) == "main" && isGlobalFun(key)) {
+				// main is not mangled
 				return CAbi{};
+			}
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {

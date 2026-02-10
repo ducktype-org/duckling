@@ -15,9 +15,7 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out)
-			.one(NamedOperator::Assign)
-			.withDef(&out->body, CodeBlock::CodeBlockType::Ordered);
+		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
 
 		PST_RETURN out;
 	}

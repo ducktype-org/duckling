@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../context.hpp"
 #include "query_graph/query_state.hpp"
+
+#include <query_framework/context/context.hpp>
 
 namespace query::internal {
 	/**

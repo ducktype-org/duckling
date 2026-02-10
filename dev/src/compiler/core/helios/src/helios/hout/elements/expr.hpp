@@ -1,8 +1,7 @@
 #pragma once
 
-#include "../../scope_symbol_id.hpp"
-
 #include <ctv/numeric_value.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
@@ -542,6 +541,27 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		RefOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents a box creation expression.
+	 *
+	 * Currently, box types are not created explicitly, so this node gets created each time we
+	 * encounter a `Direct` to `Box` coercion.
+	 */
+	struct BoxOfExpr final: public Expr {
+		Box<Expr> inner;
+
+		BoxOfExpr(query::Context& ctx, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BoxOfExpr(tsh::ExpressionType<> expression_type, Box<Expr> inner);
 	};
 
 	/**

@@ -1,3 +1,8 @@
+/**
+ * @file generic_operations.cpp
+ * \parallel Must be thread-safe. Concurrent builds of the same module/package can collide on paths.
+ */
+
 #include "generic_operations.hpp"
 
 #include <driver/module_flags/module_flags.hpp>
@@ -19,9 +24,9 @@
 
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
-#include <query_framework/query_artifacts_macros.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/standard_query/query_artifacts_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>

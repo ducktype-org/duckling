@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include "../scope_symbol_id.hpp"
 #include "elements/expr.hpp"  // IWYU pragma: export @TODO: #404 relax it to forward declaration
 #include "hout_fd.hpp"        // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -175,9 +175,15 @@ namespace compiler::helios {
 
 		std::vector<HOUTGlobalData> glob_data;
 
-		std::vector<HOUTFunction> functions;
+		std::vector<CRef<HOUTFunction>> functions;
 
 		[[nodiscard]]
 		std::string debugPrint(query::Context& ctx) const;
+
+		HOUTUnit()                          = default;
+		HOUTUnit(const HOUTUnit&)           = delete;
+		HOUTUnit operator=(const HOUTUnit&) = delete;
+		HOUTUnit(HOUTUnit&&)                = default;
+		HOUTUnit& operator=(HOUTUnit&&)     = default;
 	};
 }

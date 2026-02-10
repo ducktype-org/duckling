@@ -1,14 +1,17 @@
-pub mod types;
+pub mod git_access;
+pub mod solver_freeze;
+pub mod solving;
+pub mod types_common;
+pub mod util;
 
 use std::{cell::OnceCell, marker::PhantomData};
 
 use crate::{
     QpCtx, QuackResult,
-    quackpack::core::{PackageCtx, solver::types::GitAccess},
+    quackpack::core::{PackageCtx, solver::git_access::GitAccess, solver_freeze::SolverFreeze},
 };
 
 pub enum ToImplement {}
-pub type VenvFreeze = ToImplement;
 
 pub trait SolverState {}
 
@@ -25,13 +28,13 @@ pub struct Solver<'duck, State: SolverState> {
     //  * package root is the freeze's primary location
     //  * in the case of its absence the freeze from the storage should be passed
     //  * in the case of its absence an empty freeze should be passed.
-    _current_freeze: VenvFreeze,
+    _current_freeze: SolverFreeze,
     _gathered_info: OnceCell<ToImplement>,
     _state: PhantomData<State>,
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn new(package_ctx: &'duck PackageCtx<'duck>, current_freeze: VenvFreeze) -> Self {
+    pub fn new(package_ctx: &'duck PackageCtx<'duck>, current_freeze: SolverFreeze) -> Self {
         Self {
             _qp_ctx: package_ctx.ctx(),
             _root_package_ctx: package_ctx,
@@ -56,7 +59,7 @@ impl<'duck> Solver<'duck, Prepared> {
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn solve(self) -> QuackResult<VenvFreeze> {
+    pub fn solve(self) -> QuackResult<SolverFreeze> {
         unimplemented!(
             "\
 1. Solve the problem \

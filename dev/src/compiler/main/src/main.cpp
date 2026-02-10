@@ -32,9 +32,9 @@
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 #include <iostream>
 
@@ -183,7 +183,8 @@ clah::Clah getClahForMain() {
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
-					auto pst = pst::PST(file_to_parse);
+					// @TODO: #1879 Currently defaults to program
+					auto pst = pst::PST(file_to_parse, pst::PSTType::Program);
 
 					int exit_code = 0;
 
@@ -223,7 +224,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit.debugPrint(ctx);
+									   std::cout << hout_unit->debugPrint(ctx);
 							   });
 
 							   return exit_code;

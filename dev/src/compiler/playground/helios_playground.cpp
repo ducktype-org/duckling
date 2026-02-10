@@ -7,9 +7,9 @@
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
-#include <query_framework/context.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <iostream>
 
@@ -72,10 +72,10 @@ int notMain(int argc, const char* const* argv) {
 	printQueryDeps(deps);
 
 	for (auto& i: top_level.functions) {
-		std::cerr << "\nInputs of function: " << i.declaration->original_name.strView() << "\n";
+		std::cerr << "\nInputs of function: " << i->declaration->original_name.strView() << "\n";
 		auto i_deps
 			= query::Context::getState().getGraph().getNodeDepsFiltered<helios::QueryCodeOfFun>(
-				i.declaration->original_symbol, pst_access_id
+				i->declaration->original_symbol, pst_access_id
 			);
 		printQueryDeps(i_deps);
 	}

@@ -5,7 +5,7 @@
 #include <typesystem/higher/queries/implicit_coercibility.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <query_framework/context.hpp>
+#include <query_framework/context/context.hpp>
 
 namespace compiler::helios {
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -29,6 +29,14 @@ namespace compiler::helios {
 		if (source_symbol_type.getRefKind() != tsh::ReferenceKind::Direct
 		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
 			current_expr       = makeBox<code::DerefExpr>(ctx, std::move(current_expr));
+			source_symbol_type = current_expr->expression_type.getSymbolType();
+			// If underlying types differ, proceed with the standard coercion.
+		}
+
+		// If `from` is direct and `to` is a box, create a BoxOfExpression.
+		if (source_symbol_type.getRefKind() == tsh::ReferenceKind::Direct
+		    && to.getRefKind() == tsh::ReferenceKind::Box) {
+			current_expr       = makeBox<code::BoxOfExpr>(ctx, std::move(current_expr));
 			source_symbol_type = current_expr->expression_type.getSymbolType();
 			// If underlying types differ, proceed with the standard coercion.
 		}

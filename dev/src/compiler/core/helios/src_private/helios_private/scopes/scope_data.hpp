@@ -2,8 +2,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/access.hpp>
-#include <helios/scope_symbol_id.hpp>
-#include <helios/utils/symbol_list.hpp>
+#include <helios/scope_id.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>

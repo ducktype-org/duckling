@@ -14,7 +14,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context_fd.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
 
 #include <utility>
@@ -34,6 +34,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	/** Simple byte by byte assignment */
 	Assign,
 	AddressOf,
+
+	/** 
+		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
+		@TODO: #1894 This approach may be temporary and depends on how we handle 
+		destructors in the future. Remove the comment if the approach changes.
+	 */
+	AllocBox,
 
 	/**
 		@brief Placeholder.
@@ -463,6 +470,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool isGlobal() const {
 			return std::holds_alternative<MIRPlace>(value) && std::get<MIRPlace>(value).isGlobal();
+		}
+
+		[[nodiscard]]
+		bool isConstant() const {
+			return std::holds_alternative<MIRConstant>(value);
 		}
 
 		/**

@@ -1,3 +1,5 @@
+#include "incremental_metadata_test_common.hpp"  // IWYU pragma: keep
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
@@ -6,9 +8,9 @@
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <filesystem>

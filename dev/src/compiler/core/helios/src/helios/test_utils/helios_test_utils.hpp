@@ -4,11 +4,12 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
-#include <helios/scope_symbol_id.hpp>
+#include <helios/scope_id.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <type_traits>
 
