@@ -52,7 +52,7 @@ namespace time_stats {
 			"."
 		);
 
-		ended                                               = true;
+		ended = true;
 
 		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
