@@ -4,6 +4,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "vm/core/thread/low_program/instruction.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -407,4 +408,14 @@ namespace vm {
 		// std::cout << "Thread " << id << " releaseing GIL\n";
 		gil.unlock();
 	}
+
+	std::shared_ptr<std::mutex> VMProcess::getMutex(i64 mutex_id) {
+		return mutex_map.at(mutex_id); // TODO dodać co jak nie ma
+	}
+
+	i64 VMProcess::addMutex() {
+		mutex_map[next_mutex_id] = std::make_shared<std::mutex>();
+		return next_mutex_id++;
+	}
+
 }
