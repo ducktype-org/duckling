@@ -50,7 +50,7 @@ namespace vm {
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
-        std::mutex gil;
+		std::mutex                  gil;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -200,7 +200,7 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
-        void acquireGil(i64);
-        void releaseGil(i64);
+		void acquireGil(i64);
+		void releaseGil(i64);
 	};
 }
