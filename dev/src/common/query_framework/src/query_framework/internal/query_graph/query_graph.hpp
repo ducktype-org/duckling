@@ -1,8 +1,10 @@
 #pragma once
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include "node_id.hpp"
 #include "node_making.hpp"
 
+#include "base/pointers/box.hpp"
 #include <base/collections/maps.hpp>
 
 #include <ostream>
@@ -17,7 +19,7 @@ namespace query::internal {
 	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
 	 */
 	class QueryGraph final {
-		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
+		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -39,7 +41,7 @@ namespace query::internal {
 			std::vector<std::vector<usize>> adjacency;
 		};
 
-		QueryGraph()                             = default;
+		QueryGraph();
 		QueryGraph(const QueryGraph&)            = delete;
 		QueryGraph(QueryGraph&&)                 = default;
 		QueryGraph& operator=(const QueryGraph&) = delete;

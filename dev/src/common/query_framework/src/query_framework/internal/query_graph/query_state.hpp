@@ -4,11 +4,13 @@
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
+#include "base/pointers/box.hpp"
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
 
 namespace query {
 	// Forward declaration
@@ -51,7 +53,7 @@ namespace query::internal {
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
 			QueryGraph                       graph;
-			base::HashMap<NodeID, PrevColor> node_colors;
+			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
 
 			/**
 			 * Metadata from previous compilation.
@@ -61,7 +63,7 @@ namespace query::internal {
 
 			PreviousCompilation() = delete;
 
-			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+			PreviousCompilation(QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeID, PrevColor>>&& colors):
 				  graph(std::move(g)),
 				  node_colors(std::move(colors)),
 				  metadata() {}
@@ -138,7 +140,7 @@ namespace query::internal {
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+		base::CRef<concurrent::ConHashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
 
 		/**
 		 * @brief Sets the previous query graph.
@@ -288,8 +290,8 @@ namespace query::internal {
 		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
 		 * computed/in progress.
 		 * @TODO: #1889 decide if we need this at all.
-		 */
-		base::HashMap<NodeID, NodeData> node_data;
+		 */				
+		concurrent::ConHashMap<NodeID, NodeData> node_data;
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.

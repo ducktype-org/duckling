@@ -69,6 +69,31 @@ namespace concurrent {
 			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
 		};
 
+	 	/**
+		 * RAII guard that locks ALL shards for the lifetime of the object.
+		 * Used by begin()/end() to provide safe iteration over the entire map.
+		 *
+		 * @warning Holding this lock blocks all concurrent access to the map.
+		 *          Keep the locked scope as short as possible.
+		 */
+		class AllShardsLock final {
+			const ConHashMap& self;
+
+		public:
+			explicit AllShardsLock(const ConHashMap& self) noexcept: self(self) {
+				for (u64 i = 0; i < SHARD_COUNT; i++)
+					self.shard_mutexes[i]->lock();
+			}
+
+			~AllShardsLock() noexcept {
+				for (u64 i = 0; i < SHARD_COUNT; i++)
+					self.shard_mutexes[i]->unlock();
+			}
+
+			AllShardsLock(const AllShardsLock&) = delete;
+			AllShardsLock(AllShardsLock&&)      = delete;
+		};
+
 
 	public:
 		ConHashMap(): shards(SHARD_COUNT) {
@@ -175,6 +200,138 @@ namespace concurrent {
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].erase(key);
+		}
+
+
+		/**
+		 * Iterator over the entire ConHashMap.
+		 *
+		 * On construction it receives a shared_ptr to an AllShardsLock that keeps
+		 * every shard locked for as long as any live iterator references it.
+		 * Dereferencing, advancing and comparing are delegated to the underlying
+		 * StableHashMap iterators.
+		 *
+		 * @tparam ValueT  KeyValuePair or const KeyValuePair – controls mutability.
+		 *
+		 * @warning All shards remain locked while any iterator obtained from the
+		 *          same begin()/end() pair is alive.  Keep iteration scopes short.
+		 */
+		template<typename ValueT>
+		class LockedIterator final {
+			using InnerIterator = typename HashMapType::template Iterator<ValueT>;
+
+			std::shared_ptr<AllShardsLock> lock_guard;
+
+			/// Pointer to the shards vector (const or mutable depending on ValueT).
+			using ShardsPtr = std::conditional_t<
+				std::is_const_v<ValueT>,
+				const std::vector<HashMapType>*,
+				std::vector<HashMapType>*>;
+
+			ShardsPtr     shards_ptr;
+			u64           shard_index;
+			InnerIterator inner;
+
+			/**
+			 * If the current inner iterator has reached the end of its shard,
+			 * advance to the next non-empty shard.
+			 */
+			void advanceToValid() {
+				while (shard_index < SHARD_COUNT
+				       && inner == (*shards_ptr)[shard_index].end()) {
+					++shard_index;
+					if (shard_index < SHARD_COUNT)
+						inner = (*shards_ptr)[shard_index].begin();
+				}
+			}
+
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type   = std::ptrdiff_t;
+			using value_type        = ValueT;
+			using pointer           = ValueT*;
+			using reference         = ValueT&;
+
+			/**
+			 * Constructs an iterator starting at the given shard.
+			 *
+			 * @param lock_guard  Shared lock keeping all shards locked.
+			 * @param shards_ptr  Pointer to the shards vector.
+			 * @param shard_index Starting shard index (SHARD_COUNT for end()).
+			 */
+			LockedIterator(
+				std::shared_ptr<AllShardsLock> lock_guard,
+				ShardsPtr                      shards_ptr,
+				u64                            shard_index
+			) noexcept:
+				  lock_guard(std::move(lock_guard)),
+				  shards_ptr(shards_ptr),
+				  shard_index(shard_index) {
+				if (shard_index < SHARD_COUNT) {
+					inner = (*this->shards_ptr)[shard_index].begin();
+					advanceToValid();
+				}
+			}
+
+			reference operator*() const { return *inner; }
+
+			pointer operator->() const { return &(*inner); }
+
+			LockedIterator& operator++() {
+				++inner;
+				advanceToValid();
+				return *this;
+			}
+
+			LockedIterator operator++(int) {
+				LockedIterator tmp = *this;
+				++(*this);
+				return tmp;
+			}
+
+			bool operator==(const LockedIterator& other) const noexcept {
+				if (shard_index == SHARD_COUNT && other.shard_index == SHARD_COUNT)
+					return true;
+				return shard_index == other.shard_index && inner == other.inner;
+			}
+
+			bool operator!=(const LockedIterator& other) const noexcept {
+				return !(*this == other);
+			}
+		};
+
+		using Iterator      = LockedIterator<KeyValuePair>;
+		using ConstIterator = LockedIterator<const KeyValuePair>;
+
+		/**
+		 * Returns an iterator-pair spanning all elements across every shard.
+		 *
+		 * All shards are locked for the lifetime of the returned iterators
+		 * (they share ownership of the lock via shared_ptr).
+		 *
+		 * @code
+		 *   for (auto it = map.begin(); it != map.end(); ++it) { ... }
+		 * @endcode
+		 *
+		 * @warning Do NOT store the iterators beyond the scope where you need
+		 *          them – the entire map is blocked while any iterator is alive.
+		 */
+		Iterator begin() RELEASE_NOEXCEPT {
+			auto guard = std::make_shared<AllShardsLock>(*this);
+			return Iterator(guard, &shards, 0);
+		}
+
+		Iterator end() RELEASE_NOEXCEPT {
+			return Iterator(nullptr, &shards, SHARD_COUNT);
+		}
+
+		ConstIterator begin() const RELEASE_NOEXCEPT {
+			auto guard = std::make_shared<AllShardsLock>(*this);
+			return ConstIterator(guard, &shards, 0);
+		}
+
+		ConstIterator end() const RELEASE_NOEXCEPT {
+			return ConstIterator(nullptr, &shards, SHARD_COUNT);
 		}
 
 	private:
