@@ -18,12 +18,13 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
 	return { .functions            = std::ranges::to<std::vector>(function_map),
-		     .types                = std::ranges::to<std::vector>(type_context.getCurrentTypes()),
+		     .types                = std::ranges::to<std::vector>(type_context.getPodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
@@ -31,7 +32,7 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCol
 	return copy;
 }
 
-const vm::ObjIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+const vm::code::TypeMap& vm::code::ValidProgram::types() const {
 	return type_context.getCurrentTypes();
 }
 
@@ -55,6 +56,7 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	type_context.insertAndValidate(new_types, function_signatures);
+	// @TODO: Delete the code below
 	// for (const auto& type: new_types) type_context.insertType(type);
 	// Check if no cycles in hierarchy appeared after injection.
 	// detail::validateTypesIntegrity(type_context);

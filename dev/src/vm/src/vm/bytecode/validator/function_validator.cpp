@@ -44,8 +44,8 @@ namespace {
 
 	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
 	const ExpectedT& expectPointerType(
-		const vm::code::type::kind::Pointer& pointer,
-		const ObjIdNameMap<TypeOfData>&      tod_map,
+		const vm::code::type::concrete::Pointer& pointer,
+		const ObjIdNameMap<type::Type>&          tod_map,
 		Args&&... error_args
 	) {
 		const auto& pointed_type = tod_map.at(pointer.inner);
@@ -76,7 +76,7 @@ namespace {
  */
 struct LocalStackEntry {
 	base::StrID      local_name;
-	CRef<TypeOfData> type;
+	CRef<type::Type> type;
 
 	constexpr bool operator==(const LocalStackEntry& other) const {
 		return local_name == other.local_name && *type == *other.type;
@@ -88,9 +88,8 @@ class LocalStack {
 
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<ObjIdNameMap<TypeOfData>>               tod_map;
-	[[maybe_unused]] CRef<TypeMetadata>          type_metadata;
-	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
+	CRef<ObjIdNameMap<type::Type>>               tod_map;
+	base::HashMap<base::StrID, CRef<type::Type>> local_name_to_type;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -98,13 +97,8 @@ public:
 	LocalStack& operator=(const LocalStack&) = default;
 	LocalStack& operator=(LocalStack&&)      = default;
 
-	LocalStack(
-		const FuncSignature&            signature,
-		const ObjIdNameMap<TypeOfData>& tod_map,
-		const TypeMetadata&             type_metadata
-	):
-		  tod_map(&tod_map),
-		  type_metadata(&type_metadata) {
+	LocalStack(const FuncSignature& signature, const ObjIdNameMap<type::Type>& tod_map):
+		  tod_map(&tod_map) {
 		push(base::StrID("ret_val"), signature.result_type.str);
 		for (auto [idx, param]: std::views::enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
@@ -113,12 +107,12 @@ public:
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
 
 	void push(const opargs::StackLocalAny& local, const opargs::Type& type) {
-		auto tod = tod_map->at(type.type_name);
+		auto tp = tod_map->at(type.type_name);
 
 		if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
-		stack_state.emplace_back(local.var_name, tod);
-		local_name_to_type.put(local.var_name, tod);
+		stack_state.emplace_back(local.var_name, tp);
+		local_name_to_type.put(local.var_name, tp);
 	}
 
 	/**
@@ -151,7 +145,7 @@ public:
 
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
-	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
+	CRef<type::Type> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
 };
 
 /**
@@ -160,7 +154,7 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const ObjIdNameMap<type::Type>&                  types;
+	const TypeMap&                                   types;
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
@@ -188,7 +182,7 @@ class FunctionValidator {
 		if (signature->parameters.size() > local_stack.size() + check_ret_val)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		for (auto param: signature->parameters | std::views::reverse) {
-			if (typeName(*local_stack.back().type) != param.str)
+			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
@@ -284,7 +278,7 @@ class FunctionValidator {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
 	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
 		if (!current_stack.contains(local->var_name)) throw UnknownLocalNameError(*local); \
-		CRef<TypeOfData> entry = current_stack.at(local->var_name);                        \
+		CRef<type::Type> entry = current_stack.at(local->var_name);                        \
 		variant_match(*entry) {                                                            \
 			variant_case(PrimitiveType, primitive_type) {                                  \
 				if (primitive_type.size != (BIT_COUNT / 8))                                \
@@ -335,7 +329,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalPtr>, local) {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
-					CRef<TypeOfData> type = current_stack.at(local->var_name);
+					CRef<type::Type> type = current_stack.at(local->var_name);
 					if (!std::holds_alternative<PointerType>(*type))
 						throw InvalidArgumentTypeError(*local);
 				}
@@ -354,7 +348,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalOpq>, local) {
 					if (!current_stack.contains(local->var_name))
 						throw UnknownLocalNameError(*local);
-					CRef<TypeOfData> type = current_stack.at(local->var_name);
+					CRef<type::Type> type = current_stack.at(local->var_name);
 					if (!std::holds_alternative<OpaqueType>(*type))
 						throw InvalidArgumentTypeError(*local);
 				}
@@ -408,7 +402,7 @@ class FunctionValidator {
 				variant_case(CRef<opargs::StackLocalVnt>, variant) {
 					if (!current_stack.contains(variant->var_name))
 						throw UnknownLocalNameError(*variant);
-					CRef<TypeOfData> type = current_stack.at(variant->var_name);
+					CRef<type::Type> type = current_stack.at(variant->var_name);
 					if (!std::holds_alternative<VariantType>(*type))
 						throw InvalidArgumentTypeError(*variant);
 				}
@@ -442,7 +436,7 @@ class FunctionValidator {
 			variant_match(arg) {
 #define STACK_LOCAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                \
 	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {          \
-		CRef<TypeOfData> entry = current_stack.at(local->var_name);     \
+		CRef<type::Type> entry = current_stack.at(local->var_name);     \
 		variant_match(*entry) {                                         \
 			variant_case(PrimitiveType, primitive_type) {               \
 				primitive_args.push_back(primitive_type);               \
@@ -490,7 +484,7 @@ class FunctionValidator {
 			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
 			instr_case(Op_alloc_lptr_type, instr) {
 				validateArgInstantiable(instr.type);
-				CRef<TypeOfData> variable = current_stack.at(instr.ptr.var_name);
+				CRef<type::Type> variable = current_stack.at(instr.ptr.var_name);
 				PointerType      pointer  = std::get<PointerType>(*variable);
 				if (pointer.inner != instr.type.type_name) throw PointerTypeMismatchError(instr);
 			}
@@ -1187,21 +1181,21 @@ class FunctionValidator {
 			instr_case(Op_store_lptr_lany, instr) {
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.src.var_name);
+				CRef<type::Type> other_type      = current_stack.at(instr.src.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_load_lany_lptr, instr) {
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.src_ptr.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.dst.var_name);
+				CRef<type::Type> other_type      = current_stack.at(instr.dst.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_ref_lptr_lany, instr) {
 				const auto& pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.dst_ptr.var_name));
-				CRef<TypeOfData> other_type      = current_stack.at(instr.src.var_name);
+				CRef<type::Type> other_type      = current_stack.at(instr.src.var_name);
 				base::StrID      other_type_name = typeName(*other_type);
 				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
 			}
@@ -1332,8 +1326,9 @@ class FunctionValidator {
 		if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 	}
 
-	void validateUpcast(const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack)
-		const {
+	void validateUpcast(
+		const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const {
 		auto dst_ptr_tod = current_stack.at(instruction.dst.var_name);
 		auto src_ptr_tod = current_stack.at(instruction.src.var_name);
 
@@ -1491,15 +1486,13 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const ObjIdNameMap<TypeOfData>&                  tod_map,
-		const TypeMetadata&                              type_metadata,
+		const ObjIdNameMap<type::Type>&                  tod_map,
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 		const Function&                                  function
 	):
 		  tod_map(tod_map),
-		  type_metadata(type_metadata),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),

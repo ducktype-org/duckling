@@ -161,6 +161,7 @@ namespace vm {
 	}
 
 	void Type::finalize() {
+		// @TODO: #1971 Delete these checks
 		if (state == State::Finalizing) throw code::CyclicDependencyError(*this);
 		if (state == State::Finalized) return;
 		state = State::Finalizing;

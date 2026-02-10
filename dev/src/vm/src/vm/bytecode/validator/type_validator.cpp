@@ -1,5 +1,6 @@
 #include "type_validator.hpp"
 
+#include "vm/bytecode/validator/type.hpp"
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/type_utils.hpp>
@@ -27,19 +28,17 @@ namespace {
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif
-	template<TypeOfDataConcept ExpectedType, ErrorFactoryConcept ErrorFactory>
+	template<type::ConcreteType ExpectedType, ErrorFactoryConcept ErrorFactory>
 	const ExpectedType& getType(
 		const TypeContext&  ctx,
 		const base::StrID&  name,
 		const TypeOfData&   context_for_error,
 		const ErrorFactory& error_factory
 	) {
-		const TypeOfData& type_of_data
-			= *ctx.getCurrentTypes().atMaybe(name).expect<UnknownSubtypeError>(
-				context_for_error, name
-			);
-		if (const auto* specific_type = std::get_if<ExpectedType>(&type_of_data))
-			return *specific_type;
+		const type::Type& tp = *ctx.getCurrentTypes().atMaybe(name).expect<UnknownSubtypeError>(
+			context_for_error, name
+		);
+		if (const auto& specific_type = tp.maybeGet<ExpectedType>()) return *specific_type;
 		throw error_factory();
 	}
 #if defined(__GNUG__) && !defined(__clang__)
@@ -122,10 +121,9 @@ namespace {
 		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
-				ctx,
-				interface_name,
-				error_context_inh,
-				[&]() { return InvalidImplementsError(inh, interface_name); }
+				ctx, interface_name, error_context_inh, [&]() {
+					return InvalidImplementsError(inh, interface_name);
+				}
 			);
 			insertImplementationsRecursive(implementations, interface, error_context_inh, ctx);
 		}
@@ -356,7 +354,7 @@ void vm::code::detail::validateTypesIntegrity(const TypeContext& ctx) {
 	auto& types = ctx.getCurrentTypes();
 
 	base::HashMap<base::StrID, Status> status;
-	for (const auto& type: types) status.put(typeName(type), Waiting);
+	for (const auto& type: types) status.put(type.getName(), Waiting);
 
 	auto helper = [&](this auto self, const auto& type) {
 		auto name = typeName(type);

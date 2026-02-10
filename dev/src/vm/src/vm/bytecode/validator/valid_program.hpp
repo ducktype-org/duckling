@@ -45,8 +45,7 @@ namespace vm::code {
 		 */
 		ValidProgram tryInsertCode(const CodeCollection& collection) const;
 
-
-		const ObjIdNameMap<TypeOfData>& types() const;
+		const TypeMap& types() const;
 
 		const TypeContext& getTypeContext() const;
 
