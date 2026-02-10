@@ -6,9 +6,10 @@
 
 #include <cstring>
 #include <iostream>
+#include <mutex>
+#include <shared_mutex>
 
 namespace base {
-
 	/**
 	 * Size of memory buffers used to store byte-strings represented by StrID
 	 */
@@ -34,15 +35,21 @@ namespace base {
 			return &buffer_list;
 		}
 
-		// remanding size of last buffer (equals default_buffer_size - next_pos)
+		// remaining size of last buffer (equals default_buffer_size - next_pos)
 		usize size_left = 0;
 
 		// next free position in last buffer
 		usize next_pos = 0;
 
 		bool any_buffer_exits = false;
+
+		std::shared_mutex mutex;
 	}
 
+	/**
+	 * @brief Creates a new buffer for storing strings.
+	 * @note It is required to be called under write-lock.
+	 */
 	void newBuffer() {
 		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
 		getBufferList()->emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
@@ -50,6 +57,10 @@ namespace base {
 		next_pos  = 0;
 	}
 
+	/**
+	 * @brief Returns a view to the last buffer.
+	 * @note It is required to be called under read-lock.
+	 */
 	base::RawView lastBuffer() { return getBufferList()->back().view(); }
 
 	/**
@@ -65,8 +76,10 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
-		if (getToIDMap()->contains(data)) {
-			id = getToIDMap()->at(data);
+		std::unique_lock lock(mutex);
+
+		if (auto id = getToIDMap()->atMaybe(data)) {
+			this->id = **id;
 			return;
 		}
 
@@ -105,11 +118,13 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
+		std::shared_lock lock(mutex);
 		return getToDataMap()->operator[](id);
 	}
 
 	void StrID::dumpData(std::ostream& out) {
-		i32 i = 0;
+		i32              i = 0;
+		std::shared_lock lock(mutex);
 		for (auto v: *getToDataMap()) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
