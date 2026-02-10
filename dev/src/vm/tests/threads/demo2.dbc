@@ -3,7 +3,7 @@ global_data counter i64 {};
 function inc {} -> void {
     init_lany_type			 temp, i64;
 	init_lany_type 			 i, i64;
-	mov_l64_imm				 i, 10000;
+	mov_l64_imm				 i, 3;
 	# while(i > 0)
 	label Loop1;
 		# i--
@@ -16,6 +16,8 @@ function inc {} -> void {
 		# if i > 0 goto Loop1
 		cmpGt_l64_imm         i, 0;
 		jmpIf_label      	 Loop1;
+    deinit;
+    deinit;
 
     ret;
 }
@@ -37,6 +39,8 @@ function print {} -> void {
 		# if i > 0 goto Loop1
 		cmpGt_l64_imm         i, 0;
 		jmpIf_label      	 Loop1;
+    deinit;
+    deinit;
 
     ret;
 }
@@ -72,6 +76,16 @@ function main { i64, ptr_argv } -> i64 {
     init_lany_type			 output_var, i64;
     mov_l64_g64 			 output_var, counter;
     output_l64				 output_var;
+
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    deinit;
 
     ret;
 }

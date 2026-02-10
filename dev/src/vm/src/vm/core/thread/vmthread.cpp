@@ -1,4 +1,3 @@
-
 #include "vmthread.hpp"
 
 #include "kill_process_exception.hpp"
@@ -345,6 +344,9 @@ namespace vm {
 		frame->current_function = &start_function;
 
 		const auto* instr = start_function.bc.data();
+        i64 id = static_cast<i64>(std::hash<std::thread::id>{}(exec_thread->get_id()));
+        acquireGil();
+        
 
 #ifdef USE_TAIL_CALLS
 		instr->tc_opfun(instr, local_stack, frame, *this);
@@ -373,6 +375,7 @@ namespace vm {
 		}
 	End:
 #endif
+        process.releaseGil(id);
 		// @note: The return value is the only block left on the block stack.
 		auto block         = frame->block_stack.back();
 		exit_value_storage = process.createVmValue(func.result_type, Pointer(block, 0));
@@ -658,4 +661,31 @@ namespace vm {
 	bool VMThread::waitForRunningResponse() {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
+
+
+    void VMThread::acquireGil(){
+        i64 id = static_cast<i64>(std::hash<std::thread::id>{}(exec_thread->get_id()));
+        if(has_gil){
+            // Check if you can hold it longer - releasing policy
+            // If you can't hold it longer then
+            // 1. say
+            if(false) return;
+            has_gil = false;
+            // 2. release gil
+            process.releaseGil(id);
+            // 3. yield - to not reacquire instantly
+            std::this_thread::yield();
+            
+        }
+        // Try to acquire GIL
+        process.acquireGil(id);
+        has_gil = true;
+    }
+
+    void VMThread::releaseGil(){
+        i64 id = static_cast<i64>(std::hash<std::thread::id>{}(exec_thread->get_id()));
+        has_gil = false;
+        process.releaseGil(id);
+    }
 }
+
