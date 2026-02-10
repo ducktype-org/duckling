@@ -3,9 +3,9 @@
 #include <timer/timer.hpp>
 
 #include <array>
+#include <atomic>
 #include <iostream>
 #include <utility>
-#include <atomic>
 
 namespace time_stats {
 
@@ -19,8 +19,8 @@ namespace time_stats {
 		 * \parallel They will have to be made thread-safe if time tracking from multiple threads
 		 * is to be supported (perhaps via thread-local storage).
 		 */
-		constinit std::array<timer::AtomicDuration, TIME_CATEGORIES_COUNT>  time_statistics{};
-		constinit std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>      is_category_active{};
+		constinit std::array<timer::AtomicDuration, TIME_CATEGORIES_COUNT> time_statistics{};
+		constinit std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>     is_category_active{};
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):

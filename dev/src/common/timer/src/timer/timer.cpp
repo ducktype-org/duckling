@@ -6,7 +6,8 @@ namespace timer {
 		return std::chrono::duration_cast<std::chrono::nanoseconds>(value).count();
 	}
 
-	AtomicDuration::AtomicDuration(const Duration& duration): nanoseconds(duration.toNanoseconds()) {}
+	AtomicDuration::AtomicDuration(const Duration& duration):
+		  nanoseconds(duration.toNanoseconds()) {}
 
 	Duration AtomicDuration::toDuration() const {
 		return Duration{ std::chrono::nanoseconds(nanoseconds.load(std::memory_order_relaxed)) };

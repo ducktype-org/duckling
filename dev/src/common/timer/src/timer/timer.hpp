@@ -2,8 +2,8 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <chrono>
 #include <atomic>
+#include <chrono>
 
 namespace timer {
 	using TimeStamp = decltype(std::chrono::high_resolution_clock::now());
@@ -37,17 +37,17 @@ namespace timer {
 	/**
 	 * Atomic variant of Duration, for use in concurrent scenarios.
 	 */
-    class AtomicDuration final {
-        std::atomic<i64> nanoseconds{0};
+	class AtomicDuration final {
+		std::atomic<i64> nanoseconds{ 0 };
 
-    public:
-        AtomicDuration() = default;
-		
+	public:
+		AtomicDuration() = default;
+
 		/**
 		 * Construct AtomicDuration from a Duration.
 		 */
 		AtomicDuration(const Duration& duration);
-		
+
 		/**
 		 * Convert AtomicDuration to a Duration.
 		 */
@@ -58,7 +58,7 @@ namespace timer {
 		 * Add a Duration to this AtomicDuration.
 		 */
 		void add(const Duration& duration);
-    };
+	};
 
 	enum class TimeUnit { Nanoseconds, Microseconds, Milliseconds, Seconds };
 
