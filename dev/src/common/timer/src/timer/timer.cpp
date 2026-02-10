@@ -2,6 +2,20 @@
 
 namespace timer {
 
+	i64 Duration::toNanoseconds() const {
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(value).count();
+	}
+
+	AtomicDuration::AtomicDuration(const Duration& duration): nanoseconds(duration.toNanoseconds()) {}
+
+	Duration AtomicDuration::toDuration() const {
+		return Duration{ std::chrono::nanoseconds(nanoseconds.load(std::memory_order_relaxed)) };
+	}
+
+	void AtomicDuration::add(const Duration& duration) {
+		nanoseconds.fetch_add(duration.toNanoseconds(), std::memory_order_relaxed);
+	}
+
 	void printAs(std::ostream& out, const Duration& duration, TimeUnit unit) {
 		switch (unit) {
 		case TimeUnit::Nanoseconds:
