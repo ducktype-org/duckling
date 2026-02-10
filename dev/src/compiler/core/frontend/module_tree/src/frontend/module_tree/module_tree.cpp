@@ -933,12 +933,16 @@ namespace compiler::frontend {
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					key
 				);
-			auto pst = file->getPST();
-			root_element_file_back_map.maybePutAndUpdate(
-				pst->getRootElement().unlock(ctx)->getID(),
-				key,
-				[&key](auto& existing) { existing = key; }
-			);
+			auto pst              = file->getPST();
+			auto root_id          = pst->getRootElement().unlock(ctx)->getID();
+			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, key);
+			if (!maybe_put_result) {
+				// If the key already exists, assert that it maps to the same value
+				CORE_ASSERT(
+					root_element_file_back_map.getCopy(root_id) == key,
+					"Root element ID already exists in back map with a different file ID"
+				);
+			}
 
 			// @todo modify it, when making proper helios errors
 			if (pst->getLogger()->bad()) {
