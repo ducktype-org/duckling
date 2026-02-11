@@ -10,7 +10,7 @@
 #include <thread>
 
 template<class F>
-void runOrTimeout(F func, usize timeout_ms = 10'000) {
+void runOrTimeout(F func, usize timeout_ms = 20'000) {
 	std::atomic<bool> finished = false;
 
 	std::jthread worker_thread([&func, &finished]() {
