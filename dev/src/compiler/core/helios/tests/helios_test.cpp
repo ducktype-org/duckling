@@ -1,6 +1,8 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -89,6 +91,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testHoutElementsOrigin);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -603,6 +606,8 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
+		using namespace compiler::helios::code;
+
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
@@ -614,20 +619,18 @@ private:
 
 
 			// Build chain comparison expressions vector
-			std::vector<base::Box<compiler::helios::code::Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 3));
+			std::vector<base::Box<Expr>> chain_exprs;
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
 
-			std::vector<compiler::helios::code::BuiltinBinary> chain_ops{
-				compiler::helios::code::BuiltinBinary::IntegerLt,
-				compiler::helios::code::BuiltinBinary::IntegerLteq
-			};
+			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
+				                                  BuiltinBinary::IntegerLteq };
 
 			// Build tuple elements
-			std::vector<base::Box<compiler::helios::code::Expr>> tuple_elements;
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
+			std::vector<base::Box<Expr>> tuple_elements;
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
 
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
@@ -638,55 +641,58 @@ private:
 			          ->getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
-			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
+			std::vector<base::Box<Expr>> call_args;
+			call_args.emplace_back(makeBox<AccessExpr>(
+				ctx, generatedOrigin(), makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_obj), a_field
 			));
 
 			// Build sequence expressions
-			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
+			std::vector<base::Box<Expr>> sequence_exprs;
 			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+				makeBox<TupleExpr>(ctx, generatedOrigin(), std::move(tuple_elements))
 			);
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<BinaryOperatorExpr>(
 				ctx,
-				compiler::helios::code::BuiltinBinary::IntegerAdd,
-				makeBox<compiler::helios::code::ParenthesisExpr>(
+				generatedOrigin(),
+				BuiltinBinary::IntegerAdd,
+				makeBox<ParenthesisExpr>(
 					ctx,
-					makeBox<compiler::helios::code::UnaryOperatorExpr>(
-						compiler::helios::code::BuiltinUnary::IntegerNegation,
-						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
+					generatedOrigin(),
+					makeBox<UnaryOperatorExpr>(
+						generatedOrigin(),
+						BuiltinUnary::IntegerNegation,
+						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 					)
 				),
-				makeBox<compiler::helios::code::CallExpr>(
+				makeBox<CallExpr>(
 					ctx,
-					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					generatedOrigin(),
+					makeBox<IdentifierExpr>(ctx, generatedOrigin(), square_sym),
 					std::move(call_args)
 				)
 			));
 
 			// Build variant subtypes
-			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
-			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
+			std::vector<base::Box<Expr>> variant_subtypes;
+			variant_subtypes.emplace_back(makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
 			);
-			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
-			);
+			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true));
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
+				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
-			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
+			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
+				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<compiler::helios::code::ChainComparisonExpr>(
-					ctx, std::move(chain_exprs), std::move(chain_ops)
+				makeBox<ChainComparisonExpr>(
+					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
 				),
 				// If true: SequenceExpr with nested expressions including CallExpr
-				makeBox<compiler::helios::code::SequenceExpr>(ctx, std::move(sequence_exprs)),
+				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<compiler::helios::code::VariantTypeConstructorExpr>(
-					ctx, std::move(variant_subtypes)
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
 				)
 			);
 
@@ -1545,7 +1551,7 @@ private:
 			};
 
 			auto all_expr_holders
-				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
+				= pst::viewAllSubTreeElementsFilter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"
@@ -2396,6 +2402,116 @@ private:
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
+	}
+
+	/**
+	 * Test the origin calculation for elements.
+	 * The origin calculation is not trivial for expressions and generated elements.
+	 */
+	void testHoutElementsOrigin() {
+		auto [module, _] = getModule(fs::File(path("test_modules/helios_pst_origin_tests")));
+
+		auto& hout = query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+
+		auto get_global_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
+			for (const auto& glob: hout.glob_data)
+				if (glob.original_name == name) return &glob;
+			return {};
+		};
+
+		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
+		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
+		auto all_variables
+			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst->getRootElement());
+
+		auto get_pst_variable_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
+			for (const auto& var: all_variables)
+				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of initial value expression
+		 * calculated from HOUT is the same as the source position of the whole PST init expression.
+		 * This is not trivial for AccessChain and for generated elements. (derefs, casts)
+		 */
+		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
+			auto glob_opt = get_global_by_name(name);
+			auto var_opt  = get_pst_variable_by_name(name);
+			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
+			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			auto glob              = glob_opt.value();
+			auto var_pst           = var_opt.value();
+			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
+			auto initial_value_expr
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+
+			dia::SourcePosition expr_pos_from_origin
+				= initial_value_expr->origin.getSourcePosition().value();
+			assertEqual(
+				expr_pos_from_origin,
+				initial_value_pst->getSourcePosition(),
+				base::strConcat(
+					"The initial value expression PST node does not match for variable ",
+					name.strView()
+				)
+			);
+
+			assertEqual(
+				initial_value_expr->origin.isGenerated(),
+				is_generated,
+				"Generated origin does not match for variable "
+			);
+		};
+		check_var_init_expr_origin(base::StrID("var1"), false);
+		check_var_init_expr_origin(base::StrID("var2"), false);
+		check_var_init_expr_origin(base::StrID("var3"), false);
+		check_var_init_expr_origin(base::StrID("var4"), false);
+		check_var_init_expr_origin(base::StrID("var5"), false);
+		check_var_init_expr_origin(base::StrID("var6"), false);
+		check_var_init_expr_origin(base::StrID("var7_generated"), true);
+		check_var_init_expr_origin(base::StrID("var8_generated"), true);
+
+		auto get_hout_function_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name == name) return fun;
+			return {};
+		};
+		auto all_pst_functions = pst::viewAllSubTreeElementsFilter<pst::Fun>(pst->getRootElement());
+		auto get_pst_function_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
+			for (const auto& fun: all_pst_functions)
+				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of function body calculated from HOUT
+		 * is the same as the source position of the whole PST function of the same name.
+		 */
+		auto check_function_origin = [&](base::StrID name) {
+			auto fun_opt     = get_hout_function_by_name(name);
+			auto pst_fun_opt = get_pst_function_by_name(name);
+			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
+			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			auto fun = fun_opt.value();
+
+
+			auto pst_fun = pst_fun_opt.value();
+			assertEqual(
+				fun->origin.getSourcePosition(),
+				pst_fun->getSourcePosition(),
+				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+		};
+
+		check_function_origin(base::StrID("a"));
+		check_function_origin(base::StrID("b"));
+
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testScopeParentsAndDepth() {
