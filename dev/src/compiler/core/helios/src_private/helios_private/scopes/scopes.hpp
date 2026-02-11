@@ -143,7 +143,6 @@ namespace compiler::helios {
 	 * @brief Query all scopes defined in a given module.
 	 * Note: Not implemented yet.
 	 *
-	 * \parallel reads scope_table
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(

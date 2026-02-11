@@ -491,7 +491,7 @@ namespace compiler::helios::code {
 				variant_case(CoercionMatch, data) { coercion_match.push_back(std::move(data)); }
 				variant_case(NoMatch, data) {
 					no_match.push_back(data);
-					// For now ignore it, it is handled by the logic bellow.
+					// For now ignore it, it is handled by the logic below.
 				}
 			}
 		}

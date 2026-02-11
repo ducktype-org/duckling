@@ -1,3 +1,5 @@
+#include "incremental_metadata_test_common.hpp"
+
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
@@ -93,7 +95,39 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+
+			// Trigger metadata merge by calling the same queries
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
+
+		// ========== Verify metadata persisted from previous compilation ==========
+		{
+			using namespace metadata_persistence_test;
+			const auto& state = *query::internal::ContextAccess::getState();
+
+			// Build NodeIDs for our test queries
+			auto node_42  = query::internal::makeNodeID<MetadataPersistenceTestQuery>({ 42 });
+			auto node_100 = query::internal::makeNodeID<MetadataPersistenceTestQuery>({ 100 });
+
+			// Verify TestCounter metadata
+			auto counter_42 = state.getMetadata<metadata_TestCounter>(node_42);
+			ASSERT_EQUAL(counter_42.size(), 1);
+			ASSERT_EQUAL(counter_42[0]->value, u64{ 420 });  // 42 * 10
+
+			auto counter_100 = state.getMetadata<metadata_TestCounter>(node_100);
+			ASSERT_EQUAL(counter_100.size(), 1);
+			ASSERT_EQUAL(counter_100[0]->value, u64{ 1'000 });  // 100 * 10
+
+			// Verify TestSourceFile (StrID) metadata
+			auto source_42 = state.getMetadata<metadata_TestSourceFile>(node_42);
+			ASSERT_EQUAL(source_42.size(), 1);
+			ASSERT_EQUAL(source_42[0]->value.strView(), std::string_view{ "test/source_42.duck" });
+
+			auto source_100 = state.getMetadata<metadata_TestSourceFile>(node_100);
+			ASSERT_EQUAL(source_100.size(), 1);
+			ASSERT_EQUAL(source_100[0]->value.strView(), std::string_view{ "test/source_100.duck" });
+		}
 
 		// Check if red-green sweep marks all direct dependencies of the root node as green
 		for (const auto& dep_node: root_deps) {
@@ -119,7 +153,7 @@ private:
 		ASSERT_TRUE(maybe_art.has_value());
 
 		const auto& art  = *maybe_art.value();
-		auto        path = art.FILE.getFilePath().getPath();
+		auto        path = art.file.getFilePath().getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
 

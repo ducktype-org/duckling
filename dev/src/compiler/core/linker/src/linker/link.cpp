@@ -24,7 +24,7 @@ namespace compiler::linker {
 		system_command::SystemCommand command("gcc");
 
 		for (const auto& object_file_path: inputs)
-			command.addArg(object_file_path.FILE.getFilePath().native());
+			command.addArg(object_file_path.file.getFilePath().native());
 
 		for (const auto& link_path: options.external_static_libraries)
 			command.addArg(link_path.native());
@@ -32,9 +32,9 @@ namespace compiler::linker {
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");
-		command.addArg(output.FILE.getFilePath().native());
+		command.addArg(output.file.getFilePath().native());
 
-		CORE_USER_LOG("[?/?] Linking executable: ", output.FILE.getFilePath().name(), "\n");
+		CORE_USER_LOG("[?/?] Linking executable: ", output.file.getFilePath().name(), "\n");
 
 		command.execute();
 	}
