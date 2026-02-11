@@ -145,6 +145,20 @@ namespace concurrent {
 		 * 1. Inserts key->value into the container if key does not exist.
 		 * 2. Calls f with reference to the value associated with the key.
 		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void putOrAssign(const K& key, const D& value) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto inserted = shards[lock.shard_index].maybePut(key, value);
+			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
+			shards[lock.shard_index][key] = value;
+		}
+
+		/**
+		 * Performs atomically a following sequence:
+		 * 1. Inserts key->value into the container if key does not exist.
+		 * 2. Calls f with reference to the value associated with the key.
+		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename Func>
 		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
