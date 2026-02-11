@@ -191,9 +191,7 @@ namespace concurrent {
 
 			for (u64 i = 0; i < SHARD_COUNT; i++) {
 				WithShardLock lock(*this, i);
-				for (const auto& pair: shards[i]) {
-					result.emplace_back(&pair);
-				}
+				for (const auto& pair: shards[i]) result.emplace_back(&pair);
 			}
 
 			return result;

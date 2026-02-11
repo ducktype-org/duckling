@@ -402,7 +402,8 @@ namespace compiler::helios {
 
 			std::vector<SymID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
+			for (auto elem_cref: cache.getAllKeyValuePairs())
+				out.emplace_back(QResult{ &elem_cref->value.data });
 			return out;
 		}
 
@@ -560,9 +561,8 @@ namespace compiler::helios {
 					// This implementation is fragile, adjust if needed.
 
 					std::vector<SymID> out;
-
-					for (auto& [key, cache_entry]: cache)
-						for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
+					for (auto elem_cref: cache.getAllKeyValuePairs())
+						for (auto sym_id: elem_cref->value.data.data_refs) out.emplace_back(sym_id);
 					return out;
 				}
 
@@ -871,8 +871,8 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 
-				for (auto& [key, cache_entry]: cache)
-					out.emplace_back(QResult{ &cache_entry.data });
+				for (auto pair: cache.getAllKeyValuePairs())
+					out.emplace_back(QResult{ &pair->value.data });
 				return out;
 			}
 
