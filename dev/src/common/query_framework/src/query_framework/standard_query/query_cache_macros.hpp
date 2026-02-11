@@ -9,8 +9,8 @@
 #define QUERY_AUTO_CACHE_COPY                                                      \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache; \
 	static auto load(KHash key_hash) -> LoadResult {                               \
-		if (const auto& value = cache.atMaybe(key_hash)) {                         \
-			return QResWithACD{ (*value)->data, (*value)->acd };                   \
+		if (const auto& value = cache.atMaybeCopy(key_hash)) {                     \
+			return QResWithACD{ (*value).data, (*value).acd };                     \
 		}                                                                          \
 		return {};                                                                 \
 	}                                                                              \

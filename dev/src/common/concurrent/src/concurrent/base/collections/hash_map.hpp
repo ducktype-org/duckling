@@ -384,6 +384,9 @@ namespace concurrent {
 
 		/**
 		 * Retrieves all key-value pairs from the map.
+		 * Locks WithAllShardsLock underneath to ensure thread safety,
+		 * but locks each shard only for the time needed to copy its elements,
+		 * so it can see elements added during the call, but not necessarily all of them.
 		 */
 		[[nodiscard]]
 		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
