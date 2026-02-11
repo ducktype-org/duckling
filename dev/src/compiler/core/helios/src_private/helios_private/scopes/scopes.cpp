@@ -194,9 +194,6 @@ namespace compiler::helios {
 		 * Use only inside that function (and only for debug/test purposes)!
 		 */
 		static std::vector<ScopeID> getAllCachedScopes() {
-			// \parallel this implementation must be made thread safe
-			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
-
 			// This implementation is fragile, adjust if needed.
 
 			std::vector<ScopeID> out;
@@ -268,9 +265,6 @@ namespace compiler::helios {
 		 * Use only inside that function (and only for debug/test purposes)!
 		 */
 		static std::vector<ScopeID> getAllCachedScopes() {
-			// \parallel this implementation must be made thread safe
-			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
-
 			// This implementation is fragile, adjust if needed.
 
 			std::vector<ScopeID> out;
