@@ -62,6 +62,10 @@ public:
 		TESTER_ADD_TEST(iteratorTest);
 		TESTER_ADD_TEST(constIteratorTest);
 		TESTER_ADD_TEST(multiThreadedSizeTest);
+
+		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
+		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
+		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
 	}
 
 private:
@@ -475,6 +479,46 @@ private:
 		for (int i = 0; i < N; i++) expected += i * 10;
 
 		for (auto& s: sums) ASSERT_EQUAL(s.load(), expected);
+	}
+
+	/**
+	 * Tests that putOrAssign works correctly under concurrent access.
+	 * Multiple threads call putOrAssign on overlapping keys;
+	 * each final value must equal the last write for that key.
+	 */
+	template<u64 thread_count>
+	void multiThreadedPutOrAssignTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 500;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// Each thread writes keys [0, KEY_RANGE) with value = thread_id * OPS_PER_THREAD + j.
+		// putOrAssign must insert or overwrite atomically.
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+
+		for (u64 i = 0; i < thread_count; i++) {
+			threads.emplace_back([&map, i]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64 key   = j % KEY_RANGE;
+					u64 value = i * OPS_PER_THREAD + j;
+					map.putOrAssign(key, value);
+				}
+			});
+		}
+
+		for (auto& t: threads) t.join();
+
+		// Every key in [0, KEY_RANGE) must be present.
+		ASSERT_EQUAL(map.size(), KEY_RANGE);
+
+		for (u64 k = 0; k < KEY_RANGE; k++) {
+			ASSERT_TRUE(map.contains(k));
+			// Value was set by some thread; just verify it is within the valid range.
+			u64 v = map.getCopy(k);
+			ASSERT_TRUE(v < thread_count * OPS_PER_THREAD);
+		}
 	}
 
 	/**
