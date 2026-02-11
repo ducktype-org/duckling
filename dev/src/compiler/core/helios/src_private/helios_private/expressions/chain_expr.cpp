@@ -632,6 +632,7 @@ namespace compiler::helios::code {
 			if (expr->expression_type.getSymbolType().getType().getKind() != tsh::Kind::StaticArray
 			    && expr->expression_type.getSymbolType().getType().getKind()
 			           != tsh::Kind::DynamicArray) {
+				// TODOP: Resolve.
 				// @TODO: #1620 This error currently links to the index expression, but should link
 				// to the `base` HOUT expression. Change that once SourcePositions are available in HOUT.
 				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(

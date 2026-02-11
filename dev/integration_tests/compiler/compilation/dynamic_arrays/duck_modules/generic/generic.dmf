@@ -102,7 +102,12 @@ fun dynamicArraysTest() -> () = {
     builtin_output_i64(nested[1][0]); # 3
     builtin_output_i64(nested[1][1]); # 4
     
-    inner2 += 123; # TODOP: Should this modify the matrix?
+    # @TODO: #2000 Since we don't have any copy semantics implemented, 
+    # this line will modify `nested` data. 
+    # The proper way to do that would be to invoke a copy constructor in this line:
+    # `nested += inner2`
+    # which would perform a deep copy instead of just the bit-wise copy.
+    inner2 += 123; 
 
     builtin_output_i64(i64(len nested[1])); # 2
 

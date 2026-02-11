@@ -416,7 +416,6 @@ namespace compiler::backend_llvm {
 
 		// Prepare parameter types.
 		for (const auto& param: parameters)
-			// TODOP: Look here.
 			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
 				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
 			else
