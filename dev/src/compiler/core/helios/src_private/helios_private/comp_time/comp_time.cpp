@@ -84,7 +84,7 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					match_optional(expr.origin.getSourcePosition(ctx)) {
+					match_optional(expr.origin.getSourcePosition()) {
 						opt_some(pos) {
 							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 								"Expression cannot be evaluated at compile-time.", pos

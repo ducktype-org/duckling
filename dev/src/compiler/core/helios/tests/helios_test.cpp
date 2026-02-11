@@ -2442,27 +2442,14 @@ private:
 			auto var_opt  = get_pst_variable_by_name(name);
 			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
 			assertTrue(var_opt.has_value(), "Variable not found in PST");
-			auto glob = glob_opt.value();
-			assertTrue(
-				glob->origin.getPstElements().size() == 1,
-				base::strConcat("Global ", name.strView(), " has no PST origin elements")
-			);
-			auto glob_pst_origin = glob->origin.getPstElements().back().illegalAccess().value();
-			auto var_pst         = var_opt.value();
-			assertEqual(
-				glob_pst_origin->getHash(),
-				var_pst->getHash(),
-				base::strConcat("The variable origin is not the PST of the variable", name.strView())
-			);
-
+			auto glob              = glob_opt.value();
+			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
 			auto initial_value_expr
 				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
 
-			dia::SourcePosition expr_pos_from_origin = dia::SourcePosition::fakePosition();
-			query::utils::withContextDo([&](query::Context& ctx) {
-				expr_pos_from_origin = initial_value_expr->origin.getSourcePosition(ctx).value();
-			});
+			dia::SourcePosition expr_pos_from_origin
+				= initial_value_expr->origin.getSourcePosition().value();
 			assertEqual(
 				expr_pos_from_origin,
 				initial_value_pst->getSourcePosition(),
@@ -2512,16 +2499,11 @@ private:
 			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
 			auto fun = fun_opt.value();
 
-			assertTrue(
-				fun->origin.getPstElements().size() == 1,
-				base::strConcat("Function ", name.strView(), " has no PST origin elements")
-			);
 
-			auto fun_pst_origin = fun->origin.getPstElements().back().illegalAccess().value();
-			auto pst_fun        = pst_fun_opt.value();
+			auto pst_fun = pst_fun_opt.value();
 			assertEqual(
-				fun_pst_origin->getHash(),
-				pst_fun->getHash(),
+				fun->origin.getSourcePosition(),
+				pst_fun->getSourcePosition(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
 			);
 		};
