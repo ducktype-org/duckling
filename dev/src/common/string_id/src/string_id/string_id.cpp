@@ -20,30 +20,25 @@ namespace base {
 		using ToDataType = VectorMap<StrID::InnerID, RawView>;
 		using ToIDType   = HashMap<RawView, StrID::InnerID>;
 
-		Ref<ToDataType> getToDataMap() {
-			static ToDataType to_data_map;
-			return &to_data_map;
-		}
-
 		Ref<ToIDType> getToIDMap() {
+			// This does not have a constinit constructor
 			static ToIDType to_id_map;
 			return &to_id_map;
 		}
 
-		Ref<BufferList> getBufferList() {
-			static BufferList buffer_list;
-			return &buffer_list;
-		}
+		constinit BufferList buffer_list;
+
+		constinit ToDataType to_data_map;
 
 		// remaining size of last buffer (equals default_buffer_size - next_pos)
-		usize size_left = 0;
+		constinit usize size_left = 0;
 
 		// next free position in last buffer
-		usize next_pos = 0;
+		constinit usize next_pos = 0;
 
-		bool any_buffer_exits = false;
+		constinit bool any_buffer_exits = false;
 
-		std::shared_mutex mutex;
+		constinit std::shared_mutex mutex;
 	}
 
 	/**
@@ -52,7 +47,7 @@ namespace base {
 	 */
 	void newBuffer() {
 		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
-		getBufferList()->emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
+		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
 		size_left = DEFAULT_BUFFER_SIZE;
 		next_pos  = 0;
 	}
@@ -61,7 +56,7 @@ namespace base {
 	 * @brief Returns a view to the last buffer.
 	 * @note It is required to be called under read-lock.
 	 */
-	base::RawView lastBuffer() { return getBufferList()->back().view(); }
+	base::RawView lastBuffer() { return buffer_list.back().view(); }
 
 	/**
 	 * @brief
@@ -99,7 +94,7 @@ namespace base {
 		// @TODO: add test to this:
 		if (data.size() > DEFAULT_BUFFER_SIZE) {
 			// Data is too big to fit into any buffer
-			getBufferList()->emplace_back(base::OwningView::copy(data));
+			buffer_list.emplace_back(base::OwningView::copy(data));
 			actual_data      = RawView(lastBuffer().getBegin(), data.size());
 			any_buffer_exits = true;
 		} else {
@@ -110,12 +105,12 @@ namespace base {
 			}
 
 			actual_data = RawView(lastBuffer().getBegin() + next_pos, data.size());
-			std::memcpy(getBufferList()->back().begin + next_pos, data.getBegin(), data.size());
+			std::memcpy(buffer_list.back().begin + next_pos, data.getBegin(), data.size());
 			size_left -= data.size();
 			next_pos += data.size();
 		}
 
-		getToDataMap()->put(id, actual_data);
+		to_data_map.put(id, actual_data);
 		getToIDMap()->put(actual_data, id);
 	}
 
@@ -128,13 +123,13 @@ namespace base {
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
 		std::shared_lock lock(mutex);
-		return getToDataMap()->operator[](id);
+		return to_data_map[id];
 	}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32              i = 0;
 		std::shared_lock lock(mutex);
-		for (auto v: *getToDataMap()) {
+		for (auto v: to_data_map) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
 		}
