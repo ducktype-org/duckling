@@ -150,8 +150,10 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto inserted = shards[lock.shard_index].maybePut(key, value);
-			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			else shards[lock.shard_index][key] = value;
+			if (inserted != nullptr)
+				elements_count.fetch_add(1, std::memory_order_relaxed);
+			else
+				shards[lock.shard_index][key] = value;
 		}
 
 		/**
