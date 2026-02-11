@@ -256,7 +256,7 @@ private:
    					return 0;
 				}
 			)",
-			{ "cannot be evaluated at compile-time" },
+			{ "cannot be evaluated at compile-time", "const y = x" },
 			1
 		);
 

@@ -118,7 +118,7 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
@@ -138,7 +138,7 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
-				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
+				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
 				dvm_file.close();
