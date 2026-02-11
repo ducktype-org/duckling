@@ -183,9 +183,75 @@ namespace artifacts {
 		}
 
 		/////////////////////////// PRIVATE /////////////////////////
-
+		
 	private:
+		/////////////////// NO LOCK INTERNALL API ///////////////////
+
+		/**
+		 * @brief Flushes ArtifactCollection tree data to the disk.
+		 */
+		void flushNoLock();
+
+		Ref<ArtifactCollection> subCollectionNewNoLock(base::StrID collection_name);
+
+		Ref<ArtifactCollection> subCollectionAtOrNewNoLock(base::StrID collection_name);
+
+		Ref<ArtifactCollection> subCollectionAtNoLock(base::StrID collection_name);
+
+		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybeNoLock(base::StrID collection_name);
+
+		FileArtifact fileArtifactNewNoLock(base::StrID artifact_name);
+
+		FileArtifact fileArtifactAtOrNewNoLock(base::StrID artifact_name);
+
+		FileArtifact fileArtifactAtNoLock(base::StrID artifact_name) const;
+
+		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybeNoLock(base::StrID artifact_name
+		) const;
+
+
+		BlobArtifact blobArtifactNewNoLock(base::StrID artifact_name);
+
+		BlobArtifact blobArtifactAtOrNewNoLock(base::StrID artifact_name);
+
+		BlobArtifact blobArtifactAtNoLock(base::StrID artifact_name) const;
+
+		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybeNoLock(base::StrID artifact_name
+		) const;
+
+		void setBlobDataNoLock(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
+
+		template<SerdeType T>
+		void setBlobDataNoLock(const BlobArtifact& blob, const T& data) {
+			setBlobDataNoLock(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
+		}
+
+		base::RawView getBlobDataViewNoLock(const BlobArtifact& blob) const;
+
+		template<SerdeType T>
+		const T getBlobDataNoLock(const BlobArtifact& blob) const {
+			return deserialize<T>(getBlobDataViewNoLock(blob));
+		}
+
+		///////////////////////// OBJECT STATE //////////////////////
+
+
 		const std::filesystem::path PATH;
+
+		concurrent::AtomicFlagSpinlock lock;
+
+		/**
+		 * @brief RAII struct for locking the collection.
+		 */
+		struct WithLock final {
+			ArtifactCollection& collection;
+			WithLock(ArtifactCollection& collection) : collection(collection) {
+				collection.lock.lock();
+			}
+			~WithLock() {
+				collection.lock.unlock();
+			}
+		};
 
 		/**
 		 * @name  Artifacts storage

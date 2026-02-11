@@ -125,13 +125,14 @@ fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 }
 
 void artifacts::ArtifactCollection::flush() {
+
 	if (PARENT)
 		PARENT.value()->flush();
 	else
 		flushDown();
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(
 	base::StrID collection_name
 ) {
 	CORE_ASSERT(
@@ -142,26 +143,26 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 	sub_collections.put(
 		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
 	);
-	return subCollectionAt(collection_name);
+	return subCollectionAtNoLock(collection_name);
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNewNoLock(
 	base::StrID collection_name
 ) {
-	match_optional(subCollectionAtMaybe(collection_name)) {
+	match_optional(subCollectionAtMaybeNoLock(collection_name)) {
 		opt_some(collection) return collection;
-		opt_none return subCollectionNew(collection_name);
+		opt_none return subCollectionNewNoLock(collection_name);
 	}
 	CORE_UNREACHABLE();
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtNoLock(
 	base::StrID collection_name
 ) {
 	return sub_collections.at(collection_name).refMut();
 }
 
-base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
+base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybeNoLock(
 	base::StrID collection_name
 ) {
 	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
@@ -169,7 +170,7 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	});
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::StrID artifact_name) {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(base::StrID artifact_name) {
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
@@ -183,46 +184,46 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::Str
 			.file   = fs::File(file_path),
 		}
 	);
-	return fileArtifactAt(artifact_name);
+	return fileArtifactAtNoLock(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNewNoLock(base::StrID artifact_name
 ) {
-	match_optional(fileArtifactAtMaybe(artifact_name)) {
+	match_optional(fileArtifactAtMaybeNoLock(artifact_name)) {
 		opt_some(artifact) return *artifact;
-		opt_none return fileArtifactNew(artifact_name);
+		opt_none return fileArtifactNewNoLock(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtNoLock(base::StrID artifact_name
 ) const {
 	return file_artifacts.at(artifact_name);
 }
 
-base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybeNoLock(
 	base::StrID artifact_name
 ) const {
 	return file_artifacts.atMaybe(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(base::StrID artifact_name) {
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(base::StrID artifact_name) {
 	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
-	return blobArtifactAt(artifact_name);
+	return blobArtifactAtNoLock(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(base::StrID artifact_name
 ) {
-	match_optional(blobArtifactAtMaybe(artifact_name)) {
+	match_optional(blobArtifactAtMaybeNoLock(artifact_name)) {
 		opt_some(artifact) return *artifact;
-		opt_none return blobArtifactNew(artifact_name);
+		opt_none return blobArtifactNewNoLock(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtNoLock(base::StrID artifact_name
 ) const {
 	return blob_artifacts.at(artifact_name);
 }
@@ -233,14 +234,14 @@ base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollectio
 	return blob_artifacts.atMaybe(artifact_name);
 }
 
-void artifacts::ArtifactCollection::setBlobData(
+void artifacts::ArtifactCollection::setBlobDataNoLock(
 	const BlobArtifact& blob, const byte* ptr, usize n_bytes
 ) {
 	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
 	blob_data[blob.name] = makeBox<Bytes>(ptr, ptr + n_bytes);
 }
 
-base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
+base::RawView artifacts::ArtifactCollection::getBlobDataViewNoLock(const BlobArtifact& blob) const {
 	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
 	const auto& data = blob_data[blob.name];
 	return { data->data(), data->size() };
