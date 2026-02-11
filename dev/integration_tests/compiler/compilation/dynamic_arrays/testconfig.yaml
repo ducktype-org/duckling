@@ -1,4 +1,4 @@
-# Tests for static array types
+# Tests for dynamic array types
 Tests:
   simple_lists:
     Cases:

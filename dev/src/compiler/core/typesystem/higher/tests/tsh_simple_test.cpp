@@ -47,6 +47,7 @@ public:
 		TESTER_ADD_TEST(simpleFunction);
 		TESTER_ADD_TEST(simpleLanguageElements);
 		TESTER_ADD_TEST(simpleMeta);
+		TESTER_ADD_TEST(simpleTypeTemplate);
 		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
 		TESTER_ADD_TEST(simpleImplicitCoercibility);
@@ -538,6 +539,40 @@ private:
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
+	}
+
+	void simpleTypeTemplate() {
+		query::utils::withContextDo([&](query::Context& ctx) -> void {
+			const auto list_template_type
+				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
+
+			assertTrue(
+				list_template_type.getKind() == TypeTemplate,
+				"Type template for List should have kind TypeTemplate."
+			);
+
+			assertTrue(
+				list_template_type.isBuiltin(TypeTemplateAbstractType::BuiltinKind::List),
+				"Template should be identified as a built-in List."
+			);
+
+			assertFalse(
+				list_template_type.carriesInformation(ctx),
+				"Type templates should not carry information."
+			);
+
+			assertTrue(
+				list_template_type.hasNoOpDestructor(),
+				"Type templates should have a no-op destructor."
+			);
+
+			const auto list_template_type_2
+				= ctx.query<QueryTypeTemplateType>({ TypeTemplateAbstractType::BuiltinKind::List });
+			assertTrue(
+				list_template_type == list_template_type_2,
+				"Queries for the same type template should return the same type object."
+			);
+		});
 	}
 
 	void simpleExpressionType() {
