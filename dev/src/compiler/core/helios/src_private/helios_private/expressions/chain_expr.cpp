@@ -256,6 +256,12 @@ namespace compiler::helios::code {
 				}))
 				return looked_up_callees;
 
+			// If all candidates are methods, return them as is.	
+			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
+					return kind(symbol) == SymbolKind::Method;
+				}))
+				return looked_up_callees;
+
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
 				auto error = makeBox<CallInvalidCallablesError>(
@@ -500,7 +506,7 @@ namespace compiler::helios::code {
 
 		/**
 		 * When we have an access expression not followed by a call expression,
-		 * for example "NS.value" or "NS.value.y" amd the current state is a namespace.
+		 * for example "NS.value" or "NS.value.y" and the current state is a namespace.
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
@@ -520,12 +526,22 @@ namespace compiler::helios::code {
 		   This may result in a method. Method
 		 * parameter overload is possible.
 		 */
-		auto processPSTExpr(base::Box<Expr>, pst::Access<pst::expr::Access>, pst::Access<pst::expr::Call>)
+		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
-			throw base::NotYetImplemented(
-				"Helios chain expr: call on access expr not implemented yet"
-			);
-			return query::Failed();
+			// TODO: HERE!!!
+
+			auto current_expr_type = current_expr->expression_type.getType();
+			auto lookup_result     = HInterface::ofTypeInstance(current_expr_type)
+			                         .lookup(query_ctx, expr_access->getName().value);
+
+			// @TODO: #1412 fix dealias
+			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+			auto expr_result = processFunctionCall(query_ctx, callees, call_expr);
+			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
+
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		/**

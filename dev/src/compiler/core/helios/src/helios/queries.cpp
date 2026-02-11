@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -341,6 +342,10 @@ namespace compiler::helios {
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 			}
+
+			void visitMethod(pst::Access<pst::Method> stmt) final {
+				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+			}
 		};
 
 		static PResult getImplicitCtorDecl(
@@ -457,7 +462,8 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (kind(key)) {
 			case SymbolKind::Function:
-			case SymbolKind::FunctionDeclaration: {
+			case SymbolKind::FunctionDeclaration:
+			case SymbolKind::Method: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor decl_maker(ctx, key);
