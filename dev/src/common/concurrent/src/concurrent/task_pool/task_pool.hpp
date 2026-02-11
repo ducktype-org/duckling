@@ -66,7 +66,7 @@ namespace concurrent::pool {
 	public:
 		/**
 		 * @brief Constructs a TaskPool.
-		 * It uses the WorkerManager singleton to get the workers 
+		 * It uses the WorkerManager singleton to get the workers
 		 * and set the no_tasks_callback for each worker to its onWorkerNoTasks method.
 		 */
 		explicit TaskPool();
@@ -82,7 +82,7 @@ namespace concurrent::pool {
 		/**
 		 * @brief Add the initial set of tasks to the pool.
 		 * These tasks will be distributed to workers when execute() is called.
-		 * 
+		 *
 		 * For now it may only be called once, it panics if called more than once.
 		 */
 		void addInitialTasks(std::vector<Task> tasks);
@@ -146,7 +146,7 @@ namespace concurrent::pool {
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
-		 * Attempts to steal work from the pool and shedules it on the 
+		 * Attempts to steal work from the pool and shedules it on the
 		 * current worker. Should be called from the worker's no_tasks_callback.
 		 */
 		void onWorkerNoTasks(worker::WRef current_worker);
@@ -178,7 +178,7 @@ namespace concurrent::pool {
 		 * @return True if the task has been completed by us or was already
 		 * done in the middle of the function.
 		 * Otherwise returns false.
-		 * 
+		 *
 		 * So if returns true we know for sure that the task is done,
 		 * but if returns false then we don't know if the task is done or still in progress.
 		 */
@@ -207,7 +207,7 @@ namespace concurrent::pool {
 
 
 		/**
-		 * @brief Waits until the `no_tasks_callback` has exited on all workers 
+		 * @brief Waits until the `no_tasks_callback` has exited on all workers
 		 * to ensure that the workers are not executing any method of the TaskPool
 		 * object to safely destroy it.
 		 */

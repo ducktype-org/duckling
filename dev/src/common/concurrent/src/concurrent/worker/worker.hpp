@@ -60,14 +60,14 @@ namespace concurrent::worker {
 		 * and has no tasks in its queue.
 		 */
 		[[nodiscard]] bool isFree() const;
-		
+
 		/**
 		 * @brief Checks if the worker has tasks in its queue.
 		 * Used specifically when you need it and when you are sure
 		 * that there are no race conditions on scheduling the tasks.
-		 * 
+		 *
 		 * Used in the TaskPool to prevent the situation when we exit
-		 * the worker's no_tasks_callback without new schedules 
+		 * the worker's no_tasks_callback without new schedules
 		 * and before setting the worker as free we want to schedule something.
 		 */
 		[[nodiscard]] bool internalHasTasks() const;
