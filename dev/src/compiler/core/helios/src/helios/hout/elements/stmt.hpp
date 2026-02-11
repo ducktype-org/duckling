@@ -22,7 +22,7 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		Stmt(ElementOrigin origin): origin(std::move(origin)) {}
+		Stmt(ElementOrigin origin): origin(origin) {}
 
 		ElementOrigin origin;
 
@@ -72,7 +72,7 @@ namespace compiler::helios::code {
 			const tsh::SymbolType<> type,
 			const SymID             helios_symbol
 		):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  initial_value(std::move(initial_value)),
 			  type(type),
 			  helios_symbol(helios_symbol) {}
@@ -89,7 +89,7 @@ namespace compiler::helios::code {
 			tsh::SymbolType<>         type,
 			const SymID               helios_symbol
 		):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  initial_value(std::move(initial_value)),
 			  type(type),
 			  helios_symbol(helios_symbol) {}
@@ -106,7 +106,7 @@ namespace compiler::helios::code {
 		Box<Expr> new_value_expr;
 
 		AssignmentStmt(ElementOrigin origin, Box<Expr> location_expr, Box<Expr> new_value):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  location_expr(std::move(location_expr)),
 			  new_value_expr(std::move(new_value)) {}
 
@@ -120,9 +120,7 @@ namespace compiler::helios::code {
 	struct ReturnStmt final: public Stmt {
 		Box<Expr> value;
 
-		ReturnStmt(ElementOrigin origin, Box<Expr> value):
-			  Stmt(std::move(origin)),
-			  value(std::move(value)) {}
+		ReturnStmt(ElementOrigin origin, Box<Expr> value): Stmt(origin), value(std::move(value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -132,7 +130,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
-		VoidReturnStmt(ElementOrigin origin): Stmt(std::move(origin)) {}
+		VoidReturnStmt(ElementOrigin origin): Stmt(origin) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -144,9 +142,7 @@ namespace compiler::helios::code {
 	struct ExprStmt final: public Stmt {
 		Box<Expr> expr;
 
-		ExprStmt(ElementOrigin origin, Box<Expr> expr):
-			  Stmt(std::move(origin)),
-			  expr(std::move(expr)) {}
+		ExprStmt(ElementOrigin origin, Box<Expr> expr): Stmt(origin), expr(std::move(expr)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -161,13 +157,13 @@ namespace compiler::helios::code {
 		CodeBlock else_body;
 
 		IfStmt(ElementOrigin origin, Box<Expr> condition, CodeBlock then_body, CodeBlock else_body):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
 			  else_body(std::move(else_body)) {}
 
 		IfStmt(ElementOrigin origin, Box<Expr> condition, CodeBlock then_body):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
 			  else_body({}) {}
@@ -184,7 +180,7 @@ namespace compiler::helios::code {
 		CodeBlock body;
 
 		WhileStmt(ElementOrigin origin, Box<Expr> condition, CodeBlock body):
-			  Stmt(std::move(origin)),
+			  Stmt(origin),
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 

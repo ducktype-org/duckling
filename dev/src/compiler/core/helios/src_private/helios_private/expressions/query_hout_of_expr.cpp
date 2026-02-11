@@ -189,9 +189,7 @@ namespace compiler::helios::code {
 					opt_some_move(value) {
 						auto [operation, coercion] = value;
 						auto coerced               = coercion.coerce(ctx, std::move(expr));
-						return makeBox<UnaryOperatorExpr>(
-							std::move(origin), operation, std::move(coerced)
-						);
+						return makeBox<UnaryOperatorExpr>(origin, operation, std::move(coerced));
 					}
 					opt_none { return {}; }
 				}

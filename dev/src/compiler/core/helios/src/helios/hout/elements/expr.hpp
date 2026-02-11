@@ -39,7 +39,7 @@ namespace compiler::helios::code {
 
 		Expr(tsh::ExpressionType<> expression_type, ElementOrigin origin):
 			  expression_type(expression_type),
-			  origin(std::move(origin)) {}
+			  origin(origin) {}
 
 		virtual ~Expr() = default;
 

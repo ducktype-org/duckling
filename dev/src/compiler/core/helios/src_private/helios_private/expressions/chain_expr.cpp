@@ -111,7 +111,7 @@ namespace compiler::helios::code {
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
 
 		static ChainState ofNamespaceLike(SymID namespace_like_symbol, ElementOrigin origin) {
-			return { namespace_like_symbol, std::move(origin) };
+			return { namespace_like_symbol, origin };
 		}
 
 	private:
@@ -123,7 +123,7 @@ namespace compiler::helios::code {
 
 		ChainState(SymID namespace_like_symbol, ElementOrigin origin):
 			  expr(base::MBox<Expr>{}),
-			  namespace_like_symbol(std::make_pair(namespace_like_symbol, std::move(origin))) {}
+			  namespace_like_symbol(std::make_pair(namespace_like_symbol, origin)) {}
 
 		base::MBox<Expr>                                expr{};
 		base::Optional<std::pair<SymID, ElementOrigin>> namespace_like_symbol{};

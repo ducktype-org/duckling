@@ -90,7 +90,7 @@ namespace compiler::helios {
 		const CRef<HOUTFunctionDeclaration>           other,
 		const std::shared_ptr<const code::CodeBlock>& body
 	):
-		  origin(std::move(origin)),
+		  origin(origin),
 		  declaration(other),
 		  body(body) {}
 
