@@ -267,8 +267,8 @@ namespace concurrent {
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type   = std::ptrdiff_t;
 			using value_type        = ValueT;
-			using pointer           = ValueT*;
-			using reference         = ValueT&;
+			using pointer           = value_type*;
+			using reference         = value_type&;
 
 			/**
 			 * Constructs an iterator starting at the given shard.
@@ -288,6 +288,13 @@ namespace concurrent {
 					advanceToValid();
 				}
 			}
+
+			LockedIterator() {
+				// todo
+
+			}
+			LockedIterator(const LockedIterator&)            = default;
+			LockedIterator& operator=(const LockedIterator&) = default;
 
 			reference operator*() const { return *inner; }
 
@@ -317,6 +324,11 @@ namespace concurrent {
 
 		using Iterator      = LockedIterator<KeyValuePair>;
 		using ConstIterator = LockedIterator<const KeyValuePair>;
+
+
+		static_assert(std::forward_iterator<Iterator>, "Iterator must be a forward iterator");
+		static_assert(std::forward_iterator<ConstIterator>, "ConstIterator must be a forward iterator");
+
 
 		/**
 		 * Returns an iterator-pair spanning all elements across every shard.
