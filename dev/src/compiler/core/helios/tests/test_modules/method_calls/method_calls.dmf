@@ -1,0 +1,43 @@
+class ExampleClass {
+    exampleField: i64 = 0;
+
+    fun getField() -> i64 = {
+        return exampleField;
+    }
+
+    fun setField(field:i64 = 0) = {
+        exampleField = field;
+    }
+}
+
+# class ComplexClass {
+#     member: ExampleClass = ExampleClass();
+# 
+#     fun getMember() -> ExampleClass = {
+#         return member;
+#     }
+# }
+
+fun main() -> i64 = {
+    var obj1 = ExampleClass();
+    var obj2 = ExampleClass(1);
+
+    var v1 = obj1.exampleField;
+    var v2 = obj2.getField();
+
+    obj1.setField(2);
+    obj2.setField(3);
+
+    var v2 = obj1.getField();
+    var v3 = obj2.exampleField;
+
+    return 0;
+
+    # var obj2 = ComplexClass();
+    # obj2.getMember().setField(6);
+    # var number = obj2.getMember().exampleField;
+
+    # var foo = obj1.exampleField;
+
+    # return 0;
+}

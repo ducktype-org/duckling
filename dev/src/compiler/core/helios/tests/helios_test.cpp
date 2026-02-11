@@ -79,6 +79,7 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
@@ -1611,6 +1612,15 @@ private:
 			    );
 			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
+	}
+	void testMethodCalls() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/method_calls")));
+
+		auto& hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			std::cout << hout.debugPrint(ctx);
+		});
 	}
 
 	void testMangler() {
