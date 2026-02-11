@@ -12,6 +12,7 @@ namespace compiler::helios {
 		Box<code::Expr> handleReferenceKindCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
+			auto origin    = expr->origin.generatedFrom();
 			auto from_kind = expr->expression_type.getSymbolType().getRefKind();
 			auto to_kind   = to.getRefKind();
 
@@ -24,25 +25,25 @@ namespace compiler::helios {
 					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
 				else if (to_kind == tsh::ReferenceKind::Box) {
 					// var x: box T = T(); -> Implicit box creation.
-					return makeBox<code::BoxOfExpr>(ctx, std::move(expr));
+					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(expr));
 				}
 			} else if (from_kind == tsh::ReferenceKind::Ref) {
 				// --- From Reference ---
 				if (to_kind == tsh::ReferenceKind::Direct) {
 					// var x: T = ref_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, std::move(expr));
+					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 				} else if (to_kind == tsh::ReferenceKind::Box) {
 					// var x: box T = ref_T; -> Creating a box from a ref, requires to perform a
 					// copy of the inner ref value. Since we can't just take ownership from a
 					// reference, thus we first dereference the rhs.
-					auto dereferenced = makeBox<code::DerefExpr>(ctx, std::move(expr));
-					return makeBox<code::BoxOfExpr>(ctx, std::move(dereferenced));
+					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
+					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(dereferenced));
 				}
 			} else if (from_kind == tsh::ReferenceKind::Box) {
 				// --- From Box ---
 				if (to_kind == tsh::ReferenceKind::Direct)
 					// var x: T = box_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, std::move(expr));
+					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 				else if (to_kind == tsh::ReferenceKind::Ref)
 					// Should be explicit: var x: ref T = &box_T;
 					CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
@@ -83,15 +84,19 @@ namespace compiler::helios {
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion
-			return makeBox<code::CastExpr>(ctx, std::move(current_expr), to);
+			return makeBox<code::CastExpr>(
+				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
+			);
 		} else if (is_source_numeric and is_target_bool) {
 			// Numeric zero-check to bool
 			auto comparison = makeBox<code::BinaryOperatorExpr>(
 				ctx,
+				current_expr->origin.generatedFrom(),
 				code::BuiltinBinary::IntegerNeq,
 				std::move(current_expr),
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
+					code::generatedOrigin(),
 					numeric_value::NumericValue::createOfType(
 						current_expr->expression_type.getSymbolType()
 					)
@@ -104,7 +109,9 @@ namespace compiler::helios {
 		            or source_type.getKind() == tsh::Kind::Tuple)
 		           and to.getType().getKind() == tsh::Kind::Meta) {
 			// Lift value to type
-			return makeBox<code::LiftToTypeExpr>(ctx, std::move(current_expr));
+			return makeBox<code::LiftToTypeExpr>(
+				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
+			);
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
