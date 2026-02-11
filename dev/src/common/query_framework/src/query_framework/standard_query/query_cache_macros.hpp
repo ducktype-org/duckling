@@ -33,7 +33,7 @@
  * @note Should not be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
-	static inline base::HashMap<KHash, query::CacheEntry<PResult>> cache;               \
+	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;      \
 	static auto load(KHash key_hash) -> LoadResult {                                    \
 		if (const auto& value = cache.atMaybe(key_hash)) {                              \
 			return QResWithACD{ QResult((*value)->data), (*value)->acd };               \
@@ -76,7 +76,7 @@
  * it cannot see private constructors.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK                 \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;            \
+	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;         \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
 		if (auto value = cache.atMaybe(key_hash)) {                                        \
 			return QResWithACD{ QResult(CRef<PResult>(&(*value)->data)), (*value)->acd };  \
@@ -127,7 +127,7 @@
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls provided lambda.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(lambda)                                               \
-	static inline base::StableHashMap<KHash, query::CacheEntry<PResult>> cache;                    \
+	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;                 \
 	static auto load(KHash key_hash) -> LoadResult {                                               \
 		static constexpr auto construct_lambda = lambda;                                           \
                                                                                                    \

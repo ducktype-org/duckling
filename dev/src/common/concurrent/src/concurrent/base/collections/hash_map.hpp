@@ -154,6 +154,11 @@ namespace concurrent {
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
+		[[nodiscard]]
+		auto at(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+			return atMaybe(key).value();
+		}
+
 		/**
 		 * Atomically updates the value associated with the given key.
 		 */
@@ -175,6 +180,23 @@ namespace concurrent {
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].erase(key);
+		}
+
+		/**
+		 * Retrieves all key-value pairs from the map.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
+			std::vector<CRef<KeyValuePair>> result;
+
+			for (u64 i = 0; i < SHARD_COUNT; i++) {
+				WithShardLock lock(*this, i);
+				for (const auto& pair: shards[i]) {
+					result.emplace_back(&pair);
+				}
+			}
+
+			return result;
 		}
 
 	private:
