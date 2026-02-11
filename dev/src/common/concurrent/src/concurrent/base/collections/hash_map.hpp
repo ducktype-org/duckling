@@ -388,12 +388,10 @@ namespace concurrent {
 		[[nodiscard]]
 		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
 			std::vector<CRef<KeyValuePair>> result;
-
-			for (u64 i = 0; i < SHARD_COUNT; i++) {
-				WithShardLock lock(*this, i);
-				for (const auto& pair: shards[i]) result.emplace_back(&pair);
-			}
-
+			result.reserve(size());
+			std::transform(begin(), end(), std::back_inserter(result), [](const auto& pair) {
+				return &pair;
+			});
 			return result;
 		}
 
