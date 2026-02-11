@@ -169,9 +169,7 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	});
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(
-	base::StrID artifact_name
-) {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::StrID artifact_name) {
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
@@ -188,8 +186,7 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(
 	return fileArtifactAt(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(
-	base::StrID artifact_name
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return *artifact;
@@ -209,17 +206,14 @@ base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollectio
 	return file_artifacts.atMaybe(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(
-	base::StrID artifact_name
-) {
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(base::StrID artifact_name) {
 	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
 	return blobArtifactAt(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(
-	base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return *artifact;

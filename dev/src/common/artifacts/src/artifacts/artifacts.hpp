@@ -42,12 +42,13 @@ namespace artifacts {
 	/**
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
-	 * 
+	 *
 	 * @note This type is intentially simple and copyable, think of it as a File-ID.
 	 *
-	 * \parallel There is at the moment no synchronization on file access. During compilation/lowering/backends files can be written to disk. Processed files
-	 * and backend outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same
-	 * module/package can collide on paths. See:
+	 * \parallel There is at the moment no synchronization on file access. During
+	 * compilation/lowering/backends files can be written to disk. Processed files and backend
+	 * outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same module/package
+	 * can collide on paths. See:
 	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp
 	 *  - \ref
 	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_llvm.cpp
@@ -70,9 +71,9 @@ namespace artifacts {
 	 *
 	 * @note This type is intentially simple and copyable, think of it as a Blob-ID.
 	 *
-	 * @note Methods call on this object are thread safe, but there is no synchronization beyond that.
-	 * If threads are writing to the blob, while someone is reading content by using the view from
-	 * `getDataView`, it will result in a race condition.
+	 * @note Methods call on this object are thread safe, but there is no synchronization beyond
+	 * that. If threads are writing to the blob, while someone is reading content by using the view
+	 * from `getDataView`, it will result in a race condition.
 	 */
 	struct BlobArtifact final {
 		const Ref<ArtifactCollection> parent;
