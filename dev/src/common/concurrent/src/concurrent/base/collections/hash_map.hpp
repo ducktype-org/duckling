@@ -289,10 +289,7 @@ namespace concurrent {
 				}
 			}
 
-			LockedIterator() {
-				// todo
-
-			}
+			LockedIterator() noexcept: shards_ptr(nullptr), shard_index(SHARD_COUNT) {}
 			LockedIterator(const LockedIterator&)            = default;
 			LockedIterator& operator=(const LockedIterator&) = default;
 
