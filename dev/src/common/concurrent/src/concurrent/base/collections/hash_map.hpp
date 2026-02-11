@@ -220,7 +220,7 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		u64 size() const noexcept {
-			return length.load(std::memory_order_relaxed);
+			return length.load(std::memory_order_seq_cst);
 		}
 
 		/**

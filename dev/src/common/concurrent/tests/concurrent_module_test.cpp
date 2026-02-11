@@ -2,6 +2,7 @@
 
 #include <tester/tester.hpp>
 
+#include <algorithm>
 #include <random>
 
 template<usize Size>
@@ -55,6 +56,11 @@ public:
 		TESTER_ADD_TEST(multiThreadedEraseTest<1>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<2>);
 		TESTER_ADD_TEST(multiThreadedEraseTest<4>);
+
+		TESTER_ADD_TEST(sizeTrackingTest);
+		TESTER_ADD_TEST(iteratorTest);
+		TESTER_ADD_TEST(constIteratorTest);
+		TESTER_ADD_TEST(multiThreadedSizeTest);
 	}
 
 private:
@@ -304,6 +310,178 @@ private:
 		);
 
 		ASSERT_TRUE(ELEMENTS_COUNT - erase_count == element_count_after_erase);
+	}
+
+	/**
+	 * Tests that size() correctly tracks insertions and erasures in a single thread.
+	 */
+	void sizeTrackingTest() {
+		concurrent::ConHashMap<int, int> map;
+
+		ASSERT_EQUAL(map.size(), 0ULL);
+
+		map.put(1, 10);
+		map.put(2, 20);
+		map.put(3, 30);
+		ASSERT_EQUAL(map.size(), 3ULL);
+
+		// maybePut on existing key should not change size
+		map.maybePut(2, 999);
+		ASSERT_EQUAL(map.size(), 3ULL);
+
+		// maybePut on new key should increment size
+		map.maybePut(4, 40);
+		ASSERT_EQUAL(map.size(), 4ULL);
+
+		// maybePutAndUpdate on existing key should not change size
+		map.maybePutAndUpdate(1, 0, [](int& v) { v += 1; });
+		ASSERT_EQUAL(map.size(), 4ULL);
+
+		// maybePutAndUpdate on new key should increment size
+		map.maybePutAndUpdate(5, 50, [](int& v) { v += 1; });
+		ASSERT_EQUAL(map.size(), 5ULL);
+
+		// erase existing key should decrement size
+		map.erase(3);
+		ASSERT_EQUAL(map.size(), 4ULL);
+
+		// erase non-existing key should not change size
+		map.erase(3);
+		ASSERT_EQUAL(map.size(), 4ULL);
+
+		map.erase(1);
+		map.erase(2);
+		map.erase(4);
+		map.erase(5);
+		ASSERT_EQUAL(map.size(), 0ULL);
+	}
+
+	/**
+	 * Tests that 3 threads can concurrently iterate using mutable iterators
+	 * while a 4th thread attempts to put() into the map.
+	 * The put() calls will block on the spinlock until the iterators release all shards.
+	 */
+	void iteratorTest() {
+		concurrent::ConHashMap<int, int> map;
+
+		constexpr int N         = 200;
+		constexpr int EXTRA_KEY = N + 1000;  // keys that won't collide with existing ones
+
+		for (int i = 0; i < N; i++) map.put(i, i * 10);
+
+		std::array<std::vector<int>, 3> per_thread_keys;
+		std::atomic<bool>               writer_done = false;
+
+		{
+			std::jthread t0([&map, &per_thread_keys]() {
+				for (auto it = map.begin(); it != map.end(); ++it)
+					per_thread_keys[0].push_back(it->key);
+			});
+			std::jthread t1([&map, &per_thread_keys]() {
+				for (auto it = map.begin(); it != map.end(); ++it)
+					per_thread_keys[1].push_back(it->key);
+			});
+			std::jthread t2([&map, &per_thread_keys]() {
+				for (auto it = map.begin(); it != map.end(); ++it)
+					per_thread_keys[2].push_back(it->key);
+			});
+			// Writer thread: tries to put while iterators hold all shard locks
+			std::jthread writer([&map, &writer_done]() {
+				for (int i = 0; i < 50; i++) map.put(EXTRA_KEY + i, i);
+				writer_done.store(true);
+			});
+		}
+
+		// Writer must have completed (was blocked, then released)
+		ASSERT_TRUE(writer_done.load());
+
+		// All extra keys should be present
+		for (int i = 0; i < 50; i++) {
+			ASSERT_TRUE(map.contains(EXTRA_KEY + i));
+			ASSERT_EQUAL(map.getCopy(EXTRA_KEY + i), i);
+		}
+
+		// Each iterator should have seen at least the original N elements
+		for (auto& keys: per_thread_keys) {
+			std::ranges::sort(keys);
+			// The iterator might also see some of the writer's keys (if the writer
+			// sneaked in between iterations), but it must see all original N keys.
+			ASSERT_TRUE(keys.size() >= static_cast<usize>(N));
+			// Verify all original keys [0, N) are present
+			std::vector<int> original;
+			for (int k: keys)
+				if (k < N) original.push_back(k);
+			ASSERT_EQUAL(original.size(), static_cast<usize>(N));
+			for (int i = 0; i < N; i++) ASSERT_EQUAL(original[static_cast<usize>(i)], i);
+		}
+	}
+
+	/**
+	 * Tests that 3 threads can concurrently iterate using const iterators without crashing.
+	 */
+	void constIteratorTest() {
+		concurrent::ConHashMap<int, int> map;
+
+		constexpr int N = 200;
+		for (int i = 0; i < N; i++) map.put(i, i * 10);
+
+		const auto& cmap = map;
+
+		std::array<std::atomic<int>, 3> sums = {};
+
+		{
+			std::jthread t0([&cmap, &sums]() {
+				int s = 0;
+				for (auto it = cmap.begin(); it != cmap.end(); ++it) s += it->value;
+				sums[0].store(s);
+			});
+			std::jthread t1([&cmap, &sums]() {
+				int s = 0;
+				for (auto it = cmap.begin(); it != cmap.end(); ++it) s += it->value;
+				sums[1].store(s);
+			});
+			std::jthread t2([&cmap, &sums]() {
+				int s = 0;
+				for (auto it = cmap.begin(); it != cmap.end(); ++it) s += it->value;
+				sums[2].store(s);
+			});
+		}
+
+		int expected = 0;
+		for (int i = 0; i < N; i++) expected += i * 10;
+
+		for (auto& s: sums) ASSERT_EQUAL(s.load(), expected);
+	}
+
+	/**
+	 * Tests that size() remains consistent under concurrent put + erase.
+	 */
+	void multiThreadedSizeTest() {
+		constexpr u64 ELEMENTS = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// Phase 1: concurrent puts on disjoint keys from 2 threads
+		{
+			std::jthread t1([&map]() {
+				for (u64 i = 0; i < ELEMENTS; i++) map.put(i * 2, i);
+			});
+			std::jthread t2([&map]() {
+				for (u64 i = 0; i < ELEMENTS; i++) map.put(i * 2 + 1, i);
+			});
+		}
+		ASSERT_EQUAL(map.size(), ELEMENTS * 2);
+
+		// Phase 2: concurrent erases on disjoint keys from 2 threads
+		{
+			std::jthread t1([&map]() {
+				for (u64 i = 0; i < ELEMENTS; i++) map.erase(i * 2);
+			});
+			std::jthread t2([&map]() {
+				for (u64 i = 0; i < ELEMENTS; i++) map.erase(i * 2 + 1);
+			});
+		}
+		ASSERT_EQUAL(map.size(), 0ULL);
 	}
 };
 
