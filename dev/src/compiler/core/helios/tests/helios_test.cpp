@@ -78,6 +78,7 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -1683,6 +1684,68 @@ private:
 				                            .getType()
 				                            .as<compiler::tsh::StaticArrayAbstractType>();
 				ASSERT_EQUAL(static_arr_inner.getSize(), 2);
+			}
+		});
+	}
+
+	void testDynamicArrays() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/dynamic_arrays")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			using namespace compiler::helios::code;
+			using namespace compiler::tsh;
+
+			{
+				// var l: List[i64];
+				auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(0));
+				ASSERT_EQUAL(compiler::helios::name(var_decl.helios_symbol), "l");
+
+				auto type = var_decl.type.getType();
+				ASSERT_EQUAL(type.getKind(), Kind::DynamicArray);
+
+				auto dyn_array_type = type.as<DynamicArrayAbstractType>();
+				auto i64_type       = ctx.query<QueryIntegralType>({ 64, Signed });
+				ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
+
+				auto* default_val
+					= dynamic_cast<const DefaultValueExpr*>(var_decl.initial_value->get());
+				ASSERT_TRUE(default_val != nullptr);
+			}
+			{
+				// l += 1;
+				auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
+				auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
+				ASSERT_TRUE(push_expr != nullptr);
+			}
+			{
+				// l -= 1;
+				auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
+				auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
+				ASSERT_TRUE(pop_expr != nullptr);
+			}
+			{
+				// let l_len = len l;
+				auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
+				auto* len_expr
+					= dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value->get());
+				ASSERT_TRUE(len_expr != nullptr);
+				ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+			}
+			{
+				// l[0] = 42;
+				auto& assign_stmt = dynamic_cast<const AssignmentStmt&>(*statements.at(4));
+				auto* index_expr  = dynamic_cast<const IndexExpr*>(assign_stmt.location_expr.get());
+				ASSERT_TRUE(index_expr != nullptr);
+			}
+			{
+				// let x = l[0];
+				auto& var_decl   = dynamic_cast<const VariableStmt&>(*statements.at(5));
+				auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value->get());
+				ASSERT_TRUE(index_expr != nullptr);
 			}
 		});
 	}
