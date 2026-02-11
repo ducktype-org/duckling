@@ -1,10 +1,10 @@
 #pragma once
 
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
+
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
-
-#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
@@ -185,7 +185,7 @@ namespace artifacts {
 		}
 
 		/////////////////////////// PRIVATE /////////////////////////
-		
+
 	private:
 		/////////////////// NO LOCK INTERNALL API ///////////////////
 
@@ -200,7 +200,8 @@ namespace artifacts {
 
 		Ref<ArtifactCollection> subCollectionAtNoLock(base::StrID collection_name);
 
-		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybeNoLock(base::StrID collection_name);
+		base::Optional<Ref<ArtifactCollection>> subCollectionAtMaybeNoLock(base::StrID collection_name
+		);
 
 		FileArtifact fileArtifactNewNoLock(base::StrID artifact_name);
 
@@ -247,12 +248,12 @@ namespace artifacts {
 		 */
 		struct WithLock final {
 			const ArtifactCollection& collection;
-			WithLock(const ArtifactCollection& collection) : collection(collection) {
+
+			WithLock(const ArtifactCollection& collection): collection(collection) {
 				collection.lock.lock();
 			}
-			~WithLock() {
-				collection.lock.unlock();
-			}
+
+			~WithLock() { collection.lock.unlock(); }
 		};
 
 		/**

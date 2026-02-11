@@ -14,8 +14,6 @@
 
 constexpr char ARTC_DELIM = ';';
 
-
-
 void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
 	parent->setBlobData(*this, ptr, n_bytes);
 }
@@ -23,8 +21,6 @@ void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
 base::RawView artifacts::BlobArtifact::getDataView() const {
 	return parent->getBlobDataView(*this);
 }
-
-
 
 //////////// COLLECTION EXTERNALLY VISIBLE METHODS ////////////
 
@@ -36,28 +32,35 @@ artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	loadData();
 }
 
-
 void artifacts::ArtifactCollection::flush() {
 	WithLock lock(*this);
 	this->flushNoLock();
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(base::StrID collection_name) {
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(
+	base::StrID collection_name
+) {
 	WithLock lock(*this);
 	return subCollectionNewNoLock(collection_name);
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(base::StrID collection_name) {
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
+	base::StrID collection_name
+) {
 	WithLock lock(*this);
 	return subCollectionAtOrNewNoLock(collection_name);
 }
 
-Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(base::StrID collection_name) {
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
+	base::StrID collection_name
+) {
 	WithLock lock(*this);
 	return subCollectionAtNoLock(collection_name);
 }
 
-base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(base::StrID collection_name) {
+base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
+	base::StrID collection_name
+) {
 	WithLock lock(*this);
 	return subCollectionAtMaybeNoLock(collection_name);
 }
@@ -67,17 +70,21 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(base::Str
 	return fileArtifactNewNoLock(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name) {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(base::StrID artifact_name
+) {
 	WithLock lock(*this);
 	return fileArtifactAtOrNewNoLock(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name) const {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
+) const {
 	WithLock lock(*this);
 	return fileArtifactAtNoLock(artifact_name);
 }
 
-base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(base::StrID artifact_name) const {
+base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+	base::StrID artifact_name
+) const {
 	WithLock lock(*this);
 	return fileArtifactAtMaybeNoLock(artifact_name);
 }
@@ -87,22 +94,28 @@ artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(base::Str
 	return blobArtifactNewNoLock(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name) {
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(base::StrID artifact_name
+) {
 	WithLock lock(*this);
 	return blobArtifactAtOrNewNoLock(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name) const {
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
+) const {
 	WithLock lock(*this);
 	return blobArtifactAtNoLock(artifact_name);
 }
 
-base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(base::StrID artifact_name) const {
+base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollection::blobArtifactAtMaybe(
+	base::StrID artifact_name
+) const {
 	WithLock lock(*this);
 	return blobArtifactAtMaybeNoLock(artifact_name);
 }
 
-void artifacts::ArtifactCollection::setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes) {
+void artifacts::ArtifactCollection::setBlobData(
+	const BlobArtifact& blob, const byte* ptr, usize n_bytes
+) {
 	WithLock lock(*this);
 	setBlobDataNoLock(blob, ptr, n_bytes);
 }
@@ -111,10 +124,6 @@ base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact&
 	WithLock lock(*this);
 	return getBlobDataViewNoLock(blob);
 }
-
-
-
- 
 
 /////////////////////// INTERNAL METHODS //////////////////////
 
@@ -215,7 +224,6 @@ fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 }
 
 void artifacts::ArtifactCollection::flushNoLock() {
-
 	if (PARENT)
 		PARENT.value()->flush();
 	else
@@ -260,7 +268,8 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	});
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(base::StrID artifact_name) {
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(base::StrID artifact_name
+) {
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	auto file_path = PATH / artifact_name.strView();
 
@@ -277,7 +286,8 @@ artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNewNoLock(bas
 	return fileArtifactAtNoLock(artifact_name);
 }
 
-artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNewNoLock(base::StrID artifact_name
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNewNoLock(
+	base::StrID artifact_name
 ) {
 	match_optional(fileArtifactAtMaybeNoLock(artifact_name)) {
 		opt_some(artifact) return *artifact;
@@ -297,14 +307,16 @@ base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollectio
 	return file_artifacts.atMaybe(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(base::StrID artifact_name) {
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(base::StrID artifact_name
+) {
 	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
 	return blobArtifactAtNoLock(artifact_name);
 }
 
-artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNewNoLock(
+	base::StrID artifact_name
 ) {
 	match_optional(blobArtifactAtMaybeNoLock(artifact_name)) {
 		opt_some(artifact) return *artifact;
