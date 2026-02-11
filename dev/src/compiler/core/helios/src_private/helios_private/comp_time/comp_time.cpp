@@ -95,8 +95,7 @@ namespace compiler::helios {
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at least "
-									"partially "
-									"compiler generated.",
+									"partially compiler generated.",
 									"The failure happened for the symbol `",
 									name(expr.symbol),
 									"`."

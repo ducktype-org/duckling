@@ -242,7 +242,7 @@ namespace compiler::helios::code {
 	 * @param ctx Query context
 	 * @param fun The function symbol being called
 	 * @param callee_expr The PST expression representing the callee being invoked.
-	 * @param call_parentheris_expr The PST call expression representing the function call. (the
+	 * @param call_parentheses_expr The PST call expression representing the function call. (the
 	 * `(...)` part and not the callee)
 	 * @param positional_arguments Vector of positional argument of the call
 	 * @param named_arguments Vector of named argument expressions (name, expression) of the call
@@ -256,7 +256,7 @@ namespace compiler::helios::code {
 		query::Context&                                  ctx,
 		SymID                                            fun,
 		pst::Access<pst::ExprElement>                    callee_expr,
-		pst::Access<pst::expr::Call>                     call_parentheris_expr,
+		pst::Access<pst::expr::Call>                     call_parentheses_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
 		const std::vector<ArgumentOrigin>&               argument_origin,
@@ -294,7 +294,7 @@ namespace compiler::helios::code {
 		}
 		return makeBox<CallExpr>(
 			ctx,
-			multiplePstOrigin({ callee_expr, call_parentheris_expr }),
+			multiplePstOrigin({ callee_expr, call_parentheses_expr }),
 			makeBox<IdentifierExpr>(ctx, pstOrigin(callee_expr), fun),
 			std::move(final_arguments)
 		);

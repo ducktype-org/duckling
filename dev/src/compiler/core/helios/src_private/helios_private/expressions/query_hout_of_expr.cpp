@@ -422,8 +422,8 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				throw base::NotYetImplemented(
-					"Suffix operators are not yet implemented in HOUT, since there are any for "
-					"now"
+					"Suffix operators are not yet implemented in HOUT, "
+					"since they don't exist yet"
 				);
 			}
 

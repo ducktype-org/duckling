@@ -1551,7 +1551,7 @@ private:
 			};
 
 			auto all_expr_holders
-				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
+				= pst::viewAllSubTreeElementsFilter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"
@@ -2404,6 +2404,10 @@ private:
 		});
 	}
 
+	/**
+	 * Test the origin calculation for elements.
+	 * The origin calculation is not trivial for expressions and generated elements.
+	 */
 	void testHoutElementsOrigin() {
 		auto [module, _] = getModule(fs::File(path("test_modules/helios_pst_origin_tests")));
 
@@ -2419,7 +2423,7 @@ private:
 		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
 		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
 		auto all_variables
-			= pst::viewAllSubTreeElementsFillter<pst::Variable>(pst->getRootElement());
+			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst->getRootElement());
 
 		auto get_pst_variable_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
@@ -2428,7 +2432,12 @@ private:
 			return {};
 		};
 
-		auto check_same_origin = [&](base::StrID name, bool is_generated) {
+		/**
+		 * Check if the source position of the origin of initial value expression
+		 * calculated from HOUT is the same as the source position of the whole PST init expression.
+		 * This is not trivial for AccessChain and for generated elements. (derefs, casts)
+		 */
+		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
 			auto glob_opt = get_global_by_name(name);
 			auto var_opt  = get_pst_variable_by_name(name);
 			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
@@ -2469,14 +2478,14 @@ private:
 				"Generated origin does not match for variable "
 			);
 		};
-		check_same_origin(base::StrID("var1"), false);
-		check_same_origin(base::StrID("var2"), false);
-		check_same_origin(base::StrID("var3"), false);
-		check_same_origin(base::StrID("var4"), false);
-		check_same_origin(base::StrID("var5"), false);
-		check_same_origin(base::StrID("var6"), false);
-		check_same_origin(base::StrID("var7_generated"), true);
-		check_same_origin(base::StrID("var8_generated"), true);
+		check_var_init_expr_origin(base::StrID("var1"), false);
+		check_var_init_expr_origin(base::StrID("var2"), false);
+		check_var_init_expr_origin(base::StrID("var3"), false);
+		check_var_init_expr_origin(base::StrID("var4"), false);
+		check_var_init_expr_origin(base::StrID("var5"), false);
+		check_var_init_expr_origin(base::StrID("var6"), false);
+		check_var_init_expr_origin(base::StrID("var7_generated"), true);
+		check_var_init_expr_origin(base::StrID("var8_generated"), true);
 
 		auto get_hout_function_by_name
 			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
@@ -2484,14 +2493,18 @@ private:
 				if (fun->declaration->original_name == name) return fun;
 			return {};
 		};
-		auto all_pst_functions
-			= pst::viewAllSubTreeElementsFillter<pst::Fun>(pst->getRootElement());
+		auto all_pst_functions = pst::viewAllSubTreeElementsFilter<pst::Fun>(pst->getRootElement());
 		auto get_pst_function_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
 			for (const auto& fun: all_pst_functions)
 				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
 			return {};
 		};
+
+		/**
+		 * Check if the source position of the origin of function body calculated from HOUT
+		 * is the same as the source position of the whole PST function of the same name.
+		 */
 		auto check_function_origin = [&](base::StrID name) {
 			auto fun_opt     = get_hout_function_by_name(name);
 			auto pst_fun_opt = get_pst_function_by_name(name);
