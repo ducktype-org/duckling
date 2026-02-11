@@ -6,6 +6,7 @@
 #include "queries.hpp"
 #include "source_file.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
@@ -23,7 +24,7 @@
 
 namespace {
 	/**
-	 * @brief Map storting FileID of each parsed PST (by root element ID)
+	 * @brief Map storing FileID of each parsed PST (by root element ID)
 	 * @note: as of right now it is needed only for QueryPrimaryCodeScopeFor for acquiring
 	 * the root scope via extendQueryModuleIDOfPST.
 	 * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put
@@ -32,7 +33,8 @@ namespace {
 	 * \parallel A map from PST root element IDs back to FileIDs, stored at module-tree level. Used
 	 * during PST construction/association; must be safe if PST is built concurrently.
 	 */
-	inline static base::Map<pst::PstID, compiler::frontend::FileID> root_element_file_back_map;
+	inline static concurrent::ConHashMap<pst::PstID, compiler::frontend::FileID>
+		root_element_file_back_map;
 
 	/**
 	 * StableHashMap that stores all ModuleTree instances.
@@ -508,12 +510,8 @@ namespace compiler::frontend {
 		module->updateModuleHash();
 
 		// Remove entry from root_element_file_back_map if exists
-		auto root_id = file->getPST()->getRootElement().illegalAccess();
-		if (root_id.has_value()) {
-			auto iter = root_element_file_back_map.find(root_id.value()->getID());
-			if (iter != root_element_file_back_map.end() && iter->second == file->getFileID())
-				root_element_file_back_map.erase(iter);
-		}
+		if (auto root_id = file->getPST()->getRootElement().illegalAccess(); root_id.has_value())
+			root_element_file_back_map.erase(root_id.value()->getID());
 
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(file);
@@ -935,8 +933,16 @@ namespace compiler::frontend {
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					key
 				);
-			auto pst = file->getPST();
-			root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
+			auto pst              = file->getPST();
+			auto root_id          = pst->getRootElement().unlock(ctx)->getID();
+			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, key);
+			if (!maybe_put_result) {
+				// If the key already exists, assert that it maps to the same value
+				CORE_ASSERT(
+					root_element_file_back_map.getCopy(root_id) == key,
+					"Root element ID already exists in back map with a different file ID"
+				);
+			}
 
 			// @todo modify it, when making proper helios errors
 			if (pst->getLogger()->bad()) {
@@ -966,8 +972,9 @@ namespace compiler::frontend {
 		// get top-level:
 		while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
 
-		// this access depends of global state that might become a problem in incremental compilation:
-		auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
+		// this access depends on the global state that might
+		// become a problem in incremental compilation:
+		auto file_id = root_element_file_back_map.getCopy(element.unlock(ctx)->getID());
 		return getFileRef(file_id)->getModule().unlock(ctx).getID();
 	}
 }

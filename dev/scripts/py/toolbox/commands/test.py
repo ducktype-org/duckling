@@ -44,10 +44,9 @@ from click import command, option, INT
 )
 @verbose()
 @option(
-    "--output-on-failure",
+    "--output-on-failure/--no-output-on-failure",
     help="Output anything outputted by the test program if the test should fail",
-    is_flag=True,
-    default=False,
+    default=True,
 )
 @option(
     "--stop-on-failure",

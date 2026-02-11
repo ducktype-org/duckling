@@ -238,10 +238,25 @@ namespace compiler::helios::code {
 	 * constructs a helios CallExpr. The expressions will be moved from the arguments.
 	 * @p argument_origin define the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
+	 *
+	 * @param ctx Query context
+	 * @param fun The function symbol being called
+	 * @param callee_expr The PST expression representing the callee being invoked.
+	 * @param call_parentheses_expr The PST call expression representing the function call. (the
+	 * `(...)` part and not the callee)
+	 * @param positional_arguments Vector of positional argument of the call
+	 * @param named_arguments Vector of named argument expressions (name, expression) of the call
+	 * @param argument_origin The origin of each argument in the call (e.x. first argument is
+	 * positional, second is named, third is default, etc.)
+	 * @param coercions Optional vector of coercions to apply to each argument
+	 *
+	 * @return Box<CallExpr> representing the function call
 	 */
 	Box<CallExpr> constructCallExpr(
 		query::Context&                                  ctx,
 		SymID                                            fun,
+		pst::Access<pst::ExprElement>                    callee_expr,
+		pst::Access<pst::expr::Call>                     call_parentheses_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
 		const std::vector<ArgumentOrigin>&               argument_origin,
@@ -277,7 +292,12 @@ namespace compiler::helios::code {
 				final_arguments.push_back(std::move(expr));
 			}
 		}
-		return makeBox<CallExpr>(ctx, makeBox<IdentifierExpr>(ctx, fun), std::move(final_arguments));
+		return makeBox<CallExpr>(
+			ctx,
+			multiplePstOrigin({ callee_expr, call_parentheses_expr }),
+			makeBox<IdentifierExpr>(ctx, pstOrigin(callee_expr), fun),
+			std::move(final_arguments)
+		);
 	}
 
 	/**
@@ -430,9 +450,10 @@ namespace compiler::helios::code {
 	}
 
 	query::QResult<Box<CallExpr>> processFunctionCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
-		pst::Access<pst::expr::Call> call_expr
+		query::Context&               ctx,
+		const std::vector<SymID>&     candidates,
+		pst::Access<pst::ExprElement> callee_expr,
+		pst::Access<pst::expr::Call>  call_expr
 	) {
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;
@@ -487,6 +508,8 @@ namespace compiler::helios::code {
 			return constructCallExpr(
 				ctx,
 				exact_match.back().function,
+				callee_expr,
+				call_expr,
 				positional_arguments,
 				named_arguments,
 				exact_match.back().argument_origin,
@@ -505,6 +528,8 @@ namespace compiler::helios::code {
 			return constructCallExpr(
 				ctx,
 				coercion_match.back().function,
+				callee_expr,
+				call_expr,
 				positional_arguments,
 				named_arguments,
 				coercion_match.back().argument_origin,

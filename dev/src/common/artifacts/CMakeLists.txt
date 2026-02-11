@@ -1,6 +1,6 @@
 add_library(Artifacts src_private/artifacts/artifacts.cpp)
 
-make_module(Artifacts USES Base Filesystem Hashing Logger)
+make_module(Artifacts USES Base Filesystem Hashing Logger Concurrent)
 
 add_example(artifacts_example examples/artifacts_example.cpp
 	USES Artifacts)

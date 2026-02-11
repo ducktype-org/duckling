@@ -5,8 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "errors.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -103,28 +101,32 @@ namespace compiler::helios::code {
 		}
 
 		[[nodiscard]] auto getNamespaceLikeSymbol() -> SymID {
-			return namespace_like_symbol.value();
+			return namespace_like_symbol.value().first;
+		}
+
+		[[nodiscard]] auto getNamespaceLikePstOrigin() -> ElementOrigin {
+			return namespace_like_symbol.value().second;
 		}
 
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
 
-		static ChainState ofNamespaceLike(SymID namespace_like_symbol) {
-			return { namespace_like_symbol };
+		static ChainState ofNamespaceLike(SymID namespace_like_symbol, ElementOrigin origin) {
+			return { namespace_like_symbol, origin };
 		}
 
 	private:
-		ChainState(): expr(base::MBox<Expr>{}), namespace_like_symbol(base::Optional<SymID>{}) {}
+		ChainState(): expr(base::MBox<Expr>{}), namespace_like_symbol(std::nullopt) {}
 
 		ChainState(base::Box<Expr> expr):
 			  expr(std::move(expr)),
-			  namespace_like_symbol(base::Optional<SymID>{}) {}
+			  namespace_like_symbol(std::nullopt) {}
 
-		ChainState(SymID namespace_like_symbol):
+		ChainState(SymID namespace_like_symbol, ElementOrigin origin):
 			  expr(base::MBox<Expr>{}),
-			  namespace_like_symbol(namespace_like_symbol) {}
+			  namespace_like_symbol(std::make_pair(namespace_like_symbol, origin)) {}
 
-		base::MBox<Expr>      expr{};
-		base::Optional<SymID> namespace_like_symbol{};
+		base::MBox<Expr>                                expr{};
+		base::Optional<std::pair<SymID, ElementOrigin>> namespace_like_symbol{};
 
 		friend class ChainExprConstruction;
 	};
@@ -176,6 +178,10 @@ namespace compiler::helios::code {
 		 * All chain elements that would be processed.
 		 */
 		std::vector<pst::AccessLocked<pst::ExprElement>> chain_elements{};
+		/**
+		 * The original PST chain expression that is being processed.
+		 */
+		pst::Access<pst::expr::ChainExpr> original_chain_expr;
 
 		/**
 		 * The temporary buffor for the currently built value from left to current place of
@@ -315,7 +321,7 @@ namespace compiler::helios::code {
 			const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto res = processFunctionCall(query_ctx, callees, call_expr);
+			auto res = processFunctionCall(query_ctx, callees, ident, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -350,7 +356,10 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
-						query_ctx, std::move(arg_expr), literal_type_expr->value_type
+						query_ctx,
+						multiplePstOrigin({ keyword, call_expr }),
+						std::move(arg_expr),
+						literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}
@@ -378,7 +387,7 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			return processNamespaceOrValue(sym_list.back());
+			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident));
 		}
 
 		/**
@@ -391,7 +400,8 @@ namespace compiler::helios::code {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
 			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, expr);
 			auto symbol = getIdentifierExprSymID(hout_expr.ref());
-			if (symbol.has_value()) return processNamespaceOrValue(symbol.value());
+			if (symbol.has_value())
+				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr));
 			return ChainState::ofExpr(std::move(hout_expr));
 		}
 
@@ -409,7 +419,10 @@ namespace compiler::helios::code {
 			// @TODO: #982 improve type lookup and provide correct
 			// candidates for processFunctionCall. write tests for this case, when it will be implemented
 
-			auto expr_result = processFunctionCall(query_ctx, /* provide */ {}, call_expr);
+			// This is only a temporary thing for error handling, note the incorrect callee PST
+			// expression.
+			auto expr_result
+				= processFunctionCall(query_ctx, /* provide */ {}, call_expr, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -453,13 +466,22 @@ namespace compiler::helios::code {
 						// Insert a deref if source of field access is not a direct type.
 						if (current_expr->expression_type.getSymbolType().getRefKind()
 						    != tsh::ReferenceKind::Direct) {
-							current_expr = makeBox<DerefExpr>(query_ctx, std::move(current_expr));
+							current_expr = makeBox<DerefExpr>(
+								query_ctx,
+								current_expr->origin.generatedFrom(),
+								std::move(current_expr)
+							);
 						}
-						auto node = makeBox<AccessExpr>(query_ctx, std::move(current_expr), sym);
+						auto node = makeBox<AccessExpr>(
+							query_ctx,
+							current_expr->origin.extended(expr_access),
+							std::move(current_expr),
+							sym
+						);
 						return ChainState::ofExpr(std::move(node));
 					} else if (kind(sym) == SymbolKind::Namespace) {
 						result_sequence.push_back(std::move(current_expr));
-						return ChainState::ofNamespaceLike(sym);
+						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
 						throw base::NotYetImplemented(
 							"Handling of access to method without a call is not implemented yet"
@@ -511,7 +533,9 @@ namespace compiler::helios::code {
 					  );
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			return processNamespaceOrValue(sym_list.back());
+			auto whole_expr_origin
+				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin);
 		}
 
 		/**
@@ -545,7 +569,7 @@ namespace compiler::helios::code {
 			auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-			auto expr_result = processFunctionCall(query_ctx, callees, call_expr);
+			auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 			return ChainState::ofExpr(std::move(expr));
 		}
@@ -556,18 +580,21 @@ namespace compiler::helios::code {
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the
 		 * lookup result of the name.
+		 * @param symbol The symbol found in the lookup.
+		 * @param pst_elem The PST element for which the lookup was performed.
 		 */
-		auto processNamespaceOrValue(const SymID& symbol) -> query::QResult<ChainState> {
+		auto processNamespaceOrValue(const SymID& symbol, ElementOrigin pst_element_origin)
+			-> query::QResult<ChainState> {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
-				return ChainState::ofNamespaceLike(symbol);
+				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
 			case SymbolKind::Const:
 			case SymbolKind::Class: {
-				auto expr = makeBox<IdentifierExpr>(query_ctx, symbol);
+				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
@@ -666,7 +693,8 @@ namespace compiler::helios::code {
 
 	public:
 		ChainExprConstruction(query::Context& ctx, pst::Access<pst::expr::ChainExpr> expr):
-			  query_ctx(ctx) {
+			  query_ctx(ctx),
+			  original_chain_expr(expr) {
 			this->chain_elements.emplace_back(expr->getAtom());
 			auto chain = expr->getChain();
 			std::ranges::copy(chain, std::back_inserter(this->chain_elements));
@@ -721,7 +749,9 @@ namespace compiler::helios::code {
 				result_sequence.push_back(this->current_state.getExpr());
 			if (this->current_state.isNamespaceLike()) {
 				auto namespace_expr = makeBox<IdentifierExpr>(
-					query_ctx, this->current_state.getNamespaceLikeSymbol()
+					query_ctx,
+					this->current_state.getNamespaceLikePstOrigin(),
+					this->current_state.getNamespaceLikeSymbol()
 				);
 				result_sequence.emplace_back(std::move(namespace_expr));
 			}
@@ -737,7 +767,9 @@ namespace compiler::helios::code {
 			if (result_sequence.size() == 1) return std::move(result_sequence[0]);
 
 			// If we have multiple expressions, we need to create a chain expression
-			auto chain_expr = makeBox<SequenceExpr>(query_ctx, std::move(result_sequence));
+			auto chain_expr = makeBox<SequenceExpr>(
+				query_ctx, pstOrigin(original_chain_expr), std::move(result_sequence)
+			);
 			return chain_expr;
 		}
 	};
