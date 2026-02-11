@@ -25,10 +25,9 @@ void runOrTimeout(F func, usize timeout_ms = 5'000) {
 			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
 			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
-			std::cerr << "Possible deadlock detected. Worker thread stack trace:\n";
 			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
@@ -51,11 +50,13 @@ protected:
 		try {
 			runOrTimeout(WorkerManager::get().testPrivateAccessReloadState);
 		} catch (const std::runtime_error& e) {
-			message(base::strConcat(
-				"WorkerManager reload state timed out during fail(). "
-				"Possible deadlock detected. Terminating. Error: ",
-				e.what()
-			));
+			message(
+				base::strConcat(
+					"WorkerManager reload state timed out during fail(). "
+					"Possible deadlock detected. Terminating. Error: ",
+					e.what()
+				)
+			);
 			std::terminate();
 		}
 		tester::TestSuite::fail(err, critical);
