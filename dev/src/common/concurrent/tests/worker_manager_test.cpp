@@ -99,7 +99,7 @@ private:
 						  << task_finished_counter.load(std::memory_order_relaxed)
 						  << ", No task callbacks: "
 						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
-					std::this_thread::yield();
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		});
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
