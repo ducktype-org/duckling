@@ -42,8 +42,10 @@ namespace artifacts {
 	/**
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
+	 * 
+	 * @note This type is intentially simple and copyable, think of it as a File-ID.
 	 *
-	 * \parallel During compilation/lowering/backends files can be written to disk. Processed files
+	 * \parallel There is at the moment no synchronization on file access. During compilation/lowering/backends files can be written to disk. Processed files
 	 * and backend outputs (LLVM IR/ASM/object files, DVM files) in concurrent builds of the same
 	 * module/package can collide on paths. See:
 	 *  - \ref dev/src/compiler/driver/driver/src/driver/operations/generic_operations.cpp
@@ -53,22 +55,28 @@ namespace artifacts {
 	 * dev/src/compiler/driver/driver/src_private/driver_private/backend_operations/compile_dvm.cpp
 	 */
 	struct FileArtifact final {
-		const Ref<ArtifactCollection> PARENT;
-		const base::StrID             NAME;
+		const Ref<ArtifactCollection> parent;
+		const base::StrID             name;
 
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
 		 */
-		const fs::File FILE;
+		const fs::File file;
 	};
 
 	/**
 	 * @brief Represents an artifact, that can be represented as bytes, e.g. result of a query that
 	 * returns an int.
+	 *
+	 * @note This type is intentially simple and copyable, think of it as a Blob-ID.
+	 *
+	 * @note Methods call on this object are thread safe, but there is no synchronization beyond that.
+	 * If threads are writing to the blob, while someone is reading content by using the view from
+	 * `getDataView`, it will result in a race condition.
 	 */
 	struct BlobArtifact final {
-		const Ref<ArtifactCollection> PARENT;
-		const base::StrID             NAME;
+		const Ref<ArtifactCollection> parent;
+		const base::StrID             name;
 
 		/**
 		 * @brief Sets blob's data.
@@ -137,22 +145,22 @@ namespace artifacts {
 
 		/////////////////////////// FILE ARTIFACTS /////////////////////////
 
-		const FileArtifact& fileArtifactNew(base::StrID artifact_name);
+		FileArtifact fileArtifactNew(base::StrID artifact_name);
 
-		const FileArtifact& fileArtifactAtOrNew(base::StrID artifact_name);
+		FileArtifact fileArtifactAtOrNew(base::StrID artifact_name);
 
-		const FileArtifact& fileArtifactAt(base::StrID artifact_name) const;
+		FileArtifact fileArtifactAt(base::StrID artifact_name) const;
 
 		base::Optional<base::CRef<FileArtifact>> fileArtifactAtMaybe(base::StrID artifact_name
 		) const;
 
 		/////////////////////////// BLOB ARTIFACTS /////////////////////////
 
-		const BlobArtifact& blobArtifactNew(base::StrID artifact_name);
+		BlobArtifact blobArtifactNew(base::StrID artifact_name);
 
-		const BlobArtifact& blobArtifactAtOrNew(base::StrID artifact_name);
+		BlobArtifact blobArtifactAtOrNew(base::StrID artifact_name);
 
-		const BlobArtifact& blobArtifactAt(base::StrID artifact_name) const;
+		BlobArtifact blobArtifactAt(base::StrID artifact_name) const;
 
 		base::Optional<base::CRef<BlobArtifact>> blobArtifactAtMaybe(base::StrID artifact_name
 		) const;

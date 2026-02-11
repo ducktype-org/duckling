@@ -15,11 +15,11 @@
 constexpr char ARTC_DELIM = ';';
 
 void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
-	PARENT->setBlobData(*this, ptr, n_bytes);
+	parent->setBlobData(*this, ptr, n_bytes);
 }
 
 base::RawView artifacts::BlobArtifact::getDataView() const {
-	return PARENT->getBlobDataView(*this);
+	return parent->getBlobDataView(*this);
 }
 
 artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
@@ -169,7 +169,7 @@ base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection
 	});
 }
 
-const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactNew(
 	base::StrID artifact_name
 ) {
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
@@ -180,15 +180,15 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
 	file_artifacts.put(
 		artifact_name,
 		FileArtifact{
-			.PARENT = this,
-			.NAME   = artifact_name,
-			.FILE   = fs::File(file_path),
+			.parent = this,
+			.name   = artifact_name,
+			.file   = fs::File(file_path),
 		}
 	);
 	return fileArtifactAt(artifact_name);
 }
 
-const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNew(
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAtOrNew(
 	base::StrID artifact_name
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
@@ -198,7 +198,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 	CORE_UNREACHABLE();
 }
 
-const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
+artifacts::FileArtifact artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
 ) const {
 	return file_artifacts.at(artifact_name);
 }
@@ -209,16 +209,16 @@ base::Optional<base::CRef<artifacts::FileArtifact>> artifacts::ArtifactCollectio
 	return file_artifacts.atMaybe(artifact_name);
 }
 
-const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactNew(
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNew(
 	base::StrID artifact_name
 ) {
 	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
-	blob_artifacts.put(artifact_name, BlobArtifact{ .PARENT = this, .NAME = artifact_name });
+	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
 	return blobArtifactAt(artifact_name);
 }
 
-const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNew(
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAtOrNew(
 	base::StrID artifact_name
 ) {
 	match_optional(blobArtifactAtMaybe(artifact_name)) {
@@ -228,7 +228,7 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNe
 	CORE_UNREACHABLE();
 }
 
-const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
+artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
 ) const {
 	return blob_artifacts.at(artifact_name);
 }
@@ -242,12 +242,12 @@ base::Optional<base::CRef<artifacts::BlobArtifact>> artifacts::ArtifactCollectio
 void artifacts::ArtifactCollection::setBlobData(
 	const BlobArtifact& blob, const byte* ptr, usize n_bytes
 ) {
-	CORE_ASSERT(blob.PARENT.get() == this, "Blob does not belong to this collection");
-	blob_data[blob.NAME] = makeBox<Bytes>(ptr, ptr + n_bytes);
+	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
+	blob_data[blob.name] = makeBox<Bytes>(ptr, ptr + n_bytes);
 }
 
 base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
-	CORE_ASSERT(blob.PARENT.get() == this, "Blob does not belong to this collection");
-	const auto& data = blob_data[blob.NAME];
+	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
+	const auto& data = blob_data[blob.name];
 	return { data->data(), data->size() };
 }
