@@ -42,7 +42,7 @@
 	}                                                                                   \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {         \
 		cache.put(key_hash, { std::move(res), acd });                                   \
-		return QResult(cache.at(key_hash).data);                                        \
+		return QResult(cache.at(key_hash)->data);                                       \
 	}                                                                                   \
 	static_assert(                                                                      \
 		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \

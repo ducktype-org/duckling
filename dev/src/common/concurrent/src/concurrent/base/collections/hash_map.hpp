@@ -155,6 +155,23 @@ namespace concurrent {
 		}
 
 		[[nodiscard]]
+		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+			return atMaybe(key).value();
+		}
+
+		/**
+		 * Atomically retrieves a reference to the value associated with the given key.
+		 *
+		 * @important Usage of the reference must be synchronized externally.
+		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
+		 */
+		[[nodiscard]]
+		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].atMaybe(key);
+		}
+
+		[[nodiscard]]
 		auto at(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
 			return atMaybe(key).value();
 		}
