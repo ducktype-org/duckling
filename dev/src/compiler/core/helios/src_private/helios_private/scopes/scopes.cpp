@@ -201,8 +201,7 @@ namespace compiler::helios {
 
 			std::vector<ScopeID> out;
 
-			for (auto elem: cache.getAllKeyValuePairs())
-				out.emplace_back(QResult{ &elem->value.data });
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
 
@@ -276,8 +275,7 @@ namespace compiler::helios {
 
 			std::vector<ScopeID> out;
 
-			for (auto elem: cache.getAllKeyValuePairs())
-				out.emplace_back(QResult{ &elem->value.data });
+			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
 			return out;
 		}
 
