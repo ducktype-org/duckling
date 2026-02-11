@@ -365,7 +365,7 @@ private:
 		concurrent::ConHashMap<int, int> map;
 
 		constexpr int N         = 200;
-		constexpr int EXTRA_KEY = N + 1000;  // keys that won't collide with existing ones
+		constexpr int EXTRA_KEY = N + 1'000;  // keys that won't collide with existing ones
 
 		for (int i = 0; i < N; i++) map.put(i, i * 10);
 

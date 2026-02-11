@@ -290,6 +290,7 @@ namespace concurrent {
 			}
 
 			LockedIterator() noexcept: shards_ptr(nullptr), shard_index(SHARD_COUNT) {}
+
 			LockedIterator(const LockedIterator&)            = default;
 			LockedIterator& operator=(const LockedIterator&) = default;
 
@@ -324,8 +325,9 @@ namespace concurrent {
 
 
 		static_assert(std::forward_iterator<Iterator>, "Iterator must be a forward iterator");
-		static_assert(std::forward_iterator<ConstIterator>, "ConstIterator must be a forward iterator");
-
+		static_assert(
+			std::forward_iterator<ConstIterator>, "ConstIterator must be a forward iterator"
+		);
 
 		/**
 		 * Returns an iterator-pair spanning all elements across every shard.
