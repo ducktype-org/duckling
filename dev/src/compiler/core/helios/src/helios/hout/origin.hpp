@@ -6,8 +6,6 @@
 
 #include <diagnostic/source_position.hpp>
 
-#include <variant>
-
 namespace compiler::helios::code {
 
 	class ElementOrigin {

@@ -105,7 +105,7 @@ namespace compiler::helios::code {
 		}
 
 		[[nodiscard]] auto getNamespaceLikePstOrigin() -> ElementOrigin {
-			return std::move(namespace_like_symbol.value().second);
+			return namespace_like_symbol.value().second;
 		}
 
 		static ChainState ofExpr(base::Box<Expr> expr) { return { std::move(expr) }; }
@@ -535,7 +535,7 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
 				= current_state.getNamespaceLikePstOrigin().extended(expr_access);
-			return processNamespaceOrValue(sym_list.back(), std::move(whole_expr_origin));
+			return processNamespaceOrValue(sym_list.back(), whole_expr_origin);
 		}
 
 		/**
@@ -588,14 +588,13 @@ namespace compiler::helios::code {
 			switch (kind(symbol)) {
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
-				return ChainState::ofNamespaceLike(symbol, std::move(pst_element_origin));
+				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:
 			case SymbolKind::Const:
 			case SymbolKind::Class: {
-				auto expr
-					= makeBox<IdentifierExpr>(query_ctx, std::move(pst_element_origin), symbol);
+				auto expr = makeBox<IdentifierExpr>(query_ctx, pst_element_origin, symbol);
 				return ChainState::ofExpr(std::move(expr));
 			}
 			default:
