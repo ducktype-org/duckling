@@ -78,20 +78,20 @@ namespace concurrent {
 		 * @warning Holding this lock blocks all concurrent access to the map.
 		 *          Keep the locked scope as short as possible.
 		 */
-		class AllShardsLock final {
+		class WithAllShardsLock final {
 			const ConHashMap& self;
 
 		public:
-			explicit AllShardsLock(const ConHashMap& self) noexcept: self(self) {
+			explicit WithAllShardsLock(const ConHashMap& self) noexcept: self(self) {
 				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->lock();
 			}
 
-			~AllShardsLock() noexcept {
+			~WithAllShardsLock() noexcept {
 				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->unlock();
 			}
 
-			AllShardsLock(const AllShardsLock&) = delete;
-			AllShardsLock(AllShardsLock&&)      = delete;
+			WithAllShardsLock(const WithAllShardsLock&) = delete;
+			WithAllShardsLock(WithAllShardsLock&&)      = delete;
 		};
 
 
@@ -118,7 +118,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 			auto          result
 				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
-			length.fetch_add(1, std::memory_order_relaxed);
+			elements_count.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
 
@@ -136,7 +136,7 @@ namespace concurrent {
 
 			auto result
 				= shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
-			if (result != nullptr) length.fetch_add(1, std::memory_order_relaxed);
+			if (result != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
 
@@ -150,7 +150,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto inserted = shards[lock.shard_index].maybePut(key, value);
-			if (inserted != nullptr) length.fetch_add(1, std::memory_order_relaxed);
+			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			f(shards[lock.shard_index][key]);
 		}
 
@@ -206,8 +206,8 @@ namespace concurrent {
 		 */
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
-			auto          erased = shards[lock.shard_index].erase(key);
-			if (erased) length.fetch_sub(1, std::memory_order_relaxed);
+			bool          erased = shards[lock.shard_index].erase(key);
+			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
 			return erased;
 		}
 
@@ -215,18 +215,18 @@ namespace concurrent {
 		 * Returns the number of elements currently stored in the map.
 		 *
 		 * @note The value is approximate under concurrent modifications –
-		 *       it uses relaxed memory ordering and is not synchronized with
+		 *       other operations uses relaxed memory ordering and this one is not synchronized with
 		 *       any particular shard lock.
 		 */
 		[[nodiscard]]
 		u64 size() const noexcept {
-			return length.load(std::memory_order_seq_cst);
+			return elements_count.load(std::memory_order_seq_cst);
 		}
 
 		/**
 		 * Iterator over the entire ConHashMap.
 		 *
-		 * On construction it receives a shared_ptr to an AllShardsLock that keeps
+		 * On construction it receives a shared_ptr to an WithAllShardsLock that keeps
 		 * every shard locked for as long as any live iterator references it.
 		 * Dereferencing, advancing and comparing are delegated to the underlying
 		 * StableHashMap iterators.
@@ -240,15 +240,18 @@ namespace concurrent {
 		class LockedIterator final {
 			using InnerIterator = typename HashMapType::template Iterator<ValueT>;
 
-			std::shared_ptr<AllShardsLock> lock_guard;
+			std::shared_ptr<WithAllShardsLock> lock_guard;
 
 			/// Pointer to the shards vector (const or mutable depending on ValueT).
+			/// This would have to change when number of shards is not compile-time constant
 			using ShardsPtr = std::conditional_t<
 				std::is_const_v<ValueT>,
 				const std::vector<HashMapType>*,
 				std::vector<HashMapType>*>;
 
-			ShardsPtr     shards_ptr;
+			ShardsPtr shards_ptr;
+
+			/// This would have to change when number of shards is not compile-time constant
 			u64           shard_index;
 			InnerIterator inner;
 
@@ -278,7 +281,7 @@ namespace concurrent {
 			 * @param shard_index Starting shard index (SHARD_COUNT for end()).
 			 */
 			LockedIterator(
-				std::shared_ptr<AllShardsLock> lock_guard, ShardsPtr shards_ptr, u64 shard_index
+				std::shared_ptr<WithAllShardsLock> lock_guard, ShardsPtr shards_ptr, u64 shard_index
 			) noexcept:
 				  lock_guard(std::move(lock_guard)),
 				  shards_ptr(shards_ptr),
@@ -343,14 +346,14 @@ namespace concurrent {
 		 *          them – the entire map is blocked while any iterator is alive.
 		 */
 		Iterator begin() RELEASE_NOEXCEPT {
-			auto guard = std::make_shared<AllShardsLock>(*this);
+			auto guard = std::make_shared<WithAllShardsLock>(*this);
 			return Iterator(guard, &shards, 0);
 		}
 
 		Iterator end() RELEASE_NOEXCEPT { return Iterator(nullptr, &shards, SHARD_COUNT); }
 
 		ConstIterator begin() const RELEASE_NOEXCEPT {
-			auto guard = std::make_shared<AllShardsLock>(*this);
+			auto guard = std::make_shared<WithAllShardsLock>(*this);
 			return ConstIterator(guard, &shards, 0);
 		}
 
@@ -384,7 +387,7 @@ namespace concurrent {
 		/**
 		 * Atomic counter tracking the number of elements in the map.
 		 */
-		std::atomic<u64> length{ 0 };
+		std::atomic<u64> elements_count{ 0 };
 	};
 
 }

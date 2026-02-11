@@ -58,6 +58,7 @@ public:
 		TESTER_ADD_TEST(multiThreadedEraseTest<4>);
 
 		TESTER_ADD_TEST(sizeTrackingTest);
+		TESTER_ADD_TEST(simpleIteratorTest);
 		TESTER_ADD_TEST(iteratorTest);
 		TESTER_ADD_TEST(constIteratorTest);
 		TESTER_ADD_TEST(multiThreadedSizeTest);
@@ -357,6 +358,30 @@ private:
 	}
 
 	/**
+	 * Simple single-threaded test: insert keys, then iterate and verify
+	 * that iteration yields exactly the same key-value pairs.
+	 */
+	void simpleIteratorTest() {
+		concurrent::ConHashMap<int, int> map;
+
+		constexpr int N = 100;
+		for (int i = 0; i < N; i++) map.put(i, i * 10);
+
+		std::vector<std::pair<int, int>> collected;
+		for (auto it = map.begin(); it != map.end(); ++it)
+			collected.emplace_back(it->key, it->value);
+
+		ASSERT_EQUAL(collected.size(), static_cast<usize>(N));
+
+		std::ranges::sort(collected, [](const auto& a, const auto& b) { return a.first < b.first; });
+
+		for (int i = 0; i < N; i++) {
+			ASSERT_EQUAL(collected[static_cast<usize>(i)].first, i);
+			ASSERT_EQUAL(collected[static_cast<usize>(i)].second, i * 10);
+		}
+	}
+
+	/**
 	 * Tests that 3 threads can concurrently iterate using mutable iterators
 	 * while a 4th thread attempts to put() into the map.
 	 * The put() calls will block on the spinlock until the iterators release all shards.
@@ -374,8 +399,7 @@ private:
 
 		{
 			std::jthread t0([&map, &per_thread_keys]() {
-				for (auto it = map.begin(); it != map.end(); ++it)
-					per_thread_keys[0].push_back(it->key);
+				for (auto el: map) per_thread_keys[0].push_back(el.key);
 			});
 			std::jthread t1([&map, &per_thread_keys]() {
 				for (auto it = map.begin(); it != map.end(); ++it)
@@ -412,7 +436,7 @@ private:
 			for (int k: keys)
 				if (k < N) original.push_back(k);
 			ASSERT_EQUAL(original.size(), static_cast<usize>(N));
-			for (int i = 0; i < N; i++) ASSERT_EQUAL(original[static_cast<usize>(i)], i);
+			for (int i = 0; i < N; i++) ASSERT_EQUAL(original.at(static_cast<usize>(i)), i);
 		}
 	}
 
