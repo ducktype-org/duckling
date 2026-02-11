@@ -4,6 +4,8 @@
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
 
+#include <concurrent/base/locks/atomic_flag_spinlock.hpp>
+
 #include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
 
