@@ -226,7 +226,6 @@ private:
 			a        = b;
 			b        = next;
 		}
-		fail("Custom fail");
 	}
 };
 
