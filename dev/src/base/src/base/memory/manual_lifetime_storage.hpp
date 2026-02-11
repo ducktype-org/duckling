@@ -70,6 +70,8 @@ namespace base {
 				CORE_ASSERT(state == State::Empty, "Object is already constructed");
 				state = State::Constructed;
 			})
+			// We explicitly use `::new(std::size_t, void*)` as is is [the only
+			// overload](https://eel.is/c++draft/new.delete.placement) that is not replaceable
 			::new (static_cast<void*>(data)) T(std::forward<Args>(args)...);
 		}
 

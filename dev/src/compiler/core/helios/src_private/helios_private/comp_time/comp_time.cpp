@@ -188,10 +188,26 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					// @TODO: #1620 make this error reporting better.
-					ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-						"Identifier '", name(expr.symbol), "' cannot be evaluated at compile-time."
-					)));
+					match_optional(expr.origin.getSourcePosition()) {
+						opt_some(pos) {
+							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+								"Expression cannot be evaluated at compile-time.", pos
+							));
+						}
+						opt_none {
+							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+								"Expression cannot be evaluated at compile-time.",
+								base::strConcat(
+									"The code is unavailable because the expression is at "
+									"least "
+									"partially compiler generated.",
+									"The failure happened for the symbol `",
+									name(expr.symbol),
+									"`."
+								)
+							));
+						}
+					}
 					result = query::Failed();
 					return;
 				}
@@ -565,51 +581,21 @@ namespace compiler::helios {
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
 
-				bool coercion_success = true;
-
 				for (auto& sub_type: expr.subtypes) {
-					auto coercion_qresult
-						= canCoerceToMeta(ctx, sub_type->expression_type.getSymbolType());
-					if (coercion_qresult.hasFailed()) {
-						coercion_success = false;
-						continue;
+					CORE_ASSERT(
+						sub_type->expression_type.getType().getKind() == tsh::Kind::Meta,
+						"It's impossible to create a variant of non-type sub-types in HOUT"
+					);
+
+					const auto sub_type_ctv = evalHoutExpr(ctx, sub_type.ref());
+					if (sub_type_ctv.hasFailed()) {
+						result = query::Failed();
+						return;
 					}
 
-					variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-						variant_case(Coercion, coercion) {
-							const auto sub_type_coerced = coercion.coerce(ctx, sub_type->clone());
-
-							const auto sub_type_ctv
-								= ctx.query<QueryEvaluateHOUTExpression>({ sub_type_coerced.ref() });
-							if (sub_type_ctv.hasFailed()) {
-								result = query::Failed();
-								return;
-							}
-
-							subtypes.emplace_back(
-								sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
-							);
-						}
-						variant_case(InvalidCoercion, _) {
-							coercion_success = false;
-
-							// @TODO: #1620 report error properly when HOUT exposes source positions.
-
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-								"Cannot coerce variant subtype of type ",
-								sub_type->expression_type.getSymbolType().toString(),
-								" to meta type."
-							)));
-						}
-						variant_default {
-							CORE_PANIC("Unexpected coercion result when coercing to meta type.");
-						}
-					}
-				}
-
-				if (!coercion_success) {
-					result = query::Failed();
-					return;
+					subtypes.emplace_back(
+						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					);
 				}
 
 				result = CompileTimeValue{ tsh::SymbolType<>{
