@@ -18,7 +18,7 @@ namespace concurrent::pool {
 	class TaskPool;
 
 	/**
-	 * @brief TaskID is a std::size_t because it should be a result of hashing a NodeID
+	 * @brief TaskID is a unique identifier for tasks in the TaskPool.
 	 */
 	using TaskID = std::size_t;
 
@@ -26,7 +26,7 @@ namespace concurrent::pool {
 	 * @brief Status of a task in the TaskPool.
 	 */
 	enum class TaskStatus : uint8_t {
-		// NotStarted,  ///< Task has been added but not yet picked up by a worker.
+		// NotStarted,  ///< Currently if a task is not in the map, it is not started.
 		InProgress,  ///< Task is currently being executed by a worker.
 		Done,        ///< Task has completed execution.
 	};
@@ -101,11 +101,9 @@ namespace concurrent::pool {
 		 * @brief Query (execute) a task immediately.
 		 *
 		 * If the task is already being executed by another worker, this will
-		 * wait for it to complete while doing other useful work.
+		 * wait for it to complete.
 		 *
-		 * @param work The work function to execute.
-		 * @param wd The worker data reference of the calling worker.
-		 * @return TaskID of the executed task.
+		 * @param task The task to execute.
 		 *
 		 * @note Must be called from a worker thread.
 		 */
@@ -116,8 +114,7 @@ namespace concurrent::pool {
 		 *
 		 * Tasks are added to the pool and can be awaited using wait().
 		 *
-		 * @param work Work function to schedule.
-		 * @param wd The worker data reference of the calling worker.
+		 * @param task The task to schedule.
 		 * @return TaskHandle for scheduled task.
 		 *
 		 * @note Must be called from a worker thread.
@@ -138,6 +135,7 @@ namespace concurrent::pool {
 		/**
 		 * @brief Check if a task is complete.
 		 * @param id The task ID to check.
+		 *
 		 * @return True if the task is done, false otherwise.
 		 */
 		[[nodiscard]] bool isTaskDone(TaskID id) const;
@@ -162,6 +160,9 @@ namespace concurrent::pool {
 		 */
 		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref);
 
+		/**
+		 * @brief Same as above but only steals the task of the given ID by @param task_id.
+		 */
 		base::Optional<Task> tryStealFromWorkerUnlocked(worker::WRef worker_ref, TaskID task_id);
 
 		/**
@@ -170,14 +171,17 @@ namespace concurrent::pool {
 		 * If the task is not started, executes it.
 		 * @param task The task to execute.
 		 * @return True if the task has been completed by us or was already
-		 * done at some moment in the middle of the function.
+		 * done in the middle of the function.
 		 * Otherwise returns false.
+		 * 
+		 * So if returns true we know for sure that the task is done,
+		 * but if returns false then we don't know if the task is done or still in progress.
 		 */
 		bool tryExecuteTask(const Task& task);
 
 		/**
 		 * @brief Add a task to a worker's local pool.
-		 * @param worker_ref The worker ID.
+		 * @param worker_ref The worker ref.
 		 * @param task The task to add.
 		 */
 		void addToWorkerPoolUnlocked(worker::WRef worker_ref, Task&& task);
@@ -189,7 +193,7 @@ namespace concurrent::pool {
 		void addToGlobalPoolUnlocked(Task&& task);
 
 		/**
-		 * @brief Gets the ID of a free worker if available.
+		 * @brief Gets the reference of a free worker if available.
 		 * There is a similiar function in WorkerManager, but here we
 		 * set the availability of the worker under our mutex
 		 * avoiding the missed wake up problem (missed schedule problem in this case).
@@ -197,6 +201,11 @@ namespace concurrent::pool {
 		base::Optional<worker::WRef> getFreeWorkerUnlocked() const;
 
 
+		/**
+		 * @brief Waits until the `no_tasks_callback` has exited on all workers 
+		 * to ensure that the workers are not executing any method of the TaskPool
+		 * object to safely destroy it.
+		 */
 		void flushWorkers();
 
 
@@ -226,13 +235,11 @@ namespace concurrent::pool {
 		/// Total number of tasks (used in execute()).
 		std::atomic<usize> added_tasks{ 0 };
 
-		/// Our own worker free
+		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
 		base::HashMap<worker::WRef, std::atomic<bool>> is_worker_free_map;
 
 		/// Flag indicating if execution is in progress.
 		std::atomic<bool> is_executing{ false };
-
-		bool is_used = false;
 	};
 
 }  // namespace concurrent
