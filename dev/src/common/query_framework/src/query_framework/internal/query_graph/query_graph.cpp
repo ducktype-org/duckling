@@ -143,7 +143,7 @@ namespace query::internal {
 		node_to_index.reserve(node_count);
 
 		usize next_index = 0;
-		for (const auto& [node, _]: node_deps) {
+		for (const auto& [node, _]: *node_deps) {
 			node_to_index.emplace(node, next_index++);
 			nodes.push_back(node);
 		}

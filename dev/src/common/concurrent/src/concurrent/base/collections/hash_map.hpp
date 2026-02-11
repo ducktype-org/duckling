@@ -5,6 +5,8 @@
 
 #include <base/collections/stable_hashmap.hpp>
 
+#include <atomic>
+
 namespace concurrent {
 
 	/**
@@ -116,7 +118,9 @@ namespace concurrent {
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			auto result = shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			length.fetch_add(1, std::memory_order_relaxed);
+			return result;
 		}
 
 		/**
@@ -131,7 +135,10 @@ namespace concurrent {
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			return shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
+			auto result = shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
+			if (result != nullptr)
+				length.fetch_add(1, std::memory_order_relaxed);
+			return result;
 		}
 
 		/**
@@ -143,7 +150,9 @@ namespace concurrent {
 		void maybePutAndUpdate(const K& key, const D& value, Func f) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			shards[lock.shard_index].maybePut(key, value);
+			auto inserted = shards[lock.shard_index].maybePut(key, value);
+			if (inserted != nullptr)
+				length.fetch_add(1, std::memory_order_relaxed);
 			f(shards[lock.shard_index][key]);
 		}
 
@@ -199,7 +208,22 @@ namespace concurrent {
 		 */
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
-			return shards[lock.shard_index].erase(key);
+			auto erased = shards[lock.shard_index].erase(key);
+			if (erased)
+				length.fetch_sub(1, std::memory_order_relaxed);
+			return erased;
+		}
+
+		/**
+		 * Returns the number of elements currently stored in the map.
+		 *
+		 * @note The value is approximate under concurrent modifications –
+		 *       it uses relaxed memory ordering and is not synchronized with
+		 *       any particular shard lock.
+		 */
+		[[nodiscard]]
+		u64 size() const noexcept {
+			return length.load(std::memory_order_relaxed);
 		}
 
 
@@ -356,6 +380,11 @@ namespace concurrent {
 		 * The locks protecting each shard.
 		 */
 		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+
+		/**
+		 * Atomic counter tracking the number of elements in the map.
+		 */
+		std::atomic<u64> length{0};
 	};
 
 }
