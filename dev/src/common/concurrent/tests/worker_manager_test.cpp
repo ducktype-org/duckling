@@ -187,13 +187,20 @@ private:
 		}
 
 
-		runOrTimeout([&] {
-			while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
-				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
-						  << " / " << TASK_COUNT << " tasks.\n";
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			}
-		});
+		try {
+			runOrTimeout([&] {
+				while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
+					std::cerr << "Completed "
+							  << total_completed_tasks.load(std::memory_order_relaxed) << " / "
+							  << TASK_COUNT << " tasks.\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+			});
+		} catch (std::runtime_error&) {
+			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
+					  << " / " << TASK_COUNT << " tasks.\n";
+			throw;
+		}
 
 		std::scoped_lock lock(task_mutex);
 		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
