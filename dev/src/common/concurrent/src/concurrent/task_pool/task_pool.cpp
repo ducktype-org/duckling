@@ -27,8 +27,8 @@ namespace concurrent::pool {
 	}
 
 	void TaskPool::addInitialTasks(std::vector<Task> tasks) {
-		CORE_ASSERT(not is_used, "addInitialTasks can only be called once and before execute()");
-		is_used = true;
+		CORE_ASSERT(first_call, "addInitialTasks can only be called once and before execute()");
+		first_call = false;
 
 		std::lock_guard lock(pool_mutex);
 		for (auto& task: tasks) global_pool.push_back(std::move(task));
@@ -91,7 +91,9 @@ namespace concurrent::pool {
 		// instead of comparing).
 
 		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
-
+		
+		// @TODO: #1973 integrate with query
+		// this insert decided who get's to do the task
 		if (change_status_result.toOpt().has_value()) {
 			// The key was inserted by us, we can execute the task
 			auto wd = worker::Worker::getCurrentWorker();
@@ -169,6 +171,7 @@ namespace concurrent::pool {
 	}
 
 	bool TaskPool::isTaskDone(TaskID id) const {
+		// @TODO: #1973 integrate with query.
 		return task_status_map.contains(id) && task_status_map.getCopy(id) == TaskStatus::Done;
 	}
 

@@ -34,7 +34,8 @@ namespace concurrent::pool {
 	/**
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
-	struct Task {
+	struct Task final {
+		// @TODO: #1973 integrate with query.
 		TaskID       id;
 		worker::Task work;
 
@@ -44,7 +45,7 @@ namespace concurrent::pool {
 	/**
 	 * @brief Handle returned when scheduling tasks, allows waiting on completion.
 	 */
-	class TaskHandle {
+	class TaskHandle final {
 	public:
 		explicit TaskHandle(TaskPool& pool, TaskID id): pool(pool), task_id(id) {}
 
@@ -61,11 +62,12 @@ namespace concurrent::pool {
 	 * @brief Task pool scheduler that manages task distribution across workers.
 	 * @note All public methods are thread-safe.
 	 */
-	class TaskPool {
+	class TaskPool final {
 	public:
 		/**
-		 * @brief Constructs a TaskPool with the given WorkerManager.
-		 * @param worker_manager Reference to the WorkerManager that provides workers.
+		 * @brief Constructs a TaskPool.
+		 * It uses the WorkerManager singleton to get the workers 
+		 * and set the no_tasks_callback for each worker to its onWorkerNoTasks method.
 		 */
 		explicit TaskPool();
 
@@ -80,6 +82,8 @@ namespace concurrent::pool {
 		/**
 		 * @brief Add the initial set of tasks to the pool.
 		 * These tasks will be distributed to workers when execute() is called.
+		 * 
+		 * For now it may only be called once, it panics if called more than once.
 		 */
 		void addInitialTasks(std::vector<Task> tasks);
 
@@ -142,7 +146,8 @@ namespace concurrent::pool {
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
-		 * Attempts to steal work from the pool and schedules it using the WorkerManager.
+		 * Attempts to steal work from the pool and shedules it on the 
+		 * current worker. Should be called from the worker's no_tasks_callback.
 		 */
 		void onWorkerNoTasks(worker::WRef current_worker);
 
@@ -208,7 +213,6 @@ namespace concurrent::pool {
 		 */
 		void flushWorkers();
 
-
 		/// Reference to the WorkerManager.
 		worker::WorkerManager& worker_manager;
 
@@ -240,6 +244,9 @@ namespace concurrent::pool {
 
 		/// Flag indicating if execution is in progress.
 		std::atomic<bool> is_executing{ false };
+
+		/// If addInitialTasks() was called already, to prevent multiple calls.
+		bool first_call = true;
 	};
 
 }  // namespace concurrent
