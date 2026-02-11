@@ -71,7 +71,7 @@ namespace concurrent {
 			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
 		};
 
-	 	/**
+		/**
 		 * RAII guard that locks ALL shards for the lifetime of the object.
 		 * Used by begin()/end() to provide safe iteration over the entire map.
 		 *
@@ -83,13 +83,11 @@ namespace concurrent {
 
 		public:
 			explicit AllShardsLock(const ConHashMap& self) noexcept: self(self) {
-				for (u64 i = 0; i < SHARD_COUNT; i++)
-					self.shard_mutexes[i]->lock();
+				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->lock();
 			}
 
 			~AllShardsLock() noexcept {
-				for (u64 i = 0; i < SHARD_COUNT; i++)
-					self.shard_mutexes[i]->unlock();
+				for (u64 i = 0; i < SHARD_COUNT; i++) self.shard_mutexes[i]->unlock();
 			}
 
 			AllShardsLock(const AllShardsLock&) = delete;
@@ -118,7 +116,8 @@ namespace concurrent {
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
-			auto result = shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			auto          result
+				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
 			length.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
@@ -135,9 +134,9 @@ namespace concurrent {
 		MRef<KeyValuePair> maybePut(K&& key, D&& value) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 
-			auto result = shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
-			if (result != nullptr)
-				length.fetch_add(1, std::memory_order_relaxed);
+			auto result
+				= shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
+			if (result != nullptr) length.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
 
@@ -151,8 +150,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto inserted = shards[lock.shard_index].maybePut(key, value);
-			if (inserted != nullptr)
-				length.fetch_add(1, std::memory_order_relaxed);
+			if (inserted != nullptr) length.fetch_add(1, std::memory_order_relaxed);
 			f(shards[lock.shard_index][key]);
 		}
 
@@ -208,9 +206,8 @@ namespace concurrent {
 		 */
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
 			WithShardLock lock(*this, keyToShard(key));
-			auto erased = shards[lock.shard_index].erase(key);
-			if (erased)
-				length.fetch_sub(1, std::memory_order_relaxed);
+			auto          erased = shards[lock.shard_index].erase(key);
+			if (erased) length.fetch_sub(1, std::memory_order_relaxed);
 			return erased;
 		}
 
@@ -225,7 +222,6 @@ namespace concurrent {
 		u64 size() const noexcept {
 			return length.load(std::memory_order_relaxed);
 		}
-
 
 		/**
 		 * Iterator over the entire ConHashMap.
@@ -261,11 +257,9 @@ namespace concurrent {
 			 * advance to the next non-empty shard.
 			 */
 			void advanceToValid() {
-				while (shard_index < SHARD_COUNT
-				       && inner == (*shards_ptr)[shard_index].end()) {
+				while (shard_index < SHARD_COUNT && inner == (*shards_ptr)[shard_index].end()) {
 					++shard_index;
-					if (shard_index < SHARD_COUNT)
-						inner = (*shards_ptr)[shard_index].begin();
+					if (shard_index < SHARD_COUNT) inner = (*shards_ptr)[shard_index].begin();
 				}
 			}
 
@@ -284,9 +278,7 @@ namespace concurrent {
 			 * @param shard_index Starting shard index (SHARD_COUNT for end()).
 			 */
 			LockedIterator(
-				std::shared_ptr<AllShardsLock> lock_guard,
-				ShardsPtr                      shards_ptr,
-				u64                            shard_index
+				std::shared_ptr<AllShardsLock> lock_guard, ShardsPtr shards_ptr, u64 shard_index
 			) noexcept:
 				  lock_guard(std::move(lock_guard)),
 				  shards_ptr(shards_ptr),
@@ -314,8 +306,7 @@ namespace concurrent {
 			}
 
 			bool operator==(const LockedIterator& other) const noexcept {
-				if (shard_index == SHARD_COUNT && other.shard_index == SHARD_COUNT)
-					return true;
+				if (shard_index == SHARD_COUNT && other.shard_index == SHARD_COUNT) return true;
 				return shard_index == other.shard_index && inner == other.inner;
 			}
 
@@ -345,9 +336,7 @@ namespace concurrent {
 			return Iterator(guard, &shards, 0);
 		}
 
-		Iterator end() RELEASE_NOEXCEPT {
-			return Iterator(nullptr, &shards, SHARD_COUNT);
-		}
+		Iterator end() RELEASE_NOEXCEPT { return Iterator(nullptr, &shards, SHARD_COUNT); }
 
 		ConstIterator begin() const RELEASE_NOEXCEPT {
 			auto guard = std::make_shared<AllShardsLock>(*this);
@@ -384,7 +373,7 @@ namespace concurrent {
 		/**
 		 * Atomic counter tracking the number of elements in the map.
 		 */
-		std::atomic<u64> length{0};
+		std::atomic<u64> length{ 0 };
 	};
 
 }
