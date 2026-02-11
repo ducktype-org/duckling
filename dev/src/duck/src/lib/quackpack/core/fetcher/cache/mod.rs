@@ -239,7 +239,7 @@ impl ManifestCache {
             });
         });
         let result = unpack_tokio_scoped_vector(results)?;
-        extract_single_item_from_vec(result)?.context_internal("SQLit thread panicked")?;
+        extract_single_item_from_vec(result)?.context_internal("SQLite thread panicked")?;
         Ok(())
     }
 }

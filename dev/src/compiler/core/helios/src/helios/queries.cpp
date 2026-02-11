@@ -59,18 +59,18 @@ namespace compiler::helios {
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
-						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
+						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
 						// we "catch" failure here to continue gathering other functions:
 						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function.hasFailed()) {
+						if (hout_function->hasFailed()) {
 							is_failed = true;
 							continue;
 						} else {
-							out.functions.push_back(hout_function.valueOrPanic());
+							out.functions.emplace_back(&hout_function->valueOrPanic());
 						}
 					}
 					if (kind(sym) == SymbolKind::Class)
@@ -90,7 +90,7 @@ namespace compiler::helios {
 		 * @param ctx The query context.
 		 */
 		static void appendClassConstructors(
-			std::vector<HOUTFunction>& out_functions, const SymID class_sym, Context& ctx
+			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
@@ -106,17 +106,17 @@ namespace compiler::helios {
 			                            .as<tsh::ClassAbstractType>();
 			const auto& implicit_ctor
 				= ctx.query<houtgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
-			out_functions.push_back(implicit_ctor);
+			out_functions.emplace_back(&implicit_ctor);
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
 
-	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<HOUTUnit>>) {
+	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, query::QResult<std::vector<CRef<HOUTUnit>>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key).valueOrThrow() };
+			std::vector<CRef<HOUTUnit>> out = { &ctx.query<QueryModuleHOUT>(key)->valueOrThrow() };
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
 			for (auto submodule: *submodules) {
@@ -148,12 +148,12 @@ namespace compiler::helios {
 			for (auto sym: *symbols_in_module_root) {
 				// grab constants:
 				if (kind(sym) == SymbolKind::Const)
-					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Constant);
+					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant);
 				if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-					out.glob_data.emplace_back(sym, ctx, HOUTGlobalDataType::Variable);
+					out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
-					out.functions.push_back(ctx.query<QueryCodeOfFun>(sym).valueOrThrow());
+					out.functions.emplace_back(&ctx.query<QueryCodeOfFun>(sym)->valueOrThrow());
 			}
 
 			return out;
@@ -396,33 +396,18 @@ namespace compiler::helios {
 				// Get the initial value for the field from the PST.
 				const auto field_pst_data
 					= symbolPst(field.getSymbol()).unlock(ctx).dynamicCast<pst::Field>().value();
-				auto init_expr_opt = field_pst_data->getInit().map(
-					[&](const pst::AccessLocked<pst::ExprHolder>& expr_holder) {
-						return ctx
-					        .query<QueryHoutOfExpr>(expr_holder.unlock(ctx)->getExpr().unlock(ctx))
-					        .valueOrThrow();
+				auto init_expr_opt         = field_pst_data->getInit();
+				auto init_expr_coerced_opt = init_expr_opt.map(
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+						const auto field_type = field.getType(ctx);
+						auto       expr
+							= getHoutOfExprWithExpectedType(
+								  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
+							)
+					              .valueOrThrow();
+						return expr;
 					}
 				);
-				auto init_expr_coerced_opt
-					= std::move(init_expr_opt).map([&](Box<code::Expr>&& expr) -> Box<code::Expr> {
-						  const auto init_expr_type = expr->expression_type.getSymbolType();
-						  const auto field_type     = field.getType(ctx);
-						  const auto coercion
-							  = canCoerce(ctx, init_expr_type, field_type).valueOrThrow();
-
-						  if (coercion.isInvalid()) {
-							  // @TODO: #1620 report error with position here when HOUT exposes position.
-							  ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-								  "Cannot coerce default field value of type ",
-								  init_expr_type.toString(),
-								  " to the field's expected type ",
-								  field_type.toString()
-							  )));
-							  query::throwFailed();
-						  }
-
-						  return coercion.coerce(ctx, std::move(expr));
-					  });
 
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
@@ -570,7 +555,9 @@ namespace compiler::helios {
 					)
 				          .valueOrThrow();
 
-				block.statements.emplace_back(makeBox<code::ReturnStmt>(std::move(expr_coerced)));
+				block.statements.emplace_back(makeBox<code::ReturnStmt>(
+					expr_coerced->origin.generatedFrom(), std::move(expr_coerced)
+				));
 				return block;
 			} else {
 				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
@@ -620,9 +607,9 @@ namespace compiler::helios {
 											ctx, val.value().unlock(ctx)->getExpr(), return_type
 					)
 					                        .valueOrThrow();
-					output(code::ReturnStmt(std::move(expr_coerced)));
+					output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
 				} else {
-					output(code::VoidReturnStmt());
+					output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 				}
 			}
 
@@ -645,7 +632,9 @@ namespace compiler::helios {
 				// the value in the memory pointed by the ref/box.
 				auto location_type = location_expr->expression_type.getSymbolType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
-					location_expr = makeBox<code::DerefExpr>(ctx, std::move(location_expr));
+					location_expr = makeBox<code::DerefExpr>(
+						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
+					);
 
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now coerce
@@ -680,7 +669,9 @@ namespace compiler::helios {
 				}
 
 				output(code::AssignmentStmt(
-					std::move(location_expr), std::move(new_value_expr_coerced)
+					code::pstOrigin(assignment),
+					std::move(location_expr),
+					std::move(new_value_expr_coerced)
 				));
 			}
 
@@ -698,7 +689,7 @@ namespace compiler::helios {
 				// else just create an expression statement:
 
 				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr }).valueOrThrow();
-				output(code::ExprStmt(std::move(expr)));
+				output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
@@ -719,12 +710,17 @@ namespace compiler::helios {
 				match_optional(stmt->getElseBody()) {
 					opt_some(else_body) {
 						output(code::IfStmt(
+							code::pstOrigin(stmt),
 							std::move(condition),
 							std::move(then_body),
 							queryCodeOfCodeBlock(ctx, else_body, return_type)
 						));
 					}
-					opt_none { output(code::IfStmt(std::move(condition), std::move(then_body))); }
+					opt_none {
+						output(code::IfStmt(
+							code::pstOrigin(stmt), std::move(condition), std::move(then_body)
+						));
+					}
 				}
 			}
 
@@ -741,7 +737,8 @@ namespace compiler::helios {
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody(), return_type);
 
-				output(code::WhileStmt(std::move(condition), std::move(body)));
+				output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body))
+				);
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -770,8 +767,9 @@ namespace compiler::helios {
 					          .valueOrThrow();
 
 
-					output(code::VariableStmt(std::move(initial_value_coerced), symbol_type, symbol)
-					);
+					output(code::VariableStmt(
+						code::pstOrigin(stmt), std::move(initial_value_coerced), symbol_type, symbol
+					));
 				}
 			}
 
@@ -817,13 +815,17 @@ namespace compiler::helios {
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
-				this->out.emplace(HOUTFunction{ &decl, output_body });
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
+			);
+			CORE_ASSERT(
+				getSymRef(key)->getPSTDataOpt().has_value(),
+				"Query code of function does not support generated functions"
 			);
 
 			HOUTFunctionMaker func_maker(ctx, key);
@@ -832,7 +834,7 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOfFun);

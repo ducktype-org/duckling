@@ -17,7 +17,7 @@
 #### Debian/Ubuntu
 
 
-Note that the dependencies listed bellow are listed without versions. Update the command accordingly, depending on package names on you system / you version preferences. 
+Note that the dependencies listed below are listed without versions. Update the command accordingly, depending on package names on you system / you version preferences. 
 
 ```bash
 sudo apt update -y && \

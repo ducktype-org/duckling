@@ -1,8 +1,10 @@
 #include "worker_count.hpp"
 
+#include <concurrent/worker/worker_manager.hpp>
+
 #include <base/except/exceptions.hpp>
 
-namespace concurrent {
+namespace concurrent::worker {
 
 	namespace {
 		constinit u64 worker_count = 0;
@@ -11,6 +13,7 @@ namespace concurrent {
 	void setWorkerCount(u64 value) {
 		CORE_ASSERT(worker_count == 0, "Worker count can only be set once.");
 		worker_count = value;
+		worker::WorkerManager::setWorkers(static_cast<usize>(value));
 	}
 
 	u64 getWorkerCount() {

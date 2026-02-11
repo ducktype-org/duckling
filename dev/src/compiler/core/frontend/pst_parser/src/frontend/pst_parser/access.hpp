@@ -45,6 +45,9 @@ namespace pst {
 		template<typename T>
 		Access(Access<T>&& other): ref(std::move(other).ref) {}
 
+		template<typename E>
+		Access(const Access<E>& other) noexcept: ref(other.ref) {}
+
 		/**
 		 * @brief This should be fine for now, casting might end up as null which would be
 		 * potentially bad for knowing about accesses

@@ -1,6 +1,8 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -63,6 +65,7 @@ public:
 		TESTER_ADD_TEST(testTypeInstanceInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
+		TESTER_ADD_TEST(testBoxes);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
 		TESTER_ADD_TEST(testSimpleHOUT);
@@ -89,6 +92,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testHoutElementsOrigin);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -429,7 +433,7 @@ private:
 			class_with_member_abstract_type
 		);
 
-		std::vector<compiler::helios::HOUTUnit> units
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
@@ -472,7 +476,7 @@ private:
 		// 	st(query::entryPoint<compiler::tsh::QueryIntegralType>({64, Signed}))
 		// );
 
-		std::vector<compiler::helios::HOUTUnit> units
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
 		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
@@ -603,6 +607,8 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
+		using namespace compiler::helios::code;
+
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
@@ -614,20 +620,18 @@ private:
 
 
 			// Build chain comparison expressions vector
-			std::vector<base::Box<compiler::helios::code::Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 3));
+			std::vector<base::Box<Expr>> chain_exprs;
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
 
-			std::vector<compiler::helios::code::BuiltinBinary> chain_ops{
-				compiler::helios::code::BuiltinBinary::IntegerLt,
-				compiler::helios::code::BuiltinBinary::IntegerLteq
-			};
+			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
+				                                  BuiltinBinary::IntegerLteq };
 
 			// Build tuple elements
-			std::vector<base::Box<compiler::helios::code::Expr>> tuple_elements;
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
+			std::vector<base::Box<Expr>> tuple_elements;
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
 
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
@@ -638,55 +642,58 @@ private:
 			          ->getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
-			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
+			std::vector<base::Box<Expr>> call_args;
+			call_args.emplace_back(makeBox<AccessExpr>(
+				ctx, generatedOrigin(), makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_obj), a_field
 			));
 
 			// Build sequence expressions
-			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
+			std::vector<base::Box<Expr>> sequence_exprs;
 			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+				makeBox<TupleExpr>(ctx, generatedOrigin(), std::move(tuple_elements))
 			);
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<BinaryOperatorExpr>(
 				ctx,
-				compiler::helios::code::BuiltinBinary::IntegerAdd,
-				makeBox<compiler::helios::code::ParenthesisExpr>(
+				generatedOrigin(),
+				BuiltinBinary::IntegerAdd,
+				makeBox<ParenthesisExpr>(
 					ctx,
-					makeBox<compiler::helios::code::UnaryOperatorExpr>(
-						compiler::helios::code::BuiltinUnary::IntegerNegation,
-						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
+					generatedOrigin(),
+					makeBox<UnaryOperatorExpr>(
+						generatedOrigin(),
+						BuiltinUnary::IntegerNegation,
+						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 					)
 				),
-				makeBox<compiler::helios::code::CallExpr>(
+				makeBox<CallExpr>(
 					ctx,
-					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					generatedOrigin(),
+					makeBox<IdentifierExpr>(ctx, generatedOrigin(), square_sym),
 					std::move(call_args)
 				)
 			));
 
 			// Build variant subtypes
-			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
-			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
+			std::vector<base::Box<Expr>> variant_subtypes;
+			variant_subtypes.emplace_back(makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
 			);
-			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
-			);
+			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true));
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
+				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
-			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
+			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
+				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<compiler::helios::code::ChainComparisonExpr>(
-					ctx, std::move(chain_exprs), std::move(chain_ops)
+				makeBox<ChainComparisonExpr>(
+					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
 				),
 				// If true: SequenceExpr with nested expressions including CallExpr
-				makeBox<compiler::helios::code::SequenceExpr>(ctx, std::move(sequence_exprs)),
+				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<compiler::helios::code::VariantTypeConstructorExpr>(
-					ctx, std::move(variant_subtypes)
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
 				)
 			);
 
@@ -729,8 +736,8 @@ private:
 		unsigned long glob_data = 0;
 
 		for (const auto& hout: houts) {
-			functions += hout.functions.size();
-			glob_data += hout.glob_data.size();
+			functions += hout->functions.size();
+			glob_data += hout->glob_data.size();
 		}
 
 		ASSERT_EQUAL(functions, 3);
@@ -747,8 +754,8 @@ private:
 		unsigned long glob_data = 0;
 
 		for (const auto& hout: houts) {
-			functions += hout.functions.size();
-			glob_data += hout.glob_data.size();
+			functions += hout->functions.size();
+			glob_data += hout->glob_data.size();
 		}
 
 		ASSERT_EQUAL(functions, 1);
@@ -762,17 +769,17 @@ private:
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module).valueOrPanic();
 
 		for (const auto& hout: houts) {
-			for (const auto& fun: hout.functions) {
-				std::cerr << fun.declaration->original_name.str() << " is dependent on\n";
+			for (const auto& fun: hout->functions) {
+				std::cerr << fun->declaration->original_name.str() << " is dependent on\n";
 				std::cerr << " Original symbol: "
-						  << fun.declaration->original_symbol.queryUnstablePerfectHash() << "\n";
+						  << fun->declaration->original_symbol.queryUnstablePerfectHash() << "\n";
 				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOfFun>(
-					fun.declaration->original_symbol
+					fun->declaration->original_symbol
 				);
 				std::cerr << "Tokens:\n";
 
 				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOfFun>(
-					fun.declaration->original_symbol
+					fun->declaration->original_symbol
 				);
 
 				printer::PrinterOStream str;
@@ -789,14 +796,14 @@ private:
 			fs::File(path("test_modules/visitor_test_module"))
 		);
 
-		auto hout
+		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		ASSERT_EQUAL(hout.functions.size(), 1);
 
 		auto the_function = hout.functions.at(0);
 
-		auto& stmt_list = the_function.body->statements;
+		auto& stmt_list = the_function->body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 6);
 
 		using namespace compiler::helios::code;
@@ -882,7 +889,7 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		auto hout
+		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto test_value = [&](auto str, i64 exp_val) {
@@ -1022,12 +1029,12 @@ private:
 
 		auto& function = hout.functions.at(0);
 
-		ASSERT_EQUAL(function.declaration->original_name, "foo");
+		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.body->statements.size(), 8);
+		ASSERT_EQUAL(function->body->statements.size(), 8);
 
-		auto& statements = function.body->statements;
+		auto& statements = function->body->statements;
 
 		auto get_var_block = [&](usize i, auto&& code_block) -> decltype(auto) {
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(
@@ -1036,7 +1043,7 @@ private:
 		};
 
 		auto get_var_ref
-			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function.body); };
+			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function->body); };
 
 
 		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
@@ -1128,7 +1135,7 @@ private:
 		{
 			// Check if RefOfExpr was inserted.
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*function.body->statements.at(1)
+				*function->body->statements.at(1)
 			);
 			auto make_ref_expr = dynamic_cast<const compiler::helios::code::RefOfExpr*>(
 				var_stmt.initial_value->get()
@@ -1138,7 +1145,7 @@ private:
 		{
 			// Check if deref was inserted when assigning a `ref T = T`
 			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
-				*function.body->statements.at(2)
+				*function->body->statements.at(2)
 			);
 			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				ass_stmt.location_expr.get()
@@ -1148,7 +1155,7 @@ private:
 		{
 			// Check if deref was inserted when assigning T = ref T.
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*function.body->statements.at(3)
+				*function->body->statements.at(3)
 			);
 			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				var_stmt.initial_value->get()
@@ -1158,7 +1165,7 @@ private:
 		{
 			// Check if `ref T = ref T` performs value assignment, not rebinding.
 			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
-				*function.body->statements.at(5)
+				*function->body->statements.at(5)
 			);
 			auto deref_lhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				ass_stmt.location_expr.get()
@@ -1172,7 +1179,7 @@ private:
 		{
 			// Check if ref T = ref T + 1. Derefs should be inserted on both sides.
 			auto& ass_stmt = dynamic_cast<const compiler::helios::code::AssignmentStmt&>(
-				*function.body->statements.at(6)
+				*function->body->statements.at(6)
 			);
 
 			auto deref1_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
@@ -1189,7 +1196,7 @@ private:
 		{
 			// Check deref in call expressions.
 			auto& call_stmt = dynamic_cast<const compiler::helios::code::ExprStmt&>(
-				*function.body->statements.at(7)
+				*function->body->statements.at(7)
 			);
 			auto& call_expr
 				= dynamic_cast<const compiler::helios::code::CallExpr&>(*call_stmt.expr.get());
@@ -1202,7 +1209,7 @@ private:
 		{
 			// Check deref in unary operator: var z: i32 = -r;
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*function.body->statements.at(8)
+				*function->body->statements.at(8)
 			);
 			auto un_expr = dynamic_cast<const compiler::helios::code::UnaryOperatorExpr*>(
 				var_stmt.initial_value->get()
@@ -1217,7 +1224,7 @@ private:
 		{
 			// Check deref in binary operator with two refs: var p: i32 = r + r2;
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*function.body->statements.at(9)
+				*function->body->statements.at(9)
 			);
 			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
 				var_stmt.initial_value->get()
@@ -1236,7 +1243,7 @@ private:
 		{
 			// Check deref in field access: var val: i32 = ref_point.x;
 			auto& var_stmt = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*function.body->statements.at(12)
+				*function->body->statements.at(12)
 			);
 			auto outer_deref = dynamic_cast<const compiler::helios::code::DerefExpr*>(
 				var_stmt.initial_value->get()
@@ -1257,11 +1264,122 @@ private:
 		{
 			// Check deref in returns.
 			auto& ret_stmt = dynamic_cast<const compiler::helios::code::ReturnStmt&>(
-				*function.body->statements.at(13)
+				*function->body->statements.at(13)
 			);
 			auto deref_expr
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());
 			ASSERT_TRUE(deref_expr != nullptr);
+		}
+	}
+
+	void testBoxes() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/boxes")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(4);
+		auto& body     = *function->body;
+		using namespace compiler::helios::code;
+
+		{
+			// var b_int: box i32 = 42;
+			ASSERT_TRUE(body.statements.size() > 0);
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
+			ASSERT_TRUE(var_stmt != nullptr);
+
+			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value->get());
+			ASSERT_TRUE(make_box_expr != nullptr);
+
+			auto* literal_expr
+				= dynamic_cast<const LiteralNumericExpr*>(make_box_expr->inner.get());
+			ASSERT_TRUE(literal_expr != nullptr);
+
+			auto var_type = var_stmt->type;
+			ASSERT_EQUAL(var_type.getRefKind(), compiler::tsh::ReferenceKind::Box);
+			ASSERT_EQUAL(var_type.getType().getKind(), compiler::tsh::Kind::Integral);
+		}
+		{
+			// double_coerce(b_int);
+			// `box i32` -> `ref i32` -> `ref i64`
+			ASSERT_TRUE(body.statements.size() > 2);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* cast_expr = dynamic_cast<const CastExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(cast_expr != nullptr);
+			ASSERT_EQUAL(cast_expr->target_type.getRefKind(), compiler::tsh::ReferenceKind::Ref);
+		}
+		{
+			// var x: i32 = b_point.x;
+			ASSERT_TRUE(body.statements.size() > 5);
+			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[4].get());
+			ASSERT_TRUE(var_stmt != nullptr);
+
+			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value->get());
+			ASSERT_TRUE(access_expr != nullptr);
+			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "x");
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// b_point.y = 99;
+			ASSERT_TRUE(body.statements.size() > 7);
+			auto* assign_stmt = dynamic_cast<const AssignmentStmt*>(body.statements[6].get());
+			ASSERT_TRUE(assign_stmt != nullptr);
+
+			auto* access_expr = dynamic_cast<const AccessExpr*>(assign_stmt->location_expr.get());
+			ASSERT_TRUE(access_expr != nullptr);
+			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "y");
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(access_expr->base.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			// by_val(b_point);
+			// `box T -> T`
+			ASSERT_TRUE(body.statements.size() > 8);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[7].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(deref_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
+			// by_ref(b_point);
+			// `box T -> ref T`
+			ASSERT_TRUE(body.statements.size() > 9);
+			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[8].get());
+			ASSERT_TRUE(expr_stmt != nullptr);
+
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
+
+			ASSERT_TRUE(call_expr->arguments.size() == 1);
+			auto* refof_expr = dynamic_cast<const RefOfExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(refof_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(refof_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
+		}
+		{
+			// `box i32 -> i32` in return.
+			auto* return_stmt = dynamic_cast<const ReturnStmt*>(body.statements.back().get());
+			ASSERT_TRUE(return_stmt != nullptr);
+
+			auto* deref_expr = dynamic_cast<const DerefExpr*>(return_stmt->value.get());
+			ASSERT_TRUE(deref_expr != nullptr);
+
+			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
+			ASSERT_TRUE(ident_expr != nullptr);
 		}
 	}
 
@@ -1351,17 +1469,17 @@ private:
 			ASSERT_EQUAL(hout.functions.size(), 2);
 			{
 				auto function = hout.functions.at(0);
-				ASSERT_EQUAL(function.declaration->original_name, "foo");
+				ASSERT_EQUAL(function->declaration->original_name, "foo");
 
-				auto& a_param = function.declaration->parameters.at(0);
+				auto& a_param = function->declaration->parameters.at(0);
 				ASSERT_EQUAL("a", a_param.name);
 				ASSERT_EQUAL(st(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
-				ASSERT_EQUAL(function.body->statements.size(), 1);
+				ASSERT_EQUAL(function->body->statements.size(), 1);
 
-				auto ret_stmt = function.body->statements.at(0).ref();
+				auto ret_stmt = function->body->statements.at(0).ref();
 				auto ret_stmt_casted
 					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
@@ -1385,9 +1503,9 @@ private:
 
 			{
 				auto function = hout.functions.at(1);
-				ASSERT_EQUAL(function.declaration->original_name, "bar");
-				auto& abc_param    = function.declaration->parameters.at(0);
-				auto& second_param = function.declaration->parameters.at(1);
+				ASSERT_EQUAL(function->declaration->original_name, "bar");
+				auto& abc_param    = function->declaration->parameters.at(0);
+				auto& second_param = function->declaration->parameters.at(1);
 
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
@@ -1434,7 +1552,7 @@ private:
 			};
 
 			auto all_expr_holders
-				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
+				= pst::viewAllSubTreeElementsFilter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"
@@ -1470,9 +1588,9 @@ private:
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		ASSERT_EQUAL(4, hout.functions.size());
 		auto function = hout.functions.at(1);
-		ASSERT_EQUAL(function.declaration->original_name, "foo");
+		ASSERT_EQUAL(function->declaration->original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function.body->statements.at(0).ref().get()
+			function->body->statements.at(0).ref().get()
 		);
 		ASSERT_TRUE(variable != nullptr);
 		auto call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(
@@ -1499,9 +1617,9 @@ private:
 		ASSERT_EQUAL(1, hout.functions.size());
 
 		for (auto& function: hout.functions) {
-			if (function.declaration->original_name == base::StrID("stmtBody1")) {
-				ASSERT_EQUAL(1, function.body->statements.size());
-				auto stmt        = function.body->statements.at(0).ref();
+			if (function->declaration->original_name == base::StrID("stmtBody1")) {
+				ASSERT_EQUAL(1, function->body->statements.size());
+				auto stmt        = function->body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
 				auto ret_expr    = stmt_casted->value.get();
 				auto ctv
@@ -1519,10 +1637,10 @@ private:
 		ASSERT_EQUAL(1, hout.functions.size());
 
 		auto function = hout.functions.at(0);
-		ASSERT_EQUAL(function.declaration->original_name, "main");
+		ASSERT_EQUAL(function->declaration->original_name, "main");
 
 		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function.body->statements.at(0).ref().get()
+			function->body->statements.at(0).ref().get()
 		);
 		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
 			variable_stmt->initial_value->ref().get()
@@ -1535,7 +1653,7 @@ private:
 		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
 
 		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
-			function.body->statements.at(1).ref().get()
+			function->body->statements.at(1).ref().get()
 		);
 		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		auto call_expr_2_callee
@@ -1560,7 +1678,7 @@ private:
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
 		for (auto& function: hout.functions)
-			ASSERT_EQUAL(function.declaration->return_type.getType(), i64_type);
+			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
 	}
 
 	void testFunctionReturnTypeCheckAndCoercion() {
@@ -1571,11 +1689,11 @@ private:
 		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 
 		for (auto& function: hout.functions) {
-			ASSERT_EQUAL(i64_type, function.declaration->return_type.getType());
+			ASSERT_EQUAL(i64_type, function->declaration->return_type.getType());
 
-			if (function.declaration->original_name == base::StrID("big_example")) {
+			if (function->declaration->original_name == base::StrID("big_example")) {
 				for (size_t i: std::initializer_list<size_t>{ 1, 2, 3, 4 }) {
-					auto if_stmt = function.body->statements.at(i).ref();
+					auto if_stmt = function->body->statements.at(i).ref();
 					auto if_stmt_casted
 						= dynamic_cast<const compiler::helios::code::IfStmt*>(&*if_stmt);
 					if (!if_stmt_casted) {
@@ -1589,7 +1707,7 @@ private:
 					assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
 
 					auto ret_type = ret_stmt_casted->value->expression_type.getType();
-					ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+					ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
 
 					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
 						ret_stmt_casted->value.get()
@@ -1599,13 +1717,13 @@ private:
 				continue;
 			}
 
-			auto ret_stmt = function.body->statements.back().ref();
+			auto ret_stmt = function->body->statements.back().ref();
 			auto ret_stmt_casted
 				= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 			assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
 
 			auto ret_type = ret_stmt_casted->value->expression_type.getType();
-			ASSERT_EQUAL(function.declaration->return_type.getType(), ret_type);
+			ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
 
 			auto cast_expr
 				= dynamic_cast<const compiler::helios::code::CastExpr*>(ret_stmt_casted->value.get()
@@ -1625,13 +1743,13 @@ private:
 
 	void testMangler() {
 		auto [module, _] = getModule(fs::File(path("test_modules/mangling")));
-		auto hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+		const auto& hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
 			for (const auto& fun: unit.functions)
-				if (fun.declaration->original_name == name) return fun;
+				if (fun->declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
@@ -1645,9 +1763,9 @@ private:
 		};
 
 		auto goo = find_function(hout_unit, base::StrID("goooo")).value();
-		std::cerr << "\nFunction name: " << goo.declaration->original_name.strView() << '\n';
+		std::cerr << "\nFunction name: " << goo->declaration->original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = goo.declaration->original_symbol,
+			{ .symbol_key              = goo->declaration->original_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 123,
 		      .additional_metadata     = "metadata_v123" }
@@ -1686,15 +1804,15 @@ private:
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
-		auto sub_module = getModule(fs::File(path("test_modules/mangling/sub")));
-		auto sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first).valueOrPanic();
+		auto        sub_module = getModule(fs::File(path("test_modules/mangling/sub")));
+		const auto& sub_hout_unit
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first)->valueOrPanic();
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
-		std::cerr << "\nSub function name: " << sub_fun.declaration->original_name.strView()
+		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
 				  << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_fun.declaration->original_symbol,
+			{ .symbol_key              = sub_fun->declaration->original_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 5,
 		      .additional_metadata     = "metadata_v5" }
@@ -1764,9 +1882,9 @@ private:
 
 	void testGlobalVariableExpressions() {
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                     ) -> base::Optional<compiler::helios::HOUTFunction> {
+		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
 			for (const auto& fun: unit.functions)
-				if (fun.declaration->original_name == name) return fun;
+				if (fun->declaration->original_name == name) return fun;
 			fail(base::strConcat("Function ", name.strView(), " not found"));
 			return {};
 		};
@@ -1782,8 +1900,8 @@ private:
 		{  // General global variable checks.
 
 			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/general")));
-			auto hout_unit
-				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+			const auto& hout_unit
+				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
@@ -1808,7 +1926,7 @@ private:
 					dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr2)->callee.ref()
 				)
 					.value(),
-				find_function(hout_unit, base::StrID("foooo")).value().declaration->original_symbol
+				find_function(hout_unit, base::StrID("foooo")).value()->declaration->original_symbol
 			);
 			expr1->debugPrint(std::cerr);
 			std::cerr << '\n';
@@ -1816,8 +1934,8 @@ private:
 
 		{  // Global variable detections check (isGlobalVar function).
 			auto [module, _] = getModule(fs::File(path("test_modules/global_variables/detection")));
-			auto hout_unit
-				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module).valueOrPanic();
+			const auto& hout_unit
+				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
 
@@ -1829,20 +1947,20 @@ private:
 					));
 
 				for (const auto& fun: hout_unit.functions) {
-					if (fun.declaration->original_name.str() == "foo0") {
+					if (fun->declaration->original_name.str() == "foo0") {
 						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-							&(*fun.body->statements[0])
+							fun->body->statements[0].get()
 						);
 						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 					}
-					if (fun.declaration->original_name.str() == "foo1") {
+					if (fun->declaration->original_name.str() == "foo1") {
 						auto var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-							&(*fun.body->statements[0])
+							fun->body->statements[0].get()
 						);
 						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 
 						var_ptr = dynamic_cast<compiler::helios::code::VariableStmt*>(
-							&(*fun.body->statements[1])
+							fun->body->statements[1].get()
 						);
 						ASSERT_TRUE(not compiler::helios::isGlobalVar(ctx, var_ptr->helios_symbol));
 					}
@@ -2105,7 +2223,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto get_function_by_order
-			= [&](usize index) { return hout.functions.at(index).declaration->original_symbol; };
+			= [&](usize index) { return hout.functions.at(index)->declaration->original_symbol; };
 
 		// Store function symbols for each overload (order matches declaration order in file)
 		auto foo_bool  = get_function_by_order(0);  // fun foo(x: bool)
@@ -2164,7 +2282,7 @@ private:
 		// Helper: find a VariableStmt by name in the function body and return its initializer expr
 		auto get_var_init_expr
 			= [&](const base::StrID& varname) -> CRef<compiler::helios::code::Expr> {
-			for (const auto& st_box: function.body->statements) {
+			for (const auto& st_box: function->body->statements) {
 				if (auto var_ptr
 				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
 					if (compiler::helios::name(var_ptr->helios_symbol) == varname) {
@@ -2294,6 +2412,116 @@ private:
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
+	}
+
+	/**
+	 * Test the origin calculation for elements.
+	 * The origin calculation is not trivial for expressions and generated elements.
+	 */
+	void testHoutElementsOrigin() {
+		auto [module, _] = getModule(fs::File(path("test_modules/helios_pst_origin_tests")));
+
+		auto& hout = query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+
+		auto get_global_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
+			for (const auto& glob: hout.glob_data)
+				if (glob.original_name == name) return &glob;
+			return {};
+		};
+
+		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
+		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
+		auto all_variables
+			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst->getRootElement());
+
+		auto get_pst_variable_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
+			for (const auto& var: all_variables)
+				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of initial value expression
+		 * calculated from HOUT is the same as the source position of the whole PST init expression.
+		 * This is not trivial for AccessChain and for generated elements. (derefs, casts)
+		 */
+		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
+			auto glob_opt = get_global_by_name(name);
+			auto var_opt  = get_pst_variable_by_name(name);
+			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
+			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			auto glob              = glob_opt.value();
+			auto var_pst           = var_opt.value();
+			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
+			auto initial_value_expr
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+
+			dia::SourcePosition expr_pos_from_origin
+				= initial_value_expr->origin.getSourcePosition().value();
+			assertEqual(
+				expr_pos_from_origin,
+				initial_value_pst->getSourcePosition(),
+				base::strConcat(
+					"The initial value expression PST node does not match for variable ",
+					name.strView()
+				)
+			);
+
+			assertEqual(
+				initial_value_expr->origin.isGenerated(),
+				is_generated,
+				"Generated origin does not match for variable "
+			);
+		};
+		check_var_init_expr_origin(base::StrID("var1"), false);
+		check_var_init_expr_origin(base::StrID("var2"), false);
+		check_var_init_expr_origin(base::StrID("var3"), false);
+		check_var_init_expr_origin(base::StrID("var4"), false);
+		check_var_init_expr_origin(base::StrID("var5"), false);
+		check_var_init_expr_origin(base::StrID("var6"), false);
+		check_var_init_expr_origin(base::StrID("var7_generated"), true);
+		check_var_init_expr_origin(base::StrID("var8_generated"), true);
+
+		auto get_hout_function_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name == name) return fun;
+			return {};
+		};
+		auto all_pst_functions = pst::viewAllSubTreeElementsFilter<pst::Fun>(pst->getRootElement());
+		auto get_pst_function_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
+			for (const auto& fun: all_pst_functions)
+				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of function body calculated from HOUT
+		 * is the same as the source position of the whole PST function of the same name.
+		 */
+		auto check_function_origin = [&](base::StrID name) {
+			auto fun_opt     = get_hout_function_by_name(name);
+			auto pst_fun_opt = get_pst_function_by_name(name);
+			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
+			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			auto fun = fun_opt.value();
+
+
+			auto pst_fun = pst_fun_opt.value();
+			assertEqual(
+				fun->origin.getSourcePosition(),
+				pst_fun->getSourcePosition(),
+				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+		};
+
+		check_function_origin(base::StrID("a"));
+		check_function_origin(base::StrID("b"));
+
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testScopeParentsAndDepth() {
