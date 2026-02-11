@@ -172,6 +172,7 @@ namespace artifacts {
 
 		template<SerdeType T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
+			// lock will happen in the call bellow:
 			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
 		}
 
@@ -179,6 +180,7 @@ namespace artifacts {
 
 		template<SerdeType T>
 		const T getBlobData(const BlobArtifact& blob) const {
+			// lock will happen in the call bellow:
 			return deserialize<T>(getBlobDataView(blob));
 		}
 
@@ -238,14 +240,14 @@ namespace artifacts {
 
 		const std::filesystem::path PATH;
 
-		concurrent::AtomicFlagSpinlock lock;
+		mutable concurrent::AtomicFlagSpinlock lock;
 
 		/**
 		 * @brief RAII struct for locking the collection.
 		 */
 		struct WithLock final {
-			ArtifactCollection& collection;
-			WithLock(ArtifactCollection& collection) : collection(collection) {
+			const ArtifactCollection& collection;
+			WithLock(const ArtifactCollection& collection) : collection(collection) {
 				collection.lock.lock();
 			}
 			~WithLock() {
