@@ -616,7 +616,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
+		static inline concurrent::ConHashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// In the future calculate resulting string in comp time
@@ -649,7 +649,7 @@ namespace compiler::helios {
 
 		static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
-			return extractResult(cache.at(key).data);
+			return extractResult(cache.at(key)->data);
 		}
 	};
 
