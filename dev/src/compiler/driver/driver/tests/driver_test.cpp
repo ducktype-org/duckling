@@ -406,9 +406,9 @@ private:
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
 			                    .valueOrPanic();
 
-			ASSERT_TRUE(module_o.FILE.exists());
+			ASSERT_TRUE(module_o.file.exists());
 
-			fs::FileManager::deleteFile(module_o.FILE);
+			fs::FileManager::deleteFile(module_o.file);
 		});
 	}
 
@@ -498,18 +498,18 @@ private:
 			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
 			                    .valueOrPanic();
 
-			assertTrue(module_o.FILE.exists(), "Object file does not exist");
+			assertTrue(module_o.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_o.FILE.getFilePath().getPath());
+			std::filesystem::remove(module_o.file.getFilePath().getPath());
 		});
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
 			                      .valueOrPanic();
-			assertTrue(module_dbc.FILE.exists(), "Object file does not exist");
+			assertTrue(module_dbc.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_dbc.FILE.getFilePath().getPath());
+			std::filesystem::remove(module_dbc.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());

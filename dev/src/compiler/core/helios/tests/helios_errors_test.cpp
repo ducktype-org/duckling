@@ -267,7 +267,7 @@ private:
    					return 0;
 				}
 			)",
-			{ "cannot be evaluated at compile-time" },
+			{ "cannot be evaluated at compile-time", "const y = x" },
 			1
 		);
 
@@ -288,7 +288,7 @@ private:
 					var arr: i32[n];
 				}
 			)",
-			{ "Identifier 'n' cannot be evaluated at compile-time." },
+			{ "Expression cannot be evaluated at compile-time." },
 			1
 		);
 

@@ -52,7 +52,8 @@ namespace compiler::helios::houtgen {
                 = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
             });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
-				makeBox<code::DefaultValueExpr>(ctx, result_symbol_type),
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), result_symbol_type),
 				result_symbol_type,
 				result_symbol
 			)));
@@ -60,26 +61,32 @@ namespace compiler::helios::houtgen {
 			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {
 				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
 					makeBox<code::AccessExpr>(
 						ctx,
-						makeBox<code::IdentifierExpr>(ctx, result_symbol),
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
 						fields.at(i).getSymbol()
 					),
-					makeBox<code::IdentifierExpr>(ctx, ctor_decl.parameters.at(i).helios_symbol)
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol
+					)
 				));
 			}
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(makeBox<code::IdentifierExpr>(ctx, result_symbol))
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+			));
 
 			// Finally, create the HOUTFunction object.
-			return HOUTFunction{
+			return HOUTFunction(
+				code::generatedOrigin(),
 				&ctor_decl,
 				std::make_shared<const code::CodeBlock>(code::CodeBlock{
 					.statements = std::move(body),
-				}),
-			};
+				})
+			);
 		}
 
 		QUERY_AUTO_CACHE_CREF
