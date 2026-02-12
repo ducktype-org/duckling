@@ -551,7 +551,7 @@ namespace compiler::helios {
 					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
 						return tsh::SymbolType<>{
-							ctx.query<tsh::QueryUnitType>({}),
+							tsh::getUnitType(),
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable,
 						};
@@ -737,8 +737,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			UNPACK_QRESULT_MOVE(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
+			UNPACK_QRESULT_CREF_TO_BOX(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
+			return ctx.query<QueryEvaluateHOUTExpression>({ expr });
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -753,7 +753,7 @@ namespace compiler::helios {
 			ctx,
 			pst_expr,
 			tsh::SymbolType<>{
-				ctx.query<tsh::QueryMetaType>({}),
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			}

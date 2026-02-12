@@ -107,6 +107,28 @@ private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
+		return std::any_cast<compiler::tsh::IntegralAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getIntegralType(ctx, size, signedness);
+			})
+		);
+	}
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getFloatTypeNoContext(u64 size) {
+		return std::any_cast<compiler::tsh::FloatAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getFloatType(ctx, size); }
+		));
+	}
+
+	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
@@ -157,16 +179,16 @@ private:
 	void testMetaCompTime() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
 
-		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
+		auto i16_type  = getIntegralTypeNoContext(16, Signed);
+		auto i32_type  = getIntegralTypeNoContext(32, Signed);
+		auto i64_type  = getIntegralTypeNoContext(64, Signed);
+		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
-		auto f16_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		auto f64_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
+		auto f16_type  = getFloatTypeNoContext(16);
+		auto f64_type  = getFloatTypeNoContext(64);
+		auto f128_type = getFloatTypeNoContext(128);
 
-		auto unit_type = query::entryPoint<compiler::tsh::QueryUnitType>({});
+		auto unit_type = compiler::tsh::getUnitType();
 
 		// Tree eval
 		{
@@ -324,14 +346,17 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
-		const auto i16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		const auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		const auto u16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Unsigned });
-		const auto u32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Unsigned });
-		const auto u64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+		const auto i16_type = getIntegralTypeNoContext(16, Signed);
+		const auto i32_type = getIntegralTypeNoContext(32, Signed);
+		const auto i64_type = getIntegralTypeNoContext(64, Signed);
+
+		const auto u16_type = getIntegralTypeNoContext(16, Unsigned);
+		const auto u32_type = getIntegralTypeNoContext(32, Unsigned);
+		const auto u64_type = getIntegralTypeNoContext(64, Unsigned);
+
+		const auto f32_type = getFloatTypeNoContext(32);
+		const auto f64_type = getFloatTypeNoContext(64);
+
 
 		auto verify_type_and_mutability = [&](std::string_view            keyword,
 		                                      std::string_view            type_suffix,
@@ -520,13 +545,13 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/types")));
 
-		const auto int16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto f16_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
-		const auto meta_type  = query::entryPoint<compiler::tsh::QueryMetaType>({});
-		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto int16_type = getIntegralTypeNoContext(16, Signed);
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto f16_type   = getFloatTypeNoContext(16);
+		const auto f32_type   = getFloatTypeNoContext(32);
+		const auto bool_type  = compiler::tsh::getBoolType();
+		const auto meta_type  = compiler::tsh::getMetaType();
+		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
 		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
@@ -616,7 +641,7 @@ private:
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto int_type = ctx.query<compiler::tsh::QueryIntegralType>({ 64 });
+			auto int_type = compiler::tsh::getIntegralType(ctx, 64, Signed);
 
 
 			// Build chain comparison expressions vector
@@ -984,7 +1009,7 @@ private:
 		auto              tree_vref = getExprOfConst(sym_vref);
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
 		const auto int32ref_type = st(int32_type)
 		                               .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
 		                               .withMutability(Immutable);
@@ -995,7 +1020,7 @@ private:
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
+		const auto f16_type    = getFloatTypeNoContext(16);
 		const auto f16box_type = st(f16_type)
 		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
 		                             .withMutability(Immutable);
@@ -1006,7 +1031,7 @@ private:
 		auto              tree_vconst = getExprOfConst(sym_vconst);
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
-		const auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>(query::EmptyKey{});
+		const auto bool_type       = compiler::tsh::getBoolType();
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
@@ -1014,8 +1039,7 @@ private:
 		auto member_access_sym  = getChain("member_access", root_scope).back();
 		auto member_access_expr = getExprOfVariable(member_access_sym);
 		ASSERT_EQUAL(
-			member_access_expr->expression_type.getType(),
-			query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed })
+			member_access_expr->expression_type.getType(), getIntegralTypeNoContext(32, Signed)
 		);
 	}
 
@@ -1046,8 +1070,8 @@ private:
 			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function->body); };
 
 
-		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
+		auto f32_type = getFloatTypeNoContext(32);
 		auto i32_or_f32
 			= query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
 
@@ -1128,7 +1152,7 @@ private:
 			// Check type of r.
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
-			auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto i32_type              = getIntegralTypeNoContext(32, Signed);
 			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
@@ -1386,30 +1410,30 @@ private:
 	void testKeywordLiterals() {
 		auto [module, top_scope] = getModule(fs::File(path("test_modules/keyword_literals")));
 
-		auto i8_type   = query::entryPoint<compiler::tsh::QueryIntegralType>({ 8, Signed });
-		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
+		auto i8_type   = getIntegralTypeNoContext(8, Signed);
+		auto i16_type  = getIntegralTypeNoContext(16, Signed);
+		auto i32_type  = getIntegralTypeNoContext(32, Signed);
+		auto i64_type  = getIntegralTypeNoContext(64, Signed);
+		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
-		auto u8_type   = query::entryPoint<compiler::tsh::QueryIntegralType>({ 8, Unsigned });
-		auto u16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Unsigned });
-		auto u32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Unsigned });
-		auto u64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
-		auto u128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Unsigned });
+		auto u8_type   = getIntegralTypeNoContext(8, Unsigned);
+		auto u16_type  = getIntegralTypeNoContext(16, Unsigned);
+		auto u32_type  = getIntegralTypeNoContext(32, Unsigned);
+		auto u64_type  = getIntegralTypeNoContext(64, Unsigned);
+		auto u128_type = getIntegralTypeNoContext(128, Unsigned);
 
-		auto f16_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+		auto f16_type = getFloatTypeNoContext(16);
+		auto f32_type = getFloatTypeNoContext(32);
+		auto f64_type = getFloatTypeNoContext(64);
 
-		auto f80_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 80 });
-		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
+		auto f80_type  = getFloatTypeNoContext(80);
+		auto f128_type = getFloatTypeNoContext(128);
 
-		auto char_type = query::entryPoint<compiler::tsh::QueryCharType>({});
+		auto char_type = compiler::tsh::getCharType();
 
-		auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>({});
+		auto bool_type = compiler::tsh::getBoolType();
 
-		auto str_type = query::entryPoint<compiler::tsh::QueryStringType>({});
+		auto str_type = compiler::tsh::getStringType();
 
 		// a simple way to get function scope through hout:
 		auto foo            = getChain("foo", top_scope).back();
@@ -1461,8 +1485,8 @@ private:
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::File(path("test_modules/parameters")));
 
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto int64_type = getIntegralTypeNoContext(64, Signed);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto& hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1675,7 +1699,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions)
 			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
@@ -1686,7 +1710,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions) {
 			ASSERT_EQUAL(i64_type, function->declaration->return_type.getType());
@@ -1975,12 +1999,16 @@ private:
 	void testTypeOfConstAndVar() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
 
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto f64_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
-		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto int64_type = getIntegralTypeNoContext(64, Signed);
+
+		const auto f32_type = getFloatTypeNoContext(32);
+		const auto f64_type = getFloatTypeNoContext(64);
+
+		const auto bool_type = compiler::tsh::getBoolType();
+
+		const auto str_type = compiler::tsh::getStringType();
+
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
@@ -2299,7 +2327,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("explicit"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+			auto f64_type = getFloatTypeNoContext(64);
 			ASSERT_EQUAL(f64_type, cast_ptr->target_type.getType());
 		}
 
@@ -2307,7 +2335,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("widen"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+			auto i64_type = getIntegralTypeNoContext(64, Signed);
 			ASSERT_EQUAL(i64_type, cast_ptr->target_type.getType());
 		}
 
@@ -2315,7 +2343,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("bool_as_int"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto i32_type = getIntegralTypeNoContext(32, Signed);
 			ASSERT_EQUAL(i32_type, cast_ptr->target_type.getType());
 		}
 
@@ -2364,12 +2392,10 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st
-				= st(ctx.query<compiler::tsh::QueryMetaType>({})).withMutability(Immutable);
-			const auto unit_st
-				= st(ctx.query<compiler::tsh::QueryUnitType>({})).withMutability(Immutable);
-			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
-			                        .withMutability(Immutable);
+			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
+			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
+			const auto int_st
+				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
 			const auto tuple_ii_st
 				= st(ctx.query<compiler::tsh::QueryTupleType>(
 						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }

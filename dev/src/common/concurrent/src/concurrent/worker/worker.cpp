@@ -5,6 +5,10 @@
 #include <random>
 
 namespace concurrent::worker {
+	namespace {
+		thread_local base::Optional<WRef> current_worker = std::nullopt;
+	}
+
 	void Worker::scheduleTask(const Task& task) {
 		CORE_ASSERT(loop_run_flag, "Cannot push task to stopped worker");
 		{
@@ -28,6 +32,11 @@ namespace concurrent::worker {
 
 	bool Worker::isFree() const { return is_free; }
 
+	bool Worker::internalHasTasks() const {
+		std::scoped_lock lock(mut);
+		return !task_queue.empty();
+	}
+
 	Worker::~Worker() {
 		{
 			std::scoped_lock lock(mut);
@@ -39,6 +48,7 @@ namespace concurrent::worker {
 
 	void Worker::run() {
 		real_thread = std::jthread{ [this]() {
+			current_worker.emplace(this);
 			while (loop_run_flag) {
 				Task task;
 				{
@@ -84,5 +94,9 @@ namespace concurrent::worker {
 
 	Worker::Worker(usize seed): rng(seed) {}
 
-
+	WRef Worker::getCurrentWorker() {
+		if (!current_worker.has_value())
+			CORE_PANIC("Accessing the thread-local current worker reference that is empty");
+		return current_worker.value();
+	}
 }

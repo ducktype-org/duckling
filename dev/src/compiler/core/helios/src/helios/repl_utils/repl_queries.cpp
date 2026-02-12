@@ -40,12 +40,12 @@ namespace compiler::repl {
 			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
 
 			CORE_ASSERT(
-				hout_expr_result.hasValue(),
+				hout_expr_result->hasValue(),
 				"Failed to convert expression to HOUT in REPL expression wrapper"
 			);
 
 
-			auto hout_expr   = std::move(hout_expr_result).valueOrPanic();
+			auto hout_expr   = hout_expr_result->valueOrPanic()->clone();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
 			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
