@@ -337,9 +337,9 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
 			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, hout_expr_result);
+			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, hout_expr_result);
 
-			if (auto literal_type_expr = dynamic_cast<LiteralTypeExpr*>(hout_expr.get())) {
+			if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
 				auto args = call_expr->getArgs().unlock(query_ctx);
 				if (args->size() != 1) {
 					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -353,12 +353,12 @@ namespace compiler::helios::code {
 					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
 						arg.unlock(query_ctx)->getArg().unlock(query_ctx)->getExpr()
 					);
-					UNPACK_QRESULT_MOVE(base::Box<Expr> arg_expr =, arg_expr_result);
+					UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
 						query_ctx,
 						multiplePstOrigin({ keyword, call_expr }),
-						std::move(arg_expr),
+						arg_expr->clone(),
 						literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
@@ -398,11 +398,11 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr) -> query::QResult<ChainState> {
 			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			UNPACK_QRESULT_MOVE(base::Box<Expr> hout_expr =, expr);
-			auto symbol = getIdentifierExprSymID(hout_expr.ref());
+			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, expr);
+			auto symbol = getIdentifierExprSymID(hout_expr);
 			if (symbol.has_value())
 				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr));
-			return ChainState::ofExpr(std::move(hout_expr));
+			return ChainState::ofExpr(hout_expr->clone());
 		}
 
 		/**
