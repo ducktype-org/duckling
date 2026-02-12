@@ -31,7 +31,7 @@ namespace compiler::tsh {
 		return CharAbstractType{&char_impl};
 	}
 
-	IntegralAbstractType getIntegralType(query::Context& ctx, usize size, IntegralAbstractType::Signedness signedness) {
+	IntegralAbstractType getIntegralType(query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness) {
 		using Impl = IntegralAbstractType::Impl;
 		using enum IntegralAbstractType::Signedness;
 
@@ -61,50 +61,36 @@ namespace compiler::tsh {
 	}
 
 
+	FloatAbstractType getFloatType(query::Context& ctx, u64 size) {
+		using Impl = FloatAbstractType::Impl;
 
+		static std::map<usize, Impl> cache = {
+			{ 16, Impl{ 16 } },    // For certain GPU applications
+			{ 32, Impl{ 32 } },    // Standard float
+			{ 64, Impl{ 64 } },    // Double precision
+			{ 80, Impl{ 80 } },    // Long double, covers int64 and uint64 precisely
+			{ 128, Impl{ 128 } },  // Quad precision
+		};
 
-
-	struct IMPLEMENT_QUERY(QueryFloatType, FloatAbstractType::Pimpl) {
-		static auto provide(Context& ctx, const QKey size) -> PResult {
-			using Impl = FloatAbstractType::Impl;
-
-			static std::map<usize, Impl> cache = {
-				{ 16, Impl{ 16 } },    // For certain GPU applications
-				{ 32, Impl{ 32 } },    // Standard float
-				{ 64, Impl{ 64 } },    // Double precision
-				{ 80, Impl{ 80 } },    // Long double, covers int64 and uint64 precisely
-				{ 128, Impl{ 128 } },  // Quad precision
-			};
-
-			if (!cache.contains(size.value)) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Invalid size of float type: ", size.value, "."),
-					"The only allowed sizes are 16, 32, 64, 80, and 128."
-				));
-				// @TODO: maybe change to some ErrorType, instead of a "best guess".
-				return &cache.at(128);
-			}
-
-			return &cache.at(size.value);
+		if (!cache.contains(size)) {
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("Invalid size of float type: ", size.value, "."),
+				"The only allowed sizes are 16, 32, 64, 80, and 128."
+			));
+			// @TODO: maybe change to query Failed, instead of a "best guess".
+			return FloatAbstractType{&cache.at(128)};
 		}
 
-		QUERY_AUTO_NO_CACHE
-	};
+		return FloatAbstractType{&cache.at(size)};
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType)
+	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer) {
+		static auto raw_pointer_impl
+			= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
+							RawPointerAbstractTypeImpl{ Mutability::Mutable } };
+		return RawPointerAbstractType{&raw_pointer_impl.at(mutable_pointer)};
+	}
 
-	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey key) -> PResult {
-			static auto raw_pointer_impl
-				= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
-				              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-			return &raw_pointer_impl.at(key.value);
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {

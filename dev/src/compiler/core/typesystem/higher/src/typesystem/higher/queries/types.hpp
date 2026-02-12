@@ -43,25 +43,19 @@ namespace compiler::tsh {
 	/**
 	 * @brief Simple getter to create and get integral types.
 	 */
-	IntegralAbstractType getIntegralType(query::Context& ctx, usize size, IntegralAbstractType::Signedness signedness);
+	IntegralAbstractType getIntegralType(query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness);
 
 
 	/**
-	 * @brief Query to get a Float (floating point) type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get floating point types.
 	 */
-	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({ .uses_qresult = false }))
+	FloatAbstractType getFloatType(query::Context& ctx, u64 size);
 
 	/**
-	 * @brief Query to get a RawPointer type.
-	 * The boolean key denotes whether the raw pointer points to mutable data.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get raw pointer types.
 	 */
-	DECLARE_QUERY(
-		QueryRawPointerType, query::BoolKey, RawPointerAbstractType, ({ .uses_qresult = false })
-	)
+	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer);
+
 
 	/**
 	 * @brief Query to get a typed Pointer type.
