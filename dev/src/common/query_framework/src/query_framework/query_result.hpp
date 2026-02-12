@@ -210,6 +210,7 @@ namespace query {
 	var std::move(RES_VAR_NAME).valueOrPanic()
 
 /**
+ * Unpack a result from QResult or return the Failed state.
  * In situations where you have a CRef<QResult<...>>
  */
 #define UNPACK_QRESULT_CREF(var, new_value)                \
@@ -218,6 +219,7 @@ namespace query {
 	var RES_VAR_NAME->valueOrPanic()
 
 /**
+ * Unpack a result from QResult or return the Failed state.
  * Used in situations where you have a CRef<QResult<Box<...>>>,
  */
 #define UNPACK_QRESULT_CREF_TO_BOX(var, new_value)         \

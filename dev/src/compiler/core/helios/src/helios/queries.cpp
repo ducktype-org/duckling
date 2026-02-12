@@ -626,7 +626,7 @@ namespace compiler::helios {
 				auto location_type = location_expr->expression_type.getSymbolType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 					location_expr = makeBox<code::DerefExpr>(
-						ctx, location_expr->origin.generatedFrom(), location_expr->clone()
+						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
 					);
 
 				// The new `SymbolType` of `location_expr` is the location symbol without the
