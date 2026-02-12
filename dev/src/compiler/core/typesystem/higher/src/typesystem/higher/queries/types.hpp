@@ -56,6 +56,10 @@ namespace compiler::tsh {
 	 */
 	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer);
 
+	/**
+	 * @brief Simple getter to create and get string type.
+	 */
+	StringAbstractType getStringType();
 
 	/**
 	 * @brief Query to get a typed Pointer type.
@@ -64,12 +68,7 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the String type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType, ({ .uses_qresult = false }))
+
 
 	/**
 	 * @brief Query to get the DynamicArray type.

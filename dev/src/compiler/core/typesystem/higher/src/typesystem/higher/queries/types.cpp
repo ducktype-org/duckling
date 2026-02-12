@@ -74,7 +74,7 @@ namespace compiler::tsh {
 
 		if (!cache.contains(size)) {
 			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-				base::strConcat("Invalid size of float type: ", size.value, "."),
+				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));
 			// @TODO: maybe change to query Failed, instead of a "best guess".
@@ -91,6 +91,11 @@ namespace compiler::tsh {
 		return RawPointerAbstractType{&raw_pointer_impl.at(mutable_pointer)};
 	}
 
+	StringAbstractType getStringType() {
+		static auto string_impl = StringAbstractTypeImpl{};
+		return StringAbstractType{&string_impl};
+	}
+
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
@@ -102,16 +107,7 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
-	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto string_impl = StringAbstractTypeImpl{};
-			return &string_impl;
-		}
 
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
