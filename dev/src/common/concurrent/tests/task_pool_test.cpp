@@ -1,33 +1,11 @@
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/run_or_timeout.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 #include <concurrent/task_pool/task_pool.hpp>
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
 #include <tester/tester.hpp>
-
-template<class F>
-void runOrTimeout(F func, usize timeout_ms = 10'000) {
-	std::atomic<bool> finished = false;
-
-	std::jthread worker_thread([&func, &finished]() {
-		func();
-		finished.store(true, std::memory_order_relaxed);
-	});
-
-	auto start = std::chrono::steady_clock::now();
-	while (!finished.load(std::memory_order_relaxed)) {
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed_ms
-			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
-			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
-			std::cerr << "Possible deadlock detected. Worker thread stack trace:\n";
-			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-}
 
 class TaskPoolTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -47,16 +25,15 @@ public:
 
 protected:
 	void fail(std::string_view err, bool critical = true) override {
-		try {
-			runOrTimeout(concurrent::worker::WorkerManager::get().testPrivateAccessReloadState);
-		} catch (const std::runtime_error& e) {
-			message(base::strConcat(
-				"WorkerManager reload state timed out during fail(). "
-				"Possible deadlock detected. Terminating. Error: ",
-				e.what()
-			));
-			std::terminate();
-		}
+		concurrent::runOrTimeout(
+			concurrent::worker::WorkerManager::get().testPrivateAccessReloadState,
+			[&] {
+				message(
+					base::strConcat("WorkerManager reload state timed out during fail(). "
+			                        "Terminating.")
+				);
+			}
+		);
 		tester::TestSuite::fail(err, critical);
 	}
 
@@ -116,11 +93,14 @@ private:
 			return fib_task_gen(250);
 		});
 
-		runOrTimeout([&]() {
-			task_pool.addInitialTasks({ std::move(initial_task) });
-			task_pool.execute();
-			task_pool.waitExecutionCompletion();
-		});
+		concurrent::runOrTimeout(
+			[&]() {
+				task_pool.addInitialTasks({ std::move(initial_task) });
+				task_pool.execute();
+				task_pool.waitExecutionCompletion();
+			},
+			[&] { fail("Timeout"); }
+		);
 		std::cout << "Execution completed.\n";
 	}
 
@@ -161,11 +141,14 @@ private:
 			return fib_task_gen(250);
 		});
 
-		runOrTimeout([&]() {
-			task_pool.addInitialTasks({ std::move(initial_task) });
-			task_pool.execute();
-			task_pool.waitExecutionCompletion();
-		});
+		concurrent::runOrTimeout(
+			[&]() {
+				task_pool.addInitialTasks({ std::move(initial_task) });
+				task_pool.execute();
+				task_pool.waitExecutionCompletion();
+			},
+			[&] { fail("Timeout"); }
+		);
 
 		std::cout << "Execution completed.\n";
 	}
@@ -204,11 +187,14 @@ private:
 			return fib_task_gen(250);
 		});
 
-		runOrTimeout([&]() {
-			task_pool.addInitialTasks({ std::move(initial_task) });
-			task_pool.execute();
-			task_pool.waitExecutionCompletion();
-		});
+		concurrent::runOrTimeout(
+			[&]() {
+				task_pool.addInitialTasks({ std::move(initial_task) });
+				task_pool.execute();
+				task_pool.waitExecutionCompletion();
+			},
+			[&] { fail("Timeout"); }
+		);
 
 		std::cout << "Execution completed.\n";
 	}
@@ -248,11 +234,14 @@ private:
 			return fib_task_gen(250);
 		});
 
-		runOrTimeout([&]() {
-			task_pool.addInitialTasks({ std::move(initial_task) });
-			task_pool.execute();
-			task_pool.waitExecutionCompletion();
-		});
+		concurrent::runOrTimeout(
+			[&]() {
+				task_pool.addInitialTasks({ std::move(initial_task) });
+				task_pool.execute();
+				task_pool.waitExecutionCompletion();
+			},
+			[&] { fail("Timeout"); }
+		);
 
 		std::cout << "Execution completed.\n";
 	}
@@ -306,11 +295,14 @@ private:
 			return gib_task_gen(250);
 		});
 
-		runOrTimeout([&]() {
-			task_pool.addInitialTasks({ std::move(initial_task) });
-			task_pool.execute();
-			task_pool.waitExecutionCompletion();
-		});
+		concurrent::runOrTimeout(
+			[&]() {
+				task_pool.addInitialTasks({ std::move(initial_task) });
+				task_pool.execute();
+				task_pool.waitExecutionCompletion();
+			},
+			[&] { fail("Timeout"); }
+		);
 
 		std::cout << "Execution completed.\n";
 	}
