@@ -52,7 +52,7 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 		std::mutex                  gil;
-		i64 						next_mutex_id;
+		i64 						next_mutex_id=0;
 		std::map<i64, std::shared_ptr<std::mutex>> 	mutex_map; // TODO lepiej pewnie co innego niz mapa
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
