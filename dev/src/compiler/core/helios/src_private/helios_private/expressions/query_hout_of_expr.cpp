@@ -295,27 +295,19 @@ namespace compiler::helios::code {
 
 				// types:
 				case pst::Keyword::Bool:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getBoolType()
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getBoolType());
 					break;
 
 				case pst::Keyword::Char:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getCharType()
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharType());
 					break;
 
 				case pst::Keyword::Str:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getStringType()
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getMetaType()
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
 					break;
 
 				case pst::Keyword::i128:
@@ -371,9 +363,8 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 80)
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 80));
 					break;
 				case pst::Keyword::f128:
 					node = makeBox<LiteralTypeExpr>(
@@ -381,19 +372,16 @@ namespace compiler::helios::code {
 					);
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 64)
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 64));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 32)
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 32));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16)
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
 
 

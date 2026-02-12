@@ -490,9 +490,7 @@ namespace compiler::helios {
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
-							tsh::getUnitType,
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
+							tsh::getUnitType, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data

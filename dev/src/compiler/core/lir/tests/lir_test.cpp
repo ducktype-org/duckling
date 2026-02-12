@@ -532,8 +532,7 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
+			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
 			auto f32_layout
 				= ctx.query<tsl::QueryAbstractTypeLayout>(ctx.query<tsh::QueryFloatType>({ 32 }));
 			auto i16_layout

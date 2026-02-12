@@ -98,7 +98,7 @@ private:
 	 */
 	void simpleByteSized() {
 		const auto byte_1 = getByteType();
-		
+
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
 		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
 
@@ -106,9 +106,9 @@ private:
 
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
 		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
-		
+
 		const auto char_1 = getCharType();
-		
+
 		assertTrue(char_1.getKind() == Char, "Char type should have kind Char.");
 		assertTrue(char_1.hasNoOpDestructor(), "Char should have no op destructor.");
 

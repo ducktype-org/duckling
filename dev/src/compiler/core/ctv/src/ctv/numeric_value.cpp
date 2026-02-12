@@ -26,18 +26,16 @@ namespace compiler::numeric_value {
 
 				if constexpr (IS_INTEGRAL && IS_SIGNED) {
 					return SymbolType{
-						getIntegralType(ctx,
-							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Signed
+						getIntegralType(
+							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Signed
 						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
 					return SymbolType{
-						getIntegralType(ctx,
-							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Unsigned
+						getIntegralType(
+							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned
 						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
