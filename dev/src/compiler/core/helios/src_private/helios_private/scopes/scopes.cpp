@@ -211,9 +211,9 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		/**
 		 * @brief Cache to verify parent scopes are consistent.
-		 * \parallel Must be made thread safe.
+		 * @note It is intentionally thread safe.
 		 */
-		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element_key) -> PResult {
 			auto element            = element_key.element.unlock(ctx);
@@ -243,9 +243,9 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			if (parent_map.contains(element->getID())) {
+			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
 				CORE_ASSERT(
-					parent_map.at(element->getID()) == parent,
+					*scope_in_map == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
