@@ -48,7 +48,7 @@ namespace compiler::tsh {
 		if (!cache.contains({ size, signedness })) {
 			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
 				base::strConcat("Invalid size of integral type: ", size, "."),
-				"The only allowed sizes are 16, 32, 64, 80, and 128."
+				"The only allowed sizes are 8, 16, 32, 64 and 128."
 			));
 			// @TODO: maybe change to query failed, instead of a "best guess".
 			return IntegralAbstractType{ &cache.at({ 128, signedness }) };
@@ -60,7 +60,7 @@ namespace compiler::tsh {
 	FloatAbstractType getFloatType(query::Context& ctx, u64 size) {
 		using Impl = FloatAbstractType::Impl;
 
-		static std::map<usize, Impl> cache = {
+		static const std::map<usize, Impl> cache = {
 			{ 16, Impl{ 16 } },    // For certain GPU applications
 			{ 32, Impl{ 32 } },    // Standard float
 			{ 64, Impl{ 64 } },    // Double precision
