@@ -200,7 +200,7 @@ private:
 		} catch (std::runtime_error&) {
 			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
 					  << " / " << TASK_COUNT << " tasks.\n";
-			throw;
+			fail("Timeout.");
 		}
 
 		std::scoped_lock lock(task_mutex);
