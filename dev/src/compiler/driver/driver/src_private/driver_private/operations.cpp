@@ -18,7 +18,7 @@ namespace compiler::driver {
 
 
 	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
-		QUERY_AUTO_NO_CACHE
+
 
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
@@ -83,12 +83,14 @@ namespace compiler::driver {
 				.globals   = globals,
 			};
 		}
+
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
 
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_CREF
 
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
@@ -101,8 +103,10 @@ namespace compiler::driver {
 									  .hash.toStringHex()
 				)
 			                      .c_str());
-
-			return ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
+			
+			// we intentially make copy here, to keep the data in the
+			// cache of this query
+			return *ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
 		}
 	};
 
