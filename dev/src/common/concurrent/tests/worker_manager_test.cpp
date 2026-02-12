@@ -10,8 +10,10 @@
 #include <stdexcept>
 #include <thread>
 
-template<class F>
-void runOrTimeout(F func, usize timeout_ms = 5'000) {
+class WorkerManagerTest;
+
+template<class F, class G>
+void runOrTimeout(F func, G timeout_callback, usize timeout_ms = 5'000) {
 	std::atomic<bool> finished = false;
 
 	std::jthread worker_thread([&func, &finished]() {
@@ -26,7 +28,7 @@ void runOrTimeout(F func, usize timeout_ms = 5'000) {
 			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
 			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
-			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
+			timeout_callback();
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
@@ -48,18 +50,15 @@ public:
 
 protected:
 	void fail(std::string_view err, bool critical = true) override {
-		try {
-			runOrTimeout(WorkerManager::get().testPrivateAccessReloadState);
-		} catch (const std::runtime_error& e) {
+		runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(
 				base::strConcat(
 					"WorkerManager reload state timed out during fail(). "
-					"Possible deadlock detected. Terminating. Error: ",
-					e.what()
+					"Terminating."
 				)
 			);
 			std::terminate();
-		}
+		});
 		tester::TestSuite::fail(err, critical);
 	}
 
@@ -94,15 +93,20 @@ private:
 		// Wait for all tasks to complete
 		// We also expect that during this time the no_tasks_callback
 		// has been called at least once per worker.
-		runOrTimeout([&] {
-			while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			       || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
-				std::cerr << "Waiting... Finished tasks: "
-						  << task_finished_counter.load(std::memory_order_relaxed)
-						  << ", No task callbacks: "
-						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		});
+		runOrTimeout(
+			[&] {
+				while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
+			           || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
+					std::cerr << "Waiting... Finished tasks: "
+							  << task_finished_counter.load(std::memory_order_relaxed)
+							  << ", No task callbacks: "
+							  << no_task_counter.load(std::memory_order_relaxed) << "\n",
+						std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			},
+			[&] {
+				fail("Timeout while waiting for tasks to finish or no_tasks_callback to be called.");
+			}
+		);
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
 		std::cerr << "No task callback called " << val << " times.\n";
@@ -189,20 +193,21 @@ private:
 		}
 
 
-		try {
-			runOrTimeout([&] {
+		runOrTimeout(
+			[&] {
 				while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
 					std::cerr << "Completed "
 							  << total_completed_tasks.load(std::memory_order_relaxed) << " / "
 							  << TASK_COUNT << " tasks.\n";
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
-			});
-		} catch (std::exception&) {
-			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
-					  << " / " << TASK_COUNT << " tasks.\n";
-			fail("Timeout.");
-		}
+			},
+			[&] {
+				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
+						  << " / " << TASK_COUNT << " tasks.\n";
+				fail("Timeout.");
+			}
+		);
 
 		std::scoped_lock lock(task_mutex);
 		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
