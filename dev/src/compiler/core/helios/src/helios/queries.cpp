@@ -242,7 +242,7 @@ namespace compiler::helios {
 				// there are no returns to deduce the type
 				// we default to unit type
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -282,7 +282,7 @@ namespace compiler::helios {
 			) {
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -689,7 +689,7 @@ namespace compiler::helios {
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto bool_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -719,7 +719,7 @@ namespace compiler::helios {
 
 			void visitWhile(pst::Access<pst::While> stmt) override {
 				auto bool_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

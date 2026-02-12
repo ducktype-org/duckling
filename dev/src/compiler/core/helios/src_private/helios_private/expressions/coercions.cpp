@@ -106,7 +106,7 @@ namespace compiler::helios {
 			ctx,
 			from,
 			tsh::SymbolType<>{
-				ctx.query<tsh::QueryMetaType>({}),
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			}

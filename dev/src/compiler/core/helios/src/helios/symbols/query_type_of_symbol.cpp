@@ -121,15 +121,15 @@ namespace compiler::helios {
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getMetaType());
 			}
 
 			void visitNamespace(pst::Access<pst::Namespace>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryNamespaceType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getNamespaceType());
 			}
 
 			void visitImport(pst::Access<pst::Import>) final {
-				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
+				setTypeOfSymbolByAbstractType(tsh::getImportType());
 			}
 
 			void visitParam(pst::Access<pst::Param> param) final {
