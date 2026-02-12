@@ -71,11 +71,11 @@ namespace compiler::helios {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
 						{ stmt->getValue().value().unlock(ctx)->getExpr() }
 					);
-					if (parsed.hasFailed()) {
+					if (parsed->hasFailed()) {
 						setFailed();
 						return;
 					}
-					const auto& expr_type = parsed.valueOrThrow()->expression_type;
+					const auto& expr_type = parsed->valueOrThrow()->expression_type;
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
 						expr_type, tsh::Mutability::Immutable
 					));
@@ -95,10 +95,10 @@ namespace compiler::helios {
 						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
 					);
 				} else if (stmt->getValue().has_value()) {
-					auto parsed = ctx.query<QueryHoutOfExpr>(
-										 { stmt->getValue().value().unlock(ctx)->getExpr() }
+					auto& parsed = ctx.query<QueryHoutOfExpr>(
+										  { stmt->getValue().value().unlock(ctx)->getExpr() }
 					)
-					                  .valueOrThrow();
+					                   ->valueOrThrow();
 
 					const auto& expr_type = parsed->expression_type;
 					setTypeOfSymbol(

@@ -319,23 +319,23 @@ namespace compiler::helios::code {
 	) {
 		usize arg_index = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr
+			auto arg_expr_result
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasFailed()) return query::Failed();
+			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				for (auto&& [existing_name, _]: named_arguments)
 					if (existing_name == arg_name)
 						return RepeatedNamedArgument{ arg_index };  // Duplicate named argument.
-				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
+				named_arguments.emplace_back(arg_name, arg_expr->clone());
 			} else {
 				if (!named_arguments.empty())
 					return PositionalAfterNamedArgument{
 						arg_index
 					};  // Normal argument after named one.
 
-				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
+				positional_arguments.emplace_back(arg_expr->clone());
 			}
 			arg_index++;
 		}
