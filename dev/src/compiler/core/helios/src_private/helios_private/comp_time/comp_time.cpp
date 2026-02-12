@@ -737,8 +737,8 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryEvaluatePSTExpression, CompTimeEvalResult) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
-			UNPACK_QRESULT_MOVE(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
-			return ctx.query<QueryEvaluateHOUTExpression>({ expr.ref() });
+			UNPACK_QRESULT_CREF_TO_BOX(auto expr =, ctx.query<QueryHoutOfExpr>({ key.element }));
+			return ctx.query<QueryEvaluateHOUTExpression>({ expr });
 		}
 
 		QUERY_AUTO_NO_CACHE

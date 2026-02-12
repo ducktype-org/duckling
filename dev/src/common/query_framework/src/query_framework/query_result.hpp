@@ -9,7 +9,6 @@
 #include <base/pointers/ref.hpp>
 #include <base/preproc/utils.hpp>
 
-#include <expected>
 #include <type_traits>
 #include <variant>
 
@@ -209,6 +208,22 @@ namespace query {
 	auto&& RES_VAR_NAME = new_value;                      \
 	if (RES_VAR_NAME.hasFailed()) return query::Failed(); \
 	var std::move(RES_VAR_NAME).valueOrPanic()
+
+/**
+ * In situations where you have a CRef<QResult<...>>
+ */
+#define UNPACK_QRESULT_CREF(var, new_value)                \
+	auto&& RES_VAR_NAME = new_value;                       \
+	if (RES_VAR_NAME->hasFailed()) return query::Failed(); \
+	var RES_VAR_NAME->valueOrPanic()
+
+/**
+ * Used in situations where you have a CRef<QResult<Box<...>>>,
+ */
+#define UNPACK_QRESULT_CREF_TO_BOX(var, new_value)         \
+	auto&& RES_VAR_NAME = new_value;                       \
+	if (RES_VAR_NAME->hasFailed()) return query::Failed(); \
+	var RES_VAR_NAME->valueOrPanic().ref()
 
 
 /**

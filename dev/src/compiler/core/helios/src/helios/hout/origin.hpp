@@ -27,14 +27,14 @@ namespace compiler::helios::code {
 		 * @brief Helper function that creates a new origin based on the current one
 		 * but extending the source position to include the additional PST element.
 		 */
-		ElementOrigin extended(pst::Access<pst::LangElement> pst_element);
+		[[nodiscard]] ElementOrigin extended(pst::Access<pst::LangElement> pst_element) const;
 
 		/**
 		 * @brief Helper function that creates a new origin based on the current one but marked as
 		 * generated. Used for example when the `deref expr` or `cast expr` is generated based on an
 		 * existing expression.
 		 */
-		ElementOrigin generatedFrom();
+		[[nodiscard]] ElementOrigin generatedFrom() const;
 
 		[[nodiscard]] bool isGenerated() const { return is_generated; }
 	};
