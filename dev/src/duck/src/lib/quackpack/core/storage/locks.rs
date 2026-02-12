@@ -113,9 +113,10 @@ impl CleanLock {
 /// Counterpart to [`CleanLock`], which blocks latter from being acquired.
 /// In practice this is shared form of [`CleanLock`].
 ///
-/// Can be constructed from [`TrySyncLock::to_disallow_clean_lock`].
-pub struct DisallowCleanLock {
-    _lock: FileLockGuard,
+/// Can be constructed from [`TrySyncLock::to_compile_lock`].
+pub struct CompileLock {
+    _compile_lock: FileLockGuard,
+    _clean_lock: FileLockGuard,
 }
 
 #[derive(Debug)]
@@ -139,29 +140,12 @@ impl TrySyncLock {
         })
     }
 
-    pub fn to_disallow_clean_lock(self) -> DisallowCleanLock {
-        DisallowCleanLock {
-            _lock: self.clean_lock,
-        }
-    }
-}
-
-#[derive(Debug)]
-/// A lock granting safe read-only access to a virtual environment's dependency configuration.
-/// Holding this lock guarantees the dependencies remain unchanged for the duration.
-pub struct RunLock {
-    _lock: FileLockGuard,
-}
-
-impl RunLock {
-    pub fn new(storage: &Storage, venv_id: VenvId) -> QuackResult<Self> {
-        let lock = storage
-            .sync_lock(venv_id)
-            .lock_shared(ShouldBlock::Yes)
-            .with_context(|| {
-                format!("failed to acquire shared sync lock for venv `{}`", venv_id)
-            })?;
-        Ok(Self { _lock: lock })
+    pub fn to_compile_lock(self, storage: &Storage, venv_id: VenvId) -> QuackResult<CompileLock> {
+        let compile_lock = storage.compile_lock(venv_id).lock(ShouldBlock::Yes)?;
+        Ok(CompileLock {
+            _compile_lock: compile_lock,
+            _clean_lock: self.clean_lock,
+        })
     }
 }
 
@@ -170,6 +154,7 @@ impl RunLock {
 pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
     cleanup_locks_impl(storage, storage.iter_sync_locks()?)?;
     cleanup_locks_impl(storage, storage.iter_data_locks()?)?;
+    cleanup_locks_impl(storage, storage.iter_compile_locks()?)?;
     Ok(())
 }
 

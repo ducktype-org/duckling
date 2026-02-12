@@ -14,6 +14,9 @@
 //! │   └── ...
 //! └── locks/
 //!     ├── clean.lock
+//!     ├── compile/
+//!     │   ├── <package id>
+//!     │   └── ...
 //!     ├── venv_sync/
 //!     │   ├── <package id>
 //!     │   └── ...
@@ -38,6 +41,7 @@ use super::package_id::PackageId;
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
 const VENV_DATA_LOCK_FILENAME: &str = "venv_data";
+const COMPILE_LOCK_FILENAME: &str = "compile";
 const CLEAN_LOCK_FILENAME: &str = "clean.lock";
 
 const VENVS_DIR_NAME: &str = "venv";
@@ -55,6 +59,7 @@ pub struct Storage {
     clean_lock: PathBuf,
     sync_lock_base: PathBuf,
     data_lock_base: PathBuf,
+    compile_locks_base: PathBuf,
 }
 
 impl Storage {
@@ -68,12 +73,14 @@ impl Storage {
         let clean_lock = lock_base.join(CLEAN_LOCK_FILENAME);
         let sync_lock_base = lock_base.join(VENV_SYNC_LOCK_FILENAME);
         let data_lock_base = lock_base.join(VENV_DATA_LOCK_FILENAME);
+        let compile_locks_base = lock_base.join(COMPILE_LOCK_FILENAME);
         Self {
             packages_dir,
             venvs_dir,
             clean_lock,
             sync_lock_base,
             data_lock_base,
+            compile_locks_base,
         }
     }
 
@@ -91,6 +98,10 @@ impl Storage {
 
     pub fn data_lock(&self, venv_id: VenvId) -> PathBuf {
         self.data_lock_base.join(venv_id)
+    }
+
+    pub fn compile_lock(&self, venv_id: VenvId) -> PathBuf {
+        self.compile_locks_base.join(venv_id)
     }
 
     pub fn venv_dir(&self, venv_id: VenvId) -> PathBuf {
@@ -136,6 +147,14 @@ impl Storage {
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_data_locks(&self) -> QuackResult<ReadDir> {
         let dir = self.data_lock_base.as_path();
+        create_dir_iterator(dir)
+    }
+
+    /// Returns an iterator over all compile locks in the storage.
+    /// It is not guaranteed that during iteration, the yielded paths
+    /// still exist and there are no guarantees on paths that appeared during an iteration.
+    pub fn iter_compile_locks(&self) -> QuackResult<ReadDir> {
+        let dir = self.compile_locks_base.as_path();
         create_dir_iterator(dir)
     }
 

@@ -99,20 +99,21 @@ pub fn clean_storage(ctx: &DuckCtx) -> QuackResult<CleanOutput> {
 }
 
 fn clean_venv_from_storage(
-    venv: DirEntry,
+    dir: DirEntry,
     storage: &Storage,
     temporary_lifetime: Duration,
     now: SystemTime,
     removed_vevns: &mut Vec<VenvId>,
     all_deps: &mut HashSet<StrId>,
 ) -> QuackResult<()> {
-    let venv_id = venv.file_name().to_string_lossy().into_owned().into();
+    let venv_id = dir.file_name().to_string_lossy().into_owned().into();
     let _lock = storage.data_lock(venv_id).lock(ShouldBlock::Yes)?;
-    let data = Venv::fix_and_load(storage, venv_id)?;
-    let Some(mut data) = data else {
+    let venv = Venv::fix_and_load(storage, venv_id)?;
+    let Some(mut venv) = venv else {
         return Ok(());
     };
     let mut requires_save = false;
+    let data = venv.data_mut();
     // last_access can exceed current_time only if there was a system time change.
     // If ephemeral venv's previous last_access is far in the future, we may never
     // clean it. Choosing to truncate the last_access to the present time may instead
@@ -124,17 +125,19 @@ fn clean_venv_from_storage(
     }
     if data.is_ephemeral() && data.last_access() + temporary_lifetime < now {
         debug!("removing venv `{venv_id}` from the shared storage");
-        venv.path().rmtree().with_context(|| {
+        dir.path().rmtree().with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
-                venv.path().display()
+                dir.path().display()
             )
         })?;
         removed_vevns.push(venv_id);
         return Ok(());
     }
+    // We're done mutating data, let's make borrow checker happy.
+    let data = venv.data();
     if requires_save {
-        data.save_to(storage, venv_id)?;
+        venv.save_to(storage)?;
     }
     all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {
         if dep.source().is_local() {

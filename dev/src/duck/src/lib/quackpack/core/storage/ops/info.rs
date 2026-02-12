@@ -5,10 +5,10 @@ use rustvil::fs::{PathExt, ShouldBlock};
 use crate::quackpack::core::storage;
 
 use crate::StrId;
+use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::{DuckCtx, QuackResult};
 use storage::paths;
-use storage::venv::Venv;
 
 /// Get a snapshot of all virtual environments' states.
 ///
