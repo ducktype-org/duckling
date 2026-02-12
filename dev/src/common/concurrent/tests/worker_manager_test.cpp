@@ -78,10 +78,8 @@ protected:
 	void fail(std::string_view err, bool critical = true) override {
 		runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(
-				base::strConcat(
-					"WorkerManager reload state timed out during fail(). "
-					"Terminating."
-				)
+				base::strConcat("WorkerManager reload state timed out during fail(). "
+			                    "Terminating.")
 			);
 		});
 		tester::TestSuite::fail(err, critical);
@@ -122,8 +120,8 @@ private:
 			[&](const std::stop_token& st) {
 				while (!st.stop_requested()
 			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			               || no_task_counter.load(std::memory_order_relaxed)
-			                      < getWorkerCount() * 2)) {
+			               || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2
+			           )) {
 					std::cerr << "Waiting... Finished tasks: "
 							  << task_finished_counter.load(std::memory_order_relaxed)
 							  << ", No task callbacks: "
@@ -175,7 +173,7 @@ private:
 		concurrent::ConHashMap<u64, u64>  results;
 		concurrent::ConHashMap<WRef, u64> worker_task_counts;
 
-		constexpr u64 TASK_COUNT      = 10'000;
+		constexpr u64 TASK_COUNT      = 50'000;
 		constexpr u64 START           = 10'000;
 		constexpr u64 TASK_BATCH_SIZE = 5;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
