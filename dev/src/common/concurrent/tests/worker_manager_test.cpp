@@ -52,10 +52,8 @@ protected:
 	void fail(std::string_view err, bool critical = true) override {
 		runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(
-				base::strConcat(
-					"WorkerManager reload state timed out during fail(). "
-					"Terminating."
-				)
+				base::strConcat("WorkerManager reload state timed out during fail(). "
+			                    "Terminating.")
 			);
 			std::terminate();
 		});
@@ -96,16 +94,15 @@ private:
 		runOrTimeout(
 			[&] {
 				while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			           || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
+			           || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2) {
 					std::cerr << "Waiting... Finished tasks: "
 							  << task_finished_counter.load(std::memory_order_relaxed)
 							  << ", No task callbacks: "
 							  << no_task_counter.load(std::memory_order_relaxed) << "\n",
 						std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				}
 			},
-			[&] {
-				fail("Timeout while waiting for tasks to finish or no_tasks_callback to be called.");
-			}
+			[&] { fail("Timeout"); }
 		);
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
@@ -203,6 +200,7 @@ private:
 				}
 			},
 			[&] {
+				std::cout << "Leaving out of testing...\n";
 				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
 						  << " / " << TASK_COUNT << " tasks.\n";
 				fail("Timeout.");
