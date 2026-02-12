@@ -20,6 +20,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -554,12 +556,7 @@ namespace compiler::helios {
 			return code::fromPST(ctx, key.element);
 		}
 
-		// @TODO: perhaps add cache
-		// Right now its not that simple since QueryHoutOfExpr
-		// has to return different expresion tree (unique_ptr).
-		// It might not be a problem in the future, so for now it is left without cache.
-
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
@@ -572,16 +569,14 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
-		if (expr_hout_qresult.hasFailed()) return query::Failed();
-
-		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
+		UNPACK_QRESULT_CREF_TO_BOX(auto expr_hout =, expr_hout_qresult);
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
 			variant_case(InvalidCoercion, _) {
 				if (log_error.has_value()) {
 					(*log_error)(ctx);

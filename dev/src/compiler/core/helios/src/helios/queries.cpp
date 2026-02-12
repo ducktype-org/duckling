@@ -196,7 +196,8 @@ namespace compiler::helios {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
 						)
-						                .valueOrThrow();
+						                ->valueOrThrow()
+						                .ref();
 						output(expr->expression_type.getSymbolType());
 					} else {
 						CORE_PANIC(
@@ -217,7 +218,8 @@ namespace compiler::helios {
 			void visitReturn(pst::Access<pst::Return> stmt) final {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
-					                .valueOrThrow();
+					                ->valueOrThrow()
+					                .ref();
 					output(expr->expression_type.getSymbolType());
 				}
 			}
@@ -312,9 +314,6 @@ namespace compiler::helios {
 					if (value.empty()) {
 						parameters.emplace_back(param_name, param_type, std::nullopt, param_symbol);
 					} else {
-						// auto initial_value
-						// 	= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr())
-						//           .valueOrThrow();
 						auto initial_value
 							= getHoutOfExprWithExpectedType(
 								  ctx, value.value().unlock(ctx)->getExpr(), param_type
@@ -620,7 +619,7 @@ namespace compiler::helios {
 				auto var = assignment->getVariables();
 				auto val = assignment->getValue();
 
-				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).valueOrThrow();
+				auto location_expr = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
 
 				// If left side of the assignment is a ref/box, we have to dereference it and store
 				// the value in the memory pointed by the ref/box.
@@ -682,7 +681,7 @@ namespace compiler::helios {
 
 				// else just create an expression statement:
 
-				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr }).valueOrThrow();
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow()->clone();
 				output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
 			}
 
