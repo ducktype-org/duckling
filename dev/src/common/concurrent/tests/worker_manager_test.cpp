@@ -11,26 +11,49 @@
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 
-class WorkerManagerTest;
+template<class F, class... Args>
+concept JThreadStoppable = std::is_invocable_v<F, const std::stop_token&, Args...>;
 
+/**
+ * @brief Runs a function with a timeout. If the function does not complete within the specified
+ * timeout, the test is failed and the process is terminated.
+ *
+ * @param func The function to run.
+ * @param timeout_callback The callback to invoke if a timeout occurs. This can be used to perform
+ * any necessary cleanup before termination.
+ * @param timeout_ms The timeout duration in milliseconds. Default is 5000 ms (5 seconds).
+ */
 template<class F, class G>
 void runOrTimeout(F func, G timeout_callback, usize timeout_ms = 5'000) {
 	std::mutex              mutex;
 	std::condition_variable cv;
+	std::atomic_bool        done = false;
 
-	std::jthread worker_thread([&func, &cv]() {
-		func();
-		cv.notify_one();
-	});
+	constexpr bool IS_STOPPABLE = JThreadStoppable<F>;
+	std::jthread   worker_thread([&func, &cv, &done, &mutex](const std::stop_token& st) {
+        if constexpr (IS_STOPPABLE)
+            func(st);
+        else
+            func();
+        std::scoped_lock lock(mutex);
+        done.store(true, std::memory_order_relaxed);
+        cv.notify_one();
+    });
 
 	{
 		std::unique_lock lock(mutex);
-		if (cv.wait_for(lock, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout) {
-			worker_thread.detach();  // Detach the thread to allow it to finish on its own, since we
-			                         // are terminating the test.
+		if (!done.load(std::memory_order_relaxed)
+		    && cv.wait_for(lock, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout) {
+			if (IS_STOPPABLE)
+				worker_thread.request_stop();
+			else
+				worker_thread.detach();  // Detach the worker thread since we are going to terminate
+				                         // the process
 			std::cerr << "Timeout after " << timeout_ms << " ms. Terminating the task.\n";
 			timeout_callback();
+			if (!IS_STOPPABLE) std::terminate();
 		}
 	}
 }
@@ -56,7 +79,6 @@ protected:
 				base::strConcat("WorkerManager reload state timed out during fail(). "
 			                    "Terminating.")
 			);
-			std::terminate();
 		});
 		tester::TestSuite::fail(err, critical);
 	}
@@ -93,9 +115,11 @@ private:
 		// We also expect that during this time the no_tasks_callback
 		// has been called at least once per worker.
 		runOrTimeout(
-			[&] {
-				while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			           || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2) {
+			[&](const std::stop_token& st) {
+				while (!st.stop_requested()
+			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
+			               || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2
+			           )) {
 					std::cerr << "Waiting... Finished tasks: "
 							  << task_finished_counter.load(std::memory_order_relaxed)
 							  << ", No task callbacks: "
@@ -192,8 +216,9 @@ private:
 
 
 		runOrTimeout(
-			[&] {
-				while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
+			[&](const std::stop_token& st) {
+				while (!st.stop_requested()
+			           && total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
 					std::cerr << "Completed(inner) "
 							  << total_completed_tasks.load(std::memory_order_relaxed) << " / "
 							  << TASK_COUNT << " tasks.\n";
