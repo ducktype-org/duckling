@@ -642,7 +642,7 @@ private:
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto int_type = getIntegralTypeNoContext(64, Signed);
+			auto int_type = compiler::tsh::getIntegralType(ctx, 64, Signed);
 
 
 			// Build chain comparison expressions vector
@@ -2388,7 +2388,7 @@ private:
 			const auto meta_st
 				= st(compiler::tsh::getMetaType()).withMutability(Immutable);
 			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
-			const auto int_st  = st(getIntegralTypeNoContext(32, Signed))
+			const auto int_st  = st(compiler::tsh::getIntegralType(ctx, 32, Signed))
 			                        .withMutability(Immutable);
 			const auto tuple_ii_st
 				= st(ctx.query<compiler::tsh::QueryTupleType>(
