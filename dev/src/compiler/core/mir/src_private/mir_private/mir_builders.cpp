@@ -223,7 +223,7 @@ namespace compiler::mir {
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addNoLifetimeBoolTmp() {
 		auto type = tsh::SymbolType<>(
-			ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
+			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
 		);
 		return addNoLifetimeTmp(type);
 	}

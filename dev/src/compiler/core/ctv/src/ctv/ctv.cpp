@@ -40,7 +40,7 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case_novalue(bool) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -48,14 +48,14 @@ namespace compiler::ctv {
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
 			variant_case_novalue(base::StrID) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryStringType>({}),
+					tsh::getStringType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
 			}
 			variant_case_novalue(UnitCTV) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -75,7 +75,7 @@ namespace compiler::ctv {
 
 			variant_case(tsh::SymbolType<>, val) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryMetaType>({}),
+					tsh::getMetaType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
