@@ -482,7 +482,7 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable
 					);
 					auto str_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryStringType>({}),
+						tsh::getStringType(),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);

@@ -46,7 +46,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  tsh::getUnitType,
+					  tsh::getUnitType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -123,7 +123,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryStringType>({}),
+					  tsh::getStringType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -152,7 +152,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::getMetaType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -461,7 +461,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::getMetaType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -865,7 +865,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>(
-					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::getMetaType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable
 				  ),

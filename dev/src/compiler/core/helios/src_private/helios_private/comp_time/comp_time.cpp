@@ -753,7 +753,7 @@ namespace compiler::helios {
 			ctx,
 			pst_expr,
 			tsh::SymbolType<>{
-				ctx.query<tsh::QueryMetaType>({}),
+				tsh::getMetaType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			}

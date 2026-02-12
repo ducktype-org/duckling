@@ -453,7 +453,7 @@ private:
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = ctx.query<tsh::QueryMetaType>({});
+			auto                  meta_type_entity = tsh::getMetaType();
 			CRef<tsl::TypeLayout> meta_layout
 				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
 
