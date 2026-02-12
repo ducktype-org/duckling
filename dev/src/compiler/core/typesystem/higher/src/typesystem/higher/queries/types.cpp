@@ -6,97 +6,63 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
-	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto unit_impl = UnitAbstractTypeImpl{};
-			return &unit_impl;
+	UnitAbstractType getUnitType() {
+		static auto unit_impl = UnitAbstractTypeImpl{};
+			return UnitAbstractType{&unit_impl};
+	}
+
+	VoidAbstractType getVoidType() {
+		static auto void_impl = VoidAbstractTypeImpl{};
+			return VoidAbstractType{&void_impl};
+	}
+
+	ByteAbstractType getByteType() {
+		static auto byte_impl = ByteAbstractTypeImpl{};
+		return ByteAbstractType{&byte_impl};
+	}
+
+	BoolAbstractType getBoolType() {
+		static auto bool_impl = BoolAbstractTypeImpl{};
+		return BoolAbstractType{&bool_impl};
+	}
+
+	CharAbstractType getCharType() {
+		static auto char_impl = CharAbstractTypeImpl{};
+		return CharAbstractType{&char_impl};
+	}
+
+	IntegralAbstractType getIntegralType(query::Context& ctx, usize size, IntegralAbstractType::Signedness signedness) {
+		using Impl = IntegralAbstractType::Impl;
+		using enum IntegralAbstractType::Signedness;
+
+		static const std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
+			{ { 8, Signed }, Impl{ 8, Signed } },
+			{ { 8, Unsigned }, Impl{ 8, Unsigned } },
+			{ { 16, Signed }, Impl{ 16, Signed } },
+			{ { 16, Unsigned }, Impl{ 16, Unsigned } },
+			{ { 32, Signed }, Impl{ 32, Signed } },
+			{ { 32, Unsigned }, Impl{ 32, Unsigned } },
+			{ { 64, Signed }, Impl{ 64, Signed } },
+			{ { 64, Unsigned }, Impl{ 64, Unsigned } },
+			{ { 128, Signed }, Impl{ 128, Signed } },
+			{ { 128, Unsigned }, Impl{ 128, Unsigned } },
+		};
+
+		if (!cache.contains({ size, signedness })) {
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("Invalid size of integral type: ", size, "."),
+				"The only allowed sizes are 16, 32, 64, 80, and 128."
+			));
+			// @TODO: maybe change to query failed, instead of a "best guess".
+			return IntegralAbstractType{&cache.at({ 128, signedness })};
 		}
 
-		QUERY_AUTO_NO_CACHE
-	};
+		return IntegralAbstractType{&cache.at({ size, signedness })};
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType)
 
-	struct IMPLEMENT_QUERY(QueryVoidType, VoidAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto void_impl = VoidAbstractTypeImpl{};
-			return &void_impl;
-		}
 
-		QUERY_AUTO_NO_CACHE
-	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType)
-
-	struct IMPLEMENT_QUERY(QueryByteType, ByteAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto byte_impl = ByteAbstractTypeImpl{};
-			return &byte_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType)
-
-	struct IMPLEMENT_QUERY(QueryBoolType, BoolAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto bool_impl = BoolAbstractTypeImpl{};
-			return &bool_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType)
-
-	struct IMPLEMENT_QUERY(QueryCharType, CharAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto char_impl = CharAbstractTypeImpl{};
-			return &char_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
-
-	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralAbstractType::Pimpl) {
-		static auto provide(Context& ctx, const QKey key) -> PResult {
-			using Impl = IntegralAbstractType::Impl;
-			using enum IntegralAbstractType::Signedness;
-
-			static std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
-				{ { 8, Signed }, Impl{ 8, Signed } },
-				{ { 8, Unsigned }, Impl{ 8, Unsigned } },
-				{ { 16, Signed }, Impl{ 16, Signed } },
-				{ { 16, Unsigned }, Impl{ 16, Unsigned } },
-				{ { 32, Signed }, Impl{ 32, Signed } },
-				{ { 32, Unsigned }, Impl{ 32, Unsigned } },
-				{ { 64, Signed }, Impl{ 64, Signed } },
-				{ { 64, Unsigned }, Impl{ 64, Unsigned } },
-				{ { 128, Signed }, Impl{ 128, Signed } },
-				{ { 128, Unsigned }, Impl{ 128, Unsigned } },
-			};
-
-			const auto [size, signedness] = key;
-
-			if (!cache.contains({ size, signedness })) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Invalid size of integral type: ", size, "."),
-					"The only allowed sizes are 16, 32, 64, 80, and 128."
-				));
-				// @TODO: maybe change to some ErrorType, instead of a "best guess".
-				return &cache.at({ 128, signedness });
-			}
-
-			return &cache.at({ size, signedness });
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
 
 	struct IMPLEMENT_QUERY(QueryFloatType, FloatAbstractType::Pimpl) {
 		static auto provide(Context& ctx, const QKey size) -> PResult {

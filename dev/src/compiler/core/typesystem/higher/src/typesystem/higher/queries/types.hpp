@@ -1,3 +1,9 @@
+/**
+ * This file contains the queries and functions that create types.
+ * Some of those functions are queries and some are simple getters,
+ * the division depends mostly on whether we want a query cache or not.
+ */
+
 #pragma once
 
 #include "../symbol_type.hpp"
@@ -10,82 +16,35 @@
 
 namespace compiler::tsh {
 	/**
-	 * @brief Query to get the Unit type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Unit type.
 	 */
-	DECLARE_QUERY(QueryUnitType, query::EmptyKey, UnitAbstractType, ({ .uses_qresult = false }))
+	UnitAbstractType getUnitType();
 
 	/**
-	 * @brief Query to get the Void type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Void type.
 	 */
-	DECLARE_QUERY(QueryVoidType, query::EmptyKey, VoidAbstractType, ({ .uses_qresult = false }))
+	VoidAbstractType getVoidType();
 
 	/**
-	 * @brief Query to get the Byte type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Byte type.
 	 */
-	DECLARE_QUERY(QueryByteType, query::EmptyKey, ByteAbstractType, ({ .uses_qresult = false }))
+	ByteAbstractType getByteType();
 
 	/**
-	 * @brief Query to get the Bool type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Bool type.
 	 */
-	DECLARE_QUERY(QueryBoolType, query::EmptyKey, BoolAbstractType, ({ .uses_qresult = false }))
+	BoolAbstractType getBoolType();
 
 	/**
-	 * @brief Query to get the Char type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Char type.
 	 */
-	DECLARE_QUERY(QueryCharType, query::EmptyKey, CharAbstractType, ({ .uses_qresult = false }))
+	CharAbstractType getCharType();
 
 	/**
-	 * @brief Key for QueryIntegralType.
+	 * @brief Simple getter to create and get integral types.
 	 */
-	struct KeyFor_QueryIntegralType final {
-		/**
-		 * @brief The size of the Integral type. Pick from { 8, 16, 32, 64, 128 }.
-		 */
-		usize size;
+	IntegralAbstractType getIntegralType(query::Context& ctx, usize size, IntegralAbstractType::Signedness signedness);
 
-		/**
-		 * @brief Whether the Integral type is signed or not.
-		 */
-		IntegralAbstractType::Signedness signedness;
-
-		// These constructor definitions are to force giving at least the first argument.
-		KeyFor_QueryIntegralType() = delete;
-
-		KeyFor_QueryIntegralType(
-			const usize                            size,
-			const IntegralAbstractType::Signedness signedness
-			= IntegralAbstractType::Signedness::Signed
-		):
-			  size(size),
-			  signedness(signedness) {}
-
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return size + (signedness == IntegralAbstractType::Signedness::Signed);
-		}
-	};
-
-	/**
-	 * @brief Query to get an Integral type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryIntegralType,
-		KeyFor_QueryIntegralType,
-		IntegralAbstractType,
-		({ .uses_qresult = false })
-	)
 
 	/**
 	 * @brief Query to get a Float (floating point) type.
