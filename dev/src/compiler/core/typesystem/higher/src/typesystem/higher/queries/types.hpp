@@ -43,7 +43,9 @@ namespace compiler::tsh {
 	/**
 	 * @brief Simple getter to create and get integral types.
 	 */
-	IntegralAbstractType getIntegralType(query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness);
+	IntegralAbstractType getIntegralType(
+		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
+	);
 
 
 	/**
@@ -80,7 +82,6 @@ namespace compiler::tsh {
 	 * @brief Simple getter to create and get import type.
 	 */
 	ImportAbstractType getImportType();
-
 
 
 	/**
@@ -223,8 +224,6 @@ namespace compiler::tsh {
 	DECLARE_QUERY(
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
 	)
-
-
 
 
 }

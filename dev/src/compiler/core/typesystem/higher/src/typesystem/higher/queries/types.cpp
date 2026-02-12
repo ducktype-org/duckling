@@ -8,44 +8,41 @@
 namespace compiler::tsh {
 	UnitAbstractType getUnitType() {
 		static auto unit_impl = UnitAbstractTypeImpl{};
-			return UnitAbstractType{&unit_impl};
+		return UnitAbstractType{ &unit_impl };
 	}
 
 	VoidAbstractType getVoidType() {
 		static auto void_impl = VoidAbstractTypeImpl{};
-			return VoidAbstractType{&void_impl};
+		return VoidAbstractType{ &void_impl };
 	}
 
 	ByteAbstractType getByteType() {
 		static auto byte_impl = ByteAbstractTypeImpl{};
-		return ByteAbstractType{&byte_impl};
+		return ByteAbstractType{ &byte_impl };
 	}
 
 	BoolAbstractType getBoolType() {
 		static auto bool_impl = BoolAbstractTypeImpl{};
-		return BoolAbstractType{&bool_impl};
+		return BoolAbstractType{ &bool_impl };
 	}
 
 	CharAbstractType getCharType() {
 		static auto char_impl = CharAbstractTypeImpl{};
-		return CharAbstractType{&char_impl};
+		return CharAbstractType{ &char_impl };
 	}
 
-	IntegralAbstractType getIntegralType(query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness) {
+	IntegralAbstractType getIntegralType(
+		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
+	) {
 		using Impl = IntegralAbstractType::Impl;
 		using enum IntegralAbstractType::Signedness;
 
 		static const std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
-			{ { 8, Signed }, Impl{ 8, Signed } },
-			{ { 8, Unsigned }, Impl{ 8, Unsigned } },
-			{ { 16, Signed }, Impl{ 16, Signed } },
-			{ { 16, Unsigned }, Impl{ 16, Unsigned } },
-			{ { 32, Signed }, Impl{ 32, Signed } },
-			{ { 32, Unsigned }, Impl{ 32, Unsigned } },
-			{ { 64, Signed }, Impl{ 64, Signed } },
-			{ { 64, Unsigned }, Impl{ 64, Unsigned } },
-			{ { 128, Signed }, Impl{ 128, Signed } },
-			{ { 128, Unsigned }, Impl{ 128, Unsigned } },
+			{ { 8, Signed }, Impl{ 8, Signed } },     { { 8, Unsigned }, Impl{ 8, Unsigned } },
+			{ { 16, Signed }, Impl{ 16, Signed } },   { { 16, Unsigned }, Impl{ 16, Unsigned } },
+			{ { 32, Signed }, Impl{ 32, Signed } },   { { 32, Unsigned }, Impl{ 32, Unsigned } },
+			{ { 64, Signed }, Impl{ 64, Signed } },   { { 64, Unsigned }, Impl{ 64, Unsigned } },
+			{ { 128, Signed }, Impl{ 128, Signed } }, { { 128, Unsigned }, Impl{ 128, Unsigned } },
 		};
 
 		if (!cache.contains({ size, signedness })) {
@@ -54,12 +51,11 @@ namespace compiler::tsh {
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));
 			// @TODO: maybe change to query failed, instead of a "best guess".
-			return IntegralAbstractType{&cache.at({ 128, signedness })};
+			return IntegralAbstractType{ &cache.at({ 128, signedness }) };
 		}
 
-		return IntegralAbstractType{&cache.at({ size, signedness })};
+		return IntegralAbstractType{ &cache.at({ size, signedness }) };
 	}
-
 
 	FloatAbstractType getFloatType(query::Context& ctx, u64 size) {
 		using Impl = FloatAbstractType::Impl;
@@ -78,42 +74,42 @@ namespace compiler::tsh {
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));
 			// @TODO: maybe change to query Failed, instead of a "best guess".
-			return FloatAbstractType{&cache.at(128)};
+			return FloatAbstractType{ &cache.at(128) };
 		}
 
-		return FloatAbstractType{&cache.at(size)};
+		return FloatAbstractType{ &cache.at(size) };
 	}
 
 	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer) {
 		static auto raw_pointer_impl
 			= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
-							RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-		return RawPointerAbstractType{&raw_pointer_impl.at(mutable_pointer)};
+			              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
+		return RawPointerAbstractType{ &raw_pointer_impl.at(mutable_pointer) };
 	}
 
 	StringAbstractType getStringType() {
 		static auto string_impl = StringAbstractTypeImpl{};
-		return StringAbstractType{&string_impl};
+		return StringAbstractType{ &string_impl };
 	}
 
 	NamespaceAbstractType getNamespaceType() {
 		static auto namespace_impl = NamespaceAbstractTypeImpl{};
-		return NamespaceAbstractType{&namespace_impl};
+		return NamespaceAbstractType{ &namespace_impl };
 	}
 
 	MetaAbstractType getMetaType() {
 		static auto meta_impl = MetaAbstractTypeImpl{};
-		return MetaAbstractType{&meta_impl};
+		return MetaAbstractType{ &meta_impl };
 	}
 
 	ModuleAbstractType getModuleType() {
 		static auto module_impl = ModuleAbstractTypeImpl{};
-		return ModuleAbstractType{&module_impl};
+		return ModuleAbstractType{ &module_impl };
 	}
 
 	ImportAbstractType getImportType() {
 		static auto import_impl = ImportAbstractTypeImpl{};
-		return ImportAbstractType{&import_impl};
+		return ImportAbstractType{ &import_impl };
 	}
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
@@ -125,8 +121,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
-
-
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
