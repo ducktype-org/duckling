@@ -33,5 +33,7 @@ namespace compiler::driver {
 	/**
 	 * @brief Query that produces LIRModuleData for given Duckling module.
 	 */
-	DECLARE_QUERY(CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRModuleData>>, ({}))
+	DECLARE_QUERY(
+		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRModuleData>>, ({})
+	)
 }

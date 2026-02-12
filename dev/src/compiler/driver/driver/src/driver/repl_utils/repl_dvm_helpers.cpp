@@ -14,7 +14,6 @@
 
 #include <vm/api/vm.hpp>
 
-
 namespace compiler::repl {
 	// Platform portability check: DVM assumes bool is 1 byte (stored as i8).
 	// float and double sizes are already validated in base/types/floats.hpp.
@@ -25,10 +24,10 @@ namespace compiler::repl {
 	) {
 		CRef lir_data
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit,
-		                                                          base::StrID("repl_module") })
-		          ->valueOrPanic();
-		
-				  auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
+		                                                           base::StrID("repl_module") })
+		           ->valueOrPanic();
+
+		auto dvm_code_collection = driver::compileLIRModuleToDVM(lir_data);
 
 		return vm::api::loadCode(pid, dvm_code_collection).transform_error(vm::api::errorToString);
 	}

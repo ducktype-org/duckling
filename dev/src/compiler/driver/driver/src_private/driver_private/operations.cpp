@@ -18,8 +18,6 @@ namespace compiler::driver {
 
 
 	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
-
-
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
 			auto        module_name = key.module_name;
@@ -103,7 +101,7 @@ namespace compiler::driver {
 									  .hash.toStringHex()
 				)
 			                      .c_str());
-			
+
 			// we intentially make copy here, to keep the data in the
 			// cache of this query
 			return *ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
