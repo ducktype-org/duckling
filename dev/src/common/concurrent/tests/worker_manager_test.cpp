@@ -147,7 +147,7 @@ private:
 		concurrent::ConHashMap<u64, u64>  results;
 		concurrent::ConHashMap<WRef, u64> worker_task_counts;
 
-		constexpr u64 TASK_COUNT      = 50'000;
+		constexpr u64 TASK_COUNT      = 10'000;
 		constexpr u64 START           = 10'000;
 		constexpr u64 TASK_BATCH_SIZE = 5;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
