@@ -53,12 +53,21 @@ namespace query::internal {
 			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			QueryGraph                                           graph;
+			QueryGraph graph;
+
+			/**
+			 * Colors of nodes from the previous compilation.
+			 * Red   - node is outdated
+			 * Green - node is up to date and can be merged into the current graph without
+			 * recomputation
+			 * @note This map should only be written to during the red-green sweep
+			 */
 			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
 
 			/**
 			 * Metadata from previous compilation.
 			 * Metadata for green nodes will be moved into current metadata_storage during merge.
+			 * /parallel #29 Make metadata concurrent
 			 */
 			base::Optional<MetadataStorage> metadata;
 
@@ -89,7 +98,7 @@ namespace query::internal {
 		\***************************/
 
 		/**
-		 * @brief Returns the query graph.
+		 * @brief Returns read-only reference to the query graph.
 		 */
 		[[nodiscard]]
 		const QueryGraph& getGraph() const {
@@ -97,7 +106,7 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Returns the graph from previous compilation.
+		 * @brief Returns read-only reference to the graph from previous compilation.
 		 */
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
@@ -123,6 +132,10 @@ namespace query::internal {
 		| Active query state interface:   |
 		\*********************************/
 
+		/**
+		 *  Return mutable reference to the active graph.
+		 *  @note Note that all active graph operations are thread safe.
+		 */
 		Ref<ActiveGraph> getActiveGraph() noexcept;
 
 		/**

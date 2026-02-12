@@ -1,5 +1,6 @@
 #include "query_state.hpp"
 
+#include <concurrent/base/locks/assert_lock.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -24,9 +25,6 @@
 #include <vector>
 
 namespace {
-	std::mutex red_green_sweep_mutex;
-	std::mutex merge_mutex;
-
 	// Small local wrappers to make intent explicit while staying on top of std::vector.
 	template<typename T>
 	struct VectorMap final {
@@ -129,7 +127,11 @@ namespace query::internal {
 
 	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
 		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");
-		previous->node_colors->putOrAssign(node, color);
+		CORE_ASSERT(
+			!previous->node_colors->contains(node),
+			"Node color is already set in previous compilation"
+		);
+		previous->node_colors->put(node, color);
 	}
 
 	base::CRef<concurrent::ConHashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
@@ -141,17 +143,28 @@ namespace query::internal {
 	}
 
 	void QueryState::setPreviousGraph(QueryGraph&& graph) {
+		// This should be called only once per compilation
+		static concurrent::AssertLock lock;
+		lock.lock();
 		CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
 		previous.emplace(std::move(graph));
+		lock.unlock();
 	}
 
 	void QueryState::setPreviousMetadata(MetadataStorage&& metadata) {
+		// This should be called only once per compilation
+		static concurrent::AssertLock lock;
+		lock.lock();
 		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
 		CORE_ASSERT(previous->metadata.empty(), "Previous metadata is already set!");
 		previous->metadata.emplace(std::move(metadata));
+		lock.unlock();
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
+		// @TODO: #2007 Remove this mutex and make it trully thread-safe.
+		static std::mutex red_green_sweep_mutex;
+
 		std::scoped_lock lock(red_green_sweep_mutex);
 
 		// measure time spent in red-green sweep:
@@ -206,12 +219,13 @@ namespace query::internal {
 			// node and aren't colored yet So the cannot be merged yet
 			CORE_ASSERT(prev_graph.node_deps->contains(node), "Node should exist in previous graph");
 
-			auto& deps = *prev_graph.node_deps->atMaybe(node).value();
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());)
+			auto& deps        = *prev_graph.node_deps->atMaybe(node).value();
+			auto  deps_holder = deps.getHolder();
+			auto& children    = *deps_holder;
 
 			// If node has no entry or no deps -> treat as leaf; mark Green if not colored yet
 			// If node is not colored that means node is not input, so we can safely mark it Green
-			if (deps.children.empty()) {
+			if (children.empty()) {
 				node_colors->putOrAssign(node, PrevColor::Green);
 
 				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
@@ -221,8 +235,8 @@ namespace query::internal {
 			}
 
 			// Process children one by one ensuring post-order coloring
-			if (frame.idx < deps.children.size()) {
-				const NodeID& child = deps.children[frame.idx++];
+			if (frame.idx < children.size()) {
+				const NodeID& child = children[frame.idx++];
 
 				// If child's color is known already, continue to next child
 				// This is necessary for merging and sweeping algorithm work concurrently
@@ -243,14 +257,17 @@ namespace query::internal {
 
 			// All children processed. Determine this node's color from its direct dependencies.
 			bool all_green = true;
-			for (const auto& c: deps.children) {
+			for (const auto& c: children) {
 				auto itc = node_colors->atMaybe(c);
 				if (!itc.has_value() || *itc.value() != PrevColor::Green) {
 					all_green = false;
 					break;
 				}
 			}
-			node_colors->putOrAssign(node, all_green ? PrevColor::Green : PrevColor::Red);
+			CORE_ASSERT(
+				!node_colors->contains(node), "Node color should not be set before processing"
+			);
+			node_colors->put(node, all_green ? PrevColor::Green : PrevColor::Red);
 
 			IF_BUILD_TYPE_DEV(in_stack.erase(node);)
 
@@ -279,6 +296,9 @@ namespace query::internal {
 	}
 
 	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
+		// @TODO: #2007 Remove this mutex and make it trully thread-safe.
+		static std::mutex merge_mutex;
+
 		std::scoped_lock lock(merge_mutex);
 
 		// measure time spent in graph merges:
@@ -344,16 +364,19 @@ namespace query::internal {
 			auto prev_it = prev_graph.node_deps->atMaybe(node);
 			CORE_ASSERT(prev_it.has_value(), "Failed to find node in previous graph during merge");
 
+			// Get holder only to hold the assert lock
+			auto node_deps_holder = prev_it.value()->getHolder();
+
 			auto prev_deps = std::move(*prev_it.value());
-			IF_BUILD_TYPE_DEV(auto assert_lock = prev_deps.lock.get(); assert_lock->lock();
-			                  defer(assert_lock->unlock());)
 			prev_graph.node_deps->erase(node);
+			node_deps_holder.release();
 
 			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));
 			CORE_ASSERT(
 				key_value_pair != nullptr, "Node should not exist in current graph during merge"
 			);
-			const auto& deps = key_value_pair->value.children;
+			auto        current_deps_holder = key_value_pair->value.getHolder();
+			const auto& merged_deps         = *current_deps_holder;
 
 			// Merge metadata for nodes with preserve_in_graph = true
 			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
@@ -362,7 +385,7 @@ namespace query::internal {
 					metadata_storage.emplace(std::move(extracted_opt).value());
 			}
 
-			for (const auto& child: deps) stack.push_back(Frame{ .node = child });
+			for (const auto& child: merged_deps) stack.push_back(Frame{ .node = child });
 		}
 	}
 
@@ -450,10 +473,9 @@ namespace query::internal {
 			u64   edge_count      = 0;
 			usize preserved_nodes = 0;
 			for (const auto& [node, deps]: *node_deps) {
-				IF_BUILD_TYPE_DEV(deps.lock->lock();)
-				edge_count += deps.children.size();
+				auto deps_holder = deps.getHolder();
+				edge_count += (*deps_holder).size();
 				if (node.q_id.getData().tags.preserve_in_graph) ++preserved_nodes;
-				IF_BUILD_TYPE_DEV(deps.lock->unlock();)
 			}
 			CORE_DEV_LOG(
 				Incremental,
@@ -504,10 +526,10 @@ namespace query::internal {
 
 			// Convert dependencies to index space and deduplicate
 			std::vector<LocalNodeID> child_indices;
-			IF_BUILD_TYPE_DEV(deps.lock->lock();)
-			child_indices.reserve(deps.children.size());
-			for (const auto& dep: deps.children) child_indices.push_back(node_to_idx.at(dep));
-			IF_BUILD_TYPE_DEV(deps.lock->unlock();)
+			auto                     deps_holder = deps.getHolder();
+			auto&                    children    = *deps_holder;
+			child_indices.reserve(children.size());
+			for (const auto& dep: children) child_indices.push_back(node_to_idx.at(dep));
 
 			// Deduplicate dependencies
 			deduplicate_or_remove(child_indices, true, false);

@@ -9,8 +9,11 @@
 #include <base/collections/maps.hpp>
 #include <base/config/build_type.hpp>
 #include <base/pointers/box.hpp>
+#include <base/pointers/ref.hpp>
+#include <base/preproc/utils.hpp>
 
 #include <ostream>
+#include <type_traits>
 #include <vector>
 
 namespace query::internal {
@@ -22,13 +25,88 @@ namespace query::internal {
 	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
 	 */
 	class QueryGraph final {
+		struct ChildrenData;
+		template<class T>
+		struct ChildrenDataHolderImpl;
+		using ChildrenDataHolder      = ChildrenDataHolderImpl<ChildrenData>;
+		using ConstChildrenDataHolder = ChildrenDataHolderImpl<const ChildrenData>;
+
 		struct ChildrenData final {
+		private:
 			std::vector<NodeID> children;
-			IF_BUILD_TYPE_DEV(base::Box<concurrent::AssertLock> lock;  // protects children vector
+			IF_BUILD_TYPE_DEV(mutable base::Box<concurrent::AssertLock> lock
+			                  = base::makeBox<concurrent::AssertLock>();  // protects children vector
 			)
-			IF_BUILD_TYPE_DEV(ChildrenData() : lock(base::makeBox<concurrent::AssertLock>()){})
+
+		public:
+			friend class QueryGraph;
+			friend class QueryState;
+			ChildrenData() = default;
+
+			ChildrenData(std::vector<NodeID>&& children): children(std::move(children)) {}
+
+			template<class T>
+			friend struct ChildrenDataHolderImpl;
+
+			/**
+			 * @brief Get a holder for the children vector. The holder will lock the children data
+			 * until it is destroyed.
+			 * @return A holder for the children vector.
+			 * @note Holder uses asert lock, so if two threads try to get the holder at the same
+			 * time, one of them will panic. This is intentional, as it should never happen that two
+			 * threads try to access the same node's children at the same time.
+			 */
+			ChildrenDataHolder getHolder() { return { this }; }
+
+			[[nodiscard]]
+			ConstChildrenDataHolder getHolder() const {
+				return { this };
+			}
+
 			// Each node (query call with unique key) should be executed once at the same time, but
 			// we use AssertLock to be sure about that
+		};
+
+		/**
+		 * @brief Holder for the children data. Locks the children data until destroyed or release()
+		 * is called.
+		 */
+		template<class T>
+		struct ChildrenDataHolderImpl {
+		private:
+			base::Ref<T> children;
+			IF_BUILD_TYPE_DEV(mutable base::Ref<concurrent::AssertLock> lock;
+			)  // protects children vector
+			IF_BUILD_TYPE_DEV(mutable bool was_released = false;)
+
+		public:
+			ChildrenDataHolderImpl(base::Ref<T> children):
+				  children(children) IF_BUILD_TYPE_DEV(COMMA lock(children->lock.refMut())) {
+				IF_BUILD_TYPE_DEV(lock->lock();)
+			}
+
+			ChildrenDataHolderImpl(const ChildrenDataHolderImpl&)            = delete;
+			ChildrenDataHolderImpl& operator=(const ChildrenDataHolderImpl&) = delete;
+			ChildrenDataHolderImpl(ChildrenDataHolderImpl&&)                 = delete;
+			ChildrenDataHolderImpl& operator=(ChildrenDataHolderImpl&&)      = delete;
+
+			auto operator*() -> std::conditional_t<
+				std::is_const_v<T>,
+				const std::vector<NodeID>&,
+				std::vector<NodeID>&> {
+				return children->children;
+			}
+
+			const std::vector<NodeID>& operator*() const { return children->children; }
+
+			void release() const {
+				IF_BUILD_TYPE_DEV(if (!was_released) {
+					was_released = true;
+					lock->unlock();
+				})
+			}
+
+			~ChildrenDataHolderImpl() { this->release(); }
 		};
 
 		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;

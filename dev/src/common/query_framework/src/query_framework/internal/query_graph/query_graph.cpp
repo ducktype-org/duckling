@@ -2,8 +2,6 @@
 
 #include "node_id.hpp"
 
-#include <base/config/build_type.hpp>
-#include <base/extend_cpp/defer.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
@@ -26,9 +24,9 @@ namespace query::internal {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
-		auto children_data = node_deps->atMaybe(from).value();
-		IF_BUILD_TYPE_DEV(children_data->lock->lock(); defer(children_data->lock->unlock());)
-		children_data->children.push_back(to);
+		auto  children_data = node_deps->atMaybe(from).value();
+		auto& children      = *children_data->getHolder();
+		children.push_back(to);
 	}
 
 	std::vector<NodeID> QueryGraph::getNodeDeps(internal::NodeID node_id) const {
@@ -56,9 +54,10 @@ namespace query::internal {
 				visited_node_id.hash.val.toStringHex()
 			);
 
-			const auto node = node_deps->atMaybe(visited_node_id).value();
-			IF_BUILD_TYPE_DEV(node->lock->lock(); defer(node->lock->unlock());)
-			for (auto dep: node->children)
+			const auto node     = node_deps->atMaybe(visited_node_id).value();
+			auto       holder   = node->getHolder();
+			auto&      children = *holder;
+			for (auto dep: children)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
 
@@ -82,9 +81,11 @@ namespace query::internal {
 			node_deps->contains(node_id),
 			"Node not found in dep graph when requesting direct dependencies."
 		);
-		auto children_data = node_deps->atMaybe(node_id).value();
-		IF_BUILD_TYPE_DEV(children_data->lock->lock(); defer(children_data->lock->unlock());)
-		return children_data->children;
+		auto  children_data   = node_deps->atMaybe(node_id).value();
+		auto  children_holder = children_data->getHolder();
+		auto& children        = *children_holder;
+		children_holder.release();
+		return children;
 	}
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
@@ -101,25 +102,24 @@ namespace query::internal {
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
 		for (auto& [k, v]: *node_deps) {
-			IF_BUILD_TYPE_DEV(v.lock->lock();)
-			index[k] = id++;
+			auto children_holder = v.getHolder();
+			index[k]             = id++;
 			out << id << " " << k.q_id.getData().name << "\n";
-			IF_BUILD_TYPE_DEV(v.lock->unlock();)
 		}
 
 		for (auto& [k, v]: *node_deps) {
-			IF_BUILD_TYPE_DEV(v.lock->lock();)
-			for (auto& dep: v.children) out << index[k] << " " << index[dep] << "\n";
-			IF_BUILD_TYPE_DEV(v.lock->unlock();)
+			auto  children_holder = v.getHolder();
+			auto& children        = *children_holder;
+			for (auto& dep: children) out << index[k] << " " << index[dep] << "\n";
 		}
 	}
 
 	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
 		for (const auto& n: nodes) {
-			auto children_data = node_deps->atMaybe(n).value();
-			IF_BUILD_TYPE_DEV(children_data->lock->lock(); defer(children_data->lock->unlock());)
-			const auto& node_data_entry = children_data->children;
+			auto        children_data   = node_deps->atMaybe(n).value();
+			auto        children_holder = children_data->getHolder();
+			const auto& node_data_entry = *children_holder;
 			out << "    > Query - " << std::setw(5) << std::left;
 			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
@@ -136,18 +136,19 @@ namespace query::internal {
 
 		for (auto& [node, deps]: *node_deps) {
 			auto it = other.node_deps->atMaybe(node);
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); it.value()->lock->lock();)
-			if (!it.has_value() || deps.children != it.value()->children) return false;
-			IF_BUILD_TYPE_DEV(it.value()->lock->unlock(); deps.lock->unlock();)
+			if (!it.has_value()) return false;
+			auto deps_holder       = deps.getHolder();
+			auto other_deps_holder = it.value()->getHolder();
+			if (*deps_holder != *other_deps_holder) return false;
 		}
 
 		for (auto& [node, deps]: *other.node_deps) {
 			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); it.value()->lock->lock();)
-			bool are_same = deps.children == it.value()->children;
+			auto deps_holder       = deps.getHolder();
+			auto other_deps_holder = it.value()->getHolder();
+			bool are_same          = *deps_holder == *other_deps_holder;
 			if (!are_same) return false;
-			IF_BUILD_TYPE_DEV(it.value()->lock->unlock(); deps.lock->unlock();)
 		}
 
 		return true;
@@ -169,11 +170,12 @@ namespace query::internal {
 
 		std::vector<std::vector<usize>> adjacency(node_count);
 		for (const auto& node: nodes) {
-			auto& deps = *node_deps->atMaybe(node).value();
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());)
-			auto& out = adjacency.at(node_to_index.at(node));
-			out.reserve(deps.children.size());
-			for (const auto& dep: deps.children) {
+			auto& deps        = *node_deps->atMaybe(node).value();
+			auto  deps_holder = deps.getHolder();
+			auto& children    = *deps_holder;
+			auto& out         = adjacency.at(node_to_index.at(node));
+			out.reserve(children.size());
+			for (const auto& dep: children) {
 				CORE_ASSERT(
 					node_to_index.contains(dep),
 					"Dependency node missing from graph during serialization."
@@ -291,8 +293,8 @@ namespace query::internal {
 			usize deps_size = 0;
 			read(deps_size);
 
-			ChildrenData deps;
-			deps.children.reserve(deps_size);
+			std::vector<NodeID> children;
+			children.reserve(deps_size);
 
 			// Deserialize each dependency index
 			for (usize j = 0; j < deps_size; ++j) {
@@ -300,10 +302,11 @@ namespace query::internal {
 				read(dep_index);
 				if (dep_index >= nodes.size())
 					throw std::out_of_range("Dependency index out of range during deserialization");
-				deps.children.emplace_back(nodes.at(dep_index));
+				children.emplace_back(nodes.at(dep_index));
 			}
 
-			auto key_value_pair = graph.node_deps->maybePut(nodes.at(node_index), std::move(deps));
+			auto key_value_pair
+				= graph.node_deps->maybePut(nodes.at(node_index), std::move(children));
 			if (key_value_pair == nullptr)
 				CORE_PANIC("Duplicate node detected during deserialization");
 		}
@@ -324,9 +327,9 @@ namespace query::internal {
 	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
 		auto it = node_deps->atMaybe(node_id);
 		if (!it.has_value()) return false;
-		auto& deps = *it.value();
-		IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());)
-		bool has_deps = !deps.children.empty();
+		auto& deps        = *it.value();
+		auto  deps_holder = deps.getHolder();
+		bool  has_deps    = !(*deps_holder).empty();
 		return has_deps;
 	}
 }
