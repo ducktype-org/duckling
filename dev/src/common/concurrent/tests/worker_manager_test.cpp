@@ -20,7 +20,9 @@ concept JThreadStoppable = std::is_invocable_v<F, const std::stop_token&, Args..
  * @brief Runs a function with a timeout. If the function does not complete within the specified
  * timeout, the test is failed and the process is terminated.
  *
- * @param func The function to run.
+ * @param func The function to run. The function can optionally take a `std::stop_token` as its
+ * first argument if it supports cooperative cancellation. Otherwise, if the function does not
+ * support cancellation, the process will be forcefully terminated on timeout.
  * @param timeout_callback The callback to invoke if a timeout occurs. This can be used to perform
  * any necessary cleanup before termination.
  * @param timeout_ms The timeout duration in milliseconds. Default is 5000 ms (5 seconds).
@@ -76,8 +78,10 @@ protected:
 	void fail(std::string_view err, bool critical = true) override {
 		runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
 			message(
-				base::strConcat("WorkerManager reload state timed out during fail(). "
-			                    "Terminating.")
+				base::strConcat(
+					"WorkerManager reload state timed out during fail(). "
+					"Terminating."
+				)
 			);
 		});
 		tester::TestSuite::fail(err, critical);
@@ -118,8 +122,8 @@ private:
 			[&](const std::stop_token& st) {
 				while (!st.stop_requested()
 			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			               || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2
-			           )) {
+			               || no_task_counter.load(std::memory_order_relaxed)
+			                      < getWorkerCount() * 2)) {
 					std::cerr << "Waiting... Finished tasks: "
 							  << task_finished_counter.load(std::memory_order_relaxed)
 							  << ", No task callbacks: "
