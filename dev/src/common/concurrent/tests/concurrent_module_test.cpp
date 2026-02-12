@@ -66,9 +66,19 @@ public:
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
+
+		TESTER_ADD_TEST(testGetAllKeyValuePairs);
 	}
 
 private:
+	void testGetAllKeyValuePairs() {
+		concurrent::ConHashMap<int, int> map;
+		for (int i = 0; i < 100; ++i) map.put(i, i);
+		auto pairs = map.getAllKeyValuePairs();
+		ASSERT_EQUAL(pairs.size(), 100ul);
+		for (auto p: pairs) ASSERT_EQUAL(p->key, p->value);
+	}
+
 	/**
 	 * Simple single-threaded test of concurrent::ConHashMap.
 	 */

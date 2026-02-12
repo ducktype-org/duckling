@@ -198,14 +198,19 @@ namespace concurrent {
 		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
 		 */
 		[[nodiscard]]
-		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> decltype(auto) {
+		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> base::Optional<Ref<DATA_T>> {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
-		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
+		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> base::Optional<CRef<DATA_T>> {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
+		}
+
+		[[nodiscard]]
+		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
+			return atMaybe(key).value();
 		}
 
 		/**
@@ -381,6 +386,22 @@ namespace concurrent {
 
 		ConstIterator end() const RELEASE_NOEXCEPT {
 			return ConstIterator(nullptr, &shards, SHARD_COUNT);
+		}
+
+		/**
+		 * Retrieves all key-value pairs from the map.
+		 * Locks WithAllShardsLock underneath to ensure thread safety,
+		 * but locks each shard only for the time needed to copy its elements,
+		 * so it can see elements added during the call, but not necessarily all of them.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
+			std::vector<CRef<KeyValuePair>> result;
+			result.reserve(size());
+			std::transform(begin(), end(), std::back_inserter(result), [](const auto& pair) {
+				return &pair;
+			});
+			return result;
 		}
 
 	private:
