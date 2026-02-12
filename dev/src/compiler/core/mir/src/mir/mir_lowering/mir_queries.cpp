@@ -213,7 +213,7 @@ namespace compiler::mir {
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
 				tsh::SymbolType{
-					tsh::getUnitType,
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable,
 				},

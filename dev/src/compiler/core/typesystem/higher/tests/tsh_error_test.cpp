@@ -3,9 +3,11 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
+#include <any>
 
 using namespace compiler::tsh;
 
@@ -20,10 +22,35 @@ public:
 	}
 
 private:
+		/**
+	* WithContextCompute helper wrapper to avoid boilerplate.
+	*/
+	auto getIntegralTypeNoContext(u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness) {
+		return std::any_cast<compiler::tsh::IntegralAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getIntegralType(ctx, size, signedness);
+			})
+		);
+	}
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getFloatTypeNoContext(u64 size) {
+		return std::any_cast<compiler::tsh::FloatAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getFloatType(ctx, size);
+			})
+		);
+	}
+
+
 	void integralSizeErrorTest() {
 		query::Context::int_logger.clear();
 		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
-		query::entryPoint<QueryIntegralType>({ 42 });
+
+		// this should log an error since 42 is not a valid integral size:
+		getIntegralTypeNoContext(42, compiler::tsh::IntegralAbstractType::Signedness::Signed);
 
 		std::stringstream dumped_logs;
 		assertTrue(
@@ -41,7 +68,9 @@ private:
 	void floatSizeErrorTest() {
 		query::Context::int_logger.clear();
 		assertTrue(query::Context::int_logger.good(), "Test should begin without errors.");
-		query::entryPoint<QueryFloatType>({ 42 });
+		
+		// this should log an error since 42 is not a valid float size:
+		getFloatTypeNoContext(42);
 
 		std::stringstream dumped_logs;
 		assertTrue(

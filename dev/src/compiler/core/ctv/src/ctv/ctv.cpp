@@ -55,7 +55,7 @@ namespace compiler::ctv {
 			}
 			variant_case_novalue(UnitCTV) {
 				return tsh::SymbolType<>{
-					tsh::getUnitType,
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

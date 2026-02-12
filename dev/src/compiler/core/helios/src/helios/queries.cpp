@@ -240,7 +240,7 @@ namespace compiler::helios {
 				// there are no returns to deduce the type
 				// we default to unit type
 				return tsh::SymbolType<>{
-					tsh::getUnitType,
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -280,7 +280,7 @@ namespace compiler::helios {
 			) {
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
-					tsh::getUnitType,
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

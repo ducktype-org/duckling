@@ -551,7 +551,7 @@ namespace compiler::helios {
 					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
 						return tsh::SymbolType<>{
-							tsh::getUnitType,
+							tsh::getUnitType(),
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable,
 						};
