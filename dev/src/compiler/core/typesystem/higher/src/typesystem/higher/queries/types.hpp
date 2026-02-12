@@ -56,7 +56,7 @@ namespace compiler::tsh {
 	/**
 	 * @brief Simple getter to create and get raw pointer types.
 	 */
-	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer);
+	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
 
 	/**
 	 * @brief Simple getter to create and get string type.

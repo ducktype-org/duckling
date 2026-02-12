@@ -80,7 +80,7 @@ namespace compiler::tsh {
 		return FloatAbstractType{ &cache.at(size) };
 	}
 
-	RawPointerAbstractType getRawPointerType(query::Context& ctx, bool mutable_pointer) {
+	RawPointerAbstractType getRawPointerType(bool mutable_pointer) {
 		static auto raw_pointer_impl
 			= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
 			              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
