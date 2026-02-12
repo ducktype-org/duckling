@@ -4,6 +4,8 @@
 
 #include <tester/tester.hpp>
 
+#include <condition_variable>
+#include <csignal>
 #include <exception>
 #include <iostream>
 #include <mutex>
@@ -14,23 +16,22 @@ class WorkerManagerTest;
 
 template<class F, class G>
 void runOrTimeout(F func, G timeout_callback, usize timeout_ms = 5'000) {
-	std::atomic<bool> finished = false;
+	std::mutex              mutex;
+	std::condition_variable cv;
 
-	std::jthread worker_thread([&func, &finished]() {
+	std::jthread worker_thread([&func, &cv]() {
 		func();
-		finished.store(true, std::memory_order_relaxed);
+		cv.notify_one();
 	});
 
-	auto start = std::chrono::steady_clock::now();
-	while (!finished.load(std::memory_order_relaxed)) {
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed_ms
-			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
-			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
+	{
+		std::unique_lock lock(mutex);
+		if (cv.wait_for(lock, std::chrono::milliseconds(timeout_ms)) == std::cv_status::timeout) {
+			worker_thread.detach();  // Detach the thread to allow it to finish on its own, since we
+			                         // are terminating the test.
+			std::cerr << "Timeout after " << timeout_ms << " ms. Terminating the task.\n";
 			timeout_callback();
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
@@ -193,23 +194,30 @@ private:
 		runOrTimeout(
 			[&] {
 				while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
-					std::cerr << "Completed "
+					std::cerr << "Completed(inner) "
 							  << total_completed_tasks.load(std::memory_order_relaxed) << " / "
 							  << TASK_COUNT << " tasks.\n";
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
 			},
 			[&] {
-				std::cout << "Leaving out of testing...\n";
+				std::cerr << "Leaving out of testing...\n";
 				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
 						  << " / " << TASK_COUNT << " tasks.\n";
+
+				// Print worker task counts
+				for (const auto& worker: worker_manager.getAllWorkers()) {
+					u64 count = worker_task_counts.getCopy(worker);
+					std::cerr << "Worker " << usize(worker.get()) << " completed " << count
+							  << " tasks.\n";
+				}
 				fail("Timeout.");
 			}
 		);
 
 		std::scoped_lock lock(task_mutex);
-		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
-				  << TASK_COUNT << " tasks.\n";
+		std::cerr << "Completed(outer) " << total_completed_tasks.load(std::memory_order_relaxed)
+				  << " / " << TASK_COUNT << " tasks.\n";
 
 		// Print worker task counts
 		for (const auto& worker: worker_manager.getAllWorkers()) {
