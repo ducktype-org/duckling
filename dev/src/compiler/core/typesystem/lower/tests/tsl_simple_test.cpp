@@ -64,7 +64,7 @@ private:
 
 			const std::array<std::pair<AbstractType, Bits>, 3> small_types{ {
 				{ ctx.query<QueryBoolType>({}), BOOL_SIZE },
-				{ ctx.query<QueryByteType>({}), BYTE_SIZE },
+				{ getByteType(), BYTE_SIZE },
 				{ ctx.query<QueryCharType>({}), CHAR_SIZE },
 			} };
 			for (auto [small_type, expected_small_size]: small_types) {

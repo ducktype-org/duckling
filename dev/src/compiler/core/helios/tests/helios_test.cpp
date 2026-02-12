@@ -2357,7 +2357,7 @@ private:
 			const auto meta_st
 				= st(ctx.query<compiler::tsh::QueryMetaType>({})).withMutability(Immutable);
 			const auto unit_st
-				= st(ctx.query<compiler::tsh::QueryUnitType>({})).withMutability(Immutable);
+				= st(compiler::tsh::getUnitType()).withMutability(Immutable);
 			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
 			                        .withMutability(Immutable);
 			const auto tuple_ii_st

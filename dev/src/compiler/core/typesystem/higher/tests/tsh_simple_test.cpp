@@ -59,7 +59,7 @@ private:
 	 * Also, test that assignment works.
 	 */
 	void trivialCastAndAssignment() {
-		const AbstractType type_1{ query::entryPoint<QueryVoidType>({}) };
+		const AbstractType type_1{ getVoidType() };
 		AbstractType       type_2 = type_1;
 		assertTrue(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
 		type_2 = query::entryPoint<QueryUnitType>({});
@@ -70,8 +70,8 @@ private:
 	 * Test that there is only one void and one unit type, and that they are correctly cast.
 	 */
 	void simpleVoidAndUnit() {
-		const auto void_1 = query::entryPoint<QueryVoidType>({});
-		const auto void_2 = query::entryPoint<QueryVoidType>({});
+		const auto void_1 = query::entryPoint<Type>({});
+		const auto void_2 = getVoidType();
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
 		assertTrue(void_1.getKind() == Void, "Void type should have kind Void.");
 		assertTrue(void_1.hasNoOpDestructor(), "Void should have no op destructor.");
@@ -97,10 +97,10 @@ private:
 	 * Test that there are three unique byte-sized types, and that they are correctly cast.
 	 */
 	void simpleByteSized() {
-		const auto byte_1 = query::entryPoint<QueryByteType>({});
+		const auto byte_1 = getByteType();
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
 		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
-		const auto bool_1 = query::entryPoint<QueryBoolType>({});
+		const auto bool_1 = getVoidType;
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
 		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
 		const auto char_1 = query::entryPoint<QueryCharType>({});
@@ -112,8 +112,8 @@ private:
 			"All byte-sized types should be different."
 		);
 
-		const auto byte_2 = query::entryPoint<QueryByteType>({});
-		const auto bool_2 = query::entryPoint<QueryBoolType>({});
+		const auto byte_2 = getByteType();
+		const auto bool_2 = getVoidType;
 		const auto char_2 = query::entryPoint<QueryCharType>({});
 
 		assertTrue(
@@ -477,7 +477,7 @@ private:
 	}
 
 	void simpleExpressionType() {
-		const auto void_i = query::entryPoint<QueryVoidType>({});
+		const auto void_i = getVoidType();
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
 		const ExpressionType int_desc(st(int_i), ValueCategory(PrimaryCategory::Local));
@@ -552,7 +552,7 @@ private:
 			"Bigger int should not be coercible into a smaller one."
 		);
 
-		const auto void_type = query::entryPoint<QueryVoidType>({});
+		const auto void_type = getVoidType();
 		assertTrue(
 			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
 			"Void should not be coercible to anything."

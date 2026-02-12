@@ -490,7 +490,7 @@ namespace compiler::helios {
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
-							ctx.query<tsh::QueryUnitType>({}),
+							tsh::getUnitType,
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable
 						);

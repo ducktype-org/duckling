@@ -46,7 +46,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryUnitType>({}),
+					  tsh::getUnitType,
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
