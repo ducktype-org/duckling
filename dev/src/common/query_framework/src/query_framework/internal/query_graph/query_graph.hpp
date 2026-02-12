@@ -139,6 +139,10 @@ namespace query::internal {
 			return node_deps.contains(node_id);
 		}
 
+		std::vector<NodeID> getDependentNodes(std::vector<NodeID> start_nodes);
+
+		void eraseNodes(const std::vector<NodeID>& nodes_to_erase);
+
 		/**
 		 * @brief Get all Nodes in the graph.
 		 * @return A vector of all NodeIDs in the graph.

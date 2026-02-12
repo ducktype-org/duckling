@@ -2,6 +2,7 @@
 
 #include "node_id.hpp"
 
+#include <algorithm>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
@@ -12,6 +13,8 @@
 #include <queue>
 #include <ranges>
 #include <set>
+#include <stack>
+#include <unordered_set>
 #include <vector>
 
 namespace query::internal {
@@ -23,7 +26,8 @@ namespace query::internal {
 		node_deps.at(from).emplace_back(to);
 
 		if (TRACK_REVERSE_GRAPH) {
-			if (!node_reverse_deps.contains(to)) node_reverse_deps.insert_or_assign(to, std::vector<NodeID>{});
+			if (!node_reverse_deps.contains(to))
+				node_reverse_deps.insert_or_assign(to, std::vector<NodeID>{});
 			node_reverse_deps.at(to).emplace_back(from);
 		}
 
@@ -164,8 +168,9 @@ namespace query::internal {
 			}
 		}
 
-		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
-		                                               .adjacency = std::move(adjacency) });
+		return serializeReducedGraph(
+			ReducedGraphData{ .nodes = std::move(nodes), .adjacency = std::move(adjacency) }
+		);
 	}
 
 	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
@@ -305,5 +310,43 @@ namespace query::internal {
 	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
 		auto it = node_deps.find(node_id);
 		return it != node_deps.end() && !it->second.empty();
+	}
+
+	std::vector<NodeID> QueryGraph::getDependentNodes(std::vector<NodeID> start_nodes) {
+		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes.");
+		std::queue<NodeID> queue{start_nodes.begin(), start_nodes.end()};
+		std::unordered_set<NodeID> visited;
+
+		while (not queue.empty()) {
+			auto node = queue.front();
+			queue.pop();
+
+			if (visited.contains(node)) continue;
+			visited.insert(node);
+
+			for (auto& node: node_reverse_deps.at(node)) {
+				queue.push(node);
+			}
+		}
+
+		return { visited.begin(), visited.end() };
+	}
+
+	void QueryGraph::eraseNodes(const std::vector<NodeID>& nodes_to_erase) {
+		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to erase nodes.");
+
+		for (const auto& node: nodes_to_erase) {
+			node_deps.erase(node);
+
+			// Erase the node from reverse dependencies of its dependencies
+			const auto& reverse_deps = node_reverse_deps.at(node);
+			for (const auto& dep: reverse_deps) {
+				auto& deps = node_deps.at(dep);
+				auto new_end = std::ranges::remove(deps, node);
+				deps.erase(new_end.begin(), new_end.end()); 
+			}
+
+			node_reverse_deps.erase(node);
+		}
 	}
 }
