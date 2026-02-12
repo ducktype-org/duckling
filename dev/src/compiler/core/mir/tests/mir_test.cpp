@@ -42,8 +42,7 @@ public:
 	}
 
 private:
-
-using enum compiler::tsh::IntegralAbstractType::Signedness;
+	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));

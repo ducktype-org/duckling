@@ -7,6 +7,7 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+
 #include <any>
 
 using namespace compiler::tsh;
@@ -56,11 +57,12 @@ public:
 private:
 	using enum Kind;
 
-
-		/**
-	* WithContextCompute helper wrapper to avoid boilerplate.
-	*/
-	auto getIntegralTypeNoContext(u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness) {
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
 		return std::any_cast<compiler::tsh::IntegralAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
 				return compiler::tsh::getIntegralType(ctx, size, signedness);
@@ -72,14 +74,10 @@ private:
 	 * WithContextCompute helper wrapper to avoid boilerplate.
 	 */
 	auto getFloatTypeNoContext(u64 size) {
-		return std::any_cast<compiler::tsh::FloatAbstractType>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return compiler::tsh::getFloatType(ctx, size);
-			})
-		);
+		return std::any_cast<compiler::tsh::FloatAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getFloatType(ctx, size); }
+		));
 	}
-
-
 
 	/**
 	 * Test that the specialized AbstractType to AbstractType dynamic cast works as intended.
@@ -205,8 +203,7 @@ private:
 		}
 
 		assertTrue(
-			getIntegralTypeNoContext(8, Signed)
-				!= getIntegralTypeNoContext(16, Signed),
+			getIntegralTypeNoContext(8, Signed) != getIntegralTypeNoContext(16, Signed),
 			"Ints of different sizes should be different."
 		);
 	}

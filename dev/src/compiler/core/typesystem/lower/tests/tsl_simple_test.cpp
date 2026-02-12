@@ -86,10 +86,11 @@ private:
 
 			for (constexpr std::array<usize, 5> int_sizes{ 8, 16, 32, 64, 128 };
 			     usize                          size: int_sizes) {
+				IntegralAbstractType int_type = getIntegralType(
+					ctx, size, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
 
-				IntegralAbstractType int_type   = getIntegralType(ctx, size, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-				auto                 int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
-				
 				assertTrue(
 					int_layout->getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
@@ -107,10 +108,9 @@ private:
 
 			for (constexpr std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
 			     usize                          size: float_sizes) {
-				
-				FloatAbstractType float_type   = getFloatType(ctx, size);
+				FloatAbstractType float_type = getFloatType(ctx, size);
 
-				auto              float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
+				auto float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
 				assertTrue(
 					float_layout->getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
@@ -144,7 +144,7 @@ private:
 			testPrinting(functional_layout, ctx);
 
 			const RawPointerAbstractType raw_pointer_type = getRawPointerType(false);
-			
+
 			auto raw_pointer_layout = ctx.query<QueryAbstractTypeLayout>(raw_pointer_type);
 			assertTrue(
 				raw_pointer_layout->getSize() == POINTER_SIZE,
@@ -238,8 +238,10 @@ private:
 
 	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			SymbolType<>              i8_type  = st(getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed));
-			SymbolType<>              f16_type = st(getFloatType(ctx, 16));
+			SymbolType<> i8_type = st(
+				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			SymbolType<> f16_type = st(getFloatType(ctx, 16));
 
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
@@ -281,7 +283,9 @@ private:
 
 	void tupleTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const SymbolType<> i8_type  = st(getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed));
+			const SymbolType<> i8_type = st(
+				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
 			const SymbolType<> f16_type = st(getFloatType(ctx, 16));
 			const SymbolType<> f64_type = st(getFloatType(ctx, 64));
 			const SymbolType<> f16_ref
@@ -383,7 +387,9 @@ private:
 
 	void mutabilityTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto int_symbol_type       = st(getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed));
+			auto int_symbol_type = st(
+				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
 			auto const_int_symbol_type = int_symbol_type.withMutability(Immutable);
 			auto int_layout            = ctx.query<QuerySymbolTypeLayout>(int_symbol_type);
 			auto const_int_layout      = ctx.query<QuerySymbolTypeLayout>(const_int_symbol_type);

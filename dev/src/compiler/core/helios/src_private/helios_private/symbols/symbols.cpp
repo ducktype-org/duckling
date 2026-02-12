@@ -456,22 +456,18 @@ namespace compiler::helios {
 					std::vector<SymbolData> output_symbol_data;
 
 					auto i32_type = tsh::SymbolType<>(
-						tsh::getIntegralType(ctx, 
-							32, tsh::IntegralAbstractType::Signedness::Signed
-						),
+						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto i64_type = tsh::SymbolType<>(
-						tsh::getIntegralType(ctx, 
-							64, tsh::IntegralAbstractType::Signedness::Signed
-						),
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto u64_type = tsh::SymbolType<>(
-						tsh::getIntegralType(ctx, 
-						 64, tsh::IntegralAbstractType::Signedness::Unsigned
+						tsh::getIntegralType(
+							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 						),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
@@ -482,9 +478,7 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable
 					);
 					auto str_type = tsh::SymbolType<>(
-						tsh::getStringType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
+						tsh::getStringType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 
 					[[maybe_unused]]

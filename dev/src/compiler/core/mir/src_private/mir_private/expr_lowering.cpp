@@ -483,9 +483,11 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{ tsh::getMetaType(),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable, };
+				tsh::SymbolType<> result_type{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 
 				return ExprLowerRes(
 					current,

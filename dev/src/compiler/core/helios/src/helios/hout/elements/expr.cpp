@@ -865,9 +865,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>(
-					  tsh::getMetaType(),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable
+					  tsh::getMetaType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 				  ),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),

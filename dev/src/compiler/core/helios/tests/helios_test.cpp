@@ -106,9 +106,11 @@ private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
-	* WithContextCompute helper wrapper to avoid boilerplate.
-	*/
-	auto getIntegralTypeNoContext(u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness) {
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
 		return std::any_cast<compiler::tsh::IntegralAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
 				return compiler::tsh::getIntegralType(ctx, size, signedness);
@@ -120,14 +122,10 @@ private:
 	 * WithContextCompute helper wrapper to avoid boilerplate.
 	 */
 	auto getFloatTypeNoContext(u64 size) {
-		return std::any_cast<compiler::tsh::FloatAbstractType>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return compiler::tsh::getFloatType(ctx, size);
-			})
-		);
+		return std::any_cast<compiler::tsh::FloatAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getFloatType(ctx, size); }
+		));
 	}
-
-
 
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
@@ -347,14 +345,14 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
-		const auto i16_type  = getIntegralTypeNoContext(16, Signed);
-		const auto i32_type  = getIntegralTypeNoContext(32, Signed);
-		const auto i64_type  = getIntegralTypeNoContext(64, Signed);
-		
+		const auto i16_type = getIntegralTypeNoContext(16, Signed);
+		const auto i32_type = getIntegralTypeNoContext(32, Signed);
+		const auto i64_type = getIntegralTypeNoContext(64, Signed);
+
 		const auto u16_type = getIntegralTypeNoContext(16, Unsigned);
 		const auto u32_type = getIntegralTypeNoContext(32, Unsigned);
 		const auto u64_type = getIntegralTypeNoContext(64, Unsigned);
-		
+
 		const auto f32_type = getFloatTypeNoContext(32);
 		const auto f64_type = getFloatTypeNoContext(64);
 
@@ -1010,7 +1008,7 @@ private:
 		auto              tree_vref = getExprOfConst(sym_vref);
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
-		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
 		const auto int32ref_type = st(int32_type)
 		                               .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
 		                               .withMutability(Immutable);
@@ -1040,8 +1038,7 @@ private:
 		auto member_access_sym  = getChain("member_access", root_scope).back();
 		auto member_access_expr = getExprOfVariable(member_access_sym);
 		ASSERT_EQUAL(
-			member_access_expr->expression_type.getType(),
-			getIntegralTypeNoContext(32, Signed)
+			member_access_expr->expression_type.getType(), getIntegralTypeNoContext(32, Signed)
 		);
 	}
 
@@ -1154,7 +1151,7 @@ private:
 			// Check type of r.
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
-			auto i32_type = getIntegralTypeNoContext(32, Signed);
+			auto i32_type              = getIntegralTypeNoContext(32, Signed);
 			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
@@ -1994,13 +1991,13 @@ private:
 
 		const auto int32_type = getIntegralTypeNoContext(32, Signed);
 		const auto int64_type = getIntegralTypeNoContext(64, Signed);
-		
-		const auto f32_type   = getFloatTypeNoContext(32);
-		const auto f64_type   = getFloatTypeNoContext(64);
-		
-		const auto bool_type  = compiler::tsh::getBoolType();
-		
-		const auto str_type   = compiler::tsh::getStringType();
+
+		const auto f32_type = getFloatTypeNoContext(32);
+		const auto f64_type = getFloatTypeNoContext(64);
+
+		const auto bool_type = compiler::tsh::getBoolType();
+
+		const auto str_type = compiler::tsh::getStringType();
 
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
@@ -2385,11 +2382,10 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st
-				= st(compiler::tsh::getMetaType()).withMutability(Immutable);
+			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
 			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
-			const auto int_st  = st(compiler::tsh::getIntegralType(ctx, 32, Signed))
-			                        .withMutability(Immutable);
+			const auto int_st
+				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
 			const auto tuple_ii_st
 				= st(ctx.query<compiler::tsh::QueryTupleType>(
 						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
