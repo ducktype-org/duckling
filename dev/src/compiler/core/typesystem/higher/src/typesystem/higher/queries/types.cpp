@@ -50,7 +50,7 @@ namespace compiler::tsh {
 				base::strConcat("Invalid size of integral type: ", size, "."),
 				"The only allowed sizes are 8, 16, 32, 64 and 128."
 			));
-			// @TODO: maybe change to query failed, instead of a "best guess".
+			// We might want to change this to query failed, instead of a "best guess".
 			return IntegralAbstractType{ &cache.at({ 128, signedness }) };
 		}
 
@@ -73,7 +73,7 @@ namespace compiler::tsh {
 				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));
-			// @TODO: maybe change to query Failed, instead of a "best guess".
+			// We might want to change this to query failed, instead of a "best guess".
 			return FloatAbstractType{ &cache.at(128) };
 		}
 
