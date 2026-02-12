@@ -136,20 +136,18 @@ namespace query::internal {
 
 		for (auto& [node, deps]: *node_deps) {
 			auto it = other.node_deps->atMaybe(node);
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());
-			                  it.value()->lock->lock();
-			                  defer(it.value()->lock->unlock());)
+			IF_BUILD_TYPE_DEV(deps.lock->lock(); it.value()->lock->lock();)
 			if (!it.has_value() || deps.children != it.value()->children) return false;
+			IF_BUILD_TYPE_DEV(it.value()->lock->unlock(); deps.lock->unlock();)
 		}
 
 		for (auto& [node, deps]: *other.node_deps) {
 			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());
-			                  it.value()->lock->lock();
-			                  defer(it.value()->lock->unlock());)
+			IF_BUILD_TYPE_DEV(deps.lock->lock(); it.value()->lock->lock();)
 			bool are_same = deps.children == it.value()->children;
 			if (!are_same) return false;
+			IF_BUILD_TYPE_DEV(it.value()->lock->unlock(); deps.lock->unlock();)
 		}
 
 		return true;

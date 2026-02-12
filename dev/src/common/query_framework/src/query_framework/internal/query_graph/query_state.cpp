@@ -450,9 +450,10 @@ namespace query::internal {
 			u64   edge_count      = 0;
 			usize preserved_nodes = 0;
 			for (const auto& [node, deps]: *node_deps) {
-				IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());)
+				IF_BUILD_TYPE_DEV(deps.lock->lock();)
 				edge_count += deps.children.size();
 				if (node.q_id.getData().tags.preserve_in_graph) ++preserved_nodes;
+				IF_BUILD_TYPE_DEV(deps.lock->unlock();)
 			}
 			CORE_DEV_LOG(
 				Incremental,
@@ -503,9 +504,10 @@ namespace query::internal {
 
 			// Convert dependencies to index space and deduplicate
 			std::vector<LocalNodeID> child_indices;
-			IF_BUILD_TYPE_DEV(deps.lock->lock(); defer(deps.lock->unlock());)
+			IF_BUILD_TYPE_DEV(deps.lock->lock();)
 			child_indices.reserve(deps.children.size());
 			for (const auto& dep: deps.children) child_indices.push_back(node_to_idx.at(dep));
+			IF_BUILD_TYPE_DEV(deps.lock->unlock();)
 
 			// Deduplicate dependencies
 			deduplicate_or_remove(child_indices, true, false);
