@@ -205,7 +205,7 @@ namespace compiler::helios::code {
 					// Expect all subexpressions in variant constructor to be Meta types or try to
 					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
-						ctx.query<tsh::QueryMetaType>({}),
+						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable,
 					};
@@ -320,79 +320,79 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 128, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Signed)
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 64, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Signed)
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 32, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Signed)
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 16, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Signed)
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 8, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Signed)
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 128, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Unsigned)
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 64, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Unsigned)
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 32, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Unsigned)
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 16, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Unsigned)
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 8, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Unsigned)
 					);
 					break;
 
 				case pst::Keyword::f80:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 80 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 80)
 					);
 					break;
 				case pst::Keyword::f128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 128 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 128)
 					);
 					break;
 				case pst::Keyword::f64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 64 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 64)
 					);
 					break;
 				case pst::Keyword::f32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 32 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 32)
 					);
 					break;
 				case pst::Keyword::f16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 16 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16)
 					);
 					break;
 

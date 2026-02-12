@@ -26,25 +26,25 @@ namespace compiler::numeric_value {
 
 				if constexpr (IS_INTEGRAL && IS_SIGNED) {
 					return SymbolType{
-						ctx.query<QueryIntegralType>({
+						getIntegralType(ctx,
 							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Signed,
-						}),
+							IntegralAbstractType::Signedness::Signed
+						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
 					return SymbolType{
-						ctx.query<QueryIntegralType>({
+						getIntegralType(ctx,
 							sizeof(T) * 8,
-							IntegralAbstractType::Signedness::Unsigned,
-						}),
+							IntegralAbstractType::Signedness::Unsigned
+						),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
 				} else {  // Floating point.
 					return SymbolType{
-						ctx.query<QueryFloatType>({ sizeof(T) * 8 }),
+						getFloatType(ctx, sizeof(T) * 8),
 						ReferenceKind::Direct,
 						Mutability::Mutable,
 					};
