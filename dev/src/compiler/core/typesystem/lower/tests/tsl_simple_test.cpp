@@ -63,7 +63,7 @@ private:
 			testPrinting(unit_layout, ctx);
 
 			const std::array<std::pair<AbstractType, Bits>, 3> small_types{ {
-				{ ctx.query<QueryBoolType>({}), BOOL_SIZE },
+				{ getBoolType(), BOOL_SIZE },
 				{ getByteType(), BYTE_SIZE },
 				{ ctx.query<QueryCharType>({}), CHAR_SIZE },
 			} };

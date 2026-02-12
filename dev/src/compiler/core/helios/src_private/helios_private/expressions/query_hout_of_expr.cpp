@@ -296,25 +296,25 @@ namespace compiler::helios::code {
 				// types:
 				case pst::Keyword::Bool:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryBoolType>({})
+						ctx, pstOrigin(stmt), tsh::getBoolType()
 					);
 					break;
 
 				case pst::Keyword::Char:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryCharType>({})
+						ctx, pstOrigin(stmt), tsh::getCharType()
 					);
 					break;
 
 				case pst::Keyword::Str:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryStringType>({})
+						ctx, pstOrigin(stmt), tsh::getStringType()
 					);
 					break;
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryMetaType>({})
+						ctx, pstOrigin(stmt), tsh::getMetaType()
 					);
 					break;
 

@@ -40,7 +40,7 @@ namespace compiler::ctv {
 		variant_match(value) {
 			variant_case_novalue(bool) {
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

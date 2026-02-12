@@ -94,7 +94,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::getBoolType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -235,7 +235,7 @@ namespace compiler::helios::code {
 		case FloatNeq:
 		case MetaEq:
 		case MetaNeq:
-			return ctx.query<tsh::QueryBoolType>({});
+			return tsh::getBoolType();
 		case BooleanAnd:
 		case BooleanOr:
 			return argument_type;
@@ -683,7 +683,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::getBoolType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },

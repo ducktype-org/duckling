@@ -523,7 +523,7 @@ private:
 		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
 		const auto f16_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
 		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
+		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto meta_type  = query::entryPoint<compiler::tsh::QueryMetaType>({});
 		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
 
@@ -1005,7 +1005,7 @@ private:
 		auto              tree_vconst = getExprOfConst(sym_vconst);
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
-		const auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>(query::EmptyKey{});
+		const auto bool_type = compiler::tsh::getBoolType();
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
@@ -1404,11 +1404,11 @@ private:
 		auto f80_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 80 });
 		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
 
-		auto char_type = query::entryPoint<compiler::tsh::QueryCharType>({});
+		auto char_type = compiler::tsh::getCharType();
 
-		auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>({});
+		auto bool_type = compiler::tsh::getBoolType();
 
-		auto str_type = query::entryPoint<compiler::tsh::QueryStringType>({});
+		auto str_type = compiler::tsh::getStringType();
 
 		// a simple way to get function scope through hout:
 		auto foo            = getChain("foo", top_scope).back();
@@ -1969,7 +1969,7 @@ private:
 		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
 		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
 		const auto f64_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
+		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
