@@ -71,6 +71,16 @@ namespace compiler::tsh {
 	 */
 	MetaAbstractType getMetaType();
 
+	/**
+	 * @brief Simple getter to create and get module type.
+	 */
+	ModuleAbstractType getModuleType();
+
+	/**
+	 * @brief Simple getter to create and get import type.
+	 */
+	ImportAbstractType getImportType();
+
 
 
 	/**
@@ -79,9 +89,6 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
-
-
-
 
 
 	/**
@@ -220,17 +227,4 @@ namespace compiler::tsh {
 
 
 
-	/**
-	 * @brief Query to get the Module type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleAbstractType, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Query to get the Import type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportAbstractType, ({ .uses_qresult = false }))
 }
