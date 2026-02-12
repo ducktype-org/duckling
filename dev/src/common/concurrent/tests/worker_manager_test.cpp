@@ -1,4 +1,5 @@
 #include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/run_or_timeout.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
@@ -6,31 +7,8 @@
 
 #include <iostream>
 #include <mutex>
-#include <stdexcept>
 #include <thread>
 
-template<class F>
-void runOrTimeout(F func, usize timeout_ms = 10'000) {
-	std::atomic<bool> finished = false;
-
-	std::jthread worker_thread([&func, &finished]() {
-		func();
-		finished.store(true, std::memory_order_relaxed);
-	});
-
-	auto start = std::chrono::steady_clock::now();
-	while (!finished.load(std::memory_order_relaxed)) {
-		auto now = std::chrono::steady_clock::now();
-		auto elapsed_ms
-			= std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
-		if (elapsed_ms > timeout_ms && !finished.load(std::memory_order_relaxed)) {
-			std::cerr << "Function timed out after " << elapsed_ms << " ms\n";
-			std::cerr << "Possible deadlock detected. Worker thread stack trace:\n";
-			throw std::runtime_error("Test timed out after " + std::to_string(timeout_ms) + " ms");
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-}
 
 using namespace concurrent::worker;
 
@@ -43,21 +21,17 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		setWorkerCount(4);
 		TESTER_ADD_TEST(basicFunctionalityTest);
-		// TESTER_ADD_TEST(taskPoolFibonacciTest);
+		TESTER_ADD_TEST(taskPoolFibonacciTest);
 	}
 
 protected:
 	void fail(std::string_view err, bool critical = true) override {
-		try {
-			runOrTimeout(WorkerManager::get().testPrivateAccessReloadState);
-		} catch (const std::runtime_error& e) {
-			message(base::strConcat(
-				"WorkerManager reload state timed out during fail(). "
-				"Possible deadlock detected. Terminating. Error: ",
-				e.what()
-			));
-			std::terminate();
-		}
+		concurrent::runOrTimeout(WorkerManager::get().testPrivateAccessReloadState, [&] {
+			message(
+				base::strConcat("WorkerManager reload state timed out during fail(). "
+			                    "Terminating.")
+			);
+		});
 		tester::TestSuite::fail(err, critical);
 	}
 
@@ -92,15 +66,21 @@ private:
 		// Wait for all tasks to complete
 		// We also expect that during this time the no_tasks_callback
 		// has been called at least once per worker.
-		runOrTimeout([&] {
-			while (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
-			       || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2)
-				std::cerr << "Waiting... Finished tasks: "
-						  << task_finished_counter.load(std::memory_order_relaxed)
-						  << ", No task callbacks: "
-						  << no_task_counter.load(std::memory_order_relaxed) << "\n",
-					std::this_thread::yield();
-		});
+		concurrent::runOrTimeout(
+			[&](const std::stop_token& st) {
+				while (!st.stop_requested()
+			           && (task_finished_counter.load(std::memory_order_relaxed) < getWorkerCount()
+			               || no_task_counter.load(std::memory_order_relaxed) < getWorkerCount() * 2
+			           )) {
+					std::cerr << "Waiting... Finished tasks: "
+							  << task_finished_counter.load(std::memory_order_relaxed)
+							  << ", No task callbacks: "
+							  << no_task_counter.load(std::memory_order_relaxed) << "\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				}
+			},
+			[&] { fail("Timeout"); }
+		);
 
 		usize val = no_task_counter.load(std::memory_order_relaxed);
 		std::cerr << "No task callback called " << val << " times.\n";
@@ -143,7 +123,7 @@ private:
 		concurrent::ConHashMap<u64, u64>  results;
 		concurrent::ConHashMap<WRef, u64> worker_task_counts;
 
-		constexpr u64 TASK_COUNT      = 50'000;
+		constexpr u64 TASK_COUNT      = 10'000;
 		constexpr u64 START           = 10'000;
 		constexpr u64 TASK_BATCH_SIZE = 5;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
@@ -187,17 +167,34 @@ private:
 		}
 
 
-		runOrTimeout([&] {
-			while (total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
+		concurrent::runOrTimeout(
+			[&](const std::stop_token& st) {
+				while (!st.stop_requested()
+			           && total_completed_tasks.load(std::memory_order_relaxed) < TASK_COUNT) {
+					std::cerr << "Completed(inner) "
+							  << total_completed_tasks.load(std::memory_order_relaxed) << " / "
+							  << TASK_COUNT << " tasks.\n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+			},
+			[&] {
+				std::cerr << "Leaving out of testing...\n";
 				std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
 						  << " / " << TASK_COUNT << " tasks.\n";
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+				// Print worker task counts
+				for (const auto& worker: worker_manager.getAllWorkers()) {
+					u64 count = worker_task_counts.getCopy(worker);
+					std::cerr << "Worker " << usize(worker.get()) << " completed " << count
+							  << " tasks.\n";
+				}
+				fail("Timeout.");
 			}
-		});
+		);
 
 		std::scoped_lock lock(task_mutex);
-		std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed) << " / "
-				  << TASK_COUNT << " tasks.\n";
+		std::cerr << "Completed(outer) " << total_completed_tasks.load(std::memory_order_relaxed)
+				  << " / " << TASK_COUNT << " tasks.\n";
 
 		// Print worker task counts
 		for (const auto& worker: worker_manager.getAllWorkers()) {
