@@ -79,7 +79,7 @@ namespace compiler::driver {
 			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID("builtins_llvm.o"));
 		auto mod = backend_llvm::Module::fromLLVMBC(getBuiltinsX8664LinuxGnuBCSpan());
 		mod.compile(
-			builtin_obj_file.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+			builtin_obj_file.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 		);
 		return builtin_obj_file;
 	}
