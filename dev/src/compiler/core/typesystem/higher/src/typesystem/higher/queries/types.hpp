@@ -62,11 +62,25 @@ namespace compiler::tsh {
 	StringAbstractType getStringType();
 
 	/**
+	 * @brief Simple getter to create and get namespace type.
+	 */
+	NamespaceAbstractType getNamespaceType();
+
+	/**
+	 * @brief Simple getter to create and get meta type.
+	 */
+	MetaAbstractType getMetaType();
+
+
+
+	/**
 	 * @brief Query to get a typed Pointer type.
 	 *
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
+
+
 
 
 
@@ -203,21 +217,8 @@ namespace compiler::tsh {
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
 	)
 
-	/**
-	 * @brief Query to get the Meta type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the Namespace type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryNamespaceType, query::EmptyKey, NamespaceAbstractType, ({ .uses_qresult = false })
-	)
+
 
 	/**
 	 * @brief Query to get the Module type.

@@ -96,6 +96,16 @@ namespace compiler::tsh {
 		return StringAbstractType{&string_impl};
 	}
 
+	NamespaceAbstractType getNamespaceType() {
+		static auto namespace_impl = NamespaceAbstractTypeImpl{};
+		return NamespaceAbstractType{&namespace_impl};
+	}
+
+	MetaAbstractType getMetaType() {
+		static auto meta_impl = MetaAbstractTypeImpl{};
+		return MetaAbstractType{&meta_impl};
+	}
+
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
@@ -156,16 +166,6 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
 
-	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto namespace_impl = NamespaceAbstractTypeImpl{};
-			return &namespace_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType)
 
 	struct IMPLEMENT_QUERY(QueryModuleType, ModuleAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -178,16 +178,6 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType)
 
-	struct IMPLEMENT_QUERY(QueryMetaType, MetaAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto meta_impl = MetaAbstractTypeImpl{};
-			return &meta_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
 
 	struct IMPLEMENT_QUERY(QueryImportType, ImportAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
