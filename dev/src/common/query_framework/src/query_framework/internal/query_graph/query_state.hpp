@@ -4,8 +4,11 @@
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
@@ -50,8 +53,8 @@ namespace query::internal {
 			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			QueryGraph                       graph;
-			base::HashMap<NodeID, PrevColor> node_colors;
+			QueryGraph                                           graph;
+			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
 
 			/**
 			 * Metadata from previous compilation.
@@ -61,12 +64,17 @@ namespace query::internal {
 
 			PreviousCompilation() = delete;
 
-			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+			PreviousCompilation(
+				QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeID, PrevColor>>&& colors
+			):
 				  graph(std::move(g)),
 				  node_colors(std::move(colors)),
 				  metadata() {}
 
-			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors(), metadata() {}
+			PreviousCompilation(QueryGraph&& g):
+				  graph(std::move(g)),
+				  node_colors(base::makeBox<concurrent::ConHashMap<NodeID, PrevColor>>()),
+				  metadata() {}
 		};
 
 	public:
@@ -79,11 +87,6 @@ namespace query::internal {
 		/***************************\
 		| Query graph interface:    |
 		\***************************/
-
-		/**
-		 * @brief Returns the mutable query graph.
-		 */
-		Ref<QueryGraph> getGraphMutable() { return &query_graph; }
 
 		/**
 		 * @brief Returns the query graph.
@@ -107,6 +110,14 @@ namespace query::internal {
 		 * adding existing node
 		 */
 		void addGraphNode(NodeID node_id);
+
+
+		/**
+		 * @brief Marks that given query depends on another query.
+		 * Note that @p to does not need to be in the graph at the moment of calling this function.
+		 */
+		void addDependency(NodeID from, NodeID to);
+
 
 		/*********************************\
 		| Active query state interface:   |
@@ -138,7 +149,7 @@ namespace query::internal {
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+		base::CRef<concurrent::ConHashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
 
 		/**
 		 * @brief Sets the previous query graph.
@@ -289,7 +300,7 @@ namespace query::internal {
 		 * computed/in progress.
 		 * @TODO: #1889 decide if we need this at all.
 		 */
-		base::HashMap<NodeID, NodeData> node_data;
+		concurrent::ConHashMap<NodeID, NodeData> node_data;
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.

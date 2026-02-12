@@ -3,7 +3,12 @@
 #include "node_id.hpp"
 #include "node_making.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+#include <concurrent/base/locks/assert_lock.hpp>
+
 #include <base/collections/maps.hpp>
+#include <base/config/build_type.hpp>
+#include <base/pointers/box.hpp>
 
 #include <ostream>
 #include <vector>
@@ -17,7 +22,16 @@ namespace query::internal {
 	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
 	 */
 	class QueryGraph final {
-		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
+		struct ChildrenData final {
+			std::vector<NodeID> children;
+			IF_BUILD_TYPE_DEV(base::Box<concurrent::AssertLock> lock;  // protects children vector
+			)
+			IF_BUILD_TYPE_DEV(ChildrenData() : lock(base::makeBox<concurrent::AssertLock>()){})
+			// Each node (query call with unique key) should be executed once at the same time, but
+			// we use AssertLock to be sure about that
+		};
+
+		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -39,19 +53,17 @@ namespace query::internal {
 			std::vector<std::vector<usize>> adjacency;
 		};
 
-		QueryGraph()                             = default;
+		QueryGraph();
 		QueryGraph(const QueryGraph&)            = delete;
 		QueryGraph(QueryGraph&&)                 = default;
 		QueryGraph& operator=(const QueryGraph&) = delete;
 		QueryGraph& operator=(QueryGraph&&)      = delete;
 
-		enum class DependencyStatus { OK, Cycle };
-
 		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
-		DependencyStatus addDependency(internal::NodeID from, internal::NodeID to);
+		void addDependency(internal::NodeID from, internal::NodeID to);
 
 		/**
 		 * Returns all dependencies of a @p node_id.
@@ -66,7 +78,9 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
-		/** @brief Returns the immediate dependencies of a @p node_id. */
+		/** @brief Returns the immediate dependencies of a @p node_id.
+		 * @note This is not thread-safe and should only be used for debugging/testing purposes.
+		 */
 		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
 
 		void debugPrint(std::ostream& out) const;
@@ -133,7 +147,7 @@ namespace query::internal {
 		 */
 		[[nodiscard]]
 		bool nodeExists(const NodeID& node_id) const {
-			return node_deps.contains(node_id);
+			return node_deps->contains(node_id);
 		}
 
 		/**
