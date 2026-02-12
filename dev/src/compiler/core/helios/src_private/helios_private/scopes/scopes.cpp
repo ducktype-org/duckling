@@ -211,7 +211,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeData) {
 		/**
 		 * @brief Cache to verify parent scopes are consistent.
-		 * @note It is intentially thread safe.
+		 * @note It is intentionally thread safe.
 		 */
 		inline static concurrent::ConHashMap<pst::PstID, ScopeID> parent_map;
 
