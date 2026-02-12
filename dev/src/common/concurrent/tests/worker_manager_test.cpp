@@ -4,6 +4,7 @@
 
 #include <tester/tester.hpp>
 
+#include <exception>
 #include <iostream>
 #include <mutex>
 #include <stdexcept>
@@ -197,7 +198,7 @@ private:
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
 			});
-		} catch (std::runtime_error&) {
+		} catch (std::exception&) {
 			std::cerr << "Completed " << total_completed_tasks.load(std::memory_order_relaxed)
 					  << " / " << TASK_COUNT << " tasks.\n";
 			fail("Timeout.");
