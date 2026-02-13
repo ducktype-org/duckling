@@ -4,17 +4,18 @@
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
 
-#include <query_framework/internal/query_graph/node_id.hpp>
-
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/internal/query_graph/node_id.hpp>
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <vector>
+
 // #include <any>
 
 namespace query::internal {
@@ -41,14 +42,12 @@ namespace query::internal {
 	struct Task final {
 		// @TODO: PR for now
 		// using WorkerTask = std::function<void(concurrent::worker::WRef)>;
-		
-		NodeID id;
+
+		NodeID                   id;
 		concurrent::worker::Task work;
 
 		Task(NodeID id, concurrent::worker::Task&& work): id(id), work(std::move(work)) {}
 	};
-
-
 
 	/**
 	 * @brief Handle returned when scheduling tasks, allows waiting on completion.

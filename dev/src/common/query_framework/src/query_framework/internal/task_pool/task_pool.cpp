@@ -1,4 +1,5 @@
 #include "task_pool.hpp"
+
 #include <concurrent/worker/worker.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -126,8 +127,8 @@ namespace query::internal {
 
 	TaskHandle TaskPool::schedule(Task&& task) {
 		// This function is the most problematic in terms of using independent queues,
-		WRef current_worker = concurrent::worker::Worker::getCurrentWorker();
-		const auto   task_id        = task.id;
+		WRef       current_worker = concurrent::worker::Worker::getCurrentWorker();
+		const auto task_id        = task.id;
 
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
 		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
@@ -145,8 +146,9 @@ namespace query::internal {
 
 			if (free_worker_opt.has_value()) {
 				// Schedule on a free worker
-				free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef
-				                                      ) mutable { tryExecuteTask(pt); });
+				free_worker_opt.value()->scheduleTask([this, pt = std::move(task)](WRef) mutable {
+					tryExecuteTask(pt);
+				});
 				is_worker_free_map[free_worker_opt.value()] = false;
 				return TaskHandle(*this, task_id);
 
@@ -163,7 +165,8 @@ namespace query::internal {
 
 	void TaskPool::await(NodeID id) {
 		std::unique_lock lock(pool_mutex);
-		auto task_opt = tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
+		auto             task_opt
+			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
 		if_opt_some(task_opt, task) {
 			lock.unlock();
 			tryExecuteTask(task);
@@ -197,9 +200,7 @@ namespace query::internal {
 		return std::nullopt;
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(
-		WRef worker_ref, NodeID task_id
-	) {
+	base::Optional<Task> TaskPool::tryStealFromWorkerUnlocked(WRef worker_ref, NodeID task_id) {
 		auto& worker_pool = worker_pools[worker_ref];
 		for (auto it = worker_pool.begin(); it != worker_pool.end(); ++it) {
 			if (it->id == task_id) {
@@ -237,8 +238,9 @@ namespace query::internal {
 		}
 
 		if (task_opt.has_value()) {
-			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](WRef
-			                             ) mutable { tryExecuteTask(pt); });
+			current_worker->scheduleTask([this, pt = std::move(task_opt).value()](WRef) mutable {
+				tryExecuteTask(pt);
+			});
 			is_worker_free_map[current_worker] = false;
 		} else {
 			// There might be some tasks scheduled before this callback get's cpu time,

@@ -227,10 +227,14 @@ namespace query::internal {
  * macro-implementation structs.
  * @param type Name of a struct with query implementation
  * @param pretty_name Pretty name of the Query
+ * @TODO PR: calculate key hash once
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                \
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                     \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
+	}                                                                                                                                  \
+	auto type::QueryType::internal_load(const type::QKey& key) -> type::QResult {                                                      \
+		return type::load(perfectHashKey<type::IS_HASH_STABLE>(key));                                                                  \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \

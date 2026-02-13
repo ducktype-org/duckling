@@ -2,6 +2,7 @@
 2. ~~task id → node id~~
 3. ~~Add task struct~~
 3. Add task state
+4. 
 
 
 

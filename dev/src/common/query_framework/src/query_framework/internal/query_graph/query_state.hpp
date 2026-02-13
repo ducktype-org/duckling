@@ -150,6 +150,15 @@ namespace query::internal {
 		[[nodiscard]]
 		u64 activeQueryCount() const;
 
+		/************************\
+		| Task pool interface:   |
+		\************************/
+
+		// add doc comment
+		Ref<TaskPool> getTaskPool() noexcept {
+			// PR move to cpp
+			return &task_pool;
+		}
 
 		/***************************\
 		| Incremental interface:    |
@@ -322,8 +331,8 @@ namespace query::internal {
 		ActiveGraph active_graph;
 
 		/**
-		* Task pool handling execution of queries.
-		*/
+		 * Task pool handling execution of queries.
+		 */
 		TaskPool task_pool;
 
 		/**

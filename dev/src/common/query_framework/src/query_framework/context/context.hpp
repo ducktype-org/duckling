@@ -70,7 +70,8 @@ namespace query {
 
 		/**
 		 * this is also await
-		 * @note This is also an external query invocation layer. @TODO PR: change later to make separation clearer.
+		 * @note This is also an external query invocation layer. @TODO PR: change later to make
+		 * separation clearer.
 		 */
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
@@ -79,6 +80,9 @@ namespace query {
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
 			main_query_state.addDependency(my_node, dep_id);
+
+
+			// @TODO: PR: Optimize it, we only need to add edge here, when the query is not ready.
 
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
@@ -89,6 +93,7 @@ namespace query {
 			// Scheduling acts as if the schedule operation came from outside the query framework.
 			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
 			auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(my_node);
+
 
 			if (maybe_cycle.has_value()) {
 				// we hit a cycle!
@@ -134,7 +139,18 @@ namespace query {
 				main_query_state.getActiveGraph()->removeEdge(my_node);
 			});
 
-			return OthQuery::internal_query(key);
+			if (dep_id.q_id.getData().isInputQuery()) {
+				return OthQuery::internal_query(key);
+			} else {
+				// return OthQuery::internal_query(key);
+				main_query_state.getTaskPool()->query(internal::Task{
+					.id   = dep_id,
+					.func = [key](concurrent::worker::WRef) { OthQuery::internal_query(key); },
+				});
+
+				return OthQuery::internal_load(key);
+			}
+			CORE_UNREACHABLE();
 		}
 
 		template<typename OthQuery>
