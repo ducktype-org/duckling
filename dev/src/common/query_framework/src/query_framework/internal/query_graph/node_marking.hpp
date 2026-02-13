@@ -1,5 +1,7 @@
 #pragma once
 
+#include <query_framework/internal/query_graph/node_id.hpp>
+
 #include <vector>
 
 namespace query::external {
@@ -13,4 +15,8 @@ namespace query::internal {
 	 * data. This function is used for incremental compilation.
 	 */
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
+
+	std::vector<NodeID> findInputsRemovedFromCurrentGraph(
+		std::vector<query::external::InputData> inputs
+	);
 }

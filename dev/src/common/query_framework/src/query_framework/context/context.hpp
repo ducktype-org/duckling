@@ -6,7 +6,7 @@
 
 #include "context_fd.hpp"  // IWYU pragma: keep
 
-#include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 
 #include <base/extend_cpp/defer.hpp>
@@ -138,6 +138,8 @@ namespace query {
 
 
 		void logInt(Box<dia_int::MessageBase> diagnostic);
+
+		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
 
 		/**
 		 * @brief Returns a const reference to the main query state.

@@ -1,5 +1,9 @@
 #include "context.hpp"
 
+#include "diagnostic_interactive/core/diagnostic_arguments.hpp"
+
+#include <diagnostic_interactive/logger.hpp>
+
 #include <query_framework/internal/query_graph/query_state.hpp>
 
 namespace query {
@@ -7,6 +11,11 @@ namespace query {
 
 	void Context::logInt(Box<dia_int::MessageBase> diagnostic) {
 		assertActive();
-		int_logger.log(std::move(diagnostic));
+		main_query_state.logDiagnosticForNode(my_node, std::move(diagnostic));
+	}
+
+	void Context::collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output) {
+		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
+			logger->collectDiagnostics(output);
 	}
 }

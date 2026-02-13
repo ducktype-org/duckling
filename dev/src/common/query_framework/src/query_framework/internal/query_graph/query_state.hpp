@@ -1,6 +1,8 @@
 #pragma once
 
 #include "active_graph.hpp"
+#include "concurrent/base/collections/hash_map.hpp"
+#include "diagnostic_interactive/message.hpp"
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
@@ -265,7 +267,7 @@ namespace query::internal {
 
 		void clearDiagnosticForNode(NodeID node_id);
 
-		std::vector<Box<dia_int::MessageBase>> getAllDiagnostics() const;
+		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
 
 	private:
 		friend struct ::query::Context;

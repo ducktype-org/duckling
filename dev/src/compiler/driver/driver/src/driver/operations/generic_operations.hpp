@@ -76,4 +76,6 @@ namespace compiler::driver {
 			.preserve_in_graph       = true,
 		})
 	);
+
+	void invalidateQueryInputs();
 }

@@ -3,7 +3,20 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <tester/tester.hpp>
 
-#include <random>
+// We need to test things:
+// 1. All queries dependend on start nodes are invalidated correctly, meaning
+//   - they are removed from the graph
+//   - their cache is cleared 
+//   - their metadata is cleared
+//   - their diagnostics are cleared
+//   - other nodes are not affected
+//   - if an erased node is in the reversed dependency 
+
+// Start1
+
+// 
+
+// Start2
 
 // Those queries are used just to get dummy QueryIDs for NodeID generation.
 DECLARE_QUERY(DummyQuery1, query::U64Key, u64, ({ .uses_qresult = false }));
@@ -26,14 +39,15 @@ struct IMPLEMENT_QUERY(DummyQuery2, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery2);
 
 
-// class ActiveGraph: public tester::TestSuite {
-// #undef TESTER_CLASS
-// #define TESTER_CLASS ActiveGraph
+class ActiveGraph: public tester::TestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS ActiveGraph
 
-// public:
-// 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-// 		TESTER_ADD_TEST(test);
-// 	}
+public:
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(test);
+	}
 
-// private:
-// }
+private:
+	void test() {}
+};

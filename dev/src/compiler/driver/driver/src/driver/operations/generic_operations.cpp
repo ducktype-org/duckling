@@ -22,6 +22,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include <query_framework/external/api.hpp>
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -30,6 +31,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include "driver_private/collect_input.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -238,5 +240,10 @@ namespace compiler::driver {
 				return RunOutput{ .exit_code
 				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
+	}
+
+	void invalidateQueryInputs() {
+		auto new_inputs = collectAllPstElementHashesFromGlobalPackages();
+		query::external::invalidateQueries(std::move(new_inputs));
 	}
 }

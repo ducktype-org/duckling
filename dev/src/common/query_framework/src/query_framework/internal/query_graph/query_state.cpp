@@ -892,6 +892,18 @@ namespace query::internal {
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
 
 	std::vector<Box<dia_int::MessageBase>> QueryState::getAllDiagnostics() const {
-		// for []
+		std::vector<Box<dia_int::MessageBase>> diagnostics;
+
+		for (const auto& [_, logger]: diagnostic_loggers) {
+			auto logger_ref = logger.ref();
+			logger_ref->
+		}
+
+		return diagnostics;
+	}
+
+	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
+	) const {
+		return &diagnostic_loggers;
 	}
 }  // namespace query::internal

@@ -2,24 +2,26 @@
 
 #include <base/except/exceptions.hpp>
 
+#include "query_framework/internal/query_graph/node_id.hpp"
 #include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
 #include <algorithm>
+#include <utility>
 
 namespace query::internal {
 
-	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs) {
-		auto state = ContextAccess::getState();
-
-		auto maybe_prev = state->getPreviousGraph();
-		CORE_ASSERT(maybe_prev.has_value(), "Previous graph is not set");
-		auto prev_graph = maybe_prev.value();
-
+	template<typename NodePresentCallback, typename NodeRemovedCallback>
+	void callForEveryRemovedInput(
+		NodePresentCallback                     present_callback,
+		NodeRemovedCallback                     removed_callback,
+		CRef<QueryGraph>                        prev_graph,
+		std::vector<query::external::InputData> new_inputs
+	) {
 		// Sort inputs by (hash, q_id)
 		std::ranges::sort(
-			inputs,
+			new_inputs,
 			[](const query::external::InputData& a, const query::external::InputData& b) {
 				if (a.hash == b.hash) return a.q_id.asInt() < b.q_id.asInt();
 				return a.hash < b.hash;
@@ -70,12 +72,12 @@ namespace query::internal {
 			return h1 < h2;
 		};
 
-		while (i < inputs.size() && j < prev_inputs.size()) {
-			const auto& in   = inputs[i];
+		while (i < new_inputs.size() && j < prev_inputs.size()) {
+			const auto& in   = new_inputs[i];
 			const auto& node = prev_inputs[j];
 
 			if (in.hash == node.hash.val && in.q_id.asInt() == node.q_id.asInt()) {
-				state->setPrevNodeColor(node, QueryState::PrevColor::Green);
+				present_callback(node);
 				++i;
 				++j;
 			} else if (cmp_pair(in.hash, in.q_id.asInt(), node.hash.val, node.q_id.asInt())) {
@@ -83,14 +85,44 @@ namespace query::internal {
 				++i;
 			} else {
 				// node < input: mark as red and advance nodes
-				state->setPrevNodeColor(node, QueryState::PrevColor::Red);
+				removed_callback(node);
 				++j;
 			}
 		}
 
 		// Remaining nodes are red
 		for (; j < prev_inputs.size(); ++j)
-			state->setPrevNodeColor(prev_inputs[j], QueryState::PrevColor::Red);
+			removed_callback(prev_inputs[j]);
+			
 	}
 
+	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs) {
+		auto state      = ContextAccess::getState();
+		auto maybe_prev = state->getPreviousGraph();
+		CORE_ASSERT(maybe_prev.has_value(), "Previous graph is not set");
+		auto prev_graph       = maybe_prev.value();
+		auto present_callback = [&](const NodeID& node) {
+			state->setPrevNodeColor(node, QueryState::PrevColor::Green);
+		};
+		auto removed_callback = [&](const NodeID& node) {
+			state->setPrevNodeColor(node, QueryState::PrevColor::Red);
+		};
+		callForEveryRemovedInput(present_callback, removed_callback, prev_graph, std::move(inputs));
+	}
+
+	std::vector<NodeID> findInputsRemovedFromCurrentGraph(
+		std::vector<query::external::InputData> inputs
+	) {
+		auto state 	= ContextAccess::getState();
+		auto& prev_graph = state->getGraph();
+		std::vector<NodeID> removed_inputs;
+		auto present_callback = [&](const NodeID&) {
+			// do nothing
+		};
+		auto removed_callback = [&](const NodeID& node) {
+			removed_inputs.push_back(node);
+		};
+		callForEveryRemovedInput(present_callback, removed_callback, &prev_graph, std::move(inputs));
+		return removed_inputs;
+	}
 }  // namespace query::internal
