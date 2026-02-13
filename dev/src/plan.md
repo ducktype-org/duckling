@@ -3,8 +3,9 @@
 3. ~~Add task struct~~
 4. Add task state
 5. deal with entry points
-6. ~~write entry point~~
-
+6. write entry point
+7. add execute somewhere
+8. remove return type from internal query
 
 
 

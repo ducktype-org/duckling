@@ -27,13 +27,16 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	WRef WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return;
+			if (worker->scheduleTaskIfFree(task)) return worker.get();
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
-		workers[static_cast<usize>(rng()) % (workers.size())]->scheduleTask(task);
+		auto id = static_cast<usize>(rng()) % (workers.size());
+
+		workers[id]->scheduleTask(task); 
+		return workers[id].get();
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }

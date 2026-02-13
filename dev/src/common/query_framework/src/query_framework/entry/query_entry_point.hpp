@@ -22,7 +22,9 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
-				return QueryType::internal_query(key);
+				// return QueryType::internal_query(key);
+
+				Context::getState().
 			}
 		};
 	}
@@ -33,10 +35,12 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto entryPoint(const typename QueryType::QKey& key) -> decltype(auto) {
-		CORE_ASSERT(
-			Context::getState().activeQueryCount() == 0,
-			"query::entryPoint called from within query!"
-		);
+		// PR assert that we are not inside query
+
+		// CORE_ASSERT(
+		// 	Context::getState().activeQueryCount() == 0,
+		// 	"query::entryPoint called from within query!"
+		// );
 		return internal::EntryPointHelper::callQuery<QueryType>(key);
 	}
 }

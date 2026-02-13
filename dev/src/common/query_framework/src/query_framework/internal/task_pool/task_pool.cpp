@@ -22,6 +22,8 @@ namespace query::internal {
 		// @TODO: PR think about this later:
 		// this links query task execution with workers manager logic.
 		worker_manager.setNoTasksCallback([this](auto wref) { onWorkerNoTasks(wref); });
+
+		// is_executing.store(true);
 	}
 
 	TaskPool::~TaskPool() {
@@ -29,13 +31,39 @@ namespace query::internal {
 		flushWorkers();
 	}
 
-	void TaskPool::addInitialTasks(std::vector<Task> tasks) {
-		CORE_ASSERT(first_call, "addInitialTasks can only be called once and before execute()");
-		first_call = false;
+	void TaskPool::addTask(Task&& task) {
+		// CORE_ASSERT(first_call, "addInitialTasks can only be called once and before execute()");
+		// first_call = false;
 
 		std::lock_guard lock(pool_mutex);
-		for (auto& task: tasks) global_pool.push_back(std::move(task));
-		added_tasks.fetch_add(tasks.size());
+		
+		added_tasks.fetch_add(1);
+
+		auto chosen_worker = worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
+			tryExecuteTask(pt);
+		});
+		is_worker_free_map[chosen_worker] = false;
+
+		
+
+		// auto              worker_refs           = worker_manager.getAllWorkers();
+		// usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
+		// std::vector<Task> tasks_to_distribute;
+
+		// for (usize i = 0; i < n_tasks_to_distribute; ++i) {
+		// 	tasks_to_distribute.push_back(std::move(global_pool.front()));
+		// 	global_pool.pop_front();
+		// }
+
+		// for (usize i = 0; i < ; ++i) {
+		// 	auto& task = tasks_to_distribute[i];
+		// 	worker_refs[i]->scheduleTaskIfFree([this, pt = std::move(task)](WRef) mutable {
+		// 		tryExecuteTask(pt);
+		// 	});
+		// 	is_worker_free_map[worker_refs[i]] = false;
+		// }
+
+
 	}
 
 	void TaskPool::waitExecutionCompletion() {
@@ -47,34 +75,11 @@ namespace query::internal {
 			);
 			return added_tasks.load() == completed_tasks.load();
 		});
-		is_executing.store(false);
+		// is_executing.store(false);
 	}
 
 	void TaskPool::execute() {
-		CORE_ASSERT(
-			global_pool.size() > 0,
-			"No tasks to execute. Add tasks using addInitialTasks() before calling execute()."
-		);
-
-		is_executing.store(true);
-		std::unique_lock lock(pool_mutex);
-
-		auto              worker_refs           = worker_manager.getAllWorkers();
-		usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
-		std::vector<Task> tasks_to_distribute;
-
-		for (usize i = 0; i < n_tasks_to_distribute; ++i) {
-			tasks_to_distribute.push_back(std::move(global_pool.front()));
-			global_pool.pop_front();
-		}
-
-		for (usize i = 0; i < n_tasks_to_distribute; ++i) {
-			auto& task = tasks_to_distribute[i];
-			worker_refs[i]->scheduleTask([this, pt = std::move(task)](WRef) mutable {
-				tryExecuteTask(pt);
-			});
-			is_worker_free_map[worker_refs[i]] = false;
-		}
+		CORE_UNREACHABLE();
 	}
 
 	void TaskPool::query(const Task& task) {
@@ -220,7 +225,8 @@ namespace query::internal {
 	}
 
 	void TaskPool::onWorkerNoTasks(WRef current_worker) {
-		if (!is_executing.load()) return;
+		// if (!is_executing.load()) return;
+
 
 		base::Optional<Task> task_opt;
 		std::lock_guard      lock(pool_mutex);

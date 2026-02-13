@@ -56,7 +56,7 @@ namespace concurrent::worker {
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.
 		 */
-		void scheduleTaskOnAnyWorker(const Task& task);
+		WRef scheduleTaskOnAnyWorker(const Task& task);
 
 		/**
 		 * @brief Checks if a worker is free.

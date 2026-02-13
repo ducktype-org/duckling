@@ -89,18 +89,14 @@ namespace query::internal {
 
 
 		/**
-		 * @brief Add the initial set of tasks to the pool.
-		 * These tasks will be distributed to workers when execute() is called.
-		 *
-		 * For now it may only be called once, it panics if called more than once.
+		 * @brief Add the tasks to the pool.
 		 */
-		void addInitialTasks(std::vector<Task> tasks);
+		void addTask(Task&& tasks);
 
 		/**
 		 * @brief Start execution of all tasks in the pool.
 		 * Distributes initial tasks: one to each worker and the rest to the global pool.
 		 * Is non-blocking, returns immediately after scheduling the initial tasks.
-		 * @note execute() must be called after addInitialTasks()
 		 */
 		void execute();
 
@@ -159,7 +155,7 @@ namespace query::internal {
 		 * current worker. Should be called from the worker's no_tasks_callback.
 		 */
 		void onWorkerNoTasks(WRef current_worker);
-
+		
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
@@ -253,10 +249,10 @@ namespace query::internal {
 		base::HashMap<WRef, std::atomic<bool>> is_worker_free_map;
 
 		/// Flag indicating if execution is in progress.
-		std::atomic<bool> is_executing{ false };
+		// std::atomic<bool> is_executing{ false };
 
 		/// If addInitialTasks() was called already, to prevent multiple calls.
-		bool first_call = true;
+		// bool first_call = true;
 	};
 
 }  // namespace concurrent
