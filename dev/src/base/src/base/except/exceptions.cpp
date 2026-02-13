@@ -64,6 +64,8 @@ namespace base {
 	}
 
 	Panic::Panic(std::string_view position, std::string_view reason) {
+		std::cerr << "PANIC OCCURRED! Gathering details...\n";
+		
 		// Note that multiple threads might safely race on was_first_panic, and only one will win.
 		// For not its ok, in the future we might want to add some per-thread first panic tracking,
 		// if this becomes an issue.
@@ -114,6 +116,9 @@ namespace base {
 				what_str += " - This panic happened after main() ended, and the first-panic details were already destroyed.\n";
 			}
 		}
+
+		// early print:
+		std::cerr << what_str;
 	}
 
 	const char* Panic::what() const noexcept { return what_str.c_str(); }

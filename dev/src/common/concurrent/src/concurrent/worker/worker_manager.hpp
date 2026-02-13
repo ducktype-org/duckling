@@ -7,6 +7,9 @@
 #include <base/types/ints.hpp>
 
 namespace concurrent::worker {
+
+
+
 	/**
 	 * @brief Manages a fixed number of workers to execute tasks.
 	 * @note Destruction of WorkerManager first STOPS and then joins all workers. This means:

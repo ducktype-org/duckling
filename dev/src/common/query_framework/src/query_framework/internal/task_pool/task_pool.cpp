@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <iostream>
 
 namespace query::internal {
 
@@ -17,7 +18,7 @@ namespace query::internal {
 		for (auto worker: worker_manager.getAllWorkers())
 			worker_pools.emplace(worker, std::deque<Task>());
 
-		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.emplace(worker, true);
+		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.put(worker, true);
 
 		// @TODO: PR think about this later:
 		// this links query task execution with workers manager logic.
@@ -65,6 +66,8 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
+		std::cerr << "Waiting for task with id " << id.q_id.getData().name << id.hash.val.toStringHex() << " to complete\n";
+		
 		std::unique_lock lock(pool_mutex);
 
 		// auto             task_opt
@@ -77,6 +80,7 @@ namespace query::internal {
 
 		
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+		std::cerr << "Task with id " << id.q_id.getData().name << id.hash.val.toStringHex() << " is done\n";
 	}
 
 	void TaskPool::waitExecutionCompletion() {

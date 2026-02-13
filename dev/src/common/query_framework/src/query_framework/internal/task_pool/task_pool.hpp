@@ -251,7 +251,7 @@ namespace query::internal {
 		std::atomic<usize> added_tasks{ 0 };
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
-		base::HashMap<WRef, std::atomic<bool>> is_worker_free_map;
+		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
 
 		/// Flag indicating if execution is in progress.
 		// std::atomic<bool> is_executing{ false };

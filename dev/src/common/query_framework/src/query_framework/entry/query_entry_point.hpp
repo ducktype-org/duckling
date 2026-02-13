@@ -12,6 +12,8 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/utils/simple_keys.hpp>
 
+#include <iostream> // PR remove
+
 namespace query {
 
 	namespace internal {
@@ -22,12 +24,17 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
+				std::cerr << "call query\n";
+				
 				// return QueryType::internal_query(key);
 				auto node_id = makeNodeID<QueryType>(key);
+				
+				std::cerr << "...\n";
 
 				Context::getState().getTaskPool()->addTask(internal::Task{
-					node_id, [key](concurrent::worker::WRef) { QueryType::internal_query(key); } });
-
+					node_id, [key](concurrent::worker::WRef) { QueryType::internal_query(key); }, });
+					
+				std::cerr << "waiting soon\n";
 				Context::getState().getTaskPool()->waitForTask(node_id);
 
 				return QueryType::internal_load(key);
