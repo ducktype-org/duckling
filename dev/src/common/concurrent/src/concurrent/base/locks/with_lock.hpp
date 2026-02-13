@@ -10,17 +10,17 @@ namespace concurrent {
 	template<typename LockType>
 	struct WithLock final {
 	private:
-		CRef<LockType> lock;
+		Ref<LockType> lock;
 
 	public:
-		WithLock(CRef<LockType> lock): lock(lock) { this->lock->lock(); }
+		WithLock(Ref<LockType> lock): lock(lock) { this->lock->lock(); }
 
 		~WithLock() { this->lock->unlock(); }
 	};
 
 	template<typename LockType>
-	WithLock(CRef<LockType> lock) -> WithLock<LockType>;
+	WithLock(Ref<LockType> lock) -> WithLock<LockType>;
 
 	template<typename LockType>
-	WithLock(const LockType* lock) -> WithLock<LockType>;
+	WithLock(LockType* lock) -> WithLock<LockType>;
 }
