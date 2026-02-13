@@ -31,6 +31,7 @@ public:
 	void resume() const;
 	void pause() const;
 	void stop() const;
+	void getCurrentPosition() const;
 
 private:
 	struct CallInfo {

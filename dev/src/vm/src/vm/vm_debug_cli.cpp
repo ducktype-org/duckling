@@ -84,7 +84,10 @@ bool DuckVMDebugCli::handleLine(std::string line) {
 		core.pause();
 	} else if (stripped_line == "stop") {
 		core.stop();
-	} else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
+	} else if (stripped_line == "cp" || stripped_line == "pos" || stripped_line == "position") {
+		core.getCurrentPosition();
+	} 
+	else if (stripped_line == "help" || stripped_line == "?" || stripped_line == "h") {
 		help();
 	} else {
 		std::cout << "Invalid input: \"" << line << "\"\n";

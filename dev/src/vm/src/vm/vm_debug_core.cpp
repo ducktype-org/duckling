@@ -148,6 +148,12 @@ void DuckVMDebugCore::getStatus() const {
 			
 			if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
 		}
+		if(std::holds_alternative<vm::api::Paused>(response.value())) {
+			auto position_response = vm::api::getCurrentPosition(pid);
+			if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
+			vm::api::response::CodePosition position = position_response.value();
+			std::cout << "Paused on line " << position.instr_number << " of function nr " << position.function_id << "\n";
+		}
 	} else {
 		const vm::api::ApiError& err = response.error();
 		std::cout << "error: " << vm::api::errorToString(err) << "\n";
@@ -188,4 +194,16 @@ void DuckVMDebugCore::stop() const {
 		return;
 	}
 	if (!vm::api::stop(pid)) throw BeRDFailedToPauseVM();
+}
+
+void DuckVMDebugCore::getCurrentPosition() const {
+	auto response = vm::api::getExecutionStatus(pid);
+	if (response.has_value() && !std::holds_alternative<vm::api::Paused>(response.value())) {
+		std::cout << "Not paused program - make sure you started it.\n";
+		return;
+	}
+	auto position_response = vm::api::getCurrentPosition(pid);
+	if (!position_response.has_value()) throw std::runtime_error("Failed to get current position");
+	vm::api::response::CodePosition position = position_response.value();
+	std::cout << "Line " << position.instr_number << " of function nr " << position.function_id << "\n";
 }
