@@ -27,6 +27,8 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
+#include <concurrent/worker/worker.hpp> // PR
+#include <concurrent/worker/worker_manager.hpp> // PR
 
 #include <base/except/exceptions.hpp>
 
@@ -828,6 +830,9 @@ namespace compiler::helios {
 				getSymRef(key)->getPSTDataOpt().has_value(),
 				"Query code of function does not support generated functions"
 			);
+
+			// std::cerr << concurrent::worker::Worker::getCurrentWorker().get() << " Generating code for function " << name(key).strView() << "\n";
+			// std::cerr << concurrent::worker::WorkerManager::
 
 			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);

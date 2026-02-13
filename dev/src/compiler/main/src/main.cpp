@@ -353,9 +353,9 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
-					u64 worker_count = options.getValue<u64>("worker count").copyValueOr(1);
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 					// PR change it
-					concurrent::worker::setWorkerCount(worker_count);
+					concurrent::worker::setWorkerCount(base::safeIntConv<u64>(worker_count));
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
