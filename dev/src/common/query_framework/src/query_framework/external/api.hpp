@@ -59,5 +59,4 @@ namespace query::external {
 	[[nodiscard]] std::vector<byte> serializeMetadata();
 
 
-
 }  // namespace query::external

@@ -18,7 +18,7 @@
 		cache.put(key_hash, { std::move(res), acd });                              \
 		return cache.at(key_hash)->data;                                           \
 	}                                                                              \
-	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); } \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }    \
 	static_assert(                                                                 \
 		std::is_same_v<PResult, QResult>,                                          \
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"            \

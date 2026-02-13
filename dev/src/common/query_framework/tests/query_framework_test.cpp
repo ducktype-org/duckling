@@ -71,9 +71,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 		return res;
 	}
 
-	static auto erase(KHash key_hash) -> bool {
-		return cache.erase(key_hash) > 0;
-	}
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash) > 0; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);

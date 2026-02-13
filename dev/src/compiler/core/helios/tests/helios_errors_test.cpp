@@ -55,15 +55,15 @@ private:
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 		query::utils::withContextDo([&](query::Context& ctx) {
-			ctx.int_logger.clear();
 			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
-			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged.");
+			auto logger = query::Context::dumpToOneLoggerAndClear();
+			assertTrue(logger->hasErrors(), "Expected errors to be logged.");
 
 			std::stringstream logged_messages;
-			ctx.int_logger.terminalPrint(logged_messages);
+			logger->terminalPrint(logged_messages);
 			std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-			auto msg_count = ctx.int_logger.messageCount();
+			auto msg_count = logger->messageCount();
 			assertEqual(
 				msg_count,
 				logged_msg_count,

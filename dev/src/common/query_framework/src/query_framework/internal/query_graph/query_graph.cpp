@@ -13,7 +13,6 @@
 #include <queue>
 #include <ranges>
 #include <set>
-#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -311,7 +310,7 @@ namespace query::internal {
 		return it != node_deps.end() && !it->second.empty();
 	}
 
-	std::vector<NodeID> QueryGraph::getDependentNodes(const std::vector<NodeID> &start_nodes) {
+	std::vector<NodeID> QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes) {
 		CORE_ASSERT(
 			TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes."
 		);

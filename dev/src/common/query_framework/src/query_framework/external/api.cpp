@@ -1,11 +1,11 @@
 #include "api.hpp"
 
-#include "base/extend_cpp/variant_match.hpp"
+#include <base/extend_cpp/variant_match.hpp>
 
-#include "query_framework/internal/query_data/query_data.hpp"
-#include "query_framework/internal/query_graph/node_id.hpp"
-#include "query_framework/internal/query_graph/node_making.hpp"
 #include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_data/query_data.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>
 #include <query_framework/internal/query_graph/node_marking.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
@@ -51,12 +51,12 @@ namespace query::external {
 	}
 
 	void invalidateQueries(std::vector<InputData>&& new_inputs) {
-		auto state       = ::query::internal::ContextAccess::getState();
-		
+		auto state = ::query::internal::ContextAccess::getState();
+
 		// Step 1: Get all nodes to invalidate
 		auto start_nodes = internal::findInputsRemovedFromCurrentGraph(std::move(new_inputs));
 		auto nodes_to_invalidate = state->getGraphMutable()->getDependentNodes(start_nodes);
-		
+
 		// Step 2: Erase nodes from the graph
 		state->getGraphMutable()->eraseNodes(nodes_to_invalidate);
 

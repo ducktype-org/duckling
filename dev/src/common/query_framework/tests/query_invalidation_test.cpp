@@ -6,15 +6,15 @@
 // We need to test things:
 // 1. All queries dependend on start nodes are invalidated correctly, meaning
 //   - they are removed from the graph
-//   - their cache is cleared 
+//   - their cache is cleared
 //   - their metadata is cleared
 //   - their diagnostics are cleared
 //   - other nodes are not affected
-//   - if an erased node is in the reversed dependency 
+//   - if an erased node is in the reversed dependency
 
 // Start1
 
-// 
+//
 
 // Start2
 
@@ -38,15 +38,12 @@ struct IMPLEMENT_QUERY(DummyQuery2, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery2);
 
-
 class ActiveGraph: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ActiveGraph
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(test);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(test); }
 
 private:
 	void test() {}

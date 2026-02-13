@@ -1,18 +1,19 @@
 #pragma once
 
 #include "active_graph.hpp"
-#include "concurrent/base/collections/hash_map.hpp"
-#include "diagnostic_interactive/message.hpp"
 #include "node_id.hpp"
 #include "query_graph.hpp"
+
+#include <concurrent/base/collections/hash_map.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/message_forward.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
-#include <diagnostic_interactive/logger_fwd.hpp>
-#include <diagnostic_interactive/message_forward.hpp>
 
 namespace query {
 	// Forward declaration

@@ -62,6 +62,8 @@ namespace dia_int {
 			std::ostream&              out,
 			bool                       catch_exceptions = true
 		);
+
+		void mergeWith(Logger&& other);
 	};
 
 	/**

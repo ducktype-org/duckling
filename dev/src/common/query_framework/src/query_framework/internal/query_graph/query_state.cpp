@@ -1,5 +1,6 @@
 #include "query_state.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -13,7 +14,6 @@
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
-#include "diagnostic_interactive/logger.hpp"
 
 #include <algorithm>
 #include <unordered_set>
@@ -885,22 +885,11 @@ namespace query::internal {
 	}
 
 	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
-		diagnostic_loggers.maybePut(node_id, dia_int::Logger{});
+		diagnostic_loggers.maybePut(node_id, makeBox<dia_int::Logger>());
 		diagnostic_loggers.atMaybe(node_id).value()->refMut()->log(std::move(diagnostic));
 	}
 
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
-
-	std::vector<Box<dia_int::MessageBase>> QueryState::getAllDiagnostics() const {
-		std::vector<Box<dia_int::MessageBase>> diagnostics;
-
-		for (const auto& [_, logger]: diagnostic_loggers) {
-			auto logger_ref = logger.ref();
-			logger_ref->
-		}
-
-		return diagnostics;
-	}
 
 	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
 	) const {

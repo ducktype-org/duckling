@@ -287,8 +287,9 @@ namespace query::internal {
 		),                                                                                                                             \
 		"PResult must not be a QResult if uses_qresult is false"                                                                       \
 	);                                                                                                                                 \
-	decltype(type::QueryType::id) type::QueryType::id                                                                                  \
-		= ::query::internal::registerQuery(type::QueryType::QUERY_DATA.withImplData({.erase_function = &type::erase}));
+	decltype(type::QueryType::id) type::QueryType::id = ::query::internal::registerQuery(                                              \
+		type::QueryType::QUERY_DATA.withImplData({ .erase_function = &type::erase })                                                   \
+	);
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

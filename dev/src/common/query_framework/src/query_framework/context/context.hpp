@@ -6,6 +6,7 @@
 
 #include "context_fd.hpp"  // IWYU pragma: keep
 
+#include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 
@@ -53,7 +54,6 @@ namespace query {
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 	public:
-
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
@@ -136,10 +136,11 @@ namespace query {
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
-
 		void logInt(Box<dia_int::MessageBase> diagnostic);
 
 		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
+
+		static Box<dia_int::Logger> dumpToOneLoggerAndClear();
 
 		/**
 		 * @brief Returns a const reference to the main query state.

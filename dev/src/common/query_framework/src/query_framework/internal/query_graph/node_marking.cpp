@@ -2,9 +2,9 @@
 
 #include <base/except/exceptions.hpp>
 
-#include "query_framework/internal/query_graph/node_id.hpp"
 #include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
 #include <algorithm>
@@ -91,9 +91,7 @@ namespace query::internal {
 		}
 
 		// Remaining nodes are red
-		for (; j < prev_inputs.size(); ++j)
-			removed_callback(prev_inputs[j]);
-			
+		for (; j < prev_inputs.size(); ++j) removed_callback(prev_inputs[j]);
 	}
 
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs) {
@@ -113,15 +111,13 @@ namespace query::internal {
 	std::vector<NodeID> findInputsRemovedFromCurrentGraph(
 		std::vector<query::external::InputData> inputs
 	) {
-		auto state 	= ContextAccess::getState();
-		auto& prev_graph = state->getGraph();
+		auto                state      = ContextAccess::getState();
+		auto&               prev_graph = state->getGraph();
 		std::vector<NodeID> removed_inputs;
-		auto present_callback = [&](const NodeID&) {
-			// do nothing
+		auto                present_callback = [&](const NodeID&) {
+            // do nothing
 		};
-		auto removed_callback = [&](const NodeID& node) {
-			removed_inputs.push_back(node);
-		};
+		auto removed_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
 		callForEveryRemovedInput(present_callback, removed_callback, &prev_graph, std::move(inputs));
 		return removed_inputs;
 	}

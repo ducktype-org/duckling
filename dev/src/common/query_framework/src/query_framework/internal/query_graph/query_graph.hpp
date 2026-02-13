@@ -20,7 +20,8 @@ namespace query::internal {
 	 */
 	class QueryGraph final {
 		base::HashMap<NodeID, std::vector<NodeID>> node_deps;
-		base::HashMap<NodeID, std::vector<NodeID>> node_reverse_deps;  // Only used if TRACK_REVERSE_GRAPH is true
+		base::HashMap<NodeID, std::vector<NodeID>>
+			node_reverse_deps;  // Only used if TRACK_REVERSE_GRAPH is true
 
 		/*
 		 * for direct access to node_deps
@@ -139,7 +140,7 @@ namespace query::internal {
 			return node_deps.contains(node_id);
 		}
 
-		[[nodiscard]] std::vector<NodeID> getDependentNodes(const std::vector<NodeID> &start_nodes);
+		[[nodiscard]] std::vector<NodeID> getDependentNodes(const std::vector<NodeID>& start_nodes);
 
 		void eraseNodes(const std::vector<NodeID>& nodes_to_erase);
 
