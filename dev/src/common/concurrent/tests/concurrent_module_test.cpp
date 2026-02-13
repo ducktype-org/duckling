@@ -595,9 +595,15 @@ private:
 		// Common interface for both implementations
 		class HashMapInterface {
 		public:
-			virtual bool                  maybePut(const Key& key, const Value& value) = 0;
-			virtual base::Optional<Value> atMaybeCopy(const Key& key) const            = 0;
-			virtual bool                  erase(const Key& key)                        = 0;
+			[[nodiscard]]
+			virtual bool maybePut(const Key& key, const Value& value)
+				= 0;
+			[[nodiscard]]
+			virtual base::Optional<Value> atMaybeCopy(const Key& key) const
+				= 0;
+			[[nodiscard]]
+			virtual bool erase(const Key& key)
+				= 0;
 
 			virtual ~HashMapInterface() = default;
 		};
