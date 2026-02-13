@@ -155,7 +155,7 @@ namespace query::internal {
 		\************************/
 
 		// add doc comment
-		Ref<TaskPool> getTaskPool() noexcept {
+		Ref<TaskPool> getTaskPool() const noexcept {
 			// PR move to cpp
 			return &task_pool;
 		}
@@ -332,8 +332,9 @@ namespace query::internal {
 
 		/**
 		 * Task pool handling execution of queries.
+		 * PR: think about this mutable
 		 */
-		TaskPool task_pool;
+		mutable TaskPool task_pool;
 
 		/**
 		 * The previous compilation data if any.

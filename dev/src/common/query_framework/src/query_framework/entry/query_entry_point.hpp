@@ -23,8 +23,16 @@ namespace query {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
 				// return QueryType::internal_query(key);
+				auto node_id = makeNodeID<QueryType>(key);
 
-				Context::getState().
+				Context::getState().getTaskPool()->addTask(internal::Task{
+					node_id,
+					[key](concurrent::worker::WRef) { QueryType::internal_query(key); }
+				});
+
+				Context::getState().getTaskPool()->waitForTask(node_id);
+
+				return QueryType::internal_load(key);
 			}
 		};
 	}

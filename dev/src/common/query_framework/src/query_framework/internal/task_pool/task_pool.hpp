@@ -155,6 +155,11 @@ namespace query::internal {
 		 * current worker. Should be called from the worker's no_tasks_callback.
 		 */
 		void onWorkerNoTasks(WRef current_worker);
+
+		/**
+		 * @brief Waits until some worker executed the task.
+		 */
+		void waitForTask(NodeID id);
 		
 	private:
 		/**

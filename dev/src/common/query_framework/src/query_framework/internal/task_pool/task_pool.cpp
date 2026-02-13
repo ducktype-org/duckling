@@ -44,7 +44,7 @@ namespace query::internal {
 		});
 		is_worker_free_map[chosen_worker] = false;
 
-		
+
 
 		// auto              worker_refs           = worker_manager.getAllWorkers();
 		// usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
@@ -64,6 +64,20 @@ namespace query::internal {
 		// }
 
 
+	}
+
+	void TaskPool::waitForTask(NodeID id) {
+		std::unique_lock lock(pool_mutex);
+		
+		// auto             task_opt
+		// 	= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
+		// if_opt_some(task_opt, task) {
+		// 	lock.unlock();
+		// 	tryExecuteTask(task);
+		// 	lock.lock();
+		// }
+
+		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
 	void TaskPool::waitExecutionCompletion() {
