@@ -698,5 +698,6 @@ private:
 		}
 		std::cerr << "\n";
 	}
+};
 
-	TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
+TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
