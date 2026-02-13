@@ -50,7 +50,7 @@ namespace query::internal {
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{ QueryIntType::getID() };
 
-
+		// @TODO: PR check node status
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			/****************************************************\
 			| Query result was cached, we return it directly.    |
