@@ -1,6 +1,8 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -89,6 +91,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testHoutElementsOrigin);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -101,6 +104,28 @@ private:
 
 	using enum compiler::tsh::Mutability;
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
+		return std::any_cast<compiler::tsh::IntegralAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getIntegralType(ctx, size, signedness);
+			})
+		);
+	}
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getFloatTypeNoContext(u64 size) {
+		return std::any_cast<compiler::tsh::FloatAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getFloatType(ctx, size); }
+		));
+	}
 
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
@@ -153,16 +178,16 @@ private:
 	void testMetaCompTime() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
 
-		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
+		auto i16_type  = getIntegralTypeNoContext(16, Signed);
+		auto i32_type  = getIntegralTypeNoContext(32, Signed);
+		auto i64_type  = getIntegralTypeNoContext(64, Signed);
+		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
-		auto f16_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		auto f64_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
+		auto f16_type  = getFloatTypeNoContext(16);
+		auto f64_type  = getFloatTypeNoContext(64);
+		auto f128_type = getFloatTypeNoContext(128);
 
-		auto unit_type = query::entryPoint<compiler::tsh::QueryUnitType>({});
+		auto unit_type = compiler::tsh::getUnitType();
 
 		// Tree eval
 		{
@@ -320,14 +345,17 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
 
 		// Test type deduction.
-		const auto i16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		const auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		const auto u16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Unsigned });
-		const auto u32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Unsigned });
-		const auto u64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
-		const auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+		const auto i16_type = getIntegralTypeNoContext(16, Signed);
+		const auto i32_type = getIntegralTypeNoContext(32, Signed);
+		const auto i64_type = getIntegralTypeNoContext(64, Signed);
+
+		const auto u16_type = getIntegralTypeNoContext(16, Unsigned);
+		const auto u32_type = getIntegralTypeNoContext(32, Unsigned);
+		const auto u64_type = getIntegralTypeNoContext(64, Unsigned);
+
+		const auto f32_type = getFloatTypeNoContext(32);
+		const auto f64_type = getFloatTypeNoContext(64);
+
 
 		auto verify_type_and_mutability = [&](std::string_view            keyword,
 		                                      std::string_view            type_suffix,
@@ -516,13 +544,13 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/types")));
 
-		const auto int16_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto f16_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
-		const auto meta_type  = query::entryPoint<compiler::tsh::QueryMetaType>({});
-		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto int16_type = getIntegralTypeNoContext(16, Signed);
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto f16_type   = getFloatTypeNoContext(16);
+		const auto f32_type   = getFloatTypeNoContext(32);
+		const auto bool_type  = compiler::tsh::getBoolType();
+		const auto meta_type  = compiler::tsh::getMetaType();
+		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
 		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
@@ -603,6 +631,8 @@ private:
 	 * that contains every expression type at least once
 	 */
 	void testExprClone() {
+		using namespace compiler::helios::code;
+
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/expressions")));
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
@@ -610,24 +640,22 @@ private:
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto int_type = ctx.query<compiler::tsh::QueryIntegralType>({ 64 });
+			auto int_type = compiler::tsh::getIntegralType(ctx, 64, Signed);
 
 
 			// Build chain comparison expressions vector
-			std::vector<base::Box<compiler::helios::code::Expr>> chain_exprs;
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
-			chain_exprs.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 3));
+			std::vector<base::Box<Expr>> chain_exprs;
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
+			chain_exprs.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 3));
 
-			std::vector<compiler::helios::code::BuiltinBinary> chain_ops{
-				compiler::helios::code::BuiltinBinary::IntegerLt,
-				compiler::helios::code::BuiltinBinary::IntegerLteq
-			};
+			std::vector<BuiltinBinary> chain_ops{ BuiltinBinary::IntegerLt,
+				                                  BuiltinBinary::IntegerLteq };
 
 			// Build tuple elements
-			std::vector<base::Box<compiler::helios::code::Expr>> tuple_elements;
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 1));
-			tuple_elements.emplace_back(makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 2));
+			std::vector<base::Box<Expr>> tuple_elements;
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 1));
+			tuple_elements.emplace_back(makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 2));
 
 			// Build call arguments for square function
 			const compiler::helios::SymID a_field
@@ -638,55 +666,58 @@ private:
 			          ->getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
-			std::vector<base::Box<compiler::helios::code::Expr>> call_args;
-			call_args.emplace_back(makeBox<compiler::helios::code::AccessExpr>(
-				ctx, makeBox<compiler::helios::code::IdentifierExpr>(ctx, a_obj), a_field
+			std::vector<base::Box<Expr>> call_args;
+			call_args.emplace_back(makeBox<AccessExpr>(
+				ctx, generatedOrigin(), makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_obj), a_field
 			));
 
 			// Build sequence expressions
-			std::vector<base::Box<compiler::helios::code::Expr>> sequence_exprs;
+			std::vector<base::Box<Expr>> sequence_exprs;
 			sequence_exprs.emplace_back(
-				makeBox<compiler::helios::code::TupleExpr>(ctx, std::move(tuple_elements))
+				makeBox<TupleExpr>(ctx, generatedOrigin(), std::move(tuple_elements))
 			);
-			sequence_exprs.emplace_back(makeBox<compiler::helios::code::BinaryOperatorExpr>(
+			sequence_exprs.emplace_back(makeBox<BinaryOperatorExpr>(
 				ctx,
-				compiler::helios::code::BuiltinBinary::IntegerAdd,
-				makeBox<compiler::helios::code::ParenthesisExpr>(
+				generatedOrigin(),
+				BuiltinBinary::IntegerAdd,
+				makeBox<ParenthesisExpr>(
 					ctx,
-					makeBox<compiler::helios::code::UnaryOperatorExpr>(
-						compiler::helios::code::BuiltinUnary::IntegerNegation,
-						makeBox<compiler::helios::code::LiteralNumericExpr>(ctx, 10)
+					generatedOrigin(),
+					makeBox<UnaryOperatorExpr>(
+						generatedOrigin(),
+						BuiltinUnary::IntegerNegation,
+						makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 10)
 					)
 				),
-				makeBox<compiler::helios::code::CallExpr>(
+				makeBox<CallExpr>(
 					ctx,
-					makeBox<compiler::helios::code::IdentifierExpr>(ctx, square_sym),
+					generatedOrigin(),
+					makeBox<IdentifierExpr>(ctx, generatedOrigin(), square_sym),
 					std::move(call_args)
 				)
 			));
 
 			// Build variant subtypes
-			std::vector<base::Box<compiler::helios::code::Expr>> variant_subtypes;
-			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralTypeExpr>(ctx, int_type)
+			std::vector<base::Box<Expr>> variant_subtypes;
+			variant_subtypes.emplace_back(makeBox<LiteralTypeExpr>(ctx, generatedOrigin(), int_type)
 			);
-			variant_subtypes.emplace_back(makeBox<compiler::helios::code::LiteralBoolExpr>(ctx, true)
-			);
+			variant_subtypes.emplace_back(makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true));
 			variant_subtypes.emplace_back(
-				makeBox<compiler::helios::code::LiteralStringExpr>(ctx, base::StrID("hello"))
+				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
-			auto mega_expr = makeBox<compiler::helios::code::TernaryOperatorExpr>(
+			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
+				generatedOrigin(),
 				// Condition: ChainComparisonExpr (1 < 2 <= 3)
-				makeBox<compiler::helios::code::ChainComparisonExpr>(
-					ctx, std::move(chain_exprs), std::move(chain_ops)
+				makeBox<ChainComparisonExpr>(
+					ctx, generatedOrigin(), std::move(chain_exprs), std::move(chain_ops)
 				),
 				// If true: SequenceExpr with nested expressions including CallExpr
-				makeBox<compiler::helios::code::SequenceExpr>(ctx, std::move(sequence_exprs)),
+				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<compiler::helios::code::VariantTypeConstructorExpr>(
-					ctx, std::move(variant_subtypes)
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
 				)
 			);
 
@@ -977,7 +1008,7 @@ private:
 		auto              tree_vref = getExprOfConst(sym_vref);
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
 		const auto int32ref_type = st(int32_type)
 		                               .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
 		                               .withMutability(Immutable);
@@ -988,7 +1019,7 @@ private:
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
+		const auto f16_type    = getFloatTypeNoContext(16);
 		const auto f16box_type = st(f16_type)
 		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
 		                             .withMutability(Immutable);
@@ -999,7 +1030,7 @@ private:
 		auto              tree_vconst = getExprOfConst(sym_vconst);
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
-		const auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>(query::EmptyKey{});
+		const auto bool_type       = compiler::tsh::getBoolType();
 		const auto const_bool_type = st(bool_type).withMutability(Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
@@ -1007,8 +1038,7 @@ private:
 		auto member_access_sym  = getChain("member_access", root_scope).back();
 		auto member_access_expr = getExprOfVariable(member_access_sym);
 		ASSERT_EQUAL(
-			member_access_expr->expression_type.getType(),
-			query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed })
+			member_access_expr->expression_type.getType(), getIntegralTypeNoContext(32, Signed)
 		);
 	}
 
@@ -1039,8 +1069,8 @@ private:
 			= [&](usize i) -> decltype(auto) { return get_var_block(i, *function->body); };
 
 
-		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
+		auto f32_type = getFloatTypeNoContext(32);
 		auto i32_or_f32
 			= query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
 
@@ -1121,7 +1151,7 @@ private:
 			// Check type of r.
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
-			auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto i32_type              = getIntegralTypeNoContext(32, Signed);
 			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
@@ -1379,30 +1409,30 @@ private:
 	void testKeywordLiterals() {
 		auto [module, top_scope] = getModule(fs::File(path("test_modules/keyword_literals")));
 
-		auto i8_type   = query::entryPoint<compiler::tsh::QueryIntegralType>({ 8, Signed });
-		auto i16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Signed });
-		auto i32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		auto i64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		auto i128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Signed });
+		auto i8_type   = getIntegralTypeNoContext(8, Signed);
+		auto i16_type  = getIntegralTypeNoContext(16, Signed);
+		auto i32_type  = getIntegralTypeNoContext(32, Signed);
+		auto i64_type  = getIntegralTypeNoContext(64, Signed);
+		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
-		auto u8_type   = query::entryPoint<compiler::tsh::QueryIntegralType>({ 8, Unsigned });
-		auto u16_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 16, Unsigned });
-		auto u32_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Unsigned });
-		auto u64_type  = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Unsigned });
-		auto u128_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 128, Unsigned });
+		auto u8_type   = getIntegralTypeNoContext(8, Unsigned);
+		auto u16_type  = getIntegralTypeNoContext(16, Unsigned);
+		auto u32_type  = getIntegralTypeNoContext(32, Unsigned);
+		auto u64_type  = getIntegralTypeNoContext(64, Unsigned);
+		auto u128_type = getIntegralTypeNoContext(128, Unsigned);
 
-		auto f16_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 16 });
-		auto f32_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+		auto f16_type = getFloatTypeNoContext(16);
+		auto f32_type = getFloatTypeNoContext(32);
+		auto f64_type = getFloatTypeNoContext(64);
 
-		auto f80_type  = query::entryPoint<compiler::tsh::QueryFloatType>({ 80 });
-		auto f128_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 128 });
+		auto f80_type  = getFloatTypeNoContext(80);
+		auto f128_type = getFloatTypeNoContext(128);
 
-		auto char_type = query::entryPoint<compiler::tsh::QueryCharType>({});
+		auto char_type = compiler::tsh::getCharType();
 
-		auto bool_type = query::entryPoint<compiler::tsh::QueryBoolType>({});
+		auto bool_type = compiler::tsh::getBoolType();
 
-		auto str_type = query::entryPoint<compiler::tsh::QueryStringType>({});
+		auto str_type = compiler::tsh::getStringType();
 
 		// a simple way to get function scope through hout:
 		auto foo            = getChain("foo", top_scope).back();
@@ -1454,8 +1484,8 @@ private:
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::File(path("test_modules/parameters")));
 
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto int64_type = getIntegralTypeNoContext(64, Signed);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto& hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1545,7 +1575,7 @@ private:
 			};
 
 			auto all_expr_holders
-				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
+				= pst::viewAllSubTreeElementsFilter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"
@@ -1668,7 +1698,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions)
 			ASSERT_EQUAL(function->declaration->return_type.getType(), i64_type);
@@ -1679,7 +1709,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions) {
 			ASSERT_EQUAL(i64_type, function->declaration->return_type.getType());
@@ -1959,12 +1989,16 @@ private:
 	void testTypeOfConstAndVar() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/type_deduction")));
 
-		const auto int32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
-		const auto int64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
-		const auto f32_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 32 });
-		const auto f64_type   = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
-		const auto bool_type  = query::entryPoint<compiler::tsh::QueryBoolType>({});
-		const auto str_type   = query::entryPoint<compiler::tsh::QueryStringType>({});
+		const auto int32_type = getIntegralTypeNoContext(32, Signed);
+		const auto int64_type = getIntegralTypeNoContext(64, Signed);
+
+		const auto f32_type = getFloatTypeNoContext(32);
+		const auto f64_type = getFloatTypeNoContext(64);
+
+		const auto bool_type = compiler::tsh::getBoolType();
+
+		const auto str_type = compiler::tsh::getStringType();
+
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
@@ -2283,7 +2317,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("explicit"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto f64_type = query::entryPoint<compiler::tsh::QueryFloatType>({ 64 });
+			auto f64_type = getFloatTypeNoContext(64);
 			ASSERT_EQUAL(f64_type, cast_ptr->target_type.getType());
 		}
 
@@ -2291,7 +2325,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("widen"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto i64_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 64, Signed });
+			auto i64_type = getIntegralTypeNoContext(64, Signed);
 			ASSERT_EQUAL(i64_type, cast_ptr->target_type.getType());
 		}
 
@@ -2299,7 +2333,7 @@ private:
 			auto expr_ptr = get_var_init_expr(base::StrID("bool_as_int"));
 			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
-			auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32, Signed });
+			auto i32_type = getIntegralTypeNoContext(32, Signed);
 			ASSERT_EQUAL(i32_type, cast_ptr->target_type.getType());
 		}
 
@@ -2348,12 +2382,10 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st
-				= st(ctx.query<compiler::tsh::QueryMetaType>({})).withMutability(Immutable);
-			const auto unit_st
-				= st(ctx.query<compiler::tsh::QueryUnitType>({})).withMutability(Immutable);
-			const auto int_st = st(ctx.query<compiler::tsh::QueryIntegralType>({ 32, Signed }))
-			                        .withMutability(Immutable);
+			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
+			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
+			const auto int_st
+				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
 			const auto tuple_ii_st
 				= st(ctx.query<compiler::tsh::QueryTupleType>(
 						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
@@ -2396,6 +2428,116 @@ private:
 				"Trying to lift an unliftable tuple to a type should result in a coercion error."
 			);
 		});
+	}
+
+	/**
+	 * Test the origin calculation for elements.
+	 * The origin calculation is not trivial for expressions and generated elements.
+	 */
+	void testHoutElementsOrigin() {
+		auto [module, _] = getModule(fs::File(path("test_modules/helios_pst_origin_tests")));
+
+		auto& hout = query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+
+		auto get_global_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
+			for (const auto& glob: hout.glob_data)
+				if (glob.original_name == name) return &glob;
+			return {};
+		};
+
+		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
+		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
+		auto all_variables
+			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst->getRootElement());
+
+		auto get_pst_variable_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
+			for (const auto& var: all_variables)
+				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of initial value expression
+		 * calculated from HOUT is the same as the source position of the whole PST init expression.
+		 * This is not trivial for AccessChain and for generated elements. (derefs, casts)
+		 */
+		auto check_var_init_expr_origin = [&](base::StrID name, bool is_generated) {
+			auto glob_opt = get_global_by_name(name);
+			auto var_opt  = get_pst_variable_by_name(name);
+			assertTrue(glob_opt.has_value(), "Global not found in HOUT");
+			assertTrue(var_opt.has_value(), "Variable not found in PST");
+			auto glob              = glob_opt.value();
+			auto var_pst           = var_opt.value();
+			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
+			auto initial_value_expr
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+
+			dia::SourcePosition expr_pos_from_origin
+				= initial_value_expr->origin.getSourcePosition().value();
+			assertEqual(
+				expr_pos_from_origin,
+				initial_value_pst->getSourcePosition(),
+				base::strConcat(
+					"The initial value expression PST node does not match for variable ",
+					name.strView()
+				)
+			);
+
+			assertEqual(
+				initial_value_expr->origin.isGenerated(),
+				is_generated,
+				"Generated origin does not match for variable "
+			);
+		};
+		check_var_init_expr_origin(base::StrID("var1"), false);
+		check_var_init_expr_origin(base::StrID("var2"), false);
+		check_var_init_expr_origin(base::StrID("var3"), false);
+		check_var_init_expr_origin(base::StrID("var4"), false);
+		check_var_init_expr_origin(base::StrID("var5"), false);
+		check_var_init_expr_origin(base::StrID("var6"), false);
+		check_var_init_expr_origin(base::StrID("var7_generated"), true);
+		check_var_init_expr_origin(base::StrID("var8_generated"), true);
+
+		auto get_hout_function_by_name
+			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name == name) return fun;
+			return {};
+		};
+		auto all_pst_functions = pst::viewAllSubTreeElementsFilter<pst::Fun>(pst->getRootElement());
+		auto get_pst_function_by_name
+			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
+			for (const auto& fun: all_pst_functions)
+				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+			return {};
+		};
+
+		/**
+		 * Check if the source position of the origin of function body calculated from HOUT
+		 * is the same as the source position of the whole PST function of the same name.
+		 */
+		auto check_function_origin = [&](base::StrID name) {
+			auto fun_opt     = get_hout_function_by_name(name);
+			auto pst_fun_opt = get_pst_function_by_name(name);
+			assertTrue(fun_opt.has_value(), "Function not found in HOUT");
+			assertTrue(pst_fun_opt.has_value(), "Function not found in PST");
+			auto fun = fun_opt.value();
+
+
+			auto pst_fun = pst_fun_opt.value();
+			assertEqual(
+				fun->origin.getSourcePosition(),
+				pst_fun->getSourcePosition(),
+				base::strConcat("The function origin is not the PST of the function", name.strView())
+			);
+		};
+
+		check_function_origin(base::StrID("a"));
+		check_function_origin(base::StrID("b"));
+
+		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
 	}
 
 	void testScopeParentsAndDepth() {

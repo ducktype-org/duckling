@@ -256,7 +256,7 @@ private:
    					return 0;
 				}
 			)",
-			{ "cannot be evaluated at compile-time" },
+			{ "cannot be evaluated at compile-time", "const y = x" },
 			1
 		);
 
@@ -348,9 +348,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
-			const auto int32_type = ctx.query<tsh::QueryIntegralType>(
-				{ 32, tsh::IntegralAbstractType::Signedness::Signed }
-			);
+			const auto int32_type
+				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
 			auto st = tsh::SymbolType{
 				int32_type,
 				tsh::ReferenceKind::Direct,

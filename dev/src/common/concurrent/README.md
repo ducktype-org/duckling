@@ -15,3 +15,15 @@ Additionally there are few important rules about workers:
 This allows implementation of some concurrent algorithm to be much simpler or more efficient. This is mainly due to the limited concurrency expressed in the maximum number of workers and the worker indexes and per-worker rng provided by *Worker*'s API.
 
 It is allowed to use the idea of the *Worker* outside of this module (intended mostly for purposes of query concurrent execution).
+
+## Task pool
+
+There are n+1 queues, one per each of the `n` workers and one global pool.
+When adding new tasks, they are added to the global pool.
+Once the thread finishes it's task then steals another job.
+It looks first at the global pool and then on other workers jobs from their queues.
+
+There are 2 different synchronization mechanisms:
+1. ConHashMap for the information about task status and for deciding who get's to do the task.
+2. The global mutex for modifying the queues and for the workerss to wait on.
+ 
