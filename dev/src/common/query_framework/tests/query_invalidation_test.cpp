@@ -1,3 +1,4 @@
+#include "query_framework/entry/query_entry_point.hpp"
 #include <query_framework/internal/query_graph/active_graph.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -29,7 +30,19 @@ DECLARE_QUERY(DummyQuery2, query::U64Key, u64, ({ .uses_qresult = false }));
 DECLARE_QUERY(DummyQuery3, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(DummyQuery1, u64) {
-	static auto provide(Context&, QKey key) -> PResult { return key.value; }
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		if (key.value == 1) {
+			ctx.query<DummyQuery2>({ 2 });
+			ctx.query<DummyQuery2>({ 3 });
+		} else if (key.value == 2) {
+			ctx.query<DummyQuery3>({ 4 });
+			ctx.query<DummyQuery3>({ 5 });
+		} else if (key.value == 3) {
+			ctx.query<DummyQuery3>({ 6 });
+			ctx.query<DummyQuery3>({ 7 });
+		}
+		return key.value;
+	}
 
 	QUERY_AUTO_CACHE_COPY
 };
@@ -37,20 +50,49 @@ struct IMPLEMENT_QUERY(DummyQuery1, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery1);
 
 struct IMPLEMENT_QUERY(DummyQuery2, u64) {
-	static auto provide(Context&, QKey key) -> PResult { return key.value; }
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		if (key.value == 1) {
+			ctx.query<DummyQuery3>({ 1 });
+			ctx.query<DummyQuery3>({ 2 });
+		} else if (key.value == 2) {
+			ctx.query<DummyQuery3>({ 2 });
+			ctx.query<DummyQuery3>({ 3 });
+		} else if (key.value == 3) {
+			ctx.query<DummyQuery3>({ 3 });
+			ctx.query<DummyQuery3>({ 4 });
+		} else if (key.value == 4) {
+			ctx.query<DummyQuery3>({ 4 });
+			ctx.query<DummyQuery3>({ 5 });
+		}
+		return key.value;
+	}
 
 	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery2);
 
+struct IMPLEMENT_QUERY(DummyQuery3, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult { return key.value; }
+
+	QUERY_AUTO_CACHE_COPY
+};
+
 class ActiveGraph: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ActiveGraph
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(test); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testInvalidation); }
 
 private:
-	void test() {}
+	void testInvalidation() {
+		query::entryPoint<DummyQuery1>({ 1 });
+		query::entryPoint<DummyQuery1>({ 2 });
+		query::entryPoint<DummyQuery1>({ 3 });
+
+
+		const auto& graph = query::Context::getState().getGraph();
+		graph.get
+	}
 };
