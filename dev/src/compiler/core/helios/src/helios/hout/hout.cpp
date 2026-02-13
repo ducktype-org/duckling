@@ -85,8 +85,12 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction::HOUTFunction(
-		const CRef<HOUTFunctionDeclaration> other, const std::shared_ptr<const code::CodeBlock>& body
+
+		code::ElementOrigin                           origin,
+		const CRef<HOUTFunctionDeclaration>           other,
+		const std::shared_ptr<const code::CodeBlock>& body
 	):
+		  origin(origin),
 		  declaration(other),
 		  body(body) {}
 
@@ -110,9 +114,10 @@ namespace compiler::helios {
 	}
 
 	HOUTGlobalData::HOUTGlobalData(
-		const SymID symbol, query::Context& ctx, const HOUTGlobalDataType data_type
+		query::Context& ctx, const SymID symbol, const HOUTGlobalDataType data_type
 	):
 		  helios_symbol(symbol),
+		  origin(code::pstOrigin(stmt(ctx, symbol).value())),
 		  original_name(name(symbol)),
 		  data_type(data_type),
 		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {

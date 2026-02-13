@@ -59,7 +59,6 @@ namespace compiler::frontend {
 		friend class ModuleTreeModifier;
 		friend class ModuleTree;
 		friend struct GetFileID_Functor;
-		friend struct ImplementationOf_QueryFilePST;
 		friend struct FileID;
 
 		/**

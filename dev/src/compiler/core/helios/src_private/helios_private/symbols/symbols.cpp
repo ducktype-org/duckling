@@ -395,9 +395,6 @@ namespace compiler::helios {
 		 * Use only inside that function (and only for debug/test purposes)!
 		 */
 		static std::vector<SymID> getAllCachedSymbols() {
-			// \parallel this implementation must be made thread safe
-			// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
-
 			// This implementation is fragile, adjust if needed.
 
 			std::vector<SymID> out;
@@ -459,43 +456,35 @@ namespace compiler::helios {
 					std::vector<SymbolData> output_symbol_data;
 
 					auto i32_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
-						),
+						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto i64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
-						),
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto u64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+						tsh::getIntegralType(
+							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 						),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto f64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryFloatType>({ 64 }),
+						tsh::getFloatType(ctx, 64),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto str_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryStringType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
+						tsh::getStringType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
-							ctx.query<tsh::QueryUnitType>({}),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
+							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
@@ -554,9 +543,6 @@ namespace compiler::helios {
 				 * Use only inside that function (and only for debug/test purposes)!
 				 */
 				static std::vector<SymID> getAllCachedSymbols() {
-					// \parallel this implementation must be made thread safe
-					// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
-
 					// This implementation is fragile, adjust if needed.
 
 					std::vector<SymID> out;
@@ -864,9 +850,6 @@ namespace compiler::helios {
 			 * Use only inside that function (and only for debug/test purposes)!
 			 */
 			static std::vector<SymID> getAllCachedSymbols() {
-				// \parallel this implementation must be made thread safe
-				// we will probably need to add ConcurrentHashMap::getAllKeyValuePairs() to do it.
-
 				// This implementation is fragile, adjust if needed.
 
 				std::vector<SymID> out;

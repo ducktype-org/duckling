@@ -1,3 +1,9 @@
+/**
+ * This file contains the queries and functions that create types.
+ * Some of those functions are queries and some are simple getters,
+ * the division depends mostly on whether we want a query cache or not.
+ */
+
 #pragma once
 
 #include "../symbol_type.hpp"
@@ -10,99 +16,73 @@
 
 namespace compiler::tsh {
 	/**
-	 * @brief Query to get the Unit type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Unit type.
 	 */
-	DECLARE_QUERY(QueryUnitType, query::EmptyKey, UnitAbstractType, ({ .uses_qresult = false }))
+	UnitAbstractType getUnitType();
 
 	/**
-	 * @brief Query to get the Void type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Void type.
 	 */
-	DECLARE_QUERY(QueryVoidType, query::EmptyKey, VoidAbstractType, ({ .uses_qresult = false }))
+	VoidAbstractType getVoidType();
 
 	/**
-	 * @brief Query to get the Byte type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Byte type.
 	 */
-	DECLARE_QUERY(QueryByteType, query::EmptyKey, ByteAbstractType, ({ .uses_qresult = false }))
+	ByteAbstractType getByteType();
 
 	/**
-	 * @brief Query to get the Bool type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Bool type.
 	 */
-	DECLARE_QUERY(QueryBoolType, query::EmptyKey, BoolAbstractType, ({ .uses_qresult = false }))
+	BoolAbstractType getBoolType();
 
 	/**
-	 * @brief Query to get the Char type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get the Char type.
 	 */
-	DECLARE_QUERY(QueryCharType, query::EmptyKey, CharAbstractType, ({ .uses_qresult = false }))
+	CharAbstractType getCharType();
 
 	/**
-	 * @brief Key for QueryIntegralType.
+	 * @brief Simple getter to create and get integral types.
 	 */
-	struct KeyFor_QueryIntegralType final {
-		/**
-		 * @brief The size of the Integral type. Pick from { 8, 16, 32, 64, 128 }.
-		 */
-		usize size;
+	IntegralAbstractType getIntegralType(
+		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
+	);
 
-		/**
-		 * @brief Whether the Integral type is signed or not.
-		 */
-		IntegralAbstractType::Signedness signedness;
-
-		// These constructor definitions are to force giving at least the first argument.
-		KeyFor_QueryIntegralType() = delete;
-
-		KeyFor_QueryIntegralType(
-			const usize                            size,
-			const IntegralAbstractType::Signedness signedness
-			= IntegralAbstractType::Signedness::Signed
-		):
-			  size(size),
-			  signedness(signedness) {}
-
-		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return size + (signedness == IntegralAbstractType::Signedness::Signed);
-		}
-	};
 
 	/**
-	 * @brief Query to get an Integral type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get floating point types.
 	 */
-	DECLARE_QUERY(
-		QueryIntegralType,
-		KeyFor_QueryIntegralType,
-		IntegralAbstractType,
-		({ .uses_qresult = false })
-	)
+	FloatAbstractType getFloatType(query::Context& ctx, u64 size);
 
 	/**
-	 * @brief Query to get a Float (floating point) type.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get raw pointer types.
 	 */
-	DECLARE_QUERY(QueryFloatType, query::U64Key, FloatAbstractType, ({ .uses_qresult = false }))
+	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
 
 	/**
-	 * @brief Query to get a RawPointer type.
-	 * The boolean key denotes whether the raw pointer points to mutable data.
-	 *
-	 * \query_thread_safe
+	 * @brief Simple getter to create and get string type.
 	 */
-	DECLARE_QUERY(
-		QueryRawPointerType, query::BoolKey, RawPointerAbstractType, ({ .uses_qresult = false })
-	)
+	StringAbstractType getStringType();
+
+	/**
+	 * @brief Simple getter to create and get namespace type.
+	 */
+	NamespaceAbstractType getNamespaceType();
+
+	/**
+	 * @brief Simple getter to create and get meta type.
+	 */
+	MetaAbstractType getMetaType();
+
+	/**
+	 * @brief Simple getter to create and get module type.
+	 */
+	ModuleAbstractType getModuleType();
+
+	/**
+	 * @brief Simple getter to create and get import type.
+	 */
+	ImportAbstractType getImportType();
+
 
 	/**
 	 * @brief Query to get a typed Pointer type.
@@ -111,12 +91,6 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the String type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get the DynamicArray type.
@@ -251,33 +225,5 @@ namespace compiler::tsh {
 		QueryClassType, compiler::helios::SymID, ClassAbstractType, ({ .uses_qresult = false })
 	)
 
-	/**
-	 * @brief Query to get the Meta type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaAbstractType, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query to get the Namespace type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryNamespaceType, query::EmptyKey, NamespaceAbstractType, ({ .uses_qresult = false })
-	)
-
-	/**
-	 * @brief Query to get the Module type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleAbstractType, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Query to get the Import type.
-	 *
-	 * \query_thread_safe
-	 */
-	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportAbstractType, ({ .uses_qresult = false }))
 }

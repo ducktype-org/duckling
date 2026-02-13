@@ -59,12 +59,17 @@ private:
 
 		// Verify node colors: previously-leaf nodes are green and dependency count checks hold
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(!prev_colors->empty());
+		ASSERT_TRUE(
+			prev_colors->size() != 0
+		);  // If there are no nodes, there's nothing to mark green, so test is not valid
 
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
 				ASSERT_TRUE(prev->getNodeDeps(node).size() == 1);
-				ASSERT_TRUE(prev_colors->at(node) == query::internal::QueryState::PrevColor::Green);
+				ASSERT_TRUE(
+					*prev_colors->atMaybe(node).value()
+					== query::internal::QueryState::PrevColor::Green
+				);
 			} else {
 				ASSERT_TRUE(
 					!node.q_id.getData().usesStableHashing() || prev->getNodeDeps(node).size() > 1
@@ -134,7 +139,10 @@ private:
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));
-			ASSERT_TRUE(prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Green);
+			ASSERT_TRUE(
+				*prev_colors->atMaybe(dep_node).value()
+				== query::internal::QueryState::PrevColor::Green
+			);
 		}
 
 		// Verify that CompileModule artifact exists and is non-empty on disk
@@ -153,7 +161,7 @@ private:
 		ASSERT_TRUE(maybe_art.has_value());
 
 		const auto& art  = *maybe_art.value();
-		auto        path = art.FILE.getFilePath().getPath();
+		auto        path = art.file.getFilePath().getPath();
 		ASSERT_TRUE(std::filesystem::exists(path));
 		ASSERT_TRUE(std::filesystem::file_size(path) > 0);
 

@@ -62,6 +62,17 @@ namespace concurrent::worker {
 		[[nodiscard]] bool isFree() const;
 
 		/**
+		 * @brief Checks if the worker has tasks in its queue.
+		 * Used specifically when you need it and when you are sure
+		 * that there are no race conditions on scheduling the tasks.
+		 *
+		 * Used in the TaskPool to prevent the situation when we exit
+		 * the worker's no_tasks_callback without new schedules
+		 * and before setting the worker as free we want to schedule something.
+		 */
+		[[nodiscard]] bool internalHasTasks() const;
+
+		/**
 		 * @brief Sets the callback to be invoked when there are no tasks.
 		 * @param callback The callback function.
 		 * @note If a worker is free, it will call the new callback
@@ -71,6 +82,12 @@ namespace concurrent::worker {
 		 * happen.
 		 */
 		void setNoTasksCallback(const NoTasksCallback& callback);
+
+		/**
+		 * @brief Gets the reference of the current worker
+		 * Panics if called from a non-worker thread.
+		 */
+		static WRef getCurrentWorker();
 
 	private:
 		Worker(usize seed);
