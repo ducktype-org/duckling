@@ -37,7 +37,7 @@ namespace query {
 				std::cerr << "waiting soon\n";
 				Context::getState().getTaskPool()->waitForTask(node_id);
 
-				return QueryType::internal_load(key);
+				return QueryType::internal_load(node_id.hash);
 			}
 		};
 	}

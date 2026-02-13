@@ -153,8 +153,22 @@ namespace query {
 
 		template<typename OthQuery>
 		auto schedule(const typename OthQuery::QKey& key) {
-			// @TODO: PR implement this
-			CORE_PANIC("Not implemented yet");
+			static_assert(not OthQuery::q_id.getData().isInputQuery(), "Cannot schedule an input query.");
+
+			auto handle = main_query_state.getTaskPool()->schedule(internal::Task{
+				internal::makeNodeID<OthQuery>(key),
+				[key](concurrent::worker::WRef) { OthQuery::internal_query(key); }
+			});
+			return handle;
+		}
+
+		template<typename OthQuery>
+		auto await(internal::TaskHandle& handle) {
+			CORE_ASSERT(OthQuery::q_id == handle.getId().q_id, "Task handle query ID does not match the awaited query type.");
+
+			handle.await();
+
+			return OthQuery::internal_load(handle.getId().hash);
 		}
 
 		/**

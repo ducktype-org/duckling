@@ -19,7 +19,7 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);              \
 		return ::query::internal::SideInputMockValue{};                                       \
 	}                                                                                         \
-	auto query_type::internal_load(const query_type::QKey& key) -> query_type::QResult {      \
+	auto query_type::internal_load(base::Bit256) -> query_type::QResult {      \
 		CORE_UNREACHABLE();                                                                   \
 	}                                                                                         \
 	static_assert(                                                                            \
