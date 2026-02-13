@@ -73,6 +73,8 @@ namespace query::internal {
 	class TaskPool final {
 		using WRef = concurrent::worker::WRef;
 
+		static constexpr usize TASK_SHARDS = 127;
+
 	public:
 		/**
 		 * @brief Constructs a TaskPool.
@@ -100,12 +102,6 @@ namespace query::internal {
 		 * Is non-blocking, returns immediately after scheduling the initial tasks.
 		 */
 		void execute();
-
-		/**
-		 * @brief Wait for all tasks in the pool to complete.
-		 * Should be called after execute().
-		 */
-		void waitExecutionCompletion();
 
 		/**
 		 * @brief Query (execute) a task immediately.
@@ -243,13 +239,9 @@ namespace query::internal {
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
 		/// Condition variable for signaling task completion.
-		std::condition_variable task_completed_cv;
-
-		/// Counter for completed tasks (used in execute()).
-		std::atomic<usize> completed_tasks{ 0 };
-
-		/// Total number of tasks (used in execute()).
-		std::atomic<usize> added_tasks{ 0 };
+		// std::condition_variable task_completed_cv;
+		std::vector<std::mutex> task_completed_mutexes;
+		std::vector<std::condition_variable> task_completed_cvs;
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
 		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
