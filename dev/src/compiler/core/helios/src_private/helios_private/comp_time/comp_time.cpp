@@ -735,8 +735,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryEvaluateHOUTExpression);
 
-
-
 	CompTimeEvalResult getTypeCTVFromPST(
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
