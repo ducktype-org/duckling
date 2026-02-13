@@ -175,7 +175,7 @@ namespace compiler::helios {
 										if (rhs_val == 0) {
 											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 												"Division by zero in compile-time expression "
-									            "evaluation.",
+												"evaluation.",
 												expr.origin.getSourcePosition().value()
 											));
 											return query::Failed();
@@ -187,7 +187,7 @@ namespace compiler::helios {
 										if (rhs_val == 0) {
 											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 												"Modulo by zero in compile-time expression "
-									            "evaluation.",
+												"evaluation.",
 												expr.origin.getSourcePosition().value()
 											));
 											return query::Failed();
