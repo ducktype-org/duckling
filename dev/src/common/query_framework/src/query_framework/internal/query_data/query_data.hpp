@@ -77,8 +77,8 @@ namespace query {
 		};
 
 		struct QueryImplData {
-			using EraseFunctionUnstableType = bool (*)(base::Bit256);
-			using EraseFunctionStableType  = bool (*)(u64);
+			using EraseFunctionStableType = bool (*)(base::Bit256);
+			using EraseFunctionUnstableType  = bool (*)(u64);
 			std::variant<EraseFunctionUnstableType, EraseFunctionStableType> erase_function;
 		};
 

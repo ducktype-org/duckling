@@ -9,6 +9,8 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <diagnostic_interactive/logger_fwd.hpp>
+#include <diagnostic_interactive/message_forward.hpp>
 
 namespace query {
 	// Forward declaration
@@ -254,6 +256,17 @@ namespace query::internal {
 			return metadata_storage;
 		}
 
+		[[nodiscard]]
+		Ref<MetadataStorage> getMetadataStorageMutable() {
+			return &metadata_storage;
+		}
+
+		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+
+		void clearDiagnosticForNode(NodeID node_id);
+
+		std::vector<Box<dia_int::MessageBase>> getAllDiagnostics() const;
+
 	private:
 		friend struct ::query::Context;
 
@@ -310,5 +323,8 @@ namespace query::internal {
 		 * @brief Storage for metadata attached to query nodes.
 		 */
 		MetadataStorage metadata_storage;
+
+
+		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
 	};
 }

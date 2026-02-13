@@ -2,11 +2,11 @@
 
 #include "node_id.hpp"
 
-#include <algorithm>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
+#include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <ostream>
@@ -168,9 +168,8 @@ namespace query::internal {
 			}
 		}
 
-		return serializeReducedGraph(
-			ReducedGraphData{ .nodes = std::move(nodes), .adjacency = std::move(adjacency) }
-		);
+		return serializeReducedGraph(ReducedGraphData{ .nodes     = std::move(nodes),
+		                                               .adjacency = std::move(adjacency) });
 	}
 
 	std::vector<byte> QueryGraph::serializeReducedGraph(ReducedGraphData reduced_graph) {
@@ -312,9 +311,11 @@ namespace query::internal {
 		return it != node_deps.end() && !it->second.empty();
 	}
 
-	std::vector<NodeID> QueryGraph::getDependentNodes(std::vector<NodeID> start_nodes) {
-		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes.");
-		std::queue<NodeID> queue{start_nodes.begin(), start_nodes.end()};
+	std::vector<NodeID> QueryGraph::getDependentNodes(const std::vector<NodeID> &start_nodes) {
+		CORE_ASSERT(
+			TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes."
+		);
+		std::queue<NodeID>         queue{ start_nodes.begin(), start_nodes.end() };
 		std::unordered_set<NodeID> visited;
 
 		while (not queue.empty()) {
@@ -324,9 +325,7 @@ namespace query::internal {
 			if (visited.contains(node)) continue;
 			visited.insert(node);
 
-			for (auto& node: node_reverse_deps.at(node)) {
-				queue.push(node);
-			}
+			for (auto& new_node: node_reverse_deps.at(node)) queue.push(new_node);
 		}
 
 		return { visited.begin(), visited.end() };
@@ -336,16 +335,22 @@ namespace query::internal {
 		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to erase nodes.");
 
 		for (const auto& node: nodes_to_erase) {
-			node_deps.erase(node);
+			// A(input) <- B <- C
+			//        D <--┘
+			// deps(B) = {A, D}
+			// rev_deps(A) = {B}
+			// rev_deps(D) = {B}
 
 			// Erase the node from reverse dependencies of its dependencies
-			const auto& reverse_deps = node_reverse_deps.at(node);
-			for (const auto& dep: reverse_deps) {
-				auto& deps = node_deps.at(dep);
-				auto new_end = std::ranges::remove(deps, node);
-				deps.erase(new_end.begin(), new_end.end()); 
+			const auto& removed_node_deps = node_deps.at(node);
+			for (const auto& dep: removed_node_deps) {
+				if_opt_some(node_reverse_deps.atMaybe(dep), its_reverse_deps) {
+					auto new_end = std::ranges::remove(*its_reverse_deps, node);
+					its_reverse_deps->erase(new_end.begin(), new_end.end());
+				}
 			}
 
+			node_deps.erase(node);
 			node_reverse_deps.erase(node);
 		}
 	}

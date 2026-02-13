@@ -53,17 +53,6 @@ namespace query {
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 	public:
-		// @TODO: Make the context (and thus the logger) be propagated through query calls,
-		// so that all queries run on the same file / in the same compilation thread / whatever
-		// use a single, *non-static* logger object.
-		/**
-		 * @name Logs storage
-		 * @brief Global/vector-backed logging facility.
-		 * \parallel Current implementation uses a global vector; not thread-safe; serialize or
-		 * buffer per-thread.
-		 */
-		static dia_int::Logger int_logger;
-
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
@@ -147,11 +136,6 @@ namespace query {
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
-		/**
-		 * Log message to be shown to the user.
-		 * @param message The dia::Message to be logged.
-		 */
-		void log(Box<dia::Message> message);
 
 		void logInt(Box<dia_int::MessageBase> diagnostic);
 

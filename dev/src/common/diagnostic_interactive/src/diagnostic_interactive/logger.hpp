@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "message_forward.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>  // IWYU pragma: export
 
@@ -9,12 +11,6 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-
-namespace dia_int {
-	class MessageBase;
-}
-
-DEFAULT_BOX_PTR_DELETER_DECLARATION(dia_int::MessageBase);
 
 namespace dia_int {
 	class Logger {

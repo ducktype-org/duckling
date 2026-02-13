@@ -1,5 +1,10 @@
 #include "api.hpp"
 
+#include "base/extend_cpp/variant_match.hpp"
+
+#include "query_framework/internal/query_data/query_data.hpp"
+#include "query_framework/internal/query_graph/node_id.hpp"
+#include "query_framework/internal/query_graph/node_making.hpp"
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/node_marking.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
@@ -43,5 +48,28 @@ namespace query::external {
 	std::vector<byte> serializeMetadata() {
 		auto state = ::query::internal::ContextAccess::getState();
 		return state->getMetadataStorage().serialize();
+	}
+
+	void invalidateQueries(const std::vector<internal::NodeID>& start_nodes) {
+		auto state       = ::query::internal::ContextAccess::getState();
+		
+		// Step 1: Get all nodes to invalidate
+		auto nodes_to_invalidate = state->getGraphMutable()->getDependentNodes(start_nodes);
+		
+		// Step 2: Erase nodes from the graph
+		state->getGraphMutable()->eraseNodes(nodes_to_invalidate);
+
+		// Step 3: Erase values of the invalidated nodes from their cache
+		for (const auto& node: nodes_to_invalidate) {
+			variant_match(node.q_id.getData().impl_data.value().erase_function) {
+				variant_case(internal::QueryImplData::EraseFunctionStableType, erase_func) {
+					erase_func(node.hash.val);
+				}
+				variant_case(internal::QueryImplData::EraseFunctionUnstableType, erase_func) {
+					erase_func(u64(node.hash.val));
+				}
+			}
+			state->getMetadataStorageMutable()->clearNodeMetadata(node);
+		}
 	}
 }  // namespace query::external

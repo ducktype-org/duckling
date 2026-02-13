@@ -56,4 +56,7 @@ namespace query::external {
 	 */
 	[[nodiscard]] std::vector<byte> serializeMetadata();
 
+
+	void invalidateQueries(const std::vector<InputData>& start_nodes);
+
 }  // namespace query::external
