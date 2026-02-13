@@ -146,14 +146,14 @@ namespace query {
 				main_query_state.getTaskPool()->query(internal::Task{
 					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
-				return OthQuery::internal_load(key);
+				return OthQuery::internal_load(dep_id.hash.val);
 			}
 			CORE_UNREACHABLE();
 		}
 
 		template<typename OthQuery>
 		auto schedule(const typename OthQuery::QKey& key) {
-			static_assert(not OthQuery::q_id.getData().isInputQuery(), "Cannot schedule an input query.");
+			static_assert(not OthQuery::QUERY_DATA.isInputQuery(), "Cannot schedule an input query.");
 
 			auto handle = main_query_state.getTaskPool()->schedule(internal::Task{
 				internal::makeNodeID<OthQuery>(key),
@@ -164,11 +164,11 @@ namespace query {
 
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
-			CORE_ASSERT(OthQuery::q_id == handle.getId().q_id, "Task handle query ID does not match the awaited query type.");
+			CORE_ASSERT(OthQuery::getID() == handle.getId().q_id, "Task handle query ID does not match the awaited query type.");
 
 			handle.await();
 
-			return OthQuery::internal_load(handle.getId().hash);
+			return OthQuery::internal_load(handle.getId().hash.val);
 		}
 
 		/**

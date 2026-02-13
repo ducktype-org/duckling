@@ -224,7 +224,7 @@ namespace query::internal {
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
 	auto type::QueryType::internal_load(base::Bit256 hash) -> type::QResult {                                                      \
-		return type::load(type::KHash{hash}).value().data;                                            \
+		return type::load(type::KHash(hash)).value().data;                                            \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \

@@ -52,6 +52,10 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
+			std::vector<query::internal::TaskHandle> scheduled_tasks;
+
+
+
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -64,17 +68,21 @@ namespace compiler::helios {
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
 						// we "catch" failure here to continue gathering other functions:
-						auto hout_function = ctx.query<QueryCodeOfFun>(sym);
-						if (hout_function->hasFailed()) {
+						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
+					}
+					if (kind(sym) == SymbolKind::Class)
+						appendClassConstructors(out.functions, sym, ctx);
+				}
+			}
+
+			for (auto handler : scheduled_tasks) {
+				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
+					if (hout_function->hasFailed()) {
 							is_failed = true;
 							continue;
 						} else {
 							out.functions.emplace_back(&hout_function->valueOrPanic());
 						}
-					}
-					if (kind(sym) == SymbolKind::Class)
-						appendClassConstructors(out.functions, sym, ctx);
-				}
 			}
 
 			if (is_failed) return query::Failed();
