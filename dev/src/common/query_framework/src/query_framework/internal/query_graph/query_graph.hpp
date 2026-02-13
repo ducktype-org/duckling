@@ -39,7 +39,6 @@ namespace query::internal {
 			)
 
 		public:
-			friend class QueryGraph;
 
 			ChildrenData() = default;
 
