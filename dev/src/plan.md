@@ -1,8 +1,9 @@
 1. ~~Move files to query~~
 2. ~~task id → node id~~
 3. ~~Add task struct~~
-3. Add task state
-4. 
+4. Add task state
+5. deal with entry points
+6. ~~write entry point~~
 
 
 

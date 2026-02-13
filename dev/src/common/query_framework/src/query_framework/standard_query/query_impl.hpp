@@ -37,6 +37,8 @@ namespace query::internal {
 	 * @param key Query key
 	 * @param from node id of caller
 	 * @return QueryImplType::QResult
+	 *
+	 * PR: this goes into task pool
 	 */
 	template<typename QueryImplType>
 	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
@@ -52,19 +54,10 @@ namespace query::internal {
 
 		// @TODO: PR check node status
 		if (auto v = QueryImplType::load(perfect_hash)) {
-			/****************************************************\
-			| Query result was cached, we return it directly.    |
-			\****************************************************/
-
-			// @TODO: #1889 we might want to detect if a query should be loaded based on its state?
-			// Or is cache entry effectively a state?
-			// Maybe this is what ACD is for?
-
-			// @FUTURE: Add ACD check here...
-			CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Cached. Done.\n");
-
-			return std::move(v.value().data);
+			CORE_PANIC("query cache present in standardQueryEntry");
 		} else {
+
+
 			auto node_id = makeNodeID<QueryIntType>(key);
 			auto context = ContextAccess::make(node_id);
 
@@ -234,7 +227,7 @@ namespace query::internal {
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
 	auto type::QueryType::internal_load(const type::QKey& key) -> type::QResult {                                                      \
-		return type::load(perfectHashKey<type::IS_HASH_STABLE>(key));                                                                  \
+		return type::load(::query::perfectHashKey<type::IS_HASH_STABLE>(key)).value().data;                                                                  \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \
