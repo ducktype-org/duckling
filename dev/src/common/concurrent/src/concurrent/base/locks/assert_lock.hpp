@@ -40,13 +40,16 @@ namespace concurrent {
 		 */
 		void lock() RELEASE_NOEXCEPT {
 			IF_BUILD_TYPE_DEV({
-				if (atomic_flag.test_and_set(std::memory_order_acquire)) CORE_PANIC(panic_message);
+				bool prev_state = atomic_flag.test_and_set(std::memory_order_acquire);
+				CORE_ASSERT(!prev_state, panic_message);
 			})
 		}
 
 		/**
 		 * Releases the lock.
 		 */
-		void unlock() noexcept { IF_BUILD_TYPE_DEV(atomic_flag.clear(std::memory_order_release);) }
+		void unlock() noexcept {
+			IF_BUILD_TYPE_DEV({ atomic_flag.clear(std::memory_order_release); })
+		}
 	};
 }

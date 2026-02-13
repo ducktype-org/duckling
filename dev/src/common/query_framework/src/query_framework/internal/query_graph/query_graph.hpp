@@ -41,7 +41,14 @@ namespace query::internal {
 		public:
 			friend class QueryGraph;
 			friend class QueryState;
+
 			ChildrenData() = default;
+
+			ChildrenData(const ChildrenData&) = delete;
+			ChildrenData(ChildrenData&&)      = default;
+
+			ChildrenData& operator=(const ChildrenData&) = delete;
+			ChildrenData& operator=(ChildrenData&&)      = default;
 
 			ChildrenData(std::vector<NodeID>&& children): children(std::move(children)) {}
 
@@ -70,19 +77,25 @@ namespace query::internal {
 		/**
 		 * @brief Holder for the children data. Locks the children data until destroyed or release()
 		 * is called.
+		 *
+		 * @note This is a template to allow for both const and non-const access to the children data.
 		 */
 		template<class T>
 		struct ChildrenDataHolderImpl {
 		private:
+			static_assert(
+				std::is_same_v<T, ChildrenData> || std::is_same_v<T, const ChildrenData>,
+				"ChildrenDataHolderImpl can only be instantiated with ChildrenData or const "
+				"ChildrenData"
+			);
+
 			base::Ref<T> children;
-			IF_BUILD_TYPE_DEV(mutable base::Ref<concurrent::AssertLock> lock;
-			)  // protects children vector
-			IF_BUILD_TYPE_DEV(mutable bool was_released = false;)
+
+			IF_BUILD_TYPE_DEV(mutable std::atomic_flag was_released = false;)
 
 		public:
-			ChildrenDataHolderImpl(base::Ref<T> children):
-				  children(children) IF_BUILD_TYPE_DEV(COMMA lock(children->lock.refMut())) {
-				IF_BUILD_TYPE_DEV(lock->lock();)
+			ChildrenDataHolderImpl(base::Ref<T> children): children(children) {
+				IF_BUILD_TYPE_DEV(children->lock->lock();)
 			}
 
 			ChildrenDataHolderImpl(const ChildrenDataHolderImpl&)            = delete;
@@ -100,9 +113,9 @@ namespace query::internal {
 			const std::vector<NodeID>& operator*() const { return children->children; }
 
 			void release() const {
-				IF_BUILD_TYPE_DEV(if (!was_released) {
-					was_released = true;
-					lock->unlock();
+				IF_BUILD_TYPE_DEV({
+					if (!was_released.test_and_set(std::memory_order_acquire))
+						children->lock->unlock();
 				})
 			}
 
