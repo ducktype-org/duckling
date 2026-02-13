@@ -93,6 +93,6 @@ private:
 
 
 		const auto& graph = query::Context::getState().getGraph();
-		graph.get
+		graph.getNodeDeps<DummyQuery1>({ 1 }).size() == 2;
 	}
 };
