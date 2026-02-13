@@ -14,6 +14,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_metadata/declare_metadata.hpp>
 #include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/simple_keys.hpp>
 #include <tester/tester.hpp>
@@ -270,7 +271,7 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
 		static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(IdentityQuery);
@@ -282,7 +283,7 @@ namespace context_leak {
 			return key.value;
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LeakQuery);
@@ -294,7 +295,7 @@ namespace context_leak {
 			return key.value;
 		}
 
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
@@ -324,7 +325,7 @@ DECLARE_QUERY(EmptyQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
@@ -337,7 +338,7 @@ struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 		return key.value;
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
@@ -350,7 +351,7 @@ struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 		return key.value;
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
@@ -463,7 +464,7 @@ struct IMPLEMENT_QUERY(UsesQResultTest, UsesQResult_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultTest);
@@ -484,7 +485,7 @@ struct IMPLEMENT_QUERY(UsesQResultNoCatchTest, UsesQResultNoCatch_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(UsesQResultNoCatchTest);
@@ -505,7 +506,7 @@ struct IMPLEMENT_QUERY(NoQResultTest, NoQResult_Result) {
 		return res.valueOrThrow();
 	}
 
-	QUERY_AUTO_NO_CACHE
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(NoQResultTest);

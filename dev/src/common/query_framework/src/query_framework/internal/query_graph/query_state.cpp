@@ -110,8 +110,13 @@ namespace {
 
 namespace query::internal {
 	void QueryState::addGraphNode(NodeID node_id) {
-		node_data.putOrAssign(node_id, NodeData());
-		query_graph.node_deps->putOrAssign(node_id, QueryGraph::ChildrenData{});
+		CORE_ASSERT(!query_graph.node_deps->contains(node_id), "Node already exists in the graph");
+		query_graph.node_deps->put(node_id, QueryGraph::ChildrenData{});
+	}
+
+	void QueryState::addSideInputNode(NodeID node_id) {
+		CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
+		query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
 	}
 
 	void QueryState::addDependency(NodeID from, NodeID to) { query_graph.addDependency(from, to); }
