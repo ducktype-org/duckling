@@ -40,7 +40,6 @@ namespace query::internal {
 
 		public:
 			friend class QueryGraph;
-			friend class QueryState;
 
 			ChildrenData() = default;
 
@@ -81,7 +80,7 @@ namespace query::internal {
 		 * @note This is a template to allow for both const and non-const access to the children data.
 		 */
 		template<class T>
-		struct ChildrenDataHolderImpl {
+		struct ChildrenDataHolderImpl final {
 		private:
 			static_assert(
 				std::is_same_v<T, ChildrenData> || std::is_same_v<T, const ChildrenData>,
