@@ -39,7 +39,6 @@ namespace query::internal {
 			)
 
 		public:
-
 			ChildrenData() = default;
 
 			ChildrenData(const ChildrenData&) = delete;
