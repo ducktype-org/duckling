@@ -40,8 +40,7 @@ namespace concurrent {
 		 */
 		void lock() RELEASE_NOEXCEPT {
 			IF_BUILD_TYPE_DEV({
-				if (atomic_flag.test_and_set(std::memory_order_acquire))
-			                      CORE_PANIC(panic_message);
+				if (atomic_flag.test_and_set(std::memory_order_acquire)) CORE_PANIC(panic_message);
 			})
 		}
 

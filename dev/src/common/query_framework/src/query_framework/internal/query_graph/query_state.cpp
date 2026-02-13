@@ -146,10 +146,10 @@ namespace query::internal {
 		// This should be called only once per compilation
 		static concurrent::AssertLock lock;
 		lock.lock();
-		
+
 		CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
 		previous.emplace(std::move(graph));
-		
+
 		lock.unlock();
 	}
 
@@ -161,7 +161,7 @@ namespace query::internal {
 		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
 		CORE_ASSERT(previous->metadata.empty(), "Previous metadata is already set!");
 		previous->metadata.emplace(std::move(metadata));
-		
+
 		lock.unlock();
 	}
 
