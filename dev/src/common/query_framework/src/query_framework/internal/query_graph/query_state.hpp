@@ -155,10 +155,7 @@ namespace query::internal {
 		\************************/
 
 		// add doc comment
-		Ref<TaskPool> getTaskPool() const noexcept {
-			// PR move to cpp
-			return &task_pool;
-		}
+		Ref<TaskPool> getTaskPool() const;
 
 		/***************************\
 		| Incremental interface:    |
@@ -334,7 +331,7 @@ namespace query::internal {
 		 * Task pool handling execution of queries.
 		 * PR: think about this mutable
 		 */
-		mutable TaskPool task_pool;
+		// mutable TaskPool task_pool;
 
 		/**
 		 * The previous compilation data if any.
