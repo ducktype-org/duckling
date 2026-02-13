@@ -68,6 +68,10 @@ namespace query {
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
+		/**
+		 * this is also await
+		 * @note This is also an external query invocation layer. @TODO PR: change later to make separation clearer.
+		 */
 		template<typename OthQuery>
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
@@ -131,6 +135,12 @@ namespace query {
 			});
 
 			return OthQuery::internal_query(key);
+		}
+
+		template<typename OthQuery>
+		auto schedule(const typename OthQuery::QKey& key) {
+			// @TODO: PR implement this
+			CORE_PANIC("Not implemented yet");
 		}
 
 		/**

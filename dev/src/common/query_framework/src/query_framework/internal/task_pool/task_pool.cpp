@@ -18,6 +18,8 @@ namespace query::internal {
 
 		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.emplace(worker, true);
 
+		// @TODO: PR think about this later:
+		// this links query task execution with workers manager logic.
 		worker_manager.setNoTasksCallback([this](auto wref) { onWorkerNoTasks(wref); });
 	}
 

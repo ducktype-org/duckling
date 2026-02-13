@@ -12,6 +12,7 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <query_framework/internal/task_pool/task_pool.hpp>
 
 namespace query {
 	// Forward declaration
@@ -319,6 +320,11 @@ namespace query::internal {
 		 * The active graph that holds the currently active queries.
 		 */
 		ActiveGraph active_graph;
+
+		/**
+		* Task pool handling execution of queries.
+		*/
+		TaskPool task_pool;
 
 		/**
 		 * The previous compilation data if any.

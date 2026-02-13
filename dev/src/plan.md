@@ -1,6 +1,7 @@
 1. ~~Move files to query~~
-2. Add task state
-
+2. ~~task id → node id~~
+3. ~~Add task struct~~
+3. Add task state
 
 
 
