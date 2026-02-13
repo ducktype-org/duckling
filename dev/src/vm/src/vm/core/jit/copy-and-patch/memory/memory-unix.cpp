@@ -1,27 +1,40 @@
 #include "memory.hpp"
 
 #if not __unix__
-	#error "Use only under windows"
+	#error "Use only under unix"
 #else
 
-#include <sys/mman.h>
-#include <unistd.h>
+	#include <sys/mman.h>
+	#include <unistd.h>
 
-#include <cassert>
-#include <cstddef>
-#include <iostream>
+	#include <cassert>
+	#include <cstddef>
+	#include <iostream>
+	#include <functional>
 
-void jit_error(char* msg) {
+[[noreturn]] void jit_error(const char* msg) {
 	std::cerr << msg;
 	std::exit(1);
 }
 
-inline size_t get_page_size() { return sysconf(_SC_PAGESIZE); }
+inline size_t get_page_size() { 
+	static size_t page_size = std::invoke([]() { 
+		long result = sysconf(_SC_PAGESIZE);
+		if (result == -1) {
+			jit_error("couldn't get the page size");
+		} else {
+			return static_cast<size_t>(result);
+		}
+	});
+
+	return page_size;
+}
 
 JitMemory JitMemory::allocate(size_t size) {
+	size = (size + get_page_size() - 1) / get_page_size() * get_page_size();
 	assert(size % get_page_size() == 0);
-	int        flags = MAP_ANONYMOUS | MAP_PRIVATE;
-	std::byte* memory
+	int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
+	auto memory
 		= reinterpret_cast<std::byte*>(mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0));
 
 	if (memory == MAP_FAILED) jit_error("unable to allocate memory");
