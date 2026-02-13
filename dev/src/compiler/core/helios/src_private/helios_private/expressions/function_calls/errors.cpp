@@ -187,14 +187,24 @@ namespace compiler::helios::code {
 	}
 
 	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, pst::Access<pst::expr::Call> call_expr, usize argument_index
+		query::Context& ctx, CallOrBinOpExpr call_expr, usize argument_index
 	) {
-		usize current_index = 0;
-		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			if (current_index == argument_index) return arg.unlock(ctx);
-			current_index++;
+		variant_match(call_expr) {
+			variant_case(pst::Access<pst::expr::Call>, call) {
+				usize current_index = 0;
+				for (auto&& arg: *call->getArgs().unlock(ctx)) {
+					if (current_index == argument_index) return arg.unlock(ctx);
+					current_index++;
+				}
+				CORE_PANIC("Argument index out of bounds");
+			}
+			variant_case(pst::Access<pst::expr::BinaryOperator>, bin_op) {
+				if (argument_index == 0) return bin_op->getLeftOperand().unlock(ctx);
+				if (argument_index == 1) return bin_op->getRightOperand().unlock(ctx);
+				CORE_PANIC("Argument index out of bounds");
+			}
 		}
-		CORE_PANIC("Argument index out of bounds");
+		CORE_UNREACHABLE();
 	}
 
 	pst::Access<pst::LangElement> getNthDeclarationParameter(
@@ -209,10 +219,10 @@ namespace compiler::helios::code {
 	}
 
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&              ctx,
-		pst::Access<pst::expr::Call> call_expr,
-		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function
+		query::Context&    ctx,
+		CallOrBinOpExpr    call_expr,
+		const CallFailure& failure_reason,
+		bool               is_for_candidate_function
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
@@ -276,12 +286,12 @@ namespace compiler::helios::code {
 								param_decl->getSourcePosition()
 							};
 							return makeBox<CallMissingArgumentError>(
-								call_expr->getSourcePosition(), param_position
+								getSourcePosition(call_expr), param_position
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							call_expr->getSourcePosition(), std::nullopt
+							getSourcePosition(call_expr), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {

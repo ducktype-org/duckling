@@ -2,6 +2,7 @@
 
 #include "coercions.hpp"
 #include "errors.hpp"
+#include "function_calls/call_processing.hpp"
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
@@ -10,7 +11,7 @@
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/expressions/builtin_operations.hpp>
+#include <helios_private/expressions/builtin_operators.hpp>
 #include <helios_private/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -124,7 +125,7 @@ namespace compiler::helios::code {
 			/**
 			 * The "output" of the visitor.
 			 */
-			base::Optional<base::Box<Expr>> node;
+			base::Optional<Box<Expr>> node;
 
 			void visitUnitExpr(pst::Access<pst::expr::UnitExpr>) override {
 				node = makeBox<LiteralUnitExpr>(ctx);
@@ -179,6 +180,18 @@ namespace compiler::helios::code {
 				}
 			}
 
+			static bool isNumericType(const tsh::AbstractType type) {
+				return type.getKind() == tsh::Kind::Integral or type.getKind() == tsh::Kind::Float;
+			}
+
+			static bool isNumericOperator(const lexer::Operator op) {
+				// Only operators which allow their arguments to undergo numeric promotion.
+				// In particular, `%` is not included, as it work on integers only.
+				const std::set numeric_ops
+					= { "+", "-", "*", "/", "**", "<", "<=", ">", ">=", "==", "!=" };
+				return numeric_ops.contains(op.str().c_str());
+			}
+
 			/**
 			 * If a valid builtin exists (special characters only), returns it.
 			 * Otherwise, returns None.
@@ -221,6 +234,52 @@ namespace compiler::helios::code {
 				CORE_UNREACHABLE();
 			}
 
+			/**
+			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
+			 * HOUT expression. Consumes the provided expressions of the arguments.
+			 * @param stmt The original PST expression
+			 * @param lhs The precomputed left-hand side argument
+			 * @param rhs The precomputed right-hand side argument
+			 */
+			void resolveBinaryOperator(
+				pst::Access<pst::expr::BinaryOperator> stmt, Box<Expr> lhs, Box<Expr> rhs
+			) {
+				const auto lhs_type = lhs->expression_type.getSymbolType();
+				const auto rhs_type = rhs->expression_type.getSymbolType();
+
+				// Binary operator resolution now happens in two steps:
+				// 1. If the arguments are both numeric (integral or float) and the operator is a
+				// built-in arithmetic operator, we try to find the smallest common type to which we
+				// can promote both arguments, and then use the built-in operator on the common type.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the left-hand side argument (for an operator method).
+				// Next, we perform typical overload resolution.
+
+				// Step 1. — special path for numeric promotions
+				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
+				    && isNumericOperator(stmt->getOperator())) {
+					auto builtin
+						= binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
+					if (builtin.has_value()) {
+						node = std::move(builtin).value();
+						return;
+					}
+				}
+
+				// Step 2. — Regular lookup and overload resolution
+				const auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+				const auto lookup_result
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, stmt->getOperator().value);
+				// @TODO: #1412 fix dealias
+				auto       all_candidates    = lookup_result->leaves;
+				const auto builtin_operators = getRegularBinaryBuiltinSymbols(ctx);
+				all_candidates.insert(
+					all_candidates.begin(), builtin_operators->cbegin(), builtin_operators->cend()
+				);
+				node = processBinaryOperatorCall(ctx, all_candidates, stmt).valueOrThrow();
+			}
+
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				if (stmt->getOperator().str() == "|") {
@@ -251,34 +310,10 @@ namespace compiler::helios::code {
 				auto lhs_res = fromPST(ctx, stmt->getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
-				// @todo: make failure more explicit...
-				if (lhs_res.hasFailed() or rhs_res.hasFailed()) return;  // failed
-
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
 
-				auto lhs_type = lhs->expression_type.getSymbolType();
-				auto rhs_type = rhs->expression_type.getSymbolType();
-
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
-
-				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.logInt(makeBox<code::UndefinedBinaryOperatorError>(
-						stmt->getSourcePosition(),
-						stmt->getOperator().str(),
-						makeBox<InteractiveType>(ctx, lhs_type),
-						makeBox<InteractiveType>(ctx, rhs_type)
-					));
-					// failed
-				}
+				resolveBinaryOperator(stmt, std::move(lhs), std::move(rhs));
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain_expr) override {

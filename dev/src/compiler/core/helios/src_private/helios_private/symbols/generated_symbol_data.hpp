@@ -2,6 +2,7 @@
 
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>

@@ -28,9 +28,12 @@ namespace compiler::helios {
 			return { return_type.queryUnstablePerfectHash(), counter };
 		}
 
-		GeneratedSymbolData::GeneratedSymbolData(
-			const std::variant<ImplicitConstructor, BuiltinOperator, Parameter, Variable, ReplExpressionWrapper>& data
-		):
+		GeneratedSymbolData::GeneratedSymbolData(const std::variant<
+												 ImplicitConstructor,
+												 BuiltinOperator,
+												 Parameter,
+												 Variable,
+												 ReplExpressionWrapper>& data):
 			  data(data) {}
 
 		base::Bit256 GeneratedSymbolData::queryUnstablePerfectHash() const {
@@ -66,6 +69,13 @@ namespace compiler::helios {
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(BuiltinOperator, op) {
+					return tsh::SymbolType<>{
+						op.operator_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
@@ -124,6 +134,9 @@ namespace compiler::helios {
 		SymbolKind kind{};
 		variant_match(generated_data.data) {
 			variant_case_novalue(houtgen::GeneratedSymbolData::ImplicitConstructor) {
+				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(houtgen::GeneratedSymbolData::Parameter) {

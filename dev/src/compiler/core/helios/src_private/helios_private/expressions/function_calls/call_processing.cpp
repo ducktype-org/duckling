@@ -12,6 +12,7 @@
 #include <helios_private/expressions/function_calls/call_processing.hpp>
 #include <helios_private/expressions/function_calls/errors.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_code_generation/builtin_operators.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/types.hpp>
@@ -235,11 +236,12 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
-	 * constructs a helios CallExpr. The expressions will be moved from the arguments.
-	 * @p argument_origin define the actual structure of the arguments, while @p
+	 * constructs a helios Expr representing the call of the function. Construction of the
+	 * expressions will move the arguments.
+	 * @p argument_origin defines the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
 	 */
-	Box<CallExpr> constructCallExpr(
+	Box<Expr> constructProperCallExpr(
 		query::Context&                                  ctx,
 		SymID                                            fun,
 		std::vector<Box<Expr>>&                          positional_arguments,
@@ -281,6 +283,61 @@ namespace compiler::helios::code {
 	}
 
 	/**
+	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * constructs a helios Expr representing the call of the function. Construction of the
+	 * expressions will move the arguments.
+	 * @p argument_origin defines the actual structure of the arguments, while @p
+	 * positional_arguments and @p named_arguments define their content.
+	 */
+	Box<Expr> constructBuiltinOperatorEvaluationExpr(
+		query::Context&                              ctx,
+		const SymID                                  fun,
+		std::vector<Box<Expr>>&                      positional_arguments,
+		const base::Optional<std::vector<Coercion>>& coercions
+	) {
+		return houtgen::generateBuiltinOperatorExpression(
+			ctx, fun, std::move(positional_arguments), coercions
+		);
+	}
+
+	/**
+	 * @brief Given function symbol and Box<Expr> of all the arguments and arguments origin
+	 * constructs a helios Expr representing the call of the function. Construction of the
+	 * expressions will move the arguments.
+	 * @p argument_origin defines the actual structure of the arguments, while @p
+	 * positional_arguments and @p named_arguments define their content.
+	 */
+	Box<Expr> constructCallExpr(
+		query::Context&                                  ctx,
+		SymID                                            fun,
+		std::vector<Box<Expr>>&                          positional_arguments,
+		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
+		const std::vector<ArgumentOrigin>&               argument_origin,
+		const base::Optional<std::vector<Coercion>>&     coercions
+	) {
+		// If the function is a builtin operator, we use special
+		// handling which may not be simply a single function call.
+		// Note: this does not include numeric operators on numeric arguments,
+		// as that case is handled earlier, before considering overload resolution.
+		variant_match(getSymRef(fun)->other) {
+			variant_case(houtgen::GeneratedSymbolData, generated) {
+				variant_match(generated.data) {
+					variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+						return constructBuiltinOperatorEvaluationExpr(
+							ctx, fun, positional_arguments, coercions
+						);
+					}
+				}
+			}
+		}
+
+		// Otherwise, we construct a normal function call expression.
+		return constructProperCallExpr(
+			ctx, fun, positional_arguments, named_arguments, argument_origin, coercions
+		);
+	}
+
+	/**
 	 * @brief Unwraps and validates call arguments from PST, populating positional and named
 	 * argument collections.
 	 * @param ctx Query context
@@ -293,7 +350,7 @@ namespace compiler::helios::code {
 	 */
 	query::QResult<std::variant<std::monostate, PositionalAfterNamedArgument, RepeatedNamedArgument>> fillCallArgs(
 		query::Context&                                  ctx,
-		pst::Access<pst::expr::Call>                     call_expr,
+		const pst::Access<pst::expr::Call>               call_expr,
 		std::vector<Box<Expr>>&                          positional_arguments,
 		std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
@@ -396,14 +453,14 @@ namespace compiler::helios::code {
 	}
 
 	void appendFailedMatchesErrors(
-		query::Context&              ctx,
-		Box<AmbiguousMatchesError>&  main_msg,
-		pst::Access<pst::expr::Call> call_expr,
-		const std::vector<NoMatch>&  failed_matches,
-		bool                         as_a_link
+		query::Context&             ctx,
+		Box<AmbiguousMatchesError>& main_msg,
+		CallOrBinOpExpr             call_expr,
+		const std::vector<NoMatch>& failed_matches,
+		bool                        as_a_link
 	) {
 		if (failed_matches.empty()) return;
-		// We have to differentiate between first candidate beacuse all the other candidates will
+		// We have to differentiate between first candidate because all the other candidates will
 		// be attached to it.
 		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
 		for (const auto& match: failed_matches) {
@@ -429,37 +486,31 @@ namespace compiler::helios::code {
 			main_msg->addAttachedMessage(std::move(first_candidate_msg).value());
 	}
 
-	query::QResult<Box<CallExpr>> processFunctionCall(
-		query::Context&              ctx,
-		const std::vector<SymID>&    candidates,
-		pst::Access<pst::expr::Call> call_expr
+	using OverloadResolutionResult
+		= std::tuple<SymID, std::vector<ArgumentOrigin>, base::Optional<std::vector<Coercion>>>;
+
+	/**
+	 * @brief Performs overload resolution for a function call, taking into account coercions,
+	 * positional and named arguments. Performs diagnostic logging in case of resolution failure.
+	 * Returns the symbol of the function that should be called, the ArgumentOrigins for the
+	 * arguments and the coercions which should be applied to them (if any).
+	 * @return The function symbol, the argument origins, and the coercions.
+	 */
+	query::QResult<OverloadResolutionResult> doOverloadResolution(
+		query::Context&                                        ctx,
+		const CallOrBinOpExpr                                  call_expr,
+		const std::vector<SymID>&                              candidates,
+		const std::vector<Box<Expr>>&                          positional_arguments,
+		const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments
 	) {
-		// Unwrap and validate call arguments.
-		std::vector<Box<Expr>>                          positional_arguments;
-		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
-		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
-
-		if (verify_result.hasFailed()) return query::Failed();
-
 		if (candidates.empty()) {
-			ctx.logInt(makeBox<NoCandidatesFoundError>(call_expr->getSourcePosition()));
+			ctx.logInt(makeBox<NoCandidatesFoundError>(getSourcePosition(call_expr)));
 			return query::Failed();
 		}
-
-		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
-			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
-			return query::Failed{};
-		}
-		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrThrow())) {
-			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
-			return query::Failed{};
-		}
-
 
 		std::vector<ExactMatch>    exact_match;
 		std::vector<CoercionMatch> coercion_match;
 		std::vector<NoMatch>       no_match;
-
 
 		for (auto candidate: candidates) {
 			MatchResult match
@@ -476,7 +527,7 @@ namespace compiler::helios::code {
 		}
 
 		if (exact_match.size() > 1) {
-			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			auto main_msg = makeBox<AmbiguousMatchesError>(getSourcePosition(call_expr));
 			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
@@ -484,42 +535,95 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		if (exact_match.size() == 1) {
-			return constructCallExpr(
-				ctx,
+			return OverloadResolutionResult{
 				exact_match.back().function,
-				positional_arguments,
-				named_arguments,
 				exact_match.back().argument_origin,
-				{}
-			);
+				{},
+			};
 		}
 
 		if (coercion_match.size() > 1) {
-			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			auto main_msg = makeBox<AmbiguousMatchesError>(getSourcePosition(call_expr));
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, true);
 			ctx.logInt(std::move(main_msg));
 			return query::Failed();
 		}
 		if (coercion_match.size() == 1) {
-			return constructCallExpr(
-				ctx,
+			return OverloadResolutionResult{
 				coercion_match.back().function,
-				positional_arguments,
-				named_arguments,
 				coercion_match.back().argument_origin,
-				{ coercion_match.back().coercions }
-			);
+				coercion_match.back().coercions,
+			};
 		}
 
 		if (candidates.size() == 1) {
 			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, no_match[0].reason, false));
 		} else {
-			auto main_msg = makeBox<AmbiguousMatchesError>(call_expr->getSourcePosition());
+			auto main_msg = makeBox<AmbiguousMatchesError>(getSourcePosition(call_expr));
 			appendFailedMatchesErrors(ctx, main_msg, call_expr, no_match, false);
 			ctx.logInt(std::move(main_msg));
 		}
 
 		return query::Failed();
+	}
+
+	query::QResult<Box<Expr>> processFunctionCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::Call> call_expr
+	) {
+		// Unwrap and validate call arguments.
+		std::vector<Box<Expr>>                          positional_arguments;
+		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
+		auto verify_result = fillCallArgs(ctx, call_expr, positional_arguments, named_arguments);
+
+		if (verify_result.hasFailed()) return query::Failed();
+
+		if (auto error = std::get_if<PositionalAfterNamedArgument>(&verify_result.valueOrThrow())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
+			return query::Failed{};
+		}
+		if (auto error = std::get_if<RepeatedNamedArgument>(&verify_result.valueOrThrow())) {
+			ctx.logInt(createDetailedCallErrorMessage(ctx, call_expr, *error, false));
+			return query::Failed{};
+		}
+
+		auto overload_resolution_result = doOverloadResolution(
+			ctx, call_expr, candidates, positional_arguments, named_arguments
+		);
+		if (overload_resolution_result.hasFailed()) return query::Failed();
+		const auto [callee, argument_origin, coercions]
+			= std::move(overload_resolution_result.valueOrThrow());
+
+		return constructCallExpr(
+			ctx, callee, positional_arguments, named_arguments, argument_origin, coercions
+		);
+	}
+
+	query::QResult<Box<Expr>> processBinaryOperatorCall(
+		query::Context&                        ctx,
+		const std::vector<SymID>&              candidates,
+		pst::Access<pst::expr::BinaryOperator> bin_op_expr
+	) {
+		std::vector<Box<Expr>> positional_arguments;
+		positional_arguments.reserve(2);
+		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments{};
+		for (auto&& arg: { bin_op_expr->getLeftOperand(), bin_op_expr->getRightOperand() }) {
+			auto arg_expr = ctx.query<QueryHoutOfExpr>(arg);
+			if (arg_expr.hasFailed()) return query::Failed();
+			positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
+		}
+
+		auto overload_resolution_result = doOverloadResolution(
+			ctx, bin_op_expr, candidates, positional_arguments, named_arguments
+		);
+		if (overload_resolution_result.hasFailed()) return query::Failed();
+		const auto [callee, argument_origin, coercions]
+			= std::move(overload_resolution_result.valueOrThrow());
+
+		return constructCallExpr(
+			ctx, callee, positional_arguments, named_arguments, argument_origin, coercions
+		);
 	}
 }

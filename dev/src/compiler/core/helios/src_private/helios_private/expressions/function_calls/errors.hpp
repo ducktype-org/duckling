@@ -6,6 +6,7 @@
 #pragma once
 
 #include <diagnostic_interactive/message.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
@@ -94,6 +95,17 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief A variant type to capture calls of any kinds, including regular function calls and
+	 * operator calls. Will probably be extended with prefix and suffix operators in the future.
+	 */
+	using CallOrBinOpExpr
+		= std::variant<pst::Access<pst::expr::Call>, pst::Access<pst::expr::BinaryOperator>>;
+
+	static dia::SourcePosition getSourcePosition(CallOrBinOpExpr call_expr) {
+		return VISIT(call_expr, e, return e->getSourcePosition());
+	}
+
+	/**
 	 * @brief Creates a call error message based on the provided failure reason.
 	 * @param ctx The query context.
 	 * @param call_expr The PST call expression.
@@ -103,10 +115,10 @@ namespace compiler::helios::code {
 	 * @return A detailed error message describing the call failure.
 	 */
 	Box<dia_int::MessageBase> createDetailedCallErrorMessage(
-		query::Context&              ctx,
-		pst::Access<pst::expr::Call> call_expr,
-		const CallFailure&           failure_reason,
-		bool                         is_for_candidate_function
+		query::Context&    ctx,
+		CallOrBinOpExpr    call_expr,
+		const CallFailure& failure_reason,
+		bool               is_for_candidate_function
 	);
 
 	/**
@@ -120,7 +132,7 @@ namespace compiler::helios::code {
 	);
 
 	pst::Access<pst::LangElement> getNthCallArgument(
-		query::Context& ctx, pst::Access<pst::expr::Call> call_expr, usize argument_index
+		query::Context& ctx, CallOrBinOpExpr call_expr, usize argument_index
 	);
 
 	pst::Access<pst::LangElement> getNthDeclarationParameter(

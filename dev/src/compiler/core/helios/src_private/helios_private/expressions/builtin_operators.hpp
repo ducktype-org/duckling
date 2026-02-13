@@ -24,6 +24,14 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Get all builtin binary operators which are *not* numeric operators
+	 * for the purpose of lookup and overload resolution.
+	 * @note: The symbols' implementation in compiler::helios::houtgen::generateBuiltinOperatorExpression
+	 * must be kept up-to-date with this list.
+	 */
+	CRef<std::vector<SymID>> getRegularBinaryBuiltinSymbols(query::Context& ctx);
+
+	/**
 	 * @brief Finds a builtin unary operation for a given expression and for given operator. If the
 	 * given expression's type is not direct, performs the necessary coercion.
 	 * Returns None if no such operation exists.

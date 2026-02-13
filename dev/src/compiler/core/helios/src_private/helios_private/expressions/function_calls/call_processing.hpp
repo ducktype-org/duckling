@@ -8,7 +8,6 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios::code {
-
 	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
 	 * the given call expression and creates callexpr from it. The function is selected based on
@@ -20,9 +19,26 @@ namespace compiler::helios::code {
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param call_expr The PST call expression representing the function call.
 	 */
-	query::QResult<Box<CallExpr>> processFunctionCall(
+	query::QResult<Box<Expr>> processFunctionCall(
 		query::Context&              ctx,
 		const std::vector<SymID>&    candidates,
 		pst::Access<pst::expr::Call> call_expr
+	);
+
+	/**
+	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
+	 * the given operator expression and creates callexpr from it. The function is selected based on
+	 * argument types only. If no function or multiple functions match the call, an
+	 * error is returned.
+	 *
+	 * @note takes actual symbols that might be called, does not perform any lookup.
+	 *
+	 * @param candidates Contains all candidate functions that could be called.
+	 * @param bin_op_expr The PST binary operator expression representing the function call.
+	 */
+	query::QResult<Box<Expr>> processBinaryOperatorCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::BinaryOperator> bin_op_expr
 	);
 }
