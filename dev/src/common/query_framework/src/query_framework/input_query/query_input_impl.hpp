@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/except/exceptions.hpp>                            // IWYU pragma: export
+
 #include <query_framework/context/context.hpp>                   // IWYU pragma: export
 #include <query_framework/internal/context_access.hpp>           // IWYU pragma: export
 #include <query_framework/internal/query_data/query_id.hpp>      // IWYU pragma: export
@@ -16,6 +18,9 @@
 		auto node_id = ::query::internal::makeNodeID<query_type>(key);                        \
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);              \
 		return ::query::internal::SideInputMockValue{};                                       \
+	}                                                                                         \
+	auto query_type::internal_load(const query_type::QKey& key) -> query_type::QResult {      \
+		CORE_UNREACHABLE();                                                                   \
 	}                                                                                         \
 	static_assert(                                                                            \
 		not std::is_reference_v<query_type::QKey>,                                            \

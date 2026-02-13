@@ -56,8 +56,6 @@ namespace query::internal {
 		if (auto v = QueryImplType::load(perfect_hash)) {
 			CORE_PANIC("query cache present in standardQueryEntry");
 		} else {
-
-
 			auto node_id = makeNodeID<QueryIntType>(key);
 			auto context = ContextAccess::make(node_id);
 
@@ -227,7 +225,7 @@ namespace query::internal {
 		return ::query::internal::standardQueryEntry<type>(key);                                                                       \
 	}                                                                                                                                  \
 	auto type::QueryType::internal_load(const type::QKey& key) -> type::QResult {                                                      \
-		return type::load(::query::perfectHashKey<type::IS_HASH_STABLE>(key)).value().data;                                                                  \
+		return type::load(::query::perfectHashKey<type::IS_HASH_STABLE>(key)).value().data;                                            \
 	}                                                                                                                                  \
 	static_assert(                                                                                                                     \
 		not std::is_reference_v<type::QResult>,                                                                                        \

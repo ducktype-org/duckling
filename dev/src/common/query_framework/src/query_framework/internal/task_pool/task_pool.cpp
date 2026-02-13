@@ -36,19 +36,19 @@ namespace query::internal {
 		// first_call = false;
 
 		std::lock_guard lock(pool_mutex);
-		
+
 		added_tasks.fetch_add(1);
 
-		auto chosen_worker = worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
-			tryExecuteTask(pt);
-		});
+		auto chosen_worker
+			= worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
+				  tryExecuteTask(pt);
+			  });
 		is_worker_free_map[chosen_worker] = false;
 
 
-
 		// auto              worker_refs           = worker_manager.getAllWorkers();
-		// usize             n_tasks_to_distribute = std::min(global_pool.size(), worker_refs.size());
-		// std::vector<Task> tasks_to_distribute;
+		// usize             n_tasks_to_distribute = std::min(global_pool.size(),
+		// worker_refs.size()); std::vector<Task> tasks_to_distribute;
 
 		// for (usize i = 0; i < n_tasks_to_distribute; ++i) {
 		// 	tasks_to_distribute.push_back(std::move(global_pool.front()));
@@ -62,13 +62,11 @@ namespace query::internal {
 		// 	});
 		// 	is_worker_free_map[worker_refs[i]] = false;
 		// }
-
-
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
 		std::unique_lock lock(pool_mutex);
-		
+
 		// auto             task_opt
 		// 	= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
 		// if_opt_some(task_opt, task) {
@@ -92,9 +90,7 @@ namespace query::internal {
 		// is_executing.store(false);
 	}
 
-	void TaskPool::execute() {
-		CORE_UNREACHABLE();
-	}
+	void TaskPool::execute() { CORE_UNREACHABLE(); }
 
 	void TaskPool::query(const Task& task) {
 		added_tasks.fetch_add(1);

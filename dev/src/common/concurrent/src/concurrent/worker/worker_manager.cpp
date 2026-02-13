@@ -33,9 +33,9 @@ namespace concurrent::worker {
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
-		auto id = static_cast<usize>(rng()) % (workers.size());
+		auto             id = static_cast<usize>(rng()) % (workers.size());
 
-		workers[id]->scheduleTask(task); 
+		workers[id]->scheduleTask(task);
 		return workers[id].get();
 	}
 

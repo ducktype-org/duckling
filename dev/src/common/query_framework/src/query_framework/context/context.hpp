@@ -144,9 +144,7 @@ namespace query {
 			} else {
 				// return OthQuery::internal_query(key);
 				main_query_state.getTaskPool()->query(internal::Task{
-					 dep_id,
-					 [key](concurrent::worker::WRef) { OthQuery::internal_query(key); }
-				});
+					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
 				return OthQuery::internal_load(key);
 			}

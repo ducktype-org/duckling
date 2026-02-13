@@ -160,7 +160,7 @@ namespace query::internal {
 		 * @brief Waits until some worker executed the task.
 		 */
 		void waitForTask(NodeID id);
-		
+
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
