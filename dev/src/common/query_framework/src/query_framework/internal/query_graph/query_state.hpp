@@ -113,12 +113,15 @@ namespace query::internal {
 
 		/**
 		 * @brief Adds a node to the query graph.
-		 *
-		 * If the node already exists, resets its data.
-		 * @TODO: #1889 in the future, we might want to disallow cache less queries and panic on
-		 * adding existing node
+		 * panics if the node already exists.
 		 */
 		void addGraphNode(NodeID node_id);
+
+		/**
+		 * @brief Adds a node to the query graph that represents a side input query.
+		 * This is needed because SideSinput queries have no cache and can be added multiple times.
+		 */
+		void addSideInputNode(NodeID node_id);
 
 
 		/**
@@ -306,14 +309,6 @@ namespace query::internal {
 		/***************************\
 		| All of the actual state:  |
 		\***************************/
-
-		/**
-		 * The runtime data of the graph.
-		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
-		 * computed/in progress.
-		 * @TODO: #1889 decide if we need this at all.
-		 */
-		concurrent::ConHashMap<NodeID, NodeData> node_data;
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.
