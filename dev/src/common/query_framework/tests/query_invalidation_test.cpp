@@ -12,15 +12,21 @@
 //   - other nodes are not affected
 //   - if an erased node is in the reversed dependency
 
-// Start1
+// 1_1 depends on (2_1, 2_2)
 
-//
+// 1_2 depends on (2_2, 2_3)
 
-// Start2
+// 1_3 depends on (2_3, 2_4)
+
+// 2_1 depends on (3_1, 3_2)
+// 2_2 depends on (3_2, 3_3)
+// 2_3 depends on (3_3, 3_4)
+// 2_4 depends on (3_4, 3_5)
 
 // Those queries are used just to get dummy QueryIDs for NodeID generation.
 DECLARE_QUERY(DummyQuery1, query::U64Key, u64, ({ .uses_qresult = false }));
 DECLARE_QUERY(DummyQuery2, query::U64Key, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(DummyQuery3, query::U64Key, u64, ({ .uses_qresult = false }));
 
 struct IMPLEMENT_QUERY(DummyQuery1, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key.value; }
