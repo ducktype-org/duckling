@@ -31,20 +31,6 @@ namespace compiler::helios {
 	)
 
 	/**
-	 * @brief Evaluate a PST expression in compile time.
-	 * @note Effectively generates the HOUT of a PST expression and
-	 * evaluates it using QueryEvaluateHOUTExpression.
-	 *
-	 * \query_not_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryEvaluatePSTExpression,
-		pst::GenericPSTQueryKey<pst::ExprElement>,
-		CompTimeEvalResult,
-		({})
-	)
-
-	/**
 	 * Get a CTV representing a type evaluated from a PST expression.
 	 * @note This is most useful for evaluating expressions where a type is expected,
 	 * e.g. types in declarations or type assertions.
