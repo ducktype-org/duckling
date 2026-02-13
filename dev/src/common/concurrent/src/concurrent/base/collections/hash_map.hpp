@@ -48,8 +48,6 @@ namespace concurrent {
 			return result;
 		}
 
-		using KeyValuePair = typename HashMapType::KeyValuePair;
-
 		/**
 		 * RAII lock for a given shard.
 		 *
@@ -69,8 +67,9 @@ namespace concurrent {
 			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
 		};
 
-
 	public:
+		using KeyValuePair = typename HashMapType::KeyValuePair;
+
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
