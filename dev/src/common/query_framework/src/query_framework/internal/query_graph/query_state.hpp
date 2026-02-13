@@ -119,6 +119,7 @@ namespace query::internal {
 
 		/**
 		 * @brief Adds a node to the query graph that represents a side input query.
+		 * This is needed because SideSinput queries have no cache and can be added multiple times.
 		 */
 		void addSideInputNode(NodeID node_id);
 
