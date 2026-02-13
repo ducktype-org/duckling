@@ -250,6 +250,7 @@ namespace compiler::helios {
 			else {
 				parent_map.put(element->getID(), parent);
 			}
+			// clang-format on
 
 			return ScopeData{
 				parent, false, element, module(parent), scopeDepth(parent) + 1,
