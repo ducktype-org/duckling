@@ -124,11 +124,13 @@ namespace query::internal {
 			}) }
 
 			/**
-			 * This moves the hold children data out of the holder into a local object returned by this method.
-			 * Importantly:
-			 * - lock of the moved from object will be a nullptr after this, so any access to it will panic,
-			 * - lock of the moved into object will be unlocked. New holder has to be created to access the children data after this move, 
-			 *   as a reference hold in this lock will become dangling after the move.
+			 * This moves the hold children data out of the holder into a local object returned by
+			 * this method. Importantly:
+			 * - lock of the moved from object will be a nullptr after this, so any access to it
+			 * will panic,
+			 * - lock of the moved into object will be unlocked. New holder has to be created to
+			 * access the children data after this move, as a reference hold in this lock will
+			 * become dangling after the move.
 			 */
 			ChildrenData moveFrom() {
 				IF_BUILD_TYPE_DEV({
@@ -138,10 +140,10 @@ namespace query::internal {
 
 					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
-					
+
 					// we unlock not on *children, as that object is moved from, but on this local
-					// one no one else can see (yet): 
-					moved_1.lock->unlock(); 
+					// one no one else can see (yet):
+					moved_1.lock->unlock();
 
 					// we move again, to actually return the children data:
 					return std::move(moved_1);
