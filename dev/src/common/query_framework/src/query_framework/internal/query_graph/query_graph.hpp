@@ -26,8 +26,10 @@ namespace query::internal {
 	 */
 	class QueryGraph final {
 		struct ChildrenData;
+		
 		template<class T>
 		struct ChildrenDataHolderImpl;
+
 		using ChildrenDataHolder      = ChildrenDataHolderImpl<ChildrenData>;
 		using ConstChildrenDataHolder = ChildrenDataHolderImpl<const ChildrenData>;
 
@@ -56,7 +58,7 @@ namespace query::internal {
 			 * @brief Get a holder for the children vector. The holder will lock the children data
 			 * until it is destroyed.
 			 * @return A holder for the children vector.
-			 * @note Holder uses asert lock, so if two threads try to get the holder at the same
+			 * @note Holder uses assert lock, so if two threads try to get the holder at the same
 			 * time, one of them will panic. This is intentional, as it should never happen that two
 			 * threads try to access the same node's children at the same time.
 			 */
@@ -105,6 +107,13 @@ namespace query::internal {
 				const std::vector<NodeID>&,
 				std::vector<NodeID>&> {
 				return children->children;
+			}
+
+			auto operator->() -> std::conditional_t<
+				std::is_const_v<T>,
+				const std::vector<NodeID>*,
+				std::vector<NodeID>*> {
+				return &children->children;
 			}
 
 			const std::vector<NodeID>& operator*() const { return children->children; }
@@ -166,8 +175,10 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
-		/** @brief Returns the immediate dependencies of a @p node_id.
+		/** 
+		 * @brief Returns the immediate dependencies of a @p node_id.
 		 * @note This is not thread-safe and should only be used for debugging/testing purposes.
+		 *       Access to the return reference can race with other operations.
 		 */
 		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
 

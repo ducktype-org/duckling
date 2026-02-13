@@ -225,11 +225,10 @@ namespace query::internal {
 
 			auto& deps        = *prev_graph.node_deps->atMaybe(node).value();
 			auto  deps_holder = deps.getHolder();
-			auto& children    = *deps_holder;
 
 			// If node has no entry or no deps -> treat as leaf; mark Green if not colored yet
 			// If node is not colored that means node is not input, so we can safely mark it Green
-			if (children.empty()) {
+			if (deps_holder->empty()) {
 				node_colors->putOrAssign(node, PrevColor::Green);
 
 				IF_BUILD_TYPE_DEV(in_stack.erase(node);)
@@ -239,8 +238,8 @@ namespace query::internal {
 			}
 
 			// Process children one by one ensuring post-order coloring
-			if (frame.idx < children.size()) {
-				const NodeID& child = children[frame.idx++];
+			if (frame.idx < deps_holder->size()) {
+				const NodeID& child = (*deps_holder)[frame.idx++];
 
 				// If child's color is known already, continue to next child
 				// This is necessary for merging and sweeping algorithm work concurrently
@@ -250,8 +249,8 @@ namespace query::internal {
 				stack.push(Frame{ .node = child, .idx = 0 });
 
 				IF_BUILD_TYPE_DEV(
-					auto instert_result = in_stack.insert(child); CORE_ASSERT(
-						instert_result.second,
+					auto insert_result = in_stack.insert(child); CORE_ASSERT(
+						insert_result.second,
 						"Cycle detected in previous query graph during red-green sweep"
 					);
 				)
@@ -261,7 +260,7 @@ namespace query::internal {
 
 			// All children processed. Determine this node's color from its direct dependencies.
 			bool all_green = true;
-			for (const auto& c: children) {
+			for (const auto& c: *deps_holder) {
 				auto itc = node_colors->atMaybe(c);
 				if (!itc.has_value() || *itc.value() != PrevColor::Green) {
 					all_green = false;
@@ -380,7 +379,6 @@ namespace query::internal {
 				key_value_pair != nullptr, "Node should not exist in current graph during merge"
 			);
 			auto        current_deps_holder = key_value_pair->value.getHolder();
-			const auto& merged_deps         = *current_deps_holder;
 
 			// Merge metadata for nodes with preserve_in_graph = true
 			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
@@ -389,7 +387,7 @@ namespace query::internal {
 					metadata_storage.emplace(std::move(extracted_opt).value());
 			}
 
-			for (const auto& child: merged_deps) stack.push_back(Frame{ .node = child });
+			for (const auto& child: *current_deps_holder) stack.push_back(Frame{ .node = child });
 		}
 	}
 
@@ -478,7 +476,7 @@ namespace query::internal {
 			usize preserved_nodes = 0;
 			for (const auto& [node, deps]: *node_deps) {
 				auto deps_holder = deps.getHolder();
-				edge_count += (*deps_holder).size();
+				edge_count += deps_holder->size();
 				if (node.q_id.getData().tags.preserve_in_graph) ++preserved_nodes;
 			}
 			CORE_DEV_LOG(
@@ -531,9 +529,8 @@ namespace query::internal {
 			// Convert dependencies to index space and deduplicate
 			std::vector<LocalNodeID> child_indices;
 			auto                     deps_holder = deps.getHolder();
-			auto&                    children    = *deps_holder;
-			child_indices.reserve(children.size());
-			for (const auto& dep: children) child_indices.push_back(node_to_idx.at(dep));
+			child_indices.reserve(deps_holder->size());
+			for (const auto& dep: *deps_holder) child_indices.push_back(node_to_idx.at(dep));
 
 			// Deduplicate dependencies
 			deduplicate_or_remove(child_indices, true, false);

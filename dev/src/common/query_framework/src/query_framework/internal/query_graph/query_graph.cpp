@@ -25,8 +25,8 @@ namespace query::internal {
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
 		auto  children_data = node_deps->atMaybe(from).value();
-		auto& children      = *children_data->getHolder();
-		children.push_back(to);
+		auto children      = children_data->getHolder();
+		children->push_back(to);
 	}
 
 	std::vector<NodeID> QueryGraph::getNodeDeps(internal::NodeID node_id) const {
@@ -55,9 +55,8 @@ namespace query::internal {
 			);
 
 			const auto node     = node_deps->atMaybe(visited_node_id).value();
-			auto       holder   = node->getHolder();
-			auto&      children = *holder;
-			for (auto dep: children)
+			auto       children_holder   = node->getHolder();
+			for (auto dep: *children_holder)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
 
@@ -101,16 +100,14 @@ namespace query::internal {
 
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
-		for (auto& [k, v]: *node_deps) {
-			auto children_holder = v.getHolder();
+		for (auto& [k, _]: *node_deps) {
 			index[k]             = id++;
 			out << id << " " << k.q_id.getData().name << "\n";
 		}
 
 		for (auto& [k, v]: *node_deps) {
 			auto  children_holder = v.getHolder();
-			auto& children        = *children_holder;
-			for (auto& dep: children) out << index[k] << " " << index[dep] << "\n";
+			for (auto& dep: *children_holder) out << index[k] << " " << index[dep] << "\n";
 		}
 	}
 
@@ -137,16 +134,20 @@ namespace query::internal {
 		for (auto& [node, deps]: *node_deps) {
 			auto it = other.node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
+			
 			auto deps_holder       = deps.getHolder();
 			auto other_deps_holder = it.value()->getHolder();
+
 			if (*deps_holder != *other_deps_holder) return false;
 		}
 
 		for (auto& [node, deps]: *other.node_deps) {
 			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
+			
 			auto deps_holder       = deps.getHolder();
 			auto other_deps_holder = it.value()->getHolder();
+
 			bool are_same          = *deps_holder == *other_deps_holder;
 			if (!are_same) return false;
 		}
@@ -172,10 +173,10 @@ namespace query::internal {
 		for (const auto& node: nodes) {
 			auto& deps        = *node_deps->atMaybe(node).value();
 			auto  deps_holder = deps.getHolder();
-			auto& children    = *deps_holder;
+
 			auto& out         = adjacency.at(node_to_index.at(node));
-			out.reserve(children.size());
-			for (const auto& dep: children) {
+			out.reserve(deps_holder->size());
+			for (const auto& dep: *deps_holder) {
 				CORE_ASSERT(
 					node_to_index.contains(dep),
 					"Dependency node missing from graph during serialization."
@@ -329,7 +330,6 @@ namespace query::internal {
 		if (!it.has_value()) return false;
 		auto& deps        = *it.value();
 		auto  deps_holder = deps.getHolder();
-		bool  has_deps    = !(*deps_holder).empty();
-		return has_deps;
+		return !deps_holder->empty();
 	}
 }
