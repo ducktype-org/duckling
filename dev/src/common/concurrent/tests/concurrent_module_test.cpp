@@ -89,7 +89,7 @@ public:
 
 		TESTER_ADD_TEST(testGetAllKeyValuePairs);
 
-    TESTER_ADD_TEST(hashMapRaceTest);
+		TESTER_ADD_TEST(hashMapRaceTest);
 	}
 
 private:
@@ -583,8 +583,8 @@ private:
 		}
 		ASSERT_EQUAL(map.size(), 0ULL);
 	}
-  
-  /**
+
+	/**
 	 * Race test for concurrent::ConHashMap using the RaceTester framework.
 	 * Tests maybePut, atMaybeCopy, and erase operations for linearizability.
 	 */
@@ -696,7 +696,7 @@ private:
 				race_tester.runAndCheck(worker_count, worker), "ConHashMap should be linearizable."
 			);
 		}
-		std::cerr << "\n";  
-};
+		std::cerr << "\n";
+	}
 
-TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
+	TESTER_COMMON_MAIN("/src/common/concurrent/tests/");
