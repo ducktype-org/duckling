@@ -5,6 +5,8 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
+#include <concurrent/base/locks/assert_lock.hpp>
+#include <concurrent/base/locks/with_lock.hpp>
 
 #include <vector>
 
@@ -13,9 +15,16 @@ namespace query::external {
 	void setPreviousGraphFromRawBytes(
 		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
 	) {
+		static concurrent::AssertLock lock;
+		concurrent::WithLock guard(&lock);
+		
+
 		auto state = ::query::internal::ContextAccess::getState();
 		// Remap NodeIDs while deserializing so the framework keeps all QueryIDs registered and
 		// avoids unstable hash collisions.
+
+		
+
 		::query::internal::QueryGraph graph = ::query::internal::QueryGraph::deserialize(
 			graph_raw_bytes,
 			[state](::query::internal::NodeID node) {

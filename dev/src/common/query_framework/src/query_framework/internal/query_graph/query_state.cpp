@@ -146,8 +146,10 @@ namespace query::internal {
 		// This should be called only once per compilation
 		static concurrent::AssertLock lock;
 		lock.lock();
+		
 		CORE_ASSERT(!previous.has_value(), "Previous graph is already set");
 		previous.emplace(std::move(graph));
+		
 		lock.unlock();
 	}
 
@@ -155,14 +157,16 @@ namespace query::internal {
 		// This should be called only once per compilation
 		static concurrent::AssertLock lock;
 		lock.lock();
+
 		CORE_ASSERT(previous.has_value(), "Previous graph must be set before setting metadata");
 		CORE_ASSERT(previous->metadata.empty(), "Previous metadata is already set!");
 		previous->metadata.emplace(std::move(metadata));
+		
 		lock.unlock();
 	}
 
 	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
-		// @TODO: #2007 Remove this mutex and make it trully thread-safe.
+		// @TODO: #2007 Remove this mutex and make it truly thread-safe.
 		static std::mutex red_green_sweep_mutex;
 
 		std::scoped_lock lock(red_green_sweep_mutex);

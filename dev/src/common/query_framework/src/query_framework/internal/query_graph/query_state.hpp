@@ -67,7 +67,7 @@ namespace query::internal {
 			/**
 			 * Metadata from previous compilation.
 			 * Metadata for green nodes will be moved into current metadata_storage during merge.
-			 * /parallel #29 Make metadata concurrent
+			 * \parallel #29 Make metadata concurrent
 			 */
 			base::Optional<MetadataStorage> metadata;
 

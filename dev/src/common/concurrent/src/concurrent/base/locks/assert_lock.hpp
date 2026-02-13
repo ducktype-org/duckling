@@ -33,14 +33,16 @@ namespace concurrent {
 		IF_BUILD_TYPE_DEV(AssertLock(std::string_view panic_message) : panic_message(panic_message
 		){})
 
-		IF_BUILD_TYPE_RELEASE(AssertLock(std::string_view panic_message){})
+		IF_BUILD_TYPE_RELEASE(AssertLock([[maybe_unused]] std::string_view panic_message){})
 
 		/**
 		 * Acquires the lock, spinning and/or sleeping if necessary.
 		 */
 		void lock() RELEASE_NOEXCEPT {
-			IF_BUILD_TYPE_DEV(if (atomic_flag.test_and_set(std::memory_order_acquire))
-			                      CORE_PANIC(panic_message);)
+			IF_BUILD_TYPE_DEV({
+				if (atomic_flag.test_and_set(std::memory_order_acquire))
+			                      CORE_PANIC(panic_message);
+			})
 		}
 
 		/**
