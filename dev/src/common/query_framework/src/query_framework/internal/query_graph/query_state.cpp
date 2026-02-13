@@ -370,15 +370,14 @@ namespace query::internal {
 			// Get holder only to hold the assert lock
 			auto node_deps_holder = prev_it.value()->getHolder();
 
-			auto prev_deps = std::move(*prev_it.value());
+			auto prev_deps = node_deps_holder.moveFrom(); // implicit release.
 			prev_graph.node_deps->erase(node);
-			node_deps_holder.release();
 
 			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));
 			CORE_ASSERT(
 				key_value_pair != nullptr, "Node should not exist in current graph during merge"
 			);
-			auto        current_deps_holder = key_value_pair->value.getHolder();
+			auto current_deps_holder = key_value_pair->value.getHolder();
 
 			// Merge metadata for nodes with preserve_in_graph = true
 			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {

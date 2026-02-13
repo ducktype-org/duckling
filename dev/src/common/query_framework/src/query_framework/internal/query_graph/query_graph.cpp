@@ -24,7 +24,7 @@ namespace query::internal {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
-		auto  children_data = node_deps->atMaybe(from).value();
+		auto children_data = node_deps->atMaybe(from).value();
 		auto children      = children_data->getHolder();
 		children->push_back(to);
 	}
@@ -54,8 +54,8 @@ namespace query::internal {
 				visited_node_id.hash.val.toStringHex()
 			);
 
-			const auto node     = node_deps->atMaybe(visited_node_id).value();
-			auto       children_holder   = node->getHolder();
+			const auto node            = node_deps->atMaybe(visited_node_id).value();
+			auto       children_holder = node->getHolder();
 			for (auto dep: *children_holder)
 				if (!visited.contains(dep)) queue.push(dep);
 		}
@@ -101,12 +101,12 @@ namespace query::internal {
 		std::map<NodeID, u64> index;
 		u64                   id = 0;
 		for (auto& [k, _]: *node_deps) {
-			index[k]             = id++;
+			index[k] = id++;
 			out << id << " " << k.q_id.getData().name << "\n";
 		}
 
 		for (auto& [k, v]: *node_deps) {
-			auto  children_holder = v.getHolder();
+			auto children_holder = v.getHolder();
 			for (auto& dep: *children_holder) out << index[k] << " " << index[dep] << "\n";
 		}
 	}
@@ -134,7 +134,7 @@ namespace query::internal {
 		for (auto& [node, deps]: *node_deps) {
 			auto it = other.node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
-			
+
 			auto deps_holder       = deps.getHolder();
 			auto other_deps_holder = it.value()->getHolder();
 
@@ -144,11 +144,11 @@ namespace query::internal {
 		for (auto& [node, deps]: *other.node_deps) {
 			auto it = node_deps->atMaybe(node);
 			if (!it.has_value()) return false;
-			
+
 			auto deps_holder       = deps.getHolder();
 			auto other_deps_holder = it.value()->getHolder();
 
-			bool are_same          = *deps_holder == *other_deps_holder;
+			bool are_same = *deps_holder == *other_deps_holder;
 			if (!are_same) return false;
 		}
 
@@ -174,7 +174,7 @@ namespace query::internal {
 			auto& deps        = *node_deps->atMaybe(node).value();
 			auto  deps_holder = deps.getHolder();
 
-			auto& out         = adjacency.at(node_to_index.at(node));
+			auto& out = adjacency.at(node_to_index.at(node));
 			out.reserve(deps_holder->size());
 			for (const auto& dep: *deps_holder) {
 				CORE_ASSERT(

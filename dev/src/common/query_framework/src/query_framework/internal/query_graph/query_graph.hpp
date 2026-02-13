@@ -106,6 +106,7 @@ namespace query::internal {
 				std::is_const_v<T>,
 				const std::vector<NodeID>&,
 				std::vector<NodeID>&> {
+				
 				return children->children;
 			}
 
@@ -113,19 +114,42 @@ namespace query::internal {
 				std::is_const_v<T>,
 				const std::vector<NodeID>*,
 				std::vector<NodeID>*> {
+
 				return &children->children;
 			}
 
-			const std::vector<NodeID>& operator*() const { return children->children; }
-
 			void release() const {
 				IF_BUILD_TYPE_DEV({
-					if (!was_released.test_and_set(std::memory_order_acquire))
-						children->lock->unlock();
+					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
+					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
+					
+					children->lock->unlock();
 				})
 			}
 
-			~ChildrenDataHolderImpl() { this->release(); }
+			ChildrenData moveFrom() {
+				IF_BUILD_TYPE_DEV({
+					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
+					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
+					
+					// note that we intentially keep the lock in the moved-from object,
+					// so that if it is accidentally used after move, it will panic instead of
+					// doing bug-prone operations on the children vector after it has been moved from.
+					
+					return std::move(*children);
+				})
+			}
+
+			~ChildrenDataHolderImpl() {
+				// we don't cal release() in the destructor, because we don't want to panic on double release here.
+				IF_BUILD_TYPE_DEV({
+					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
+					if (!was_released_check) {
+						children->lock->unlock();
+					}
+				})
+				
+			}
 		};
 
 		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
