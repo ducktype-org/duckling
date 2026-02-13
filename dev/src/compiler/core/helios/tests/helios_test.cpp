@@ -1547,7 +1547,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
-			auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
+			auto pst       = getFilePST(ctx, main_file);
 
 			auto test_expr = [&](pst::AccessLocked<pst::ExprHolder> expr) {
 				auto unlocked = expr.unlock(ctx);
@@ -2447,9 +2447,11 @@ private:
 		};
 
 		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
-		auto pst       = query::entryPoint<compiler::frontend::QueryFilePST>(main_file);
+		base::Optional<CRef<pst::PST<>>> pst;
+		query::utils::withContextDo([&](::query::Context& ctx) { pst = getFilePST(ctx, main_file); }
+		);
 		auto all_variables
-			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst->getRootElement());
+			= pst::viewAllSubTreeElementsFilter<pst::Variable>(pst.value()->getRootElement());
 
 		auto get_pst_variable_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
@@ -2506,7 +2508,8 @@ private:
 				if (fun->declaration->original_name == name) return fun;
 			return {};
 		};
-		auto all_pst_functions = pst::viewAllSubTreeElementsFilter<pst::Fun>(pst->getRootElement());
+		auto all_pst_functions
+			= pst::viewAllSubTreeElementsFilter<pst::Fun>(pst.value()->getRootElement());
 		auto get_pst_function_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
 			for (const auto& fun: all_pst_functions)

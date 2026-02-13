@@ -243,14 +243,14 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
+			// clang-format off
 			if (auto scope_in_map = parent_map.atMaybeCopy(element->getID())) {
-				CORE_ASSERT(
-					*scope_in_map == parent,
-					"Parent mismatch in QueryPrimaryCodeScopeFor"
-				);
-			} else {
+				CORE_ASSERT(*scope_in_map == parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			}
+			else {
 				parent_map.put(element->getID(), parent);
 			}
+			// clang-format on
 
 			return ScopeData{
 				parent, false, element, module(parent), scopeDepth(parent) + 1,
@@ -338,7 +338,7 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<std::vector<ScopeID>> out) {
-			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
+			auto root = getFilePST(ctx, file)->getRootElement().unlock(ctx);
 
 			ScopeGrabPseudoVisitor scope_grab(out, ctx);
 			scope_grab.visit(root);
@@ -684,7 +684,7 @@ namespace compiler::helios {
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
-		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
+		auto main_source_pst  = getFilePST(ctx, main_source_file);
 
 		auto main_file_root_scope
 			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });

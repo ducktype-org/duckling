@@ -229,7 +229,7 @@ namespace compiler::repl {
 			base::Optional<pst::AccessLocked<pst::ExprStmt>> expr_stmt_opt;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
-				auto pst       = ctx.query<frontend::QueryFilePST>(main_file);
+				auto pst       = getFilePST(ctx, main_file);
 
 				CORE_DEV_LOG(REPL, "PST:\n");
 				if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
