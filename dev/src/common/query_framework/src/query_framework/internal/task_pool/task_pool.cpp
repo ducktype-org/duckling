@@ -75,6 +75,7 @@ namespace query::internal {
 		// 	lock.lock();
 		// }
 
+		
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
