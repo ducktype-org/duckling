@@ -8,8 +8,8 @@
 namespace concurrent::worker {
 
 	namespace {
-		std::mt19937_64 rng;
-		std::mutex      mut;
+		std::mt19937_64                   rng;
+		std::mutex                        mut;
 		static constinit std::atomic_flag is_worker_count_set;
 	}
 
@@ -48,7 +48,10 @@ namespace concurrent::worker {
 
 	WorkerManager& WorkerManager::get() {
 		static WorkerManager instance;
-		CORE_ASSERT(is_worker_count_set.test(), "WorkerManager::get() called before setting worker count with setWorkers()!");
+		CORE_ASSERT(
+			is_worker_count_set.test(),
+			"WorkerManager::get() called before setting worker count with setWorkers()!"
+		);
 		return instance;
 	}
 

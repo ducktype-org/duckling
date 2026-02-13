@@ -6,8 +6,8 @@
 #include <base/str/str_utils.hpp>
 
 #include <atomic>
-#include <mutex>
 #include <iostream>
+#include <mutex>
 
 namespace query::internal {
 
@@ -66,8 +66,9 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
-		std::cerr << "Waiting for task with id " << id.q_id.getData().name << id.hash.val.toStringHex() << " to complete\n";
-		
+		std::cerr << "Waiting for task with id " << id.q_id.getData().name
+				  << id.hash.val.toStringHex() << " to complete\n";
+
 		std::unique_lock lock(pool_mutex);
 
 		// auto             task_opt
@@ -78,9 +79,10 @@ namespace query::internal {
 		// 	lock.lock();
 		// }
 
-		
+
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
-		std::cerr << "Task with id " << id.q_id.getData().name << id.hash.val.toStringHex() << " is done\n";
+		std::cerr << "Task with id " << id.q_id.getData().name << id.hash.val.toStringHex()
+				  << " is done\n";
 	}
 
 	void TaskPool::waitExecutionCompletion() {

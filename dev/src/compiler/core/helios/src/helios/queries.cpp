@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include <concurrent/worker/worker.hpp>          // PR
+#include <concurrent/worker/worker_manager.hpp>  // PR
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -27,8 +29,6 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 #include <typesystem/higher/type_interface.hpp>
-#include <concurrent/worker/worker.hpp> // PR
-#include <concurrent/worker/worker_manager.hpp> // PR
 
 #include <base/except/exceptions.hpp>
 
@@ -57,7 +57,6 @@ namespace compiler::helios {
 			std::vector<query::internal::TaskHandle> scheduled_tasks;
 
 
-
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -77,14 +76,14 @@ namespace compiler::helios {
 				}
 			}
 
-			for (auto handler : scheduled_tasks) {
+			for (auto handler: scheduled_tasks) {
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
-					if (hout_function->hasFailed()) {
-							is_failed = true;
-							continue;
-						} else {
-							out.functions.emplace_back(&hout_function->valueOrPanic());
-						}
+				if (hout_function->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					out.functions.emplace_back(&hout_function->valueOrPanic());
+				}
 			}
 
 			if (is_failed) return query::Failed();
@@ -831,8 +830,9 @@ namespace compiler::helios {
 				"Query code of function does not support generated functions"
 			);
 
-			// std::cerr << concurrent::worker::Worker::getCurrentWorker().get() << " Generating code for function " << name(key).strView() << "\n";
-			// std::cerr << concurrent::worker::WorkerManager::
+			// std::cerr << concurrent::worker::Worker::getCurrentWorker().get() << " Generating
+			// code for function " << name(key).strView() << "\n"; std::cerr <<
+			// concurrent::worker::WorkerManager::
 
 			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);
