@@ -370,7 +370,7 @@ namespace query::internal {
 			// Get holder only to hold the assert lock
 			auto node_deps_holder = prev_it.value()->getHolder();
 
-			auto prev_deps = node_deps_holder.moveFrom(); // implicit release.
+			auto prev_deps = node_deps_holder.moveFrom();  // implicit release.
 			prev_graph.node_deps->erase(node);
 
 			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));

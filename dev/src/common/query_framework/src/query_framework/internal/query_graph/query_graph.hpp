@@ -26,7 +26,7 @@ namespace query::internal {
 	 */
 	class QueryGraph final {
 		struct ChildrenData;
-		
+
 		template<class T>
 		struct ChildrenDataHolderImpl;
 
@@ -106,7 +106,6 @@ namespace query::internal {
 				std::is_const_v<T>,
 				const std::vector<NodeID>&,
 				std::vector<NodeID>&> {
-				
 				return children->children;
 			}
 
@@ -114,41 +113,36 @@ namespace query::internal {
 				std::is_const_v<T>,
 				const std::vector<NodeID>*,
 				std::vector<NodeID>*> {
-
 				return &children->children;
 			}
 
-			void release() const {
-				IF_BUILD_TYPE_DEV({
-					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
-					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
-					
-					children->lock->unlock();
-				})
-			}
+			void release() const { IF_BUILD_TYPE_DEV({
+				auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
+				CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
+
+				children->lock->unlock();
+			}) }
 
 			ChildrenData moveFrom() {
 				IF_BUILD_TYPE_DEV({
 					bool was_released_check = was_released.test_and_set(std::memory_order_acquire);
 					CORE_ASSERT(!was_released_check, "ChildrenDataHolderImpl already released");
-					
+
 					// note that we intentially keep the lock in the moved-from object,
 					// so that if it is accidentally used after move, it will panic instead of
 					// doing bug-prone operations on the children vector after it has been moved from.
-					
+
 					return std::move(*children);
 				})
 			}
 
 			~ChildrenDataHolderImpl() {
-				// we don't cal release() in the destructor, because we don't want to panic on double release here.
+				// we don't cal release() in the destructor, because we don't want to panic on
+				// double release here.
 				IF_BUILD_TYPE_DEV({
 					auto was_released_check = was_released.test_and_set(std::memory_order_acquire);
-					if (!was_released_check) {
-						children->lock->unlock();
-					}
+					if (!was_released_check) children->lock->unlock();
 				})
-				
 			}
 		};
 
@@ -199,7 +193,7 @@ namespace query::internal {
 		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
 			const;
 
-		/** 
+		/**
 		 * @brief Returns the immediate dependencies of a @p node_id.
 		 * @note This is not thread-safe and should only be used for debugging/testing purposes.
 		 *       Access to the return reference can race with other operations.
