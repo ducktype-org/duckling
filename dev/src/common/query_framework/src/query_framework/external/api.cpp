@@ -50,11 +50,24 @@ namespace query::external {
 		return state->getMetadataStorage().serialize();
 	}
 
-	void invalidateQueries(std::vector<InputData>&& new_inputs) {
+	void invalidateQueries(
+		std::vector<InputData>&&               new_inputs,
+		base::Optional<std::vector<InputData>> previous_inputs_opt
+	) {
 		auto state = ::query::internal::ContextAccess::getState();
 
+		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs
+		std::vector<internal::NodeID> start_nodes;
+		
+		if_opt_some(previous_inputs_opt, previous_inputs) {
+			start_nodes
+				= internal::findRemovedInputsFromSelectedInputs(previous_inputs, new_inputs);
+		}
+		if_opt_none(previous_inputs_opt) {
+			start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
+		}
+
 		// Step 1: Get all nodes to invalidate
-		auto start_nodes = internal::findInputsRemovedFromCurrentGraph(std::move(new_inputs));
 		auto nodes_to_invalidate = state->getGraphMutable()->getDependentNodes(start_nodes);
 
 		// Step 2: Erase nodes from the graph

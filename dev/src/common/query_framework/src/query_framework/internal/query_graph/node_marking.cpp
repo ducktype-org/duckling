@@ -16,6 +16,7 @@ namespace query::internal {
 	void callForEveryRemovedInput(
 		NodePresentCallback                     present_callback,
 		NodeRemovedCallback                     removed_callback,
+		const std::vector<NodeID>&              all_nodes,
 		CRef<QueryGraph>                        prev_graph,
 		std::vector<query::external::InputData> new_inputs
 	) {
@@ -29,7 +30,6 @@ namespace query::internal {
 		);
 
 		// Collect previous nodes of interest (Input and SideInput)
-		auto                all_nodes = prev_graph->getAllNodes();
 		std::vector<NodeID> prev_inputs;
 		prev_inputs.reserve(all_nodes.size());
 		for (const auto& node: all_nodes) {
@@ -98,27 +98,58 @@ namespace query::internal {
 		auto state      = ContextAccess::getState();
 		auto maybe_prev = state->getPreviousGraph();
 		CORE_ASSERT(maybe_prev.has_value(), "Previous graph is not set");
-		auto prev_graph       = maybe_prev.value();
+		auto prev_graph = maybe_prev.value();
+
 		auto present_callback = [&](const NodeID& node) {
 			state->setPrevNodeColor(node, QueryState::PrevColor::Green);
 		};
 		auto removed_callback = [&](const NodeID& node) {
 			state->setPrevNodeColor(node, QueryState::PrevColor::Red);
 		};
-		callForEveryRemovedInput(present_callback, removed_callback, prev_graph, std::move(inputs));
+
+		auto all_nodes = prev_graph->getAllNodes();
+		callForEveryRemovedInput(
+			present_callback, removed_callback, all_nodes, prev_graph, std::move(inputs)
+		);
 	}
 
-	std::vector<NodeID> findInputsRemovedFromCurrentGraph(
-		std::vector<query::external::InputData> inputs
+	std::vector<NodeID> findRemovedInputsFromCurrentGraph(
+		std::vector<query::external::InputData> new_inputs
+	) {
+		auto                state      = ContextAccess::getState();
+		auto&               prev_graph = state->getGraph();
+		auto                nodes      = state->getGraph().getAllNodes();
+		std::vector<NodeID> removed_inputs;
+
+		auto present_callback = [&](const NodeID&) { /* empty*/ };
+		auto removed_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
+
+		callForEveryRemovedInput(
+			present_callback, removed_callback, nodes, &prev_graph, std::move(new_inputs)
+		);
+		return removed_inputs;
+	}
+
+	std::vector<NodeID> findRemovedInputsFromSelectedInputs(
+		const std::vector<external::InputData>& selected_inputs,
+		std::vector<query::external::InputData> new_inputs
 	) {
 		auto                state      = ContextAccess::getState();
 		auto&               prev_graph = state->getGraph();
 		std::vector<NodeID> removed_inputs;
-		auto                present_callback = [&](const NodeID&) {
-            // do nothing
-		};
+
+		std::vector<NodeID> selected_nodes
+			= selected_inputs | std::views::transform([](auto& input) {
+				  return internal::NodeID(input.q_id, { input.hash });
+			  })
+		    | std::ranges::to<std::vector>();
+
+		auto present_callback = [&](const NodeID&) { /* empty*/ };
 		auto removed_callback = [&](const NodeID& node) { removed_inputs.push_back(node); };
-		callForEveryRemovedInput(present_callback, removed_callback, &prev_graph, std::move(inputs));
+
+		callForEveryRemovedInput(
+			present_callback, removed_callback, selected_nodes, &prev_graph, std::move(new_inputs)
+		);
 		return removed_inputs;
 	}
 }  // namespace query::internal

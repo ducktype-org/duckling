@@ -38,7 +38,9 @@ namespace query::external {
 		std::span<const std::byte> graph_raw_bytes, std::vector<InputData>&& inputs
 	);
 
-	void invalidateQueries(std::vector<InputData>&& inputs);
+	void invalidateQueries(
+		std::vector<InputData>&& inputs, base::Optional<std::vector<InputData>> previous_inputs_opt = {}
+	);
 
 	/**
 	 * @brief Optimize and serialize the current query graph for persistence on disk.

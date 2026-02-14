@@ -73,7 +73,7 @@ struct IMPLEMENT_QUERY(DummyQuery2, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(DummyQuery2);
 
 struct IMPLEMENT_QUERY(DummyQuery3, u64) {
-	static auto provide(Context& ctx, QKey key) -> PResult { return key.value; }
+	static auto provide(Context&, QKey key) -> PResult { return key.value; }
 
 	QUERY_AUTO_CACHE_COPY
 };
@@ -93,6 +93,6 @@ private:
 
 
 		const auto& graph = query::Context::getState().getGraph();
-		graph.getNodeDeps<DummyQuery1>({ 1 }).size() == 2;
+		graph.getNodeDeps<DummyQuery1>({ 1 }).size() == 5;
 	}
 };

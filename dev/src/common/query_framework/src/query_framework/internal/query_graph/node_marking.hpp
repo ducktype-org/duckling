@@ -16,7 +16,12 @@ namespace query::internal {
 	 */
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
-	std::vector<NodeID> findInputsRemovedFromCurrentGraph(
-		std::vector<query::external::InputData> inputs
+	std::vector<NodeID> findRemovedInputsFromCurrentGraph(
+		std::vector<query::external::InputData> new_inputs
+	);
+
+	std::vector<NodeID> findRemovedInputsFromSelectedInputs(
+		const std::vector<external::InputData>& selected_inputs,
+		std::vector<query::external::InputData> new_inputs
 	);
 }
