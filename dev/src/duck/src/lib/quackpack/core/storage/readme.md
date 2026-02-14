@@ -32,3 +32,7 @@ Note that, regarding the `freezefile_exposed` flag, current freeze is *always* s
 a virtual environment.
 In other words, setting `freezefile_exposed` affects only two things: whether to consider user-exposed freeze
 (`quackfreeze.json`), and whether to update it after finding new dependencies.
+
+It's also worth mentioning that "to consider user-exposed freeze" means, that we prioritize
+user-exposed freeze over storage's freeze: but if user didn't have a freezefile, we *would* use freeze stored in
+storage.

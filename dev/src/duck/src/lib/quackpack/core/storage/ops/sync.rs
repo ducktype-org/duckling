@@ -49,13 +49,9 @@ pub fn sync(
 
     let venv = Venv::fix_and_load(&storage, id)?;
     drop(data_lock);
-    let _input_freeze = user_exposed_freeze.as_ref().or_else(|| {
-        if expose_freezefile {
-            venv.as_ref().map(|venv| venv.data().freeze())
-        } else {
-            None
-        }
-    });
+    let _input_freeze = user_exposed_freeze
+        .as_ref()
+        .or(venv.as_ref().map(|venv| venv.data().freeze()));
     #[allow(clippy::diverging_sub_expression)] // @TODO: #1962 Remove this
     let _freeze: storage::freeze::VenvFreeze = panic!("@TODO: #1962 Unmock solver");
     debug!("solver returned freeze `{_freeze:?}`");
