@@ -136,6 +136,11 @@ namespace vm::builtins {
 		mutex->unlock();
 	}
 
+	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, i64 mutex_id) {
+		std::cout << "Destroying Mutex " << mutex_id << "\n";
+		thread.process.removeMutex(mutex_id);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		TypeCRef                         result_type,
@@ -151,7 +156,7 @@ namespace vm::builtins {
 		);                                                                              \
 	}
 
-			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi, StartThread, JoinThread, CreateMutex, LockMutex, UnlockMutex)
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64, OutputString, Stoi, StartThread, JoinThread, CreateMutex, LockMutex, UnlockMutex, DestroyMutex)
 
 
 		default:
@@ -207,6 +212,11 @@ namespace vm::builtins {
 				 {
 					 BuiltinFunctionID::UnlockMutex,
 					 { base::StrID("builtin_unlock_mutex"),
+			           code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) }
+				 },
+				 {
+					 BuiltinFunctionID::DestroyMutex,
+					 { base::StrID("builtin_destroy_mutex"),
 			           code::FuncSignature(base::StrID("void"), { base::StrID("mutex") }) }
 				 }
 				};

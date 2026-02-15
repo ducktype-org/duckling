@@ -56,7 +56,8 @@ namespace vm::builtins {
 		JoinThread,
 		CreateMutex,
 		LockMutex,
-		UnlockMutex
+		UnlockMutex,
+		DestroyMutex
 	};
 
 	/**
@@ -78,7 +79,7 @@ namespace vm::builtins {
 		static i64  builtinCreateMutex(VMThread& process);
 		static void builtinLockMutex(VMThread& process, i64 mutex_id);
 		static void builtinUnlockMutex(VMThread& process, i64 mutex_id);
-		// TODO destroyMutex
+		static void builtinDestroyMutex(VMThread& process, i64 mutex_id);
 	};
 
 	/**

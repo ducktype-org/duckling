@@ -207,6 +207,6 @@ namespace vm {
 		void releaseGil(i64);
 		std::shared_ptr<std::mutex> getMutex(i64 mutex_id);
 		i64 addMutex();
-		
+		void removeMutex(i64);
 	};
 }
