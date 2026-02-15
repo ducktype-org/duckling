@@ -6,6 +6,7 @@
 #include <base/collections/stable_hashmap.hpp>
 
 #include <atomic>
+#include <shared_mutex>
 
 namespace concurrent {
 
@@ -71,6 +72,19 @@ namespace concurrent {
 			~WithShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
 		};
 
+		struct WithSharedShardLock final {
+			u64               shard_index;
+			const ConHashMap& self;
+
+			WithSharedShardLock(const ConHashMap& self, u64 shard_index) noexcept:
+				  shard_index(shard_index),
+				  self(self) {
+				self.shard_mutexes[shard_index]->lock_shared();
+			}
+
+			~WithSharedShardLock() noexcept { self.shard_mutexes[shard_index]->unlock(); }
+		};
+
 		/**
 		 * RAII guard that locks ALL shards for the lifetime of the object.
 		 * Used by begin()/end() to provide safe iteration over the entire map.
@@ -98,7 +112,7 @@ namespace concurrent {
 	public:
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
-				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
+				shard_mutexes.emplace_back(makeBox<std::shared_mutex>());
 		}
 
 		ConHashMap(const ConHashMap&) = delete;
@@ -176,7 +190,7 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		DATA_T getCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			WithSharedShardLock lock(*this, keyToShard(key));
 			DATA_T        value = shards[lock.shard_index][key];
 			return value;
 		}
@@ -187,7 +201,7 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			WithSharedShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybeCopy(key);
 		}
 
@@ -199,7 +213,7 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> base::Optional<Ref<DATA_T>> {
-			WithShardLock lock(*this, keyToShard(key));
+			WithSharedShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
 
@@ -224,7 +238,7 @@ namespace concurrent {
 
 		[[nodiscard]]
 		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT -> decltype(auto) {
-			WithShardLock lock(*this, keyToShard(key));
+			WithSharedShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].contains(key);
 		}
 
@@ -425,7 +439,8 @@ namespace concurrent {
 		/**
 		 * The locks protecting each shard.
 		 */
-		mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
+		mutable std::vector<Box<std::shared_mutex>> shard_mutexes;
+		// mutable std::vector<Box<concurrent::AtomicFlagSpinlock>> shard_mutexes;
 
 		/**
 		 * Atomic counter tracking the number of elements in the map.
