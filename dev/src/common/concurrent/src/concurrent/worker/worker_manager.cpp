@@ -10,7 +10,11 @@ namespace concurrent::worker {
 	namespace {
 		std::mt19937_64                   rng;
 		std::mutex                        mut;
-		static constinit std::atomic_flag is_worker_count_set;
+
+		/**
+		 * Helper flag used to ensure that WorkerManager::setWorkers is called only once and before any call to WorkerManager::get().
+		 */
+		constinit std::atomic_flag is_worker_count_set;
 	}
 
 	std::vector<WRef> WorkerManager::getAllWorkers() const {
@@ -28,16 +32,13 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	WRef WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return worker.get();
+			if (worker->scheduleTaskIfFree(task)) return;
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
-		auto             id = static_cast<usize>(rng()) % (workers.size());
-
-		workers[id]->scheduleTask(task);
-		return workers[id].get();
+		workers[static_cast<usize>(rng()) % (workers.size())]->scheduleTask(task);
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
