@@ -168,7 +168,7 @@ namespace concurrent {
 
 			auto inserted = shards[lock.shard_index].maybePut(key, std::forward<D>(value));
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-			f(shards[lock.shard_index][key]);
+			f(Ref<DATA_T>(&shards[lock.shard_index][key]));
 		}
 
 		/**

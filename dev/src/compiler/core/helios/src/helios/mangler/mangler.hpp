@@ -70,3 +70,12 @@ namespace compiler::helios::mangler {
 		query::Context& ctx, SymID sym_id
 	);
 }
+
+/**
+ * Hashed used for the perfect hash of KeyOf_MangledSymbol.
+ * @TODO: #2027 likely remove.
+ */
+template<>
+struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
+	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const noexcept;
+};

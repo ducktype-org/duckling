@@ -1,5 +1,6 @@
 #include "mangler.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -44,12 +45,19 @@ namespace compiler::helios::mangler {
 	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		static base::Map<KeyOf_MangledSymbol, u64> hashes{};
+		static concurrent::ConHashMap<KeyOf_MangledSymbol, u64> hashes{};
+		static std::atomic<u64>                                 next
+			= 1;  // start from 1, so that 0 can be used as an "empty value"
 
-		if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+		u64 result = 0;
 
-		u64 result = hashes.size();
-		hashes.put(*this, result);
+		hashes.maybePutAndUpdate(*this, 0, [&result](Ref<u64> existing) {
+			if (*existing == 0) *existing = next.fetch_add(1, std::memory_order_relaxed);
+			result = *existing;
+		});
+
+		CORE_ASSERT(result != 0, "Hash value not set!");
+
 		return result;
 	}
 
