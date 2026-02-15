@@ -8,8 +8,9 @@
 namespace concurrent::worker {
 
 	namespace {
-		std::mt19937_64 rng;
-		std::mutex      mut;
+		std::mt19937_64                   rng;
+		std::mutex                        mut;
+		static constinit std::atomic_flag is_worker_count_set;
 	}
 
 	std::vector<WRef> WorkerManager::getAllWorkers() const {
@@ -27,13 +28,16 @@ namespace concurrent::worker {
 		     | std::ranges::to<std::vector<WRef>>();
 	}
 
-	void WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
+	WRef WorkerManager::scheduleTaskOnAnyWorker(const Task& task) {
 		for (auto& worker: workers)
-			if (worker->scheduleTaskIfFree(task)) return;
+			if (worker->scheduleTaskIfFree(task)) return worker.get();
 
 		// If no free worker is found, push to a random worker
 		std::scoped_lock lock(mut);
-		workers[static_cast<usize>(rng()) % (workers.size())]->scheduleTask(task);
+		auto             id = static_cast<usize>(rng()) % (workers.size());
+
+		workers[id]->scheduleTask(task);
+		return workers[id].get();
 	}
 
 	bool WorkerManager::isWorkerFree(WRef worker) const { return worker->isFree(); }
@@ -44,10 +48,20 @@ namespace concurrent::worker {
 
 	WorkerManager& WorkerManager::get() {
 		static WorkerManager instance;
+		CORE_ASSERT(
+			is_worker_count_set.test(),
+			"WorkerManager::get() called before setting worker count with setWorkers()!"
+		);
 		return instance;
 	}
 
 	void WorkerManager::setWorkers(usize num_workers) {
+		auto ware_worker_count_set = is_worker_count_set.test_and_set();
+		CORE_ASSERT(
+			not ware_worker_count_set,
+			"WorkerManager::setWorkers can only be called once and before any call to get()!"
+		);
+
 		auto& worker_manager = get();
 		worker_manager.workers.clear();
 		worker_manager.workers.reserve(num_workers);
