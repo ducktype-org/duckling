@@ -34,14 +34,14 @@
  */
 namespace compiler::helios::mangler {
 
-	constexpr auto KeyOf_MangledSymbol::operator<=>(const KeyOf_MangledSymbol& other) const {
+	constexpr auto KeyOf_MangledSymbol::operator==(const KeyOf_MangledSymbol& other) const {
 		return std::tie(symbol_key, kind, mangling_scheme_version, additional_metadata)
-		   <=> std::tie(
+		    == std::tie(
 				   other.symbol_key,
 				   other.kind,
 				   other.mangling_scheme_version,
 				   other.additional_metadata
-		   );
+			);
 	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
@@ -476,4 +476,18 @@ namespace compiler::helios::mangler {
 		return ctx.query<QueryMangledSymbol>(KeyOf_MangledSymbol{
 			.symbol_key = sym_id, .kind = ManglingSymbolKind::GlobalVariableDestructor });
 	}
+}
+
+std::size_t std::hash<compiler::helios::mangler::KeyOf_MangledSymbol>::operator()(
+	const compiler::helios::mangler::KeyOf_MangledSymbol& key
+) const {
+	// this does not need to be perfect, just good enough to avoid often collisions in the hash map.
+	variant_match(key.symbol_key) {
+		variant_case(compiler::helios::SymID, sym_id) { return sym_id.queryUnstablePerfectHash(); }
+		variant_case(compiler::helios::mangler::special_symbol_keys::LIRModuleID, mod_id) {
+			return mod_id.id.getInnerID().asInt();
+		}
+		variant_default { CORE_UNREACHABLE(); }
+	}
+	CORE_UNREACHABLE();
 }

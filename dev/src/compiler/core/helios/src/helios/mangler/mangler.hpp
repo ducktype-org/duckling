@@ -32,7 +32,10 @@ namespace compiler::helios::mangler {
 		u64                         mangling_scheme_version = 0;
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
-		constexpr auto operator<=>(const KeyOf_MangledSymbol& other) const;
+		/**
+		 * @TODO: #2027 likely remove, it is used only be the hash map.
+		 */
+		constexpr auto operator==(const KeyOf_MangledSymbol& other) const;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
@@ -77,5 +80,5 @@ namespace compiler::helios::mangler {
  */
 template<>
 struct std::hash<compiler::helios::mangler::KeyOf_MangledSymbol> final {
-	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const noexcept;
+	std::size_t operator()(const compiler::helios::mangler::KeyOf_MangledSymbol& key) const;
 };
