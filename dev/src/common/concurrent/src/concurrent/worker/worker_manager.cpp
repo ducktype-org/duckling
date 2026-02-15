@@ -8,11 +8,12 @@
 namespace concurrent::worker {
 
 	namespace {
-		std::mt19937_64                   rng;
-		std::mutex                        mut;
+		std::mt19937_64 rng;
+		std::mutex      mut;
 
 		/**
-		 * Helper flag used to ensure that WorkerManager::setWorkers is called only once and before any call to WorkerManager::get().
+		 * Helper flag used to ensure that WorkerManager::setWorkers is called only once and before
+		 * any call to WorkerManager::get().
 		 */
 		constinit std::atomic_flag is_worker_count_set;
 	}
