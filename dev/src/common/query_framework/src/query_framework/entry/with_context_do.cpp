@@ -11,6 +11,8 @@ namespace query::utils {
 		struct KeyFor_DoWithContext final {
 			std::function<std::any(query::Context&)> value;
 			usize                                    id;
+
+			// PR: atomic?
 			static inline usize                      next_id = 0;
 
 			KeyFor_DoWithContext(std::function<std::any(query::Context&)> value):
