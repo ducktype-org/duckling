@@ -111,6 +111,10 @@ namespace query::internal {
 			return query_graph;
 		}
 
+		QueryGraph& getGraphMutable() {
+			return query_graph;
+		}
+
 		/**
 		 * @brief Returns read-only reference to the graph from previous compilation.
 		 */

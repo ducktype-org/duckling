@@ -285,9 +285,14 @@ namespace query::internal {
 			return node_deps->contains(node_id);
 		}
 
-		[[nodiscard]] std::vector<NodeID> getDependentNodes(const std::vector<NodeID>& start_nodes);
+		struct Dependents {
+			std::vector<NodeID> dependents_recursive;
+		};
 
-		void eraseNodes(const std::vector<NodeID>& nodes_to_erase);
+		[[nodiscard]] Dependents
+		getDependentNodes(const std::vector<NodeID>& start_nodes) const;
+
+		void eraseNodes(const Dependents& nodes_to_erase);
 
 		/**
 		 * @brief Get all Nodes in the graph.

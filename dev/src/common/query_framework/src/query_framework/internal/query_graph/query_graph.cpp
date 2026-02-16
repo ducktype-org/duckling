@@ -22,18 +22,17 @@ namespace query::internal {
 	QueryGraph::QueryGraph():
 		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()) {}
 
-
 	void QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
 
-		if (TRACK_REVERSE_GRAPH) {
+		if constexpr (TRACK_REVERSE_GRAPH) {
 			if (!node_reverse_deps.contains(to))
 				node_reverse_deps.insert_or_assign(to, std::vector<NodeID>{});
 			node_reverse_deps.at(to).emplace_back(from);
 		}
-		
+
 		auto children_data = node_deps->atMaybe(from).value();
 		auto children      = children_data->getHolder();
 		children->push_back(to);
@@ -343,7 +342,8 @@ namespace query::internal {
 		return !deps_holder->empty();
 	}
 
-	std::vector<NodeID> QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes) {
+	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
+	) const {
 		CORE_ASSERT(
 			TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes."
 		);
@@ -357,16 +357,18 @@ namespace query::internal {
 			if (visited.contains(node)) continue;
 			visited.insert(node);
 
-			for (auto& new_node: node_reverse_deps.at(node)) queue.push(new_node);
+			if_opt_some(node_reverse_deps.atMaybe(node), its_reverse_deps) {
+				for (auto& new_node: *its_reverse_deps) queue.push(new_node);
+			}
 		}
 
-		return { visited.begin(), visited.end() };
+		return QueryGraph::Dependents{ .dependents_recursive = { visited.begin(), visited.end() } };
 	}
 
-	void QueryGraph::eraseNodes(const std::vector<NodeID>& nodes_to_erase) {
+	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
 		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to erase nodes.");
 
-		for (const auto& node: nodes_to_erase) {
+		for (const auto& node: nodes_to_erase.dependents_recursive) {
 			// A(input) <- B <- C
 			//        D <--┘
 			// deps(B) = {A, D}
@@ -374,15 +376,15 @@ namespace query::internal {
 			// rev_deps(D) = {B}
 
 			// Erase the node from reverse dependencies of its dependencies
-			const auto& removed_node_deps = node_deps.at(node);
-			for (const auto& dep: removed_node_deps) {
+			auto removed_node_deps = node_deps->at(node)->getHolder();
+			for (const auto& dep: *removed_node_deps) {
 				if_opt_some(node_reverse_deps.atMaybe(dep), its_reverse_deps) {
 					auto new_end = std::ranges::remove(*its_reverse_deps, node);
 					its_reverse_deps->erase(new_end.begin(), new_end.end());
 				}
 			}
 
-			node_deps.erase(node);
+			node_deps->erase(node);
 			node_reverse_deps.erase(node);
 		}
 	}

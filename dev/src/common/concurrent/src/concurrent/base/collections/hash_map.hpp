@@ -198,7 +198,7 @@ namespace concurrent {
 		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
 		 */
 		[[nodiscard]]
-		auto atMaybe(const KEY_T& key) const  RELEASE_NOEXCEPT  -> base::Optional<Ref<DATA_T>>  {
+		auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT  -> base::Optional<Ref<DATA_T>>  {
 			WithShardLock lock(*this, keyToShard(key));
 			return shards[lock.shard_index].atMaybe(key);
 		}
@@ -209,7 +209,7 @@ namespace concurrent {
 		}
 
 		[[nodiscard]]
-		auto at(const KEY_T& key) const RELEASE_NOEXCEPT -> Ref<DATA_T>  {
+		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T>  {
 			return atMaybe(key).value();
 		}
 
