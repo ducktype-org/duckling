@@ -25,8 +25,6 @@ namespace query {
 
 				auto node_id = makeNodeID<QueryType>(key);
 
-				std::cerr << "...\n";
-
 				Context::getState().getTaskPool()->addTask(internal::Task{
 					node_id,
 					[key](concurrent::worker::WRef) { QueryType::internal_query(key); },

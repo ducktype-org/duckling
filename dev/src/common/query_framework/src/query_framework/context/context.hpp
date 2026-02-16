@@ -82,7 +82,7 @@ namespace query {
 			main_query_state.addDependency(my_node, dep_id);
 
 
-			// @TODO: PR: Optimize it, we only need to add edge here, when the query is not ready.
+			// @TODO: #2026: Optimize it, we only need to add edge here, when the query is not ready.
 
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
@@ -93,7 +93,6 @@ namespace query {
 			// Scheduling acts as if the schedule operation came from outside the query framework.
 			main_query_state.getActiveGraph()->setEdge(my_node, dep_id);
 			auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(my_node);
-
 
 			if (maybe_cycle.has_value()) {
 				// we hit a cycle!
