@@ -33,7 +33,7 @@ namespace compiler::helios::mangler {
 		base::Optional<std::string> additional_metadata     = std::nullopt;
 
 		/**
-		 * @TODO: #2027 likely remove, it is used only be the hash map.
+		 * @TODO: #2027 likely remove, it is used only by the hash map.
 		 */
 		constexpr auto operator==(const KeyOf_MangledSymbol& other) const;
 
