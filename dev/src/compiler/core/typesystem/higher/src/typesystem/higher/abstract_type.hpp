@@ -13,9 +13,8 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
-#include <query_framework/context/context_fd.hpp>
-
 #include <hashing/add_to_hash.hpp>
+#include <query_framework/context/context_fd.hpp>
 
 #include <string>
 
@@ -218,7 +217,9 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		friend constexpr void addToHash(hashing::hash_algorithm auto& h, const AbstractType& t) noexcept {
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const AbstractType& t
+		) noexcept {
 			addToHash(h, t.queryUnstablePerfectHash());
 		}
 
