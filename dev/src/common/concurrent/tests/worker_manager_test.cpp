@@ -141,8 +141,8 @@ private:
 					results.put(i, result);
 
 					// Update the task count for this worker
-					worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](u64& count_ref) {
-						count_ref++;
+					worker_task_counts.maybePutAndUpdate(worker, 0ULL, [](Ref<u64> count_ref) {
+						*count_ref += 1;
 					});
 				}
 			);
