@@ -387,12 +387,14 @@ namespace query::internal {
 			// rev_deps(A) = {B}
 			// rev_deps(D) = {B}
 
-			// Erase the node from reverse dependencies of its dependencies
-			auto removed_node_deps = node_deps->at(node)->getHolder();
-			for (const auto& dep: *removed_node_deps) {
-				if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
-					auto new_end = std::ranges::remove(*its_reverse_deps, node);
-					its_reverse_deps->erase(new_end.begin(), new_end.end());
+			{
+				auto removed_node_deps = node_deps->at(node)->getHolder();
+
+				for (const auto& dep: *removed_node_deps) {
+					if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
+						auto new_end = std::ranges::remove(*its_reverse_deps, node);
+						its_reverse_deps->erase(new_end.begin(), new_end.end());
+					}
 				}
 			}
 
