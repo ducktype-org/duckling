@@ -15,6 +15,8 @@
 #include <hashing/hashing_algorithms.hpp>
 #include <query_framework/query_int.hpp>
 
+#include <algorithm>
+
 namespace compiler::tsh {
 	/**
 	 * @brief Simple getter to create and get the Unit type.
@@ -147,7 +149,7 @@ namespace compiler::tsh {
 			hashes.reserve(underlying_types.size());
 			for (const auto& underlying_type: underlying_types)
 				hashes.push_back(underlying_type.queryUnstablePerfectHash());
-			std::sort(hashes.begin(), hashes.end());
+			std::ranges::sort(hashes, [](const auto& a, const auto& b) { return a < b; });
 
 			hashing::DefaultHashAlgorithm hasher{};
 			for (const auto& hash: hashes) addToHash(hasher, hash);

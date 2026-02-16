@@ -131,6 +131,7 @@ namespace compiler::tsh {
 
 		auto operator<=>(const ValueCategory& other) const = default;
 
+		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			return hashing::justHash(category, is_pure, allows_semantic, force_semantic);
 		}

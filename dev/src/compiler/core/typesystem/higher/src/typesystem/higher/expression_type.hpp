@@ -121,6 +121,7 @@ namespace compiler::tsh {
 			return *this <=> other == 0;
 		}
 
+		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			return hashing::justHash(symbol_type, value_category);
 		}
