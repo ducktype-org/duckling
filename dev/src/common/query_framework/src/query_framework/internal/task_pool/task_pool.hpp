@@ -239,7 +239,7 @@ namespace query::internal {
 		base::HashMap<WRef, std::deque<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		// @TODO PR: hash map per query id
+		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
 		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
 
 		/// Condition variable for signaling task completion.
@@ -253,12 +253,6 @@ namespace query::internal {
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
 		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
-
-		/// Flag indicating if execution is in progress.
-		// std::atomic<bool> is_executing{ false };
-
-		/// If addInitialTasks() was called already, to prevent multiple calls.
-		// bool first_call = true;
 	};
 
 }  // namespace concurrent

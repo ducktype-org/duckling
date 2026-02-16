@@ -56,7 +56,6 @@ namespace compiler::helios {
 
 			std::vector<query::internal::TaskHandle> scheduled_tasks;
 
-
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 
@@ -68,7 +67,6 @@ namespace compiler::helios {
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
-						// we "catch" failure here to continue gathering other functions:
 						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
 					}
 					if (kind(sym) == SymbolKind::Class)
@@ -77,6 +75,7 @@ namespace compiler::helios {
 			}
 
 			for (auto handler: scheduled_tasks) {
+				// we "catch" failure here to continue gathering other functions:
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
 				if (hout_function->hasFailed()) {
 					is_failed = true;
@@ -829,10 +828,6 @@ namespace compiler::helios {
 				getSymRef(key)->getPSTDataOpt().has_value(),
 				"Query code of function does not support generated functions"
 			);
-
-			// std::cerr << concurrent::worker::Worker::getCurrentWorker().get() << " Generating
-			// code for function " << name(key).strView() << "\n"; std::cerr <<
-			// concurrent::worker::WorkerManager::
 
 			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(ctx, key).value()->acceptVisitor(func_maker);

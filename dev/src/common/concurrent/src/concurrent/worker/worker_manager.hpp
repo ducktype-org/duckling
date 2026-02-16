@@ -56,6 +56,7 @@ namespace concurrent::worker {
 		 * @brief Schedules a task on any worker, while preferring free workers.
 		 * If no free worker is available, the task is scheduled on a random worker.
 		 * @param task The task to be executed.
+		 * @return The reference of the worker the task was scheduled on.
 		 */
 		WRef scheduleTaskOnAnyWorker(const Task& task);
 
