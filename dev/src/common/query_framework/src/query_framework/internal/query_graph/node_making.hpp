@@ -21,7 +21,7 @@ namespace query::internal {
 		static_assert(
 			QueryInteface::QUERY_INTERFACE_TAG, "makeNodeID can be used only with query interfaces"
 		);
-		// @TODO PR: see is query hash calculation are thread safe
+
 		return NodeID(
 			QueryInteface::getID(),
 			KeyHash{ .val = perfectHashKey<QueryInteface::QUERY_DATA.usesStableHashing()>(key) }
