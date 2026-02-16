@@ -121,6 +121,16 @@ namespace compiler::tsh {
 			return *this <=> other == 0;
 		}
 
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash(symbol_type, value_category);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const ExpressionType& t
+		) noexcept {
+			addToHash(h, t.queryUnstablePerfectHash());
+		}
+
 	private:
 		SymbolType<ABSTRACT_TYPE> symbol_type;
 		ValueCategory             value_category;

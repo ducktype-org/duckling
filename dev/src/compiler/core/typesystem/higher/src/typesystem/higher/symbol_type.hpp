@@ -3,6 +3,9 @@
 #include "abstract_type.hpp"
 #include "mutability.hpp"
 
+#include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
+
 namespace compiler::tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
@@ -235,12 +238,14 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<SymbolType, u64> hashes{};
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-			auto new_hash = hashes.size();
-			hashes.put(*this, new_hash);
-			return new_hash;
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash(abstract_type, reference_kind, mutability, leakage, uniqueness);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const SymbolType& t
+		) noexcept {
+			addToHash(h, t.queryUnstablePerfectHash());
 		}
 
 		[[nodiscard]]

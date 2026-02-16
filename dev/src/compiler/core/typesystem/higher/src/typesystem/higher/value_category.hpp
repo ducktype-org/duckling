@@ -11,6 +11,9 @@
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/extend_cpp/flag.hpp>
+#include <base/types/bit256.hpp>
+
+#include <hashing/hash.hpp>
 
 namespace compiler::tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
@@ -127,5 +130,15 @@ namespace compiler::tsh {
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;
+
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash(category, is_pure, allows_semantic, force_semantic);
+		}
+
+		friend constexpr void addToHash(
+			hashing::hash_algorithm auto& h, const ValueCategory& vc
+		) noexcept {
+			addToHash(h, vc.queryUnstablePerfectHash());
+		}
 	};
 }
