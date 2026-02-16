@@ -885,8 +885,11 @@ namespace query::internal {
 	}
 
 	void QueryState::logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic) {
-		diagnostic_loggers.maybePut(node_id, makeBox<dia_int::Logger>());
-		diagnostic_loggers.atMaybe(node_id).value()->refMut()->log(std::move(diagnostic));
+		diagnostic_loggers.maybePutAndUpdate(
+			node_id,
+			makeBox<dia_int::Logger>(),
+			[diag = std::move(diagnostic)](auto& logger) { logger.ref()->log(std::move(diag)); }
+		);
 	}
 
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
@@ -894,5 +897,10 @@ namespace query::internal {
 	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
 	) const {
 		return &diagnostic_loggers;
+	}
+
+	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
+		return std::nullopt;
 	}
 }  // namespace query::internal

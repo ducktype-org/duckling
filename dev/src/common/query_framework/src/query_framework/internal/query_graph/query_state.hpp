@@ -1,6 +1,7 @@
 #pragma once
 
 #include "active_graph.hpp"
+#include "diagnostic_interactive/logger.hpp"
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
@@ -264,9 +265,15 @@ namespace query::internal {
 			return &metadata_storage;
 		}
 
+		/*******************************\
+		|    Diagnostic's interface:    |
+		\******************************/
+
 		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
 
 		void clearDiagnosticForNode(NodeID node_id);
+
+		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
 
 		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
 
