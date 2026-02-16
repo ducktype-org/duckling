@@ -39,7 +39,8 @@ namespace query::external {
 	);
 
 	void invalidateQueries(
-		std::vector<InputData>&& new_inputs, base::Optional<std::vector<InputData>> previous_inputs_opt = {}
+		std::vector<InputData>&&               new_inputs,
+		base::Optional<std::vector<InputData>> previous_inputs_opt = {}
 	);
 
 	/**

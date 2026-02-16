@@ -6,8 +6,6 @@
 #include "query_graph.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
-
-#include <concurrent/base/collections/hash_map.hpp>
 #include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/message_forward.hpp>
@@ -111,9 +109,7 @@ namespace query::internal {
 			return query_graph;
 		}
 
-		QueryGraph& getGraphMutable() {
-			return query_graph;
-		}
+		QueryGraph& getGraphMutable() { return query_graph; }
 
 		/**
 		 * @brief Returns read-only reference to the graph from previous compilation.

@@ -114,11 +114,12 @@ public:
 
 private:
 	/**
-	* @brief Utility function to check if the node with @p node_id has 
-	* expected number of dependencies, dependents, metadata and diagnostics.
-	* If the @param expected_deps is 0, it also checks that the node does not exist in the graph
-	* and if the @param expected_dependents is 0, it also checks that the node does not exist in the graph.
-	*/
+	 * @brief Utility function to check if the node with @p node_id has
+	 * expected number of dependencies, dependents, metadata and diagnostics.
+	 * If the @param expected_deps is 0, it also checks that the node does not exist in the graph
+	 * and if the @param expected_dependents is 0, it also checks that the node does not exist in
+	 * the graph.
+	 */
 	void checkNodeStateEqualTo(
 		const query::internal::NodeID& node_id,
 		usize                          expected_deps,
@@ -166,8 +167,8 @@ private:
 	  - other nodes are not affected
 	  - if an erased node is in the reversed dependency
 
-	  Note the graph topology is like lattice with 4 levels 
-	  - [DummyQuery1, DummyQuery2, DummyQuery3, SideInput] 
+	  Note the graph topology is like lattice with 4 levels
+	  - [DummyQuery1, DummyQuery2, DummyQuery3, SideInput]
 	  and the following dependencies:
 
 	    1_1 depends on (2_1, 2_2)

@@ -1,8 +1,8 @@
 #include "query_state.hpp"
 
+#include <concurrent/base/locks/assert_lock.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/message_forward.hpp>
-#include <concurrent/base/locks/assert_lock.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
@@ -938,7 +938,9 @@ namespace query::internal {
 		diagnostic_loggers.maybePutAndUpdate(
 			node_id,
 			makeBox<dia_int::Logger>(),
-			[diag = std::move(diagnostic)](Ref<Box<dia_int::Logger>> logger)mutable { logger->refMut()->log(std::move(diag)); }
+			[diag = std::move(diagnostic)](Ref<Box<dia_int::Logger>> logger) mutable {
+				logger->refMut()->log(std::move(diag));
+			}
 		);
 	}
 

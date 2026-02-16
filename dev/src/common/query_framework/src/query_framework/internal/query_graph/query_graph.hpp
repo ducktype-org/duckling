@@ -289,8 +289,7 @@ namespace query::internal {
 			std::vector<NodeID> dependents_recursive;
 		};
 
-		[[nodiscard]] Dependents
-		getDependentNodes(const std::vector<NodeID>& start_nodes) const;
+		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeID>& start_nodes) const;
 
 		void eraseNodes(const Dependents& nodes_to_erase);
 
