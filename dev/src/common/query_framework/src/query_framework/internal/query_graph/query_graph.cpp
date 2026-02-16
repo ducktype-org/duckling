@@ -20,7 +20,8 @@
 namespace query::internal {
 
 	QueryGraph::QueryGraph():
-		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()) {}
+		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()),
+		  node_reverse_deps(base::makeBox<concurrent::ConHashMap<NodeID, std::vector<NodeID>>>()) {}
 
 	void QueryGraph::addDependency(NodeID from, NodeID to) {
 		CORE_ASSERT(
@@ -28,9 +29,11 @@ namespace query::internal {
 		);
 
 		if constexpr (TRACK_REVERSE_GRAPH) {
-			if (!node_reverse_deps.contains(to))
-				node_reverse_deps.insert_or_assign(to, std::vector<NodeID>{});
-			node_reverse_deps.at(to).emplace_back(from);
+			node_reverse_deps->maybePutAndUpdate(
+				to,
+				std::vector<NodeID>{},
+				[from](Ref<std::vector<NodeID>> deps) { deps->emplace_back(from); }
+			);
 		}
 
 		auto children_data = node_deps->atMaybe(from).value();
@@ -344,9 +347,12 @@ namespace query::internal {
 
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
 	) const {
-		CORE_ASSERT(
-			TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to get dependent nodes."
-		);
+		if constexpr (not TRACK_REVERSE_GRAPH) {
+			CORE_PANIC(
+				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+			);
+		}
+
 		std::queue<NodeID>         queue{ start_nodes.begin(), start_nodes.end() };
 		std::unordered_set<NodeID> visited;
 
@@ -357,7 +363,7 @@ namespace query::internal {
 			if (visited.contains(node)) continue;
 			visited.insert(node);
 
-			if_opt_some(node_reverse_deps.atMaybe(node), its_reverse_deps) {
+			if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
 				for (auto& new_node: *its_reverse_deps) queue.push(new_node);
 			}
 		}
@@ -366,7 +372,11 @@ namespace query::internal {
 	}
 
 	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
-		CORE_ASSERT(TRACK_REVERSE_GRAPH, "Reverse graph tracking must be enabled to erase nodes.");
+		if constexpr (not TRACK_REVERSE_GRAPH) {
+			CORE_PANIC(
+				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+			);
+		}
 
 		for (const auto& node: nodes_to_erase.dependents_recursive) {
 			// A(input) <- B <- C
@@ -378,14 +388,14 @@ namespace query::internal {
 			// Erase the node from reverse dependencies of its dependencies
 			auto removed_node_deps = node_deps->at(node)->getHolder();
 			for (const auto& dep: *removed_node_deps) {
-				if_opt_some(node_reverse_deps.atMaybe(dep), its_reverse_deps) {
+				if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
 					auto new_end = std::ranges::remove(*its_reverse_deps, node);
 					its_reverse_deps->erase(new_end.begin(), new_end.end());
 				}
 			}
 
 			node_deps->erase(node);
-			node_reverse_deps.erase(node);
+			node_reverse_deps->erase(node);
 		}
 	}
 }

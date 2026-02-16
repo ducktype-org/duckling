@@ -136,10 +136,24 @@ namespace query {
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
+		/**
+		 * @brief Logs a diagnostic message for the current query node.
+		 * Is thread safe.
+		 */
 		void logInt(Box<dia_int::MessageBase> diagnostic);
 
+		/**
+		 * @brief Collect all diagnostics from the main query state into the provided output vector.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
 		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
 
+		/**
+		 * @brief Dump all loggers from all nodes into a single logger and clear them from the state.
+		 * @warning This method is not thread safe.
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
 		static Box<dia_int::Logger> dumpToOneLoggerAndClear();
 
 		/**

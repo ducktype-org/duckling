@@ -16,10 +16,27 @@ namespace query::internal {
 	 */
 	void markPreviousGraphNodesInputs(std::vector<query::external::InputData> inputs);
 
+	/**
+	 * @brief Get the NodeIDs of the input nodes in the previous graph
+	 * that are not present in the new inputs.
+	 *
+	 * For example if the previous graph had input nodes {1,2}
+	 * and we call this function with new inputs {2,3},
+	 * it should return the NodeID corresponding to input {1}.
+	 *
+	 * @param new_inputs All new inputs given to the compiler.
+	 */
 	std::vector<NodeID> findRemovedInputsFromCurrentGraph(
 		std::vector<query::external::InputData> new_inputs
 	);
 
+	/**
+	 * @brief Same as @p findRemovedInputsFromCurrentGraph but compares the new inputs
+	 * with a selected set of previous inputs.
+	 *
+	 * It is used by the Langauge Server if we only want to invalidate
+	 * input's gathered from one source file and keep all other source files intact.
+	 */
 	std::vector<NodeID> findRemovedInputsFromSelectedInputs(
 		const std::vector<external::InputData>& selected_inputs,
 		std::vector<query::external::InputData> new_inputs

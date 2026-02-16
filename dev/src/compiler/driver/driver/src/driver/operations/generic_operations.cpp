@@ -241,9 +241,4 @@ namespace compiler::driver {
 				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
 			});
 	}
-
-	void invalidateQueryInputs() {
-		auto new_inputs = collectAllPstElementHashesFromGlobalPackages();
-		query::external::invalidateQueries(std::move(new_inputs));
-	}
 }

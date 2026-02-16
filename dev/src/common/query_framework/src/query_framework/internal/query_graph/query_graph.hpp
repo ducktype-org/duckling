@@ -20,6 +20,11 @@ namespace query::internal {
 
 	class QueryState;
 
+	/**
+	 * @brief This flag is used to track the reverse graph of dependencies in the QueryGraph.
+	 * It is used by the Langauge Server to find the dependent nodes of a given node and invalidate
+	 * them without having to traverse the whole graph.
+	 */
 	constexpr bool TRACK_REVERSE_GRAPH = true;
 
 	/**
@@ -163,8 +168,15 @@ namespace query::internal {
 		};
 
 		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
-		base::HashMap<NodeID, std::vector<NodeID>>
-			node_reverse_deps;  // Only used if TRACK_REVERSE_GRAPH is true
+
+		/**
+		 * Graph that tracks the reversed relation to `node_deps`.
+		 * Only used if @p TRACK_REVERSE_GRAPH is true.
+		 *
+		 * Does not take part in any of the additional logic like serlialization
+		 * or deserialization.
+		 */
+		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_reverse_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -285,18 +297,33 @@ namespace query::internal {
 			return node_deps->contains(node_id);
 		}
 
+		/**
+		 * @brief Helper function to keep the output of the `getDependentNodes`
+		 * function in a single struct, as it should be the transitive closure of
+		 * the dependent nodes.
+		 */
 		struct Dependents {
 			std::vector<NodeID> dependents_recursive;
 		};
 
+		/**
+		 * @brief Gets the set of all nodes that are (transitively) dependent on any of the given
+		 * start nodes, including the start nodes themselves.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 */
 		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeID>& start_nodes) const;
 
+		/**
+		 * @brief Erase the given nodes from the graph. The nodes to erase should be obtained
+		 * from getDependentNodes() to ensure all dependent nodes are erased.
+		 *
+		 * @warning This method should not be used when the query graph is being concurrently
+		 * modified.
+		 */
 		void eraseNodes(const Dependents& nodes_to_erase);
 
-		/**
-		 * @brief Get all Nodes in the graph.
-		 * @return A vector of all NodeIDs in the graph.
-		 */
 		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
 
 		/** @brief Check if a node has any dependencies. */

@@ -76,9 +76,20 @@ namespace query {
 			bool catch_exceptions_if_using_qresult = true;
 		};
 
+		/**
+		 * @brief This part of the query data is generated from the query implementation and
+		 * is not visible at the query declaration site.
+		 * There are some query kinds, like `SIDE_INPUT` that for now do not have this
+		 * implementation data.
+		 */
 		struct QueryImplData {
 			using EraseFunctionStableType   = bool (*)(base::Bit256);
 			using EraseFunctionUnstableType = bool (*)(u64);
+
+			/**
+			 * Pointer to the function that can erase the query result from it's cache based on the
+			 * key hash.
+			 */
 			std::variant<EraseFunctionUnstableType, EraseFunctionStableType> erase_function;
 		};
 

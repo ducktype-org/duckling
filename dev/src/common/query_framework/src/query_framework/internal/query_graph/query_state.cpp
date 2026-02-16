@@ -2,7 +2,6 @@
 
 #include <concurrent/base/locks/assert_lock.hpp>
 #include <diagnostic_interactive/logger.hpp>
-#include <diagnostic_interactive/message_forward.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
