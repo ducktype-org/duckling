@@ -1,64 +1,93 @@
 use std::{
-    borrow::Borrow, convert::Infallible, ffi::OsStr, fmt::Display, ops::Deref, path::Path,
+    borrow::{Borrow, Cow},
+    collections::HashSet,
+    convert::Infallible,
+    ffi::OsStr,
+    fmt::{Debug, Display},
+    hash::Hash,
+    ops::Deref,
+    path::{Path, PathBuf},
     str::FromStr,
+    sync::{Mutex, OnceLock},
 };
-
-use symbol_table::GlobalSymbol;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize, Debug)]
-pub struct StrId(GlobalSymbol);
+static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+
+#[derive(Clone, Copy)]
+pub struct StrId {
+    inner: &'static str,
+}
 
 impl StrId {
-    pub fn new(string: impl AsRef<str>) -> Self {
-        Self(GlobalSymbol::new(string))
-    }
-
     pub fn as_str(&self) -> &'static str {
-        self.0.as_str()
+        self.inner
     }
 
-    pub(crate) fn __from_static_helper(s: GlobalSymbol) -> Self {
-        Self(s)
+    pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
+        Self::from(s.into())
     }
 }
-
-macro_rules! static_str_id {
-    ($x:literal) => {
-        $crate::StrId::__from_static_helper(::symbol_table::static_symbol!($x))
-    };
-}
-
-pub(crate) use static_str_id;
 
 impl Default for StrId {
     fn default() -> Self {
-        static_str_id!("")
-    }
-}
-
-impl Display for StrId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        Self::from("")
     }
 }
 
 impl From<&str> for StrId {
     fn from(value: &str) -> Self {
-        Self::new(value)
+        Self::from(Cow::Borrowed(value))
     }
 }
 
 impl From<&String> for StrId {
     fn from(value: &String) -> Self {
-        Self::new(value.as_str())
+        Self::from(value.as_str())
     }
 }
 
 impl From<String> for StrId {
     fn from(value: String) -> Self {
-        Self::new(value)
+        Self::from(Cow::Owned(value))
+    }
+}
+
+impl From<&Path> for StrId {
+    fn from(value: &Path) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
+impl From<PathBuf> for StrId {
+    fn from(value: PathBuf) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
+impl From<Cow<'_, str>> for StrId {
+    fn from(value: Cow<'_, str>) -> Self {
+        let mut cache = STRID_CACHE
+            .get_or_init(Default::default)
+            .lock()
+            // NOTE: `.unwrap()` should never panic: from docs:
+            // Errors
+            //
+            // If another user of this mutex panicked while holding the mutex,
+            // then this call will return an error once the mutex is acquired.
+            // The acquired mutex guard will be contained in the returned error.
+            //
+            // Panics
+            //
+            // This function might panic when called if the lock is already held by the current thread.
+            .unwrap();
+        let reference = cache.get(value.as_ref()).copied().unwrap_or_else(|| {
+            let static_ref = value.into_owned().leak();
+            cache.insert(static_ref);
+            static_ref
+        });
+        StrId { inner: reference }
     }
 }
 
@@ -66,7 +95,7 @@ impl FromStr for StrId {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new(s))
+        Ok(Self::from(s))
     }
 }
 
@@ -85,6 +114,26 @@ impl PartialEq<&str> for StrId {
 impl PartialEq<String> for StrId {
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other.as_str()
+    }
+}
+
+impl PartialEq<StrId> for StrId {
+    fn eq(&self, other: &StrId) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl Eq for StrId {}
+
+impl PartialOrd for StrId {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for StrId {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.inner.cmp(other.inner)
     }
 }
 
@@ -120,6 +169,24 @@ impl Borrow<str> for StrId {
     }
 }
 
+impl Hash for StrId {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.inner.hash(state);
+    }
+}
+
+impl Debug for StrId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <str as Debug>::fmt(self.inner, f)
+    }
+}
+
+impl Display for StrId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <str as Display>::fmt(self.inner, f)
+    }
+}
+
 impl From<StrId> for String {
     fn from(value: StrId) -> Self {
         value.as_str().into()
@@ -132,14 +199,33 @@ impl From<StrId> for &'static str {
     }
 }
 
+impl Serialize for StrId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.inner.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for StrId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let str = <&'de str>::deserialize(deserializer)?;
+        Ok(Self::from(str))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn basic_tests() {
-        let a = StrId::new("a");
-        let a_copy = StrId::new("a");
+        let a = StrId::from("a");
+        let a_copy = StrId::from("a");
         assert_eq!(a, a_copy);
 
         assert_eq!(a, "a");
