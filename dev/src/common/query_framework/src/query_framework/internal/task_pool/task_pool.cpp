@@ -33,9 +33,6 @@ namespace query::internal {
 	}
 
 	void TaskPool::addTask(Task&& task) {
-		// CORE_ASSERT(first_call, "addInitialTasks can only be called once and before execute()");
-		// first_call = false;
-
 		std::lock_guard lock(pool_mutex);
 
 		added_tasks.fetch_add(1);
@@ -44,45 +41,13 @@ namespace query::internal {
 			= worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
 				  tryExecuteTask(pt);
 			  });
+		
 		is_worker_free_map[chosen_worker] = false;
-
-
-		// auto              worker_refs           = worker_manager.getAllWorkers();
-		// usize             n_tasks_to_distribute = std::min(global_pool.size(),
-		// worker_refs.size()); std::vector<Task> tasks_to_distribute;
-
-		// for (usize i = 0; i < n_tasks_to_distribute; ++i) {
-		// 	tasks_to_distribute.push_back(std::move(global_pool.front()));
-		// 	global_pool.pop_front();
-		// }
-
-		// for (usize i = 0; i < ; ++i) {
-		// 	auto& task = tasks_to_distribute[i];
-		// 	worker_refs[i]->scheduleTaskIfFree([this, pt = std::move(task)](WRef) mutable {
-		// 		tryExecuteTask(pt);
-		// 	});
-		// 	is_worker_free_map[worker_refs[i]] = false;
-		// }
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
-		std::cerr << "Waiting for task with id " << id.q_id.getData().name
-				  << id.hash.val.toStringHex() << " to complete\n";
-
 		std::unique_lock lock(pool_mutex);
-
-		// auto             task_opt
-		// 	= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
-		// if_opt_some(task_opt, task) {
-		// 	lock.unlock();
-		// 	tryExecuteTask(task);
-		// 	lock.lock();
-		// }
-
-
 		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
-		std::cerr << "Task with id " << id.q_id.getData().name << id.hash.val.toStringHex()
-				  << " is done\n";
 	}
 
 	void TaskPool::waitExecutionCompletion() {
