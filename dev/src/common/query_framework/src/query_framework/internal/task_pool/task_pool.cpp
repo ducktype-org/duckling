@@ -23,8 +23,6 @@ namespace query::internal {
 		// @TODO: PR think about this later:
 		// this links query task execution with workers manager logic.
 		worker_manager.setNoTasksCallback([this](auto wref) { onWorkerNoTasks(wref); });
-
-		// is_executing.store(true);
 	}
 
 	TaskPool::~TaskPool() {
@@ -59,7 +57,6 @@ namespace query::internal {
 			);
 			return added_tasks.load() == completed_tasks.load();
 		});
-		// is_executing.store(false);
 	}
 
 	void TaskPool::execute() { CORE_UNREACHABLE(); }
@@ -207,9 +204,6 @@ namespace query::internal {
 	}
 
 	void TaskPool::onWorkerNoTasks(WRef current_worker) {
-		// if (!is_executing.load()) return;
-
-
 		base::Optional<Task> task_opt;
 		std::lock_guard      lock(pool_mutex);
 
