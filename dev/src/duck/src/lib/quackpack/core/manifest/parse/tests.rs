@@ -1,12 +1,12 @@
-use std::path::PathBuf;
+use std::{env::home_dir, path::PathBuf};
 
-use rustvil::{config_files::home, fs::PathExt};
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
 use crate::{
     DuckCtx, QpCtx, StrId,
     quackpack::core::{BranchOrTag, Source, Version},
+    util_common::path_ops_ext::PathOpsExt,
 };
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -449,7 +449,7 @@ dependencies:
         .unwrap();
     assert!(a2.desc().source().is_local());
     if let Source::Local(local_source) = a2.desc().source().as_ref() {
-        let home_dir = home().unwrap();
+        let home_dir = home_dir().unwrap();
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "~/xd");

@@ -1,3 +1,5 @@
+pub mod command_ext;
+pub mod env;
 pub mod error;
 pub mod hash;
 pub mod path_ops_ext;

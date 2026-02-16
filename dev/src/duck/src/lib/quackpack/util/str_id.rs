@@ -2,7 +2,7 @@ use std::{
     borrow::{Borrow, Cow},
     collections::HashSet,
     convert::Infallible,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     fmt::{Debug, Display},
     hash::Hash,
     ops::Deref,
@@ -62,6 +62,18 @@ impl From<&Path> for StrId {
 
 impl From<PathBuf> for StrId {
     fn from(value: PathBuf) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
+impl From<&OsStr> for StrId {
+    fn from(value: &OsStr) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
+impl From<OsString> for StrId {
+    fn from(value: OsString) -> Self {
         Self::from(value.to_string_lossy())
     }
 }

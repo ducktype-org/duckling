@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use itertools::Itertools;
-use rustvil::fs::PathExt;
 use serde::Deserialize;
 use tracing::{Level, debug, span};
 
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
+use crate::util_common::path_ops_ext::PathOpsExt;
 use crate::{QpCtx, QuackResultContext, StrId, qp_internal};
 use crate::{QuackResult, quackpack::core::Package};
 
@@ -69,9 +69,7 @@ fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
     let package_root = path
         .parent()
         .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;
-    let content = path
-        .read_to_string()
-        .context("failed to read the manifest's content")?;
+    let content = path.read_to_string()?;
     let schema = parse_schema(&content)?;
     let manifest = manifest::parse(&schema, package_root, ctx)?;
     Ok(Package::new(
