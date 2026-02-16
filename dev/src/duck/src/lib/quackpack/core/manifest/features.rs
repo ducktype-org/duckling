@@ -7,7 +7,7 @@ pub type FeatureName = StrId;
 /// List of feature names that have been pulled in.
 pub type PulledFeatures = HashSet<FeatureName>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Features exposed by a root package we are working on.
 pub struct Features(HashMap<FeatureName, Vec<FeatureName>>);
 

@@ -118,9 +118,9 @@ private:
 		ASSERT_TRUE(*map.atMaybe(3).value() == 35);
 
 
-		map.maybePutAndUpdate(4, 40, [](int& v) { v += 5; });
+		map.maybePutAndUpdate(4, 40, [](Ref<int> v) { *v += 5; });
 		ASSERT_TRUE(map.getCopy(4) == 45);
-		map.maybePutAndUpdate(1, 100, [](int& v) { v += 5; });
+		map.maybePutAndUpdate(1, 100, [](Ref<int> v) { *v += 5; });
 		ASSERT_TRUE(map.getCopy(1) == 15);
 
 		map.maybePut(5, 50);
@@ -248,7 +248,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1ULL, 0ULL, [](u64& v) { v += 10; });
+					map.maybePutAndUpdate(1ULL, 0ULL, [](Ref<u64> v) { *v += 10; });
 			});
 		}
 
@@ -349,11 +349,11 @@ private:
 		ASSERT_EQUAL(map.size(), 4ULL);
 
 		// maybePutAndUpdate on existing key should not change size
-		map.maybePutAndUpdate(1, 0, [](int& v) { v += 1; });
+		map.maybePutAndUpdate(1, 0, [](Ref<int> v) { *v += 1; });
 		ASSERT_EQUAL(map.size(), 4ULL);
 
 		// maybePutAndUpdate on new key should increment size
-		map.maybePutAndUpdate(5, 50, [](int& v) { v += 1; });
+		map.maybePutAndUpdate(5, 50, [](Ref<int> v) { *v += 1; });
 		ASSERT_EQUAL(map.size(), 5ULL);
 
 		// erase existing key should decrement size
