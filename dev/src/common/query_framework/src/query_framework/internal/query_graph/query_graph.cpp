@@ -7,6 +7,8 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
+#include <query_framework/module_flags/module_flags.hpp>
+
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
@@ -28,7 +30,7 @@ namespace query::internal {
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
 
-		if constexpr (TRACK_REVERSE_GRAPH) {
+		if (track_reverse_graph) {
 			node_reverse_deps->maybePutAndUpdate(
 				to,
 				std::vector<NodeID>{},
@@ -347,7 +349,7 @@ namespace query::internal {
 
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
 	) const {
-		if constexpr (not TRACK_REVERSE_GRAPH) {
+		if (not track_reverse_graph) {
 			CORE_PANIC(
 				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 			);
@@ -372,7 +374,7 @@ namespace query::internal {
 	}
 
 	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
-		if constexpr (not TRACK_REVERSE_GRAPH) {
+		if (not track_reverse_graph) {
 			CORE_PANIC(
 				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 			);

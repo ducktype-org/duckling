@@ -21,13 +21,6 @@ namespace query::internal {
 	class QueryState;
 
 	/**
-	 * @brief This flag is used to track the reverse graph of dependencies in the QueryGraph.
-	 * It is used by the Langauge Server to find the dependent nodes of a given node and invalidate
-	 * them without having to traverse the whole graph.
-	 */
-	constexpr bool TRACK_REVERSE_GRAPH = true;
-
-	/**
 	 * @brief Core dependency graph powering evaluation across the compiler.
 	 * \parallel Must be thread-safe as foundational infrastructure; all query categories assume this.
 	 */
@@ -171,7 +164,7 @@ namespace query::internal {
 
 		/**
 		 * Graph that tracks the reversed relation to `node_deps`.
-		 * Only used if @p TRACK_REVERSE_GRAPH is true.
+		 * Only used if @p track_reverse_graph is true.
 		 *
 		 * Does not take part in any of the additional logic like serlialization
 		 * or deserialization.

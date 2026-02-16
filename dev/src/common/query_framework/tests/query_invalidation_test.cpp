@@ -5,6 +5,7 @@
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/internal/query_graph/active_graph.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_metadata/declare_metadata.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -110,7 +111,10 @@ class ActiveGraph: public tester::TestSuite {
 #define TESTER_CLASS ActiveGraph
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testInvalidation); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		query::track_reverse_graph = true;
+		TESTER_ADD_TEST(testInvalidation);
+	}
 
 private:
 	/**
