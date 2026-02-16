@@ -24,6 +24,20 @@ impl<T> GathererComputation<T> {
         self.1.push(QuackError::error(ctx));
         self
     }
+
+    pub fn dump_errors(self, errors: &mut Vec<QuackError>) -> T {
+        errors.extend(self.1);
+        self.0
+    }
+}
+
+impl<T> From<QuackResult<T>> for GathererComputation<Option<T>> {
+    fn from(value: QuackResult<T>) -> Self {
+        match value {
+            Ok(t) => Self(Some(t), vec![]),
+            Err(e) => Self::only_error(e),
+        }
+    }
 }
 
 impl<T> GathererComputation<Vec<T>> {

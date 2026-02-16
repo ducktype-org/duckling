@@ -8,11 +8,11 @@ use crate::{
     quackpack::core::{
         FeatureName, Manifest, Source, Version,
         gathering::{
+            error_surpression::{GathererComputation, GathererResult},
             fetch_types::{
                 FetchRequest, FetchResult, NotPinnedRequest, NotPinnedResult, PinnedRequest,
                 PinnedResult,
             },
-            gatherer_result::{GathererComputation, GathererResult},
         },
         types_common::{
             ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,

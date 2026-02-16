@@ -12,6 +12,11 @@ use crate::{
     quackpack::core::{PackageCtx, solver::git_access::GitAccess, solver_freeze::SolverFreeze},
 };
 
+pub enum SolverMode {
+    Merciful,
+    Strict,
+}
+
 pub enum ToImplement {}
 
 pub trait SolverState {}

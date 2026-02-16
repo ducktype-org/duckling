@@ -34,7 +34,7 @@ pub fn get_possible_realisations(
         )?)) else {
             return Ok(vec![]);
         };
-        let baseline_versions = if location.is_local() {
+        let baseline_versions = if location.is_local() || location.is_git() {
             vec![None]
         } else {
             dependency_description
