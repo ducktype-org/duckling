@@ -1,7 +1,7 @@
-#include "diagnostic_interactive/placeholder.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
 
-#include "query_framework/entry/query_entry_point.hpp"
-#include "query_framework/external/api.hpp"
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/external/api.hpp>
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/input_query/query_input_impl.hpp>
 #include <query_framework/internal/query_graph/active_graph.hpp>
