@@ -229,6 +229,19 @@ private:
 			1
 		);
 
+
+		// ========================== Comp time errors ==========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a: f64 = 1.0 / 0.0;
+				fun main() -> i64 = 0;
+			)",
+			{ "Division", "zero" },
+			1
+		);
+
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1

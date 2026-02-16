@@ -6,12 +6,15 @@
 #include "query_graph.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+
+#include <concurrent/base/collections/hash_map.hpp>
 #include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/message_forward.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
@@ -56,23 +59,37 @@ namespace query::internal {
 			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			QueryGraph                       graph;
-			base::HashMap<NodeID, PrevColor> node_colors;
+			QueryGraph graph;
+
+			/**
+			 * Colors of nodes from the previous compilation.
+			 * Red   - node is outdated
+			 * Green - node is up to date and can be merged into the current graph without
+			 * recomputation
+			 * @note This map should only be written to during the red-green sweep
+			 */
+			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
 
 			/**
 			 * Metadata from previous compilation.
 			 * Metadata for green nodes will be moved into current metadata_storage during merge.
+			 * \parallel #29 Make metadata concurrent
 			 */
 			base::Optional<MetadataStorage> metadata;
 
 			PreviousCompilation() = delete;
 
-			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+			PreviousCompilation(
+				QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeID, PrevColor>>&& colors
+			):
 				  graph(std::move(g)),
 				  node_colors(std::move(colors)),
 				  metadata() {}
 
-			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors(), metadata() {}
+			PreviousCompilation(QueryGraph&& g):
+				  graph(std::move(g)),
+				  node_colors(base::makeBox<concurrent::ConHashMap<NodeID, PrevColor>>()),
+				  metadata() {}
 		};
 
 	public:
@@ -87,12 +104,7 @@ namespace query::internal {
 		\***************************/
 
 		/**
-		 * @brief Returns the mutable query graph.
-		 */
-		Ref<QueryGraph> getGraphMutable() { return &query_graph; }
-
-		/**
-		 * @brief Returns the query graph.
+		 * @brief Returns read-only reference to the query graph.
 		 */
 		[[nodiscard]]
 		const QueryGraph& getGraph() const {
@@ -100,24 +112,39 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Returns the graph from previous compilation.
+		 * @brief Returns read-only reference to the graph from previous compilation.
 		 */
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
 
 		/**
 		 * @brief Adds a node to the query graph.
-		 *
-		 * If the node already exists, resets its data.
-		 * @TODO: #1889 in the future, we might want to disallow cache less queries and panic on
-		 * adding existing node
+		 * panics if the node already exists.
 		 */
 		void addGraphNode(NodeID node_id);
+
+		/**
+		 * @brief Adds a node to the query graph that represents a side input query.
+		 * This is needed because SideSinput queries have no cache and can be added multiple times.
+		 */
+		void addSideInputNode(NodeID node_id);
+
+
+		/**
+		 * @brief Marks that given query depends on another query.
+		 * Note that @p to does not need to be in the graph at the moment of calling this function.
+		 */
+		void addDependency(NodeID from, NodeID to);
+
 
 		/*********************************\
 		| Active query state interface:   |
 		\*********************************/
 
+		/**
+		 *  Return mutable reference to the active graph.
+		 *  @note Note that all active graph operations are thread safe.
+		 */
 		Ref<ActiveGraph> getActiveGraph() noexcept;
 
 		/**
@@ -144,7 +171,7 @@ namespace query::internal {
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+		base::CRef<concurrent::ConHashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
 
 		/**
 		 * @brief Sets the previous query graph.
@@ -305,14 +332,6 @@ namespace query::internal {
 		/***************************\
 		| All of the actual state:  |
 		\***************************/
-
-		/**
-		 * The runtime data of the graph.
-		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
-		 * computed/in progress.
-		 * @TODO: #1889 decide if we need this at all.
-		 */
-		base::HashMap<NodeID, NodeData> node_data;
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.

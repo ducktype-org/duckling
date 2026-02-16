@@ -4,7 +4,7 @@ use crate::QuackError;
 use crate::quackpack::schemas::registry;
 use crate::{StrId, quackpack::core::Dependency};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Map of all of the dependencies.
 /// Note that it has invariant, that `self.get(name).source().manifest_name() == name`
 pub struct Dependencies(HashMap<StrId, Dependency>);

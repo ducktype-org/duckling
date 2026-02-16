@@ -152,16 +152,3 @@
 		"QResult should not be equal to CRef<PResult> for "                                        \
 		"QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA"                                                     \
 	);
-
-
-/**
- * @brief Macro defining empty storing and loading for when providing fresh result
- * is expected to be faster than trying to look it up in a cache.
- */
-#define QUERY_AUTO_NO_CACHE                                               \
-	static auto store(KHash, PResult res, const query::ACD&) -> QResult { \
-		return QResult{ std::move(res) };                                 \
-	}                                                                     \
-	static auto erase(KHash) -> bool { return false; }                    \
-                                                                          \
-	static auto load(KHash) -> LoadResult { return {}; }

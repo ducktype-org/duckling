@@ -925,46 +925,26 @@ namespace compiler::frontend {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 
 	/****************
-	 * QueryFilePST *
+	 * getFilePST *
 	 ****************/
-	struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			Ref<SourceFile> file
-				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					key
-				);
-			auto pst              = file->getPST();
-			auto root_id          = pst->getRootElement().unlock(ctx)->getID();
-			auto maybe_put_result = root_element_file_back_map.maybePut(root_id, key);
-			if (!maybe_put_result) {
-				// If the key already exists, assert that it maps to the same value
-				CORE_ASSERT(
-					root_element_file_back_map.getCopy(root_id) == key,
-					"Root element ID already exists in back map with a different file ID"
-				);
-			}
-
-			// @todo modify it, when making proper helios errors
-			if (pst->getLogger()->bad()) {
-				std::cerr << "PARSING ERRORS: \n";
-				pst->getLogger()->dumpLog(true, std::cerr);
-				std::cerr << "\n\n";
-			}
-
-			return pst;
+	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id) {
+		Ref<SourceFile> file
+			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+				file_id
+			);
+		auto pst              = file->getPST();
+		auto root_id          = pst->getRootElement().unlock(ctx)->getID();
+		auto maybe_put_result = root_element_file_back_map.maybePut(root_id, file_id);
+		if (!maybe_put_result) {
+			// If the key already exists, assert that it maps to the same value
+			CORE_ASSERT(
+				root_element_file_back_map.getCopy(root_id) == file_id,
+				"Root element ID already exists in back map with a different file ID"
+			);
 		}
 
-		// @note: unstable ref here is only possible, because
-		// PResult is already a reference
-		//
-		// In the `file->getPST();` there is already caching mechanism implemented
-		// which checks if the PST was compiled for the SourceFile.
-		// The LSP can invalidate the SourceFile when the file is changed, but LSP can't
-		// invalidate the query cache of this query, so we have to disable caching here.
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
+		return pst;
+	}
 
 	ModuleID extendQueryModuleIDOfPST(
 		[[maybe_unused]] query::Context& ctx, pst::AccessLocked<pst::LangElement> element
