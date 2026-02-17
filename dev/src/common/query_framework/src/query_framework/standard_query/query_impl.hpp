@@ -53,11 +53,9 @@ namespace query::internal {
 
 		// @TODO: #2026 add note status static assertion if possible.
 
-		IF_BUILD_TYPE_DEV(
-			if (auto v = QueryImplType::load(perfect_hash)) {
-				CORE_PANIC("query cache present in standardQueryEntry");
-			}
-		);
+		IF_BUILD_TYPE_DEV(if (auto v = QueryImplType::load(perfect_hash)) {
+			CORE_PANIC("query cache present in standardQueryEntry");
+		});
 
 		auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::make(node_id);
@@ -70,8 +68,7 @@ namespace query::internal {
 		//  - QueryImplType provides loadFromDisc(QKey) -> PResult
 		//  - redGreenSweep(node_id) returns true (node and its deps are green in previous graph)
 		if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK) {
-			if (ContextAccess::getState()->redGreenSweep(node_id)
-				== QueryState::PrevColor::Green) {
+			if (ContextAccess::getState()->redGreenSweep(node_id) == QueryState::PrevColor::Green) {
 				auto loaded = QueryImplType::loadFromDisc(key);
 
 				if (loaded) {
@@ -138,7 +135,7 @@ namespace query::internal {
 			);
 
 			if constexpr (QueryImplType::USES_QRESULT
-							&& QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
+			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
 				return QueryImplType::store(perfect_hash, query::Failed(), acd);
 			} else {
 				CORE_PANIC(qfe.what());

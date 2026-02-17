@@ -79,8 +79,9 @@ namespace query {
 		 * implementation.
 		 *
 		 * This logically acts very similar as schedule and instant await.
-		 * The task will be executed by the caller worker immediately, unless another worker is already
-		 * executing it, in which case we will wait for it to complete and then load the result.
+		 * The task will be executed by the caller worker immediately, unless another worker is
+		 * already executing it, in which case we will wait for it to complete and then load the
+		 * result.
 		 *
 		 * @note This is also an external query invocation layer.
 		 * @TODO: #1887 change later to make separation clearer.
@@ -187,8 +188,9 @@ namespace query {
 
 		/**
 		 * @brief Waits for the completion of a scheduled query and returns its result.
-		 * The task will be executed by the caller worker immediately, unless another worker is already
-		 * executing it, in which case we will wait for it to complete and then load the result.
+		 * The task will be executed by the caller worker immediately, unless another worker is
+		 * already executing it, in which case we will wait for it to complete and then load the
+		 * result.
 		 *
 		 * @param handle The handle of the scheduled query to wait for, returned by the ctx.schedule
 		 * method.
