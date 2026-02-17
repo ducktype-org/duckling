@@ -330,7 +330,6 @@ namespace query::internal {
 		 */
 		ActiveGraph active_graph;
 
-
 		/**
 		 * The previous compilation data if any.
 		 */

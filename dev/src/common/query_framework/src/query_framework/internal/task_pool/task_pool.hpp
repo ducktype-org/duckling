@@ -15,11 +15,8 @@
 #include <condition_variable>
 #include <mutex>
 
-// #include <any>
-
 namespace query::internal {
 	class TaskPool;
-
 
 	/**
 	 * @brief Status of a task in the TaskPool.
@@ -30,17 +27,12 @@ namespace query::internal {
 		Done,        ///< Task has completed execution.
 	};
 
-	// struct TypeErasedKey final {
-	// 	// @TODO: PR std any for now
-	// 	std::any key;
-	// };
-
 	/**
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		// @TODO: PR for now
-		// using WorkerTask = std::function<void(concurrent::worker::WRef)>;
+		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds unnecessary overhead. (the other one is inside the task pool implementation).
+		// See if std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
 
 		NodeID                   id;
 		concurrent::worker::Task work;
