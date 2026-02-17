@@ -10,7 +10,7 @@ use crate::quackpack::core::{
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FetchRequest {
+pub enum ManifestsRequest {
     Pinned(PinnedRequest),
     NotPinned(NotPinnedRequest),
 }

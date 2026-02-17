@@ -10,7 +10,7 @@ use crate::{
         gathering::{
             error_surpression::{GathererComputation, GathererResult},
             fetch_types::{
-                FetchRequest, FetchResult, NotPinnedRequest, NotPinnedResult, PinnedRequest,
+                FetchResult, ManifestsRequest, NotPinnedRequest, NotPinnedResult, PinnedRequest,
                 PinnedResult,
             },
         },
@@ -34,11 +34,11 @@ pub struct PackageData {
 impl PackageData {
     /// Returns a list of requests for possible realizations of package's dependencies,
     /// given already requested features of the package.
-    fn dep_requests(&self) -> GathererResult<Vec<FetchRequest>> {
+    fn dep_requests(&self) -> GathererResult<Vec<ManifestsRequest>> {
         if !self.referenced_by_requests {
             return Ok(GathererComputation::only_success(vec![]));
         }
-        let mut result: GathererComputation<Vec<FetchRequest>> = GathererComputation::empty();
+        let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         for dependency in self.manifest.dependencies().all_dependencies().values() {
             if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
                 continue;
@@ -61,7 +61,7 @@ impl PackageData {
                     None
                 };
             if dependency.is_pinned() {
-                result.0.push(FetchRequest::Pinned(PinnedRequest {
+                result.0.push(ManifestsRequest::Pinned(PinnedRequest {
                     package: Package {
                         location,
                         version: dependency.desc().versions().first().copied(),
@@ -71,7 +71,7 @@ impl PackageData {
                 }));
             } else {
                 let versions = dependency.desc().versions().to_vec();
-                result.0.push(FetchRequest::NotPinned(NotPinnedRequest {
+                result.0.push(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location,
                     versions: if !versions.is_empty() {
                         Some(versions)
@@ -93,7 +93,7 @@ impl PackageData {
 enum QueryState {
     Failed,
     Pending {
-        requests: Vec<FetchRequest>,
+        requests: Vec<ManifestsRequest>,
         local_root: Option<PathBuf>,
     },
     Done,
@@ -105,7 +105,7 @@ pub enum RequestAction {
     /// A fetch for such request was never made, so the fetch should be performed.
     Fetch,
     /// No need for a fetch, but further requests result from this one.
-    More { requests: Vec<FetchRequest> },
+    More { requests: Vec<ManifestsRequest> },
 }
 
 impl Default for RequestAction {
@@ -144,10 +144,15 @@ impl GathererState {
     }
 
     /// Returns what action to perform for a given request.
-    pub fn get_request_action(&mut self, request: FetchRequest) -> GathererResult<RequestAction> {
+    pub fn get_request_action(
+        &mut self,
+        request: ManifestsRequest,
+    ) -> GathererResult<RequestAction> {
         match request {
-            FetchRequest::Pinned(pinned_request) => self.get_request_action_pinned(pinned_request),
-            FetchRequest::NotPinned(not_pinned_request) => {
+            ManifestsRequest::Pinned(pinned_request) => {
+                self.get_request_action_pinned(pinned_request)
+            }
+            ManifestsRequest::NotPinned(not_pinned_request) => {
                 self.get_request_action_not_pinned(not_pinned_request)
             }
         }
@@ -166,7 +171,7 @@ impl GathererState {
                 not_pinned_request.location,
                 QueryState::Pending {
                     local_root: not_pinned_request.local_root.clone(),
-                    requests: vec![FetchRequest::NotPinned(not_pinned_request)],
+                    requests: vec![ManifestsRequest::NotPinned(not_pinned_request)],
                 },
             );
             return Ok(GathererComputation::only_success(RequestAction::Fetch));
@@ -180,7 +185,7 @@ impl GathererState {
                 requests,
                 local_root: _,
             } => {
-                requests.push(FetchRequest::NotPinned(not_pinned_request));
+                requests.push(ManifestsRequest::NotPinned(not_pinned_request));
                 Ok(GathererComputation::empty())
             }
             QueryState::Done => {
@@ -212,7 +217,7 @@ impl GathererState {
                     pinned_request.package,
                     QueryState::Pending {
                         local_root: pinned_request.local_root.clone(),
-                        requests: vec![FetchRequest::Pinned(pinned_request)],
+                        requests: vec![ManifestsRequest::Pinned(pinned_request)],
                     },
                 );
                 return Ok(GathererComputation::only_success(RequestAction::Fetch));
@@ -224,7 +229,7 @@ impl GathererState {
                         pinned_request.package,
                         QueryState::Pending {
                             local_root: pinned_request.local_root.clone(),
-                            requests: vec![FetchRequest::Pinned(pinned_request)],
+                            requests: vec![ManifestsRequest::Pinned(pinned_request)],
                         },
                     );
                     return Ok(GathererComputation::only_success(RequestAction::Fetch));
@@ -237,7 +242,7 @@ impl GathererState {
                     // This is not a bug - later the same method `[GathererState::complete_requests]` will be used
                     // for handling chained requests for both types of fetches, so this pinnned
                     // request will be properly handled when the not pinned fetch completes.
-                    requests.push(FetchRequest::Pinned(pinned_request));
+                    requests.push(ManifestsRequest::Pinned(pinned_request));
                     return Ok(GathererComputation::empty());
                 }
                 QueryState::Done => {
@@ -270,7 +275,7 @@ impl GathererState {
                 requests,
                 local_root: _,
             } => {
-                requests.push(FetchRequest::Pinned(pinned_request));
+                requests.push(ManifestsRequest::Pinned(pinned_request));
                 Ok(GathererComputation::empty())
             }
             QueryState::Done => {
@@ -291,7 +296,10 @@ impl GathererState {
     }
 
     /// After getting a result of a fetch, decides what further requests to make.
-    pub fn handle_response(&mut self, result: FetchResult) -> GathererResult<Vec<FetchRequest>> {
+    pub fn handle_response(
+        &mut self,
+        result: FetchResult,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
         match result {
             FetchResult::Pinned(pinned_result) => self.handle_response_pinned(pinned_result),
             FetchResult::NotPinned(not_pinned_result) => {
@@ -304,7 +312,7 @@ impl GathererState {
     fn handle_response_pinned(
         &mut self,
         pinned_result: PinnedResult,
-    ) -> GathererResult<Vec<FetchRequest>> {
+    ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(state) = self.pinned_fetches.get_mut(&pinned_result.origin_package) else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -364,7 +372,7 @@ impl GathererState {
     fn handle_response_not_pinned(
         &mut self,
         not_pinned_result: NotPinnedResult,
-    ) -> GathererResult<Vec<FetchRequest>> {
+    ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(state) = self
             .not_pinned_fetches
             .get_mut(&not_pinned_result.origin_location)
@@ -438,12 +446,12 @@ impl GathererState {
 
     fn complete_requests(
         &mut self,
-        requests: Vec<FetchRequest>,
-    ) -> GathererResult<Vec<FetchRequest>> {
+        requests: Vec<ManifestsRequest>,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
         let mut result = GathererComputation::empty();
         for request in requests {
             match request {
-                FetchRequest::Pinned(pinned_request) => {
+                ManifestsRequest::Pinned(pinned_request) => {
                     let Some(expanded_loc) =
                         self.location_resolver.get(&pinned_request.package.location)
                     else {
@@ -462,7 +470,7 @@ impl GathererState {
                         )
                     }
                 }
-                FetchRequest::NotPinned(not_pinned_request) => {
+                ManifestsRequest::NotPinned(not_pinned_request) => {
                     let location = not_pinned_request.location;
                     let selector = not_pinned_request.versions;
                     let requested_features = not_pinned_request.features;
@@ -484,8 +492,8 @@ impl GathererState {
         location: InternedLocation,
         selector: Option<Vec<Version>>,
         requested_features: HashSet<FeatureName>,
-    ) -> GathererResult<Vec<FetchRequest>> {
-        let mut result: GathererComputation<Vec<FetchRequest>> = GathererComputation::empty();
+    ) -> GathererResult<Vec<ManifestsRequest>> {
+        let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
         let Some(expanded_loc) = self.location_resolver.get(&location).copied() else {
             qp_bail_internal!("Could not resolve location {location:?}");
@@ -529,7 +537,7 @@ impl GathererState {
         &mut self,
         pkg: ExpandedPackage,
         requested_features: HashSet<FeatureName>,
-    ) -> GathererResult<Vec<FetchRequest>> {
+    ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(pkg_data) = self.pkgs_data.get_mut(&pkg) else {
             qp_bail_internal!("Fetched package {pkg:?} without PackageData")
         };
