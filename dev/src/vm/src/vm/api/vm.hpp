@@ -61,8 +61,8 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Same as runFunction, but executes the function synchronously and waits for it to finish.
-	 * @return The exit value of the function if it was ran successfully or an API error otherwise.
+	 * @brief Same as runFunction, but executes the function synchronously on the caller's thread and returns it's return value.
+	 * @return The return value of the function if it was ran successfully or an API error otherwise.
 	 */
 	std::expected<ExitValue, ApiError> runFunctionAwait(
 		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
