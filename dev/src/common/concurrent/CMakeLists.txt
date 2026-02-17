@@ -6,7 +6,7 @@ add_library(Concurrent
     src/concurrent/base/collections/hash_map.cpp
 )
 
-make_module(Concurrent USES Base)
+make_module(Concurrent USES Base Logger)
 
 duck_add_test(common race_tester tests/race_tester_test.cpp USES Concurrent Base)
 duck_add_test(common concurrent_module tests/concurrent_module_test.cpp USES Concurrent Base)

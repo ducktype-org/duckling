@@ -18,16 +18,13 @@ namespace concurrent::worker {
 	 * tasks are completed before destroying the WorkerManager.
 	 */
 	class WorkerManager final {
-		friend void setWorkerCount(u64);
 
 		/**
-		 * @brief Constructs a WorkerManager with the specified number of workers.
-		 * @param num_workers The number of workers to create.
-		 * @note This constructor is private. Use `WorkerManager::get()` to obtain the singleton
-		 * instance. It is meant to be called by `setWorkerCount` only.
+		 * Initializes or resets the WorkerManager state.
+		 * This is separated from the constructor to allow resetting the state in unit tests.
+		 * See also: testPrivateAccessReloadState.
 		 */
-		static void setWorkers(usize num_workers);
-
+		void setup(usize num_workers);
 	public:
 		/**
 		 * @brief Tests access to private reload state for unit testing.
@@ -87,7 +84,7 @@ namespace concurrent::worker {
 		}
 
 	private:
-		WorkerManager() = default;
+		WorkerManager();
 
 		/**
 		 * @brief Array of workers managed by the WorkerManager.
