@@ -175,10 +175,10 @@ namespace query {
 			this->active = false;
 			defer({ this->active = true; });
 
-			if (dep_id.q_id.getData().isInputQuery()) {
+			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
 				return OthQuery::internal_query(key);
 			} else {
-				// return OthQuery::internal_query(key);
+				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
 					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
@@ -230,6 +230,7 @@ namespace query {
 			this->active = false;
 			defer({ this->active = true; });
 
+			// note that this will block, until the task is completed
 			handle.await();
 
 			return OthQuery::internal_load(handle.getID().hash.val);

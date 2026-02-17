@@ -62,6 +62,9 @@ namespace query::internal {
 	void TaskPool::execute() { CORE_UNREACHABLE(); }
 
 	void TaskPool::query(const Task& task) {
+		// @TODO: #2026 we could add fast path here, that checks if the task is already done, 
+		// as ->query is performing a lot of operations even in such case
+	
 		added_tasks.fetch_add(1);
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
@@ -96,7 +99,7 @@ namespace query::internal {
 			return true;
 		}
 
-		// This line, although mabye counter intuitive on the first sight, is correct.
+		// This line, although maybe counter intuitive on the first sight, is correct.
 		// It's because we don't count task completion here, but rather the number of added tasks
 		// to the pool. Some tasks may be added multiple times, (but only one execution will
 		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
@@ -117,7 +120,7 @@ namespace query::internal {
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
 		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
 
-		// Now becasue we are adding a new task to the pool, we increment the added tasks counter.
+		// Now because we are adding a new task to the pool, we increment the added tasks counter.
 		added_tasks.fetch_add(1);
 
 		{
