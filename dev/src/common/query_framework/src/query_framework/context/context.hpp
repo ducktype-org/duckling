@@ -58,9 +58,9 @@ namespace query {
 
 		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
-		/** 
-		 * @brief Helper RAII object to handle query graph, active graph, and cycle checks logic when calling another query.
-		 * Used in query and await.
+		/**
+		 * @brief Helper RAII object to handle query graph, active graph, and cycle checks logic
+		 * when calling another query. Used in query and await.
 		 */
 		struct QueryGraphHandler final {
 		private:
@@ -69,7 +69,11 @@ namespace query {
 
 
 		public:
-			QueryGraphHandler(Context& this_context, internal::NodeID caller, internal::NodeID callee): caller(caller), callee(callee) {
+			QueryGraphHandler(
+				Context& this_context, internal::NodeID caller, internal::NodeID callee
+			):
+				  caller(caller),
+				  callee(callee) {
 				main_query_state.addDependency(caller, callee);
 
 				// @TODO: #2026: Optimize it, we only need to add edge here, when the query is not ready.
@@ -78,9 +82,9 @@ namespace query {
 				// We add edge from 'caller' to 'callee' to represent the dependency.
 				// Important note #1945:
 				// Current cycle detection algorithm works only when we use wait-on-await strategy.
-				// For other strategies we will have to additionally register special "working-on" edges.
-				// Also note, that we should not add any edges when scheduling queries.
-				// Scheduling acts as if the schedule operation came from outside the query framework.
+				// For other strategies we will have to additionally register special "working-on"
+				// edges. Also note, that we should not add any edges when scheduling queries. Scheduling
+				// acts as if the schedule operation came from outside the query framework.
 				main_query_state.getActiveGraph()->setEdge(caller, callee);
 				auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
@@ -104,7 +108,10 @@ namespace query {
 								for (auto node_id: cycle.cycle_nodes) {
 									result += "  - Query node ";
 									result += base::strConcat(
-										node_id.q_id.asInt(), ".", node_id.hash.val.toStringHex(), "\n"
+										node_id.q_id.asInt(),
+										".",
+										node_id.hash.val.toStringHex(),
+										"\n"
 									);
 								}
 								return result;
@@ -119,7 +126,6 @@ namespace query {
 						caller.hash.val.toStringHex()
 					);
 				}
-
 			}
 
 			~QueryGraphHandler() {
@@ -165,11 +171,9 @@ namespace query {
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
 			QueryGraphHandler graph_handler(*this, my_node, dep_id);
-		
+
 			this->active = false;
-			defer({
-				this->active = true;
-			});
+			defer({ this->active = true; });
 
 			if (dep_id.q_id.getData().isInputQuery()) {
 				return OthQuery::internal_query(key);
@@ -222,11 +226,9 @@ namespace query {
 			);
 
 			QueryGraphHandler graph_handler(*this, my_node, handle.getID());
-		
+
 			this->active = false;
-			defer({
-				this->active = true;
-			});
+			defer({ this->active = true; });
 
 			handle.await();
 
