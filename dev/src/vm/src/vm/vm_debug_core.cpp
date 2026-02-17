@@ -98,7 +98,7 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 	std::string args_str = string.substr(paren_open + 1, paren_close - paren_open - 1);
 
 	u64               start = 0;
-	OwnedArgumentList arguments;
+	arguments = OwnedArgumentList();
 	while (start < args_str.length()) {
 		u64 end = args_str.find(',', start);
 
@@ -139,6 +139,7 @@ void DuckVMDebugCore::getStatus() const {
 		}, status);
 
 		if(std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+			freeArguments(arguments);
 			auto exitval = std::get<vm::api::ExecutionCompleted>(response.value()).exit_value;
 
 			if (exitval->type->getName() != base::StrID("i64"))

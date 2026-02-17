@@ -44,6 +44,7 @@ private:
 	u64     step_counter = 0;
 
 	std::vector<std::string> debug_args;
+	OwnedArgumentList arguments;
 };
 
 class DuckVMDebugCoreException: public base::Exception {
