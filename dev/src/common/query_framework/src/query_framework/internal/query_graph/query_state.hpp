@@ -156,7 +156,7 @@ namespace query::internal {
 
 		/**
 		 * Returns singleton task pool used for handling execution of queries.
-		 * @TODO ....
+		 * @TODO: #2038 change this to a getter of query state member.
 		 */
 		Ref<TaskPool> getTaskPool() const;
 

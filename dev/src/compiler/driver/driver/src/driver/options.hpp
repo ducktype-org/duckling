@@ -35,6 +35,16 @@ namespace compiler::driver {
 			bool enabled = true;
 		};
 
+		/**
+		 * Options related to the execution management of the compiler.
+		 */
+		struct ExecutionOptions final {
+			/**
+			 * Number of workers to use for parallel tasks run on the worker manager (mainly for query).
+			 */
+			u64 worker_count = 1;
+		};
+
 		struct ArtifactsOptions final {
 			fs::FilePath artifacts_path;
 
@@ -96,6 +106,7 @@ namespace compiler::driver {
 			global_state::BackendOptions      backend_options;
 			options_types::DebugOptions       debug_options;
 			options_types::IncrementalOptions incremental;
+			options_types::ExecutionOptions   execution_options;
 		};
 
 		/**
@@ -104,6 +115,7 @@ namespace compiler::driver {
 		 */
 		struct ReplMode final {
 			options_types::DebugOptions debug_options;
+			options_types::ExecutionOptions   execution_options;
 		};
 
 		/**

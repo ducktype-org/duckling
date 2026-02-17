@@ -62,6 +62,7 @@ namespace concurrent::worker {
 
 	void WorkerManager::setWorkers(usize num_workers) {
 		auto ware_worker_count_set = is_worker_count_set.test_and_set();
+
 		CORE_ASSERT(
 			not ware_worker_count_set,
 			"WorkerManager::setWorkers can only be called once and before any call to get()!"
