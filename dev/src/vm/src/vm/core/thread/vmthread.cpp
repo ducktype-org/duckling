@@ -636,6 +636,9 @@ namespace vm {
 		const std::string&      func_name,
 		const RunArguments&     run_arguments
 	) {
+		// @TODO: #2040 Make this function check if anyone else is executing anything,
+		// or simplify the state checking, perhaps remove state from thread and move all the state
+		// to the process?
 		safeRun(program, func_name, run_arguments);
 		waitForRunningResponse();
 	}

@@ -61,9 +61,7 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Run a function with a given name on DVM.
-	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
-	 *
+	 * @brief Same as runFunction, but executes the function synchronously and waits for it to finish.
 	 * @return The exit value of the function if it was ran successfully or an API error otherwise.
 	 */
 	std::expected<ExitValue, ApiError> runFunctionAwait(
