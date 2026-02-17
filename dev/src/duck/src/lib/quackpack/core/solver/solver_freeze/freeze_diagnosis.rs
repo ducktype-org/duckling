@@ -5,19 +5,19 @@ use futures::future::join_all;
 use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
-        BranchOrTag, Dependency, FeatureName, Manifest,
+        Dependency, FeatureName, Manifest,
         gathering::{
-            fetch_types::{FetchResult, ManifestsRequest, NotPinnedRequest, PinnedRequest},
+            fetch_types::FetchResult,
             gatherer::Gatherer,
         },
         git_access::GitAccess,
         solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        types_common::{ExpandedLocation, ExpandedPackage, InternedLocation, Location, Package},
+        types_common::ExpandedPackage,
     },
 };
 
 impl SolverFreeze {
-    async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
+    pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
         &self,
         gatherer: &'duck Gatherer<'duck, GitAccessImpl>,
     ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
@@ -26,43 +26,7 @@ impl SolverFreeze {
             if *pkg == self.main_pkg {
                 continue;
             }
-            let request = match pkg.location.as_ref() {
-                ExpandedLocation::Registry { url, real_name } => {
-                    ManifestsRequest::Pinned(PinnedRequest {
-                        package: Package {
-                            location: InternedLocation::new(Location::Registry {
-                                url: url.clone(),
-                                real_name: *real_name,
-                            }),
-                            version: pkg.version,
-                        },
-                        features: HashSet::new(),
-                        local_root: None,
-                    })
-                }
-                ExpandedLocation::Git { url, commit } => {
-                    ManifestsRequest::NotPinned(NotPinnedRequest {
-                        location: InternedLocation::new(Location::Git {
-                            url: url.clone(),
-                            branch_or_tag: BranchOrTag::Default,
-                            rev: Some(*commit),
-                        }),
-                        versions: None,
-                        features: HashSet::new(),
-                        local_root: None,
-                    })
-                }
-                ExpandedLocation::Local { absolute_path } => {
-                    ManifestsRequest::NotPinned(NotPinnedRequest {
-                        location: InternedLocation::new(Location::Local {
-                            path: absolute_path.clone(),
-                        }),
-                        versions: None,
-                        features: HashSet::new(),
-                        local_root: Some(absolute_path.clone()),
-                    })
-                }
-            };
+            let request = pkg.create_manifest_request();
             tasks.push(Box::pin(gatherer.fetch(request)));
         }
         let results = join_all(tasks).await;

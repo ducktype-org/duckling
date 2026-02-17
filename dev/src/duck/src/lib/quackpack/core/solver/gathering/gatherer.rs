@@ -276,14 +276,14 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             commit: cloned_pkg.commit_hash,
         });
         let mut git_access = self.git_access.lock().await;
-        if !git_access.is_stored(url.clone(), cloned_pkg.commit_hash) {
-            if let Err(e) = git_access.store(
+        if !git_access.is_stored(url.clone(), cloned_pkg.commit_hash)
+            && let Err(e) = git_access.store(
                 url.clone(),
                 cloned_pkg.commit_hash,
                 path_where_cloned.path(),
-            ) {
-                return Ok(GathererComputation(None, vec![e]));
-            }
+            )
+        {
+            return Ok(GathererComputation(None, vec![e]));
         }
         let expanded_pkg = ExpandedPackage {
             location: expanded_loc,
