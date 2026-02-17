@@ -277,6 +277,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = 1,
+							},
 						}
 					);
 
@@ -354,8 +357,6 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
-					// PR change it
-					concurrent::worker::setWorkerCount(base::safeIntConv<u64>(worker_count));
 
 					compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -370,6 +371,9 @@ clah::Clah getClahForMain() {
 							.backend_options = getBackendOptionsFromClap(options),
 							.debug_options = getDebugOptionsFromClap(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
 						}
 					);
 					const auto& linking_options = getLinkingOptionsFromClap(options);
@@ -445,6 +449,9 @@ clah::Clah getClahForMain() {
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
+									.execution_options = {
+										.worker_count = 1,
+									},
 						}
 					);
 
@@ -471,6 +478,9 @@ clah::Clah getClahForMain() {
 							   compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = getDebugOptionsFromClap(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
 
