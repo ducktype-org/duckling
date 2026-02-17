@@ -119,10 +119,10 @@ impl Default for RequestAction {
 ///
 /// Note(terminology):
 /// ------------------
-///     * a `request` signifies a need to read the manifest of a given package (pinned request) or the
-///         manifests of all the packages from a given location, satisfying some versions constraints (not pinned request),
-///     * a `fetch` is a process of obtaining manifest/manifests for the first time, for example from Ducknest,
-///     * to satisfy a `request`, a `fetch` may be made, this usually happens for the first `request` referencing a specific location/package.
+/// 1. a *request* signifies a need to read the manifest of a given package (pinned request) or the
+///     manifests of all the packages from a given location, satisfying some versions constraints (not pinned request),
+/// 2. a *fetch* is a process of obtaining manifest/manifests for the first time, for example from Ducknest,
+/// 3. to satisfy a *request*, a *fetch* may be made, this usually happens for the first *request* referencing a specific location/package.
 pub struct GathererState {
     not_pinned_fetches: HashMap<InternedLocation, QueryState>,
     pinned_fetches: HashMap<Package, QueryState>,
