@@ -40,7 +40,8 @@ namespace compiler::driver {
 		 */
 		struct ExecutionOptions final {
 			/**
-			 * Number of workers to use for parallel tasks run on the worker manager (mainly for query).
+			 * Number of workers to use for parallel tasks run on the worker manager (mainly for
+			 * query).
 			 */
 			u64 worker_count = 1;
 		};
@@ -114,8 +115,8 @@ namespace compiler::driver {
 		 * and does not persist artifacts to disk.
 		 */
 		struct ReplMode final {
-			options_types::DebugOptions debug_options;
-			options_types::ExecutionOptions   execution_options;
+			options_types::DebugOptions     debug_options;
+			options_types::ExecutionOptions execution_options;
 		};
 
 		/**

@@ -1,13 +1,14 @@
 #include "worker_count.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <iostream>
+
 #include <atomic>
+#include <iostream>
 
 namespace concurrent::worker {
 
 	namespace {
-		constinit std::atomic<u64> worker_count{0};
+		constinit std::atomic<u64> worker_count{ 0 };
 	}
 
 	void setWorkerCount(u64 value) {
@@ -21,11 +22,11 @@ namespace concurrent::worker {
 			setWorkerCount(1);
 			count = 1;
 
-			// This intentionally does not use the logger as this is a temporary warning, 
+			// This intentionally does not use the logger as this is a temporary warning,
 			// not a proper log, as well as to keep concurrent module dependent only on base.
 			std::cerr << "Warning: Worker count was not set, defaulting to 1 worker.\n";
 		}
-		
+
 		CORE_ASSERT(count != 0, "Worker count has not been set.");
 
 		return count;

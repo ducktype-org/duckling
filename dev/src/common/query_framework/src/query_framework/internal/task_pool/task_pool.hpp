@@ -31,8 +31,9 @@ namespace query::internal {
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds unnecessary overhead. (the other one is inside the task pool implementation).
-		// See if std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
+		// @TODO: #2035 at least one layer of std::function should be removed here, as it adds
+		// unnecessary overhead. (the other one is inside the task pool implementation). See if
+		// std::any apparch/manual void* is sufficiently faster to be used instead of std::function.
 
 		NodeID                   id;
 		concurrent::worker::Task work;

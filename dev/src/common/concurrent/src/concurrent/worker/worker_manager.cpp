@@ -63,7 +63,7 @@ namespace concurrent::worker {
 	}
 
 	WorkerManager::WorkerManager() {
-		auto num_workers    = getWorkerCount();
+		auto num_workers = getWorkerCount();
 		setup(static_cast<usize>(num_workers));
 	}
 

@@ -18,13 +18,13 @@ namespace concurrent::worker {
 	 * tasks are completed before destroying the WorkerManager.
 	 */
 	class WorkerManager final {
-
 		/**
 		 * Initializes or resets the WorkerManager state.
 		 * This is separated from the constructor to allow resetting the state in unit tests.
 		 * See also: testPrivateAccessReloadState.
 		 */
 		void setup(usize num_workers);
+
 	public:
 		/**
 		 * @brief Tests access to private reload state for unit testing.
