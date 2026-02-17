@@ -83,8 +83,9 @@ namespace query {
 				// Important note #1945:
 				// Current cycle detection algorithm works only when we use wait-on-await strategy.
 				// For other strategies we will have to additionally register special "working-on"
-				// edges. Also note, that we should not add any edges when scheduling queries. Scheduling
-				// acts as if the schedule operation came from outside the query framework.
+				// edges. Also note, that we should not add any edges when scheduling queries.
+				// Scheduling acts as if the schedule operation came from outside the query
+				// framework.
 				main_query_state.getActiveGraph()->setEdge(caller, callee);
 				auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
