@@ -61,6 +61,16 @@ namespace vm::api {
 	);
 
 	/**
+	 * @brief Run a function with a given name on DVM.
+	 * @note The exit value of the called function can be retrieved by the `getExitValue` endpoint.
+	 *
+	 * @return The exit value of the function if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runFunctionAwait(
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
+	);
+
+	/**
 	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
 	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
