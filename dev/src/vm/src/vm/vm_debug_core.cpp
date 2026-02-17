@@ -128,7 +128,7 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 }
 
 
-void DuckVMDebugCore::getStatus() const {
+void DuckVMDebugCore::getStatus() {
 	auto response = vm::api::getExecutionStatus(pid);
 	if (response.has_value()) {
 		vm::api::ProcStatus status = response.value();
@@ -140,6 +140,8 @@ void DuckVMDebugCore::getStatus() const {
 
 		if(std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
 			freeArguments(arguments);
+			arguments = OwnedArgumentList();
+
 			auto exitval = std::get<vm::api::ExecutionCompleted>(response.value()).exit_value;
 
 			if (exitval->type->getName() != base::StrID("i64"))

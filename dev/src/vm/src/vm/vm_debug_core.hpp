@@ -26,7 +26,7 @@ public:
 
 	void runVm();
 	void runFun(const std::string& string);
-	void getStatus() const;
+	void getStatus();
 	void step() const;
 	void resume() const;
 	void pause() const;
