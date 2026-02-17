@@ -149,7 +149,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         }))
     }
 
-    async fn fetch(&self, request: ManifestsRequest) -> GathererResult<Option<FetchResult>> {
+    pub async fn fetch(&self, request: ManifestsRequest) -> GathererResult<Option<FetchResult>> {
         match request {
             ManifestsRequest::Pinned(pinned_request) => {
                 self.fetch_registry_pinned(pinned_request).await

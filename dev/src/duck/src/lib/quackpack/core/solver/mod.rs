@@ -9,7 +9,7 @@ use std::{cell::OnceCell, marker::PhantomData};
 
 use crate::{
     QpCtx, QuackResult,
-    quackpack::core::{PackageCtx, solver::git_access::GitAccess, solver_freeze::SolverFreeze},
+    quackpack::core::{PackageCtx, git_access::GitAccess, solver_freeze::SolverFreeze},
 };
 
 pub enum SolverMode {
@@ -34,7 +34,7 @@ pub struct Solver<'duck, State: SolverState> {
     //  * package root is the freeze's primary location
     //  * in the case of its absence the freeze from the storage should be passed
     //  * in the case of its absence an empty freeze should be passed.
-    _current_freeze: SolverFreeze,
+    current_freeze: SolverFreeze,
     _gathered_info: OnceCell<ToImplement>,
     _state: PhantomData<State>,
 }
@@ -44,7 +44,7 @@ impl<'duck> Solver<'duck, Prepared> {
         Self {
             _qp_ctx: package_ctx.ctx(),
             _root_package_ctx: package_ctx,
-            _current_freeze: current_freeze,
+            current_freeze,
             _gathered_info: OnceCell::new(),
             _state: PhantomData,
         }

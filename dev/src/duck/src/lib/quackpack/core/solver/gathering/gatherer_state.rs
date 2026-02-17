@@ -556,6 +556,8 @@ impl GathererState {
         pkg_data.requested_features.extend(requested_features);
         pkg_data.dep_requests()
     }
+
+    //pub fn into_gathered_info()
 }
 
 impl Default for GathererState {
