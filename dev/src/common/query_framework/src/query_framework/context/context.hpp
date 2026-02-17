@@ -23,6 +23,12 @@ namespace query {
 	}
 
 	/**
+	 * We expose the TaskHandle type here, as it is used in the Context interface,
+	 * but we want to avoid exposing the whole TaskPool interface.
+	 */
+	using internal::TaskHandle;
+
+	/**
 	 * @brief Context is type of a special object
 	 * that query implementation use to perform three key operations:
 	 * 	* call other query
@@ -165,7 +171,7 @@ namespace query {
 		 * @note This is also the secondary starting-point of parallelism in the query framework (first one beeing the scheduling of multiple global tasks by the query framework user). 
 		 */
 		template<typename OthQuery>
-		auto schedule(const typename OthQuery::QKey& key) {
+		TaskHandle schedule(const typename OthQuery::QKey& key) {
 			static_assert(
 				not OthQuery::QUERY_DATA.isInputQuery(), "Cannot schedule an input query."
 			);
@@ -186,13 +192,13 @@ namespace query {
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
 			CORE_ASSERT(
-				OthQuery::getID() == handle.getId().q_id,
+				OthQuery::getID() == handle.getID().q_id,
 				"Task handle query ID does not match the awaited query type."
 			);
 
 			handle.await();
 
-			return OthQuery::internal_load(handle.getId().hash.val);
+			return OthQuery::internal_load(handle.getID().hash.val);
 		}
 
 		/**

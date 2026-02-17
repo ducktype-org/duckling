@@ -54,7 +54,7 @@ namespace compiler::helios {
 			// and return failure at the end if so.
 			bool is_failed = false;
 
-			std::vector<query::internal::TaskHandle> scheduled_tasks;
+			std::vector<query::TaskHandle> scheduled_tasks;
 
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
