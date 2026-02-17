@@ -1,7 +1,5 @@
 #include "queries.hpp"
 
-#include <concurrent/worker/worker.hpp>          // PR
-#include <concurrent/worker/worker_manager.hpp>  // PR
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
