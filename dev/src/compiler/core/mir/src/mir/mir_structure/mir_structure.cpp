@@ -35,8 +35,8 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	u64 Function::queryUnstablePerfectHash() const {
-		// There should be no collisions possible here, since both FunctionSymID and GlobalVariableCTOR just store
-		// SymID, which has a perfect hash. 
+		// There should be no collisions possible here, since both FunctionSymID and
+		// GlobalVariableCTOR just store SymID, which has a perfect hash.
 		variant_match(this->helios_id) {
 			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
 			variant_case(GlobalVariableCTOR, global_ctor) {

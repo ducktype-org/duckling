@@ -22,7 +22,6 @@ namespace query {
 		struct EntryPointHelper final {
 			template<typename QueryType>
 			auto static callQuery(const typename QueryType::QKey& key) -> decltype(auto) {
-
 				auto node_id = makeNodeID<QueryType>(key);
 
 				Context::getState().getTaskPool()->addTask(internal::Task{

@@ -75,12 +75,13 @@ namespace query {
 		Context(Context&&)      = delete;
 
 		/**
-		 * This is the main query invocation method, used to call other queries from a query implementation.
+		 * This is the main query invocation method, used to call other queries from a query
+		 * implementation.
 		 *
 		 * This logically acts very similar as schedule and instant await.
-		 * The task will be executed by the caller worker immediately, unless another worker is already executing it,
-		 * in which case we will wait for it to complete and then load the result.
-		 * 
+		 * The task will be executed by the caller worker immediately, unless another worker is already
+		 * executing it, in which case we will wait for it to complete and then load the result.
+		 *
 		 * @note This is also an external query invocation layer.
 		 * @TODO: #1887 change later to make separation clearer.
 		 * See also: #2026
@@ -163,12 +164,14 @@ namespace query {
 		}
 
 		/**
-		 * @brief Schedules another query call as a task and returns a handle to await its completion.
-		 * This is non blocking operation, the task will be scheduled for execution and this method will return immediately with a handle.
+		 * @brief Schedules another query call as a task and returns a handle to await its
+		 * completion. This is non blocking operation, the task will be scheduled for execution and
+		 * this method will return immediately with a handle.
 		 *
-		 * @note The intended use case for this method is to schedule large tasks that could likely be executed by another worker, before
-		 * we require the result.
-		 * @note This is also the secondary starting-point of parallelism in the query framework (first one beeing the scheduling of multiple global tasks by the query framework user). 
+		 * @note The intended use case for this method is to schedule large tasks that could likely
+		 * be executed by another worker, before we require the result.
+		 * @note This is also the secondary starting-point of parallelism in the query framework
+		 * (first one beeing the scheduling of multiple global tasks by the query framework user).
 		 */
 		template<typename OthQuery>
 		TaskHandle schedule(const typename OthQuery::QKey& key) {
@@ -184,10 +187,11 @@ namespace query {
 
 		/**
 		 * @brief Waits for the completion of a scheduled query and returns its result.
-		 * The task will be executed by the caller worker immediately, unless another worker is already executing it,
-		 * in which case we will wait for it to complete and then load the result.
+		 * The task will be executed by the caller worker immediately, unless another worker is already
+		 * executing it, in which case we will wait for it to complete and then load the result.
 		 *
-		 * @param handle The handle of the scheduled query to wait for, returned by the ctx.schedule method.
+		 * @param handle The handle of the scheduled query to wait for, returned by the ctx.schedule
+		 * method.
 		 */
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {

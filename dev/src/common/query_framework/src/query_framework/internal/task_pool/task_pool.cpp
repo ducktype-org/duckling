@@ -39,7 +39,7 @@ namespace query::internal {
 			= worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
 				  tryExecuteTask(pt);
 			  });
-		
+
 		is_worker_free_map[chosen_worker] = false;
 	}
 

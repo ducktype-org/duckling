@@ -66,9 +66,8 @@ namespace compiler::helios {
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable);
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
+					if (kind(sym) == SymbolKind::Function)
 						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
-					}
 					if (kind(sym) == SymbolKind::Class)
 						appendClassConstructors(out.functions, sym, ctx);
 				}
