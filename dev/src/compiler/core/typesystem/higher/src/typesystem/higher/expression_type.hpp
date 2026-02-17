@@ -123,7 +123,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(symbol_type, value_category);
+			return hashing::justHash<hashing::SHA256>(symbol_type, value_category);
 		}
 
 		friend constexpr void addToHash(

@@ -133,7 +133,9 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(category, is_pure, allows_semantic, force_semantic);
+			return hashing::justHash<hashing::SHA256>(
+				category, is_pure, allows_semantic, force_semantic
+			);
 		}
 
 		friend constexpr void addToHash(

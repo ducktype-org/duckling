@@ -239,7 +239,9 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(abstract_type, reference_kind, mutability, leakage, uniqueness);
+			return hashing::justHash<hashing::SHA256>(
+				abstract_type, reference_kind, mutability, leakage, uniqueness
+			);
 		}
 
 		friend constexpr void addToHash(

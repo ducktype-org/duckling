@@ -68,7 +68,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(source, target);
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
@@ -111,7 +111,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(source, target);
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
@@ -154,7 +154,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash(source, target);
+			return hashing::justHash<hashing::SHA256>(source, target);
 		}
 	};
 
