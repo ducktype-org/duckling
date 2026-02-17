@@ -12,7 +12,7 @@ namespace query::utils {
 			std::function<std::any(query::Context&)> value;
 			usize                                    id;
 
-			// PR: atomic?
+			// @TODO: #2036 this should be atomic
 			static inline usize next_id = 0;
 
 			KeyFor_DoWithContext(std::function<std::any(query::Context&)> value):
