@@ -129,7 +129,6 @@ namespace query::internal {
 	Ref<ActiveGraph> QueryState::getActiveGraph() noexcept { return &active_graph; }
 
 	Ref<TaskPool> QueryState::getTaskPool() const {
-		// PR move to cpp
 		static TaskPool task_pool;
 		return &task_pool;
 	}

@@ -154,7 +154,10 @@ namespace query::internal {
 		| Task pool interface:   |
 		\************************/
 
-		// add doc comment
+		/**
+		 * Returns singleton task pool used for handling execution of queries.
+		 * @TODO ....
+		 */
 		Ref<TaskPool> getTaskPool() const;
 
 		/***************************\
@@ -327,11 +330,6 @@ namespace query::internal {
 		 */
 		ActiveGraph active_graph;
 
-		/**
-		 * Task pool handling execution of queries.
-		 * PR: think about this mutable
-		 */
-		// mutable TaskPool task_pool;
 
 		/**
 		 * The previous compilation data if any.
