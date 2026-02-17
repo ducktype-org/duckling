@@ -72,9 +72,18 @@ impl AsRef<Location> for InternedLocation {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Location {
-    Registry(LocRegistry),
-    Git(LocGit),
-    Local(LocLocal),
+    Registry {
+        url: Url,
+        real_name: StrId,
+    },
+    Git {
+        url: Url,
+        branch_or_tag: BranchOrTag,
+        rev: Option<StrId>,
+    },
+    Local {
+        path: PathBuf,
+    },
 }
 
 impl TryFrom<&Dependency> for Location {
@@ -82,51 +91,33 @@ impl TryFrom<&Dependency> for Location {
 
     fn try_from(dependency: &Dependency) -> QuackResult<Self> {
         match &dependency.desc().source().as_ref() {
-            Source::Registry(registry) => Ok(Self::Registry(LocRegistry {
+            Source::Registry(registry) => Ok(Self::Registry {
                 url: registry.url().clone(),
                 real_name: dependency.real_name(),
-            })),
-            Source::Local(local) => Ok(Self::Local(LocLocal {
+            }),
+            Source::Local(local) => Ok(Self::Local {
                 path: PathBuf::from_str(local.entry_in_manifest().as_str())?,
-            })),
-            Source::Git(git) => Ok(Self::Git(LocGit {
+            }),
+            Source::Git(git) => Ok(Self::Git {
                 url: git.url().clone(),
                 branch_or_tag: git.branch_or_tag(),
                 rev: git.rev(),
-            })),
+            }),
         }
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct LocRegistry {
-    pub url: Url,
-    pub real_name: StrId,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct LocGit {
-    pub url: Url,
-    pub branch_or_tag: BranchOrTag,
-    pub rev: Option<StrId>,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct LocLocal {
-    pub path: PathBuf,
-}
-
 impl Location {
     pub fn is_registry(&self) -> bool {
-        matches!(self, Self::Registry(_))
+        matches!(self, Self::Registry { .. })
     }
 
     pub fn is_git(&self) -> bool {
-        matches!(self, Self::Git(_))
+        matches!(self, Self::Git { .. })
     }
 
     pub fn is_local(&self) -> bool {
-        matches!(self, Self::Local(_))
+        matches!(self, Self::Local { .. })
     }
 }
 

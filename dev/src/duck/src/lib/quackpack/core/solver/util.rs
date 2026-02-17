@@ -80,8 +80,8 @@ mod test {
         quackpack::core::{
             Version, parse_manifest,
             types_common::{
-                ExpandedLocRegistry, ExpandedLocation, ExpandedPackage, InternedExpandedLocation,
-                InternedLocation, LocRegistry, Location,
+                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
+                Location,
             },
             util::get_possible_realisations,
         },
@@ -117,15 +117,14 @@ dependencies:
             .all_dependencies()
             .get(&StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),
@@ -171,15 +170,14 @@ dependencies:
             .all_dependencies()
             .get(&StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry(LocRegistry {
+        let location_b = InternedLocation::new(Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        }));
-        let exp_location_b =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: Url::parse("http://localhost:9001").unwrap(),
-                real_name: StrId::from("b"),
-            }));
+        });
+        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),

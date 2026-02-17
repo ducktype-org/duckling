@@ -27,8 +27,8 @@ use crate::{
             },
             git_access::GitAccess,
             types_common::{
-                ExpandedLocGit, ExpandedLocLocal, ExpandedLocRegistry, ExpandedLocation,
-                ExpandedPackage, InternedExpandedLocation, InternedLocation, LocLocal, Location,
+                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
+                Location,
             },
         },
         schemas::registry,
@@ -118,9 +118,9 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
     ) -> QuackResult<FetchResult> {
-        let root_loc = InternedLocation::new(Location::Local(LocLocal {
+        let root_loc = InternedLocation::new(Location::Local {
             path: root_path.clone(),
-        }));
+        });
         let root_request = NotPinnedRequest {
             location: root_loc,
             versions: None,
@@ -137,11 +137,9 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             origin_location: root_loc,
             fetched_manifests: HashMap::from([(
                 ExpandedPackage {
-                    location: InternedExpandedLocation::new(ExpandedLocation::Local(
-                        ExpandedLocLocal {
-                            absolute_path: root_path,
-                        },
-                    )),
+                    location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                        absolute_path: root_path,
+                    }),
                     version: None,
                 },
                 Box::new(root_manifest),
@@ -154,14 +152,15 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             ManifestsRequest::Pinned(pinned_request) => {
                 self.fetch_registry_pinned(pinned_request).await
             }
-            ManifestsRequest::NotPinned(not_pinned_request) => match not_pinned_request
-                .location
-                .as_ref()
-            {
-                Location::Registry(_) => self.fetch_registry_not_pinned(not_pinned_request).await,
-                Location::Git(_) => self.fetch_git(not_pinned_request).await,
-                Location::Local(_) => self.fetch_local(not_pinned_request),
-            },
+            ManifestsRequest::NotPinned(not_pinned_request) => {
+                match not_pinned_request.location.as_ref() {
+                    Location::Registry { .. } => {
+                        self.fetch_registry_not_pinned(not_pinned_request).await
+                    }
+                    Location::Git { .. } => self.fetch_git(not_pinned_request).await,
+                    Location::Local { .. } => self.fetch_local(not_pinned_request),
+                }
+            }
         }
     }
 
@@ -169,16 +168,16 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         &self,
         request: PinnedRequest,
     ) -> GathererResult<Option<FetchResult>> {
-        let Location::Registry(loc_registry) = request.package.location.as_ref() else {
+        let Location::Registry { url, real_name } = request.package.location.as_ref() else {
             qp_bail_internal!("Tried to make pinned registry fetch for a non-registry location");
         };
         let Some(version) = request.package.version else {
             qp_bail_internal!("Tried to make pinned fetch without specifying version")
         };
         let pkg_to_fetch = PackageWithUrl {
-            id: loc_registry.real_name,
+            id: *real_name,
             version,
-            url: loc_registry.url.clone(),
+            url: url.clone(),
         };
         let fetcher_response: GathererComputation<Option<registry::Manifest>> = self
             .fetcher
@@ -188,11 +187,10 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         let Some(fetcher_response) = fetcher_response.0 else {
             return Ok(GathererComputation(None, fetcher_response.1));
         };
-        let expanded_loc =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: loc_registry.url.clone(),
-                real_name: loc_registry.real_name,
-            }));
+        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: *real_name,
+        });
         let manifest: QuackResult<Manifest> = fetcher_response.try_into();
         match manifest {
             Ok(manifest) => Ok(GathererComputation::only_success(Some(
@@ -213,24 +211,23 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         &self,
         request: NotPinnedRequest,
     ) -> GathererResult<Option<FetchResult>> {
-        let Location::Registry(loc_registry) = request.location.as_ref() else {
+        let Location::Registry { url, real_name } = request.location.as_ref() else {
             qp_bail_internal!(
                 "Tried to make not pinned registry fetch for a non-registry location"
             );
         };
         let fetcher_response: GathererComputation<Option<MultiMetadata>> = self
             .fetcher
-            .get_package_all_metadata(&loc_registry.url, loc_registry.real_name)
+            .get_package_all_metadata(url, *real_name)
             .await
             .into();
         let Some(fetcher_response) = fetcher_response.0 else {
             return Ok(GathererComputation(None, fetcher_response.1));
         };
-        let expanded_loc =
-            InternedExpandedLocation::new(ExpandedLocation::Registry(ExpandedLocRegistry {
-                url: loc_registry.url.clone(),
-                real_name: loc_registry.real_name,
-            }));
+        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Registry {
+            url: url.clone(),
+            real_name: *real_name,
+        });
         let mut fetch_result = NotPinnedResult {
             origin_location: request.location,
             fetched_manifests: HashMap::new(),
@@ -260,23 +257,32 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
     }
 
     async fn fetch_git(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
-        let Location::Git(loc_git) = request.location.as_ref() else {
+        let Location::Git {
+            url,
+            branch_or_tag,
+            rev,
+        } = request.location.as_ref()
+        else {
             qp_bail_internal!("Tried to make git fetch for a non-git location");
         };
-        let git_source = Git::new(loc_git.url.clone(), loc_git.branch_or_tag, loc_git.rev);
+        let git_source = Git::new(url.clone(), *branch_or_tag, *rev);
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).await.into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
             return Ok(GathererComputation(None, fetcher_response.1));
         };
-        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Git(ExpandedLocGit {
-            url: loc_git.url.clone(),
+        let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Git {
+            url: url.clone(),
             commit: cloned_pkg.commit_hash,
-        }));
+        });
         let mut git_access = self.git_access.lock().await;
-        if !git_access.is_stored(loc_git.url.clone(), cloned_pkg.commit_hash) {
-            if let Err(e) = git_access.store(loc_git.url.clone(), cloned_pkg.commit_hash, path_where_cloned.path()) {
-                return Ok(GathererComputation(None, vec![e]))
+        if !git_access.is_stored(url.clone(), cloned_pkg.commit_hash) {
+            if let Err(e) = git_access.store(
+                url.clone(),
+                cloned_pkg.commit_hash,
+                path_where_cloned.path(),
+            ) {
+                return Ok(GathererComputation(None, vec![e]));
             }
         }
         let expanded_pkg = ExpandedPackage {
@@ -295,7 +301,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
     }
 
     fn fetch_local(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
-        let Location::Local(_) = request.location.as_ref() else {
+        let Location::Local { .. } = request.location.as_ref() else {
             qp_bail_internal!("Tried to make local fetch for a non-local location")
         };
         let Some(local_root) = request.local_root else {
@@ -306,11 +312,9 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         match pkg_ctx {
             Ok(pkg_ctx) => {
                 let exp_pkg = ExpandedPackage {
-                    location: InternedExpandedLocation::new(ExpandedLocation::Local(
-                        ExpandedLocLocal {
-                            absolute_path: local_root,
-                        },
-                    )),
+                    location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                        absolute_path: local_root,
+                    }),
                     version: None,
                 };
                 Ok(GathererComputation::only_success(Some(
