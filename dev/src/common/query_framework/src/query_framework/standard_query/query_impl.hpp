@@ -53,9 +53,10 @@ namespace query::internal {
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{ QueryIntType::getID() };
 
 		// @TODO: PR check node status
-		if (auto v = QueryImplType::load(perfect_hash)) {
-			CORE_PANIC("query cache present in standardQueryEntry");
-		} else {
+		// if (auto v = QueryImplType::load(perfect_hash)) {
+			// CORE_PANIC("query cache present in standardQueryEntry");
+		// } else {
+		{
 			auto node_id = makeNodeID<QueryIntType>(key);
 			auto context = ContextAccess::make(node_id);
 

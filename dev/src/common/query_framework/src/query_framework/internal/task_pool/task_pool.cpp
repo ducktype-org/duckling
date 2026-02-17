@@ -63,12 +63,21 @@ namespace query::internal {
 	void TaskPool::execute() { CORE_UNREACHABLE(); }
 
 	void TaskPool::query(const Task& task) {
+		if (auto task_status = task_status_map.atMaybe(task.id)) {
+			if (**task_status == TaskStatus::Done) {
+				return;
+			}
+		}
+		
+
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
 			const auto       id = task.id;
 			auto& 		   mutex = task_completed_mutexes[hash(id) % TASK_SHARDS];
 			auto& cv = task_completed_cvs[hash(id) % TASK_SHARDS];
 			std::unique_lock lock(mutex);
+
+			std::cerr << "waiting (query)!\n";
 			cv.wait(lock, [this, id] { return isTaskDone(id); });
 		}
 	}
@@ -80,7 +89,7 @@ namespace query::internal {
 		// instead of comparing).
 
 		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
-		auto& mutex = task_completed_mutexes[hash(task.id) % TASK_SHARDS];
+		// auto& mutex = task_completed_mutexes[hash(task.id) % TASK_SHARDS];
 		auto& cv = task_completed_cvs[hash(task.id) % TASK_SHARDS];
 
 		// @TODO: #1973 integrate with query
@@ -91,7 +100,7 @@ namespace query::internal {
 
 			task.work(wd);
 			{
-				std::lock_guard lock(mutex);
+				// std::lock_guard lock(mutex); // is this correct?
 
 				task_status_map.update(task.id, TaskStatus::Done);
 			}
@@ -104,7 +113,7 @@ namespace query::internal {
 		// to the pool. Some tasks may be added multiple times, (but only one execution will
 		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
 		// the pool.
-		{ std::lock_guard lock(mutex); }
+		// { std::lock_guard lock(mutex); } // is this correct?
 		cv.notify_all();
 		return false;
 	}
@@ -149,20 +158,36 @@ namespace query::internal {
 	void TaskPool::await(NodeID id) {
 		auto& mutex = task_completed_mutexes[hash(id) % TASK_SHARDS];
 		auto& cv = task_completed_cvs[hash(id) % TASK_SHARDS];
+
+		if (auto task_status = task_status_map.atMaybe(id)) {
+			if (**task_status == TaskStatus::Done) {
+				return;
+			}
+			if (**task_status == TaskStatus::InProgress) {
+				std::cerr << "waiting (await 1)!\n";
+				std::unique_lock lock(mutex);
+				cv.wait(lock, [this, id] { return isTaskDone(id); });
+				return;
+			}
+		}
+		
 		std::unique_lock lock(mutex);
 		auto             task_opt
 			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
+		
 		if_opt_some(task_opt, task) {
 			lock.unlock();
 			tryExecuteTask(task);
 			lock.lock();
 		}
+		std::cerr << "waiting (await 2)!\n";
 		cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
 	bool TaskPool::isTaskDone(NodeID id) const {
 		// @TODO: #1973 integrate with query.
-		return task_status_map.contains(id) && task_status_map.getCopy(id) == TaskStatus::Done;
+		auto val = task_status_map.atMaybeCopy(id);
+		return val.has_value() and *val == TaskStatus::Done;
 	}
 
 	base::Optional<Task> TaskPool::tryStealFromGlobalUnlocked() {
