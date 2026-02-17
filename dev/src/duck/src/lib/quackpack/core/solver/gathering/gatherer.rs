@@ -9,7 +9,7 @@ use tempfile::TempDir;
 use tokio::sync::Mutex;
 
 use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail_internal,
+    QpCtx, QuackResult, QuackResultContext, qp_bail_internal,
     quackpack::{
         core::{
             FeatureName, Git, Manifest, PackageLoader, SolverMode,
@@ -269,14 +269,15 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
             return Ok(GathererComputation(None, fetcher_response.1));
         };
-        let url = StrId::new(loc_git.url.clone());
         let expanded_loc = InternedExpandedLocation::new(ExpandedLocation::Git(ExpandedLocGit {
-            url,
+            url: loc_git.url.clone(),
             commit: cloned_pkg.commit_hash,
         }));
         let mut git_access = self.git_access.lock().await;
-        if !git_access.is_stored(url, cloned_pkg.commit_hash) {
-            git_access.store(url, cloned_pkg.commit_hash, path_where_cloned.path());
+        if !git_access.is_stored(loc_git.url.clone(), cloned_pkg.commit_hash) {
+            if let Err(e) = git_access.store(loc_git.url.clone(), cloned_pkg.commit_hash, path_where_cloned.path()) {
+                return Ok(GathererComputation(None, vec![e]))
+            }
         }
         let expanded_pkg = ExpandedPackage {
             location: expanded_loc,
