@@ -2,8 +2,6 @@ add_library(Concurrent
     src/concurrent/module_flags/worker_count.cpp
     src/concurrent/worker/worker.cpp
     src/concurrent/worker/worker_manager.cpp
-    # @TODO: PR deal with this
-    # src/concurrent/task_pool/task_pool.cpp
     src/concurrent/utils/nop_wait.cpp
     src/concurrent/base/collections/hash_map.cpp
 )
@@ -15,5 +13,5 @@ duck_add_test(common concurrent_module tests/concurrent_module_test.cpp USES Con
 duck_add_test(common worker_manager tests/worker_manager_test.cpp USES Concurrent Base)
 
 
-# @TODO: PR deal with this
+# @TODO: #2030 bring the test back
 # duck_add_test(common task_pool tests/task_pool_test.cpp USES Concurrent Base)

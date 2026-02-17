@@ -62,7 +62,7 @@ namespace query::internal {
 	void TaskPool::execute() { CORE_UNREACHABLE(); }
 
 	void TaskPool::query(const Task& task) {
-		// @TODO: #2026 we could add fast path here, that checks if the task is already done,
+		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case
 
 		added_tasks.fetch_add(1);
@@ -151,6 +151,9 @@ namespace query::internal {
 	}
 
 	void TaskPool::await(NodeID id) {
+		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
+		// as ->await is performing a lot of operations even in such case
+
 		std::unique_lock lock(pool_mutex);
 		auto             task_opt
 			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
