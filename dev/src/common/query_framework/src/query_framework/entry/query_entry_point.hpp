@@ -42,8 +42,7 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto entryPoint(const typename QueryType::QKey& key) -> decltype(auto) {
-		// PR assert that we are not inside query
-
+		// @TODO: #1933 bring this assert back.
 		// CORE_ASSERT(
 		// 	Context::getState().activeQueryCount() == 0,
 		// 	"query::entryPoint called from within query!"
