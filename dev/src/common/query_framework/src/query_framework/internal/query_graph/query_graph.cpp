@@ -387,8 +387,10 @@ namespace query::internal {
 			// rev_deps(A) = {B}
 			// rev_deps(D) = {B}
 
-			{
-				auto removed_node_deps = node_deps->at(node)->getHolder();
+			// Some input's may have no dependencies at all when in Language Server mode (e.g. no
+			// queries were executed between reparsings).
+			if_opt_some(node_deps->atMaybe(node), node_deps_children_data) {
+				auto removed_node_deps = node_deps_children_data->getHolder();
 
 				for (const auto& dep: *removed_node_deps) {
 					if_opt_some(node_reverse_deps->atMaybe(dep), its_reverse_deps) {
