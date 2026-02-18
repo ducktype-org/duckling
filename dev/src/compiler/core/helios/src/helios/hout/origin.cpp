@@ -11,7 +11,7 @@ namespace compiler::helios::code {
 		return source_position;
 	}
 
-	ElementOrigin ElementOrigin::extended(pst::Access<pst::LangElement> pst_element) {
+	ElementOrigin ElementOrigin::extended(pst::Access<pst::LangElement> pst_element) const {
 		base::Optional<dia::SourcePosition> new_pos;
 		match_optional(source_position) {
 			opt_some(pos) {
@@ -22,7 +22,7 @@ namespace compiler::helios::code {
 		return { new_pos, false };
 	}
 
-	ElementOrigin ElementOrigin::generatedFrom() { return { source_position, true }; }
+	ElementOrigin ElementOrigin::generatedFrom() const { return { source_position, true }; }
 
 	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {
 		auto pos = pst_elements[0]->getSourcePosition();

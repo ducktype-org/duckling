@@ -47,7 +47,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-			symbol_ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
+			symbol_ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 			return visitor.definition_symbol_type.value();
 		}
 

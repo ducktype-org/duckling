@@ -20,6 +20,7 @@ impl Package {
         original_schema: ManifestSchema,
         manifest: Manifest,
         root: PathBuf,
+        manifest_path: PathBuf,
         warnings: Vec<String>,
     ) -> Self {
         Self {
@@ -28,6 +29,7 @@ impl Package {
                 original_schema,
                 manifest,
                 root,
+                manifest_path,
                 warnings,
             }),
         }
@@ -53,6 +55,10 @@ impl Package {
         &self.inner.root
     }
 
+    pub fn manifest_path(&self) -> &Path {
+        &self.inner.manifest_path
+    }
+
     pub fn emit_warnings(&self, ctx: &DuckCtx) {
         for warning in self.inner.warnings.iter() {
             ctx.error_console().warning(warning);
@@ -66,6 +72,7 @@ struct PackageInner {
     original_schema: ManifestSchema,
     manifest: Manifest,
     root: PathBuf,
+    manifest_path: PathBuf,
     warnings: Vec<String>,
 }
 

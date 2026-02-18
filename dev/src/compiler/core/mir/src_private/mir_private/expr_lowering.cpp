@@ -470,7 +470,7 @@ namespace compiler::mir {
 		) {
 			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
 				tsh::SymbolType<> unit_sym_type{
-					function.getContext().query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -489,9 +489,11 @@ namespace compiler::mir {
 				}
 				std::ranges::reverse(element_types);
 
-				tsh::SymbolType<> result_type{ function.getContext().query<tsh::QueryMetaType>({}),
-					                           tsh::ReferenceKind::Direct,
-					                           tsh::Mutability::Mutable };
+				tsh::SymbolType<> result_type{
+					tsh::getMetaType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 
 				return ExprLowerRes(
 					current,

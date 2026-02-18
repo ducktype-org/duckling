@@ -229,6 +229,19 @@ private:
 			1
 		);
 
+
+		// ========================== Comp time errors ==========================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a: f64 = 1.0 / 0.0;
+				fun main() -> i64 = 0;
+			)",
+			{ "Division", "zero" },
+			1
+		);
+
+
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
@@ -348,9 +361,8 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
-			const auto int32_type = ctx.query<tsh::QueryIntegralType>(
-				{ 32, tsh::IntegralAbstractType::Signedness::Signed }
-			);
+			const auto int32_type
+				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
 			auto st = tsh::SymbolType{
 				int32_type,
 				tsh::ReferenceKind::Direct,

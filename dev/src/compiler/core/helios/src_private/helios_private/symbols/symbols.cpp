@@ -101,7 +101,7 @@ namespace compiler::helios {
 					CORE_PANIC("Unexpected pst path of variable");
 				}
 			},
-			getSymRef(id)->getPSTData()->pst_element.unlock(ctx)
+			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
 		);
 	}
 
@@ -124,7 +124,7 @@ namespace compiler::helios {
 	}
 
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTData()->pst_element;
+		return getSymRef(id)->getPSTData()->getElement();
 	}
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
@@ -175,10 +175,7 @@ namespace compiler::helios {
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstSymbolData pst_data{
-			.scope       = scope,
-			.pst_element = stmt,
-		};
+		PstSymbolData pst_data(scope, stmt->getHash());
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
@@ -357,10 +354,7 @@ namespace compiler::helios {
 					.name = parameter->getName(),
 					.kind = SymbolKind::Parameter,
 				},
-				{
-					.scope       = scope,
-					.pst_element = element,
-				}
+				PstSymbolData(scope, element->getHash())
 			);
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
@@ -456,43 +450,35 @@ namespace compiler::helios {
 					std::vector<SymbolData> output_symbol_data;
 
 					auto i32_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
-						),
+						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto i64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
-						),
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto u64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>(
-							{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+						tsh::getIntegralType(
+							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 						),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto f64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryFloatType>({ 64 }),
+						tsh::getFloatType(ctx, 64),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);
 					auto str_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryStringType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
+						tsh::getStringType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 					);
 
 					[[maybe_unused]]
 					auto unit_type
 						= tsh::SymbolType<>(
-							ctx.query<tsh::QueryUnitType>({}),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
+							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 						);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 8> function_data
@@ -664,7 +650,7 @@ namespace compiler::helios {
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
+				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default:
@@ -690,14 +676,16 @@ namespace compiler::helios {
 			if (kind(key) == SymbolKind::Using) {
 				auto using_stmt = getSymRef(key)
 				                      ->getPSTData()
-				                      ->pst_element.unlock(ctx)
+				                      ->getElement()
+				                      .unlock(ctx)
 				                      .dynamicCast<pst::Using>()
 				                      .value();
 				pointed_chain = using_stmt->getPointed().unlock(ctx)->getNames();
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto alias_stmt = getSymRef(key)
 				                      ->getPSTData()
-				                      ->pst_element.unlock(ctx)
+				                      ->getElement()
+				                      .unlock(ctx)
 				                      .dynamicCast<pst::Alias>()
 				                      .value();
 				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
@@ -725,9 +713,12 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto pst
-				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
-				);
+			const auto pst = getSymRef(key)
+			                     ->getPSTData()
+			                     ->getElement()
+			                     .unlock(ctx)
+			                     .dynamicCast<pst::Const>()
+			                     .value();
 			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 			// Get the coerced HOUT expression
@@ -798,7 +789,7 @@ namespace compiler::helios {
 				return {};
 			}
 
-			auto pst_element = getSymRef(key)->getPSTData()->pst_element.unlock(ctx);
+			auto pst_element = getSymRef(key)->getPSTData()->getElement().unlock(ctx);
 
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//

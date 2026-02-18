@@ -319,23 +319,23 @@ namespace compiler::helios::code {
 	) {
 		usize arg_index = 0;
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
-			auto arg_expr
+			auto arg_expr_result
 				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			if (arg_expr.hasFailed()) return query::Failed();
+			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
 				for (auto&& [existing_name, _]: named_arguments)
 					if (existing_name == arg_name)
 						return RepeatedNamedArgument{ arg_index };  // Duplicate named argument.
-				named_arguments.emplace_back(arg_name, std::move(arg_expr.valueOrThrow()));
+				named_arguments.emplace_back(arg_name, arg_expr->clone());
 			} else {
 				if (!named_arguments.empty())
 					return PositionalAfterNamedArgument{
 						arg_index
 					};  // Normal argument after named one.
 
-				positional_arguments.emplace_back(std::move(arg_expr.valueOrThrow()));
+				positional_arguments.emplace_back(arg_expr->clone());
 			}
 			arg_index++;
 		}
@@ -353,7 +353,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<ExactCandidateNote>> first_candidate_msg{};
 		for (const auto& match: exact_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<ExactCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
@@ -382,7 +382,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<CoercibleCandidateNote>> first_candidate_msg{};
 		for (const auto& match: coercible_matches) {
-			auto decl           = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl           = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note = makeBox<CoercibleCandidateNote>(
 				getFunctionParamList(ctx, decl)->getSourcePosition()
 			);
@@ -427,7 +427,7 @@ namespace compiler::helios::code {
 		// be attached to it.
 		base::Optional<Box<FailedCandidateNote>> first_candidate_msg{};
 		for (const auto& match: failed_matches) {
-			auto decl = getSymRef(match.function)->getPSTData()->pst_element.unlock(ctx);
+			auto decl = getSymRef(match.function)->getPSTData()->getElement().unlock(ctx);
 			auto candidate_note
 				= makeBox<FailedCandidateNote>(getFunctionParamList(ctx, decl)->getSourcePosition());
 
