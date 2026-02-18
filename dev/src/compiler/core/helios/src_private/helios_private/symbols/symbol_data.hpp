@@ -108,7 +108,7 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
-			return getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
+			return getPSTData()->getElement().unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};
 
