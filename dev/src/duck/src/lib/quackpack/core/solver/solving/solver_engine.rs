@@ -33,6 +33,8 @@ pub struct SolverInput {
 }
 
 impl SolverInput {
+    /// Creates the solver input, based on the previous freeze, its packages' manifests and information gathered
+    /// in the gathering phase.
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         prev_freeze_manifests: HashMap<ExpandedPackage, Box<Manifest>>,

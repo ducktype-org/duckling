@@ -396,6 +396,8 @@ impl GathererState {
         }
     }
 
+    /// For each request referencing a given fetch, updates requested features of the fetched packages,
+    /// returning resulting new requests.
     fn complete_requests(
         &mut self,
         requests: Vec<ManifestsRequest>,
@@ -421,6 +423,13 @@ impl GathererState {
                             pinned_request.package
                         )
                     }
+                    result.extend(self.update_features(
+                        ExpandedPackage {
+                            location: *expanded_loc,
+                            version: pinned_request.package.version,
+                        },
+                        pinned_request.features,
+                    )?);
                 }
                 ManifestsRequest::NotPinned(not_pinned_request) => {
                     let location = not_pinned_request.location;

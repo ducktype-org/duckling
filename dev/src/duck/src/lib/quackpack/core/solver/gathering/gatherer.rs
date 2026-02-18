@@ -35,6 +35,7 @@ use crate::{
     },
 };
 
+/// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, GitAccessImpl: GitAccess> {
     ctx: &'duck QpCtx<'duck>,
     fetcher: &'duck Fetcher<'duck>,
@@ -42,6 +43,7 @@ pub struct Gatherer<'duck, GitAccessImpl: GitAccess> {
 }
 
 impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
+    /// Creates a new, empty [`Gatherer`].
     pub fn new(
         ctx: &'duck QpCtx<'duck>,
         fetcher: &'duck Fetcher<'duck>,
@@ -54,6 +56,9 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         }
     }
 
+    /// Main entry point, explores the dependency graph of the root package in a BFS-like manner.
+    /// For a given dependency entry in a manifest, fetches the manifests of the potential realizations
+    /// and repeats the proccess for their manifests.
     pub async fn explore(
         &self,
         root_path: PathBuf,
@@ -111,6 +116,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         state.into_gathered_info()
     }
 
+    /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
+    /// and returns a dummy [`FetchResult`], to create a starting point for the [`Gatherer::explore()`] function.
     fn fetch_root(
         &self,
         root_path: PathBuf,
@@ -146,6 +153,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         }))
     }
 
+    /// Helper for [`Gatherer::explore()`], performs a fetch.
     pub async fn fetch(&self, request: ManifestsRequest) -> GathererResult<Option<FetchResult>> {
         match request {
             ManifestsRequest::Pinned(pinned_request) => {
@@ -163,6 +171,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         }
     }
 
+    /// Helper for [`Gatherer::explore()`], performs a pinned registry fetch
+    /// (registry fetch with a specified version).
     async fn fetch_registry_pinned(
         &self,
         request: PinnedRequest,
@@ -206,6 +216,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         }
     }
 
+    /// Helper for [`Gatherer::explore()`], performs a not pinned registry fetch
+    /// (registry fetch of all the versions of some package).
     async fn fetch_registry_not_pinned(
         &self,
         request: NotPinnedRequest,
@@ -255,6 +267,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         ))
     }
 
+    /// Helper for [`Gatherer::explore()`], performs a git fetch
+    /// (fetch from an external git repository).
     async fn fetch_git(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
         let Location::Git {
             url,
@@ -299,6 +313,8 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         )))
     }
 
+    /// Helper for [`Gatherer::explore()`], performs a local fetch
+    /// (fetch from a given path).
     fn fetch_local(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
         let Location::Local { path } = request.location.as_ref() else {
             qp_bail_internal!("Tried to make local fetch for a non-local location")

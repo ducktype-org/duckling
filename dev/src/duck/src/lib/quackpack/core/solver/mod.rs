@@ -1,3 +1,21 @@
+//! This module contains a [`Solver`] struct, which is designated to finding the dependency resolution
+//! of a given package.
+//! By *dependency resolution* we mean a set of packages, each with a designated set of features,
+//! so that each package's dependencies are satisfied inside that set.
+//! 
+//! How it works:
+//! ---------------
+//! The process of finding the resolution consists of the following steps:
+//! 1. Getting the last known freeze (a representation of the dependency resolution) of the package
+//!     (we want to reuse it as much as possible).
+//! 2. Fetching manifests of the packages mentioned there (to see if their dependencies are still satisfied inside the freeze).
+//! 3. Finding the maximal subset of the previous freeze which is still a proper dependency resolution
+//!     (though we allow for the dependencies of the root package to not be satisfied).
+//! 4. Running the gathering process ([`Gatherer`]) on the unsatisfied dependencies of the root package.
+//! 5. Running the solver engine, which translates the problem into an instance of Integer Linear Programming and solves it with a 3-rd party solver.
+//! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
+//! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
+//!     but have been since removed from its manifest.
 pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
@@ -30,20 +48,18 @@ pub struct Prepared;
 impl SolverState for Created {}
 impl SolverState for Prepared {}
 
+/// A struct designated to finding the dependency resolution of a given package.
 pub struct Solver<'duck, State: SolverState> {
     qp_ctx: &'duck QpCtx<'duck>,
     fetcher: &'duck Fetcher<'duck>,
     root_package_ctx: &'duck PackageCtx<'duck>,
-    // Passing this needs further consideration from the storage:
-    //  * package root is the freeze's primary location
-    //  * in the case of its absence the freeze from the storage should be passed
-    //  * in the case of its absence an empty freeze should be passed.
     current_freeze: SolverFreeze,
     gathered_info: OnceCell<SolverInput>,
     state: PhantomData<State>,
 }
 
 impl<'duck> Solver<'duck, Prepared> {
+    /// Creates a new [`Solver`] instance.
     pub fn new(
         package_ctx: &'duck PackageCtx<'duck>,
         fetcher: &'duck Fetcher<'duck>,
@@ -59,6 +75,7 @@ impl<'duck> Solver<'duck, Prepared> {
         }
     }
 
+    /// Prepares the [`Solver`] for running the engine by constructing [`SolverInput`].
     pub async fn prepare_solving<Access: GitAccess>(
         mut self,
         git_access: Access,
