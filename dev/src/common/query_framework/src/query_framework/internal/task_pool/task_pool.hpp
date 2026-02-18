@@ -18,6 +18,7 @@
 namespace query::internal {
 	class TaskPool;
 
+
 	/**
 	 * @brief Status of a task in the TaskPool.
 	 */
@@ -25,6 +26,47 @@ namespace query::internal {
 		// NotStarted,  ///< Currently if a task is not in the map, it is not started.
 		InProgress,  ///< Task is currently being executed by a worker.
 		Done,        ///< Task has completed execution.
+	};
+
+
+	struct TaskStatusMap final {
+	private:
+		using Map = concurrent::ConHashMap<NodeID, TaskStatus>;
+
+		std::array<Map, 128> maps;
+
+		Map& getMap(NodeID id) {
+			return maps.at(id.q_id.asInt());
+		}
+
+		const Map& getMap(NodeID id) const {
+			return maps.at(id.q_id.asInt());
+		}
+
+	public:
+		/** return non empty ref, if the task was inserted */
+		auto addIfNotExists(NodeID id) -> auto {
+			return getMap(id).maybePut(id, TaskStatus::InProgress);
+		}
+
+		auto getCurrent(NodeID id) const -> base::Optional<TaskStatus> {
+			return getMap(id).atMaybeCopy(id);
+		}
+
+		bool isDone(NodeID id) const {
+			if (auto status_opt = getCurrent(id)) {
+				return *status_opt == TaskStatus::Done;
+			}
+			return false;
+		}
+
+		void setDone(NodeID id) {
+			getMap(id).update(id, TaskStatus::Done);
+		}
+
+		bool contains(NodeID id) const {
+			return getMap(id).contains(id);
+		}
 	};
 
 	/**
@@ -231,7 +273,7 @@ namespace query::internal {
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
-		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
+		TaskStatusMap task_status_map;
 
 		/// Condition variable for signaling task completion.
 		std::condition_variable task_completed_cv;

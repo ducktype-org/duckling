@@ -64,11 +64,11 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case
 
-		if (auto task_status = task_status_map.atMaybe(task.id)) {
-			if (**task_status == TaskStatus::Done) {
+		if (auto task_status = task_status_map.getCurrent(task.id)) {
+			if (*task_status == TaskStatus::Done) {
 				return;
 			}
-			else if (**task_status == TaskStatus::InProgress) {
+			else if (*task_status == TaskStatus::InProgress) {
 				std::unique_lock lock(pool_mutex);
 				task_completed_cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
 				return;
@@ -91,7 +91,7 @@ namespace query::internal {
 		// preferred by the LLM models (but using `maybePut` has the same semantics but on adding
 		// instead of comparing).
 
-		auto change_status_result = task_status_map.maybePut(task.id, TaskStatus::InProgress);
+		auto change_status_result = task_status_map.addIfNotExists(task.id);
 
 		// @TODO: #1973 integrate with query
 		// this insert decided who get's to do the task
@@ -103,7 +103,7 @@ namespace query::internal {
 			{
 				std::lock_guard lock(pool_mutex);
 
-				task_status_map.update(task.id, TaskStatus::Done);
+				task_status_map.setDone(task.id);
 				completed_tasks.fetch_add(1);
 			}
 			task_completed_cv.notify_all();
@@ -165,11 +165,11 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->await is performing a lot of operations even in such case
 
-		if (auto task_status = task_status_map.atMaybe(id)) {
-			if (**task_status == TaskStatus::Done) {
+		if (auto task_status = task_status_map.getCurrent(id)) {
+			if (*task_status == TaskStatus::Done) {
 				return;
 			}
-			else if (**task_status == TaskStatus::InProgress) {
+			else if (*task_status == TaskStatus::InProgress) {
 				std::unique_lock lock(pool_mutex);
 				task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
 				return;
@@ -189,7 +189,7 @@ namespace query::internal {
 
 	bool TaskPool::isTaskDone(NodeID id) const {
 		// @TODO: #1973 integrate with query.
-		return task_status_map.contains(id) && task_status_map.getCopy(id) == TaskStatus::Done;
+		return task_status_map.isDone(id);
 	}
 
 	base::Optional<Task> TaskPool::tryStealFromGlobalUnlocked() {

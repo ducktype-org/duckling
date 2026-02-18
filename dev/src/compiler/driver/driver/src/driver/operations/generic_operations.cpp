@@ -27,6 +27,7 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -182,24 +183,40 @@ namespace compiler::driver {
 		const linker::LinkingOptions&    linking_options
 	) {
 		auto        root   = package_info.root_module;
-		base::OkBad result = base::OK;
+		// base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
 
-		// this is std::function, so it can be recursive
-		std::function<void(frontend::ModuleID)> handle_module
-			= [&](frontend::ModuleID module_id) -> void {
-			auto module_result = query::entryPoint<CompileModule>({ module_id, backend });
-			if (module_result.hasValue())
-				objects.emplace_back(module_result.valueOrPanic());
-			else
-				result = base::BAD;
-			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
-			for (const auto& [id, sub_module]: *sub_modules) handle_module(sub_module);
-		};
-		handle_module(root);
+		std::vector<frontend::ModuleID> modules_to_compile;
 
-		if (result.isBad()) return result;
+		std::function<void(frontend::ModuleID)> collect_modules
+			= [&](frontend::ModuleID module_id) -> void {
+				modules_to_compile.push_back(module_id);
+				auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
+				for (const auto& [id, sub_module]: *sub_modules) collect_modules(sub_module);
+			};
+		collect_modules(root);
+
+		std::atomic_flag modules_failed;
+		modules_failed.clear();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			std::vector<query::internal::TaskHandle> handles;
+			for (const auto& module_id: modules_to_compile) {
+				handles.push_back(ctx.schedule<CompileModule>({ module_id, backend }));
+			}
+			for (auto& handle: handles) {
+				auto module_result = ctx.await<CompileModule>(handle);
+				if (module_result.hasValue())
+					objects.emplace_back(module_result.valueOrPanic());
+				else
+					modules_failed.test_and_set();
+			}
+		});
+
+
+
+		if (modules_failed.test()) return base::BAD;
 
 		if (backend == BackendType::LLVM) {
 			// Link all outputs into a single binary.
@@ -212,7 +229,7 @@ namespace compiler::driver {
 			linker::link(output_file, objects, linking_options);
 		}
 
-		return result;
+		return base::OK;
 	}
 
 	std::expected<RunOutput, std::string> runModuleOnDVM(
