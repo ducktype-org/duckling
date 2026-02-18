@@ -85,7 +85,9 @@ namespace pst {
 		template<typename... Args>
 		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args) requires ParseAble<Args...>
 		{
-			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
+			// time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
+			timer::TimeMeasurement measurement;
+			measurement.startMeasurement();
 
 			const lexer::TokenData& token_data = file->getTokenData();
 			auto                    state_box  = internal::makeState(
@@ -107,6 +109,11 @@ namespace pst {
 				calcElementPathHash();
 				calcHashes();
 			}
+
+			measurement.endMeasurement();
+			std::cerr << "PST construction time: ";
+			timer::printAs(std::cerr, measurement.duration(), timer::TimeUnit::Milliseconds);
+			std::cerr << "\n";
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {
