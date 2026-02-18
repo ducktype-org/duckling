@@ -178,6 +178,10 @@ namespace vm {
 
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
+		/**
+		 * @brief Calls run within safe try-catch block, to catch any exceptions thrown by the
+		 * running code and respond to the process with the panicked status.
+		 */
 		void safeRun(
 			CRef<low::LowVMProgram> program,
 			const std::string&      func_name,
