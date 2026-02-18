@@ -26,7 +26,7 @@ LLVM_INCLUDE_END()
 using namespace llvm;
 using namespace llvm::orc;
 
-inline constexpr char opcodes[] = {
+inline constexpr char OPCODES[] = {
 #ifdef USE_TAIL_CALLS
 	#embed "src/vm/common_tc.bc"
 #else
@@ -34,14 +34,14 @@ inline constexpr char opcodes[] = {
 #endif
 };
 
-static std::unique_ptr<LLVMContext>                              gContext;
-static std::unique_ptr<Module>                                   gModule;
-static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> FuncMap;
-static std::unique_ptr<LLJIT>                                    lljitInstance;
-static ExitOnError                                               ExitOnErr;
+static std::unique_ptr<LLVMContext>                              g_context;
+static std::unique_ptr<Module>                                   g_module;
+static std::unordered_map<vm::low::MicroOpcode, llvm::Function*> func_map;
+static std::unique_ptr<LLJIT>                                    lljit_instance;
+static ExitOnError                                               exit_on_err;
 
 namespace {
-	std::string extract_function_name(const std::string& full) {
+	std::string extractFunctionName(const std::string& full) {
 		size_t paren_pos = full.find('(');
 		if (paren_pos == std::string::npos) paren_pos = full.length();
 
@@ -68,25 +68,25 @@ void llvmInit() {
 	llvm::InitializeNativeTargetAsmPrinter();
 	llvm::InitializeNativeTargetAsmParser();
 
-	if (gContext) return;  // already initialized
-	gContext = std::make_unique<LLVMContext>();
+	if (g_context) return;  // already initialized
+	g_context = std::make_unique<LLVMContext>();
 
-	lljitInstance = ExitOnErr(LLJITBuilder().create());
+	lljit_instance = exit_on_err(LLJITBuilder().create());
 
-	auto& jd = lljitInstance->getMainJITDylib();
+	auto& jd = lljit_instance->getMainJITDylib();
 	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-		lljitInstance->getDataLayout().getGlobalPrefix()
+		lljit_instance->getDataLayout().getGlobalPrefix()
 	)));
 
 	// Load embedded BC into module
-	auto buffer = MemoryBuffer::getMemBuffer(StringRef(opcodes, sizeof(opcodes)), "", false);
+	auto buffer = MemoryBuffer::getMemBuffer(StringRef(OPCODES, sizeof(OPCODES)), "", false);
 
-	auto modOrErr = parseBitcodeFile(buffer->getMemBufferRef(), *gContext);
-	if (!modOrErr) llvm::report_fatal_error("Aborting due to parse error");
+	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *g_context);
+	if (!mod_or_err) llvm::report_fatal_error("Aborting due to parse error");
 
-	gModule = std::move(*modOrErr);
+	g_module = std::move(*mod_or_err);
 
-	for (auto& F: gModule->functions()) {
+	for (auto& F: g_module->functions()) {
 		if (!F.isDeclaration()) {
 			//  Here I assume that demangling works for opcodes. Maybe use itaniumDemangle?
 			auto demangled = llvm::demangle(F.getName().str());
@@ -96,29 +96,29 @@ void llvmInit() {
 			// One opcode doesn't have op prefix but it is marked to be deleted.
 			if (demangled.starts_with("vm::OpFuns::op_")
 			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
-				auto name   = extract_function_name(demangled);
+				auto name   = extractFunctionName(demangled);
 				name        = name.substr(3);  // delete op_
 				auto opcode = getOpcode(name);
-				if (FuncMap.contains(opcode)) {
+				if (func_map.contains(opcode)) {
 					// CORE_PANIC("Duplicate opcode function name: ", name);
 				} else {
 					// Sanity check, that instructions sizes make sense.
 					std::cerr << "found " << name << " number: " << static_cast<uint64_t>(opcode)
 							  << " with " << F.getInstructionCount() << " instructions\n";
-					FuncMap[opcode] = &F;
+					func_map[opcode] = &F;
 				}
 			}
 		}
 	}
-	CORE_ASSERT(!FuncMap.empty(), "Opfuns not found!");
+	CORE_ASSERT(!func_map.empty(), "Opfuns not found!");
 
-	ExitOnErr(lljitInstance->addIRModule(ThreadSafeModule(std::move(gModule), std::move(gContext))));
+	exit_on_err(lljit_instance->addIRModule(ThreadSafeModule(std::move(g_module), std::move(g_context))));
 	std::cerr << "JIT initialised successfully\n";
 }
 
-llvm::Function* llvm_get_fun(const vm::low::MicroOpcode& fun) {
-	CORE_ASSERT(FuncMap.contains(fun), "Opcode function not found in LLVM module");
-	return FuncMap.at(fun);
+llvm::Function* llvmGetFun(const vm::low::MicroOpcode& fun) {
+	CORE_ASSERT(func_map.contains(fun), "Opcode function not found in LLVM module");
+	return func_map.at(fun);
 }
 
-llvm::orc::LLJIT* llvm_get_lljit() { return lljitInstance.get(); }
+llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }

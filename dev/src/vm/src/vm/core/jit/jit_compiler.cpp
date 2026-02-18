@@ -39,33 +39,33 @@ cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
     }
 };*/
 #ifdef ENABLE_JIT
-#include "jit_compiler.hpp"
+	#include "jit_compiler.hpp"
 
-#include "opcode_definitions.hpp"
+	#include "opcode_definitions.hpp"
 
-#include <llvm_helpers/llvm_helpers.hpp>
+	#include <llvm_helpers/llvm_helpers.hpp>
 
-#include <vm/core/thread/low_program/instruction.hpp>
+	#include <vm/core/thread/low_program/instruction.hpp>
 
-#include <iostream>
+	#include <iostream>
 
 LLVM_INCLUDE_BEGIN()
 
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Verifier.h>
+	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+	#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+	#include <llvm/IR/DerivedTypes.h>
+	#include <llvm/IR/Function.h>
+	#include <llvm/IR/IRBuilder.h>
+	#include <llvm/IR/LLVMContext.h>
+	#include <llvm/IR/Module.h>
+	#include <llvm/IR/Type.h>
+	#include <llvm/IR/Verifier.h>
 
 LLVM_INCLUDE_END()
 
 vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	std::cerr << "called compileJit\n";
-	auto  lljit_ptr = llvm_get_lljit();
+	auto  lljit_ptr = llvmGetLljit();
 	auto& lljit     = *lljit_ptr;
 
 	auto               ctx = std::make_unique<llvm::LLVMContext>();
@@ -110,7 +110,7 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 	for (const vm::MicroInstruction& mi: func_data.bc) {
 		auto num = static_cast<uint64_t>(vm::getInstructionOpcode(mi));
 		std::cerr << "Looking up opcode " << num << ' ' << vm::low::OPCODE_NAMES[num] << '\n';
-		llvm::Function* opfun      = llvm_get_fun(vm::getInstructionOpcode(mi));
+		llvm::Function* opfun      = llvmGetFun(vm::getInstructionOpcode(mi));
 		std::string     opfun_name = opfun->getName().str();
 		std::cerr << "opfun name: " << opfun_name << '\n';
 

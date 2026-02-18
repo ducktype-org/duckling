@@ -73,7 +73,7 @@ if (JIT_ENABLED)
     add_library(JitDep OBJECT
         ${jit_dependency}
     )
-    make_module(JitDep USES llvm_helpers Base Diagnostic) # TODO update
+    make_module(JitDep USES llvm_helpers Base Diagnostic) # This list should be updated
     target_include_directories(JitDep PRIVATE ${LLVM_INCLUDE_DIRS})
     target_link_libraries(JitDep ${llvm_libs})
 

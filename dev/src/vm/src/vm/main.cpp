@@ -8,7 +8,7 @@
 #include <printer/stream_printer.hpp>
 
 #ifdef ENABLE_JIT
-#include <vm/core/jit/jit_init.hpp>
+	#include <vm/core/jit/jit_init.hpp>
 #endif
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
