@@ -26,7 +26,7 @@ namespace compiler::helios {
 		/**
 		 * Return associated pst_element.
 		 */
-		pst::AccessLocked<pst::LangElement> getElement() const {
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getElement() const {
 			return pst::LangElement::getByStableHash(pst_element_hash);
 		}
 	};

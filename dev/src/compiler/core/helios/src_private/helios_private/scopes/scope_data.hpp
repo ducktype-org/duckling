@@ -64,7 +64,7 @@ namespace compiler::helios {
 			);
 		}
 
-		base::Optional<pst::AccessLocked<pst::LangElement>> relatedPSTElement() const;
+		[[nodiscard]] base::Optional<pst::AccessLocked<pst::LangElement>> relatedPSTElement() const;
 
 		/**
 		 * @brief Creates a perfect clone of this ScopeData,
