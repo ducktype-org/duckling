@@ -552,7 +552,6 @@ name = "duck"
 version = "0.1.0"
 dependencies = [
  "async-scoped",
- "bitflags",
  "clap",
  "clap_complete",
  "console",

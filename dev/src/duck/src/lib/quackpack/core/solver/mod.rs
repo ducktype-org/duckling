@@ -2,20 +2,20 @@
 //! of a given package.
 //! By *dependency resolution* we mean a set of packages, each with a designated set of features,
 //! so that each package's dependencies are satisfied inside that set.
-//! 
+//!
 //! How it works:
 //! ---------------
 //! The process of finding the resolution consists of the following steps:
 //! 1. Getting the last known freeze (a representation of the dependency resolution) of the package
-//!     (we want to reuse it as much as possible).
+//!    (we want to reuse it as much as possible).
 //! 2. Fetching manifests of the packages mentioned there (to see if their dependencies are still satisfied inside the freeze).
 //! 3. Finding the maximal subset of the previous freeze which is still a proper dependency resolution
-//!     (though we allow for the dependencies of the root package to not be satisfied).
+//!    (though we allow for the dependencies of the root package to not be satisfied).
 //! 4. Running the gathering process ([`Gatherer`]) on the unsatisfied dependencies of the root package.
 //! 5. Running the solver engine, which translates the problem into an instance of Integer Linear Programming and solves it with a 3-rd party solver.
 //! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
 //! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
-//!     but have been since removed from its manifest.
+//!    but have been since removed from its manifest.
 pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
@@ -30,8 +30,13 @@ use tokio::sync::Mutex;
 use crate::{
     QpCtx, QuackResult, qp_bail_internal,
     quackpack::core::{
-        PackageCtx, fetcher::Fetcher, gathering::gatherer::Gatherer, git_access::GitAccess,
-        solver_freeze::SolverFreeze, solving::solver_engine::SolverInput,
+        PackageCtx,
+        fetcher::Fetcher,
+        gathering::gatherer::Gatherer,
+        git_access::GitAccess,
+        solver_freeze::SolverFreeze,
+        solving::solver_engine::SolverInput,
+        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
 };
 
@@ -84,15 +89,24 @@ impl<'duck> Solver<'duck, Prepared> {
         let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, access);
 
         let mut root_manifest = self.root_package_ctx.package().manifest().clone();
-        let root_package = self.current_freeze.main_pkg;
+        let new_root_package = ExpandedPackage {
+            location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                absolute_path: self
+                    .root_package_ctx
+                    .package()
+                    .root_directory()
+                    .to_path_buf(),
+            }),
+            version: None,
+        };
         let mut prev_freeze_manifests = self
             .current_freeze
             .get_prev_freeze_manifests(&gatherer)
             .await?;
-        prev_freeze_manifests.insert(root_package, Box::new(root_manifest.clone()));
+        prev_freeze_manifests.insert(new_root_package, Box::new(root_manifest.clone()));
         let maximal_valid_freeze = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
+            .find_maximal_correct_dep_solution(&prev_freeze_manifests, new_root_package)?;
         let Some(root_freeze) = maximal_valid_freeze
             .package_freezes
             .get(&maximal_valid_freeze.main_pkg)
