@@ -7,7 +7,9 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#ifdef ENABLE_JIT
 #include <vm/core/jit/jit_init.hpp>
+#endif
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
@@ -83,7 +85,10 @@ clah::Clah getVmClah() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
+#ifdef ENABLE_JIT
+	std::cout << "JIT_ENABLED\n";
 	llvmInit();
+#endif
 	auto clah = getVmClah();
 
 	try {

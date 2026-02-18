@@ -38,7 +38,7 @@ cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
         main_jd.addGenerator(std::move(search_generator));
     }
 };*/
-
+#ifdef ENABLE_JIT
 #include "jit_compiler.hpp"
 
 #include "opcode_definitions.hpp"
@@ -147,3 +147,5 @@ vm::JitOpFun* compileJit(const vm::low::LowFuncData& func_data) {
 
 	return compiled_fn;
 }
+
+#endif

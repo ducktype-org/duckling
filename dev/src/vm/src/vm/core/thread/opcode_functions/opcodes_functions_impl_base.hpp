@@ -33,8 +33,9 @@
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
-
+#ifdef ENABLE_JIT
 #include <vm/core/jit/jit_compiler.hpp>
+#endif
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -361,7 +362,7 @@ namespace vm {
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-
+#ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
 			std::cerr << "Inside jit_call_entrypoint\n";
@@ -411,6 +412,7 @@ namespace vm {
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
+#endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
