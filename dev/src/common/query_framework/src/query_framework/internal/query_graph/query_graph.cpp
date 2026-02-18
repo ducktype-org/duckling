@@ -349,11 +349,10 @@ namespace query::internal {
 
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
 	) const {
-		if (not track_reverse_graph) {
-			CORE_PANIC(
-				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
-			);
-		}
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
 
 		std::queue<NodeID>         queue{ start_nodes.begin(), start_nodes.end() };
 		std::unordered_set<NodeID> visited;
@@ -374,11 +373,11 @@ namespace query::internal {
 	}
 
 	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
-		if (not track_reverse_graph) {
-			CORE_PANIC(
-				"Reverse graph tracking must be enabled to erase nodes based on dependencies."
-			);
-		}
+		CORE_ASSERT(
+			track_reverse_graph,
+			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
+		);
+
 
 		for (const auto& node: nodes_to_erase.dependents_recursive) {
 			// A(input) <- B <- C

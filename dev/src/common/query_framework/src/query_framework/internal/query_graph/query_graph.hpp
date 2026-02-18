@@ -166,7 +166,7 @@ namespace query::internal {
 		 * Graph that tracks the reversed relation to `node_deps`.
 		 * Only used if @p track_reverse_graph is true.
 		 *
-		 * Does not take part in any of the additional logic like serlialization
+		 * Does not take part in any of the additional logic like serialization
 		 * or deserialization.
 		 */
 		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_reverse_deps;
