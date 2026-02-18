@@ -215,7 +215,6 @@ impl ExpandedPackage {
                         version: self.version,
                     },
                     features: HashSet::new(),
-                    local_root: None,
                 })
             }
             ExpandedLocation::Git { url, commit } => {
@@ -227,7 +226,6 @@ impl ExpandedPackage {
                     }),
                     versions: None,
                     features: HashSet::new(),
-                    local_root: None,
                 })
             }
             ExpandedLocation::Local { absolute_path } => {
@@ -237,7 +235,6 @@ impl ExpandedPackage {
                     }),
                     versions: None,
                     features: HashSet::new(),
-                    local_root: Some(absolute_path.clone()),
                 })
             }
         }

@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::{
     FeatureName, Manifest, Version,
@@ -21,7 +18,6 @@ pub struct NotPinnedRequest {
     pub location: InternedLocation,
     pub versions: Option<Vec<Version>>,
     pub features: HashSet<FeatureName>,
-    pub local_root: Option<PathBuf>,
 }
 
 /// Request to get manifest for a particular package.
@@ -29,7 +25,6 @@ pub struct NotPinnedRequest {
 pub struct PinnedRequest {
     pub package: Package,
     pub features: HashSet<FeatureName>,
-    pub local_root: Option<PathBuf>,
 }
 
 /// Type respresenting the result of a successful fetch.

@@ -125,7 +125,6 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
             location: root_loc,
             versions: None,
             features: root_features,
-            local_root: Some(root_path.clone()),
         };
         // The action is always RequestActionFetch, so ignore retured value.
         let action = state.get_request_action(ManifestsRequest::NotPinned(root_request))?;
@@ -301,19 +300,16 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
     }
 
     fn fetch_local(&self, request: NotPinnedRequest) -> GathererResult<Option<FetchResult>> {
-        let Location::Local { .. } = request.location.as_ref() else {
+        let Location::Local { path } = request.location.as_ref() else {
             qp_bail_internal!("Tried to make local fetch for a non-local location")
         };
-        let Some(local_root) = request.local_root else {
-            qp_bail_internal!("Tried to make local fetch with unknown local root")
-        };
-        let pkg_ctx = PackageLoader::find_at_exact_directory(&local_root, self.ctx);
+        let pkg_ctx = PackageLoader::find_at_exact_directory(path, self.ctx);
 
         match pkg_ctx {
             Ok(pkg_ctx) => {
                 let exp_pkg = ExpandedPackage {
                     location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                        absolute_path: local_root,
+                        absolute_path: path.to_path_buf(),
                     }),
                     version: None,
                 };

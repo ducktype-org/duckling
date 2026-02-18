@@ -1,12 +1,9 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
     quackpack::core::{
-        FeatureName, Manifest, Source, Version,
+        FeatureName, Manifest, Version,
         gathering::{
             error_surpression::{GathererComputation, GathererResult},
             fetch_types::{
@@ -26,7 +23,6 @@ use crate::{
 pub struct PackageData {
     pub manifest: Box<Manifest>,
     pub requested_features: HashSet<FeatureName>,
-    pub local_root: Option<PathBuf>,
     pub referenced_by_requests: bool,
 }
 
@@ -48,12 +44,6 @@ impl PackageData {
                 dependency
                     .enabled_features(Vec::from_iter(self.requested_features.iter().copied())),
             );
-            let local_root =
-                if let Source::Local(local_source) = dependency.desc().source().as_ref() {
-                    Some(PathBuf::from(local_source.absolute()))
-                } else {
-                    None
-                };
             if dependency.is_pinned() {
                 result.0.push(ManifestsRequest::Pinned(PinnedRequest {
                     package: Package {
@@ -61,7 +51,6 @@ impl PackageData {
                         version: dependency.desc().versions().first().copied(),
                     },
                     features,
-                    local_root,
                 }));
             } else {
                 let versions = dependency.desc().versions().to_vec();
@@ -73,7 +62,6 @@ impl PackageData {
                         None
                     },
                     features,
-                    local_root,
                 }))
             }
         }
@@ -86,10 +74,7 @@ impl PackageData {
 #[derive(Debug)]
 enum QueryState {
     Failed,
-    Pending {
-        requests: Vec<ManifestsRequest>,
-        local_root: Option<PathBuf>,
-    },
+    Pending { requests: Vec<ManifestsRequest> },
     Done,
 }
 
@@ -164,7 +149,6 @@ impl GathererState {
             self.not_pinned_fetches.insert(
                 not_pinned_request.location,
                 QueryState::Pending {
-                    local_root: not_pinned_request.local_root.clone(),
                     requests: vec![ManifestsRequest::NotPinned(not_pinned_request)],
                 },
             );
@@ -175,10 +159,7 @@ impl GathererState {
                 // The fetch has already failed before.
                 Ok(GathererComputation::empty())
             }
-            QueryState::Pending {
-                requests,
-                local_root: _,
-            } => {
+            QueryState::Pending { requests } => {
                 requests.push(ManifestsRequest::NotPinned(not_pinned_request));
                 Ok(GathererComputation::empty())
             }
@@ -210,7 +191,6 @@ impl GathererState {
                 self.pinned_fetches.insert(
                     pinned_request.package,
                     QueryState::Pending {
-                        local_root: pinned_request.local_root.clone(),
                         requests: vec![ManifestsRequest::Pinned(pinned_request)],
                     },
                 );
@@ -222,16 +202,12 @@ impl GathererState {
                     self.pinned_fetches.insert(
                         pinned_request.package,
                         QueryState::Pending {
-                            local_root: pinned_request.local_root.clone(),
                             requests: vec![ManifestsRequest::Pinned(pinned_request)],
                         },
                     );
                     return Ok(GathererComputation::only_success(RequestAction::Fetch));
                 }
-                QueryState::Pending {
-                    requests,
-                    local_root: _,
-                } => {
+                QueryState::Pending { requests } => {
                     // We are adding a pinned request to the requests chained to an unpinned fetch.
                     // This is not a bug - later the same method `[GathererState::complete_requests]` will be used
                     // for handling chained requests for both types of fetches, so this pinnned
@@ -265,10 +241,7 @@ impl GathererState {
                 // The fetch has already failed before.
                 Ok(GathererComputation::empty())
             }
-            QueryState::Pending {
-                requests,
-                local_root: _,
-            } => {
+            QueryState::Pending { requests } => {
                 requests.push(ManifestsRequest::Pinned(pinned_request));
                 Ok(GathererComputation::empty())
             }
@@ -310,15 +283,10 @@ impl GathererState {
         let Some(state) = self.pinned_fetches.get_mut(&pinned_result.origin_package) else {
             qp_bail_internal!("Response with no associated request state");
         };
-        let QueryState::Pending {
-            requests,
-            local_root,
-        } = state
-        else {
+        let QueryState::Pending { requests } = state else {
             qp_bail_internal!("Query not in PENDING state");
         };
         let requests = requests.clone();
-        let local_root = local_root.clone();
         *state = QueryState::Done;
 
         // If we requested a specific version and received manifest declares a different version, the request failed.
@@ -340,13 +308,10 @@ impl GathererState {
             pinned_result.origin_package.location,
             pinned_result.expanded_package.location,
         );
-        self.insert_manifests(
-            [(
-                pinned_result.expanded_package,
-                pinned_result.fetched_manifest,
-            )],
-            local_root,
-        );
+        self.insert_manifests([(
+            pinned_result.expanded_package,
+            pinned_result.fetched_manifest,
+        )]);
         self.complete_requests(requests)
     }
 
@@ -373,15 +338,10 @@ impl GathererState {
         else {
             qp_bail_internal!("Response with no associated request state");
         };
-        let QueryState::Pending {
-            requests,
-            local_root,
-        } = state
-        else {
+        let QueryState::Pending { requests } = state else {
             qp_bail_internal!("Query not in PENDING state");
         };
         let requests = requests.clone();
-        let local_root = local_root.clone();
         *state = QueryState::Done;
 
         let expanded_locs: Vec<InternedExpandedLocation> = not_pinned_result
@@ -394,7 +354,7 @@ impl GathererState {
         {
             self.location_resolver
                 .insert(not_pinned_result.origin_location, *expanded_loc);
-            self.insert_manifests(not_pinned_result.fetched_manifests, local_root);
+            self.insert_manifests(not_pinned_result.fetched_manifests);
             self.complete_requests(requests)
         } else {
             Ok(self
@@ -426,13 +386,11 @@ impl GathererState {
     fn insert_manifests(
         &mut self,
         manifests: impl IntoIterator<Item = (ExpandedPackage, Box<Manifest>)>,
-        local_root: Option<PathBuf>,
     ) {
         for (pkg, manifest) in manifests.into_iter() {
             self.pkgs_data.entry(pkg).or_insert_with(|| PackageData {
                 manifest,
                 requested_features: HashSet::new(),
-                local_root: local_root.clone(),
                 referenced_by_requests: false,
             });
         }
