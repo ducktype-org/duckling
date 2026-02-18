@@ -97,11 +97,11 @@ namespace compiler::driver {
 			moduleLog(key, "Recompiling");
 
 			auto lir_data_result = ctx.query<CompileToLIRModuleData>(key.module_id);
-			if (lir_data_result.hasFailed()) {
+			if (lir_data_result->hasFailed()) {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			auto lir_data = std::move(lir_data_result).valueOrThrow();
+			CRef lir_data = &lir_data_result->valueOrThrow();
 
 			auto output_name
 				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
@@ -118,18 +118,18 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						output.FILE.getFilePath(), backend_llvm::CompilationOutputType::Object
+						output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
 					);
 				}
 
 				if (driver::llvm_dump_ir) {
 					base::StrID llvm_ir_path
-						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".ll").c_str());
+						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".ll").c_str());
 					llvm_module.dumpLLVMToFile(llvm_ir_path);
 				}
 				if (driver::llvm_dump_asm) {
 					base::StrID assembly_path
-						= base::StrID(base::strConcat(lir_data.module_id.strView(), ".s").c_str());
+						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".s").c_str());
 					llvm_module.compile(
 						assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly
 					);
@@ -138,7 +138,7 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				auto          dvm_code_collection = compileLIRModuleToDVM(lir_data);
-				std::ofstream dvm_file(output.FILE.getFilePath().getPath(), std::ios::binary);
+				std::ofstream dvm_file(output.file.getFilePath().getPath(), std::ios::binary);
 				if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 				vm::code::serialize(dvm_code_collection, dvm_file);
 				dvm_file.close();
@@ -218,7 +218,7 @@ namespace compiler::driver {
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		auto lir_data            = ctx.query<CompileToLIRModuleData>(module_id).valueOrPanic();
+		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
 		auto dvm_code_collection = compileLIRModuleToDVM(lir_data);
 
 		vm::PID pid{};

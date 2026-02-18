@@ -47,6 +47,13 @@ namespace vm::api {
 		struct Join {
 			i64 thread_id;
 		};
+    
+		struct RunFunctionAwait {
+			std::string          func_name;
+			FunctionRunArguments func_args;
+		};
+
+		struct Join {};
 
 		struct Step {};
 
@@ -90,6 +97,7 @@ namespace vm::api {
 		request::Stop,
 		request::Run,
 		request::RunFunction,
+		request::RunFunctionAwait,
 		request::Join,
 		request::Step,
 		request::WaitForBreakpoint,

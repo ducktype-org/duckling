@@ -5,6 +5,7 @@ use std::{
     sync::{Mutex, OnceLock},
 };
 
+use serde::{Deserialize, Serialize, de, ser};
 use url::Url;
 
 use crate::{
@@ -46,6 +47,25 @@ impl InternedExpandedLocation {
     }
 }
 
+impl ser::Serialize for InternedExpandedLocation {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.deref().serialize(serializer)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for InternedExpandedLocation {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let location = ExpandedLocation::deserialize(deserializer)?;
+        Ok(Self::new(location))
+    }
+}
+
 impl From<ExpandedLocation> for InternedExpandedLocation {
     fn from(value: ExpandedLocation) -> Self {
         Self::new(value)
@@ -66,26 +86,26 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum ExpandedLocation {
     Registry(ExpandedLocRegistry),
     Git(ExpandedLocGit),
     Local(ExpandedLocLocal),
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct ExpandedLocRegistry {
     pub url: Url,
     pub real_name: StrId,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct ExpandedLocGit {
     pub url: Url,
     pub commit: StrId,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct ExpandedLocLocal {
     pub absolute_path: PathBuf,
 }

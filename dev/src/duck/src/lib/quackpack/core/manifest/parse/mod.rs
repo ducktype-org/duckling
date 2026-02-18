@@ -81,6 +81,7 @@ fn parse_inner(path: &Path, ctx: &QpCtx<'_>) -> QuackResult<Package> {
         schema,
         manifest,
         package_root.into(),
+        path.into(),
         warnings,
     ))
 }

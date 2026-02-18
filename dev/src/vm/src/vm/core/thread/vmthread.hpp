@@ -183,6 +183,15 @@ namespace vm {
 
 		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
+		/**
+		 * @brief Calls run within safe try-catch block, to catch any exceptions thrown by the
+		 * running code and respond to the process with the panicked status.
+		 */
+		void safeRun(
+			CRef<low::LowVMProgram> program,
+			const std::string&      func_name,
+			const RunArguments&     run_arguments
+		);
 
 	public:
 		VMThread(VMProcess& process);
@@ -204,6 +213,19 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
+			CRef<low::LowVMProgram> program,
+			const std::string&      func_name,
+			const RunArguments&     run_arguments
+		);
+
+
+		/**
+		 * @brief Runs a program and waits for it to finish.
+		 * Does not create a new thread, runs the program in the current execution thread.
+		 * @return The exit value of the program if it was ran successfully or an API error
+		 * otherwise.
+		 */
+		void runNoSpawn(
 			CRef<low::LowVMProgram> program,
 			const std::string&      func_name,
 			const RunArguments&     run_arguments
