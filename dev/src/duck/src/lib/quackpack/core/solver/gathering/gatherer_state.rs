@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
+    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
     quackpack::core::{
         FeatureName, Manifest, Source, Version,
         gathering::{
@@ -15,8 +15,7 @@ use crate::{
             },
         },
         types_common::{
-            ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
-            Location, Package,
+            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
         },
         version::CompatibilityCheck,
     },
@@ -43,12 +42,7 @@ impl PackageData {
             if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
                 continue;
             }
-            let location = Location::try_from(dependency);
-            let Ok(location) = location else {
-                // We have just checked that location is not in Ok state, so unwrap_err is safe.
-                result.1.push(location.unwrap_err());
-                continue;
-            };
+            let location = Location::from(dependency);
             let location = InternedLocation::new(location);
             let features: HashSet<FeatureName> = HashSet::from_iter(
                 dependency
@@ -127,7 +121,7 @@ pub struct GathererState {
     not_pinned_fetches: HashMap<InternedLocation, QueryState>,
     pinned_fetches: HashMap<Package, QueryState>,
     pkgs_data: HashMap<ExpandedPackage, PackageData>,
-    versions_for_location: HashMap<ExpandedLocation, HashSet<Option<Version>>>,
+    versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 }
 
@@ -536,7 +530,7 @@ impl GathererState {
     fn update_features(
         &mut self,
         pkg: ExpandedPackage,
-        requested_features: HashSet<FeatureName>,
+        mut requested_features: HashSet<FeatureName>,
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(pkg_data) = self.pkgs_data.get_mut(&pkg) else {
             qp_bail_internal!("Fetched package {pkg:?} without PackageData")
@@ -546,6 +540,9 @@ impl GathererState {
             if !pkg_data.manifest.features().has_feature(*feature) {
                 nonexistent_features.push(*feature);
             }
+        }
+        for feature in nonexistent_features.iter() {
+            requested_features.remove(feature);
         }
         if !nonexistent_features.is_empty() || !pkg_data.referenced_by_requests {
             pkg_data.referenced_by_requests = true;
@@ -557,7 +554,40 @@ impl GathererState {
         pkg_data.dep_requests()
     }
 
-    //pub fn into_gathered_info()
+    pub fn into_gathered_info(mut self) -> QuackResult<GatheredInfo> {
+        let mut gathered_manifests = HashMap::new();
+        let mut possible_features = HashMap::new();
+        let mut unnecessary_pkgs = Vec::new();
+        for (pkg, data) in self.pkgs_data {
+            if data.referenced_by_requests {
+                gathered_manifests.insert(pkg, data.manifest);
+                possible_features.insert(pkg, data.requested_features);
+            } else {
+                unnecessary_pkgs.push(pkg);
+            }
+        }
+        for pkg in unnecessary_pkgs {
+            let Some(versions) = self.versions_for_location.get_mut(&pkg.location) else {
+                qp_bail_internal!(
+                    "Unncecessary package's location not present in the versions for location map"
+                );
+            };
+            versions.remove(&pkg.version);
+        }
+        Ok(GatheredInfo {
+            gathered_manifests,
+            possible_features,
+            versions_for_location: self.versions_for_location,
+            location_resolver: self.location_resolver,
+        })
+    }
+}
+
+pub struct GatheredInfo {
+    pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+    pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
+    pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 }
 
 impl Default for GathererState {

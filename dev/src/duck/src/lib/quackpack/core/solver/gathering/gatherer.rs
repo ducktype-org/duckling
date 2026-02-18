@@ -23,7 +23,7 @@ use crate::{
                     FetchResult, ManifestsRequest, NotPinnedRequest, NotPinnedResult,
                     PinnedRequest, PinnedResult,
                 },
-                gatherer_state::{GathererState, RequestAction},
+                gatherer_state::{GatheredInfo, GathererState, RequestAction},
             },
             git_access::GitAccess,
             types_common::{
@@ -60,7 +60,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         root_manifest: Manifest,
         root_features: HashSet<FeatureName>,
         mode: SolverMode,
-    ) -> QuackResult<()> {
+    ) -> QuackResult<GatheredInfo> {
         let mut state = GathererState::new();
         let root_fetch_result =
             self.fetch_root(root_path, root_manifest, root_features, &mut state)?;
@@ -108,7 +108,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
                 }
             }
         }
-        Ok(())
+        state.into_gathered_info()
     }
 
     fn fetch_root(

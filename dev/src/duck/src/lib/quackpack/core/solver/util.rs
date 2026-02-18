@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     QuackResult, QuackResultContext,
@@ -13,7 +13,7 @@ use crate::{
 
 pub fn get_possible_realisations(
     dependency_description: &Dependency,
-    versions_for_location: &HashMap<InternedExpandedLocation, Vec<Option<Version>>>,
+    versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
@@ -69,7 +69,10 @@ pub fn get_possible_realisations(
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    };
 
     use rustvil::fs::PathExt;
     use tempfile::{TempDir, tempdir};
@@ -128,14 +131,14 @@ dependencies:
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),
-            vec![
+            HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
                 Some(Version::new(1, 0, 3)),
                 Some(Version::new(1, 0, 5)),
                 Some(Version::new(1, 3, 3)),
                 Some(Version::new(2, 0, 3)),
-            ],
+            ]),
         )]);
         let res =
             get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
@@ -181,21 +184,21 @@ dependencies:
         let location_resolver = HashMap::from([(location_b.clone(), exp_location_b.clone())]);
         let versions_for_location = HashMap::from([(
             exp_location_b.clone(),
-            vec![
+            HashSet::from([
                 Some(Version::new(0, 0, 1)),
                 Some(Version::new(1, 0, 0)),
                 Some(Version::new(1, 0, 3)),
                 Some(Version::new(1, 0, 5)),
                 Some(Version::new(1, 3, 3)),
                 Some(Version::new(2, 0, 3)),
-            ],
+            ]),
         )]);
         let res =
             get_possible_realisations(&dependency, &versions_for_location, &location_resolver)
                 .unwrap();
         assert_eq!(
-            res,
-            vec![
+            HashSet::from_iter(res),
+            HashSet::from([
                 ExpandedPackage {
                     location: exp_location_b.clone(),
                     version: Some(Version::new(1, 0, 3))
@@ -208,7 +211,7 @@ dependencies:
                     location: exp_location_b.clone(),
                     version: Some(Version::new(1, 3, 3))
                 }
-            ]
+            ])
         );
     }
 }

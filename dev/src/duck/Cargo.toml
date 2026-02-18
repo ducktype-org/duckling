@@ -13,6 +13,7 @@ name = "duck"
 
 [dependencies]
 async-scoped = { version = "0.9.0", features = ["use-tokio"] }
+bitflags = "2.11.0"
 clap = { version = "4.5.54", features = ["cargo"] }
 clap_complete = { version = "4.5.65", optional = true }
 console = "0.16.2"

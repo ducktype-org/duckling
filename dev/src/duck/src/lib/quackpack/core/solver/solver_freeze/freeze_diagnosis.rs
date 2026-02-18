@@ -6,10 +6,7 @@ use crate::{
     QuackResult, QuackResultContext,
     quackpack::core::{
         Dependency, FeatureName, Manifest,
-        gathering::{
-            fetch_types::FetchResult,
-            gatherer::Gatherer,
-        },
+        gathering::{fetch_types::FetchResult, gatherer::Gatherer},
         git_access::GitAccess,
         solver_freeze::{SolverFreeze, SolverPackageFreeze},
         types_common::ExpandedPackage,
@@ -60,7 +57,7 @@ impl SolverFreeze {
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
     pub fn find_maximal_correct_dep_solution(
         mut self,
-        manifests: &HashMap<ExpandedPackage, &Manifest>,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
     ) -> QuackResult<Self> {
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
@@ -93,7 +90,7 @@ impl SolverFreeze {
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
     fn still_satisfied_pkgs(
         &self,
-        manifests: &HashMap<ExpandedPackage, &Manifest>,
+        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
     ) -> QuackResult<HashSet<ExpandedPackage>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
@@ -128,7 +125,7 @@ impl SolverFreeze {
     ///     * freeze-present version equals manifest version.
     fn get_manifest_and_check_features_exist<'a>(
         pkg: &ExpandedPackage,
-        manifests: &HashMap<ExpandedPackage, &'a Manifest>,
+        manifests: &'a HashMap<ExpandedPackage, Box<Manifest>>,
         features: &HashSet<FeatureName>,
     ) -> Option<&'a Manifest> {
         let manifest = manifests.get(pkg)?;
@@ -140,12 +137,12 @@ impl SolverFreeze {
         }
         if let Some(pkg_version) = pkg.version {
             if manifest.root_description().version() == pkg_version {
-                Some(*manifest)
+                Some(manifest)
             } else {
                 None
             }
         } else {
-            Some(*manifest)
+            Some(manifest)
         }
     }
 
@@ -287,8 +284,8 @@ features:
             version: Some(Version::new(2, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
@@ -360,8 +357,8 @@ metadata:
             version: Some(Version::new(2, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
@@ -449,9 +446,9 @@ metadata:
             version: Some(Version::new(3, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
@@ -561,10 +558,10 @@ metadata:
             version: Some(Version::new(4, 0, 0)),
         };
         let manifests = HashMap::from([
-            (exp_pkg_a, manifest_a.manifest()),
-            (exp_pkg_b, manifest_b.manifest()),
-            (exp_pkg_c, manifest_c.manifest()),
-            (exp_pkg_d, manifest_d.manifest()),
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
+            (exp_pkg_d, Box::new(manifest_d.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),

@@ -10,7 +10,12 @@ use url::Url;
 
 use crate::{
     QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version, gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest}, types_common::{InternedLocation, Location, Package}, version::CompatibilityCheck},
+    quackpack::core::{
+        BranchOrTag, Dependency, Registry, Source, Version,
+        gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
+        types_common::{InternedLocation, Location, Package},
+        version::CompatibilityCheck,
+    },
 };
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
@@ -200,41 +205,41 @@ impl ExpandedPackage {
 
     pub fn create_manifest_request(&self) -> ManifestsRequest {
         match self.location.as_ref() {
-                ExpandedLocation::Registry { url, real_name } => {
-                    ManifestsRequest::Pinned(PinnedRequest {
-                        package: Package {
-                            location: InternedLocation::new(Location::Registry {
-                                url: url.clone(),
-                                real_name: *real_name,
-                            }),
-                            version: self.version,
-                        },
-                        features: HashSet::new(),
-                        local_root: None,
-                    })
-                }
-                ExpandedLocation::Git { url, commit } => {
-                    ManifestsRequest::NotPinned(NotPinnedRequest {
-                        location: InternedLocation::new(Location::Git {
+            ExpandedLocation::Registry { url, real_name } => {
+                ManifestsRequest::Pinned(PinnedRequest {
+                    package: Package {
+                        location: InternedLocation::new(Location::Registry {
                             url: url.clone(),
-                            branch_or_tag: BranchOrTag::Default,
-                            rev: Some(*commit),
+                            real_name: *real_name,
                         }),
-                        versions: None,
-                        features: HashSet::new(),
-                        local_root: None,
-                    })
-                }
-                ExpandedLocation::Local { absolute_path } => {
-                    ManifestsRequest::NotPinned(NotPinnedRequest {
-                        location: InternedLocation::new(Location::Local {
-                            path: absolute_path.clone(),
-                        }),
-                        versions: None,
-                        features: HashSet::new(),
-                        local_root: Some(absolute_path.clone()),
-                    })
-                }
+                        version: self.version,
+                    },
+                    features: HashSet::new(),
+                    local_root: None,
+                })
             }
+            ExpandedLocation::Git { url, commit } => {
+                ManifestsRequest::NotPinned(NotPinnedRequest {
+                    location: InternedLocation::new(Location::Git {
+                        url: url.clone(),
+                        branch_or_tag: BranchOrTag::Default,
+                        rev: Some(*commit),
+                    }),
+                    versions: None,
+                    features: HashSet::new(),
+                    local_root: None,
+                })
+            }
+            ExpandedLocation::Local { absolute_path } => {
+                ManifestsRequest::NotPinned(NotPinnedRequest {
+                    location: InternedLocation::new(Location::Local {
+                        path: absolute_path.clone(),
+                    }),
+                    versions: None,
+                    features: HashSet::new(),
+                    local_root: Some(absolute_path.clone()),
+                })
+            }
+        }
     }
 }

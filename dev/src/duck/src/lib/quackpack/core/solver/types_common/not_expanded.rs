@@ -2,17 +2,16 @@ use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
     path::PathBuf,
-    str::FromStr,
     sync::{Mutex, OnceLock},
 };
 
 use url::Url;
 
 use crate::{
-    QuackError, QuackResult, StrId, qp_bail_internal,
+    QuackResult, StrId, qp_bail_internal,
     quackpack::core::{
         BranchOrTag, Dependency, Source, Version,
-        types_common::{ExpandedPackage, expanded::InternedExpandedLocation},
+        types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
         version::CompatibilityCheck,
     },
 };
@@ -86,23 +85,21 @@ pub enum Location {
     },
 }
 
-impl TryFrom<&Dependency> for Location {
-    type Error = QuackError;
-
-    fn try_from(dependency: &Dependency) -> QuackResult<Self> {
+impl From<&Dependency> for Location {
+    fn from(dependency: &Dependency) -> Self {
         match &dependency.desc().source().as_ref() {
-            Source::Registry(registry) => Ok(Self::Registry {
+            Source::Registry(registry) => Self::Registry {
                 url: registry.url().clone(),
                 real_name: dependency.real_name(),
-            }),
-            Source::Local(local) => Ok(Self::Local {
-                path: PathBuf::from_str(local.entry_in_manifest().as_str())?,
-            }),
-            Source::Git(git) => Ok(Self::Git {
+            },
+            Source::Local(local) => Self::Local {
+                path: local.absolute().to_path_buf(),
+            },
+            Source::Git(git) => Self::Git {
                 url: git.url().clone(),
                 branch_or_tag: git.branch_or_tag(),
                 rev: git.rev(),
-            }),
+            },
         }
     }
 }
@@ -118,6 +115,23 @@ impl Location {
 
     pub fn is_local(&self) -> bool {
         matches!(self, Self::Local { .. })
+    }
+
+    pub fn canonical_unexpansion(expanded_loc: &ExpandedLocation) -> Self {
+        match expanded_loc {
+            ExpandedLocation::Registry { url, real_name } => Self::Registry {
+                url: url.clone(),
+                real_name: *real_name,
+            },
+            ExpandedLocation::Git { url, commit } => Self::Git {
+                url: url.clone(),
+                branch_or_tag: BranchOrTag::Default,
+                rev: Some(*commit),
+            },
+            ExpandedLocation::Local { absolute_path } => Self::Local {
+                path: absolute_path.clone(),
+            },
+        }
     }
 }
 
