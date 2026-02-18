@@ -23,7 +23,7 @@ pub use source::*;
 
 use crate::{QuackError, quackpack::schemas::registry};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
 pub struct Manifest {
     root_description: RootDescription,

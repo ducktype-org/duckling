@@ -74,7 +74,7 @@ namespace query {
 
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
-			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
+			main_query_state.addDependency(my_node, dep_id);
 
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.

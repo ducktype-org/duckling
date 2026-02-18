@@ -44,11 +44,11 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 
-	LiteralUnitExpr::LiteralUnitExpr(query::Context& ctx, ElementOrigin origin):
+	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryUnitType>({}),
+					  tsh::getUnitType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -91,12 +91,12 @@ namespace compiler::helios::code {
 		return makeBox<LiteralNumericExpr>(expression_type, origin, value);
 	}
 
-	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, ElementOrigin origin, bool value):
+	LiteralBoolExpr::LiteralBoolExpr(query::Context&, ElementOrigin origin, bool value):
 		  Expr(
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::getBoolType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -119,13 +119,13 @@ namespace compiler::helios::code {
 	}
 
 	LiteralStringExpr::LiteralStringExpr(
-		query::Context& ctx, ElementOrigin origin, const base::StrID value
+		query::Context&, ElementOrigin origin, const base::StrID value
 	):
 		  Expr(
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryStringType>({}),
+					  tsh::getStringType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -147,14 +147,12 @@ namespace compiler::helios::code {
 		return makeBox<LiteralStringExpr>(expression_type, origin, value);
 	}
 
-	LiteralTypeExpr::LiteralTypeExpr(
-		query::Context& ctx, ElementOrigin origin, tsh::AbstractType type
-	):
+	LiteralTypeExpr::LiteralTypeExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
 		  Expr(
 
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::getMetaType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -206,7 +204,7 @@ namespace compiler::helios::code {
 	}
 
 	tsh::AbstractType builtinOperationToReturnType(
-		query::Context& ctx, BuiltinBinary operation, tsh::AbstractType argument_type
+		query::Context&, BuiltinBinary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinBinary;
 		switch (operation) {
@@ -237,7 +235,7 @@ namespace compiler::helios::code {
 		case FloatNeq:
 		case MetaEq:
 		case MetaNeq:
-			return ctx.query<tsh::QueryBoolType>({});
+			return tsh::getBoolType();
 		case BooleanAnd:
 		case BooleanOr:
 			return argument_type;
@@ -457,13 +455,13 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> subtypes
+		query::Context&, ElementOrigin origin, std::vector<Box<Expr>> subtypes
 	):
 		  Expr(
 
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::getMetaType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -727,7 +725,7 @@ namespace compiler::helios::code {
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		query::Context&            ctx,
+		query::Context&,
 		ElementOrigin              origin,
 		std::vector<Box<Expr>>     expressions,
 		std::vector<BuiltinBinary> operators
@@ -735,7 +733,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::getBoolType(),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -933,13 +931,11 @@ namespace compiler::helios::code {
 		return makeBox<DefaultValueExpr>(expression_type, origin, type);
 	}
 
-	LiftToTypeExpr::LiftToTypeExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> value_expr):
+	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>(
-					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable
+					  tsh::getMetaType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
 				  ),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),

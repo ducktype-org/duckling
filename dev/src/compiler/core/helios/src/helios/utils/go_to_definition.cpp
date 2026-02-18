@@ -67,8 +67,8 @@ namespace compiler::helios {
 	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
-		if (!hout_expr.hasValue()) return {};
+		if (!hout_expr->hasValue()) return {};
 
-		return querySymIDOfHOUTExpr(ctx, hout_expr.valueOrThrow().ref());
+		return querySymIDOfHOUTExpr(ctx, hout_expr->valueOrThrow().ref());
 	}
 }

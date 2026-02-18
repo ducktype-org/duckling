@@ -18,6 +18,7 @@ clap_complete = { version = "4.5.65", optional = true }
 console = "0.16.2"
 dialoguer = "0.12.0"
 git2 = "0.20.3"
+hex = "0.4.3"
 indicatif = "0.18.3"
 itertools = "0.14.0"
 libgit2-sys = "0.18.3"
@@ -36,6 +37,7 @@ serde-untagged = "0.1.9"
 serde_ignored = "0.1.14"
 serde_json = "1.0.149"
 serde_yaml_ng = "0.10.0"
+sha2 = "0.10.9"
 symbol_table = { version = "0.5.0", features = ["global", "serde"] }
 tempfile = "3.24.0"
 tokio = { version = "1.49.0", features = ["full"] }

@@ -77,6 +77,13 @@ namespace concurrent::worker {
 		 */
 		void setNoTasksCallback(WRef worker, const NoTasksCallback& callback);
 
+		/**
+		 * @brief Same as above, but sets the same callback for all workers sequentially.
+		 */
+		void setNoTasksCallback(const NoTasksCallback& callback) {
+			for (auto& worker: getAllWorkers()) worker->setNoTasksCallback(callback);
+		}
+
 	private:
 		WorkerManager() = default;
 
