@@ -151,5 +151,3 @@ def setup_build(*args, **kwargs):
         *args, 
         **kwargs,
     )
-
-    setup_build_impl(*args, **kwargs)
