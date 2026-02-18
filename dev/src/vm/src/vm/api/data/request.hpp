@@ -40,6 +40,11 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
+		struct RunFunctionAwait {
+			std::string          func_name;
+			FunctionRunArguments func_args;
+		};
+
 		struct Join {};
 
 		struct Step {};
@@ -84,6 +89,7 @@ namespace vm::api {
 		request::Stop,
 		request::Run,
 		request::RunFunction,
+		request::RunFunctionAwait,
 		request::Join,
 		request::Step,
 		request::WaitForBreakpoint,
