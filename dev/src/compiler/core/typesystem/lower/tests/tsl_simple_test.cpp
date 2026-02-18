@@ -1,6 +1,3 @@
-#include "typesystem/higher/queries/types.hpp"
-#include "typesystem/higher/types.hpp"
-
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/higher/type_interface.hpp>

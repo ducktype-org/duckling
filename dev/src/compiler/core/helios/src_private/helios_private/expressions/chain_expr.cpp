@@ -5,8 +5,6 @@
 
 #include "chain_expr.hpp"
 
-#include "typesystem/higher/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
