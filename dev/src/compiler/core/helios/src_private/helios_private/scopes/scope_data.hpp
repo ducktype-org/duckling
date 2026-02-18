@@ -2,6 +2,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/scope_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -26,7 +27,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<pst::AccessLocked<pst::LangElement>> related_pst_element;
+		base::Optional<pst::LangElement::HashType> related_pst_element_hash;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -45,23 +46,25 @@ namespace compiler::helios {
 		ScopeInternalID unstable_id;
 
 		ScopeData(
-			std::optional<ScopeID>                              parent,
-			bool                                                is_root,
-			base::Optional<pst::AccessLocked<pst::LangElement>> related_pst_element,
-			frontend::ModuleID                                  parent_module,
-			u64                                                 depth
+			std::optional<ScopeID>                     parent,
+			bool                                       is_root,
+			base::Optional<pst::LangElement::HashType> related_pst_element_hash,
+			frontend::ModuleID                         parent_module,
+			u64                                        depth
 		):
 			  parent(parent),
 			  is_root(is_root),
-			  related_pst_element(std::move(related_pst_element)),
+			  related_pst_element_hash(related_pst_element_hash),
 			  parent_module(parent_module),
 			  depth(depth),
 			  unstable_id(ScopeInternalID::next()) {
 			CORE_ASSERT(
-				related_pst_element.empty() == is_root,
+				related_pst_element_hash.empty() == is_root,
 				"Non-root scope must have related pst element."
 			);
 		}
+
+		base::Optional<pst::AccessLocked<pst::LangElement>> relatedPSTElement() const;
 
 		/**
 		 * @brief Creates a perfect clone of this ScopeData,

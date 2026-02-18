@@ -253,7 +253,7 @@ namespace compiler::helios {
 			// clang-format on
 
 			return ScopeData{
-				parent, false, element, module(parent), scopeDepth(parent) + 1,
+				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
 			};
 		}
 
@@ -501,11 +501,11 @@ namespace compiler::helios {
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
 			// @TODO: expand macros?
 
-			if (not key.ref->related_pst_element.has_value()) {
+			if (not key.ref->related_pst_element_hash.has_value()) {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
-			auto base_element = key.ref->related_pst_element.value().unlock(ctx);
+			auto base_element = key.ref->relatedPSTElement().value().unlock(ctx);
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
@@ -542,14 +542,14 @@ namespace compiler::helios {
 						name(sym),
 						"\n\n"
 						" considered scope : ",
-						key.ref->related_pst_element.value().unlock(ctx)->elementType(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						key.ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n\n",
 						" scope of symbol: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->elementType(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 						", ID: ",
-						scope(sym).ref->related_pst_element.value().unlock(ctx)->getID().asInt(),
+						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 						"\n"
 					)
 				);
@@ -697,8 +697,9 @@ namespace compiler::helios {
 
 		while (true) {
 			os << iter_scope.queryUnstablePerfectHash() << "("
-			   << (iter_scope.ref->related_pst_element.has_value()
-			           ? iter_scope.ref->related_pst_element.value()
+			   << (iter_scope.ref->relatedPSTElement().has_value()
+			           ? iter_scope.ref->relatedPSTElement()
+			                 .value()
 			                 .illegalAccess()
 			                 .value()
 			                 ->elementType()
