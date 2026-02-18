@@ -8,7 +8,7 @@
 
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
-#include <compare>              // IWYU pragma: export
+#include <atomic>               // IWYU pragma: export
 
 /**
  * @brief Macro used to create Strong ID types.
@@ -29,9 +29,9 @@
 #define STRONG_TYPEDEF_ID(NAME)                                              \
 	class NAME final {                                                       \
 	private:                                                                 \
-		inline static u64    NEXT_ID = 0;                                    \
-		constexpr static u64 BAD_ID  = u64(-1);                              \
-		u64                  id      = BAD_ID;                               \
+		inline static std::atomic<u64> NEXT_ID = 0;                          \
+		constexpr static u64           BAD_ID  = u64(-1);                    \
+		u64                            id      = BAD_ID;                     \
 		inline constexpr NAME(u64 id): id{ id } {}                           \
                                                                              \
 	public:                                                                  \
@@ -43,7 +43,7 @@
 		[[nodiscard]]                                                        \
 		static NAME next() {                                                 \
 			NAME out;                                                        \
-			out.id = NAME::NEXT_ID++;                                        \
+			out.id = NAME::NEXT_ID.fetch_add(1, std::memory_order_relaxed);  \
 			return out;                                                      \
 		}                                                                    \
 		static NAME bad() { return NAME{ BAD_ID }; }                         \
