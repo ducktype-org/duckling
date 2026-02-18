@@ -21,7 +21,7 @@ namespace base {
 		// GCC's std::stacktrace::current() uses libbacktrace internally,
 		// which has a racy mmap-based allocator (backtrace_state).
 		static std::mutex stacktrace_mutex;
-		std::lock_guard   lock(stacktrace_mutex);
+		std::scoped_lock  lock(stacktrace_mutex);
 
 		if (max_depth > 0)
 			return prettyStacktraceString(std::stacktrace::current(0, max_depth));
