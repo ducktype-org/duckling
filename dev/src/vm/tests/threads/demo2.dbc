@@ -3,7 +3,7 @@ global_data counter i64 {};
 function inc {} -> void {
     init_lany_type			 temp, i64;
 	init_lany_type 			 i, i64;
-	mov_l64_imm				 i, 3;
+	mov_l64_imm				 i, 10000;
 	# while(i > 0)
 	label Loop1;
 		# i--
@@ -12,29 +12,6 @@ function inc {} -> void {
 		mov_l64_g64			 temp, counter;
 		add_l64_imm			 temp, 1;
 		mov_g64_l64			 counter, temp;
-
-		# if i > 0 goto Loop1
-		cmpGt_l64_imm         i, 0;
-		jmpIf_label      	 Loop1;
-    deinit;
-    deinit;
-
-    ret;
-}
-
-function print {} -> void {
-    ret;
-    init_lany_type			 output_var, i64;
-
-	init_lany_type 			 i, i64;
-	mov_l64_imm				 i, 10;
-	# while(i > 0)
-	label Loop1;
-		# i--
-		sub_l64_imm          i, 1;
-
-		mov_l64_g64 			 output_var, counter;
-    	output_l64				 output_var;
 
 		# if i > 0 goto Loop1
 		cmpGt_l64_imm         i, 0;
@@ -54,10 +31,6 @@ function main { i64, ptr_argv } -> i64 {
 	set_threadctx			 inc;
     call_builtinfunc 		 builtin_start_thread;
 
-	init_lany_type           thread_print_id, i64;
-	set_threadctx			 print;
-    call_builtinfunc 		 builtin_start_thread;
-
 	init_lany_type			 join_inc1_ret, i64;
 	init_lany_type 			 join_inc1_id, i64;
     mov_l64_l64 			 join_inc1_id, thread_inc1_id;
@@ -67,25 +40,10 @@ function main { i64, ptr_argv } -> i64 {
 	init_lany_type 			 join_inc2_id, i64;
     mov_l64_l64 			 join_inc2_id, thread_inc2_id;
     call_builtinfunc 		 builtin_join_thread;
-
-	init_lany_type			 join_print_ret, i64;
-	init_lany_type 			 join_print_id, i64;
-    mov_l64_l64 			 join_print_id, thread_print_id;
-    call_builtinfunc 		 builtin_join_thread;
 	
     init_lany_type			 output_var, i64;
     mov_l64_g64 			 output_var, counter;
     output_l64				 output_var;
-
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-    deinit;
 
     ret;
 }
