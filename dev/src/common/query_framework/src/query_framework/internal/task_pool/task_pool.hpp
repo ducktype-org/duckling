@@ -48,12 +48,12 @@ namespace query::internal {
 		}
 
 	public:
-		/** return non empty ref, if the task was inserted */
-		auto addIfNotExists(NodeID id) -> auto {
-			return getMap(id).maybePut(id.hash, TaskStatus::InProgress);
+		/** return true if added */
+		bool addIfNotExists(NodeID id) {
+			return getMap(id).maybePut(id.hash, TaskStatus::InProgress).toOpt().has_value();
 		}
 
-		auto getCurrent(NodeID id) const -> base::Optional<TaskStatus> {
+		base::Optional<TaskStatus> getCurrent(NodeID id) const {
 			return getMap(id).atMaybeCopy(id.hash);
 		}
 

@@ -91,33 +91,23 @@ namespace query::internal {
 		// instead of comparing).
 
 		auto change_status_result = task_status_map.addIfNotExists(task.id);
-		auto& mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
-		auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
 
 		// this insert decided who get's to do the task
-		if (change_status_result.toOpt().has_value()) {
+		if (change_status_result) {
 			// The key was inserted by us, we can execute the task
 			auto wd = concurrent::worker::Worker::getCurrentWorker();
 
 			task.work(wd);
 			task_status_map.setDone(task.id);
-						{
+			
+			auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
 			cv.notify_all();
 			return true;
 		}
 
-		// This line, although maybe counter intuitive on the first sight, is correct.
-		// It's because we don't count task completion here, but rather the number of added tasks
-		// to the pool. Some tasks may be added multiple times, (but only one execution will
-		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
-		// the pool.
-		// {
-		// 	std::lock_guard lock(pool_mutex);
-		// 	completed_tasks.fetch_add(1);
-		// }
-
-
-		cv.notify_all();
+		// do we need this notify?:
+		// cv.notify_all();
+		
 		return false;
 	}
 
