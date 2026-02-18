@@ -13,7 +13,10 @@ namespace query::internal {
 
 	TaskPool::TaskPool():
 		  worker_manager(concurrent::worker::WorkerManager::get()),
-		  num_workers(worker_manager.getAllWorkers().size()) {
+		  num_workers(worker_manager.getAllWorkers().size()),
+		task_completed_mutexes(TASK_SHARDS),
+		  task_completed_cvs(TASK_SHARDS) {
+			
 		// Initialize per-worker pools
 		for (auto worker: worker_manager.getAllWorkers())
 			worker_pools.emplace(worker, std::deque<Task>());
@@ -25,14 +28,12 @@ namespace query::internal {
 	}
 
 	TaskPool::~TaskPool() {
-		waitExecutionCompletion();
 		flushWorkers();
 	}
 
 	void TaskPool::addTask(Task&& task) {
 		std::lock_guard lock(pool_mutex);
 
-		added_tasks.fetch_add(1);
 
 		auto chosen_worker
 			= worker_manager.scheduleTaskOnAnyWorker([this, pt = std::move(task)](WRef) mutable {
@@ -43,20 +44,12 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
-		std::unique_lock lock(pool_mutex);
-		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+		auto& mutex = task_completed_mutexes[taskHash(id) % TASK_SHARDS];
+		auto& cv = task_completed_cvs[taskHash(id) % TASK_SHARDS];
+		std::unique_lock lock(mutex);
+		cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
-	void TaskPool::waitExecutionCompletion() {
-		std::unique_lock lock(pool_mutex);
-		task_completed_cv.wait(lock, [this] {
-			CORE_ASSERT(
-				added_tasks.load() >= completed_tasks.load(),
-				"Completed tasks cannot exceed added tasks"
-			);
-			return added_tasks.load() == completed_tasks.load();
-		});
-	}
 
 	void TaskPool::execute() { CORE_UNREACHABLE(); }
 
@@ -64,24 +57,26 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case
 
+		auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
+		auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
+
 		if (auto task_status = task_status_map.getCurrent(task.id)) {
 			if (*task_status == TaskStatus::Done) {
 				return;
 			}
 			else if (*task_status == TaskStatus::InProgress) {
-				std::unique_lock lock(pool_mutex);
-				task_completed_cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
+				std::unique_lock lock(mutex);
+				cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
 				return;
 			}
 		}
 
 
-		added_tasks.fetch_add(1);
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
 			const auto       id = task.id;
-			std::unique_lock lock(pool_mutex);
-			task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+			std::unique_lock lock(mutex);
+			cv.wait(lock, [this, id] { return isTaskDone(id); });
 		}
 	}
 
@@ -92,6 +87,8 @@ namespace query::internal {
 		// instead of comparing).
 
 		auto change_status_result = task_status_map.addIfNotExists(task.id);
+		auto& mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
+		auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
 
 		// @TODO: #1973 integrate with query
 		// this insert decided who get's to do the task
@@ -101,12 +98,13 @@ namespace query::internal {
 
 			task.work(wd);
 			{
-				std::lock_guard lock(pool_mutex);
+				std::lock_guard lock(mutex);
 
 				task_status_map.setDone(task.id);
 				completed_tasks.fetch_add(1);
 			}
-			task_completed_cv.notify_all();
+
+			cv.notify_all();
 			return true;
 		}
 
@@ -115,11 +113,13 @@ namespace query::internal {
 		// to the pool. Some tasks may be added multiple times, (but only one execution will
 		// happen), so we pair the numbers of added tasks with the number of tasks we taken out of
 		// the pool.
-		{
-			std::lock_guard lock(pool_mutex);
-			completed_tasks.fetch_add(1);
-		}
-		task_completed_cv.notify_all();
+		// {
+		// 	std::lock_guard lock(pool_mutex);
+		// 	completed_tasks.fetch_add(1);
+		// }
+
+
+		cv.notify_all();
 		return false;
 	}
 
@@ -131,8 +131,7 @@ namespace query::internal {
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
 		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
 
-		// Now because we are adding a new task to the pool, we increment the added tasks counter.
-		added_tasks.fetch_add(1);
+
 
 		{
 			std::lock_guard lock(pool_mutex);
@@ -165,18 +164,22 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->await is performing a lot of operations even in such case
 
+		auto& mutex = task_completed_mutexes[taskHash(id) % TASK_SHARDS];
+		auto& cv = task_completed_cvs[taskHash(id) % TASK_SHARDS];
+
 		if (auto task_status = task_status_map.getCurrent(id)) {
 			if (*task_status == TaskStatus::Done) {
 				return;
 			}
 			else if (*task_status == TaskStatus::InProgress) {
-				std::unique_lock lock(pool_mutex);
-				task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+				std::unique_lock lock(mutex);
+				cv.wait(lock, [this, id] { return isTaskDone(id); });
 				return;
 			}
 		}
 
-		std::unique_lock lock(pool_mutex);
+		std::unique_lock lock(mutex);
+
 		auto             task_opt
 			= tryStealFromWorkerUnlocked(concurrent::worker::Worker::getCurrentWorker(), id);
 		if_opt_some(task_opt, task) {
@@ -184,7 +187,7 @@ namespace query::internal {
 			tryExecuteTask(task);
 			lock.lock();
 		}
-		task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+		cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
 	bool TaskPool::isTaskDone(NodeID id) const {

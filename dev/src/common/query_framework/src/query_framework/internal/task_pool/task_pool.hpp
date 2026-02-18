@@ -18,6 +18,10 @@
 namespace query::internal {
 	class TaskPool;
 
+	inline std::size_t taskHash(const query::internal::NodeID& node) {
+		return std::hash<query::internal::NodeID>{}(node);
+	}
+
 
 	/**
 	 * @brief Status of a task in the TaskPool.
@@ -106,6 +110,8 @@ namespace query::internal {
 	class TaskPool final {
 		using WRef = concurrent::worker::WRef;
 
+		static constexpr usize TASK_SHARDS = 127;
+
 	public:
 		/**
 		 * @brief Constructs a TaskPool.
@@ -138,7 +144,7 @@ namespace query::internal {
 		 * @brief Wait for all tasks in the pool to complete.
 		 * Should be called after execute().
 		 */
-		void waitExecutionCompletion();
+		// void waitExecutionCompletion();
 
 		/**
 		 * @brief Query (execute) a task immediately.
@@ -276,13 +282,15 @@ namespace query::internal {
 		TaskStatusMap task_status_map;
 
 		/// Condition variable for signaling task completion.
-		std::condition_variable task_completed_cv;
+		// std::condition_variable task_completed_cv;
+		std::vector<std::mutex> task_completed_mutexes;
+		std::vector<std::condition_variable> task_completed_cvs;
 
 		/// Counter for completed tasks (used in execute()).
 		std::atomic<usize> completed_tasks{ 0 };
 
 		/// Total number of tasks (used in execute()).
-		std::atomic<usize> added_tasks{ 0 };
+		// std::atomic<usize> added_tasks{ 0 };
 
 		/// Our own worker free (see getFreeWorkerUnlocked() function) for more info.
 		base::StableHashMap<WRef, std::atomic<bool>> is_worker_free_map;
