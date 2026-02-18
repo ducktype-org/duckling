@@ -14,6 +14,7 @@
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
 namespace query {
 
@@ -27,6 +28,7 @@ namespace query {
 	 * 	* call other query
 	 *  * log
 	 *  * report compiler error
+	 *  * add metadata to the current query node
 	 *
 	 * @FUTURE: there exist a concept of "custom context" types as
 	 * a way to hack-in the query model. This however will most likely be
@@ -72,7 +74,7 @@ namespace query {
 
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
-			main_query_state.getGraphMutable()->addDependency(my_node, dep_id);
+			main_query_state.addDependency(my_node, dep_id);
 
 			// Here, the node should already exist in the active graph.
 			// We add edge from 'my_node' to 'dep_id' to represent the dependency.
@@ -129,6 +131,20 @@ namespace query {
 			});
 
 			return OthQuery::internal_query(key);
+		}
+
+		/**
+		 * @brief Add metadata to the current query node.
+		 *
+		 * This method allows attaching typed metadata to the current query node (my_node).
+		 * Metadata can only be added to queries that have preserve_in_graph = true.
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, internal::BaseMetadata>
+		void addMetadata(Args&&... args) {
+			assertActive();
+
+			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);
 		}
 
 		/**

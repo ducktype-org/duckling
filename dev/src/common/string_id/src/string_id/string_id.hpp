@@ -72,8 +72,7 @@ namespace base {
 
 	/**
 	 * @brief String-ID utility used widely as keys (artifacts, module names, symbols, etc.).
-	 * \parallel Constructed and used across threads; global intern table or shared state (if any)
-	 * must be safe.
+	 * @note It is thread-safe.
 	 */
 	class StrID final {
 	public:

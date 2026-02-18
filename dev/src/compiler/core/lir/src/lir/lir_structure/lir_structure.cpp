@@ -29,7 +29,7 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
+		auto bool_type   = tsh::getBoolType();
 		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LIRLocal{ bool_layout };

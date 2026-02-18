@@ -119,6 +119,12 @@ async fn create_mock_server() -> MockServer {
         .await;
 
     Mock::given(method("GET"))
+        .and(path("/packages/foo/2137.6.7"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("GET"))
         .and(path("/packages/foo"))
         .respond_with(
             ResponseTemplate::new(200).set_body_json(&types::MultiMetadata {
@@ -216,4 +222,27 @@ async fn download_blob() {
         .await
         .unwrap();
     assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
+}
+
+#[tokio::test]
+async fn not_found_in_response() {
+    let server = create_mock_server().await;
+    let client = DucknestClient::new().unwrap();
+    let err = client
+        .get_exact_metadata(&types::PackageWithUrl {
+            id: "foo".into(),
+            version: Version::new(2137, 6, 7),
+            url: server.uri().parse().unwrap(),
+        })
+        .await
+        .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        format!(
+            "while getting a metadata of `foo` version `2137.6.7` from `{}/`
+HTTP status client error (404 Not Found) for url ({}/packages/foo/2137.6.7)",
+            server.uri(),
+            server.uri()
+        )
+    );
 }

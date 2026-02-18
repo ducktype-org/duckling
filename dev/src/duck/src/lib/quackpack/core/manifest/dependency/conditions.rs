@@ -4,7 +4,7 @@ use crate::QuackError;
 use crate::quackpack::schemas::registry;
 use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
 /// This is enabled for `any(system) and any(arch) and any(flags)`.
 pub struct Conditions {

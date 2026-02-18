@@ -3,6 +3,7 @@
 #include <timer/timer.hpp>
 
 #include <array>
+#include <atomic>
 #include <iostream>
 #include <utility>
 
@@ -15,23 +16,23 @@ namespace time_stats {
 		 * Following arrays are used to store time statistics and active status
 		 * of each category.
 		 *
-		 * \parallel They will have to be made thread-safe if time tracking from multiple threads
-		 * is to be supported (perhaps via thread-local storage).
+		 * \parallel This need to stay thread-safe.
 		 */
-		constinit std::array<timer::Duration, TIME_CATEGORIES_COUNT> time_statistics{};
-		constinit std::array<bool, TIME_CATEGORIES_COUNT>            is_category_active{};
+		constinit std::array<timer::AtomicDuration, TIME_CATEGORIES_COUNT> time_statistics{};
+		constinit std::array<std::atomic<bool>, TIME_CATEGORIES_COUNT>     is_category_active{};
 	}
 
 	TrackCategoryTime::TrackCategoryTime(TimeCategories category):
 		  category(category),
 		  ended(false) {
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(true);
+
 		CORE_ASSERT(
-			not is_category_active.at(std::to_underlying(category)),
+			not was_active,
 			"Overlapping time tracking of category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = true;
 		measurement.startMeasurement();
 	}
 
@@ -41,16 +42,18 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
+
 		CORE_ASSERT(
-			is_category_active.at(std::to_underlying(category)),
+			was_active,
 			"Ending time tracking of inactive category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = false;
-		ended                                               = true;
 
-		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
+		ended = true;
+
+		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
 
 	TrackCategoryTime::~TrackCategoryTime() {
@@ -59,19 +62,19 @@ namespace time_stats {
 
 		measurement.endMeasurement();
 
+		bool was_active = is_category_active.at(std::to_underlying(category)).exchange(false);
 		CORE_ASSERT_NOEXCEPT(
-			is_category_active.at(std::to_underlying(category)),
+			was_active,
 			"Ending time tracking of inactive category ",
 			std::to_underlying(category),
 			"."
 		);
-		is_category_active.at(std::to_underlying(category)) = false;
 
-		time_statistics.at(std::to_underlying(category)).value += measurement.duration().value;
+		time_statistics.at(std::to_underlying(category)).add(measurement.duration());
 	}
 
 	timer::Duration getTimeStatistic(TimeCategories category) {
-		return time_statistics.at(std::to_underlying(category));
+		return time_statistics.at(std::to_underlying(category)).toDuration();
 	}
 
 	void prettyPrintTimeStatistics() {
@@ -80,7 +83,7 @@ namespace time_stats {
 		std::cerr << "Driver initialization time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::DriverInitialization)),
+			time_statistics.at(std::to_underlying(TimeCategories::DriverInitialization)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -88,7 +91,7 @@ namespace time_stats {
 		std::cerr << "Driver exit time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::DriverExit)),
+			time_statistics.at(std::to_underlying(TimeCategories::DriverExit)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -96,7 +99,7 @@ namespace time_stats {
 		std::cerr << "Graph optimization time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::GraphOptimization)),
+			time_statistics.at(std::to_underlying(TimeCategories::GraphOptimization)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -104,7 +107,7 @@ namespace time_stats {
 		std::cerr << "Total compilation time (note that subcategories may overlap): ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::TotalCompilationTime)),
+			time_statistics.at(std::to_underlying(TimeCategories::TotalCompilationTime)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -112,7 +115,7 @@ namespace time_stats {
 		std::cerr << " - PST construction time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::PSTConstruction)),
+			time_statistics.at(std::to_underlying(TimeCategories::PSTConstruction)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -120,7 +123,7 @@ namespace time_stats {
 		std::cerr << " - Backend compilation time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::BackendCompilation)),
+			time_statistics.at(std::to_underlying(TimeCategories::BackendCompilation)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n";
@@ -128,7 +131,7 @@ namespace time_stats {
 		std::cerr << " - Linking time: ";
 		timer::printAs(
 			std::cerr,
-			time_statistics.at(std::to_underlying(TimeCategories::Linking)),
+			time_statistics.at(std::to_underlying(TimeCategories::Linking)).toDuration(),
 			timer::TimeUnit::Milliseconds
 		);
 		std::cerr << "\n\n";

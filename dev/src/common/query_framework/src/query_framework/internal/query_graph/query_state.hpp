@@ -4,8 +4,19 @@
 #include "node_id.hpp"
 #include "query_graph.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
+
+namespace query {
+	// Forward declaration
+	struct Context;
+}
 
 namespace query::internal {
 	/**
@@ -42,16 +53,37 @@ namespace query::internal {
 			 * nodes from this graph, unless for merging purposes.
 			 * @note We assume that this graph is correct and does not contain cycles.
 			 */
-			QueryGraph                       graph;
-			base::HashMap<NodeID, PrevColor> node_colors;
+			QueryGraph graph;
+
+			/**
+			 * Colors of nodes from the previous compilation.
+			 * Red   - node is outdated
+			 * Green - node is up to date and can be merged into the current graph without
+			 * recomputation
+			 * @note This map should only be written to during the red-green sweep
+			 */
+			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
+
+			/**
+			 * Metadata from previous compilation.
+			 * Metadata for green nodes will be moved into current metadata_storage during merge.
+			 * \parallel #29 Make metadata concurrent
+			 */
+			base::Optional<MetadataStorage> metadata;
 
 			PreviousCompilation() = delete;
 
-			PreviousCompilation(QueryGraph&& g, base::HashMap<NodeID, PrevColor>&& colors):
+			PreviousCompilation(
+				QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeID, PrevColor>>&& colors
+			):
 				  graph(std::move(g)),
-				  node_colors(std::move(colors)) {}
+				  node_colors(std::move(colors)),
+				  metadata() {}
 
-			PreviousCompilation(QueryGraph&& g): graph(std::move(g)), node_colors() {}
+			PreviousCompilation(QueryGraph&& g):
+				  graph(std::move(g)),
+				  node_colors(base::makeBox<concurrent::ConHashMap<NodeID, PrevColor>>()),
+				  metadata() {}
 		};
 
 	public:
@@ -66,12 +98,7 @@ namespace query::internal {
 		\***************************/
 
 		/**
-		 * @brief Returns the mutable query graph.
-		 */
-		Ref<QueryGraph> getGraphMutable() { return &query_graph; }
-
-		/**
-		 * @brief Returns the query graph.
+		 * @brief Returns read-only reference to the query graph.
 		 */
 		[[nodiscard]]
 		const QueryGraph& getGraph() const {
@@ -79,24 +106,39 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Returns the graph from previous compilation.
+		 * @brief Returns read-only reference to the graph from previous compilation.
 		 */
 		[[nodiscard]]
 		base::Optional<base::CRef<QueryGraph>> getPreviousGraph() const;
 
 		/**
 		 * @brief Adds a node to the query graph.
-		 *
-		 * If the node already exists, resets its data.
-		 * @TODO: #1889 in the future, we might want to disallow cache less queries and panic on
-		 * adding existing node
+		 * panics if the node already exists.
 		 */
 		void addGraphNode(NodeID node_id);
+
+		/**
+		 * @brief Adds a node to the query graph that represents a side input query.
+		 * This is needed because SideSinput queries have no cache and can be added multiple times.
+		 */
+		void addSideInputNode(NodeID node_id);
+
+
+		/**
+		 * @brief Marks that given query depends on another query.
+		 * Note that @p to does not need to be in the graph at the moment of calling this function.
+		 */
+		void addDependency(NodeID from, NodeID to);
+
 
 		/*********************************\
 		| Active query state interface:   |
 		\*********************************/
 
+		/**
+		 *  Return mutable reference to the active graph.
+		 *  @note Note that all active graph operations are thread safe.
+		 */
 		Ref<ActiveGraph> getActiveGraph() noexcept;
 
 		/**
@@ -123,12 +165,18 @@ namespace query::internal {
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::CRef<base::HashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+		base::CRef<concurrent::ConHashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
 
 		/**
 		 * @brief Sets the previous query graph.
 		 */
 		void setPreviousGraph(QueryGraph&& graph);
+
+		/**
+		 * @brief Sets the previous compilation metadata storage.
+		 * Must be called after setPreviousGraph.
+		 */
+		void setPreviousMetadata(MetadataStorage&& metadata);
 
 		/**
 		 * @brief Maps NodeIDs read from a previous graph into IDs valid in the current run by
@@ -178,18 +226,89 @@ namespace query::internal {
 		[[nodiscard]] QueryGraph::ReducedGraphData reduceOptimizeGraph(const QueryGraph& graph
 		) const;
 
-	private:
 		/***************************\
-		| All of the actual state:  |
+		|    Metadata interface:    |
 		\***************************/
 
 		/**
-		 * The runtime data of the graph.
-		 * \parallel it is now empty, but is left, as a placeholder for future per-node data such as
-		 * computed/in progress.
-		 * @TODO: #1889 decide if we need this at all.
+		 * @brief Get all metadata of a specific type for a node.
+		 *
+		 * @tparam MetadataT The metadata type to retrieve (must derive from BaseMetadata)
+		 * @param node_id The NodeID to get metadata for
+		 * @return std::vector<CRef<MetadataT>> References to all metadata of the given type.
+		 *         Returns empty vector if no metadata of this type exists.
 		 */
-		base::HashMap<NodeID, NodeData> node_data;
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		std::vector<CRef<MetadataT>> getMetadata(NodeID node_id) const {
+			return metadata_storage.getMetadata<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Check if a node has any metadata of a specific type.
+		 * @note This function is used for tests
+		 *
+		 * @tparam MetadataT The metadata type to check for
+		 * @param node_id The NodeID to check
+		 * @return true if the node has at least one metadata of this type
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		bool hasMetadata(NodeID node_id) const {
+			return metadata_storage.hasMetadata<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Get count of metadata of a specific type for a node.
+		 *
+		 * @tparam MetadataT The metadata type to count
+		 * @param node_id The NodeID to check
+		 * @return usize Number of metadata instances of this type
+		 */
+		template<typename MetadataT>
+		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
+		usize getMetadataCount(NodeID node_id) const {
+			return metadata_storage.getMetadataCount<MetadataT>(node_id);
+		}
+
+		/**
+		 * @brief Get the metadata storage for direct access.
+		 * @note Prefer using the typed getMetadata<T>() method.
+		 * @return const reference to the metadata storage.
+		 */
+		[[nodiscard]]
+		const MetadataStorage& getMetadataStorage() const {
+			return metadata_storage;
+		}
+
+	private:
+		friend struct ::query::Context;
+
+		/**
+		 * @brief Add metadata to a node. Only accessible via Context.
+		 *
+		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
+		 * @tparam Args Argument types for constructing the metadata
+		 * @param node_id The NodeID to attach metadata to
+		 * @param args Arguments forwarded to MetadataT constructor
+		 */
+		template<typename MetadataT, typename... Args>
+		requires std::derived_from<MetadataT, BaseMetadata>
+		void addMetadataInternal(NodeID node_id, Args&&... args) {
+			// Check that the query has preserve_in_graph = true
+			CORE_ASSERT(
+				node_id.q_id.getData().tags.preserve_in_graph,
+				"Cannot add metadata to query without preserve_in_graph = true. "
+				"Query: "
+					+ std::string(node_id.q_id.getData().name)
+			);
+
+			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
+		}
+
+		/***************************\
+		| All of the actual state:  |
+		\***************************/
 
 		/**
 		 * The query graph that holds the dependencies and structure of the queries.
@@ -205,5 +324,10 @@ namespace query::internal {
 		 * The previous compilation data if any.
 		 */
 		base::Optional<PreviousCompilation> previous;
+
+		/**
+		 * @brief Storage for metadata attached to query nodes.
+		 */
+		MetadataStorage metadata_storage;
 	};
 }

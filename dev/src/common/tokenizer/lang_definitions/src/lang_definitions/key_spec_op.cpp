@@ -194,6 +194,7 @@ namespace lang_def {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
 		{ NamedOperator::Period, "." },
+		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },

@@ -42,6 +42,8 @@ public:
 	}
 
 private:
+	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));
 
@@ -107,7 +109,7 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 
-			auto i64_type = ctx.query<QueryIntegralType>(64);
+			auto i64_type = getIntegralType(ctx, 64, Signed);
 
 			{
 				auto a = foo_mir.local_list[0];
@@ -381,9 +383,9 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
-			auto i16_type = ctx.query<QueryIntegralType>(16);
-			auto i32_type = ctx.query<QueryIntegralType>(32);
-			auto i64_type = ctx.query<QueryIntegralType>(64);
+			auto i16_type = getIntegralType(ctx, 16, Signed);
+			auto i32_type = getIntegralType(ctx, 32, Signed);
+			auto i64_type = getIntegralType(ctx, 64, Signed);
 
 			const auto& locals = foo_mir.local_list;
 
@@ -486,7 +488,7 @@ private:
 			auto& functions = unit.functions;
 
 			compiler::tsh::SymbolType<> meta_type{
-				ctx.query<QueryMetaType>({}),
+				getMetaType(),
 				compiler::tsh::ReferenceKind::Direct,
 				compiler::tsh::Mutability::Mutable,
 			};
@@ -675,7 +677,7 @@ private:
 			                     .query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(3) })
 			                     ->valueOrThrow();
 
-			auto i64_type = ctx.query<QueryIntegralType>(64);
+			auto i64_type = getIntegralType(ctx, 64, Signed);
 
 			bool found_alloc_box_int      = false;
 			bool found_alloc_box_point    = false;

@@ -4,7 +4,7 @@ use crate::qp_bail;
 use crate::quackpack::core::InternedSource;
 use crate::quackpack::core::Version;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// Description of a crucial elements of a dependency.
 /// Note, that since we allow aliases, `manifest_name` may be an alias specified in the manifest.
 /// Real (unaliased) name is in `dependency.real_name`.
