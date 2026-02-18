@@ -35,7 +35,7 @@ namespace query::internal {
 
 	struct TaskStatusMap final {
 	private:
-		using Map = concurrent::ConHashMap<NodeID, TaskStatus>;
+		using Map = concurrent::ConHashMap<query::internal::KeyHash, TaskStatus>;
 
 		std::array<Map, 128> maps;
 
@@ -50,11 +50,11 @@ namespace query::internal {
 	public:
 		/** return non empty ref, if the task was inserted */
 		auto addIfNotExists(NodeID id) -> auto {
-			return getMap(id).maybePut(id, TaskStatus::InProgress);
+			return getMap(id).maybePut(id.hash, TaskStatus::InProgress);
 		}
 
 		auto getCurrent(NodeID id) const -> base::Optional<TaskStatus> {
-			return getMap(id).atMaybeCopy(id);
+			return getMap(id).atMaybeCopy(id.hash);
 		}
 
 		bool isDone(NodeID id) const {
@@ -65,11 +65,11 @@ namespace query::internal {
 		}
 
 		void setDone(NodeID id) {
-			getMap(id).update(id, TaskStatus::Done);
+			getMap(id).update(id.hash, TaskStatus::Done);
 		}
 
 		bool contains(NodeID id) const {
-			return getMap(id).contains(id);
+			return getMap(id).contains(id.hash);
 		}
 	};
 
