@@ -270,7 +270,7 @@ namespace compiler::helios::code {
 							getSymRef(data.function)->getDataOpt<PstSymbolData>(), pst_data
 						) {
 							auto param_decl = getNthDeclarationParameter(
-								ctx, pst_data->pst_element.unlock(ctx), data.parameter_index
+								ctx, pst_data->getElement().unlock(ctx), data.parameter_index
 							);
 							base::Optional<dia::SourcePosition> param_position{
 								param_decl->getSourcePosition()
