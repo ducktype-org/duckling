@@ -445,7 +445,7 @@ DEF_INSTR(alloc_lptr_type, (vm::opargs::StackLocalPtr, ptr), (vm::opargs::Type, 
 DEF_INSTR(free_lptr, (vm::opargs::StackLocalPtr, ptr))
 
 
-// stores local data at pointerStack
+// stores local data at pointer
 DEF_INSTR(store_lptr_lany, (vm::opargs::StackLocalPtr, dst_ptr), (vm::opargs::StackLocalAny, src))
 // dereferences pointer and stores into local
 DEF_INSTR(load_lany_lptr, (vm::opargs::StackLocalAny, dst), (vm::opargs::StackLocalPtr, src_ptr))
