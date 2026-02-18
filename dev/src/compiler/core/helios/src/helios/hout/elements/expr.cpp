@@ -25,6 +25,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
+	EXPR_VISITOR(ReusableExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TernaryOperatorExpr)
@@ -194,6 +195,30 @@ namespace compiler::helios::code {
 	Box<Expr> IdentifierExpr::clone() const {
 		return makeBox<IdentifierExpr>(expression_type, symbol);
 	}
+
+	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
+		  Expr(inner->expression_type),
+		  inner(std::move(inner)),
+		  first_use(first_use) {}
+
+	void ReusableExpr::debugPrint(std::ostream& out) const {
+		if (first_use) {
+			out << "[tmp " << inner->getID().asInt() << "] ";
+			inner->debugPrint(out);
+		} else {
+			out << "[reuse " << inner->getID().asInt() << "]";
+		}
+	}
+
+	Box<Expr> ReusableExpr::clone() const {
+		SharedBox inner_cloned = inner->clone();
+		return makeBox<ReusableExpr>(inner_cloned, first_use);
+	}
+
+	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
+		  Expr(inner->expression_type),
+		  inner(inner),
+		  first_use(first_use) {}
 
 	tsh::AbstractType builtinOperationToReturnType(
 		query::Context& ctx, BuiltinBinary operation, tsh::AbstractType argument_type
@@ -614,7 +639,7 @@ namespace compiler::helios::code {
 	}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		query::Context& ctx, std::vector<Box<Expr>> expressions, std::vector<BuiltinBinary> operators
+		query::Context& ctx, std::vector<ComparisonTriple> comparisons
 	):
 		  Expr(tsh::ExpressionType<>(
 			  tsh::SymbolType{
@@ -624,17 +649,13 @@ namespace compiler::helios::code {
 			  },
 			  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 		  )),
-		  expressions{ std::move(expressions) },
-		  operators{ std::move(operators) } {}
+		  comparisons{ std::move(comparisons) } {}
 
 	ChainComparisonExpr::ChainComparisonExpr(
-		tsh::ExpressionType<>        expression_type,
-		std::vector<base::Box<Expr>> expressions,
-		std::vector<BuiltinBinary>   operators
+		tsh::ExpressionType<> expression_type, std::vector<ComparisonTriple> comparisons
 	):
 		  Expr(expression_type),
-		  expressions{ std::move(expressions) },
-		  operators{ std::move(operators) } {}
+		  comparisons{ std::move(comparisons) } {}
 
 	void ChainComparisonExpr::debugPrint(std::ostream& out) const {
 		using namespace std::views;
@@ -666,18 +687,26 @@ namespace compiler::helios::code {
 			}
 		};
 
-		expressions.front()->debugPrint(out);
-		for (auto [expr, comp]: zip(expressions | drop(1), operators)) {
-			out << comparison_to_string(comp);
-			expr->debugPrint(out);
+		std::string separator = "";
+		for (auto [lhs, comp, rhs]: comparisons) {
+			out << separator << " ";
+			lhs->debugPrint(out);
+			out << " " << comparison_to_string(comp) << " ";
+			rhs->debugPrint(out);
+			separator = "and";
 		}
 	}
 
+	ChainComparisonExpr::ComparisonTriple ChainComparisonExpr::clone(const ComparisonTriple& comp) {
+		auto& [lhs, operation, rhs] = comp;
+		return { lhs->clone(), operation, rhs->clone() };
+	}
+
 	Box<Expr> ChainComparisonExpr::clone() const {
-		std::vector<base::Box<Expr>> expressions;
-		expressions.reserve(this->expressions.size());
-		for (const auto& expr: this->expressions) expressions.push_back(expr->clone());
-		return makeBox<ChainComparisonExpr>(expression_type, std::move(expressions), operators);
+		std::vector<ComparisonTriple> comparisons;
+		comparisons.reserve(this->comparisons.size());
+		for (const auto& comp: this->comparisons) comparisons.push_back(clone(comp));
+		return makeBox<ChainComparisonExpr>(expression_type, std::move(comparisons));
 	}
 
 	CastExpr::CastExpr(query::Context&, Box<Expr> source_expr, tsh::SymbolType<> target_type):

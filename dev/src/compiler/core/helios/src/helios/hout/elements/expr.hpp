@@ -5,6 +5,7 @@
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
@@ -134,6 +135,7 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 
 		[[nodiscard]] Box<Expr> clone() const final;
+
 	private:
 		FRIEND_MAKEBOX
 
@@ -202,6 +204,27 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		IdentifierExpr(tsh::ExpressionType<> expression_type, SymID symbol);
+	};
+
+	/**
+	 * @brief A special kind of expression which wraps expressions that need to be
+	 * used multiple times without recalculating, such as `b` in `a < b < c`.
+	 */
+	struct ReusableExpr final: public Expr {
+		SharedBox<Expr> inner;
+		bool            first_use;
+
+		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
 	};
 
 	/**
@@ -488,14 +511,10 @@ namespace compiler::helios::code {
 	 * @TODO: User defined comparison operators.
 	 */
 	struct ChainComparisonExpr final: public Expr {
-		std::vector<base::Box<Expr>> expressions;
-		std::vector<BuiltinBinary>   operators;
+		using ComparisonTriple = std::tuple<Box<Expr>, BuiltinBinary, Box<Expr>>;
+		std::vector<ComparisonTriple> comparisons;
 
-		ChainComparisonExpr(
-			query::Context&              ctx,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
-		);
+		ChainComparisonExpr(query::Context& ctx, std::vector<ComparisonTriple> comparisons);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -505,10 +524,10 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
+		[[nodiscard]] static ComparisonTriple clone(const ComparisonTriple&);
+
 		ChainComparisonExpr(
-			tsh::ExpressionType<>        expression_type,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
+			tsh::ExpressionType<> expression_type, std::vector<ComparisonTriple> comparisons
 		);
 	};
 

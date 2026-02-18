@@ -104,6 +104,25 @@ namespace compiler::mir {
 			}
 		}
 
+		void visitReusableExpr(const helios::code::ReusableExpr& expr) override {
+			// If this is the subsequent use of the expression,
+			// simply return the temporary value assigned to it.
+			if (not expr.first_use) {
+				valueOutput(continuation, function.addTmp(expr, expr_scope));
+				return;
+			}
+
+			// Otherwise, compute the value of the expression.
+			auto target_location = function.addTmp(expr, expr_scope);
+			auto assign_hole     = continuation->addHole();
+			auto lowered_inner   = lowerSubExpr(*expr.inner, continuation);
+			lowered_inner.storeResultInGivenPlace(
+				MIRPlace(target_location), assign_hole, { flagConstruct(target_location) }, expr_scope
+			);
+
+			valueOutput(lowered_inner.begin, target_location);
+		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
 			auto target_construction_hole = continuation->addHole();

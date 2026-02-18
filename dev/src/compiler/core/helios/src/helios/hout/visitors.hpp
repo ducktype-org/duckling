@@ -22,6 +22,7 @@ namespace compiler::helios::code {
 		LiteralStringExpr,
 		LiteralTypeExpr,
 		IdentifierExpr,
+		ReusableExpr,
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,

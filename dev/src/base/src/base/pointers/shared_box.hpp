@@ -126,6 +126,13 @@ namespace base {
 			other.nullify();
 		}
 
+		SharedBox(Box<T>&& other) noexcept:
+			  data_ptr{ std::move(other).ptr },
+			  ctrl_ptr{ new ControlBlock(std::move(other).deleter) } {
+			other.ptr = nullptr;
+			assertNotNull();
+		}
+
 		/**
 		 * @brief Copy assignment. The ownership of the object previously pointed to is renounced.
 		 * The ownership of the object pointed to by `oth` is taken (the number of owners is
