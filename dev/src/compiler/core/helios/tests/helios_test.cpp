@@ -1416,9 +1416,10 @@ private:
 		auto& body     = *function->body;
 		using namespace compiler::helios::code;
 
-		auto i32_type = query::entryPoint<compiler::tsh::QueryIntegralType>({ 32 });
-		auto ref_i32  = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-		auto box_i32  = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+		auto i32_type
+			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+		auto ref_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+		auto box_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
 
 		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[index].get());
