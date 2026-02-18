@@ -110,6 +110,7 @@ void DuckVMDebugCli::help() const {
 			     "  run <func([args])>   		- Run a specific function with arguments\n"
 			     "  resume, continue, c		- Resume execution of the VM\n"
 			     "  pause               		- Pause execution of the VM\n"
+			     "  cp, pos, position           - Show current position\n"
 			     "  exit, q, quit       		- Exit the debugger\n"
 			     "  help, h, ?          		- Show this help message\n";
 }
