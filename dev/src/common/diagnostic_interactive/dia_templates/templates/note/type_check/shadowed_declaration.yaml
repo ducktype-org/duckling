@@ -1,7 +1,7 @@
 metadata:
   type: "note"
   family: "type_check"
-  name: "shadowing_declaration"
+  name: "shadowed_declaration"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -16,7 +16,7 @@ params:
 
 
 header_message:
-  - "Found definition."
+  - "Previous definition."
 
 description:
   - codeblock:
@@ -28,4 +28,4 @@ pointer_messages:
   cause:
     priority: 1
     type: "note"
-    content: "defined here"
+    content: "here"

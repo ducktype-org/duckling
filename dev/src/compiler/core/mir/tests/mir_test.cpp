@@ -785,7 +785,7 @@ private:
 						.instructions[4]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good1).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good1).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good2") {
@@ -810,7 +810,7 @@ private:
 					);
 					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good2).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good3") {
@@ -824,7 +824,7 @@ private:
 						.instructions[1]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good3).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "good4") {
@@ -838,7 +838,7 @@ private:
 						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_good4).isOk());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_good4).isOk());
 				}
 
 				if (fun->declaration->original_name.str() == "bad1") {
@@ -852,7 +852,7 @@ private:
 						.instructions[2]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad1).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad1).isBad());
 				}
 
 				if (fun->declaration->original_name.str() == "bad2") {
@@ -865,7 +865,7 @@ private:
 						.instructions[0]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad2).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad2).isBad());
 				}
 
 				if (fun->declaration->original_name.str() == "bad3") {
@@ -878,7 +878,7 @@ private:
 						.instructions[0]
 						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
 
-					ASSERT_TRUE(validateFunction(mir_rep_bad3).isBad());
+					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad3).isBad());
 				}
 			}
 		});

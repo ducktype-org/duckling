@@ -1,19 +1,20 @@
 #pragma once
 
 #include <diagnostic_interactive/message.hpp>
-#include <helios_private/errors/dia_interactive_elements.hpp>
 
 namespace compiler::helios {
-	class VariableShadowingError: public dia_int::MessageWithCodeFragmentAndCause {
+    // Used for more descriptive errors when trying to look up a shadowed variable.
+    // Shadowing of unused variables gets detected at the MIR validation stage.
+	class ShadowedVariableLookupError: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
-				     .name          = "variable_shadowing" };
+				     .name          = "shadowed_variable_lookup" };
 		}
 
 	public:
-		VariableShadowingError(dia::SourcePosition source_position):
+		ShadowedVariableLookupError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -22,7 +23,7 @@ namespace compiler::helios {
 			return { .template_type = "message",
 				     .type          = "note",
 				     .family        = "type_check",
-				     .name          = "shadowing_declaration" };
+				     .name          = "lookup_shadowing_declaration" };
 		}
 
 	public:

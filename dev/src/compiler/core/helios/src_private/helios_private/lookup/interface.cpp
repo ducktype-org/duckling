@@ -112,7 +112,7 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-                auto msg = makeBox<VariableShadowingError>(error_position);
+                auto msg = makeBox<ShadowedVariableLookupError>(error_position);
                 for (auto& leaf : lookup_result->leaves) {
                     if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
                         auto decl_pos = pst_data->pst_element.unlock(ctx)->getSourcePosition();
