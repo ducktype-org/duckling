@@ -297,7 +297,10 @@ namespace query::internal {
 			return { **existing, node.hash };
 
 		QueryData dummy_query_data(
-			QueryKind::Dummy, "Dummy from previous graph created during deserialization", {}
+			QueryKind::Dummy,
+			"Dummy from previous graph created during deserialization",
+			{},
+			{ .erase_function = nullptr }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);

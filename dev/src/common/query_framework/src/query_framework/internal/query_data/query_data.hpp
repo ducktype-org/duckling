@@ -1,7 +1,5 @@
 #pragma once
 
-#include <base/collections/optional.hpp>
-
 #include <string_view>
 
 namespace base {
@@ -77,20 +75,12 @@ namespace query {
 		};
 
 		/**
-		 * @brief This part of the query data is generated from the query implementation and
-		 * is not visible at the query declaration site.
-		 * There are some query kinds, like `SIDE_INPUT` that for now do not have this
-		 * implementation data.
+		 * @brief Struct holding all the data related to query caching, like erase function pointer.
 		 */
-		struct QueryImplData {
-			using EraseFunctionStableType   = bool (*)(base::Bit256);
-			using EraseFunctionUnstableType = bool (*)(u64);
+		struct QueryCacheData final {
+			using InternalEraseFunctionType = bool (*)(base::Bit256);
 
-			/**
-			 * Pointer to the function that can erase the query result from it's cache based on the
-			 * key hash.
-			 */
-			std::variant<EraseFunctionUnstableType, EraseFunctionStableType> erase_function;
+			InternalEraseFunctionType erase_function;
 		};
 
 		/**
@@ -109,23 +99,25 @@ namespace query {
 		 * some indirect access to it, e.g. via QueryID or query interface struct.
 		 */
 		struct QueryData final {
-			QueryKind                     kind;
-			std::string_view              name;
-			QueryTags                     tags;
-			base::Optional<QueryImplData> impl_data{};
+			QueryKind        kind;
+			std::string_view name;
+			QueryTags        tags;
+			QueryCacheData   cache_data;
 
-			constexpr QueryData(QueryKind kind, std::string_view name, QueryTags tags):
+			/**
+			 * Pointer to the function that can erase the query result from it's cache based on the
+			 * key hash.
+			 */
+
+			constexpr QueryData(
+				QueryKind kind, std::string_view name, QueryTags tags, QueryCacheData cache_data
+			):
 				  kind(kind),
 				  name(name),
-				  tags(tags) {}
+				  tags(tags),
+				  cache_data(cache_data) {}
 
 			constexpr QueryData(const QueryData&) = default;
-
-			[[nodiscard]] constexpr QueryData withImplData(QueryImplData impl_data) const {
-				QueryData copy = *this;
-				copy.impl_data.emplace(impl_data);
-				return copy;
-			}
 
 			[[nodiscard]]
 			constexpr bool isInputQuery() const {

@@ -63,7 +63,7 @@ namespace dia_int {
 
 		/**
 		 * @brief Merge another Logger into this one, moving all diagnostics.
-		 * Invalidates the other Logger. 
+		 * Invalidates the other Logger.
 		 */
 		void mergeWith(Logger&& other);
 	};

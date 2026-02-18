@@ -49,6 +49,7 @@ namespace query::internal {
 				.used_hashes             = query::UsedHashes::StableHash, \
 				.can_be_loaded_from_disk = false,                         \
 				.preserve_in_graph       = true,                          \
-			}                                                             \
+			},                                                            \
+			{ .erase_function = query_type::internal_erase }              \
 		)                                                                 \
 	)

@@ -84,16 +84,7 @@ namespace query::external {
 
 		// Step 3: Erase values of the invalidated nodes from their cache
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
-			if_opt_some(node.q_id.getData().impl_data, impl_data) {
-				variant_match(impl_data.erase_function) {
-					variant_case(internal::QueryImplData::EraseFunctionStableType, erase_func) {
-						erase_func(node.hash.val);
-					}
-					variant_case(internal::QueryImplData::EraseFunctionUnstableType, erase_func) {
-						erase_func(u64(node.hash.val));
-					}
-				}
-			}
+			node.q_id.getData().cache_data.erase_function(node.hash.val);
 			state->getMetadataStorageMutable()->clearNodeMetadata(node);
 			state->clearDiagnosticForNode(node);
 		}
