@@ -4,8 +4,6 @@
  */
 #pragma once
 
-// add to init::init possibly
-
 __attribute__((noinline)) void llvmInit();
 
 #ifdef ENABLE_JIT
