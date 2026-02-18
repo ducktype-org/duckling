@@ -269,6 +269,19 @@ private:
 			{ "Immutable variables must have an initial value." },
 			1
 		);
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var n = 42;
+                    if (true) {
+                        var n = 24;
+                        builtin_output_i64(n);
+                    }
+				}
+			)",
+			{ "Variable name is ambiguous, because it has been defined multiple times.", "Found definition." },
+			1
+		);
 	}
 
 	void testErrorBadExpr() {
