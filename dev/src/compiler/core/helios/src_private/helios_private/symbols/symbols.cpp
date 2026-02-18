@@ -1,7 +1,5 @@
 #include "symbols.hpp"
 
-#include "helios_private/symbols/pst_symbol_data.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
