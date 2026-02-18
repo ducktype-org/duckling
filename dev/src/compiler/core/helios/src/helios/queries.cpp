@@ -196,7 +196,8 @@ namespace compiler::helios {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
 						)
-						                .valueOrThrow();
+						                ->valueOrThrow()
+						                .ref();
 						output(expr->expression_type.getSymbolType());
 					} else {
 						CORE_PANIC(
@@ -217,7 +218,8 @@ namespace compiler::helios {
 			void visitReturn(pst::Access<pst::Return> stmt) final {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
-					                .valueOrThrow();
+					                ->valueOrThrow()
+					                .ref();
 					output(expr->expression_type.getSymbolType());
 				}
 			}
@@ -240,7 +242,7 @@ namespace compiler::helios {
 				// there are no returns to deduce the type
 				// we default to unit type
 				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -280,7 +282,7 @@ namespace compiler::helios {
 			) {
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryUnitType>({}),
+					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -312,9 +314,6 @@ namespace compiler::helios {
 					if (value.empty()) {
 						parameters.emplace_back(param_name, param_type, std::nullopt, param_symbol);
 					} else {
-						// auto initial_value
-						// 	= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr())
-						//           .valueOrThrow();
 						auto initial_value
 							= getHoutOfExprWithExpectedType(
 								  ctx, value.value().unlock(ctx)->getExpr(), param_type
@@ -618,9 +617,10 @@ namespace compiler::helios {
 					"Unsupported assignment type"
 				);
 
-				auto var           = assignment->getVariables();
-				auto val           = assignment->getValue();
-				auto location_expr = ctx.query<QueryHoutOfExpr>({ var }).valueOrThrow();
+				auto var = assignment->getVariables();
+				auto val = assignment->getValue();
+
+				auto location_expr = ctx.query<QueryHoutOfExpr>({ var })->valueOrThrow()->clone();
 
 				// If left side of the assignment is a ref/box, we have to dereference it and store
 				// the value in the memory pointed by the ref/box.
@@ -691,8 +691,8 @@ namespace compiler::helios {
 				} else if (op == base::StrID("-=")) {
 					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
 						auto u64_type = tsh::SymbolType<>{
-							ctx.query<tsh::QueryIntegralType>(
-								{ 64, tsh::IntegralAbstractType::Signedness::Unsigned }
+							tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 							),
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable
@@ -729,7 +729,7 @@ namespace compiler::helios {
 
 				// else just create an expression statement:
 
-				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr }).valueOrThrow();
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })->valueOrThrow()->clone();
 				output(code::ExprStmt(code::pstOrigin(stmt), std::move(expr)));
 			}
 
@@ -737,7 +737,7 @@ namespace compiler::helios {
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto bool_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
@@ -767,7 +767,7 @@ namespace compiler::helios {
 
 			void visitWhile(pst::Access<pst::While> stmt) override {
 				auto bool_type = tsh::SymbolType<>{
-					ctx.query<tsh::QueryBoolType>({}),
+					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};

@@ -6,139 +6,111 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::tsh {
-	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto unit_impl = UnitAbstractTypeImpl{};
-			return &unit_impl;
+	UnitAbstractType getUnitType() {
+		static auto unit_impl = UnitAbstractTypeImpl{};
+		return UnitAbstractType{ &unit_impl };
+	}
+
+	VoidAbstractType getVoidType() {
+		static auto void_impl = VoidAbstractTypeImpl{};
+		return VoidAbstractType{ &void_impl };
+	}
+
+	ByteAbstractType getByteType() {
+		static auto byte_impl = ByteAbstractTypeImpl{};
+		return ByteAbstractType{ &byte_impl };
+	}
+
+	BoolAbstractType getBoolType() {
+		static auto bool_impl = BoolAbstractTypeImpl{};
+		return BoolAbstractType{ &bool_impl };
+	}
+
+	CharAbstractType getCharType() {
+		static auto char_impl = CharAbstractTypeImpl{};
+		return CharAbstractType{ &char_impl };
+	}
+
+	IntegralAbstractType getIntegralType(
+		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
+	) {
+		using Impl = IntegralAbstractType::Impl;
+		using enum IntegralAbstractType::Signedness;
+
+		static const std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
+			{ { 8, Signed }, Impl{ 8, Signed } },     { { 8, Unsigned }, Impl{ 8, Unsigned } },
+			{ { 16, Signed }, Impl{ 16, Signed } },   { { 16, Unsigned }, Impl{ 16, Unsigned } },
+			{ { 32, Signed }, Impl{ 32, Signed } },   { { 32, Unsigned }, Impl{ 32, Unsigned } },
+			{ { 64, Signed }, Impl{ 64, Signed } },   { { 64, Unsigned }, Impl{ 64, Unsigned } },
+			{ { 128, Signed }, Impl{ 128, Signed } }, { { 128, Unsigned }, Impl{ 128, Unsigned } },
+		};
+
+		if (!cache.contains({ size, signedness })) {
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("Invalid size of integral type: ", size, "."),
+				"The only allowed sizes are 8, 16, 32, 64 and 128."
+			));
+			// We might want to change this to query failed, instead of a "best guess".
+			return IntegralAbstractType{ &cache.at({ 128, signedness }) };
 		}
 
-		QUERY_AUTO_NO_CACHE
-	};
+		return IntegralAbstractType{ &cache.at({ size, signedness }) };
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType)
+	FloatAbstractType getFloatType(query::Context& ctx, u64 size) {
+		using Impl = FloatAbstractType::Impl;
 
-	struct IMPLEMENT_QUERY(QueryVoidType, VoidAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto void_impl = VoidAbstractTypeImpl{};
-			return &void_impl;
+		static const std::map<usize, Impl> cache = {
+			{ 16, Impl{ 16 } },    // For certain GPU applications
+			{ 32, Impl{ 32 } },    // Standard float
+			{ 64, Impl{ 64 } },    // Double precision
+			{ 80, Impl{ 80 } },    // Long double, covers int64 and uint64 precisely
+			{ 128, Impl{ 128 } },  // Quad precision
+		};
+
+		if (!cache.contains(size)) {
+			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+				base::strConcat("Invalid size of float type: ", size, "."),
+				"The only allowed sizes are 16, 32, 64, 80, and 128."
+			));
+			// We might want to change this to query failed, instead of a "best guess".
+			return FloatAbstractType{ &cache.at(128) };
 		}
 
-		QUERY_AUTO_NO_CACHE
-	};
+		return FloatAbstractType{ &cache.at(size) };
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType)
+	RawPointerAbstractType getRawPointerType(bool mutable_pointer) {
+		static auto raw_pointer_impl
+			= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
+			              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
+		return RawPointerAbstractType{ &raw_pointer_impl.at(mutable_pointer) };
+	}
 
-	struct IMPLEMENT_QUERY(QueryByteType, ByteAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto byte_impl = ByteAbstractTypeImpl{};
-			return &byte_impl;
-		}
+	StringAbstractType getStringType() {
+		static auto string_impl = StringAbstractTypeImpl{};
+		return StringAbstractType{ &string_impl };
+	}
 
-		QUERY_AUTO_NO_CACHE
-	};
+	NamespaceAbstractType getNamespaceType() {
+		static auto namespace_impl = NamespaceAbstractTypeImpl{};
+		return NamespaceAbstractType{ &namespace_impl };
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType)
+	MetaAbstractType getMetaType() {
+		static auto meta_impl = MetaAbstractTypeImpl{};
+		return MetaAbstractType{ &meta_impl };
+	}
 
-	struct IMPLEMENT_QUERY(QueryBoolType, BoolAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto bool_impl = BoolAbstractTypeImpl{};
-			return &bool_impl;
-		}
+	ModuleAbstractType getModuleType() {
+		static auto module_impl = ModuleAbstractTypeImpl{};
+		return ModuleAbstractType{ &module_impl };
+	}
 
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType)
-
-	struct IMPLEMENT_QUERY(QueryCharType, CharAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto char_impl = CharAbstractTypeImpl{};
-			return &char_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
-
-	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralAbstractType::Pimpl) {
-		static auto provide(Context& ctx, const QKey key) -> PResult {
-			using Impl = IntegralAbstractType::Impl;
-			using enum IntegralAbstractType::Signedness;
-
-			static std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
-				{ { 8, Signed }, Impl{ 8, Signed } },
-				{ { 8, Unsigned }, Impl{ 8, Unsigned } },
-				{ { 16, Signed }, Impl{ 16, Signed } },
-				{ { 16, Unsigned }, Impl{ 16, Unsigned } },
-				{ { 32, Signed }, Impl{ 32, Signed } },
-				{ { 32, Unsigned }, Impl{ 32, Unsigned } },
-				{ { 64, Signed }, Impl{ 64, Signed } },
-				{ { 64, Unsigned }, Impl{ 64, Unsigned } },
-				{ { 128, Signed }, Impl{ 128, Signed } },
-				{ { 128, Unsigned }, Impl{ 128, Unsigned } },
-			};
-
-			const auto [size, signedness] = key;
-
-			if (!cache.contains({ size, signedness })) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Invalid size of integral type: ", size, "."),
-					"The only allowed sizes are 16, 32, 64, 80, and 128."
-				));
-				// @TODO: maybe change to some ErrorType, instead of a "best guess".
-				return &cache.at({ 128, signedness });
-			}
-
-			return &cache.at({ size, signedness });
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
-
-	struct IMPLEMENT_QUERY(QueryFloatType, FloatAbstractType::Pimpl) {
-		static auto provide(Context& ctx, const QKey size) -> PResult {
-			using Impl = FloatAbstractType::Impl;
-
-			static std::map<usize, Impl> cache = {
-				{ 16, Impl{ 16 } },    // For certain GPU applications
-				{ 32, Impl{ 32 } },    // Standard float
-				{ 64, Impl{ 64 } },    // Double precision
-				{ 80, Impl{ 80 } },    // Long double, covers int64 and uint64 precisely
-				{ 128, Impl{ 128 } },  // Quad precision
-			};
-
-			if (!cache.contains(size.value)) {
-				ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
-					base::strConcat("Invalid size of float type: ", size.value, "."),
-					"The only allowed sizes are 16, 32, 64, 80, and 128."
-				));
-				// @TODO: maybe change to some ErrorType, instead of a "best guess".
-				return &cache.at(128);
-			}
-
-			return &cache.at(size.value);
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType)
-
-	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
-		static auto provide(Context&, const QKey key) -> PResult {
-			static auto raw_pointer_impl
-				= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
-				              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-			return &raw_pointer_impl.at(key.value);
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
+	ImportAbstractType getImportType() {
+		static auto import_impl = ImportAbstractTypeImpl{};
+		return ImportAbstractType{ &import_impl };
+	}
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
@@ -149,17 +121,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
-
-	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto string_impl = StringAbstractTypeImpl{};
-			return &string_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
@@ -217,50 +178,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
-
-	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto namespace_impl = NamespaceAbstractTypeImpl{};
-			return &namespace_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType)
-
-	struct IMPLEMENT_QUERY(QueryModuleType, ModuleAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto module_impl = ModuleAbstractTypeImpl{};
-			return &module_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType)
-
-	struct IMPLEMENT_QUERY(QueryMetaType, MetaAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto meta_impl = MetaAbstractTypeImpl{};
-			return &meta_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
-
-	struct IMPLEMENT_QUERY(QueryImportType, ImportAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto import_impl = ImportAbstractTypeImpl{};
-			return &import_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImportType)
 
 	struct IMPLEMENT_QUERY(QueryTypeTemplateType, TypeTemplateAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult { return { key.source }; }

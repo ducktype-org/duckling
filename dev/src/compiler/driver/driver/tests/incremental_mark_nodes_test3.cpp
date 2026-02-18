@@ -56,15 +56,19 @@ private:
 		auto prev = prev_graph_opt.value();
 
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();
-		ASSERT_TRUE(!prev_colors->empty());
+		ASSERT_TRUE(
+			prev_colors->size() != 0
+		);  // If there are no nodes, there's nothing to mark green, so test is not valid
 
 		u64 green_count = 0;
 		u64 red_count   = 0;
 		for (const auto& node: prev->getAllNodes()) {
 			if (prev_colors->contains(node)) {
-				if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Green)
+				if (*prev_colors->atMaybe(node).value()
+				    == query::internal::QueryState::PrevColor::Green)
 					green_count++;
-				else if (prev_colors->at(node) == query::internal::QueryState::PrevColor::Red)
+				else if (*prev_colors->atMaybe(node).value()
+				         == query::internal::QueryState::PrevColor::Red)
 					red_count++;
 				else
 					ASSERT_TRUE(false);
@@ -106,7 +110,8 @@ private:
 			if (!prev_colors->contains(dep_node))
 				std::cout << "Node " << dep_node.q_id.getData().name << " missing in prev_colors\n";
 			ASSERT_TRUE(prev_colors->contains(dep_node));
-			if (prev_colors->at(dep_node) == query::internal::QueryState::PrevColor::Red)
+			if (*prev_colors->atMaybe(dep_node).value()
+			    == query::internal::QueryState::PrevColor::Red)
 				red_dep_count++;
 			else
 				green_dep_count++;

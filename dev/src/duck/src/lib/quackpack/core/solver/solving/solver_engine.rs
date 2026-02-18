@@ -354,10 +354,8 @@ metadata:
             (exp_location_a, vec![Some(Version::new(1, 0, 0))]),
             (exp_location_b, vec![Some(Version::new(2, 0, 0))]),
         ]);
-        let location_resolver = HashMap::from([
-            (location_a, exp_location_a),
-            (location_b, exp_location_b.clone()),
-        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
 
         let input = GatheredInfo {
             gathered_manifests,
@@ -371,7 +369,7 @@ metadata:
 
         let main_pkg = (exp_pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone(), exp_pkg_b.clone()]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
         assert!(output.new_features == HashMap::new());
         assert!(
             output.new_edges
@@ -688,7 +686,7 @@ features:
 
         let main_pkg = (exp_pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(&input, &main_pkg).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a.clone()]));
+        assert!(output.new_packages == HashSet::from([exp_pkg_a]));
         assert!(
             output.new_features
                 == HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])

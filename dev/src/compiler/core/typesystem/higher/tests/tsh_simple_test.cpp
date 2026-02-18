@@ -8,6 +8,8 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include <any>
+
 using namespace compiler::tsh;
 
 /**
@@ -58,14 +60,36 @@ private:
 	using enum Kind;
 
 	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
+		return std::any_cast<compiler::tsh::IntegralAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getIntegralType(ctx, size, signedness);
+			})
+		);
+	}
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getFloatTypeNoContext(u64 size) {
+		return std::any_cast<compiler::tsh::FloatAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getFloatType(ctx, size); }
+		));
+	}
+
+	/**
 	 * Test that the specialized AbstractType to AbstractType dynamic cast works as intended.
 	 * Also, test that assignment works.
 	 */
 	void trivialCastAndAssignment() {
-		const AbstractType type_1{ query::entryPoint<QueryVoidType>({}) };
+		const AbstractType type_1{ getVoidType() };
 		AbstractType       type_2 = type_1;
 		assertTrue(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
-		type_2 = query::entryPoint<QueryUnitType>({});
+		type_2 = getUnitType();
 		assertTrue(type_1 != type_2, "Assignment on AbstractType should change the target object.");
 	}
 
@@ -73,14 +97,14 @@ private:
 	 * Test that there is only one void and one unit type, and that they are correctly cast.
 	 */
 	void simpleVoidAndUnit() {
-		const auto void_1 = query::entryPoint<QueryVoidType>({});
-		const auto void_2 = query::entryPoint<QueryVoidType>({});
+		const auto void_1 = getVoidType();
+		const auto void_2 = getVoidType();
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
 		assertTrue(void_1.getKind() == Void, "Void type should have kind Void.");
 		assertTrue(void_1.hasNoOpDestructor(), "Void should have no op destructor.");
 
-		const auto unit_1 = query::entryPoint<QueryUnitType>({});
-		const auto unit_2 = query::entryPoint<QueryUnitType>({});
+		const auto unit_1 = getUnitType();
+		const auto unit_2 = getUnitType();
 		assertTrue(unit_1 == unit_2, "There should only be one Unit type.");
 		assertTrue(unit_1.getKind() == Unit, "Unit type should have kind Unit.");
 		assertTrue(unit_1.hasNoOpDestructor(), "Unit should have no op destructor.");
@@ -100,13 +124,18 @@ private:
 	 * Test that there are three unique byte-sized types, and that they are correctly cast.
 	 */
 	void simpleByteSized() {
-		const auto byte_1 = query::entryPoint<QueryByteType>({});
+		const auto byte_1 = getByteType();
+
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
 		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
-		const auto bool_1 = query::entryPoint<QueryBoolType>({});
+
+		const auto bool_1 = getBoolType();
+
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
 		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
-		const auto char_1 = query::entryPoint<QueryCharType>({});
+
+		const auto char_1 = getCharType();
+
 		assertTrue(char_1.getKind() == Char, "Char type should have kind Char.");
 		assertTrue(char_1.hasNoOpDestructor(), "Char should have no op destructor.");
 
@@ -115,9 +144,9 @@ private:
 			"All byte-sized types should be different."
 		);
 
-		const auto byte_2 = query::entryPoint<QueryByteType>({});
-		const auto bool_2 = query::entryPoint<QueryBoolType>({});
-		const auto char_2 = query::entryPoint<QueryCharType>({});
+		const auto byte_2 = getByteType();
+		const auto bool_2 = getBoolType();
+		const auto char_2 = getCharType();
 
 		assertTrue(
 			byte_1 == byte_2 && bool_1 == bool_2 && char_1 == char_2,
@@ -145,9 +174,10 @@ private:
 		using enum IntegralAbstractType::Signedness;
 
 		for (usize i = 0; i < 5; i++) {
-			const auto int_1 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
-			const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
-			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), Unsigned });
+			const auto int_1 = getIntegralTypeNoContext(8U * (1 << i), Signed);
+			const auto int_2 = getIntegralTypeNoContext(8U * (1 << i), Signed);
+			const auto int_u = getIntegralTypeNoContext(8U * (1 << i), Unsigned);
+
 			assertTrue(int_1.getKind() == Integral, "Int should have kind Integral.");
 
 			assertTrue(
@@ -175,8 +205,7 @@ private:
 		}
 
 		assertTrue(
-			query::entryPoint<QueryIntegralType>({ 8 })
-				!= query::entryPoint<QueryIntegralType>({ 16 }),
+			getIntegralTypeNoContext(8, Signed) != getIntegralTypeNoContext(16, Signed),
 			"Ints of different sizes should be different."
 		);
 	}
@@ -188,8 +217,8 @@ private:
 	void simpleFloats() {
 		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
 		     const usize                float_size: float_sizes) {
-			auto float_1 = query::entryPoint<QueryFloatType>({ float_size });
-			auto float_2 = query::entryPoint<QueryFloatType>({ float_size });
+			auto float_1 = getFloatTypeNoContext(float_size);
+			auto float_2 = getFloatTypeNoContext(float_size);
 
 			assertTrue(
 				float_1.getSize() == Bits(float_size), "Size of Float should be as constructed."
@@ -205,7 +234,7 @@ private:
 		}
 
 		assertTrue(
-			query::entryPoint<QueryFloatType>({ 32 }) != query::entryPoint<QueryFloatType>({ 64 }),
+			getFloatTypeNoContext(32) != getFloatTypeNoContext(64),
 			"Floats of different sizes should be different."
 		);
 	}
@@ -221,16 +250,16 @@ private:
 	 * between each other and retain AbstractTypermation as expected.
 	 */
 	void simplePointer() {
-		const auto raw_1 = query::entryPoint<QueryRawPointerType>({ false });
+		const auto raw_1 = getRawPointerType(false);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
-		const auto raw_2 = query::entryPoint<QueryRawPointerType>({ true });
+		const auto raw_2 = getRawPointerType(true);
 		assertTrue(
 			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
 		);
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
-		const auto raw_3 = query::entryPoint<QueryRawPointerType>({ false });
+		const auto raw_3 = getRawPointerType(false);
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
-		const auto raw_4 = query::entryPoint<QueryRawPointerType>({ true });
+		const auto raw_4 = getRawPointerType(true);
 		assertTrue(raw_2 == raw_4, "There should be only one mutable Raw Pointer.");
 
 		const AbstractType           type_raw = raw_1;
@@ -258,8 +287,8 @@ private:
 	 * Test that there is only one string type, and that it is correctly cast.
 	 */
 	void simpleString() {
-		const auto str_1 = query::entryPoint<QueryStringType>({});
-		const auto str_2 = query::entryPoint<QueryStringType>({});
+		const auto str_1 = getStringType();
+		const auto str_2 = getStringType();
 
 		assertTrue(str_1 == str_2, "There should only be one String type.");
 
@@ -277,8 +306,10 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simpleDynamicArray() {
-		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
-		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+		using enum IntegralAbstractType::Signedness;
+
+		const auto int_16 = getIntegralTypeNoContext(16, Signed);
+		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
 		const auto arr_1 = query::entryPoint<QueryDynamicArrayType>(st(int_16));
 		assertTrue(arr_1.getKind() == DynamicArray, "DynamicArray should have kind DynamicArray.");
@@ -313,8 +344,10 @@ private:
 	 * and that they are correctly cast and handled.
 	 */
 	void simpleStaticArray() {
-		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
-		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+		const auto int_16
+			= getIntegralTypeNoContext(16, compiler::tsh::IntegralAbstractType::Signedness::Signed);
+		const auto int_32
+			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
 
 		const auto arr_1 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
 
@@ -352,7 +385,7 @@ private:
 
 		assertTrue(arr_1.hasNoOpDestructor(), "StaticArray of Ints should have a no-op destructor.");
 
-		const auto str_type = query::entryPoint<QueryStringType>({});
+		const auto str_type = getStringType();
 		const auto arr_str  = query::entryPoint<QueryStaticArrayType>({ st(str_type), 5 });
 		assertFalse(
 			arr_str.hasNoOpDestructor(), "StaticArray of Strings should not have a no-op destructor."
@@ -376,8 +409,9 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simpleTuple() {
-		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
-		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+		using enum IntegralAbstractType::Signedness;
+		const auto int_16 = getIntegralTypeNoContext(16, Signed);
+		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
 		const auto tup_1 = query::entryPoint<QueryTupleType>({ { st(int_16), st(int_32) } });
 
@@ -405,7 +439,7 @@ private:
 			"Tuples of Ints should have no op destructors."
 		);
 
-		const auto str   = query::entryPoint<QueryStringType>({});
+		const auto str   = getStringType();
 		const auto tup_6 = query::entryPoint<QueryTupleType>({ { st(int_16), st(str) } });
 		assertFalse(
 			tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor."
@@ -417,8 +451,9 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simpleVariant() {
-		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
-		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+		using enum IntegralAbstractType::Signedness;
+		const auto int_16 = getIntegralTypeNoContext(16, Signed);
+		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
 		const auto var_1 = query::entryPoint<QueryVariantType>({ { st(int_16), st(int_32) } });
 
@@ -443,7 +478,7 @@ private:
 			"Variants of Ints should have no op destructors."
 		);
 
-		const auto str   = query::entryPoint<QueryStringType>({});
+		const auto str   = getStringType();
 		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(str) } });
 		assertFalse(
 			var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor."
@@ -455,8 +490,9 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simpleFunction() {
-		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
-		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+		using enum IntegralAbstractType::Signedness;
+		const auto int_16 = getIntegralTypeNoContext(16, Signed);
+		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
 		const auto fun_1
 			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_32) });
@@ -503,8 +539,8 @@ private:
 	}
 
 	void simpleLanguageElements() {
-		const auto nspace   = query::entryPoint<QueryNamespaceType>({});
-		const auto nspace_2 = query::entryPoint<QueryNamespaceType>({});
+		const auto nspace   = getNamespaceType();
+		const auto nspace_2 = getNamespaceType();
 
 		assertTrue(nspace == nspace_2, "There shouldn't be multiple different Namespace types.");
 
@@ -515,8 +551,8 @@ private:
 		const NamespaceAbstractType nspace_3    = nspace_type;
 		assertTrue(nspace_3.getKind() == Namespace, "NamespaceType should survive casting.");
 
-		const auto module   = query::entryPoint<QueryModuleType>({});
-		const auto module_2 = query::entryPoint<QueryModuleType>({});
+		const auto module   = getModuleType();
+		const auto module_2 = getModuleType();
 
 		assertTrue(module == module_2, "There shouldn't be multiple different Module types.");
 
@@ -529,8 +565,8 @@ private:
 	}
 
 	void simpleMeta() {
-		const auto meta   = query::entryPoint<QueryMetaType>({});
-		const auto meta_2 = query::entryPoint<QueryMetaType>({});
+		const auto meta   = getMetaType();
+		const auto meta_2 = getMetaType();
 
 		assertTrue(meta == meta_2, "There shouldn't be multiple different 'type' types.");
 
@@ -577,8 +613,10 @@ private:
 	}
 
 	void simpleExpressionType() {
-		const auto void_i = query::entryPoint<QueryVoidType>({});
-		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
+		using enum IntegralAbstractType::Signedness;
+
+		const auto void_i = getVoidType();
+		const auto int_i  = getIntegralTypeNoContext(8, Signed);
 
 		const ExpressionType int_desc(st(int_i), ValueCategory(PrimaryCategory::Local));
 
@@ -640,8 +678,10 @@ private:
 	}
 
 	void simpleImplicitCoercibility() {
-		const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 2) });
-		const auto int_3 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 3) });
+		using enum IntegralAbstractType::Signedness;
+
+		const auto int_2 = getIntegralTypeNoContext(8U * (1 << 2), Signed);
+		const auto int_3 = getIntegralTypeNoContext(8U * (1 << 3), Signed);
 		assertTrue(
 			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, int_3 }),
 			"Smaller int should be coercible into a bigger one."
@@ -652,7 +692,7 @@ private:
 			"Bigger int should not be coercible into a smaller one."
 		);
 
-		const auto void_type = query::entryPoint<QueryVoidType>({});
+		const auto void_type = getVoidType();
 		assertTrue(
 			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
 			"Void should not be coercible to anything."

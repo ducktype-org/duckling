@@ -20,6 +20,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
+#include <query_framework/query_result.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -207,7 +209,7 @@ namespace compiler::helios::code {
 					// Expect all subexpressions in variant constructor to be Meta types or try to
 					// lift them if they aren't.
 					const auto meta_type = tsh::SymbolType<>{
-						ctx.query<tsh::QueryMetaType>({}),
+						tsh::getMetaType(),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable,
 					};
@@ -297,105 +299,93 @@ namespace compiler::helios::code {
 
 				// types:
 				case pst::Keyword::Bool:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryBoolType>({})
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getBoolType());
 					break;
 
 				case pst::Keyword::Char:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryCharType>({})
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharType());
 					break;
 
 				case pst::Keyword::Str:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryStringType>({})
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryMetaType>({})
-					);
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
 					break;
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 128, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Signed)
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 64, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Signed)
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 32, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Signed)
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 16, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Signed)
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 8, Signed })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Signed)
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 128, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 128, Unsigned)
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 64, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 64, Unsigned)
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 32, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 32, Unsigned)
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 16, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 16, Unsigned)
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryIntegralType>({ 8, Unsigned })
+						ctx, pstOrigin(stmt), tsh::getIntegralType(ctx, 8, Unsigned)
 					);
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 80 })
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 80));
 					break;
 				case pst::Keyword::f128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 128 })
+						ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 128)
 					);
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 64 })
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 64));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 32 })
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 32));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(
-						ctx, pstOrigin(stmt), ctx.query<tsh::QueryFloatType>({ 16 })
-					);
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
 				case pst::Keyword::List: {
 					node = makeBox<LiteralTypeExpr>(
@@ -576,12 +566,7 @@ namespace compiler::helios {
 			return code::fromPST(ctx, key.element);
 		}
 
-		// @TODO: perhaps add cache
-		// Right now its not that simple since QueryHoutOfExpr
-		// has to return different expresion tree (unique_ptr).
-		// It might not be a problem in the future, so for now it is left without cache.
-
-		QUERY_AUTO_NO_CACHE
+		QUERY_AUTO_CACHE_CREF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
@@ -594,16 +579,14 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
-		if (expr_hout_qresult.hasFailed()) return query::Failed();
-
-		auto expr_hout = std::move(expr_hout_qresult).valueOrThrow();
+		UNPACK_QRESULT_CREF_TO_BOX(auto expr_hout =, expr_hout_qresult);
 
 		const auto coercion_qresult
 			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
 			variant_case(InvalidCoercion, _) {
 				if (log_error.has_value()) {
 					(*log_error)(ctx);

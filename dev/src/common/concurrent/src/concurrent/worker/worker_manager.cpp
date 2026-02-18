@@ -10,6 +10,12 @@ namespace concurrent::worker {
 	namespace {
 		std::mt19937_64 rng;
 		std::mutex      mut;
+
+		/**
+		 * Helper flag used to ensure that WorkerManager::setWorkers is called only once and before
+		 * any call to WorkerManager::get().
+		 */
+		constinit std::atomic_flag is_worker_count_set;
 	}
 
 	std::vector<WRef> WorkerManager::getAllWorkers() const {
@@ -44,10 +50,20 @@ namespace concurrent::worker {
 
 	WorkerManager& WorkerManager::get() {
 		static WorkerManager instance;
+		CORE_ASSERT(
+			is_worker_count_set.test(),
+			"WorkerManager::get() called before setting worker count with setWorkers()!"
+		);
 		return instance;
 	}
 
 	void WorkerManager::setWorkers(usize num_workers) {
+		auto ware_worker_count_set = is_worker_count_set.test_and_set();
+		CORE_ASSERT(
+			not ware_worker_count_set,
+			"WorkerManager::setWorkers can only be called once and before any call to get()!"
+		);
+
 		auto& worker_manager = get();
 		worker_manager.workers.clear();
 		worker_manager.workers.reserve(num_workers);

@@ -61,6 +61,15 @@ namespace vm::api {
 	);
 
 	/**
+	 * @brief Same as runFunction, but executes the function synchronously on the caller's thread and
+	 * returns it's return value.
+	 * @return The return value of the function if it was ran successfully or an API error otherwise.
+	 */
+	std::expected<ExitValue, ApiError> runFunctionAwait(
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
+	);
+
+	/**
 	 * @brief Get a VmValue containing the return value of the last ran function on DVM.
 	 * @note The returned VmValue is owned by the process and shouldn't be freed by the caller. It
 	 * will be automatically freed when the process is destroyed.
