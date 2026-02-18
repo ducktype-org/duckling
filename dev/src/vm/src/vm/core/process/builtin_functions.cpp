@@ -118,12 +118,10 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinCreateMutex(VMThread& thread) {
 		i64 mutex_id = thread.process.addMutex();
-		std::cout << "Creating Mutex " << mutex_id << "\n";
 		return mutex_id;
 	}
 
 	void FunctionHandlers::builtinLockMutex(VMThread& thread, i64 mutex_id) {
-		std::cout << "Locking Mutex " << mutex_id << "\n";
 		auto mutex = thread.process.getMutex(mutex_id);
 		thread.releaseGil();
 		mutex->lock();
@@ -131,13 +129,11 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(VMThread& thread, i64 mutex_id) {
-		std::cout << "Unocking Mutex " << mutex_id << "\n";
 		auto mutex = thread.process.getMutex(mutex_id);
 		mutex->unlock();
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(VMThread& thread, i64 mutex_id) {
-		std::cout << "Destroying Mutex " << mutex_id << "\n";
 		thread.process.removeMutex(mutex_id);
 	}
 
