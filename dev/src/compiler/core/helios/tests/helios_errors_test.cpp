@@ -279,7 +279,8 @@ private:
                     }
 				}
 			)",
-			{ "Variable name is ambiguous, because it has been defined multiple times.", "Found definition." },
+			{ "Variable name is ambiguous, because it has been defined multiple times.",
+		      "Found definition." },
 			1
 		);
 	}

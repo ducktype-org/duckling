@@ -2,6 +2,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -18,7 +19,6 @@
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
-#include "mir/mir_lowering/mir_queries.hpp"
 
 using namespace compiler;
 
@@ -27,9 +27,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 #define TESTER_CLASS HeliosErrorsTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testErrorLogging);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testErrorLogging); }
 
 private:
 	/**
@@ -53,15 +51,19 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			ctx.int_logger.clear();
 			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
-			assertTrue(hout_result->hasValue(), "Expected HOUT query to succeed for module content.");
+			assertTrue(
+				hout_result->hasValue(), "Expected HOUT query to succeed for module content."
+			);
 			assertTrue(!ctx.int_logger.hasErrors(), "Expected no errors to be logged by HELIOS.");
 
-            bool some_fun_lowering_failed = false;
-            for (auto fun : hout_result->valueOrPanic().functions) {
-                auto result = ctx.query<mir::LowerToMIRFunction>({fun});
-                if (result->hasFailed()) some_fun_lowering_failed = true;
-            }
-            assertTrue(some_fun_lowering_failed, "Expected some MIR query to fail for module functions.");
+			bool some_fun_lowering_failed = false;
+			for (auto fun: hout_result->valueOrPanic().functions) {
+				auto result = ctx.query<mir::LowerToMIRFunction>({ fun });
+				if (result->hasFailed()) some_fun_lowering_failed = true;
+			}
+			assertTrue(
+				some_fun_lowering_failed, "Expected some MIR query to fail for module functions."
+			);
 			assertTrue(ctx.int_logger.hasErrors(), "Expected errors to be logged by MIR.");
 
 			std::stringstream logged_messages;
@@ -92,12 +94,16 @@ private:
                 if (true) {
                     var n = 24;
                 }
-            })", { "Variable definition shadows a previous definition.", "Previous definition:" }, 1
+            })",
+			{ "Variable definition shadows a previous definition.", "Previous definition:" },
+			1
 		);
 		checkForErrorOnCompileModule(
 			R"(fun shadowedArg(n: i64) = {
                 var n = 42;
-            })", { "Variable definition shadows a previous definition.", "Previous definition:" }, 1
+            })",
+			{ "Variable definition shadows a previous definition.", "Previous definition:" },
+			1
 		);
 	}
 };

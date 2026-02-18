@@ -3,8 +3,8 @@
 #include <diagnostic_interactive/message.hpp>
 
 namespace compiler::helios {
-    // Used for more descriptive errors when trying to look up a shadowed variable.
-    // Shadowing of unused variables gets detected at the MIR validation stage.
+	// Used for more descriptive errors when trying to look up a shadowed variable.
+	// Shadowing of unused variables gets detected at the MIR validation stage.
 	class ShadowedVariableLookupError: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",

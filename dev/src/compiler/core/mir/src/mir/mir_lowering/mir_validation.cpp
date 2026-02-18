@@ -1,9 +1,9 @@
 #include "../mir_structure/mir_structure.hpp"
-#include "mir_lifetimes.hpp"
 #include "errors.hpp"
+#include "mir_lifetimes.hpp"
 
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
@@ -168,18 +168,21 @@ namespace compiler::mir {
 			match_optional(named_locals.atMaybe(name)) {
 				opt_some(prev_defs) {
 					for (auto def: *prev_defs) {
-                        auto lc_scope = lca(*def->scope, *local.scope);
+						auto lc_scope = lca(*def->scope, *local.scope);
 						if (lc_scope == *def->scope || lc_scope == *local.scope) {
-							auto [shadowing, shadowed]
-								= (lc_scope == *def->scope)
-							        ? std::tuple{ base::Ref(&local), def }
-							        : std::tuple{ def, base::Ref(&local) };
-                            auto get_pos = [&](auto local_ref) {
-                                return helios::symbolPst(local_ref->helios_id.value()).unlock(ctx)->getSourcePosition();
-                            };
-                            auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
-                            msg->addAttachedMessage(makeBox<ShadowedDeclerationNote>(get_pos(shadowed)));
-                            ctx.logInt(std::move(msg));
+							auto [shadowing, shadowed] = (lc_scope == *def->scope)
+							                               ? std::tuple{ base::Ref(&local), def }
+							                               : std::tuple{ def, base::Ref(&local) };
+							auto get_pos               = [&](auto local_ref) {
+                                return helios::symbolPst(local_ref->helios_id.value())
+                                    .unlock(ctx)
+                                    ->getSourcePosition();
+							};
+							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
+							msg->addAttachedMessage(
+								makeBox<ShadowedDeclerationNote>(get_pos(shadowed))
+							);
+							ctx.logInt(std::move(msg));
 							return base::BAD;
 						}
 					}
@@ -195,5 +198,4 @@ namespace compiler::mir {
 		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk();
 		return all_ok ? base::OK : base::BAD;
 	}
-
 }
