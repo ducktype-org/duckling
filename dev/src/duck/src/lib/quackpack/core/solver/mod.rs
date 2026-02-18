@@ -23,19 +23,19 @@ pub mod solving;
 pub mod types_common;
 pub mod util;
 
-use std::{cell::OnceCell, marker::PhantomData, sync::Arc};
+use std::{cell::OnceCell, collections::HashSet, marker::PhantomData, sync::Arc};
 
 use tokio::sync::Mutex;
 
 use crate::{
     QpCtx, QuackResult, qp_bail_internal,
     quackpack::core::{
-        PackageCtx,
+        FeatureName, PackageCtx,
         fetcher::Fetcher,
         gathering::gatherer::Gatherer,
         git_access::GitAccess,
         solver_freeze::SolverFreeze,
-        solving::solver_engine::SolverInput,
+        solving::solver_engine::{SolverEngine, SolverInput},
         types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
     },
 };
@@ -58,6 +58,8 @@ pub struct Solver<'duck, State: SolverState> {
     qp_ctx: &'duck QpCtx<'duck>,
     fetcher: &'duck Fetcher<'duck>,
     root_package_ctx: &'duck PackageCtx<'duck>,
+    root_pkg: ExpandedPackage,
+    root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
     gathered_info: OnceCell<SolverInput>,
     state: PhantomData<State>,
@@ -73,6 +75,20 @@ impl<'duck> Solver<'duck, Prepared> {
         Self {
             qp_ctx: package_ctx.ctx(),
             root_package_ctx: package_ctx,
+            root_pkg: ExpandedPackage {
+                location: InternedExpandedLocation::new(ExpandedLocation::Local {
+                    absolute_path: package_ctx.package().root_directory().to_path_buf(),
+                }),
+                version: None,
+            },
+            root_pkg_features: package_ctx
+                .package()
+                .manifest()
+                .features()
+                .all_features()
+                .keys()
+                .copied()
+                .collect(),
             fetcher,
             current_freeze,
             gathered_info: OnceCell::new(),
@@ -89,24 +105,14 @@ impl<'duck> Solver<'duck, Prepared> {
         let gatherer = Gatherer::new(self.qp_ctx, self.fetcher, access);
 
         let mut root_manifest = self.root_package_ctx.package().manifest().clone();
-        let new_root_package = ExpandedPackage {
-            location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                absolute_path: self
-                    .root_package_ctx
-                    .package()
-                    .root_directory()
-                    .to_path_buf(),
-            }),
-            version: None,
-        };
         let mut prev_freeze_manifests = self
             .current_freeze
             .get_prev_freeze_manifests(&gatherer)
             .await?;
-        prev_freeze_manifests.insert(new_root_package, Box::new(root_manifest.clone()));
+        prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let maximal_valid_freeze = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests, new_root_package)?;
+            .find_maximal_correct_dep_solution(&prev_freeze_manifests, self.root_pkg)?;
         let Some(root_freeze) = maximal_valid_freeze
             .package_freezes
             .get(&maximal_valid_freeze.main_pkg)
@@ -141,6 +147,8 @@ impl<'duck> Solver<'duck, Prepared> {
             qp_ctx: self.qp_ctx,
             fetcher: self.fetcher,
             root_package_ctx: self.root_package_ctx,
+            root_pkg: self.root_pkg,
+            root_pkg_features: self.root_pkg_features,
             current_freeze: self.current_freeze,
             gathered_info: self.gathered_info,
             state: PhantomData,
@@ -149,11 +157,13 @@ impl<'duck> Solver<'duck, Prepared> {
 }
 
 impl<'duck> Solver<'duck, Prepared> {
-    pub fn solve(self) -> QuackResult<SolverFreeze> {
-        unimplemented!(
-            "\
-1. Solve the problem \
-2. Generate a new freezefile"
-        )
+    pub fn solve(mut self) -> QuackResult<SolverFreeze> {
+        let Some(input) = self.gathered_info.take() else {
+            qp_bail_internal!("Tried to run solver without input specified");
+        };
+        let manifests = input.gathered_manifests.clone();
+        let solver_output =
+            SolverEngine::run_engine(input, &(self.root_pkg, self.root_pkg_features))?;
+        self.current_freeze.new_freeze(&manifests, solver_output)
     }
 }

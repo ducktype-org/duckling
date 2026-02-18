@@ -14,7 +14,7 @@ use crate::{
 };
 
 impl SolverFreeze {
-    /// Fetches manifests of the packages mentioned in the freeze,
+    /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
     /// to later check whether their dependencies are still satisfied inside the freeze.
     pub async fn get_prev_freeze_manifests<'duck, GitAccessImpl: GitAccess>(
         &self,
