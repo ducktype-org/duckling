@@ -141,6 +141,7 @@ function(add_vm_variant suffix compile_def)
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
             BYPRODUCTS ${common_bc}.tmp
+            DEPENDS LibCommonVM_bc ${lib_thread_vm_name}_bc ${vm_dep_objects_bc}
             COMMENT "Full O3 + LTO + Aggressive Inline for ${suffix}"
         )
 
