@@ -415,7 +415,7 @@ namespace concurrent {
 		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent
 		 * queries).
 		 */
-		constexpr static u64 SHARD_COUNT = 129;
+		constexpr static u64 SHARD_COUNT = 129 * 2;
 
 		/**
 		 * The shards of the map.
