@@ -1,4 +1,5 @@
 global_data counter i64 {};
+global_data lock mutex {};
 
 function inc {} -> void {
     init_lany_type			 temp, i64;
@@ -9,41 +10,55 @@ function inc {} -> void {
 		# i--
 		sub_l64_imm          i, 1;
 
+		init_lany_type		 lock1, mutex;
+		mov_lopq_gopq			 lock1, lock;
+		call_builtinfunc	 builtin_lock_mutex;
+
 		mov_l64_g64			 temp, counter;
 		add_l64_imm			 temp, 1;
 		mov_g64_l64			 counter, temp;
 
+		init_lany_type		 lock2, mutex;
+		mov_lopq_gopq			 lock2, lock;
+		call_builtinfunc	 builtin_unlock_mutex;
+
 		# if i > 0 goto Loop1
 		cmpGt_l64_imm         i, 0;
 		jmpIf_label      	 Loop1;
-    deinit;
-    deinit;
 
     ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
+    init_lany_type			 lock1, mutex;
+	call_builtinfunc		 builtin_create_mutex;
+	mov_gopq_lopq				 lock, lock1;
+
 	init_lany_type           thread_inc1_id, i64;
 	set_threadctx			 inc;
     call_builtinfunc 		 builtin_start_thread;
 
-    init_lany_type           thread_inc2_id, i64;
+	init_lany_type           thread_inc2_id, i64;
 	set_threadctx			 inc;
     call_builtinfunc 		 builtin_start_thread;
 
 	init_lany_type			 join_inc1_ret, i64;
 	init_lany_type 			 join_inc1_id, i64;
     mov_l64_l64 			 join_inc1_id, thread_inc1_id;
-    call_builtinfunc 		 builtin_join_thread;
+    call_builtinfunc 		 builtin_join_thread;	
 
-    init_lany_type			 join_inc2_ret, i64;
+	init_lany_type			 join_inc2_ret, i64;
 	init_lany_type 			 join_inc2_id, i64;
     mov_l64_l64 			 join_inc2_id, thread_inc2_id;
     call_builtinfunc 		 builtin_join_thread;
-	
+
     init_lany_type			 output_var, i64;
     mov_l64_g64 			 output_var, counter;
     output_l64				 output_var;
+	
+	init_lany_type		 lock2, mutex;
+	mov_lopq_gopq			 lock2, lock;
+	call_builtinfunc	 builtin_destroy_mutex;
 
     ret;
 }

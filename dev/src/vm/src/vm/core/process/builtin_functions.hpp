@@ -54,6 +54,10 @@ namespace vm::builtins {
 		Stoi,
 		StartThread,
 		JoinThread,
+		CreateMutex,
+		LockMutex,
+		UnlockMutex,
+		DestroyMutex
 	};
 
 	/**
@@ -72,6 +76,10 @@ namespace vm::builtins {
 		static i64  builtinStoi(VMThread& process, Pointer ptr);
 		static i64  builtinStartThread(VMThread& process);
 		static i64  builtinJoinThread(VMThread& process, i64 thread_id);
+		static i64  builtinCreateMutex(VMThread& process);
+		static void builtinLockMutex(VMThread& process, i64 mutex_id);
+		static void builtinUnlockMutex(VMThread& process, i64 mutex_id);
+		static void builtinDestroyMutex(VMThread& process, i64 mutex_id);
 	};
 
 	/**
