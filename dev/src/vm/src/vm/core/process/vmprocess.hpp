@@ -99,6 +99,16 @@ namespace vm {
 		);
 
 		/**
+		 * @brief Runs a function and waits for it to finish.
+		 * @note Does not create a new thread, runs the function in the current execution thread.
+		 * @return The exit value of the function if it was ran successfully or an API error
+		 * otherwise.
+		 */
+		std::expected<api::Response, api::ApiError> runFunctionAwait(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
+
+		/**
 		 * @brief Joins the executing thread.
 		 */
 		std::expected<api::Response, api::ApiError> join(i64 thread_id);

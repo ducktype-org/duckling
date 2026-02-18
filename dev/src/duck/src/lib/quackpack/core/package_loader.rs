@@ -3,10 +3,7 @@ use std::{marker::PhantomData, path::Path};
 use rustvil::fs::PathExt;
 use tracing::{debug, trace};
 
-use crate::{
-    QpCtx, QuackResult, qp_bail, qp_internal,
-    quackpack::{core::PackageCtx, util::paths::MANIFEST_FILENAME},
-};
+use crate::{QpCtx, QuackResult, qp_bail, qp_internal, quackpack::core::PackageCtx};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Is [`PackageLoader`] allowed to return a global package, if it doesn't find any package.
@@ -37,7 +34,6 @@ impl PackageLoader {
     pub const MANIFEST_NAME: &str = "quackconfig.yml";
     pub const FREEZE_NAME: &str = "quackfreeze.json";
     pub const VENV_CONFIG_NAME: &str = "venvconfig.toml";
-    pub const LOCAL_STORAGE_NAME: &str = ".storage";
 
     /// Get the global package.
     pub fn global_package<'duck>(_ctx: &'duck QpCtx<'duck>) -> QuackResult<PackageCtx<'duck>> {
@@ -59,7 +55,7 @@ impl PackageLoader {
         }
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
-            let path = potential_location.join(MANIFEST_FILENAME);
+            let path = potential_location.join(Self::MANIFEST_NAME);
             trace!("checking the path `{}`", path.display());
             if path.is_file() {
                 debug!("found a package at `{}`", path.display());

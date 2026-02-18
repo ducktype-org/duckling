@@ -9,6 +9,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <expected>
+#include <mutex>
 
 namespace {
 	using namespace compiler::helios;
@@ -366,6 +367,9 @@ namespace compiler::helios {
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
+		static std::mutex vm_evaluation_mutex;
+		std::scoped_lock  lock(vm_evaluation_mutex);
+
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
