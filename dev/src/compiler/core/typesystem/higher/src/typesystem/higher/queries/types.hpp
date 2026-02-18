@@ -11,8 +11,11 @@
 
 #include <base/collections/maps.hpp>
 
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <query_framework/query_int.hpp>
-#include <query_framework/utils/simple_keys.hpp>
+
+#include <algorithm>
 
 namespace compiler::tsh {
 	/**
@@ -113,14 +116,11 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			// Note that tuple components are ordered.
+			for (const auto& component: components) addToHash(hasher, component);
+			return hasher.finalize();
 		}
 	};
 
@@ -142,14 +142,18 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
+		base::Bit256 queryUnstablePerfectHash() const {
+			// Note that a variant's component types are *not* ordered, so we have to order them.
+			// Let's just hash the components, order them, and then hash the ordered list of hashes.
+			std::vector<base::Bit256> hashes{};
+			hashes.reserve(underlying_types.size());
+			for (const auto& underlying_type: underlying_types)
+				hashes.push_back(underlying_type.queryUnstablePerfectHash());
+			std::ranges::sort(hashes, [](const auto& a, const auto& b) { return a < b; });
 
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+			hashing::SHA256 hasher{};
+			for (const auto& hash: hashes) addToHash(hasher, hash);
+			return hasher.finalize();
 		}
 	};
 
@@ -193,14 +197,13 @@ namespace compiler::tsh {
 			= default;
 
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			static base::Map<KeyFor_QueryFunctionType, u64> hashes{};
-
-			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-
-			u64 result = hashes.size();
-			hashes.put(*this, result);
-			return result;
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			for (const auto& param_type: parameter_types) addToHash(hasher, param_type);
+			addToHash(hasher, result_type);
+			addToHash(hasher, pure);
+			addToHash(hasher, free);
+			return hasher.finalize();
 		}
 	};
 
