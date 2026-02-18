@@ -5,4 +5,11 @@
 #pragma once
 
 // add to init::init possibly
+
 __attribute__((noinline)) void llvmInit();
+
+#ifdef ENABLE_JIT
+#include <init/init.hpp>
+
+RUN_BEFORE_MAIN(init::registerForInit(llvmInit));
+#endif
