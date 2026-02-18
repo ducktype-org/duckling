@@ -64,6 +64,18 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case
 
+		if (auto task_status = task_status_map.atMaybe(task.id)) {
+			if (**task_status == TaskStatus::Done) {
+				return;
+			}
+			else if (**task_status == TaskStatus::InProgress) {
+				std::unique_lock lock(pool_mutex);
+				task_completed_cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
+				return;
+			}
+		}
+
+
 		added_tasks.fetch_add(1);
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
@@ -152,6 +164,17 @@ namespace query::internal {
 	void TaskPool::await(NodeID id) {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->await is performing a lot of operations even in such case
+
+		if (auto task_status = task_status_map.atMaybe(id)) {
+			if (**task_status == TaskStatus::Done) {
+				return;
+			}
+			else if (**task_status == TaskStatus::InProgress) {
+				std::unique_lock lock(pool_mutex);
+				task_completed_cv.wait(lock, [this, id] { return isTaskDone(id); });
+				return;
+			}
+		}
 
 		std::unique_lock lock(pool_mutex);
 		auto             task_opt
