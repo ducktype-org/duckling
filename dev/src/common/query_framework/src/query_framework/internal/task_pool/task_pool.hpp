@@ -287,7 +287,7 @@ namespace query::internal {
 		std::vector<std::condition_variable> task_completed_cvs;
 
 		/// Counter for completed tasks (used in execute()).
-		std::atomic<usize> completed_tasks{ 0 };
+		// std::atomic<usize> completed_tasks{ 0 };
 
 		/// Total number of tasks (used in execute()).
 		// std::atomic<usize> added_tasks{ 0 };

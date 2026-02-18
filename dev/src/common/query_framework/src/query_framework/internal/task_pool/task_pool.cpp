@@ -16,7 +16,7 @@ namespace query::internal {
 		  num_workers(worker_manager.getAllWorkers().size()),
 		task_completed_mutexes(TASK_SHARDS),
 		  task_completed_cvs(TASK_SHARDS) {
-			
+
 		// Initialize per-worker pools
 		for (auto worker: worker_manager.getAllWorkers())
 			worker_pools.emplace(worker, std::deque<Task>());
@@ -57,14 +57,15 @@ namespace query::internal {
 		// @TODO: #2035 we could add fast path here, that checks if the task is already done,
 		// as ->query is performing a lot of operations even in such case
 
-		auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
-		auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
-
+		
 		if (auto task_status = task_status_map.getCurrent(task.id)) {
 			if (*task_status == TaskStatus::Done) {
 				return;
 			}
 			else if (*task_status == TaskStatus::InProgress) {
+				auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
+				auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
+			
 				std::unique_lock lock(mutex);
 				cv.wait(lock, [this, id = task.id] { return isTaskDone(id); });
 				return;
@@ -74,6 +75,9 @@ namespace query::internal {
 
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) {
+			auto& 		   mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
+			auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
+
 			const auto       id = task.id;
 			std::unique_lock lock(mutex);
 			cv.wait(lock, [this, id] { return isTaskDone(id); });
@@ -90,20 +94,14 @@ namespace query::internal {
 		auto& mutex = task_completed_mutexes[taskHash(task.id) % TASK_SHARDS];
 		auto& cv = task_completed_cvs[taskHash(task.id) % TASK_SHARDS];
 
-		// @TODO: #1973 integrate with query
 		// this insert decided who get's to do the task
 		if (change_status_result.toOpt().has_value()) {
 			// The key was inserted by us, we can execute the task
 			auto wd = concurrent::worker::Worker::getCurrentWorker();
 
 			task.work(wd);
-			{
-				std::lock_guard lock(mutex);
-
-				task_status_map.setDone(task.id);
-				completed_tasks.fetch_add(1);
-			}
-
+			task_status_map.setDone(task.id);
+						{
 			cv.notify_all();
 			return true;
 		}
