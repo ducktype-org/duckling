@@ -9,9 +9,17 @@ function inc {} -> void {
 		# i--
 		sub_l64_imm          i, 1;
 
+		init_lany_type		 lock1, mutex;
+		mov_l64_g64			 lock1, lock;
+		call_builtinfunc	 builtin_lock_mutex;
+
 		mov_l64_g64			 temp, counter;
 		add_l64_imm			 temp, 1;
 		mov_g64_l64			 counter, temp;
+
+		init_lany_type		 lock2, mutex;
+		mov_l64_g64			 lock2, lock;
+		call_builtinfunc	 builtin_ulock_mutex;
 
 		# if i > 0 goto Loop1
 		cmpGt_l64_imm         i, 0;
@@ -24,7 +32,7 @@ function print {} -> void {
     init_lany_type			 output_var, i64;
 
 	init_lany_type 			 i, i64;
-	mov_l64_imm				 i, 10;
+	mov_l64_imm				 i, 100;
 	# while(i > 0)
 	label Loop1;
 		# i--
@@ -41,6 +49,10 @@ function print {} -> void {
 }
 
 function main { i64, ptr_argv } -> i64 {
+	init_lany_type			 lock1, mutex;
+	call_builtinfunc		 builtin_create_mutex;
+	mov_g64_l64				 lock, lock1;
+
 	init_lany_type           thread_inc_id, i64;
 	set_threadctx			 inc;
     call_builtinfunc 		 builtin_start_thread;
