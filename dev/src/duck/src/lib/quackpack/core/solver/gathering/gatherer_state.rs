@@ -20,6 +20,7 @@ use crate::{
 };
 
 /// Gathered information about a particular package.
+#[derive(Debug)]
 pub struct PackageData {
     pub manifest: Box<Manifest>,
     pub requested_features: HashSet<FeatureName>,
@@ -45,11 +46,15 @@ impl PackageData {
                     .enabled_features(Vec::from_iter(self.requested_features.iter().copied())),
             );
             if dependency.is_pinned() {
+                let version = dependency
+                    .desc()
+                    .versions()
+                    .first()
+                    .copied()
+                    .context_internal("Pinned dependency without version")?;
                 result.0.push(ManifestsRequest::Pinned(PinnedRequest {
-                    package: Package {
-                        location,
-                        version: dependency.desc().versions().first().copied(),
-                    },
+                    location,
+                    version,
                     features,
                 }));
             } else {
@@ -102,26 +107,24 @@ impl Default for RequestAction {
 ///    manifests of all the packages from a given location, satisfying some versions constraints (not pinned request),
 /// 2. a *fetch* is a process of obtaining manifest(s) for the first time, for example from Ducknest,
 /// 3. to satisfy a *request*, a *fetch* may be made, this usually happens for the first *request* referencing a specific location/package.
+///
+/// Pinned & Not Pinned vs Registry, Git & Local:
+/// ---------------------
+/// 1. Git and Local requests are always not pinned, though they can only return one manifest.
+/// 2. Registry requests can be either pinned or not pinned.
+#[derive(Debug, Default)]
 pub struct GathererState {
+    /// Tracks the state of all the pending or finished not pinned fetches.
     not_pinned_fetches: HashMap<InternedLocation, QueryState>,
+    /// Tracks the state of all the pending or finished pinned fetches.
     pinned_fetches: HashMap<Package, QueryState>,
+
     pkgs_data: HashMap<ExpandedPackage, PackageData>,
     versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 }
 
 impl GathererState {
-    /// Creates a new, empty [`GathererState`].
-    pub fn new() -> Self {
-        GathererState {
-            not_pinned_fetches: HashMap::new(),
-            pinned_fetches: HashMap::new(),
-            pkgs_data: HashMap::new(),
-            versions_for_location: HashMap::new(),
-            location_resolver: HashMap::new(),
-        }
-    }
-
     /// Returns what action to perform for a given request.
     pub fn get_request_action(
         &mut self,
@@ -182,14 +185,17 @@ impl GathererState {
         &mut self,
         pinned_request: PinnedRequest,
     ) -> GathererResult<RequestAction> {
-        let Some(fetch_state) = self.pinned_fetches.get_mut(&pinned_request.package) else {
+        let request_pkg = Package {
+            location: pinned_request.location,
+            version: Some(pinned_request.version),
+        };
+        let Some(fetch_state) = self.pinned_fetches.get_mut(&request_pkg) else {
             // If the pinned request has not been made, we may still have done an unpinned request for the corresponding location.
-            let Some(not_pinned_fetch_state) = self
-                .not_pinned_fetches
-                .get_mut(&pinned_request.package.location)
+            let Some(not_pinned_fetch_state) =
+                self.not_pinned_fetches.get_mut(&pinned_request.location)
             else {
                 self.pinned_fetches.insert(
-                    pinned_request.package,
+                    request_pkg,
                     QueryState::Pending {
                         requests: vec![ManifestsRequest::Pinned(pinned_request)],
                     },
@@ -200,7 +206,7 @@ impl GathererState {
                 QueryState::Failed => {
                     // The not pinned fetch has failed but maybe the pinned one will be successful.
                     self.pinned_fetches.insert(
-                        pinned_request.package,
+                        request_pkg,
                         QueryState::Pending {
                             requests: vec![ManifestsRequest::Pinned(pinned_request)],
                         },
@@ -216,13 +222,11 @@ impl GathererState {
                     return Ok(GathererComputation::empty());
                 }
                 QueryState::Done => {
-                    let expanded_package = pinned_request
-                        .package
+                    let expanded_package = request_pkg
                         .resolve(&self.location_resolver)
-                        .context_internal(format!(
-                            "Could not expand the package {:?}",
-                            pinned_request.package
-                        ))?;
+                        .with_context_internal(|| {
+                            format!("Could not expand the package {:?}", request_pkg)
+                        })?;
                     if !self.pkgs_data.contains_key(&expanded_package) {
                         return Ok(GathererComputation::only_error(qp_err!(
                             "Pinned package {expanded_package:?} was supposed to be already fetched by a not pinned fetch but has no data"
@@ -246,13 +250,11 @@ impl GathererState {
                 Ok(GathererComputation::empty())
             }
             QueryState::Done => {
-                let expanded_package = pinned_request
-                    .package
+                let expanded_package = request_pkg
                     .resolve(&self.location_resolver)
-                    .context_internal(format!(
-                        "Could not expand the package {:?}",
-                        pinned_request.package
-                    ))?;
+                    .with_context_internal(|| {
+                        format!("Could not expand the package {:?}", request_pkg)
+                    })?;
                 let result = self.update_features(expanded_package, pinned_request.features)?;
                 Ok(GathererComputation(
                     RequestAction::More { requests: result.0 },
@@ -280,7 +282,11 @@ impl GathererState {
         &mut self,
         pinned_result: PinnedResult,
     ) -> GathererResult<Vec<ManifestsRequest>> {
-        let Some(state) = self.pinned_fetches.get_mut(&pinned_result.origin_package) else {
+        let origin_package = Package {
+            location: pinned_result.origin_location,
+            version: Some(pinned_result.origin_version),
+        };
+        let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
             qp_bail_internal!("Response with no associated request state");
         };
         let QueryState::Pending { requests } = state else {
@@ -289,23 +295,21 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        // If we requested a specific version and received manifest declares a different version, the request failed.
-        if ![None, pinned_result.expanded_package.version]
-        if pinned_result.origin_package.version.is_some() && pinned_result.origin_package.version != pinned_result.expanded_package.version
-        {
+        // If received result declares a different version, the request failed.
+        if Some(pinned_result.origin_version) != pinned_result.expanded_package.version {
             return Ok(self
                 .fail_pinned(
-                    pinned_result.origin_package,
+                    origin_package,
                     "Fetched manifest's version differs from required",
                 )?
                 .context(format!(
                     "While handling response for the fetch of {:?}",
-                    pinned_result.origin_package
+                    origin_package
                 )));
         }
 
         self.location_resolver.insert(
-            pinned_result.origin_package.location,
+            pinned_result.origin_location,
             pinned_result.expanded_package.location,
         );
         self.insert_manifests([(
@@ -406,27 +410,26 @@ impl GathererState {
         for request in requests {
             match request {
                 ManifestsRequest::Pinned(pinned_request) => {
-                    let Some(expanded_loc) =
-                        self.location_resolver.get(&pinned_request.package.location)
+                    let Some(expanded_loc) = self.location_resolver.get(&pinned_request.location)
                     else {
                         qp_bail_internal!(
                             "Could not resolve location {:?}",
-                            pinned_request.package.location
+                            pinned_request.location
                         )
                     };
                     let Some(versions) = self.versions_for_location.get(expanded_loc) else {
                         qp_bail_internal!("No gathered versions for location {expanded_loc:?}")
                     };
-                    if !versions.contains(&pinned_request.package.version) {
+                    if !versions.contains(&Some(pinned_request.version)) {
                         qp_bail!(
                             "Request of pinned dependency {:?} could not find matching version",
-                            pinned_request.package
+                            pinned_request.location
                         )
                     }
                     result.extend(self.update_features(
                         ExpandedPackage {
                             location: *expanded_loc,
-                            version: pinned_request.package.version,
+                            version: Some(pinned_request.version),
                         },
                         pinned_request.features,
                     )?);
@@ -555,10 +558,4 @@ pub struct GatheredInfo {
     pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
     pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
-}
-
-impl Default for GathererState {
-    fn default() -> Self {
-        Self::new()
-    }
 }

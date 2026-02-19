@@ -66,7 +66,7 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         root_features: HashSet<FeatureName>,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
-        let mut state = GathererState::new();
+        let mut state = GathererState::default();
         let root_fetch_result =
             self.fetch_root(root_path, root_manifest, root_features, &mut state)?;
 
@@ -177,15 +177,12 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         &self,
         request: PinnedRequest,
     ) -> GathererResult<Option<FetchResult>> {
-        let Location::Registry { url, real_name } = request.package.location.as_ref() else {
+        let Location::Registry { url, real_name } = request.location.as_ref() else {
             qp_bail_internal!("Tried to make pinned registry fetch for a non-registry location");
-        };
-        let Some(version) = request.package.version else {
-            qp_bail_internal!("Tried to make pinned fetch without specifying version")
         };
         let pkg_to_fetch = PackageWithUrl {
             id: *real_name,
-            version,
+            version: request.version,
             url: url.clone(),
         };
         let fetcher_response: GathererComputation<Option<registry::Manifest>> = self
@@ -204,10 +201,11 @@ impl<'duck, GitAccessImpl: GitAccess> Gatherer<'duck, GitAccessImpl> {
         match manifest {
             Ok(manifest) => Ok(GathererComputation::only_success(Some(
                 FetchResult::Pinned(PinnedResult {
-                    origin_package: request.package,
+                    origin_location: request.location,
+                    origin_version: request.version,
                     expanded_package: ExpandedPackage {
                         location: expanded_loc,
-                        version: Some(version),
+                        version: Some(manifest.root_description().version()),
                     },
                     fetched_manifest: Box::new(manifest),
                 }),

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::{
     FeatureName, Manifest, Version,
-    types_common::{ExpandedPackage, InternedLocation, Package},
+    types_common::{ExpandedPackage, InternedLocation},
 };
 
 /// Type representing a request to get manifests for a single/multiple packages.
@@ -23,7 +23,8 @@ pub struct NotPinnedRequest {
 /// Request to get manifest for a particular package.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PinnedRequest {
-    pub package: Package,
+    pub location: InternedLocation,
+    pub version: Version,
     pub features: HashSet<FeatureName>,
 }
 
@@ -37,7 +38,8 @@ pub enum FetchResult {
 /// Result of a fetch of a single package's manifest.
 #[derive(Debug)]
 pub struct PinnedResult {
-    pub origin_package: Package,
+    pub origin_location: InternedLocation,
+    pub origin_version: Version,
     pub expanded_package: ExpandedPackage,
     pub fetched_manifest: Box<Manifest>,
 }

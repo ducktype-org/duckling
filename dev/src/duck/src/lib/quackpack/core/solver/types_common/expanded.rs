@@ -13,7 +13,7 @@ use crate::{
     quackpack::core::{
         BranchOrTag, Dependency, Registry, Source, Version,
         gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
-        types_common::{InternedLocation, Location, Package},
+        types_common::{InternedLocation, Location},
         version::CompatibilityCheck,
     },
 };
@@ -203,22 +203,24 @@ impl ExpandedPackage {
         }
     }
 
-    pub fn create_manifest_request(&self) -> ManifestsRequest {
+    /// Creates a [`ManifestsRequest`] for precisely that single package.
+    pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
         match self.location.as_ref() {
             ExpandedLocation::Registry { url, real_name } => {
-                ManifestsRequest::Pinned(PinnedRequest {
-                    package: Package {
-                        location: InternedLocation::new(Location::Registry {
-                            url: url.clone(),
-                            real_name: *real_name,
-                        }),
-                        version: self.version,
-                    },
+                let version = self
+                    .version
+                    .context_internal("Registry package without version")?;
+                Ok(ManifestsRequest::Pinned(PinnedRequest {
+                    location: InternedLocation::new(Location::Registry {
+                        url: url.clone(),
+                        real_name: *real_name,
+                    }),
+                    version,
                     features: HashSet::new(),
-                })
+                }))
             }
             ExpandedLocation::Git { url, commit } => {
-                ManifestsRequest::NotPinned(NotPinnedRequest {
+                Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location: InternedLocation::new(Location::Git {
                         url: url.clone(),
                         branch_or_tag: BranchOrTag::Default,
@@ -226,16 +228,16 @@ impl ExpandedPackage {
                     }),
                     versions: None,
                     features: HashSet::new(),
-                })
+                }))
             }
             ExpandedLocation::Local { absolute_path } => {
-                ManifestsRequest::NotPinned(NotPinnedRequest {
+                Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location: InternedLocation::new(Location::Local {
                         path: absolute_path.clone(),
                     }),
                     versions: None,
                     features: HashSet::new(),
-                })
+                }))
             }
         }
     }

@@ -25,8 +25,9 @@ impl SolverFreeze {
             if *pkg == self.main_pkg {
                 continue;
             }
-            let request = pkg.create_manifest_request();
-            tasks.push(Box::pin(gatherer.fetch(request)));
+            if let Ok(request) = pkg.create_manifest_request() {
+                tasks.push(Box::pin(gatherer.fetch(request)));
+            }
         }
         let results = join_all(tasks).await;
         let mut manifests = HashMap::new();
