@@ -47,13 +47,11 @@ namespace vm::api {
 		struct Join {
 			i64 thread_id;
 		};
-    
+
 		struct RunFunctionAwait {
 			std::string          func_name;
 			FunctionRunArguments func_args;
 		};
-
-		struct Join {};
 
 		struct Step {};
 

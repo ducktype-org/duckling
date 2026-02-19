@@ -52,8 +52,9 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 		std::mutex                  gil;
-		i64 						next_mutex_id=0;
-		std::map<i64, std::shared_ptr<std::mutex>> 	mutex_map; // TODO lepiej pewnie co innego niz mapa
+		i64                         next_mutex_id = 0;
+		std::map<i64, std::shared_ptr<std::mutex>>
+			mutex_map;  // TODO lepiej pewnie co innego niz mapa
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -213,10 +214,10 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		VMProcess(PID my_pid);
-		void acquireGil(i64);
-		void releaseGil(i64);
+		void                        acquireGil();
+		void                        releaseGil();
 		std::shared_ptr<std::mutex> getMutex(i64 mutex_id);
-		i64 addMutex();
-		void removeMutex(i64);
+		i64                         addMutex();
+		void                        removeMutex(i64);
 	};
 }

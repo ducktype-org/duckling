@@ -4,11 +4,11 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "vm/core/thread/low_program/instruction.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -185,14 +185,12 @@ namespace vm {
 			}
 
 			variant_case(api::request::Join, join_request) { return join(join_request.thread_id); }
-      
+
 			variant_case(api::request::RunFunctionAwait, run_func_await_request) {
 				return runFunctionAwait(
 					run_func_await_request.func_name, run_func_await_request.func_args
 				);
 			}
-
-			variant_case_novalue(api::request::Join) { return join(); }
 
 			variant_case(api::request::Pause, pause_request) {
 				auto& thread   = pause_request.thread_id == 0
@@ -420,18 +418,12 @@ namespace vm {
 		return memory.validateMemoryState();
 	}
 
-	void VMProcess::acquireGil(i64 id) {
-		gil.lock();
-	}
+	void VMProcess::acquireGil() { gil.lock(); }
 
-	void VMProcess::releaseGil(i64 id) {
-		gil.unlock();
-	}
+	void VMProcess::releaseGil() { gil.unlock(); }
 
 	std::shared_ptr<std::mutex> VMProcess::getMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) {
-			throw exceptions::VMMutexDoesntExist(); 
-		}
+		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
 		return mutex_map.at(mutex_id);
 	}
 
@@ -441,9 +433,7 @@ namespace vm {
 	}
 
 	void VMProcess::removeMutex(i64 mutex_id) {
-		if (mutex_map.find(mutex_id) == mutex_map.end()) {
-			throw exceptions::VMMutexDoesntExist(); 
-		}
+		if (mutex_map.find(mutex_id) == mutex_map.end()) throw exceptions::VMMutexDoesntExist();
 		mutex_map.erase(mutex_id);
 	}
 

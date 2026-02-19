@@ -345,8 +345,6 @@ namespace vm {
 		frame->current_function = &start_function;
 
 		const auto* instr = start_function.bc.data();
-		i64         id = static_cast<i64>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
-
 
 #ifdef USE_TAIL_CALLS
 		instr->tc_opfun(instr, local_stack, frame, *this);
@@ -381,7 +379,7 @@ namespace vm {
 		process_memory.freeBlockData(block);
 		process_memory.decreaseBlockRefcount(block);
 		frame->resetFrameData();
-		process.releaseGil(id);
+		process.releaseGil();
 
 		return exit_value_storage.value();
 	}
@@ -679,7 +677,6 @@ namespace vm {
 	}
 
 	void VMThread::acquireGil() {
-		i64 id = static_cast<i64>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 		if (has_gil) {
 			// Check if you can hold it longer - releasing policy
 			// If you can't hold it longer then
@@ -687,18 +684,17 @@ namespace vm {
 			if (false) return;
 			has_gil = false;
 			// 2. release gil
-			process.releaseGil(id);
+			process.releaseGil();
 			// 3. yield - to not reacquire instantly
 			std::this_thread::yield();
 		}
 		// Try to acquire GIL
-		process.acquireGil(id);
+		process.acquireGil();
 		has_gil = true;
 	}
 
 	void VMThread::releaseGil() {
-		i64 id  = static_cast<i64>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 		has_gil = false;
-		process.releaseGil(id);
+		process.releaseGil();
 	}
 }
