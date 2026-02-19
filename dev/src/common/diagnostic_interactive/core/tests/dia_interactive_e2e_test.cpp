@@ -26,7 +26,7 @@ public:
 private:
 	void evaluateSimpleTextTemplate() {
 		// Create a simple text template
-		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
 metadata:
   template_type: message
@@ -75,7 +75,7 @@ pointer_messages: {}
 
 	void evaluateComplexComponentTemplate() {
 		// Register templates
-		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
 metadata:
   template_type: message
@@ -291,7 +291,7 @@ content:
 
 	void evaluatePointerMessageTemplate() {
 		// Register templates
-		TemplateRegistrySingleton::setInstance(base::makeBox<TemplateRegistryTestProvider>(
+		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
 			base::HashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
 metadata:
   template_type: message
