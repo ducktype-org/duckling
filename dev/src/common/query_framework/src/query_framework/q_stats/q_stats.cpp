@@ -9,8 +9,8 @@
 
 namespace query {
 
-	timer::Duration total_red_green_sweep_time = timer::Duration::zero();
-	timer::Duration total_graph_merge_time     = timer::Duration::zero();
+	timer::AtomicDuration total_red_green_sweep_time = timer::Duration::zero();
+	timer::AtomicDuration total_graph_merge_time     = timer::Duration::zero();
 
 	namespace {
 
@@ -67,11 +67,11 @@ namespace query {
 
 		std::cerr << "=== Query Framework Other Statistics ===\n\n";
 		std::cerr << "Total time spent in red-green sweeps: ";
-		timer::printAs(std::cerr, total_red_green_sweep_time, timer::TimeUnit::Milliseconds);
+		timer::printAs(std::cerr, total_red_green_sweep_time.toDuration(), timer::TimeUnit::Milliseconds);
 		std::cerr << "\n";
 
 		std::cerr << "Total time spent in graph merges: ";
-		timer::printAs(std::cerr, total_graph_merge_time, timer::TimeUnit::Milliseconds);
+		timer::printAs(std::cerr, total_graph_merge_time.toDuration(), timer::TimeUnit::Milliseconds);
 		std::cerr << "\n\n";
 	}
 }

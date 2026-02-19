@@ -104,6 +104,24 @@ namespace timer {
 	};
 
 	/**
+	 * RAII-like object to add time to a given AtomicDuration variable.
+	 * Measures time from construction to destruction and adds it to the given AtomicDuration reference.
+	 */
+	struct AddToTimeAtomic final {
+		AddToTimeAtomic(Ref<AtomicDuration> to_add): to_add(to_add), start(timer::now()) {}
+
+		~AddToTimeAtomic() { to_add->add(timer::duration(start, timer::now())); }
+
+	private:
+		/**
+		 * Pointer to the duration to which the time will be added.
+		 */
+		Ref<AtomicDuration> to_add;
+
+		TimeStamp start;
+	};
+
+	/**
 	 * Simple utility type to measure time in a typical scenario.
 	 * Measures time between startMeasurement() and endMeasurement() calls.
 	 */
