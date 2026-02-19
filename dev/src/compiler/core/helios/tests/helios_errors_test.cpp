@@ -229,6 +229,25 @@ private:
 			1
 		);
 
+		checkForErrorOnCompileModule(
+			R"(
+				const unitType: type = ();
+
+				fun foo(u: ()) -> () = {
+				    builtin_output_i64(1);
+				    return u;
+				}
+				
+				fun main() -> i64 = {
+					foo(unitType);
+					return 0;
+				}
+			)",
+			{ "The given argument type `const type` cannot be converted to the expected type "
+		      "`()`" },
+			1
+		);
+
 
 		// ========================== Comp time errors ==========================
 
