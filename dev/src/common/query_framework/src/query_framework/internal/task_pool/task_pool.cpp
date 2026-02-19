@@ -67,6 +67,9 @@ namespace query::internal {
 		tm.endMeasurement();
 		if (concurrent::worker::Worker::isWorkerThread()) { // this is a good-enough check for now for are we in query
 			wait_time_printer.wait_time.add(tm.duration());
+			std::cerr << "Waited for task " << id.q_id.getData().name << " for ";
+			timer::printAs(std::cerr, tm.duration(), timer::TimeUnit::Milliseconds);
+			std::cerr << "\n";
 		}
 	}
 
@@ -187,7 +190,10 @@ namespace query::internal {
 		mutex.unlock();
 			
 		if_opt_some(task_opt, task) {
-			tryExecuteTask(task);
+			bool done = tryExecuteTask(task);
+			if (done and task.id == id) {
+				return;
+			}
 		}
 
 		waitForTask(id);
