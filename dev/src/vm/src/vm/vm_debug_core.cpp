@@ -70,7 +70,9 @@ void DuckVMDebugCore::runVm() {
 		getStatus();
 		return;
 	}
-
+	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+	}
 	if (!vm::api::run(pid, debug_args)) throw std::runtime_error("Failed to run VM");
 }
 
@@ -123,6 +125,9 @@ void DuckVMDebugCore::runFun(const std::string& string) {
 		getStatus();
 		return;
 	}
+	if (std::holds_alternative<vm::api::ExecutionCompleted>(response.value())) {
+		if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
+	}
 	if (!vm::api::runFunction(pid, function_name, createArgumentList(arguments)))
 		throw BeRDFailedToRunCodeException();
 }
@@ -148,8 +153,6 @@ void DuckVMDebugCore::getStatus() {
 				throw BeRDWrongTypeException();
 			
 			std::cout<< "Ret: " << exitval->readBytes<i64>() << "\n";
-			
-			if (!vm::api::join(pid)) throw BeRDFailedToJoinProcessException();
 		}
 		if(std::holds_alternative<vm::api::Paused>(response.value())) {
 			auto position_response = vm::api::getCurrentPosition(pid);
