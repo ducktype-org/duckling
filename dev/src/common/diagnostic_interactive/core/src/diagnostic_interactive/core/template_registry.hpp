@@ -2,6 +2,8 @@
 #include "diagnostic_arguments_forward.hpp"
 #include "template_file.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
@@ -54,8 +56,9 @@ namespace dia_int {
 	 */
 	class TemplateRegistrySingleton final {
 	private:
-		base::HashMap<std::string, template_file::DiagnosticTemplate> cache;
-		Box<TemplateRegistryProvider>                                 provider;
+		concurrent::ConHashMap<std::string, template_file::DiagnosticTemplate> cache;
+		Box<TemplateRegistryProvider>                                          provider;
+		std::mutex                                                             loading_mutex;
 
 		static MBox<TemplateRegistrySingleton> instance;
 

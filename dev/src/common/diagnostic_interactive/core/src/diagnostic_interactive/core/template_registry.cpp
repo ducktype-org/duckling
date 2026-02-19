@@ -98,6 +98,10 @@ namespace dia_int {
 
 		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
 
+		std::lock_guard lock(loading_mutex);
+
+		if (auto cached = cache.atMaybe(key); cached.has_value()) return *cached.value();
+
 		auto str_content_opt = provider->loadTemplate(key);
 		if (!str_content_opt.has_value()) {
 			throw TemplateEvaluationException(base::strConcat(
@@ -123,7 +127,7 @@ namespace dia_int {
 			}
 
 			cache.put(key, std::move(diagnostic_template));
-			return cache[key];
+			return *cache.at(key);
 		} catch (const ParsingTemplateFileError& e) {
 			throw TemplateEvaluationException(
 				base::strConcat("Error parsing template '", key, "': ", e.what())
