@@ -100,7 +100,7 @@ impl Default for RequestAction {
 /// ------------------
 /// 1. a *request* signifies a need to read the manifest of a given package (pinned request) or the
 ///    manifests of all the packages from a given location, satisfying some versions constraints (not pinned request),
-/// 2. a *fetch* is a process of obtaining manifest/manifests for the first time, for example from Ducknest,
+/// 2. a *fetch* is a process of obtaining manifest(s) for the first time, for example from Ducknest,
 /// 3. to satisfy a *request*, a *fetch* may be made, this usually happens for the first *request* referencing a specific location/package.
 pub struct GathererState {
     not_pinned_fetches: HashMap<InternedLocation, QueryState>,
@@ -111,7 +111,7 @@ pub struct GathererState {
 }
 
 impl GathererState {
-    /// Creates a new, empty GathererState.
+    /// Creates a new, empty [`GathererState`].
     pub fn new() -> Self {
         GathererState {
             not_pinned_fetches: HashMap::new(),
@@ -291,7 +291,7 @@ impl GathererState {
 
         // If we requested a specific version and received manifest declares a different version, the request failed.
         if ![None, pinned_result.expanded_package.version]
-            .contains(&pinned_result.origin_package.version)
+        if pinned_result.origin_package.version.is_some() && pinned_result.origin_package.version != pinned_result.expanded_package.version
         {
             return Ok(self
                 .fail_pinned(
